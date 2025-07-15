@@ -61,7 +61,35 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				healthcare: {
+					primary: 'hsl(var(--healthcare-primary))',
+					secondary: 'hsl(var(--healthcare-secondary))',
+					success: 'hsl(var(--healthcare-success))',
+					warning: 'hsl(var(--healthcare-warning))',
+					error: 'hsl(var(--healthcare-error))',
+					info: 'hsl(var(--healthcare-info))'
+				},
+				slot: {
+					available: 'hsl(var(--slot-available))',
+					'available-border': 'hsl(var(--slot-available-border))',
+					'available-hover': 'hsl(var(--slot-available-hover))',
+					booked: 'hsl(var(--slot-booked))',
+					'booked-border': 'hsl(var(--slot-booked-border))',
+					'booked-hover': 'hsl(var(--slot-booked-hover))',
+					selected: 'hsl(var(--slot-selected))',
+					'selected-border': 'hsl(var(--slot-selected-border))'
 				}
+			},
+			backgroundImage: {
+				'gradient-primary': 'var(--gradient-primary)',
+				'gradient-secondary': 'var(--gradient-secondary)',
+				'gradient-subtle': 'var(--gradient-subtle)'
+			},
+			boxShadow: {
+				'elegant': 'var(--shadow-elegant)',
+				'card': 'var(--shadow-card)',
+				'hover': 'var(--shadow-hover)'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',

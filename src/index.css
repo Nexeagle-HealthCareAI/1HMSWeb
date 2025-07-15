@@ -8,7 +8,7 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 210 40% 98%;
     --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;
@@ -17,8 +17,8 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 197 100% 45%;
+    --primary-foreground: 0 0% 100%;
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -26,17 +26,45 @@ All colors MUST be HSL.
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 153 75% 50%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --ring: 197 100% 45%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
+
+    /* Healthcare specific colors */
+    --healthcare-primary: 197 100% 45%;
+    --healthcare-secondary: 153 75% 50%;
+    --healthcare-success: 120 100% 40%;
+    --healthcare-warning: 38 100% 50%;
+    --healthcare-error: 0 84% 60%;
+    --healthcare-info: 210 100% 70%;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(197 100% 45%), hsl(153 75% 50%));
+    --gradient-secondary: linear-gradient(135deg, hsl(153 75% 50%), hsl(197 100% 45%));
+    --gradient-subtle: linear-gradient(180deg, hsl(210 40% 98%), hsl(210 30% 95%));
+    
+    /* Slot states */
+    --slot-available: 120 100% 95%;
+    --slot-available-border: 120 100% 85%;
+    --slot-available-hover: 120 100% 90%;
+    --slot-booked: 0 100% 95%;
+    --slot-booked-border: 0 100% 85%;
+    --slot-booked-hover: 0 100% 90%;
+    --slot-selected: 197 100% 95%;
+    --slot-selected-border: 197 100% 75%;
+    
+    /* Shadows */
+    --shadow-elegant: 0 10px 30px -10px hsl(197 100% 45% / 0.2);
+    --shadow-card: 0 4px 20px -2px hsl(197 100% 45% / 0.1);
+    --shadow-hover: 0 8px 30px -8px hsl(197 100% 45% / 0.25);
 
     --sidebar-background: 0 0% 98%;
 
