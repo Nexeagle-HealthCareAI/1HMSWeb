@@ -222,7 +222,8 @@ export const PatientsPage: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          {/* Desktop Table */}
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
@@ -285,19 +286,55 @@ export const PatientsPage: React.FC = () => {
                 ))}
               </tbody>
             </table>
-
-            {filteredPatients.length === 0 && (
-              <div className="text-center py-12">
-                <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-muted-foreground mb-2">
-                  No patients found
-                </h3>
-                <p className="text-muted-foreground">
-                  Try adjusting your search or filter criteria
-                </p>
-              </div>
-            )}
           </div>
+
+          {/* Mobile Cards */}
+          <div className="lg:hidden space-y-4">
+            {filteredPatients.map((patient) => (
+              <Card 
+                key={patient.id} 
+                className="p-4 shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => handlePatientClick(patient)}
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <Button variant="link" className="p-0 h-auto font-medium text-healthcare-primary text-lg">
+                      {patient.id}
+                    </Button>
+                    <h3 className="font-semibold text-foreground">{patient.name}</h3>
+                    <p className="text-sm text-muted-foreground">{patient.age} years • {patient.gender}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge variant="secondary">{patient.department}</Badge>
+                    <Badge variant="outline">{patient.visits} visits</Badge>
+                  </div>
+                </div>
+                
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Phone className="h-3 w-3" />
+                    <span>{patient.contact}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Calendar className="h-3 w-3" />
+                    <span>Last visit: {new Date(patient.lastVisit).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          {filteredPatients.length === 0 && (
+            <div className="text-center py-12">
+              <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-muted-foreground mb-2">
+                No patients found
+              </h3>
+              <p className="text-muted-foreground">
+                Try adjusting your search or filter criteria
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

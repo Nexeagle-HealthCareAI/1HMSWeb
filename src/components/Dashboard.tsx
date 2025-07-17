@@ -182,17 +182,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             {/* Today's Patients Table */}
             <Card className="shadow-card">
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <CardTitle className="text-xl font-bold">Today's Patients</CardTitle>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm">Yesterday</Button>
-                    <Button variant="default" size="sm">Today</Button>
-                    <Button variant="outline" size="sm">Last Month</Button>
+                  <div className="flex gap-2 overflow-x-auto">
+                    <Button variant="outline" size="sm" className="whitespace-nowrap">Yesterday</Button>
+                    <Button variant="default" size="sm" className="whitespace-nowrap">Today</Button>
+                    <Button variant="outline" size="sm" className="whitespace-nowrap">Last Month</Button>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
+                {/* Desktop Table */}
+                <div className="hidden lg:block overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b">
@@ -225,6 +226,41 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                       ))}
                     </tbody>
                   </table>
+                </div>
+
+                {/* Mobile Cards */}
+                <div className="lg:hidden space-y-4">
+                  {todayPatients.map((patient) => (
+                    <Card key={patient.id} className="p-4 shadow-sm border">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <Button variant="link" className="p-0 h-auto font-medium text-healthcare-primary text-lg">
+                            {patient.id}
+                          </Button>
+                          <h3 className="font-semibold text-foreground">{patient.name}</h3>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          <Badge variant="outline">{patient.token}</Badge>
+                          {getStatusBadge(patient.status)}
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Contact:</span>
+                          <span className="font-medium">{patient.contact}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Doctor:</span>
+                          <span className="font-medium">{patient.doctor}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Time:</span>
+                          <span className="font-medium">{patient.time}</span>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
                 </div>
               </CardContent>
             </Card>

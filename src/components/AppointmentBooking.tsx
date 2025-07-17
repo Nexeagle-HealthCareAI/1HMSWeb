@@ -168,24 +168,24 @@ export const AppointmentBooking: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-subtle">
       {/* Hero Section */}
-      <div className="bg-gradient-primary text-white py-16">
+      <div className="bg-gradient-primary text-white py-12 lg:py-16">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
+          <h1 className="text-3xl md:text-4xl lg:text-6xl font-bold mb-4 lg:mb-6">
             Healthcare Appointment Booking
           </h1>
-          <p className="text-xl md:text-2xl opacity-90 mb-8">
+          <p className="text-lg md:text-xl lg:text-2xl opacity-90 mb-6 lg:mb-8">
             Simple, efficient appointment management for healthcare professionals
           </p>
-          <div className="flex justify-center gap-8 text-sm">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-8 text-sm">
+            <div className="flex items-center justify-center gap-2">
               <Calendar className="h-5 w-5" />
               <span>Easy Scheduling</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-2">
               <Clock className="h-5 w-5" />
               <span>Real-time Availability</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-2">
               <User className="h-5 w-5" />
               <span>Patient Management</span>
             </div>
@@ -193,27 +193,29 @@ export const AppointmentBooking: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex min-h-screen">
+      <div className="flex flex-col lg:flex-row min-h-screen">
         {/* Sidebar */}
-        <DepartmentSidebar
-          departments={departments}
-          selectedDepartment={selectedDepartment}
-          selectedDoctor={selectedDoctor}
-          onDepartmentSelect={handleDepartmentSelect}
-          onDoctorSelect={setSelectedDoctor}
-        />
+        <div className="lg:w-80 lg:flex-shrink-0">
+          <DepartmentSidebar
+            departments={departments}
+            selectedDepartment={selectedDepartment}
+            selectedDoctor={selectedDoctor}
+            onDepartmentSelect={handleDepartmentSelect}
+            onDoctorSelect={setSelectedDoctor}
+          />
+        </div>
 
         {/* Main Content */}
-        <div className="flex-1 p-6">
-          <Card className="p-6 shadow-card">
+        <div className="flex-1 p-4 lg:p-6">
+          <Card className="p-4 lg:p-6 shadow-card">
             {/* Header */}
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-foreground mb-2">
+              <h2 className="text-xl lg:text-2xl font-bold text-foreground mb-2">
                 Schedule Appointment
               </h2>
-              <p className="text-muted-foreground">
+              <p className="text-sm lg:text-base text-muted-foreground">
                 Selected Doctor: <span className="font-semibold text-healthcare-primary">{selectedDoctor.name}</span>
-                {' '}• {selectedDoctor.specialization}
+                <span className="hidden sm:inline">{' '}• {selectedDoctor.specialization}</span>
               </p>
             </div>
 
