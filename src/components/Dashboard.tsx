@@ -13,7 +13,17 @@ import {
   LogOut,
   Stethoscope,
   Home,
-  UserCheck
+  UserCheck,
+  CreditCard,
+  Bot,
+  MessageCircle,
+  Send,
+  Settings,
+  Zap,
+  Phone,
+  DollarSign,
+  Activity,
+  UserPlus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,6 +39,12 @@ import {
 import { AppointmentBooking } from './AppointmentBooking';
 import { PatientsPage } from './PatientsPage';
 import { ProfileCompletion } from './ProfileCompletion';
+import { Billing } from './Billing';
+import { DocAI } from './DocAI';
+import { InternalChat } from './InternalChat';
+import { BulkMessaging } from './BulkMessaging';
+import { UserManagement } from './UserManagement';
+import { PatientProfile } from './PatientProfile';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -73,6 +89,13 @@ const kpiData: KPIData[] = [
     change: "+5%",
     icon: Clock,
     color: "healthcare-warning"
+  },
+  {
+    title: "Today's Earnings",
+    value: "₹48,250",
+    change: "+18%",
+    icon: TrendingUp,
+    color: "healthcare-success"
   }
 ];
 
@@ -119,11 +142,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showProfileCompletion, setShowProfileCompletion] = useState(true);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
 
   const navigation = [
     { id: 'dashboard', name: 'Dashboard', icon: Home },
     { id: 'appointments', name: 'Appointment Scheduler', icon: Calendar },
-    { id: 'patients', name: 'Patients', icon: Users }
+    { id: 'patients', name: 'Patients', icon: Users },
+    { id: 'billing', name: 'Billing', icon: CreditCard },
+    { id: 'doc-ai', name: 'DocAI', icon: Bot },
+    { id: 'chat', name: 'Chat', icon: MessageCircle },
+    { id: 'bulk-messaging', name: 'Bulk Messaging', icon: Send },
+    { id: 'user-management', name: 'User Management', icon: Settings }
   ];
 
   const getStatusBadge = (status: Patient['status']) => {
@@ -143,6 +172,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         return <AppointmentBooking />;
       case 'patients':
         return <PatientsPage />;
+      case 'billing':
+        return <Billing />;
+      case 'doc-ai':
+        return <DocAI />;
+      case 'chat':
+        return <InternalChat />;
+      case 'bulk-messaging':
+        return <BulkMessaging />;
+      case 'user-management':
+        return <UserManagement />;
       default:
         return (
           <div className="space-y-6">
@@ -151,8 +190,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
               <ProfileCompletion onClose={() => setShowProfileCompletion(false)} />
             )}
 
+            {/* Quick Navigation */}
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+              {navigation.map((item) => (
+                <Button
+                  key={item.id}
+                  variant="outline"
+                  className="h-20 flex-col gap-2"
+                  onClick={() => setCurrentPage(item.id)}
+                >
+                  <item.icon className="h-6 w-6" />
+                  <span className="text-xs text-center">{item.name}</span>
+                </Button>
+              ))}
+            </div>
+
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {kpiData.map((kpi, index) => (
                 <Card key={index} className="shadow-card hover:shadow-hover transition-shadow">
                   <CardContent className="p-6">
@@ -210,7 +264,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                       {todayPatients.map((patient) => (
                         <tr key={patient.id} className="border-b hover:bg-muted/50 transition-colors">
                           <td className="py-3 px-4">
-                            <Button variant="link" className="p-0 h-auto font-medium text-healthcare-primary">
+                            <Button 
+                              variant="link" 
+                              className="p-0 h-auto font-medium text-healthcare-primary"
+                              onClick={() => setSelectedPatientId(patient.id)}
+                            >
                               {patient.id}
                             </Button>
                           </td>
@@ -234,7 +292,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                     <Card key={patient.id} className="p-4 shadow-sm border">
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <Button variant="link" className="p-0 h-auto font-medium text-healthcare-primary text-lg">
+                          <Button 
+                            variant="link" 
+                            className="p-0 h-auto font-medium text-healthcare-primary text-lg"
+                            onClick={() => setSelectedPatientId(patient.id)}
+                          >
                             {patient.id}
                           </Button>
                           <h3 className="font-semibold text-foreground">{patient.name}</h3>
@@ -412,6 +474,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           {renderContent()}
         </main>
       </div>
+
+      {/* Patient Profile Modal */}
+      {selectedPatientId && (
+        <PatientProfile
+          patientId={selectedPatientId}
+          onClose={() => setSelectedPatientId(null)}
+        />
+      )}
     </div>
   );
 };

@@ -57,6 +57,15 @@ const departments: Department[] = [
     ]
   },
   {
+    id: 'urology',
+    name: 'Urology',
+    icon: Phone,
+    doctors: [
+      { id: '7', name: 'Dr. William Thompson', department: 'Urology', specialization: 'Urological Surgery' },
+      { id: '8', name: 'Dr. Jennifer Clark', department: 'Urology', specialization: 'Kidney Specialist' }
+    ]
+  },
+  {
     id: 'general',
     name: 'General Medicine',
     icon: Stethoscope,
