@@ -11,7 +11,8 @@ import {
   Save,
   Download,
   Printer,
-  Plus
+  Plus,
+  Settings
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -23,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Separator } from './ui/separator';
+import { toast } from '@/hooks/use-toast';
 
 interface PatientProfileProps {
   patientId: string;
@@ -148,6 +150,7 @@ export const PatientProfile: React.FC<PatientProfileProps> = ({ patientId, onClo
   const [labTests] = useState<LabTest[]>(sampleLabTests);
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
+  const [showCustomizePrescription, setShowCustomizePrescription] = useState(false);
 
   const handleSave = () => {
     setIsEditing(false);
@@ -174,19 +177,19 @@ export const PatientProfile: React.FC<PatientProfileProps> = ({ patientId, onClo
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg w-full max-w-6xl h-[90vh] flex flex-col">
+      <div className="bg-card rounded-2xl w-full max-w-7xl h-[95vh] flex flex-col shadow-elegant animate-scale-in">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-6 border-b space-y-4 sm:space-y-0">
           <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
+            <Avatar className="h-12 w-12 sm:h-16 sm:w-16">
               <AvatarImage src="/api/placeholder/64/64" />
-              <AvatarFallback className="text-lg">
+              <AvatarFallback className="text-base sm:text-lg">
                 {patient.name.split(' ').map(n => n[0]).join('')}
               </AvatarFallback>
             </Avatar>
             <div>
-              <h2 className="text-2xl font-bold text-foreground">{patient.name}</h2>
-              <div className="flex gap-4 text-sm text-muted-foreground">
+              <h2 className="text-xl sm:text-2xl font-bold text-foreground">{patient.name}</h2>
+              <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
                 <span>ID: {patient.id}</span>
                 <span>Age: {patient.age}</span>
                 <span>Gender: {patient.gender}</span>
@@ -195,7 +198,16 @@ export const PatientProfile: React.FC<PatientProfileProps> = ({ patientId, onClo
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button 
+              onClick={() => setShowCustomizePrescription(true)} 
+              size="sm"
+              className="bg-gradient-primary text-white"
+            >
+              <Settings className="h-4 w-4 mr-1" />
+              Customize Prescription
+            </Button>
+            
             {isEditing ? (
               <>
                 <Button onClick={handleSave} size="sm">
@@ -221,18 +233,26 @@ export const PatientProfile: React.FC<PatientProfileProps> = ({ patientId, onClo
         {/* Content */}
         <div className="flex-1 overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4 mx-4 mt-4">
               <TabsTrigger value="profile" className="gap-2">
                 <User className="h-4 w-4" />
-                Patient Profile
+                <span className="hidden sm:inline">Patient History</span>
+                <span className="sm:hidden">History</span>
               </TabsTrigger>
               <TabsTrigger value="prescriptions" className="gap-2">
                 <FileText className="h-4 w-4" />
-                E-Prescription
+                <span className="hidden sm:inline">E-Prescription</span>
+                <span className="sm:hidden">Rx</span>
               </TabsTrigger>
-              <TabsTrigger value="lab" className="gap-2">
-                <TestTube className="h-4 w-4" />
-                Lab Reports
+              <TabsTrigger value="treatment" className="gap-2">
+                <Calendar className="h-4 w-4" />
+                <span className="hidden sm:inline">Treatment Plans</span>
+                <span className="sm:hidden">Plans</span>
+              </TabsTrigger>
+              <TabsTrigger value="notes" className="gap-2">
+                <Edit className="h-4 w-4" />
+                <span className="hidden sm:inline">Progress Notes</span>
+                <span className="sm:hidden">Notes</span>
               </TabsTrigger>
             </TabsList>
 
@@ -478,9 +498,165 @@ export const PatientProfile: React.FC<PatientProfileProps> = ({ patientId, onClo
                   </Card>
                 ))}
               </TabsContent>
+
+              <TabsContent value="treatment" className="mt-0 space-y-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold">Treatment Plans</h3>
+                  <Button className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    New Plan
+                  </Button>
+                </div>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Current Treatment Plan - Hypertension Management</CardTitle>
+                    <p className="text-sm text-muted-foreground">Started: Jan 1, 2024 | Dr. Sarah Johnson</p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label>Treatment Goals</Label>
+                      <ul className="list-disc list-inside space-y-1 text-sm mt-2">
+                        <li>Reduce systolic BP to &lt;130 mmHg</li>
+                        <li>Maintain diastolic BP &lt;80 mmHg</li>
+                        <li>Weight reduction of 10% over 6 months</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <Label>Interventions</Label>
+                      <div className="space-y-2 mt-2">
+                        <Badge variant="secondary">Medication: ACE Inhibitor</Badge>
+                        <Badge variant="secondary">Diet: Low sodium (&lt;2g/day)</Badge>
+                        <Badge variant="secondary">Exercise: 30 min daily</Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="notes" className="mt-0 space-y-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold">Progress Notes</h3>
+                  <Button className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Add Note
+                  </Button>
+                </div>
+
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="text-lg">Follow-up Visit</CardTitle>
+                        <p className="text-sm text-muted-foreground">Jan 15, 2024 | Dr. Sarah Johnson</p>
+                      </div>
+                      <Badge variant="default">Recent</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div>
+                        <Label>Chief Complaint</Label>
+                        <p className="text-sm">Patient reports occasional chest discomfort and shortness of breath during exertion.</p>
+                      </div>
+                      <Separator />
+                      <div>
+                        <Label>Assessment</Label>
+                        <p className="text-sm">Blood pressure well controlled on current regimen. Patient compliant with medications. Weight reduced by 3kg since last visit.</p>
+                      </div>
+                      <Separator />
+                      <div>
+                        <Label>Plan</Label>
+                        <p className="text-sm">Continue current medications. Increase exercise duration to 45 minutes daily. Follow-up in 4 weeks.</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
             </div>
           </Tabs>
         </div>
+
+        {/* Prescription Customization Modal */}
+        {showCustomizePrescription && (
+          <div className="fixed inset-0 bg-black/50 z-60 flex items-center justify-center p-4">
+            <Card className="w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Customize Prescription Template</CardTitle>
+                  <Button variant="ghost" size="sm" onClick={() => setShowCustomizePrescription(false)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="clinicName">Clinic/Hospital Name</Label>
+                    <Input id="clinicName" placeholder="Enter clinic name" />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="doctorName">Doctor Name</Label>
+                    <Input id="doctorName" placeholder="Dr. Name" defaultValue="Dr. Sarah Johnson" />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="qualification">Qualification</Label>
+                    <Input id="qualification" placeholder="MD, MBBS, etc." />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="regNumber">Registration Number</Label>
+                    <Input id="regNumber" placeholder="Medical registration number" />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="headerText">Header Text</Label>
+                    <Textarea id="headerText" placeholder="Custom header text for prescription" rows={3} />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="footerText">Footer Text</Label>
+                    <Textarea id="footerText" placeholder="Custom footer text for prescription" rows={3} />
+                  </div>
+                  
+                  <div>
+                    <Label>Template Style</Label>
+                    <Select defaultValue="modern">
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="modern">Modern Template</SelectItem>
+                        <SelectItem value="classic">Classic Template</SelectItem>
+                        <SelectItem value="minimal">Minimal Template</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button 
+                    className="flex-1 bg-gradient-primary text-white"
+                    onClick={() => {
+                      setShowCustomizePrescription(false);
+                      toast({
+                        title: "Template Saved!",
+                        description: "Prescription template has been updated successfully."
+                      });
+                    }}
+                  >
+                    Save Template
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowCustomizePrescription(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );
