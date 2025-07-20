@@ -180,7 +180,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
   if (showForgotPassword) {
     return (
       <div className="min-h-screen bg-gradient-subtle flex">
-        <div className="w-full lg:w-1/3 flex items-center justify-center p-8">
+      <div className="w-full lg:w-1/3 flex items-center justify-center p-8 lg:order-2">
           <Card className="w-full max-w-md shadow-elegant">
             <CardHeader className="text-center space-y-2">
               <div className="flex justify-center mb-4">
@@ -293,8 +293,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
           </Card>
         </div>
         
-        {/* Right side - Promotional Banner */}
-        <div className="hidden lg:flex w-2/3 bg-gradient-primary items-center justify-center p-12">
+        {/* Left side - Promotional Banner */}
+        <div className="hidden lg:flex w-2/3 bg-gradient-primary items-center justify-center p-12 lg:order-1">
           <div className="text-white max-w-2xl">
             <div className="flex items-center gap-3 mb-6">
               <Shield className="h-12 w-12" />
@@ -317,7 +317,45 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
 
   return (
     <div className="min-h-screen bg-gradient-subtle flex">
-      {/* Left side - Login Form (1/3) */}
+      {/* Left side - Promotional Banner (2/3) */}
+      <div className="hidden lg:flex w-2/3 bg-gradient-primary items-center justify-center p-12">
+        <div className="text-white max-w-2xl">
+          <div className="flex items-center gap-3 mb-6">
+            <Stethoscope className="h-12 w-12" />
+            <h1 className="text-4xl font-bold">NexEagle easyHMS</h1>
+          </div>
+          
+          <h2 className="text-2xl font-semibold mb-4">
+            Streamline Your Healthcare Practice
+          </h2>
+          
+          <p className="text-xl opacity-90 mb-8">
+            Complete patient management, appointments, billing, and more. 
+            Experience the future of healthcare administration.
+          </p>
+          
+          <div className="grid grid-cols-2 gap-6 mt-8">
+            <div className="text-center">
+              <div className="text-3xl font-bold">99.9%</div>
+              <div className="text-sm opacity-75">Uptime</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold">10K+</div>
+              <div className="text-sm opacity-75">Doctors</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold">50M+</div>
+              <div className="text-sm opacity-75">Patients</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold">24/7</div>
+              <div className="text-sm opacity-75">Support</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right side - Login Form (1/3) */}
       <div className="w-full lg:w-1/3 flex items-center justify-center p-4 lg:p-8">
         <Card className="w-full max-w-md shadow-elegant">
           <CardHeader className="text-center space-y-2">
@@ -480,44 +518,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
             </Tabs>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Right side - Promotional Banner (2/3) */}
-      <div className="hidden lg:flex w-2/3 bg-gradient-primary items-center justify-center p-12">
-        <div className="text-white max-w-2xl">
-          <div className="flex items-center gap-3 mb-6">
-            <Shield className="h-12 w-12" />
-            <h1 className="text-4xl font-bold">Healthcare Excellence</h1>
-          </div>
-          
-          <h2 className="text-2xl font-semibold mb-4">
-            Modern Healthcare Management
-          </h2>
-          
-          <p className="text-xl opacity-90 mb-8">
-            Streamline your healthcare operations with our intuitive admin system. 
-            Manage appointments, patients, and staff efficiently.
-          </p>
-          
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <h3 className="font-semibold">Quick Registration</h3>
-              <p className="opacity-80">OTP-based lightning fast onboarding</p>
-            </div>
-            <div className="space-y-2">
-              <h3 className="font-semibold">Smart Scheduling</h3>
-              <p className="opacity-80">Advanced appointment management</p>
-            </div>
-            <div className="space-y-2">
-              <h3 className="font-semibold">Patient Management</h3>
-              <p className="opacity-80">Comprehensive patient profiles</p>
-            </div>
-            <div className="space-y-2">
-              <h3 className="font-semibold">Mobile Responsive</h3>
-              <p className="opacity-80">Works perfectly on all devices</p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
