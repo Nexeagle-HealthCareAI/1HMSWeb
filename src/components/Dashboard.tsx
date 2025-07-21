@@ -46,6 +46,9 @@ import { BulkMessaging } from './BulkMessaging';
 import { UserManagement } from './UserManagement';
 import { PatientProfile } from './PatientProfile';
 import { FloatingAIChatbot } from './FloatingAIChatbot';
+import { DoctorCalendar } from './DoctorCalendar';
+import { EPrescription } from './EPrescription';
+import { AdminDashboard } from './AdminDashboard';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -147,6 +150,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
   const navigation = [
     { id: 'dashboard', name: 'Dashboard', icon: Home },
+    { id: 'admin', name: 'Admin Panel', icon: Settings },
     { id: 'calendar', name: 'Calendar', icon: Calendar },
     { id: 'appointments', name: 'Appointment Scheduler', icon: Calendar },
     { id: 'patients', name: 'Patients', icon: Users },
@@ -154,7 +158,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     { id: 'doc-ai', name: 'DocAI', icon: Bot },
     { id: 'chat', name: 'Chat', icon: MessageCircle },
     { id: 'bulk-messaging', name: 'Bulk Messaging', icon: Send },
-    { id: 'admin', name: 'Admin Panel', icon: Settings },
     { id: 'user-management', name: 'User Management', icon: Settings }
   ];
 
@@ -170,13 +173,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   };
 
   const renderContent = () => {
+    if (selectedPatientId) {
+      return <EPrescription patientId={selectedPatientId} />;
+    }
+
     switch (currentPage) {
       case 'calendar':
-        window.location.href = '/calendar';
-        return null;
+        return <DoctorCalendar />;
       case 'admin':
-        window.location.href = '/admin';
-        return null;
+        return <AdminDashboard />;
       case 'appointments':
         return <AppointmentBooking />;
       case 'patients':
@@ -276,7 +281,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                             <Button 
                               variant="link" 
                               className="p-0 h-auto font-medium text-healthcare-primary"
-                              onClick={() => window.location.href = `/prescription/${patient.id}`}
+                             onClick={() => setSelectedPatientId(patient.id)}
                             >
                               {patient.id}
                             </Button>
@@ -304,7 +309,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                           <Button 
                             variant="link" 
                             className="p-0 h-auto font-medium text-healthcare-primary text-lg"
-                            onClick={() => window.location.href = `/prescription/${patient.id}`}
+                            onClick={() => setSelectedPatientId(patient.id)}
                           >
                             {patient.id}
                           </Button>
