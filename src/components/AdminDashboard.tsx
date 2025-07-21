@@ -176,294 +176,251 @@ export const AdminDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-subtle">
-      {/* Sidebar */}
-      <div className="fixed left-0 top-0 h-full w-64 bg-card border-r border-border z-40">
-        <div className="p-6 border-b">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-primary rounded-lg">
-              <Building2 className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="font-bold text-healthcare-primary">NexEagle</h1>
-              <p className="text-xs text-muted-foreground">Admin Panel</p>
-            </div>
-          </div>
+    <div className="space-y-6">
+      {/* Top Navigation */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
+          <p className="text-muted-foreground">Hospital Management Overview</p>
         </div>
-        
-        <nav className="p-4 space-y-2">
-          {sidebarItems.map((item) => (
-            <Button
-              key={item.id}
-              variant={currentView === item.id ? "default" : "ghost"}
-              className="w-full justify-start gap-3"
-              onClick={() => setCurrentView(item.id)}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.name}
-            </Button>
-          ))}
-        </nav>
-
-        <div className="absolute bottom-4 left-4 right-4">
-          <Button variant="ghost" className="w-full justify-start gap-3 text-red-500 hover:text-red-500 hover:bg-red-50">
-            <LogOut className="h-4 w-4" />
-            Logout
+        <div className="flex items-center gap-4">
+          <Select defaultValue="today">
+            <SelectTrigger className="w-[150px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="week">This Week</SelectItem>
+              <SelectItem value="month">This Month</SelectItem>
+              <SelectItem value="year">This Year</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm">
+            <Download className="h-4 w-4 mr-2" />
+            Export
           </Button>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="ml-64">
-        {/* Top Bar */}
-        <div className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-          <div className="flex items-center justify-between px-6 py-4">
-            <div>
-              <h1 className="text-2xl font-bold capitalize">{currentView}</h1>
-              <p className="text-muted-foreground">Hospital Management Overview</p>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <Select value={dateFilter} onValueChange={setDateFilter}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="week">This Week</SelectItem>
-                  <SelectItem value="month">This Month</SelectItem>
-                  <SelectItem value="quarter">This Quarter</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <div className="relative">
-                <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-                <Input 
-                  placeholder="Search..." 
-                  className="pl-10 w-64"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              
-              <Button variant="outline" size="sm">
-                <Bell className="h-4 w-4" />
-              </Button>
-              
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-            </div>
+      {/* Secondary Navigation */}
+      <div className="flex gap-2 overflow-x-auto">
+        {sidebarItems.map((item) => (
+          <Button
+            key={item.id}
+            variant={currentView === item.id ? "default" : "outline"}
+            size="sm"
+            className="whitespace-nowrap gap-2"
+            onClick={() => setCurrentView(item.id)}
+          >
+            <item.icon className="h-4 w-4" />
+            {item.name}
+          </Button>
+        ))}
+      </div>
+
+      {/* Dashboard Content */}
+      {currentView === 'dashboard' && (
+        <div className="space-y-6">
+          {/* KPI Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {renderKPICard(
+              "Today's Appointments",
+              <Calendar className="h-6 w-6 text-primary" />,
+              kpiData.todayAppointments
+            )}
+            {renderKPICard(
+              "OPD Visits This Week",
+              <Users className="h-6 w-6 text-primary" />,
+              kpiData.weeklyOPD
+            )}
+            {renderKPICard(
+              "Revenue This Month",
+              <DollarSign className="h-6 w-6 text-primary" />,
+              kpiData.monthlyRevenue,
+              true
+            )}
+            {renderKPICard(
+              "Patient Satisfaction",
+              <Star className="h-6 w-6 text-primary" />,
+              kpiData.satisfaction
+            )}
           </div>
-        </div>
 
-        {/* Dashboard Content */}
-        {currentView === 'dashboard' && (
-          <div className="p-6 space-y-6">
-            {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {renderKPICard(
-                "Today's Appointments",
-                <Calendar className="h-6 w-6 text-primary" />,
-                kpiData.todayAppointments
-              )}
-              {renderKPICard(
-                "OPD Visits This Week",
-                <Users className="h-6 w-6 text-primary" />,
-                kpiData.weeklyOPD
-              )}
-              {renderKPICard(
-                "Revenue This Month",
-                <DollarSign className="h-6 w-6 text-primary" />,
-                kpiData.monthlyRevenue,
-                true
-              )}
-              {renderKPICard(
-                "Patient Satisfaction",
-                <Star className="h-6 w-6 text-primary" />,
-                kpiData.satisfaction
-              )}
-            </div>
-
-            {/* Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Appointments Trend */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Appointments Trend (Last 15 Days)</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={appointmentTrend}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <Tooltip />
-                      <Line 
-                        type="monotone" 
-                        dataKey="appointments" 
-                        stroke="#8884d8" 
-                        strokeWidth={2}
-                        dot={{ fill: '#8884d8' }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              {/* Department Load Distribution */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Department Load Distribution</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={departmentLoad}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {departmentLoad.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Revenue and Activity Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Revenue by Doctor */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Revenue by Doctor</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={revenueByDoctor}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="doctor" angle={-45} textAnchor="end" height={80} />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="revenue" fill="#82ca9d" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              {/* Hourly Activity Heatmap */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>OPD Activity by Hour</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={hourlyActivity}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="hour" />
-                      <YAxis />
-                      <Tooltip />
-                      <Area 
-                        type="monotone" 
-                        dataKey="appointments" 
-                        stroke="#ffc658" 
-                        fill="#ffc658" 
-                        fillOpacity={0.6}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Tables Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Recent Appointments */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>Recent Appointments</CardTitle>
-                    <Button variant="outline" size="sm">
-                      <Eye className="h-4 w-4 mr-2" />
-                      View All
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {recentAppointments.map((appointment) => (
-                      <div key={appointment.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{appointment.patient}</p>
-                          <p className="text-sm text-muted-foreground">{appointment.doctor} • {appointment.time}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs">{appointment.type}</Badge>
-                          {getStatusBadge(appointment.status)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Doctor Performance */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>Doctor Performance</CardTitle>
-                    <Button variant="outline" size="sm">
-                      <Eye className="h-4 w-4 mr-2" />
-                      View All
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {doctorPerformance.map((doctor, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{doctor.name}</p>
-                          <p className="text-sm text-muted-foreground">{doctor.patients} patients this month</p>
-                        </div>
-                        <div className="text-right">
-                          <div className="flex items-center gap-1">
-                            <Star className="h-4 w-4 text-yellow-500" />
-                            <span className="font-medium">{doctor.satisfaction}</span>
-                          </div>
-                          <p className="text-sm text-muted-foreground">${doctor.revenue.toLocaleString()}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
-
-        {/* Other Views Placeholder */}
-        {currentView !== 'dashboard' && (
-          <div className="p-6">
+          {/* Charts Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Appointments Trend */}
             <Card>
-              <CardContent className="p-12 text-center">
-                <h2 className="text-2xl font-semibold mb-4 capitalize">{currentView} Module</h2>
-                <p className="text-muted-foreground">This module is under development. It will include comprehensive {currentView} management features.</p>
+              <CardHeader>
+                <CardTitle>Appointments Trend (Last 15 Days)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={appointmentTrend}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line 
+                      type="monotone" 
+                      dataKey="appointments" 
+                      stroke="#8884d8" 
+                      strokeWidth={2}
+                      dot={{ fill: '#8884d8' }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Department Load Distribution */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Department Load Distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={departmentLoad}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {departmentLoad.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
           </div>
-        )}
-      </div>
+
+          {/* Revenue and Activity Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Revenue by Doctor */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Revenue by Doctor</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={revenueByDoctor}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="doctor" angle={-45} textAnchor="end" height={80} />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="revenue" fill="#82ca9d" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Hourly Activity Heatmap */}
+            <Card>
+              <CardHeader>
+                <CardTitle>OPD Activity by Hour</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={hourlyActivity}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="hour" />
+                    <YAxis />
+                    <Tooltip />
+                    <Area 
+                      type="monotone" 
+                      dataKey="appointments" 
+                      stroke="#ffc658" 
+                      fill="#ffc658" 
+                      fillOpacity={0.6}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Tables Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Recent Appointments */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Recent Appointments</CardTitle>
+                  <Button variant="outline" size="sm">
+                    <Eye className="h-4 w-4 mr-2" />
+                    View All
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {recentAppointments.map((appointment) => (
+                    <div key={appointment.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <p className="font-medium">{appointment.patient}</p>
+                        <p className="text-sm text-muted-foreground">{appointment.doctor} • {appointment.time}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">{appointment.type}</Badge>
+                        {getStatusBadge(appointment.status)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Doctor Performance */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Doctor Performance</CardTitle>
+                  <Button variant="outline" size="sm">
+                    <Eye className="h-4 w-4 mr-2" />
+                    View All
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {doctorPerformance.map((doctor, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <p className="font-medium">{doctor.name}</p>
+                        <p className="text-sm text-muted-foreground">{doctor.patients} patients this month</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="flex items-center gap-1">
+                          <Star className="h-4 w-4 text-yellow-500" />
+                          <span className="font-medium">{doctor.satisfaction}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">${doctor.revenue.toLocaleString()}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* Other Views Placeholder */}
+      {currentView !== 'dashboard' && (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <h2 className="text-2xl font-semibold mb-4 capitalize">{currentView} Module</h2>
+            <p className="text-muted-foreground">This module is under development. It will include comprehensive {currentView} management features.</p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

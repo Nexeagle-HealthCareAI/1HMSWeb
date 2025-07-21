@@ -103,10 +103,13 @@ const frequencyOptions = [
 const commonMedicines = [
   'Paracetamol 500mg',
   'Ibuprofen 400mg',
-  'Amoxicillin 500mg',
-  'Metformin 500mg',
-  'Aspirin 75mg',
+  'Amoxicillin 250mg',
   'Omeprazole 20mg',
+  'Metformin 500mg',
+  'Lisinopril 10mg',
+  'Atorvastatin 20mg',
+  'Aspirin 75mg',
+  'Amlodipine 5mg',
   'Cetirizine 10mg',
   'Dextromethorphan 15mg'
 ];
@@ -234,373 +237,331 @@ export const EPrescription = ({ patientId }: { patientId?: string }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-subtle">
-      {/* Sticky Header */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">E-Prescription</h1>
-              <p className="text-muted-foreground">Patient: {patient.name} (ID: {patient.id})</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowPreview(true)}>
-                <Eye className="h-4 w-4 mr-2" />
-                Preview
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleSave}>
-                <Save className="h-4 w-4 mr-2" />
-                Save
-              </Button>
-              <Button variant="outline" size="sm" onClick={handlePrint}>
-                <Printer className="h-4 w-4 mr-2" />
-                Print
-              </Button>
-              <Button size="sm" onClick={handleSendToPatient}>
-                <Send className="h-4 w-4 mr-2" />
-                Send to Patient
-              </Button>
-            </div>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">E-Prescription</h1>
+          <p className="text-muted-foreground">Patient: {patient.name} (ID: {patient.id})</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowPreview(true)}>
+            <Eye className="h-4 w-4 mr-2" />
+            Preview
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleSave}>
+            <Save className="h-4 w-4 mr-2" />
+            Save
+          </Button>
+          <Button variant="outline" size="sm" onClick={handlePrint}>
+            <Printer className="h-4 w-4 mr-2" />
+            Print
+          </Button>
+          <Button size="sm" onClick={handleSendToPatient}>
+            <Send className="h-4 w-4 mr-2" />
+            Send to Patient
+          </Button>
         </div>
       </div>
 
-      <div className="container mx-auto px-6 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Patient Info */}
-          <div className="lg:col-span-1">
-            <Card className="sticky top-24">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5" />
-                  Patient Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h3 className="font-semibold">{patient.name}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {patient.age} years, {patient.gender}
-                  </p>
-                  <p className="text-sm text-muted-foreground">{patient.contact}</p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Patient Info */}
+        <div className="lg:col-span-1">
+          <Card className="sticky top-24">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5" />
+                Patient Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <h3 className="font-semibold">{patient.name}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {patient.age} years, {patient.gender}
+                </p>
+                <p className="text-sm text-muted-foreground">{patient.contact}</p>
+              </div>
+
+              <Separator />
+
+              <div>
+                <h4 className="font-medium mb-2 flex items-center gap-2">
+                  <Heart className="h-4 w-4 text-red-500" />
+                  Vitals
+                </h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>BP: <span className="font-medium">{patient.vitals.bp}</span></div>
+                  <div>HR: <span className="font-medium">{patient.vitals.hr}</span></div>
+                  <div>Temp: <span className="font-medium">{patient.vitals.temp}</span></div>
+                  <div>Weight: <span className="font-medium">{patient.vitals.weight}</span></div>
                 </div>
+              </div>
 
-                <Separator />
+              <Separator />
 
-                <div>
-                  <h4 className="font-medium mb-2 flex items-center gap-2">
-                    <Heart className="h-4 w-4 text-red-500" />
-                    Vitals
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>BP: <span className="font-medium">{patient.vitals.bp}</span></div>
-                    <div>HR: <span className="font-medium">{patient.vitals.hr}</span></div>
-                    <div>Temp: <span className="font-medium">{patient.vitals.temp}</span></div>
-                    <div>Weight: <span className="font-medium">{patient.vitals.weight}</span></div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div>
-                  <h4 className="font-medium mb-2 flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-orange-500" />
-                    Allergies
-                  </h4>
-                  <div className="flex flex-wrap gap-1">
-                    {patient.allergies.map((allergy, index) => (
-                      <Badge key={index} variant="destructive" className="text-xs">
-                        {allergy}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div>
-                  <h4 className="font-medium mb-2">Ongoing Medications</h4>
-                  <div className="space-y-1">
-                    {patient.ongoingMedications.map((med, index) => (
-                      <div key={index} className="text-sm bg-muted p-2 rounded">
-                        {med}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Column - Prescription Form */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Diagnosis Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Diagnosis</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Enter diagnosis (ICD-10 codes supported)"
-                    value={currentDiagnosis}
-                    onChange={(e) => setCurrentDiagnosis(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && addDiagnosis()}
-                  />
-                  <Button onClick={addDiagnosis}>Add</Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {diagnoses.map((diagnosis, index) => (
-                    <Badge key={index} variant="outline" className="gap-2">
-                      {diagnosis}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-4 w-4 p-0"
-                        onClick={() => removeDiagnosis(index)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
+              <div>
+                <h4 className="font-medium mb-2 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-orange-500" />
+                  Allergies
+                </h4>
+                <div className="flex flex-wrap gap-1">
+                  {patient.allergies.map((allergy, index) => (
+                    <Badge key={index} variant="destructive" className="text-xs">
+                      {allergy}
                     </Badge>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
 
-            {/* Medicine Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  Medications
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => setIsVoiceRecording(!isVoiceRecording)}
-                  >
-                    <Mic className={`h-4 w-4 ${isVoiceRecording ? 'text-red-500' : ''}`} />
-                    Voice Input
-                  </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Add Medicine Form */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 border rounded-lg bg-muted/50">
-                  <div>
-                    <Label>Medicine Name</Label>
-                    <Select
-                      value={currentMedicine.name}
-                      onValueChange={(value) => setCurrentMedicine({...currentMedicine, name: value})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select or type medicine" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {commonMedicines.map(med => (
-                          <SelectItem key={med} value={med}>{med}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+              <Separator />
 
-                  <div>
-                    <Label>Frequency</Label>
-                    <Select
-                      value={currentMedicine.frequency}
-                      onValueChange={(value) => setCurrentMedicine({...currentMedicine, frequency: value})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select frequency" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {frequencyOptions.map(freq => (
-                          <SelectItem key={freq.value} value={freq.value}>{freq.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+              <div>
+                <h4 className="font-medium mb-2">Ongoing Medications</h4>
+                <ul className="text-sm space-y-1">
+                  {patient.ongoingMedications.map((medication, index) => (
+                    <li key={index} className="text-muted-foreground">• {medication}</li>
+                  ))}
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-                  <div>
-                    <Label>Duration (days)</Label>
-                    <Input
-                      type="number"
-                      placeholder="7"
-                      value={currentMedicine.duration}
-                      onChange={(e) => setCurrentMedicine({...currentMedicine, duration: e.target.value})}
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Instructions</Label>
-                    <Select
-                      value={currentMedicine.instructions}
-                      onValueChange={(value) => setCurrentMedicine({...currentMedicine, instructions: value})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select instruction" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="before-food">Before Food</SelectItem>
-                        <SelectItem value="after-food">After Food</SelectItem>
-                        <SelectItem value="with-food">With Food</SelectItem>
-                        <SelectItem value="empty-stomach">Empty Stomach</SelectItem>
-                        <SelectItem value="sos">SOS</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label>Timing</Label>
-                    <div className="flex gap-2 mt-1">
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          checked={currentMedicine.timing?.morning}
-                          onCheckedChange={(checked) => 
-                            setCurrentMedicine({
-                              ...currentMedicine, 
-                              timing: {...currentMedicine.timing!, morning: checked}
-                            })
-                          }
-                        />
-                        <Label className="text-xs">Morning</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          checked={currentMedicine.timing?.afternoon}
-                          onCheckedChange={(checked) => 
-                            setCurrentMedicine({
-                              ...currentMedicine, 
-                              timing: {...currentMedicine.timing!, afternoon: checked}
-                            })
-                          }
-                        />
-                        <Label className="text-xs">Afternoon</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          checked={currentMedicine.timing?.night}
-                          onCheckedChange={(checked) => 
-                            setCurrentMedicine({
-                              ...currentMedicine, 
-                              timing: {...currentMedicine.timing!, night: checked}
-                            })
-                          }
-                        />
-                        <Label className="text-xs">Night</Label>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-end">
-                    <Button onClick={addMedicine} className="w-full">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Medicine
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Medicine List */}
-                <div className="space-y-4">
-                  {Object.entries(groupMedicinesByTiming()).map(([timing, meds]) => (
-                    meds.length > 0 && (
-                      <div key={timing}>
-                        <h4 className="font-medium capitalize mb-2 flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
-                          {timing} Medications
-                        </h4>
-                        <div className="space-y-2">
-                          {meds.map((medicine) => (
-                            <div key={medicine.id} className="flex items-center justify-between p-3 border rounded-lg">
-                              <div className="flex-1">
-                                <div className="font-medium">{medicine.name}</div>
-                                <div className="text-sm text-muted-foreground">
-                                  {medicine.frequency} • {medicine.duration} days • {medicine.instructions}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => duplicateMedicine(medicine)}
-                                >
-                                  <Copy className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeMedicine(medicine.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )
+        {/* Right Column - Prescription Writing */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Diagnosis Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Diagnosis</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2 mb-4">
+                <Input
+                  placeholder="Enter diagnosis (with ICD code if available)"
+                  value={currentDiagnosis}
+                  onChange={(e) => setCurrentDiagnosis(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && addDiagnosis()}
+                />
+                <Button onClick={addDiagnosis}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              {diagnoses.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {diagnoses.map((diagnosis, index) => (
+                    <Badge key={index} variant="secondary" className="gap-2">
+                      {diagnosis}
+                      <button onClick={() => removeDiagnosis(index)}>
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </Badge>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
+              )}
+            </CardContent>
+          </Card>
 
-            {/* Lab Tests Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Laboratory Tests</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex gap-2">
-                  <Select
-                    value={currentLabTest}
-                    onValueChange={setCurrentLabTest}
-                  >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Select lab test" />
+          {/* Medicine Entry */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Medications</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Add Medicine Form */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/50">
+                <div>
+                  <Label htmlFor="medicine-name">Medicine Name</Label>
+                  <Input
+                    id="medicine-name"
+                    placeholder="Start typing medicine name..."
+                    value={currentMedicine.name}
+                    onChange={(e) => setCurrentMedicine({...currentMedicine, name: e.target.value})}
+                    list="medicine-suggestions"
+                  />
+                  <datalist id="medicine-suggestions">
+                    {commonMedicines.map((med, index) => (
+                      <option key={index} value={med} />
+                    ))}
+                  </datalist>
+                </div>
+                
+                <div>
+                  <Label htmlFor="frequency">Frequency</Label>
+                  <Select onValueChange={(value) => setCurrentMedicine({...currentMedicine, frequency: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select frequency" />
                     </SelectTrigger>
                     <SelectContent>
-                      {commonLabTests.map(test => (
-                        <SelectItem key={test} value={test}>{test}</SelectItem>
+                      {frequencyOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button onClick={addLabTest}>Add</Button>
                 </div>
+
+                <div>
+                  <Label htmlFor="duration">Duration (days)</Label>
+                  <Input
+                    id="duration"
+                    type="number"
+                    placeholder="7"
+                    value={currentMedicine.duration}
+                    onChange={(e) => setCurrentMedicine({...currentMedicine, duration: e.target.value})}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="instructions">Instructions</Label>
+                  <Select onValueChange={(value) => setCurrentMedicine({...currentMedicine, instructions: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select instruction" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Before Food">Before Food</SelectItem>
+                      <SelectItem value="After Food">After Food</SelectItem>
+                      <SelectItem value="With Food">With Food</SelectItem>
+                      <SelectItem value="Empty Stomach">Empty Stomach</SelectItem>
+                      <SelectItem value="As Needed">As Needed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="md:col-span-2">
+                  <Label>Timing</Label>
+                  <div className="flex gap-4 mt-2">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="morning"
+                        checked={currentMedicine.timing?.morning}
+                        onCheckedChange={(checked) => setCurrentMedicine({
+                          ...currentMedicine,
+                          timing: {...currentMedicine.timing, morning: checked}
+                        })}
+                      />
+                      <Label htmlFor="morning">Morning</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="afternoon"
+                        checked={currentMedicine.timing?.afternoon}
+                        onCheckedChange={(checked) => setCurrentMedicine({
+                          ...currentMedicine,
+                          timing: {...currentMedicine.timing, afternoon: checked}
+                        })}
+                      />
+                      <Label htmlFor="afternoon">Afternoon</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="night"
+                        checked={currentMedicine.timing?.night}
+                        onCheckedChange={(checked) => setCurrentMedicine({
+                          ...currentMedicine,
+                          timing: {...currentMedicine.timing, night: checked}
+                        })}
+                      />
+                      <Label htmlFor="night">Night</Label>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 flex gap-2">
+                  <Button onClick={addMedicine} className="flex-1">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Medicine
+                  </Button>
+                </div>
+              </div>
+
+              {/* Medicine List */}
+              {medicines.length > 0 && (
+                <div className="space-y-3">
+                  {medicines.map((medicine) => (
+                    <div key={medicine.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <h4 className="font-medium">{medicine.name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {medicine.frequency} • {medicine.duration} days • {medicine.instructions}
+                        </p>
+                        <div className="flex gap-1 mt-1">
+                          {medicine.timing.morning && <Badge variant="outline" className="text-xs">Morning</Badge>}
+                          {medicine.timing.afternoon && <Badge variant="outline" className="text-xs">Afternoon</Badge>}
+                          {medicine.timing.night && <Badge variant="outline" className="text-xs">Night</Badge>}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => duplicateMedicine(medicine)}>
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => removeMedicine(medicine.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Lab Tests Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Laboratory Tests</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2 mb-4">
+                <Input
+                  placeholder="Enter lab test name"
+                  value={currentLabTest}
+                  onChange={(e) => setCurrentLabTest(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && addLabTest()}
+                  list="lab-suggestions"
+                />
+                <datalist id="lab-suggestions">
+                  {commonLabTests.map((test, index) => (
+                    <option key={index} value={test} />
+                  ))}
+                </datalist>
+                <Button onClick={addLabTest}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              {labTests.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {labTests.map((test, index) => (
                     <Badge key={index} variant="outline" className="gap-2">
                       {test}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-4 w-4 p-0"
-                        onClick={() => removeLabTest(index)}
-                      >
+                      <button onClick={() => removeLabTest(index)}>
                         <Trash2 className="h-3 w-3" />
-                      </Button>
+                      </button>
                     </Badge>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
+              )}
+            </CardContent>
+          </Card>
 
-            {/* Advice Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Medical Advice</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  placeholder="Enter medical advice, lifestyle recommendations, or special instructions..."
-                  value={advice}
-                  onChange={(e) => setAdvice(e.target.value)}
-                  rows={6}
-                />
-                <div className="mt-2 text-xs text-muted-foreground">
-                  Common templates: Drink plenty of fluids • Rest for 2-3 days • Follow up in 1 week
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Advice Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Medical Advice</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                placeholder="Enter medical advice, lifestyle recommendations, or special instructions..."
+                value={advice}
+                onChange={(e) => setAdvice(e.target.value)}
+                rows={6}
+              />
+              <div className="mt-2 text-xs text-muted-foreground">
+                Common templates: Drink plenty of fluids • Rest for 2-3 days • Follow up in 1 week
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
