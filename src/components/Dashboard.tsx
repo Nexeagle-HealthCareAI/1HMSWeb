@@ -147,12 +147,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
   const navigation = [
     { id: 'dashboard', name: 'Dashboard', icon: Home },
+    { id: 'calendar', name: 'Calendar', icon: Calendar },
     { id: 'appointments', name: 'Appointment Scheduler', icon: Calendar },
     { id: 'patients', name: 'Patients', icon: Users },
     { id: 'billing', name: 'Billing', icon: CreditCard },
     { id: 'doc-ai', name: 'DocAI', icon: Bot },
     { id: 'chat', name: 'Chat', icon: MessageCircle },
     { id: 'bulk-messaging', name: 'Bulk Messaging', icon: Send },
+    { id: 'admin', name: 'Admin Panel', icon: Settings },
     { id: 'user-management', name: 'User Management', icon: Settings }
   ];
 
@@ -169,6 +171,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
   const renderContent = () => {
     switch (currentPage) {
+      case 'calendar':
+        window.location.href = '/calendar';
+        return null;
+      case 'admin':
+        window.location.href = '/admin';
+        return null;
       case 'appointments':
         return <AppointmentBooking />;
       case 'patients':
@@ -268,7 +276,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                             <Button 
                               variant="link" 
                               className="p-0 h-auto font-medium text-healthcare-primary"
-                              onClick={() => setSelectedPatientId(patient.id)}
+                              onClick={() => window.location.href = `/prescription/${patient.id}`}
                             >
                               {patient.id}
                             </Button>
@@ -296,7 +304,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                           <Button 
                             variant="link" 
                             className="p-0 h-auto font-medium text-healthcare-primary text-lg"
-                            onClick={() => setSelectedPatientId(patient.id)}
+                            onClick={() => window.location.href = `/prescription/${patient.id}`}
                           >
                             {patient.id}
                           </Button>
