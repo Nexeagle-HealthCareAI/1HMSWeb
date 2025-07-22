@@ -191,11 +191,11 @@ export const AppointmentDashboard = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-subtle overflow-hidden">
-      <div className="flex-1 flex flex-col p-2 md:p-6 space-y-4 md:space-y-6 overflow-hidden">
+    <div className="min-h-screen bg-gradient-subtle">
+      <div className="flex flex-col p-2 md:p-6 space-y-4 md:space-y-6">
         
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 md:gap-4 flex-shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 md:gap-4">
           <div className="flex items-center gap-2 md:gap-3">
             <Calendar className="h-6 w-6 md:h-8 md:w-8 text-healthcare-primary" />
             <h1 className="text-xl md:text-3xl font-bold text-foreground">📅 Appointment Dashboard</h1>
@@ -320,8 +320,8 @@ export const AppointmentDashboard = () => {
         </Card>
 
         {/* Enhanced Appointments Table with Status Navigation */}
-        <Card className="bg-card shadow-card rounded-xl border-0 flex-1 flex flex-col overflow-hidden">
-          <CardHeader className="flex-shrink-0 pb-3">
+        <Card className="bg-card shadow-card rounded-xl border-0">
+          <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-foreground text-lg md:text-xl">
               <Clock className="h-4 w-4 md:h-5 md:w-5 text-healthcare-primary" />
               📊 Patient Journey Dashboard
@@ -332,7 +332,7 @@ export const AppointmentDashboard = () => {
           </CardHeader>
 
           {/* Simple Patient Journey Navigation */}
-          <div className="px-6 pb-4 flex-shrink-0">
+          <div className="px-6 pb-4">
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={() => setSelectedStatus('vitals-required')}
@@ -402,7 +402,7 @@ export const AppointmentDashboard = () => {
             </div>
           </div>
           
-          <CardContent className="p-6 flex-1 overflow-hidden">
+          <CardContent className="p-6">
             {/* Always Show Table */}
             <div className="w-full">
               {/* Desktop Table */}
