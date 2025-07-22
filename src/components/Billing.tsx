@@ -26,6 +26,8 @@ import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { ContextualGuide } from './guide/ContextualGuide';
+import { BILLING_GUIDES } from './guide/GuideData';
 
 import { FinancialReports } from './billing/FinancialReports';
 import { PatientBillManagement } from './billing/PatientBillManagement';

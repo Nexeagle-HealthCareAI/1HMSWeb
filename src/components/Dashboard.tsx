@@ -151,7 +151,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [showProfileCompletion, setShowProfileCompletion] = useState(true);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
 
-  const navigation = [
+const navigation = [
     { id: 'dashboard', name: 'Dashboard', icon: Home },
     { id: 'admin', name: 'Admin Panel', icon: Settings },
     { id: 'calendar', name: 'Calendar', icon: Calendar },
@@ -161,6 +161,34 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     { id: 'chat', name: 'Chat', icon: MessageCircle },
     { id: 'bulk-messaging', name: 'Bulk Messaging', icon: Send }
   ];
+
+  const getNavDescription = (id: string) => {
+    switch (id) {
+      case 'dashboard': return 'Your main control center with key metrics and today\'s overview.';
+      case 'admin': return 'Manage users, system settings, and hospital configuration.';
+      case 'calendar': return 'View your schedule and manage appointments efficiently.';
+      case 'appointments': return 'Book, reschedule, and manage patient appointments.';
+      case 'billing': return 'Handle payments, insurance claims, and financial reports.';
+      case 'doc-ai': return 'Get AI-powered medical assistance and clinical insights.';
+      case 'chat': return 'Communicate with your team and colleagues instantly.';
+      case 'bulk-messaging': return 'Send notifications and messages to multiple patients.';
+      default: return 'Navigate to this section for more features.';
+    }
+  };
+
+  const getNavTips = (id: string) => {
+    switch (id) {
+      case 'dashboard': return ['View daily statistics', 'Quick access to all modules', 'Monitor hospital performance'];
+      case 'admin': return ['User management', 'Role permissions', 'System configuration'];
+      case 'calendar': return ['Color-coded appointments', 'Drag & drop scheduling', 'Multiple view modes'];
+      case 'appointments': return ['Real-time availability', 'Auto-conflict detection', 'SMS confirmations'];
+      case 'billing': return ['Multiple payment methods', 'Insurance processing', 'Automated reports'];
+      case 'doc-ai': return ['Medical consultations', 'Drug interactions', 'Diagnosis assistance'];
+      case 'chat': return ['Team communication', 'File sharing', 'Real-time messaging'];
+      case 'bulk-messaging': return ['Patient notifications', 'Appointment reminders', 'Health campaigns'];
+      default: return ['Explore features', 'Easy navigation'];
+    }
+  };
 
   const getStatusBadge = (status: Patient['status']) => {
     const statusConfig = {
@@ -384,20 +412,34 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         </div>
 
         <nav className="p-4 space-y-2">
-          {navigation.map((item) => (
-            <Button
-              key={item.id}
-              variant={currentPage === item.id ? "default" : "ghost"}
-              className="w-full justify-start gap-3"
-              onClick={() => {
-                setCurrentPage(item.id);
-                setSidebarOpen(false);
-              }}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.name}
-            </Button>
-          ))}
+          <ContextualGuide {...DASHBOARD_GUIDES['sidebar-nav']}>
+            <div className="space-y-2">
+              {navigation.map((item) => (
+                <ContextualGuide
+                  key={item.id}
+                  id={`nav-${item.id}`}
+                  title={`🎯 ${item.name}`}
+                  description={getNavDescription(item.id)}
+                  tips={getNavTips(item.id)}
+                  priority="medium"
+                  placement="right"
+                  triggerMode="hover"
+                >
+                  <Button
+                    variant={currentPage === item.id ? "default" : "ghost"}
+                    className="w-full justify-start gap-3"
+                    onClick={() => {
+                      setCurrentPage(item.id);
+                      setSidebarOpen(false);
+                    }}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {item.name}
+                  </Button>
+                </ContextualGuide>
+              ))}
+            </div>
+          </ContextualGuide>
         </nav>
 
         <div className="absolute bottom-4 left-4 right-4">
@@ -433,43 +475,49 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
             <div className="flex items-center gap-4">
               {/* Profile Completion Meter */}
-              <div className="hidden md:flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
-                <div className="w-16 h-2 bg-background rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-primary transition-all duration-300" 
-                    style={{ width: '75%' }}
-                  />
+              <ContextualGuide {...DASHBOARD_GUIDES['profile-completion']}>
+                <div className="hidden md:flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
+                  <div className="w-16 h-2 bg-background rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-primary transition-all duration-300" 
+                      style={{ width: '75%' }}
+                    />
+                  </div>
+                  <span className="text-xs font-medium">75%</span>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="p-0 h-auto text-xs text-healthcare-primary"
+                    onClick={() => setShowProfileCompletion(true)}
+                  >
+                    Complete Profile
+                  </Button>
                 </div>
-                <span className="text-xs font-medium">75%</span>
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="p-0 h-auto text-xs text-healthcare-primary"
-                  onClick={() => setShowProfileCompletion(true)}
-                >
-                  Complete Profile
-                </Button>
-              </div>
+              </ContextualGuide>
 
               {/* Notifications */}
-              <Button variant="ghost" size="sm" className="relative">
-                <Bell className="h-4 w-4" />
-                <span className="absolute -top-1 -right-1 h-2 w-2 bg-healthcare-error rounded-full"></span>
-              </Button>
+              <ContextualGuide {...DASHBOARD_GUIDES['notifications']}>
+                <Button variant="ghost" size="sm" className="relative">
+                  <Bell className="h-4 w-4" />
+                  <span className="absolute -top-1 -right-1 h-2 w-2 bg-healthcare-error rounded-full"></span>
+                </Button>
+              </ContextualGuide>
 
               {/* Language Switcher */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <Globe className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem>English</DropdownMenuItem>
-                  <DropdownMenuItem>हिंदी</DropdownMenuItem>
-                  <DropdownMenuItem>தமிழ்</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <ContextualGuide {...DASHBOARD_GUIDES['language-switcher']}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <Globe className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem>English</DropdownMenuItem>
+                    <DropdownMenuItem>हिंदी</DropdownMenuItem>
+                    <DropdownMenuItem>தமিழ்</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </ContextualGuide>
 
               {/* Profile Dropdown */}
               <DropdownMenu>

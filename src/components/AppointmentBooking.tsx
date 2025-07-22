@@ -8,6 +8,8 @@ import { PatientForm } from './booking/PatientForm';
 import { BookingSuccess } from './booking/BookingSuccess';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
+import { ContextualGuide } from './guide/ContextualGuide';
+import { APPOINTMENT_GUIDES } from './guide/GuideData';
 
 export interface Doctor {
   id: string;
@@ -178,15 +180,17 @@ export const AppointmentBooking: React.FC = () => {
     <div className="min-h-screen bg-gradient-subtle">
       <div className="flex flex-col lg:flex-row min-h-screen">
         {/* Sidebar */}
-        <div className="lg:w-80 lg:flex-shrink-0">
-          <DepartmentSidebar
-            departments={departments}
-            selectedDepartment={selectedDepartment}
-            selectedDoctor={selectedDoctor}
-            onDepartmentSelect={handleDepartmentSelect}
-            onDoctorSelect={setSelectedDoctor}
-          />
-        </div>
+        <ContextualGuide {...APPOINTMENT_GUIDES['department-selector']}>
+          <div className="lg:w-80 lg:flex-shrink-0">
+            <DepartmentSidebar
+              departments={departments}
+              selectedDepartment={selectedDepartment}
+              selectedDoctor={selectedDoctor}
+              onDepartmentSelect={handleDepartmentSelect}
+              onDoctorSelect={setSelectedDoctor}
+            />
+          </div>
+        </ContextualGuide>
 
         {/* Main Content */}
         <div className="flex-1 p-4 lg:p-6">
@@ -215,13 +219,15 @@ export const AppointmentBooking: React.FC = () => {
             />
 
             {/* Time Slots */}
-            <TimeSlots
-              timeSlots={timeSlots}
-              selectedShift={selectedShift}
-              onSlotSelect={handleSlotSelect}
-              onSlotUpdate={handleSlotUpdate}
-              onSlotCancel={handleSlotCancel}
-            />
+            <ContextualGuide {...APPOINTMENT_GUIDES['time-slots']}>
+              <TimeSlots
+                timeSlots={timeSlots}
+                selectedShift={selectedShift}
+                onSlotSelect={handleSlotSelect}
+                onSlotUpdate={handleSlotUpdate}
+                onSlotCancel={handleSlotCancel}
+              />
+            </ContextualGuide>
           </Card>
         </div>
       </div>
