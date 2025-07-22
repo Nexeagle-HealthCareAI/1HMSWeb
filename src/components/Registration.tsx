@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Check, X, Shield, ArrowLeft, Phone, User, Lock, Sparkles, Star, Award, Zap, Heart, Globe } from 'lucide-react';
+import { Check, X, Shield, ArrowLeft, Phone, User, Lock, Sparkles, Star, Award, Zap, Heart, Globe, UserCheck, Crown, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,11 +14,11 @@ interface RegistrationProps {
 
 export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitchToLogin }) => {
   const [step, setStep] = useState(1);
+  const [userType, setUserType] = useState('');
   const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [doctorName, setDoctorName] = useState('');
   const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
@@ -29,11 +29,10 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
     hasUpper: /[A-Z]/.test(password),
     hasLower: /[a-z]/.test(password),
     hasNumber: /\d/.test(password),
-    hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(password)
   };
 
   const passwordStrength = Object.values(passwordValidation).filter(Boolean).length;
-  const progressPercentage = step === 1 ? 33 : step === 2 ? 66 : 100;
+  const progressPercentage = step === 1 ? 25 : step === 2 ? 50 : step === 3 ? 75 : 100;
 
   // Format mobile number
   const formatMobile = (value: string) => {
@@ -43,13 +42,6 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
     }
     return cleaned.slice(0, 10);
   };
-
-  // Auto-send OTP when valid mobile is entered
-  useEffect(() => {
-    if (mobile.length === 10 && !otpSent) {
-      sendOTP();
-    }
-  }, [mobile]);
 
   // OTP timer
   useEffect(() => {
@@ -66,9 +58,26 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
     }
   }, [otp]);
 
+  const handleUserTypeSelection = (type: string) => {
+    setUserType(type);
+    setStep(2);
+    toast({
+      title: "Great Choice! 🎯",
+      description: `Selected: ${type === 'doctor' ? 'Doctor & Admin' : 'Admin Only'}`
+    });
+  };
+
   const sendOTP = async () => {
+    if (mobile.length !== 10) {
+      toast({
+        title: "Invalid Mobile",
+        description: "Please enter a valid 10-digit mobile number",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
-    // Simulate OTP sending
     setTimeout(() => {
       setIsLoading(false);
       setOtpSent(true);
@@ -82,43 +91,35 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
 
   const verifyOTP = async () => {
     setIsLoading(true);
-    // Simulate OTP verification
     setTimeout(() => {
       setIsLoading(false);
-      setStep(2);
+      setStep(3);
       toast({
         title: "Mobile Verified! ✅",
-        description: "Let's complete your profile"
+        description: "Almost done! Set up your email & password"
       });
     }, 1000);
   };
 
-  const handleStepTwo = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!doctorName || !email) {
+  const handleSkip = () => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
       toast({
-        title: "Missing Information",
-        description: "Please fill in all fields",
-        variant: "destructive"
+        title: "Welcome to NexEagle! 🎉",
+        description: "Account created successfully! You can add email later."
       });
-      return;
-    }
-
-    setStep(3);
-    toast({
-      title: "Almost Done! 🎯",
-      description: "Just set up your password"
-    });
+      onRegister();
+    }, 1000);
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleFinalStep = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!password) {
+    if (!email || !password) {
       toast({
-        title: "Error",
-        description: "Please create a password",
+        title: "Missing Information",
+        description: "Please fill in all fields or skip this step",
         variant: "destructive"
       });
       return;
@@ -134,7 +135,6 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
     }
 
     setIsLoading(true);
-    
     setTimeout(() => {
       setIsLoading(false);
       toast({
@@ -145,20 +145,31 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
     }, 1500);
   };
 
-  const benefits = [
-    { icon: Zap, title: "Lightning Fast", desc: "Get started in under 60 seconds" },
-    { icon: Shield, title: "Bank-Level Security", desc: "Your data is protected with military-grade encryption" },
-    { icon: Heart, title: "Loved by 10K+ Doctors", desc: "Join the fastest-growing HMS platform" },
-    { icon: Globe, title: "Available 24/7", desc: "Access your practice anywhere, anytime" },
-    { icon: Star, title: "5-Star Rated", desc: "Top-rated by healthcare professionals" },
-    { icon: Award, title: "Industry Leader", desc: "Trusted by leading healthcare institutions" }
+  const userTypes = [
+    {
+      id: 'doctor',
+      title: 'Doctor & Admin',
+      subtitle: 'Full access to all features',
+      description: 'Manage patients, appointments, prescriptions, billing & admin functions',
+      icon: UserCheck,
+      color: 'from-blue-500 to-cyan-500',
+      benefits: ['Patient Management', 'E-Prescriptions', 'Appointment Booking', 'Billing & Reports', 'Admin Dashboard']
+    },
+    {
+      id: 'admin',
+      title: 'Admin Only',
+      subtitle: 'Administrative access',
+      description: 'Handle appointments, billing, reports and administrative tasks',
+      icon: Crown,
+      color: 'from-purple-500 to-pink-500',
+      benefits: ['Appointment Management', 'Billing & Invoicing', 'Reports & Analytics', 'User Management', 'System Settings']
+    }
   ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex">
       {/* Left side - Benefits & Promotional */}
       <div className="hidden lg:flex w-2/3 relative overflow-hidden">
-        {/* Animated Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700">
           <div className="absolute inset-0 opacity-20">
             <div className="absolute inset-0 bg-white/5" style={{
@@ -168,7 +179,6 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
           </div>
         </div>
         
-        {/* Content */}
         <div className="relative z-10 flex flex-col justify-center p-12 text-white max-w-2xl mx-auto">
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-3 mb-6">
@@ -199,22 +209,6 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
             </div>
           </div>
 
-          {/* Benefits Grid */}
-          <div className="grid grid-cols-2 gap-4">
-            {benefits.map((benefit, index) => (
-              <div 
-                key={index}
-                className="flex items-start gap-3 p-4 bg-white/10 backdrop-blur-sm rounded-xl hover:bg-white/20 transition-all duration-300"
-              >
-                <benefit.icon className="h-6 w-6 mt-1 flex-shrink-0 text-yellow-300" />
-                <div>
-                  <h3 className="font-semibold text-sm">{benefit.title}</h3>
-                  <p className="text-xs opacity-80 mt-1">{benefit.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
           {/* Call to Action */}
           <div className="mt-8 p-6 bg-gradient-to-r from-yellow-400/20 to-orange-400/20 backdrop-blur-sm rounded-2xl border border-white/20">
             <div className="flex items-center gap-3 mb-2">
@@ -237,7 +231,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onSwitchToLogin}
+                onClick={step === 1 ? onSwitchToLogin : () => setStep(step - 1)}
                 className="p-2 hover:bg-gray-100 rounded-full"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -252,30 +246,72 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
             <div className="space-y-2">
               <div className="flex justify-center">
                 <div className="p-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg">
-                  {step === 1 && <Phone className="h-8 w-8 text-white" />}
-                  {step === 2 && <User className="h-8 w-8 text-white" />}
-                  {step === 3 && <Lock className="h-8 w-8 text-white" />}
+                  {step === 1 && <Building2 className="h-8 w-8 text-white" />}
+                  {step === 2 && <Phone className="h-8 w-8 text-white" />}
+                  {step === 3 && <User className="h-8 w-8 text-white" />}
                 </div>
               </div>
               
               <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                {step === 1 && "Quick Verification"}
-                {step === 2 && "Your Details"}
-                {step === 3 && "Secure Password"}
+                {step === 1 && "Choose Your Role"}
+                {step === 2 && "Quick Verification"}
+                {step === 3 && "Almost Done!"}
               </CardTitle>
               
               <p className="text-muted-foreground text-sm">
-                {step === 1 && "Lightning fast mobile verification"}
-                {step === 2 && "Tell us a bit about yourself"}
-                {step === 3 && "Protect your account with a strong password"}
+                {step === 1 && "Select the access level that suits you best"}
+                {step === 2 && "Secure your account with mobile verification"}
+                {step === 3 && "Set up email & password (optional)"}
               </p>
             </div>
           </CardHeader>
           
           <CardContent className="space-y-6">
-            {/* Step 1: Mobile Verification */}
+            {/* Step 1: User Type Selection */}
             {step === 1 && (
-              <div className="space-y-4">
+              <div className="space-y-4 animate-fade-in">
+                {userTypes.map((type) => (
+                  <div
+                    key={type.id}
+                    onClick={() => handleUserTypeSelection(type.id)}
+                    className="group cursor-pointer transform transition-all duration-300 hover:scale-105"
+                  >
+                    <Card className="border-2 border-transparent hover:border-blue-300 hover:shadow-lg transition-all duration-300">
+                      <CardContent className="p-6">
+                        <div className="flex items-start gap-4">
+                          <div className={`p-3 rounded-xl bg-gradient-to-br ${type.color} shadow-md group-hover:shadow-lg transition-shadow`}>
+                            <type.icon className="h-6 w-6 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-bold text-lg text-gray-900 group-hover:text-blue-600 transition-colors">
+                              {type.title}
+                            </h3>
+                            <p className="text-sm text-blue-600 font-medium mb-2">{type.subtitle}</p>
+                            <p className="text-sm text-gray-600 mb-3">{type.description}</p>
+                            <div className="flex flex-wrap gap-1">
+                              {type.benefits.slice(0, 3).map((benefit, idx) => (
+                                <span key={idx} className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded-full">
+                                  {benefit}
+                                </span>
+                              ))}
+                              {type.benefits.length > 3 && (
+                                <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
+                                  +{type.benefits.length - 3} more
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Step 2: Mobile Verification */}
+            {step === 2 && (
+              <div className="space-y-4 animate-fade-in">
                 <div className="space-y-2">
                   <Label htmlFor="mobile" className="text-sm font-medium">Mobile Number</Label>
                   <div className="flex">
@@ -299,6 +335,16 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
                     </div>
                   )}
                 </div>
+
+                {!otpSent && (
+                  <Button 
+                    onClick={sendOTP}
+                    disabled={mobile.length !== 10 || isLoading}
+                    className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-lg shadow-lg transition-all duration-200"
+                  >
+                    {isLoading ? "Sending OTP..." : "Send OTP"}
+                  </Button>
+                )}
 
                 {otpSent && (
                   <div className="space-y-3 animate-fade-in">
@@ -335,132 +381,100 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
                   </div>
                 )}
 
-                {isLoading && (
+                {isLoading && otpSent && (
                   <div className="text-center py-6">
                     <div className="inline-flex items-center gap-3 text-blue-600">
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                      <span className="font-medium">
-                        {!otpSent ? "Sending OTP..." : "Verifying..."}
-                      </span>
+                      <span className="font-medium">Verifying...</span>
                     </div>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Step 2: Profile Information */}
-            {step === 2 && (
-              <form onSubmit={handleStepTwo} className="space-y-4 animate-fade-in">
-                <div className="space-y-2">
-                  <Label htmlFor="doctorName" className="text-sm font-medium">Full Name</Label>
-                  <Input
-                    id="doctorName"
-                    type="text"
-                    value={doctorName}
-                    onChange={(e) => setDoctorName(e.target.value)}
-                    placeholder="Dr. John Smith"
-                    className="h-12 focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="doctor@hospital.com"
-                    className="h-12 focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <Button 
-                  type="submit" 
-                  className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-lg shadow-lg transition-all duration-200"
-                >
-                  Continue to Password
-                </Button>
-              </form>
-            )}
-
-            {/* Step 3: Password Creation */}
+            {/* Step 3: Email & Password (Optional) */}
             {step === 3 && (
-              <form onSubmit={handleRegister} className="space-y-4 animate-fade-in">
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium">Create Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Create a strong password"
-                    className="h-12 focus:ring-2 focus:ring-blue-500"
-                  />
-                  
-                  {password && (
-                    <div className="space-y-3 mt-3">
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        {Object.entries({
-                          '8+ characters': passwordValidation.minLength,
-                          'Uppercase': passwordValidation.hasUpper,
-                          'Lowercase': passwordValidation.hasLower,
-                          'Number': passwordValidation.hasNumber,
-                          'Special char': passwordValidation.hasSpecial
-                        }).map(([label, valid]) => (
-                          <div key={label} className={`flex items-center gap-2 p-2 rounded-lg ${valid ? 'text-green-700 bg-green-50' : 'text-gray-500 bg-gray-50'}`}>
-                            {valid ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
-                            <span className="font-medium">{label}</span>
-                          </div>
-                        ))}
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Password Strength</span>
-                          <span className={`font-semibold ${
-                            passwordStrength <= 2 ? 'text-red-500' : 
-                            passwordStrength <= 3 ? 'text-yellow-500' : 
-                            'text-green-500'
-                          }`}>
-                            {passwordStrength <= 2 ? 'Weak' : passwordStrength <= 3 ? 'Fair' : 'Strong'}
-                          </span>
-                        </div>
-                        <div className="flex gap-1">
-                          {[1, 2, 3, 4, 5].map((i) => (
-                            <div
-                              key={i}
-                              className={`h-2 flex-1 rounded-full transition-all duration-300 ${
-                                i <= passwordStrength
-                                  ? i <= 2 ? 'bg-red-400' : i <= 3 ? 'bg-yellow-400' : 'bg-green-400'
-                                  : 'bg-gray-200'
-                              }`}
-                            />
+              <div className="space-y-4 animate-fade-in">
+                <div className="text-center mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-700">
+                    <strong>Optional:</strong> Add email & password for enhanced security, or skip to continue
+                  </p>
+                </div>
+
+                <form onSubmit={handleFinalStep} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-sm font-medium">Email Address (Optional)</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="your@email.com"
+                      className="h-12 focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-sm font-medium">Password (Optional)</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Create a secure password"
+                      className="h-12 focus:ring-2 focus:ring-blue-500"
+                    />
+                    
+                    {password && (
+                      <div className="space-y-2 mt-3">
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          {Object.entries({
+                            '8+ chars': passwordValidation.minLength,
+                            'Uppercase': passwordValidation.hasUpper,
+                            'Lowercase': passwordValidation.hasLower,
+                            'Number': passwordValidation.hasNumber,
+                          }).map(([label, valid]) => (
+                            <div key={label} className={`flex items-center gap-2 p-2 rounded-lg ${valid ? 'text-green-700 bg-green-50' : 'text-gray-500 bg-gray-50'}`}>
+                              {valid ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                              <span className="font-medium">{label}</span>
+                            </div>
                           ))}
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
 
-                <Button 
-                  type="submit" 
-                  className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg shadow-lg transition-all duration-200 disabled:opacity-50"
-                  disabled={isLoading || passwordStrength < 3}
-                >
-                  {isLoading ? (
-                    <div className="flex items-center gap-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      Creating Account...
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4" />
-                      Create My Account
-                    </div>
-                  )}
-                </Button>
-              </form>
+                  <div className="flex gap-3">
+                    <Button 
+                      type="button"
+                      onClick={handleSkip}
+                      variant="outline"
+                      className="flex-1 h-12 font-semibold border-2 hover:bg-gray-50"
+                      disabled={isLoading}
+                    >
+                      Skip for Now
+                    </Button>
+                    
+                    <Button 
+                      type="submit" 
+                      className="flex-1 h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg shadow-lg transition-all duration-200"
+                      disabled={isLoading || (password && passwordStrength < 3)}
+                    >
+                      {isLoading ? (
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Creating...
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4" />
+                          Complete Setup
+                        </div>
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </div>
             )}
 
             {/* Login Link */}
