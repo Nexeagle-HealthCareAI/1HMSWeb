@@ -27,7 +27,20 @@ import {
   Check,
   Shield,
   Copy,
-  UserCheck
+  UserCheck,
+  Search,
+  Filter,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  History,
+  Info,
+  ChevronRight,
+  ChevronDown,
+  MoreHorizontal,
+  Zap,
+  FileCheck,
+  Activity
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -41,6 +54,7 @@ import { Badge } from './ui/badge';
 import { Switch } from './ui/switch';
 import { Separator } from './ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import { EnhancedRoleManager } from './SystemConfigurationEnhanced';
 
 interface Department {
   id: string;
@@ -115,6 +129,27 @@ interface RolePermissions {
   permissions: {
     [moduleName: string]: Permission;
   };
+  createdAt?: Date;
+  modifiedAt?: Date;
+  modifiedBy?: string;
+  isCustom?: boolean;
+}
+
+interface AuditLog {
+  id: string;
+  roleId: string;
+  roleName: string;
+  action: 'created' | 'modified' | 'deleted';
+  changes: string;
+  modifiedBy: string;
+  timestamp: Date;
+}
+
+interface UserActivity {
+  userId: string;
+  lastLogin: Date;
+  modulesAccessed: string[];
+  roleHistory: { role: string; assignedAt: Date; assignedBy: string }[];
 }
 
 interface User {
@@ -133,8 +168,42 @@ const systemModules = [
   { key: 'prescriptions', name: 'Prescriptions' },
   { key: 'labReports', name: 'Lab Reports' },
   { key: 'pharmacy', name: 'Pharmacy' },
-  { key: 'userManagement', name: 'User Management' },
-  { key: 'systemConfig', name: 'System Configuration' }
+  { key: 'userManagement', name: 'User Management', category: 'Admin' },
+  { key: 'systemConfig', name: 'System Configuration', category: 'Admin' }
+];
+
+const moduleCategories = [
+  { key: 'clinical', name: 'Clinical', modules: ['patientProfile', 'appointments', 'prescriptions', 'labReports'] },
+  { key: 'financial', name: 'Financial', modules: ['billing', 'pharmacy'] },
+  { key: 'admin', name: 'Administration', modules: ['userManagement', 'systemConfig'] }
+];
+
+const permissionIcons = {
+  view: Eye,
+  create: Plus,
+  edit: Edit,
+  delete: Trash2,
+  approve: CheckCircle2
+};
+
+const sampleAuditLogs: AuditLog[] = [
+  { id: '1', roleId: 'doctor', roleName: 'Doctor', action: 'modified', changes: 'Added billing view permission', modifiedBy: 'Admin', timestamp: new Date('2024-01-15T10:30:00') },
+  { id: '2', roleId: 'receptionist', roleName: 'Receptionist', action: 'modified', changes: 'Updated appointment permissions', modifiedBy: 'Admin', timestamp: new Date('2024-01-14T09:15:00') }
+];
+
+const sampleUserActivities: UserActivity[] = [
+  { 
+    userId: 'U001', 
+    lastLogin: new Date('2024-01-15T14:30:00'), 
+    modulesAccessed: ['patientProfile', 'appointments', 'prescriptions'], 
+    roleHistory: [{ role: 'doctor', assignedAt: new Date('2024-01-01'), assignedBy: 'Admin' }] 
+  },
+  { 
+    userId: 'U002', 
+    lastLogin: new Date('2024-01-15T08:45:00'), 
+    modulesAccessed: ['patientProfile', 'appointments'], 
+    roleHistory: [{ role: 'receptionist', assignedAt: new Date('2024-01-01'), assignedBy: 'Admin' }] 
+  }
 ];
 
 const defaultPermission: Permission = {
@@ -279,6 +348,8 @@ export const SystemConfiguration: React.FC = () => {
   const [hospitalBranding, setHospitalBranding] = useState<HospitalBranding>(defaultBranding);
   const [roles, setRoles] = useState<RolePermissions[]>(sampleRoles);
   const [users, setUsers] = useState<User[]>(sampleUsers);
+  const [userActivities] = useState<UserActivity[]>(sampleUserActivities);
+  const [auditLogs] = useState<AuditLog[]>(sampleAuditLogs);
   const [showDepartmentDialog, setShowDepartmentDialog] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [showTemplatePreview, setShowTemplatePreview] = useState(false);
@@ -286,7 +357,22 @@ export const SystemConfiguration: React.FC = () => {
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [showUserRoleDialog, setShowUserRoleDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showRoleSummary, setShowRoleSummary] = useState(false);
+  const [selectedRoleForSummary, setSelectedRoleForSummary] = useState<RolePermissions | null>(null);
+  const [showCreateRoleDialog, setShowCreateRoleDialog] = useState(false);
+  const [showAuditDialog, setShowAuditDialog] = useState(false);
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [moduleFilter, setModuleFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [bulkEditMode, setBulkEditMode] = useState(false);
+  const [selectedModules, setSelectedModules] = useState<string[]>([]);
   const { toast } = useToast();
+
+  const [newRole, setNewRole] = useState({
+    name: '',
+    description: '',
+    baseRole: ''
+  });
 
   const [newDepartment, setNewDepartment] = useState({
     name: '',
@@ -404,19 +490,119 @@ export const SystemConfiguration: React.FC = () => {
     });
   };
 
-  // Role & Permissions Management handlers
+  // Enhanced Role & Permissions Management handlers
+  const filteredSystemModules = systemModules.filter(module => {
+    const matchesSearch = searchTerm === '' || 
+      module.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = moduleFilter === 'all' || 
+      moduleCategories.find(cat => cat.key === moduleFilter)?.modules.includes(module.key);
+    return matchesSearch && matchesCategory;
+  });
+
+  const filteredRoles = roles.filter(role => {
+    return roleFilter === 'all' || role.id === roleFilter;
+  });
+
+  const createNewRole = () => {
+    if (!newRole.name) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide a role name.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const baseRolePerms = newRole.baseRole ? 
+      roles.find(r => r.id === newRole.baseRole)?.permissions : 
+      Object.fromEntries(systemModules.map(m => [m.key, { ...defaultPermission }]));
+
+    const role: RolePermissions = {
+      id: newRole.name.toLowerCase().replace(/\s+/g, '-'),
+      name: newRole.name,
+      description: newRole.description,
+      permissions: baseRolePerms || {},
+      createdAt: new Date(),
+      modifiedAt: new Date(),
+      modifiedBy: 'Admin',
+      isCustom: true
+    };
+
+    setRoles(prev => [...prev, role]);
+    setNewRole({ name: '', description: '', baseRole: '' });
+    setShowCreateRoleDialog(false);
+
+    toast({
+      title: "Role Created",
+      description: `${role.name} role has been created successfully.`,
+    });
+  };
+
+  const bulkUpdatePermissions = (permissionType: keyof Permission, value: boolean) => {
+    if (!editingRole || selectedModules.length === 0) return;
+
+    const updatedPermissions = { ...editingRole.permissions };
+    selectedModules.forEach(moduleKey => {
+      if (!updatedPermissions[moduleKey]) {
+        updatedPermissions[moduleKey] = { ...defaultPermission };
+      }
+      updatedPermissions[moduleKey] = {
+        ...updatedPermissions[moduleKey],
+        [permissionType]: value
+      };
+    });
+
+    setEditingRole({
+      ...editingRole,
+      permissions: updatedPermissions,
+      modifiedAt: new Date(),
+      modifiedBy: 'Admin'
+    });
+
+    toast({
+      title: "Bulk Update",
+      description: `Updated ${permissionType} permission for ${selectedModules.length} modules.`,
+    });
+  };
+
+  const exportRolePermissions = () => {
+    const dataStr = JSON.stringify(roles, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'role-permissions.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Export Complete",
+      description: "Role permissions have been exported successfully.",
+    });
+  };
+
+  const getUserActivity = (userId: string) => {
+    return userActivities.find(activity => activity.userId === userId);
+  };
+
   const handleSaveRole = () => {
     if (!editingRole) return;
 
     setRoles(prev => prev.map(role => 
-      role.id === editingRole.id ? editingRole : role
+      role.id === editingRole.id ? { 
+        ...editingRole, 
+        modifiedAt: new Date(),
+        modifiedBy: 'Admin'
+      } : role
     ));
 
     setEditingRole(null);
     setShowRoleDialog(false);
     
     toast({
-      title: "Role Updated",
+      title: "Role Updated", 
       description: `${editingRole.name} role permissions have been updated.`,
     });
   };
@@ -1508,7 +1694,7 @@ export const SystemConfiguration: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="roles">
-          {renderRolePermissions()}
+          <EnhancedRoleManager />
         </TabsContent>
       </Tabs>
     </div>
