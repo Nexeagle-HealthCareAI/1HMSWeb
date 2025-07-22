@@ -53,6 +53,10 @@ import { UserManagement } from './UserManagement';
 import { PatientsPage } from './PatientsPage';
 import { AppointmentOversight } from './AppointmentOversight';
 import { SystemConfiguration } from './SystemConfiguration';
+import { BillingConfiguration } from './billing/BillingConfiguration';
+import { FinancialReports } from './billing/FinancialReports';
+import { PatientBillManagement } from './billing/PatientBillManagement';
+import { InsuranceManagement } from './billing/InsuranceManagement';
 
 // Mock data
 const kpiData = {
@@ -444,8 +448,57 @@ export const AdminDashboard = () => {
       {/* System Configuration Module */}
       {currentView === 'system-config' && <SystemConfiguration />}
 
+      {/* Billing & Insurance Module */}
+      {currentView === 'billing-insurance' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-foreground">Billing & Insurance Management</h2>
+              <p className="text-muted-foreground">Comprehensive financial management system</p>
+            </div>
+          </div>
+          
+          <Tabs defaultValue="configuration" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="configuration" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Configuration
+              </TabsTrigger>
+              <TabsTrigger value="patient-bills" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Patient Bills
+              </TabsTrigger>
+              <TabsTrigger value="insurance" className="flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Insurance
+              </TabsTrigger>
+              <TabsTrigger value="reports" className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Reports
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="configuration" className="space-y-6">
+              <BillingConfiguration />
+            </TabsContent>
+            
+            <TabsContent value="patient-bills" className="space-y-6">
+              <PatientBillManagement />
+            </TabsContent>
+            
+            <TabsContent value="insurance" className="space-y-6">
+              <InsuranceManagement />
+            </TabsContent>
+            
+            <TabsContent value="reports" className="space-y-6">
+              <FinancialReports />
+            </TabsContent>
+          </Tabs>
+        </div>
+      )}
+
       {/* Other Modules - Placeholder */}
-      {['billing-insurance', 'audit-security'].includes(currentView) && (
+      {['audit-security'].includes(currentView) && (
         <Card>
           <CardContent className="p-12 text-center">
             <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
