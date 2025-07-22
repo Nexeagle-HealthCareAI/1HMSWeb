@@ -458,12 +458,8 @@ export const AdminDashboard = () => {
             </div>
           </div>
           
-          <Tabs defaultValue="configuration" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="configuration" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Configuration
-              </TabsTrigger>
+          <Tabs defaultValue="patient-bills" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="patient-bills" className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
                 Patient Bills
@@ -477,10 +473,6 @@ export const AdminDashboard = () => {
                 Reports
               </TabsTrigger>
             </TabsList>
-            
-            <TabsContent value="configuration" className="space-y-6">
-              <BillingConfiguration />
-            </TabsContent>
             
             <TabsContent value="patient-bills" className="space-y-6">
               <PatientBillManagement />
