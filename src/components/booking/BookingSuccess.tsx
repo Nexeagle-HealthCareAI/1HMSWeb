@@ -48,8 +48,8 @@ export const BookingSuccess: React.FC<BookingSuccessProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="relative">
+      <DialogContent className="max-w-lg max-h-[95vh] overflow-y-auto">
+        <DialogHeader className="relative pb-2">
           <Button
             onClick={onClose}
             variant="ghost"
@@ -65,20 +65,20 @@ export const BookingSuccess: React.FC<BookingSuccessProps> = ({
 
         <div className="text-center">
           {/* Success Icon */}
-          <div className="mb-6">
-            <CheckCircle className="h-16 w-16 text-healthcare-success mx-auto mb-4" />
-            <p className="text-muted-foreground">
+          <div className="mb-4">
+            <CheckCircle className="h-12 w-12 text-healthcare-success mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">
               Your appointment has been confirmed
             </p>
           </div>
 
           {/* Appointment Details */}
-          <Card className="p-6 bg-gradient-primary text-white mb-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <span className="text-sm opacity-75">Appointment ID:</span>
-                <div className="flex items-center gap-2 bg-white/20 rounded px-3 py-1">
-                  <span className="font-mono font-bold">{appointmentId}</span>
+          <Card className="p-4 bg-gradient-primary text-white mb-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <span className="text-xs opacity-75">ID:</span>
+                <div className="flex items-center gap-1 bg-white/20 rounded px-2 py-1">
+                  <span className="font-mono font-bold text-sm">{appointmentId}</span>
                   <Button
                     size="sm"
                     variant="ghost"
@@ -90,42 +90,42 @@ export const BookingSuccess: React.FC<BookingSuccessProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 text-left">
-                <div className="flex items-center gap-3">
-                  <User className="h-5 w-5" />
+              <div className="grid grid-cols-1 gap-2 text-left">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
                   <div>
-                    <p className="text-sm opacity-75">Doctor</p>
-                    <p className="font-semibold">{doctor.name}</p>
+                    <p className="text-xs opacity-75">Doctor</p>
+                    <p className="font-semibold text-sm">{doctor.name}</p>
                     <p className="text-xs opacity-75">{doctor.specialization}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-5 w-5" />
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
                   <div>
-                    <p className="text-sm opacity-75">Date</p>
-                    <p className="font-semibold">
-                      {format(date, 'EEEE, MMMM dd, yyyy')}
+                    <p className="text-xs opacity-75">Date</p>
+                    <p className="font-semibold text-sm">
+                      {format(date, 'MMM dd, yyyy')}
                     </p>
                   </div>
                 </div>
 
                 {timeSlot && (
-                  <div className="flex items-center gap-3">
-                    <Clock className="h-5 w-5" />
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
                     <div>
-                      <p className="text-sm opacity-75">Time</p>
-                      <p className="font-semibold">{formatTime(timeSlot.time)}</p>
+                      <p className="text-xs opacity-75">Time</p>
+                      <p className="font-semibold text-sm">{formatTime(timeSlot.time)}</p>
                     </div>
                   </div>
                 )}
 
                 {timeSlot?.patientInfo && (
-                  <div className="flex items-center gap-3">
-                    <Phone className="h-5 w-5" />
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
                     <div>
-                      <p className="text-sm opacity-75">Patient</p>
-                      <p className="font-semibold">{timeSlot.patientInfo.name}</p>
+                      <p className="text-xs opacity-75">Patient</p>
+                      <p className="font-semibold text-sm">{timeSlot.patientInfo.name}</p>
                       <p className="text-xs opacity-75">{timeSlot.patientInfo.phone}</p>
                     </div>
                   </div>
@@ -135,30 +135,17 @@ export const BookingSuccess: React.FC<BookingSuccessProps> = ({
           </Card>
 
           {/* Instructions */}
-          <Card className="p-4 bg-muted mb-6 text-left">
-            <h3 className="font-semibold text-foreground mb-2">Important Notes:</h3>
-            <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• Please arrive 15 minutes before your appointment</li>
-              <li>• Bring a valid ID and insurance card</li>
-              <li>• Contact us if you need to reschedule</li>
-              <li>• Save your appointment ID for reference</li>
+          <Card className="p-3 bg-muted mb-4 text-left">
+            <h3 className="font-semibold text-sm text-foreground mb-2">Important Notes:</h3>
+            <ul className="text-xs text-muted-foreground space-y-1">
+              <li>• Arrive 15 minutes early</li>
+              <li>• Bring ID and insurance card</li>
+              <li>• Save your appointment ID</li>
             </ul>
           </Card>
 
           {/* Actions */}
-          <div className="space-y-3">
-            <Button
-              onClick={() => {
-                onClose();
-                navigate('/');
-              }}
-              className="w-full bg-healthcare-primary hover:bg-healthcare-primary/90"
-              size="lg"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
-            </Button>
-            
+          <div className="space-y-2">            
             <div className="grid grid-cols-3 gap-2">
               <Button
                 onClick={() => {/* Edit appointment */}}
@@ -168,8 +155,7 @@ export const BookingSuccess: React.FC<BookingSuccessProps> = ({
               >
                 Edit
               </Button>
-              
-              <Button
+            <Button
                 onClick={() => {/* Reschedule appointment */}}
                 variant="outline"
                 className="bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100"
@@ -195,7 +181,6 @@ export const BookingSuccess: React.FC<BookingSuccessProps> = ({
               }}
               variant="outline"
               className="w-full"
-              size="lg"
             >
               Book Another Appointment
             </Button>
