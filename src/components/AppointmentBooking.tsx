@@ -176,32 +176,6 @@ export const AppointmentBooking: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
-      {/* Hero Section */}
-      <div className="bg-gradient-primary text-white py-12 lg:py-16">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-3xl md:text-4xl lg:text-6xl font-bold mb-4 lg:mb-6">
-            Healthcare Appointment Booking
-          </h1>
-          <p className="text-lg md:text-xl lg:text-2xl opacity-90 mb-6 lg:mb-8">
-            Simple, efficient appointment management for healthcare professionals
-          </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-8 text-sm">
-            <div className="flex items-center justify-center gap-2">
-              <Calendar className="h-5 w-5" />
-              <span>Easy Scheduling</span>
-            </div>
-            <div className="flex items-center justify-center gap-2">
-              <Clock className="h-5 w-5" />
-              <span>Real-time Availability</span>
-            </div>
-            <div className="flex items-center justify-center gap-2">
-              <User className="h-5 w-5" />
-              <span>Patient Management</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="flex flex-col lg:flex-row min-h-screen">
         {/* Sidebar */}
         <div className="lg:w-80 lg:flex-shrink-0">
