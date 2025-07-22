@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard } from 'lucide-react';
+import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Shield, Search } from 'lucide-react';
 import { TimeSlot, Doctor } from '../AppointmentBooking';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
@@ -32,7 +32,10 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     city: '',
     pincode: '',
     isPaid: false,
-    paymentMode: ''
+    paymentMode: '',
+    hasInsurance: false,
+    insuranceId: '',
+    insuranceType: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -165,6 +168,37 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           {/* Patient Form */}
           <div className="lg:col-span-2">
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Patient Search Section */}
+              <Card className="p-4 border-blue-200 bg-blue-50/50">
+                <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <Search className="h-4 w-4 text-blue-600" />
+                  Search Existing Patient (Optional)
+                </h3>
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Search for an existing patient by Patient ID, Name, or Contact Number
+                  </p>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Enter Patient ID, Name, or Phone Number"
+                      className="flex-1"
+                      disabled
+                    />
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      disabled
+                      className="whitespace-nowrap"
+                    >
+                      <Search className="h-4 w-4 mr-2" />
+                      Search
+                    </Button>
+                  </div>
+                  <p className="text-xs text-orange-600">
+                    💡 Connect to Supabase database to enable patient search functionality
+                  </p>
+                </div>
+              </Card>
               {/* Personal Information */}
               <Card className="p-4">
                 <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
@@ -301,6 +335,68 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                       )}
                     </div>
                   </div>
+                </div>
+              </Card>
+
+              {/* Insurance Information */}
+              <Card className="p-4">
+                <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-green-600" />
+                  Insurance Information (Optional)
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="hasInsurance"
+                      checked={formData.hasInsurance}
+                      onCheckedChange={(checked) => setFormData(prev => ({ 
+                        ...prev, 
+                        hasInsurance: !!checked, 
+                        insuranceId: !!checked ? prev.insuranceId : '',
+                        insuranceType: !!checked ? prev.insuranceType : ''
+                      }))}
+                    />
+                    <Label htmlFor="hasInsurance" className="text-sm font-medium">
+                      Patient has Insurance Coverage
+                    </Label>
+                  </div>
+
+                  {formData.hasInsurance && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                      <div>
+                        <Label htmlFor="insuranceType" className="text-sm font-medium">
+                          Insurance Type
+                        </Label>
+                        <Select value={formData.insuranceType} onValueChange={(value) => setFormData(prev => ({ ...prev, insuranceType: value }))}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select insurance type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="insurance">Insurance ID</SelectItem>
+                            <SelectItem value="abha">ABHA ID</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="insuranceId" className="text-sm font-medium">
+                          {formData.insuranceType === 'abha' ? 'ABHA ID' : 'Insurance ID'}
+                        </Label>
+                        <Input
+                          id="insuranceId"
+                          value={formData.insuranceId}
+                          onChange={(e) => setFormData(prev => ({ ...prev, insuranceId: e.target.value }))}
+                          placeholder={formData.insuranceType === 'abha' ? 'Enter ABHA ID' : 'Enter Insurance ID'}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {formData.insuranceType === 'abha' 
+                            ? 'Ayushman Bharat Health Account ID' 
+                            : 'Your insurance policy number'
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </Card>
 
