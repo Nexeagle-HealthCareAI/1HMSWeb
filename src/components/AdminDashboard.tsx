@@ -52,6 +52,7 @@ import {
 import { UserManagement } from './UserManagement';
 import { PatientsPage } from './PatientsPage';
 import { AppointmentOversight } from './AppointmentOversight';
+import { SystemConfiguration } from './SystemConfiguration';
 
 // Mock data
 const kpiData = {
@@ -440,8 +441,11 @@ export const AdminDashboard = () => {
       {/* Appointment Oversight Module */}
       {currentView === 'appointment-oversight' && <AppointmentOversight />}
 
+      {/* System Configuration Module */}
+      {currentView === 'system-config' && <SystemConfiguration />}
+
       {/* Other Modules - Placeholder */}
-      {['billing-insurance', 'system-config', 'audit-security'].includes(currentView) && (
+      {['billing-insurance', 'audit-security'].includes(currentView) && (
         <Card>
           <CardContent className="p-12 text-center">
             <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
