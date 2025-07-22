@@ -12,7 +12,8 @@ import {
   Eye,
   X,
   User,
-  Stethoscope
+  Stethoscope,
+  ArrowLeft
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,7 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useNavigate } from 'react-router-dom';
+import { AppointmentBooking } from './AppointmentBooking';
 
 interface Appointment {
   id: string;
@@ -93,10 +94,10 @@ const mockAppointments: Appointment[] = [
 ];
 
 export const AppointmentDashboard = () => {
-  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [doctorFilter, setDoctorFilter] = useState('all');
+  const [showBooking, setShowBooking] = useState(false);
 
   // Calculate KPIs
   const kpis = useMemo(() => {
@@ -144,6 +145,32 @@ export const AppointmentDashboard = () => {
 
   const uniqueDoctors = [...new Set(mockAppointments.map(apt => apt.doctorName))];
 
+  // If booking view is active, show the booking component
+  if (showBooking) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        {/* Header with Back Button */}
+        <div className="bg-white shadow-sm border-b px-6 py-4">
+          <div className="max-w-7xl mx-auto flex items-center gap-4">
+            <Button
+              variant="ghost"
+              onClick={() => setShowBooking(false)}
+              className="flex items-center gap-2 text-primary hover:text-primary/80"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Dashboard
+            </Button>
+            <div className="h-6 w-px bg-border" />
+            <h1 className="text-xl font-semibold">Book New Appointment</h1>
+          </div>
+        </div>
+        
+        {/* Booking Component */}
+        <AppointmentBooking />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -155,7 +182,7 @@ export const AppointmentDashboard = () => {
             <h1 className="text-3xl font-bold text-gray-900">📅 Appointment Dashboard</h1>
           </div>
           <Button 
-            onClick={() => navigate('/book-appointment')} 
+            onClick={() => setShowBooking(true)} 
             className="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
           >
             <Plus className="h-5 w-5 mr-2" />
