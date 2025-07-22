@@ -42,8 +42,15 @@ import {
   MoreVertical,
   Eye,
   Building2,
-  Stethoscope
+  Stethoscope,
+  Shield,
+  CreditCard,
+  BarChart3,
+  Cog,
+  ShieldCheck
 } from 'lucide-react';
+import { UserManagement } from './UserManagement';
+import { PatientsPage } from './PatientsPage';
 
 // Mock data
 const kpiData = {
@@ -165,14 +172,14 @@ export const AdminDashboard = () => {
     </Card>
   );
 
-  const sidebarItems = [
-    { id: 'dashboard', name: 'Dashboard', icon: Activity },
-    { id: 'doctors', name: 'Doctors', icon: Stethoscope },
-    { id: 'appointments', name: 'Appointments', icon: Calendar },
-    { id: 'billing', name: 'Billing', icon: DollarSign },
-    { id: 'reports', name: 'Reports', icon: FileText },
-    { id: 'feedback', name: 'Feedback', icon: Star },
-    { id: 'settings', name: 'Settings', icon: Settings }
+  const adminModules = [
+    { id: 'dashboard', name: 'Dashboard', icon: Activity, description: 'Overview & Analytics' },
+    { id: 'user-management', name: 'User Management', icon: Shield, description: 'Users, Roles & Permissions' },
+    { id: 'patient-management', name: 'Patient Management', icon: Users, description: 'Patient Records & Data' },
+    { id: 'appointment-oversight', name: 'Appointment Oversight', icon: Calendar, description: 'Appointment Management' },
+    { id: 'billing-insurance', name: 'Billing & Insurance', icon: CreditCard, description: 'Financial Management' },
+    { id: 'system-config', name: 'System Configuration', icon: Cog, description: 'Hospital Settings' },
+    { id: 'audit-security', name: 'Audit & Security', icon: ShieldCheck, description: 'Logs & Security' }
   ];
 
   return (
@@ -202,19 +209,30 @@ export const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Secondary Navigation */}
-      <div className="flex gap-2 overflow-x-auto">
-        {sidebarItems.map((item) => (
-          <Button
-            key={item.id}
-            variant={currentView === item.id ? "default" : "outline"}
-            size="sm"
-            className="whitespace-nowrap gap-2"
-            onClick={() => setCurrentView(item.id)}
+      {/* Admin Navigation Modules */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+        {adminModules.map((module) => (
+          <Card 
+            key={module.id}
+            className={`cursor-pointer transition-all hover:shadow-lg ${
+              currentView === module.id 
+                ? 'ring-2 ring-primary bg-primary/5' 
+                : 'hover:bg-muted/50'
+            }`}
+            onClick={() => setCurrentView(module.id)}
           >
-            <item.icon className="h-4 w-4" />
-            {item.name}
-          </Button>
+            <CardContent className="p-4 text-center">
+              <module.icon className={`h-8 w-8 mx-auto mb-2 ${
+                currentView === module.id ? 'text-primary' : 'text-muted-foreground'
+              }`} />
+              <h3 className={`font-medium text-sm mb-1 ${
+                currentView === module.id ? 'text-primary' : 'text-foreground'
+              }`}>
+                {module.name}
+              </h3>
+              <p className="text-xs text-muted-foreground">{module.description}</p>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
@@ -412,12 +430,120 @@ export const AdminDashboard = () => {
         </div>
       )}
 
-      {/* Other Views Placeholder */}
-      {currentView !== 'dashboard' && (
+      {/* User Management Module */}
+      {currentView === 'user-management' && <UserManagement />}
+
+      {/* Patient Management Module */}
+      {currentView === 'patient-management' && <PatientsPage />}
+
+      {/* Other Modules - Placeholder */}
+      {['appointment-oversight', 'billing-insurance', 'system-config', 'audit-security'].includes(currentView) && (
         <Card>
           <CardContent className="p-12 text-center">
-            <h2 className="text-2xl font-semibold mb-4 capitalize">{currentView} Module</h2>
-            <p className="text-muted-foreground">This module is under development. It will include comprehensive {currentView} management features.</p>
+            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+              {(() => {
+                const module = adminModules.find(m => m.id === currentView);
+                if (module) {
+                  const IconComponent = module.icon;
+                  return <IconComponent className="h-8 w-8 text-primary" />;
+                }
+                return null;
+              })()}
+            </div>
+            <h2 className="text-2xl font-semibold mb-4">
+              {adminModules.find(m => m.id === currentView)?.name}
+            </h2>
+            <p className="text-muted-foreground mb-6">
+              {adminModules.find(m => m.id === currentView)?.description}
+            </p>
+            <div className="space-y-3 text-left max-w-md mx-auto">
+              {currentView === 'appointment-oversight' && (
+                <>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Eye className="h-4 w-4 text-primary" />
+                    <span>View all appointments across departments</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <UserCheck className="h-4 w-4 text-primary" />
+                    <span>Reassign doctors for specific appointments</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    <span>Block or open new slots for scheduling</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Clock className="h-4 w-4 text-primary" />
+                    <span>Track no-shows and follow-up statuses</span>
+                  </div>
+                </>
+              )}
+              
+              {currentView === 'billing-insurance' && (
+                <>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Settings className="h-4 w-4 text-primary" />
+                    <span>Configure hospital billing rules</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <DollarSign className="h-4 w-4 text-primary" />
+                    <span>Manage patient bills (view, edit, refund)</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Shield className="h-4 w-4 text-primary" />
+                    <span>Integrate & manage insurance claims</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <BarChart3 className="h-4 w-4 text-primary" />
+                    <span>Generate financial reports</span>
+                  </div>
+                </>
+              )}
+              
+              {currentView === 'system-config' && (
+                <>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Building2 className="h-4 w-4 text-primary" />
+                    <span>Add departments (Cardiology, Pediatrics, etc.)</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <span>Customize prescription template</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Star className="h-4 w-4 text-primary" />
+                    <span>Set hospital branding (logo, name, contact)</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Activity className="h-4 w-4 text-primary" />
+                    <span>Configure chatbot behavior (DocsAI / Patient Bot)</span>
+                  </div>
+                </>
+              )}
+              
+              {currentView === 'audit-security' && (
+                <>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Eye className="h-4 w-4 text-primary" />
+                    <span>Track all user activities (record edits)</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Shield className="h-4 w-4 text-primary" />
+                    <span>Manage role permissions</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Clock className="h-4 w-4 text-primary" />
+                    <span>Session tracking</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <ShieldCheck className="h-4 w-4 text-primary" />
+                    <span>Two-factor authentication setup</span>
+                  </div>
+                </>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-6">
+              This module is under development and will be available soon.
+            </p>
           </CardContent>
         </Card>
       )}

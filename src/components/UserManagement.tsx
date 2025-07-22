@@ -1,31 +1,25 @@
 import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Users, 
-  Plus, 
-  Edit, 
+  UserPlus, 
+  Edit2, 
   Trash2, 
   Shield, 
-  Mail,
+  Key,
   Search,
   Filter,
   MoreVertical,
-  Eye,
-  EyeOff,
-  Calendar,
-  Activity
+  UserCheck,
+  UserX
 } from 'lucide-react';
-import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Badge } from './ui/badge';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { Checkbox } from './ui/checkbox';
-import { Switch } from './ui/switch';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
-import { useToast } from '@/hooks/use-toast';
 
 interface Permission {
   id: string;
@@ -38,241 +32,124 @@ interface Role {
   name: string;
   permissions: string[];
   color: string;
-  isCustom: boolean;
 }
 
 interface User {
   id: string;
   name: string;
   email: string;
-  phone: string;
-  roleId: string;
+  role: string;
+  department?: string;
   status: 'active' | 'inactive' | 'suspended';
-  lastLogin?: Date;
-  createdAt: Date;
-  avatar?: string;
+  lastLogin: string;
+  specialty?: string;
+  workingHours?: string;
 }
 
 const permissions: Permission[] = [
-  { id: 'dashboard', name: 'Dashboard', description: 'View dashboard and analytics' },
-  { id: 'appointments', name: 'Appointments', description: 'Manage patient appointments' },
-  { id: 'patients', name: 'Patients', description: 'View and manage patient records' },
-  { id: 'billing', name: 'Billing', description: 'Generate and manage bills' },
-  { id: 'prescriptions', name: 'Prescriptions', description: 'Create and manage prescriptions' },
-  { id: 'lab', name: 'Lab Management', description: 'Manage lab tests and results' },
-  { id: 'pharmacy', name: 'Pharmacy', description: 'View prescriptions and medications' },
-  { id: 'chat', name: 'Internal Chat', description: 'Access internal communication' },
-  { id: 'bulk-messaging', name: 'Bulk Messaging', description: 'Send bulk SMS/WhatsApp messages' },
-  { id: 'user-management', name: 'User Management', description: 'Manage users and permissions' },
-  { id: 'reports', name: 'Reports', description: 'Generate and view reports' }
+  { id: 'view_patients', name: 'View Patients', description: 'View patient records and information' },
+  { id: 'edit_patients', name: 'Edit Patients', description: 'Modify patient information' },
+  { id: 'manage_appointments', name: 'Manage Appointments', description: 'Create, edit, and cancel appointments' },
+  { id: 'view_billing', name: 'View Billing', description: 'Access billing and financial information' },
+  { id: 'manage_billing', name: 'Manage Billing', description: 'Modify billing information' },
+  { id: 'view_reports', name: 'View Reports', description: 'Access system reports' },
+  { id: 'manage_users', name: 'Manage Users', description: 'Add, edit, and remove users' },
+  { id: 'system_config', name: 'System Configuration', description: 'Modify system settings' }
 ];
 
 const defaultRoles: Role[] = [
-  {
-    id: 'admin',
-    name: 'Admin (Doctor)',
-    permissions: permissions.map(p => p.id),
-    color: 'bg-red-500',
-    isCustom: false
-  },
-  {
-    id: 'receptionist',
-    name: 'Receptionist',
-    permissions: ['dashboard', 'appointments', 'patients', 'chat'],
-    color: 'bg-blue-500',
-    isCustom: false
-  },
-  {
-    id: 'lab-tech',
-    name: 'Lab Technician',
-    permissions: ['dashboard', 'lab', 'patients', 'chat'],
-    color: 'bg-green-500',
-    isCustom: false
-  },
-  {
-    id: 'pharmacist',
-    name: 'Pharmacist',
-    permissions: ['dashboard', 'prescriptions', 'pharmacy', 'patients', 'chat'],
-    color: 'bg-purple-500',
-    isCustom: false
-  }
+  { id: 'doctor', name: 'Doctor', permissions: ['view_patients', 'edit_patients', 'manage_appointments'], color: 'bg-blue-100 text-blue-800' },
+  { id: 'nurse', name: 'Nurse', permissions: ['view_patients', 'manage_appointments'], color: 'bg-green-100 text-green-800' },
+  { id: 'receptionist', name: 'Receptionist', permissions: ['manage_appointments', 'view_billing'], color: 'bg-purple-100 text-purple-800' },
+  { id: 'lab_tech', name: 'Lab Technician', permissions: ['view_patients'], color: 'bg-orange-100 text-orange-800' },
+  { id: 'pharmacist', name: 'Pharmacist', permissions: ['view_patients'], color: 'bg-teal-100 text-teal-800' },
+  { id: 'admin', name: 'Administrator', permissions: permissions.map(p => p.id), color: 'bg-red-100 text-red-800' }
 ];
 
 const sampleUsers: User[] = [
-  {
-    id: '1',
-    name: 'Dr. Sarah Johnson',
-    email: 'sarah.johnson@hospital.com',
-    phone: '+91-9876543210',
-    roleId: 'admin',
-    status: 'active',
-    lastLogin: new Date('2024-01-15T09:30:00'),
-    createdAt: new Date('2023-06-01')
-  },
-  {
-    id: '2',
-    name: 'Emily Reception',
-    email: 'emily@hospital.com',
-    phone: '+91-9876543211',
-    roleId: 'receptionist',
-    status: 'active',
-    lastLogin: new Date('2024-01-15T10:15:00'),
-    createdAt: new Date('2023-08-15')
-  },
-  {
-    id: '3',
-    name: 'John Lab',
-    email: 'john.lab@hospital.com',
-    phone: '+91-9876543212',
-    roleId: 'lab-tech',
-    status: 'inactive',
-    createdAt: new Date('2023-09-01')
-  },
-  {
-    id: '4',
-    name: 'Maria Pharmacy',
-    email: 'maria@hospital.com',
-    phone: '+91-9876543213',
-    roleId: 'pharmacist',
-    status: 'active',
-    lastLogin: new Date('2024-01-14T16:20:00'),
-    createdAt: new Date('2023-10-10')
-  }
+  { id: '1', name: 'Dr. Sarah Johnson', email: 'sarah.johnson@hospital.com', role: 'doctor', department: 'Cardiology', status: 'active', lastLogin: '2024-01-15 09:30', specialty: 'Cardiology', workingHours: '9:00 AM - 5:00 PM' },
+  { id: '2', name: 'Nurse Maria Garcia', email: 'maria.garcia@hospital.com', role: 'nurse', department: 'Emergency', status: 'active', lastLogin: '2024-01-15 08:15' },
+  { id: '3', name: 'John Smith', email: 'john.smith@hospital.com', role: 'receptionist', status: 'active', lastLogin: '2024-01-14 17:45' },
+  { id: '4', name: 'Dr. Michael Brown', email: 'michael.brown@hospital.com', role: 'doctor', department: 'Neurology', status: 'inactive', lastLogin: '2024-01-10 14:20', specialty: 'Neurology', workingHours: '10:00 AM - 6:00 PM' },
+  { id: '5', name: 'Lisa Wong', email: 'lisa.wong@hospital.com', role: 'pharmacist', status: 'active', lastLogin: '2024-01-15 11:00' }
 ];
 
 export const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>(sampleUsers);
   const [roles, setRoles] = useState<Role[]>(defaultRoles);
-  const [showAddUser, setShowAddUser] = useState(false);
-  const [showEditRole, setShowEditRole] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterRole, setFilterRole] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-  const { toast } = useToast();
-
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [showCreateRole, setShowCreateRole] = useState(false);
+  
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
-    phone: '',
-    roleId: '',
-    sendInvite: true
+    role: '',
+    department: '',
+    specialty: '',
+    workingHours: ''
   });
-
+  
   const [newRole, setNewRole] = useState({
     name: '',
     permissions: [] as string[]
   });
 
-  const handleAddUser = () => {
-    if (!newUser.name || !newUser.email || !newUser.roleId) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const user: User = {
-      id: (users.length + 1).toString(),
-      name: newUser.name,
-      email: newUser.email,
-      phone: newUser.phone,
-      roleId: newUser.roleId,
-      status: 'active',
-      createdAt: new Date()
-    };
-
-    setUsers(prev => [...prev, user]);
-    setNewUser({ name: '', email: '', phone: '', roleId: '', sendInvite: true });
-    setShowAddUser(false);
-
-    toast({
-      title: "User Added",
-      description: `${user.name} has been added successfully.${newUser.sendInvite ? ' Invitation email sent.' : ''}`,
-    });
-  };
-
-  const handleCreateRole = () => {
-    if (!newRole.name || newRole.permissions.length === 0) {
-      toast({
-        title: "Missing Information",
-        description: "Please provide role name and select at least one permission.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const role: Role = {
-      id: `custom-${roles.length + 1}`,
-      name: newRole.name,
-      permissions: newRole.permissions,
-      color: 'bg-gray-500',
-      isCustom: true
-    };
-
-    setRoles(prev => [...prev, role]);
-    setNewRole({ name: '', permissions: [] });
-    setShowEditRole(false);
-
-    toast({
-      title: "Role Created",
-      description: `Role "${role.name}" has been created successfully.`,
-    });
-  };
-
-  const handleUserStatusChange = (userId: string, newStatus: User['status']) => {
-    setUsers(prev => prev.map(user => 
-      user.id === userId ? { ...user, status: newStatus } : user
-    ));
-
-    toast({
-      title: "User Updated",
-      description: `User status changed to ${newStatus}.`,
-    });
-  };
-
-  const handleDeleteUser = (userId: string) => {
-    setUsers(prev => prev.filter(user => user.id !== userId));
-    toast({
-      title: "User Deleted",
-      description: "User has been removed from the system.",
-    });
-  };
-
-  const getRoleById = (roleId: string) => {
-    return roles.find(role => role.id === roleId);
-  };
-
-  const getStatusBadge = (status: User['status']) => {
-    const variants = {
-      active: 'default',
-      inactive: 'secondary',
-      suspended: 'destructive'
-    };
-    return <Badge variant={variants[status] as any}>{status.toUpperCase()}</Badge>;
-  };
-
-  const formatLastLogin = (date?: Date) => {
-    if (!date) return 'Never';
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const days = Math.floor(hours / 24);
-    
-    if (days > 0) return `${days}d ago`;
-    if (hours > 0) return `${hours}h ago`;
-    return 'Just now';
-  };
-
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = filterRole === 'all' || user.roleId === filterRole;
-    const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
+    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+    const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
+    
     return matchesSearch && matchesRole && matchesStatus;
   });
+
+  const handleAddUser = () => {
+    if (newUser.name && newUser.email && newUser.role) {
+      const user: User = {
+        id: Date.now().toString(),
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        department: newUser.department || undefined,
+        specialty: newUser.specialty || undefined,
+        workingHours: newUser.workingHours || undefined,
+        status: 'active',
+        lastLogin: 'Never'
+      };
+      
+      setUsers([...users, user]);
+      setNewUser({ name: '', email: '', role: '', department: '', specialty: '', workingHours: '' });
+      setShowAddUser(false);
+    }
+  };
+
+  const handleCreateRole = () => {
+    if (newRole.name && newRole.permissions.length > 0) {
+      const role: Role = {
+        id: newRole.name.toLowerCase().replace(/\s+/g, '_'),
+        name: newRole.name,
+        permissions: newRole.permissions,
+        color: 'bg-gray-100 text-gray-800'
+      };
+      
+      setRoles([...roles, role]);
+      setNewRole({ name: '', permissions: [] });
+      setShowCreateRole(false);
+    }
+  };
+
+  const handleUserStatusChange = (userId: string, newStatus: User['status']) => {
+    setUsers(users.map(user => 
+      user.id === userId ? { ...user, status: newStatus } : user
+    ));
+  };
+
+  const handleDeleteUser = (userId: string) => {
+    setUsers(users.filter(user => user.id !== userId));
+  };
 
   const handlePermissionToggle = (permissionId: string, checked: boolean) => {
     if (checked) {
@@ -288,347 +165,322 @@ export const UserManagement: React.FC = () => {
     }
   };
 
+  const getRoleBadge = (roleId: string) => {
+    const role = roles.find(r => r.id === roleId);
+    return role ? (
+      <Badge className={role.color}>{role.name}</Badge>
+    ) : (
+      <Badge variant="outline">{roleId}</Badge>
+    );
+  };
+
+  const getStatusBadge = (status: User['status']) => {
+    switch (status) {
+      case 'active':
+        return <Badge className="bg-green-100 text-green-800">Active</Badge>;
+      case 'inactive':
+        return <Badge className="bg-gray-100 text-gray-800">Inactive</Badge>;
+      case 'suspended':
+        return <Badge className="bg-red-100 text-red-800">Suspended</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">User Management</h1>
+          <h2 className="text-2xl font-bold text-foreground">User Management</h2>
           <p className="text-muted-foreground">Manage users, roles, and permissions</p>
         </div>
-        
         <div className="flex gap-2">
-          <Dialog open={showEditRole} onOpenChange={setShowEditRole}>
+          <Dialog open={showCreateRole} onOpenChange={setShowCreateRole}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <Shield className="h-4 w-4" />
+              <Button variant="outline">
+                <Shield className="h-4 w-4 mr-2" />
                 Create Role
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Create Custom Role</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="roleName">Role Name</Label>
-                  <Input
-                    id="roleName"
-                    value={newRole.name}
-                    onChange={(e) => setNewRole(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Enter role name"
-                  />
-                </div>
-                
-                <div>
-                  <Label>Permissions</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2 max-h-60 overflow-y-auto border rounded-lg p-4">
-                    {permissions.map((permission) => (
-                      <div key={permission.id} className="flex items-start gap-2">
-                        <Checkbox
-                          checked={newRole.permissions.includes(permission.id)}
-                          onCheckedChange={(checked) => handlePermissionToggle(permission.id, checked as boolean)}
-                        />
-                        <div className="flex-1">
-                          <Label className="font-medium">{permission.name}</Label>
-                          <p className="text-xs text-muted-foreground">{permission.description}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button onClick={handleCreateRole} className="flex-1">Create Role</Button>
-                  <Button variant="outline" onClick={() => setShowEditRole(false)} className="flex-1">Cancel</Button>
-                </div>
-              </div>
-            </DialogContent>
           </Dialog>
-
+          
           <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
             <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
+              <Button>
+                <UserPlus className="h-4 w-4 mr-2" />
                 Add User
               </Button>
             </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New User</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="userName">Full Name</Label>
-                  <Input
-                    id="userName"
-                    value={newUser.name}
-                    onChange={(e) => setNewUser(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Enter full name"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="userEmail">Email</Label>
-                  <Input
-                    id="userEmail"
-                    type="email"
-                    value={newUser.email}
-                    onChange={(e) => setNewUser(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="Enter email address"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="userPhone">Phone</Label>
-                  <Input
-                    id="userPhone"
-                    value={newUser.phone}
-                    onChange={(e) => setNewUser(prev => ({ ...prev, phone: e.target.value }))}
-                    placeholder="Enter phone number"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="userRole">Role</Label>
-                  <Select value={newUser.roleId} onValueChange={(value) => setNewUser(prev => ({ ...prev, roleId: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {roles.map((role) => (
-                        <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={newUser.sendInvite}
-                    onCheckedChange={(checked) => setNewUser(prev => ({ ...prev, sendInvite: checked }))}
-                  />
-                  <Label>Send invitation email</Label>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button onClick={handleAddUser} className="flex-1">Add User</Button>
-                  <Button variant="outline" onClick={() => setShowAddUser(false)} className="flex-1">Cancel</Button>
-                </div>
-              </div>
-            </DialogContent>
           </Dialog>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search users..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={filterRole} onValueChange={setFilterRole}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Filter by role" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Roles</SelectItem>
-            {roles.map((role) => (
-              <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-36">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-            <SelectItem value="suspended">Suspended</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Users Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>Users ({filteredUsers.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {/* Desktop Table */}
-          <div className="hidden lg:block overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-semibold">User</th>
-                  <th className="text-left py-3 px-4 font-semibold">Role</th>
-                  <th className="text-left py-3 px-4 font-semibold">Status</th>
-                  <th className="text-left py-3 px-4 font-semibold">Last Login</th>
-                  <th className="text-left py-3 px-4 font-semibold">Created</th>
-                  <th className="text-left py-3 px-4 font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map((user) => {
-                  const role = getRoleById(user.roleId);
-                  return (
-                    <tr key={user.id} className="border-b hover:bg-muted/50 transition-colors">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={user.avatar} />
-                            <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <h4 className="font-medium">{user.name}</h4>
-                            <p className="text-sm text-muted-foreground">{user.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded-full ${role?.color}`}></div>
-                          <span>{role?.name}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">{getStatusBadge(user.status)}</td>
-                      <td className="py-3 px-4 text-muted-foreground">{formatLastLogin(user.lastLogin)}</td>
-                      <td className="py-3 px-4 text-muted-foreground">{user.createdAt.toLocaleDateString()}</td>
-                      <td className="py-3 px-4">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button size="sm" variant="ghost">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            <DropdownMenuItem>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit User
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => handleUserStatusChange(user.id, user.status === 'active' ? 'inactive' : 'active')}
-                            >
-                              {user.status === 'active' ? (
-                                <>
-                                  <EyeOff className="mr-2 h-4 w-4" />
-                                  Deactivate
-                                </>
-                              ) : (
-                                <>
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  Activate
-                                </>
-                              )}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => handleDeleteUser(user.id)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile Cards */}
-          <div className="lg:hidden space-y-4">
-            {filteredUsers.map((user) => {
-              const role = getRoleById(user.roleId);
-              return (
-                <Card key={user.id} className="p-4">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={user.avatar} />
-                        <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h4 className="font-medium">{user.name}</h4>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
-                      </div>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button size="sm" variant="ghost">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem>Edit User</DropdownMenuItem>
-                        <DropdownMenuItem>Change Status</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Role:</span>
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${role?.color}`}></div>
-                        <span>{role?.name}</span>
-                      </div>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Status:</span>
-                      {getStatusBadge(user.status)}
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Last Login:</span>
-                      <span>{formatLastLogin(user.lastLogin)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Created:</span>
-                      <span>{user.createdAt.toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search users..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
+                {roles.map(role => (
+                  <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="suspended">Suspended</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
 
+      {/* Users List */}
+      <div className="grid gap-4">
+        {filteredUsers.map(user => (
+          <Card key={user.id}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                    <Users className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">{user.name}</h3>
+                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                    {user.department && (
+                      <p className="text-xs text-muted-foreground">Department: {user.department}</p>
+                    )}
+                    {user.specialty && (
+                      <p className="text-xs text-muted-foreground">Specialty: {user.specialty}</p>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  {getRoleBadge(user.role)}
+                  {getStatusBadge(user.status)}
+                  
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="sm">
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                    {user.status === 'active' ? (
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleUserStatusChange(user.id, 'inactive')}
+                      >
+                        <UserX className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleUserStatusChange(user.id, 'active')}
+                      >
+                        <UserCheck className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleDeleteUser(user.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Add User Dialog */}
+      <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New User</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="name">Full Name</Label>
+              <Input
+                id="name"
+                value={newUser.name}
+                onChange={(e) => setNewUser({...newUser, name: e.target.value})}
+                placeholder="Enter full name"
+              />
+            </div>
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={newUser.email}
+                onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                placeholder="Enter email address"
+              />
+            </div>
+            <div>
+              <Label htmlFor="role">Role</Label>
+              <Select value={newUser.role} onValueChange={(value) => setNewUser({...newUser, role: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map(role => (
+                    <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="department">Department (Optional)</Label>
+              <Input
+                id="department"
+                value={newUser.department}
+                onChange={(e) => setNewUser({...newUser, department: e.target.value})}
+                placeholder="Enter department"
+              />
+            </div>
+            {newUser.role === 'doctor' && (
+              <>
+                <div>
+                  <Label htmlFor="specialty">Specialty</Label>
+                  <Input
+                    id="specialty"
+                    value={newUser.specialty}
+                    onChange={(e) => setNewUser({...newUser, specialty: e.target.value})}
+                    placeholder="Enter medical specialty"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="workingHours">Working Hours</Label>
+                  <Input
+                    id="workingHours"
+                    value={newUser.workingHours}
+                    onChange={(e) => setNewUser({...newUser, workingHours: e.target.value})}
+                    placeholder="e.g., 9:00 AM - 5:00 PM"
+                  />
+                </div>
+              </>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowAddUser(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddUser}>
+                Add User
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Role Dialog */}
+      <Dialog open={showCreateRole} onOpenChange={setShowCreateRole}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Create Custom Role</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="roleName">Role Name</Label>
+              <Input
+                id="roleName"
+                value={newRole.name}
+                onChange={(e) => setNewRole({...newRole, name: e.target.value})}
+                placeholder="Enter role name"
+              />
+            </div>
+            <div>
+              <Label>Permissions</Label>
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                {permissions.map(permission => (
+                  <div key={permission.id} className="flex items-start space-x-2">
+                    <Checkbox
+                      id={permission.id}
+                      checked={newRole.permissions.includes(permission.id)}
+                      onCheckedChange={(checked) => handlePermissionToggle(permission.id, checked as boolean)}
+                    />
+                    <div className="grid gap-1.5 leading-none">
+                      <label
+                        htmlFor={permission.id}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        {permission.name}
+                      </label>
+                      <p className="text-xs text-muted-foreground">
+                        {permission.description}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowCreateRole(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateRole}>
+                Create Role
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Roles Summary */}
       <Card>
         <CardHeader>
-          <CardTitle>Roles & Permissions</CardTitle>
+          <CardTitle>Current Roles & Permissions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {roles.map((role) => {
-              const userCount = users.filter(user => user.roleId === role.id).length;
-              return (
-                <div key={role.id} className="p-4 border rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className={`w-4 h-4 rounded-full ${role.color}`}></div>
-                    <h4 className="font-medium">{role.name}</h4>
-                    {role.isCustom && <Badge variant="secondary" className="text-xs">Custom</Badge>}
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {userCount} user{userCount !== 1 ? 's' : ''}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {role.permissions.length} permission{role.permissions.length !== 1 ? 's' : ''}
-                  </p>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {roles.map(role => (
+              <div key={role.id} className="border rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <Badge className={role.color}>{role.name}</Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {users.filter(u => u.role === role.id).length} users
+                  </span>
                 </div>
-              );
-            })}
+                <div className="space-y-1">
+                  {role.permissions.map(permId => {
+                    const perm = permissions.find(p => p.id === permId);
+                    return perm ? (
+                      <div key={permId} className="text-xs text-muted-foreground">
+                        • {perm.name}
+                      </div>
+                    ) : null;
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>

@@ -1,96 +1,122 @@
 import React, { useState } from 'react';
-import { Search, Filter, Download, Eye, Calendar, Phone, User } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  Users, 
+  Search, 
+  Filter, 
+  Download,
+  Eye,
+  Edit2,
+  UserPlus,
+  Calendar,
+  Phone,
+  Mail,
+  MapPin,
+  Clock,
+  Activity
+} from 'lucide-react';
 
 interface Patient {
   id: string;
   name: string;
   age: number;
-  gender: string;
+  gender: 'Male' | 'Female' | 'Other';
   contact: string;
+  email?: string;
+  address?: string;
   lastVisit: string;
   department: string;
   doctor: string;
   registrationDate: string;
   visits: number;
+  bloodGroup?: string;
+  emergencyContact?: string;
+  insuranceProvider?: string;
+  medicalConditions?: string[];
 }
 
 const patientsData: Patient[] = [
   {
-    id: "P001",
-    name: "John Doe",
-    age: 35,
-    gender: "Male",
-    contact: "+91-9876543210",
-    lastVisit: "2024-07-15",
-    department: "Cardiology",
-    doctor: "Dr. Sarah Johnson",
-    registrationDate: "2024-01-15",
-    visits: 5
+    id: 'P001',
+    name: 'John Doe',
+    age: 45,
+    gender: 'Male',
+    contact: '+1 (555) 123-4567',
+    email: 'john.doe@email.com',
+    address: '123 Main St, City, State 12345',
+    lastVisit: '2024-01-15',
+    department: 'Cardiology',
+    doctor: 'Dr. Sarah Johnson',
+    registrationDate: '2023-06-15',
+    visits: 12,
+    bloodGroup: 'O+',
+    emergencyContact: '+1 (555) 987-6543',
+    insuranceProvider: 'Health Plus',
+    medicalConditions: ['Hypertension', 'Diabetes Type 2']
   },
   {
-    id: "P002",
-    name: "Jane Smith", 
+    id: 'P002',
+    name: 'Jane Smith',
+    age: 32,
+    gender: 'Female',
+    contact: '+1 (555) 234-5678',
+    email: 'jane.smith@email.com',
+    lastVisit: '2024-01-12',
+    department: 'Dermatology',
+    doctor: 'Dr. Michael Brown',
+    registrationDate: '2023-08-20',
+    visits: 6,
+    bloodGroup: 'A+',
+    emergencyContact: '+1 (555) 876-5432',
+    insuranceProvider: 'MediCare Pro'
+  },
+  {
+    id: 'P003',
+    name: 'Robert Wilson',
+    age: 58,
+    gender: 'Male',
+    contact: '+1 (555) 345-6789',
+    lastVisit: '2024-01-10',
+    department: 'Orthopedics',
+    doctor: 'Dr. Lisa Wang',
+    registrationDate: '2023-03-10',
+    visits: 18,
+    bloodGroup: 'B+',
+    medicalConditions: ['Arthritis']
+  },
+  {
+    id: 'P004',
+    name: 'Emily Davis',
     age: 28,
-    gender: "Female",
-    contact: "+91-9876543211",
-    lastVisit: "2024-07-14",
-    department: "Neurology",
-    doctor: "Dr. Emily Davis",
-    registrationDate: "2024-02-20",
-    visits: 3
+    gender: 'Female',
+    contact: '+1 (555) 456-7890',
+    email: 'emily.davis@email.com',
+    lastVisit: '2024-01-08',
+    department: 'Pediatrics',
+    doctor: 'Dr. James Miller',
+    registrationDate: '2023-11-05',
+    visits: 4,
+    bloodGroup: 'AB+',
+    emergencyContact: '+1 (555) 765-4321'
   },
   {
-    id: "P003",
-    name: "Robert Wilson",
-    age: 42,
-    gender: "Male", 
-    contact: "+91-9876543212",
-    lastVisit: "2024-07-10",
-    department: "General Medicine",
-    doctor: "Dr. Lisa Anderson",
-    registrationDate: "2024-03-10",
-    visits: 8
-  },
-  {
-    id: "P004",
-    name: "Maria Garcia",
-    age: 31,
-    gender: "Female",
-    contact: "+91-9876543213",
-    lastVisit: "2024-07-12",
-    department: "Cardiology", 
-    doctor: "Dr. Michael Chen",
-    registrationDate: "2024-01-25",
-    visits: 4
-  },
-  {
-    id: "P005",
-    name: "David Brown",
-    age: 55,
-    gender: "Male",
-    contact: "+91-9876543214", 
-    lastVisit: "2024-07-08",
-    department: "General Medicine",
-    doctor: "Dr. James Brown",
-    registrationDate: "2024-04-05",
-    visits: 6
+    id: 'P005',
+    name: 'Michael Johnson',
+    age: 35,
+    gender: 'Male',
+    contact: '+1 (555) 567-8901',
+    lastVisit: '2024-01-05',
+    department: 'Neurology',
+    doctor: 'Dr. Amanda White',
+    registrationDate: '2023-09-12',
+    visits: 8,
+    bloodGroup: 'O-',
+    insuranceProvider: 'Unity Health'
   }
 ];
 
@@ -102,32 +128,24 @@ export const PatientsPage: React.FC = () => {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [showPatientDetail, setShowPatientDetail] = useState(false);
 
-  // Filter patients based on search and filters
+  const departments = Array.from(new Set(patients.map(p => p.department)));
+
   const filteredPatients = patients.filter(patient => {
     const matchesSearch = patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         patient.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         patient.contact.includes(searchTerm);
+                         patient.contact.includes(searchTerm) ||
+                         patient.id.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesDepartment = departmentFilter === 'all' || patient.department === departmentFilter;
     
-    const matchesDate = dateFilter === 'all' || (() => {
-      const today = new Date();
-      const registrationDate = new Date(patient.registrationDate);
-      
-      switch (dateFilter) {
-        case 'today':
-          return registrationDate.toDateString() === today.toDateString();
-        case 'week':
-          const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-          return registrationDate >= weekAgo;
-        case 'month':
-          const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-          return registrationDate >= monthAgo;
-        default:
-          return true;
-      }
-    })();
-
+    const today = new Date();
+    const lastVisit = new Date(patient.lastVisit);
+    const daysDiff = Math.floor((today.getTime() - lastVisit.getTime()) / (1000 * 3600 * 24));
+    
+    let matchesDate = true;
+    if (dateFilter === 'recent') matchesDate = daysDiff <= 7;
+    else if (dateFilter === 'month') matchesDate = daysDiff <= 30;
+    else if (dateFilter === 'old') matchesDate = daysDiff > 90;
+    
     return matchesSearch && matchesDepartment && matchesDate;
   });
 
@@ -137,57 +155,55 @@ export const PatientsPage: React.FC = () => {
   };
 
   const exportData = () => {
-    // Simulate CSV export
     const csvContent = [
-      ['ID', 'Name', 'Age', 'Gender', 'Contact', 'Department', 'Doctor', 'Last Visit', 'Total Visits'],
+      ['ID', 'Name', 'Age', 'Gender', 'Contact', 'Department', 'Doctor', 'Last Visit', 'Visits'],
       ...filteredPatients.map(p => [
-        p.id, p.name, p.age, p.gender, p.contact, p.department, p.doctor, p.lastVisit, p.visits
+        p.id, p.name, p.age.toString(), p.gender, p.contact, p.department, p.doctor, p.lastVisit, p.visits.toString()
       ])
-    ];
+    ].map(row => row.join(',')).join('\n');
     
     console.log('Exporting CSV:', csvContent);
-    // In real implementation, this would trigger a download
+    // In a real app, this would trigger a download
   };
-
-  const departments = [...new Set(patients.map(p => p.department))];
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Patients</h1>
-          <p className="text-muted-foreground">
-            Manage registered patients ({filteredPatients.length} total)
-          </p>
+          <h2 className="text-2xl font-bold text-foreground">Patient Management</h2>
+          <p className="text-muted-foreground">Manage patient records and information</p>
         </div>
-        <Button onClick={exportData} className="bg-healthcare-primary hover:bg-healthcare-primary/90">
-          <Download className="mr-2 h-4 w-4" />
-          Export CSV
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={exportData}>
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
+          <Button>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Add Patient
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
-      <Card className="shadow-card">
-        <CardContent className="p-6">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
-                  placeholder="Search by name, ID, or phone..."
+                  placeholder="Search patients by name, ID, or contact..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
             </div>
-
-            {/* Department Filter */}
             <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-              <SelectTrigger className="w-full lg:w-48">
-                <SelectValue placeholder="Department" />
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by department" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Departments</SelectItem>
@@ -196,224 +212,307 @@ export const PatientsPage: React.FC = () => {
                 ))}
               </SelectContent>
             </Select>
-
-            {/* Date Filter */}
             <Select value={dateFilter} onValueChange={setDateFilter}>
-              <SelectTrigger className="w-full lg:w-48">
-                <SelectValue placeholder="Registration Date" />
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by last visit" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="week">Last Week</SelectItem>
-                <SelectItem value="month">Last Month</SelectItem>
+                <SelectItem value="all">All Patients</SelectItem>
+                <SelectItem value="recent">Recent (7 days)</SelectItem>
+                <SelectItem value="month">This Month</SelectItem>
+                <SelectItem value="old">Inactive (90+ days)</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </CardContent>
       </Card>
 
-      {/* Patients Table */}
-      <Card className="shadow-card">
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Patients</p>
+                <p className="text-2xl font-bold">{patients.length}</p>
+              </div>
+              <Users className="h-8 w-8 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Recent Visits</p>
+                <p className="text-2xl font-bold">
+                  {patients.filter(p => {
+                    const daysDiff = Math.floor((new Date().getTime() - new Date(p.lastVisit).getTime()) / (1000 * 3600 * 24));
+                    return daysDiff <= 7;
+                  }).length}
+                </p>
+              </div>
+              <Calendar className="h-8 w-8 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Active Patients</p>
+                <p className="text-2xl font-bold">
+                  {patients.filter(p => {
+                    const daysDiff = Math.floor((new Date().getTime() - new Date(p.lastVisit).getTime()) / (1000 * 3600 * 24));
+                    return daysDiff <= 90;
+                  }).length}
+                </p>
+              </div>
+              <Activity className="h-8 w-8 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Departments</p>
+                <p className="text-2xl font-bold">{departments.length}</p>
+              </div>
+              <Filter className="h-8 w-8 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Patients Table/List */}
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Registered Patients
-          </CardTitle>
+          <CardTitle>Patient Records ({filteredPatients.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Desktop Table */}
-          <div className="hidden lg:block overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-semibold">Patient ID</th>
-                  <th className="text-left py-3 px-4 font-semibold">Name</th>
-                  <th className="text-left py-3 px-4 font-semibold">Age</th>
-                  <th className="text-left py-3 px-4 font-semibold">Gender</th>
-                  <th className="text-left py-3 px-4 font-semibold">Contact</th>
-                  <th className="text-left py-3 px-4 font-semibold">Department</th>
-                  <th className="text-left py-3 px-4 font-semibold">Last Visit</th>
-                  <th className="text-left py-3 px-4 font-semibold">Visits</th>
-                  <th className="text-left py-3 px-4 font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredPatients.map((patient) => (
-                  <tr key={patient.id} className="border-b hover:bg-muted/50 transition-colors">
-                    <td className="py-3 px-4">
-                      <Button 
-                        variant="link" 
-                        className="p-0 h-auto font-medium text-healthcare-primary"
-                        onClick={() => handlePatientClick(patient)}
-                      >
-                        {patient.id}
-                      </Button>
-                    </td>
-                    <td className="py-3 px-4 font-medium">{patient.name}</td>
-                    <td className="py-3 px-4">{patient.age}</td>
-                    <td className="py-3 px-4">
-                      <Badge variant="outline">{patient.gender}</Badge>
-                    </td>
-                    <td className="py-3 px-4 text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-3 w-3" />
-                        {patient.contact}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <Badge variant="secondary">{patient.department}</Badge>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        {new Date(patient.lastVisit).toLocaleDateString()}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <Badge variant="outline">{patient.visits}</Badge>
-                    </td>
-                    <td className="py-3 px-4">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handlePatientClick(patient)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile Cards */}
-          <div className="lg:hidden space-y-4">
-            {filteredPatients.map((patient) => (
-              <Card 
-                key={patient.id} 
-                className="p-4 shadow-sm border cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => handlePatientClick(patient)}
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <Button variant="link" className="p-0 h-auto font-medium text-healthcare-primary text-lg">
-                      {patient.id}
-                    </Button>
-                    <h3 className="font-semibold text-foreground">{patient.name}</h3>
-                    <p className="text-sm text-muted-foreground">{patient.age} years • {patient.gender}</p>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <Badge variant="secondary">{patient.department}</Badge>
-                    <Badge variant="outline">{patient.visits} visits</Badge>
-                  </div>
-                </div>
-                
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Phone className="h-3 w-3" />
-                    <span>{patient.contact}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    <span>Last visit: {new Date(patient.lastVisit).toLocaleDateString()}</span>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-
-          {filteredPatients.length === 0 && (
-            <div className="text-center py-12">
-              <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-muted-foreground mb-2">
-                No patients found
-              </h3>
-              <p className="text-muted-foreground">
-                Try adjusting your search or filter criteria
-              </p>
+          {filteredPatients.length === 0 ? (
+            <div className="text-center py-8">
+              <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No patients found</h3>
+              <p className="text-muted-foreground">Try adjusting your filters or search criteria.</p>
             </div>
+          ) : (
+            <>
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4 font-medium">Patient</th>
+                      <th className="text-left py-3 px-4 font-medium">Contact</th>
+                      <th className="text-left py-3 px-4 font-medium">Department</th>
+                      <th className="text-left py-3 px-4 font-medium">Doctor</th>
+                      <th className="text-left py-3 px-4 font-medium">Last Visit</th>
+                      <th className="text-left py-3 px-4 font-medium">Visits</th>
+                      <th className="text-left py-3 px-4 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredPatients.map(patient => (
+                      <tr key={patient.id} className="border-b hover:bg-muted/50">
+                        <td className="py-3 px-4">
+                          <div>
+                            <p className="font-medium">{patient.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {patient.age} years • {patient.gender} • {patient.id}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="text-sm">
+                            <p>{patient.contact}</p>
+                            {patient.email && (
+                              <p className="text-muted-foreground">{patient.email}</p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <Badge variant="outline">{patient.department}</Badge>
+                        </td>
+                        <td className="py-3 px-4 text-sm">{patient.doctor}</td>
+                        <td className="py-3 px-4 text-sm">{patient.lastVisit}</td>
+                        <td className="py-3 px-4">
+                          <Badge className="bg-blue-100 text-blue-800">{patient.visits}</Badge>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handlePatientClick(patient)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm">
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Cards */}
+              <div className="md:hidden space-y-4">
+                {filteredPatients.map(patient => (
+                  <Card key={patient.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handlePatientClick(patient)}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h3 className="font-semibold">{patient.name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {patient.age} years • {patient.gender} • {patient.id}
+                          </p>
+                        </div>
+                        <Badge className="bg-blue-100 text-blue-800">{patient.visits} visits</Badge>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <span>{patient.contact}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Badge variant="outline">{patient.department}</Badge>
+                          <span className="text-muted-foreground">•</span>
+                          <span>{patient.doctor}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Clock className="h-4 w-4" />
+                          <span>Last visit: {patient.lastVisit}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
 
-      {/* Patient Detail Modal */}
+      {/* Patient Detail Dialog */}
       <Dialog open={showPatientDetail} onOpenChange={setShowPatientDetail}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <User className="h-5 w-5 text-healthcare-primary" />
-              Patient Profile
-            </DialogTitle>
+            <DialogTitle>Patient Details</DialogTitle>
           </DialogHeader>
-
           {selectedPatient && (
             <div className="space-y-6">
               {/* Basic Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 className="font-semibold text-lg">{selectedPatient.name}</h3>
+                  <p className="text-muted-foreground">Patient ID: {selectedPatient.id}</p>
+                </div>
+                <div className="text-right">
+                  <Badge className="bg-blue-100 text-blue-800">
+                    {selectedPatient.visits} Visits
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Personal Information */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Age</p>
+                  <p>{selectedPatient.age} years</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Gender</p>
+                  <p>{selectedPatient.gender}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Blood Group</p>
+                  <p>{selectedPatient.bloodGroup || 'Not specified'}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Registration Date</p>
+                  <p>{selectedPatient.registrationDate}</p>
+                </div>
+              </div>
+
+              {/* Contact Information */}
+              <div>
+                <h4 className="font-medium mb-3">Contact Information</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span>{selectedPatient.contact}</span>
+                  </div>
+                  {selectedPatient.email && (
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span>{selectedPatient.email}</span>
+                    </div>
+                  )}
+                  {selectedPatient.address && (
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span>{selectedPatient.address}</span>
+                    </div>
+                  )}
+                  {selectedPatient.emergencyContact && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-red-500" />
+                      <span>Emergency: {selectedPatient.emergencyContact}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Medical Information */}
+              <div>
+                <h4 className="font-medium mb-3">Medical Information</h4>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">Patient ID</label>
-                    <p className="font-semibold">{selectedPatient.id}</p>
+                    <p className="text-sm font-medium text-muted-foreground">Current Department</p>
+                    <Badge variant="outline">{selectedPatient.department}</Badge>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">Full Name</label>
-                    <p className="font-semibold">{selectedPatient.name}</p>
+                    <p className="text-sm font-medium text-muted-foreground">Attending Doctor</p>
+                    <p>{selectedPatient.doctor}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">Age</label>
-                    <p className="font-semibold">{selectedPatient.age} years</p>
+                    <p className="text-sm font-medium text-muted-foreground">Last Visit</p>
+                    <p>{selectedPatient.lastVisit}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Insurance Provider</p>
+                    <p>{selectedPatient.insuranceProvider || 'None'}</p>
                   </div>
                 </div>
                 
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Gender</label>
-                    <p className="font-semibold">{selectedPatient.gender}</p>
+                {selectedPatient.medicalConditions && selectedPatient.medicalConditions.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Medical Conditions</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedPatient.medicalConditions.map((condition, index) => (
+                        <Badge key={index} className="bg-orange-100 text-orange-800">
+                          {condition}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Contact</label>
-                    <p className="font-semibold">{selectedPatient.contact}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Total Visits</label>
-                    <p className="font-semibold">{selectedPatient.visits}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Medical Info */}
-              <div className="border-t pt-4">
-                <h3 className="font-semibold mb-3">Medical Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Department</label>
-                    <p className="font-semibold">{selectedPatient.department}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Last Consulting Doctor</label>
-                    <p className="font-semibold">{selectedPatient.doctor}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Last Visit</label>
-                    <p className="font-semibold">{new Date(selectedPatient.lastVisit).toLocaleDateString()}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Registration Date</label>
-                    <p className="font-semibold">{new Date(selectedPatient.registrationDate).toLocaleDateString()}</p>
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* Actions */}
-              <div className="flex gap-3 pt-4 border-t">
-                <Button className="flex-1 bg-healthcare-primary">
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Book Appointment
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button variant="outline">
+                  <Edit2 className="h-4 w-4 mr-2" />
+                  Edit Patient
                 </Button>
-                <Button variant="outline" className="flex-1">
-                  Edit Profile
+                <Button>
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Book Appointment
                 </Button>
               </div>
             </div>
