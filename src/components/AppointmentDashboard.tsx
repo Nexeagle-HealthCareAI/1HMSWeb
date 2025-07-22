@@ -440,71 +440,77 @@ export const AppointmentDashboard = () => {
               </button>
             </div>
           </div>
-          <CardContent className="flex-1 overflow-hidden">
-            {/* Desktop & Tablet Table */}
-            <div className="hidden md:block h-full">
-              <div className="h-full border border-border rounded-lg overflow-hidden">
-                <div className="h-full overflow-auto">
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-sm z-10 border-b border-border shadow-sm">
-                      <TableRow className="hover:bg-transparent">
-                        <TableHead className="font-semibold text-foreground bg-card/95 backdrop-blur-sm">Patient ID</TableHead>
-                        <TableHead className="font-semibold text-foreground bg-card/95 backdrop-blur-sm">Patient Name</TableHead>
-                        <TableHead className="font-semibold text-foreground bg-card/95 backdrop-blur-sm">Doctor</TableHead>
-                        <TableHead className="font-semibold text-foreground bg-card/95 backdrop-blur-sm">Time</TableHead>
-                        <TableHead className="font-semibold text-foreground bg-card/95 backdrop-blur-sm">Token</TableHead>
-                        <TableHead className="font-semibold text-foreground bg-card/95 backdrop-blur-sm">Vitals</TableHead>
-                        <TableHead className="font-semibold text-foreground bg-card/95 backdrop-blur-sm">Status</TableHead>
-                        <TableHead className="font-semibold text-foreground bg-card/95 backdrop-blur-sm">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredAppointments.map((appointment, index) => (
+          <CardContent className="p-6">
+            {/* Debug Info */}
+            <div className="mb-4 p-3 bg-yellow-100 border-l-4 border-yellow-500 rounded">
+              <p className="font-semibold">🔍 Debug Information:</p>
+              <p>Total appointments: {mockAppointments.length}</p>
+              <p>Filtered appointments: {filteredAppointments.length}</p>
+              <p>Selected status: {selectedStatus}</p>
+              <p>Status filter: {statusFilter}</p>
+              <p>Doctor filter: {doctorFilter}</p>
+            </div>
+
+            {/* Desktop & Tablet Table - Simplified */}
+            <div className="hidden md:block">
+              <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="font-semibold">Patient ID</TableHead>
+                      <TableHead className="font-semibold">Patient Name</TableHead>
+                      <TableHead className="font-semibold">Doctor</TableHead>
+                      <TableHead className="font-semibold">Time</TableHead>
+                      <TableHead className="font-semibold">Token</TableHead>
+                      <TableHead className="font-semibold">Vitals</TableHead>
+                      <TableHead className="font-semibold">Status</TableHead>
+                      <TableHead className="font-semibold">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAppointments.length > 0 ? (
+                      filteredAppointments.map((appointment, index) => (
                         <TableRow 
                           key={appointment.id} 
-                          className={`hover:bg-muted/50 transition-colors border-b border-border/50 ${
-                            index % 2 === 0 ? 'bg-card' : 'bg-muted/20'
-                          }`}
+                          className={`hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
                         >
                           <TableCell className="font-medium">
                             <Button
                               variant="link"
-                              className="p-0 h-auto text-healthcare-primary hover:text-healthcare-primary/80 font-mono"
-                              onClick={() => {/* Navigate to patient profile */}}
+                              className="p-0 h-auto text-blue-600 hover:text-blue-800 font-mono"
                             >
                               {appointment.patientId}
                             </Button>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                              <span className="text-foreground font-medium">{appointment.patientName}</span>
+                              <User className="h-4 w-4 text-gray-500" />
+                              <span>{appointment.patientName}</span>
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <Stethoscope className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                              <span className="text-foreground">{appointment.doctorName}</span>
+                              <Stethoscope className="h-4 w-4 text-gray-500" />
+                              <span>{appointment.doctorName}</span>
                             </div>
                           </TableCell>
-                          <TableCell className="text-foreground font-medium">{appointment.appointmentTime}</TableCell>
+                          <TableCell>{appointment.appointmentTime}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="font-mono font-bold text-healthcare-primary">
+                            <Badge variant="outline" className="font-mono">
                               #{appointment.tokenNo}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             {appointment.vitalsUpdated ? (
                               <div className="flex items-center gap-1">
-                                <span className="text-healthcare-success text-lg">✅</span>
-                                <span className="text-xs text-healthcare-success font-medium">Updated</span>
+                                <span className="text-green-600 text-lg">✅</span>
+                                <span className="text-xs text-green-600 font-medium">Updated</span>
                               </div>
                             ) : (
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="text-healthcare-error border-healthcare-error/30 hover:bg-healthcare-error/10 text-xs"
-                                onClick={() => {/* Open vitals form */}}
+                                className="text-red-600 border-red-300 hover:bg-red-50"
                               >
                                 ❤️ Update
                               </Button>
@@ -513,22 +519,12 @@ export const AppointmentDashboard = () => {
                           <TableCell>{getStatusBadge(appointment.status)}</TableCell>
                           <TableCell>
                             <div className="flex gap-1">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="hover:bg-healthcare-primary/10 border-healthcare-primary/30 text-xs"
-                                onClick={() => {/* View details */}}
-                              >
+                              <Button variant="outline" size="sm">
                                 <Eye className="h-3 w-3 mr-1" />
                                 View
                               </Button>
                               {appointment.status !== 'completed' && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="hover:bg-healthcare-error/10 text-healthcare-error border-healthcare-error/30 text-xs"
-                                  onClick={() => {/* Cancel appointment */}}
-                                >
+                                <Button variant="outline" size="sm" className="text-red-600">
                                   <X className="h-3 w-3 mr-1" />
                                   Cancel
                                 </Button>
@@ -536,91 +532,86 @@ export const AppointmentDashboard = () => {
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8">
+                          <p className="text-gray-500">No appointments found matching the selected criteria</p>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
               </div>
             </div>
 
-            {/* Mobile Cards */}
-            <div className="md:hidden h-full">
-              <div className="h-full overflow-auto">
-                <div className="space-y-3 pr-2">
-                  {filteredAppointments.map((appointment) => (
-                    <Card key={appointment.id} className="p-4 shadow-card border border-border/50 rounded-xl bg-card hover:shadow-hover transition-all duration-200">
+            {/* Mobile Cards - Simplified */}
+            <div className="md:hidden">
+              <div className="mb-4 p-3 bg-blue-100 border-l-4 border-blue-500 rounded">
+                <p className="font-semibold">📱 Mobile Debug:</p>
+                <p>Filtered appointments: {filteredAppointments.length}</p>
+              </div>
+              
+              <div className="space-y-3">
+                {filteredAppointments.length > 0 ? (
+                  filteredAppointments.map((appointment) => (
+                    <Card key={appointment.id} className="p-4 border border-gray-200 rounded-lg bg-white">
                       <div className="flex justify-between items-start mb-3">
-                        <div className="flex-1">
+                        <div>
                           <Button 
                             variant="link" 
-                            className="p-0 h-auto font-bold text-healthcare-primary text-base font-mono"
+                            className="p-0 h-auto font-bold text-blue-600 text-base font-mono"
                           >
                             {appointment.patientId}
                           </Button>
-                          <h3 className="font-semibold text-foreground text-lg mt-1">{appointment.patientName}</h3>
+                          <h3 className="font-semibold text-gray-900 text-lg mt-1">{appointment.patientName}</h3>
                         </div>
                         <div className="flex flex-col items-end gap-2">
-                          <Badge variant="outline" className="font-mono font-bold text-healthcare-primary">
+                          <Badge variant="outline" className="font-mono">
                             #{appointment.tokenNo}
                           </Badge>
                           {getStatusBadge(appointment.status)}
                         </div>
                       </div>
                       
-                      <div className="space-y-3 mb-4">
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                          <div>
-                            <span className="text-muted-foreground block">Doctor:</span>
-                            <div className="flex items-center gap-1 mt-1">
-                              <Stethoscope className="h-3 w-3 text-muted-foreground" />
-                              <span className="font-medium text-foreground">{appointment.doctorName}</span>
-                            </div>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground block">Time:</span>
-                            <span className="font-medium text-foreground">{appointment.appointmentTime}</span>
-                          </div>
+                      <div className="space-y-2 mb-4 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Doctor:</span>
+                          <span className="font-medium">{appointment.doctorName}</span>
                         </div>
-                        
-                        <div className="flex justify-between items-center p-2 bg-muted/30 rounded-lg">
-                          <span className="text-sm text-muted-foreground">Vitals Status:</span>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Time:</span>
+                          <span className="font-medium">{appointment.appointmentTime}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Vitals:</span>
                           {appointment.vitalsUpdated ? (
-                            <div className="flex items-center gap-1">
-                              <span className="text-healthcare-success text-lg">✅</span>
-                              <span className="text-healthcare-success font-semibold text-sm">Updated</span>
-                            </div>
+                            <span className="text-green-600 font-semibold">✅ Updated</span>
                           ) : (
-                            <div className="flex items-center gap-1">
-                              <span className="text-healthcare-error text-lg">❤️</span>
-                              <span className="text-healthcare-error font-semibold text-sm">Pending</span>
-                            </div>
+                            <span className="text-red-600 font-semibold">❤️ Pending</span>
                           )}
                         </div>
                       </div>
 
                       <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 hover:bg-healthcare-primary/10 border-healthcare-primary/30 font-medium"
-                        >
+                        <Button variant="outline" size="sm" className="flex-1">
                           <Eye className="h-4 w-4 mr-1" />
-                          View Details
+                          View
                         </Button>
                         {appointment.status !== 'completed' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 hover:bg-healthcare-error/10 text-healthcare-error border-healthcare-error/30 font-medium"
-                          >
+                          <Button variant="outline" size="sm" className="flex-1 text-red-600">
                             <X className="h-4 w-4 mr-1" />
                             Cancel
                           </Button>
                         )}
                       </div>
                     </Card>
-                  ))}
-                </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No appointments found</p>
+                  </div>
+                )}
               </div>
             </div>
             
