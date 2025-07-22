@@ -31,7 +31,7 @@ interface Appointment {
   appointmentTime: string;
   tokenNo: number;
   vitalsUpdated: boolean;
-  status: 'upcoming' | 'ongoing' | 'completed';
+  status: 'vitals-required' | 'ready-consultation' | 'under-consultation' | 'lab-test-required' | 'awaiting-reconsultation' | 'completed';
   phone: string;
 }
 
@@ -43,8 +43,8 @@ const mockAppointments: Appointment[] = [
     doctorName: 'Dr. Sarah Wilson',
     appointmentTime: '09:00 AM',
     tokenNo: 1,
-    vitalsUpdated: true,
-    status: 'completed',
+    vitalsUpdated: false,
+    status: 'vitals-required',
     phone: '+1234567890'
   },
   {
@@ -54,8 +54,8 @@ const mockAppointments: Appointment[] = [
     doctorName: 'Dr. Michael Brown',
     appointmentTime: '10:30 AM',
     tokenNo: 2,
-    vitalsUpdated: false,
-    status: 'ongoing',
+    vitalsUpdated: true,
+    status: 'ready-consultation',
     phone: '+1234567891'
   },
   {
@@ -66,7 +66,7 @@ const mockAppointments: Appointment[] = [
     appointmentTime: '11:15 AM',
     tokenNo: 3,
     vitalsUpdated: true,
-    status: 'upcoming',
+    status: 'under-consultation',
     phone: '+1234567892'
   },
   {
@@ -76,20 +76,9 @@ const mockAppointments: Appointment[] = [
     doctorName: 'Dr. James Lee',
     appointmentTime: '02:00 PM',
     tokenNo: 4,
-    vitalsUpdated: false,
-    status: 'upcoming',
-    phone: '+1234567893'
-  },
-  {
-    id: 'APT005',
-    patientId: 'P005',
-    patientName: 'David Wilson',
-    doctorName: 'Dr. Michael Brown',
-    appointmentTime: '03:30 PM',
-    tokenNo: 5,
     vitalsUpdated: true,
-    status: 'upcoming',
-    phone: '+1234567894'
+    status: 'completed',
+    phone: '+1234567893'
   }
 ];
 
@@ -98,6 +87,7 @@ export const AppointmentDashboard = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [doctorFilter, setDoctorFilter] = useState('all');
   const [showBooking, setShowBooking] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState('all');
 
   // Calculate KPIs
   const kpis = useMemo(() => {
@@ -297,14 +287,121 @@ export const AppointmentDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Appointments Table */}
+        {/* Enhanced Appointments Table with Status Navigation */}
         <Card className="bg-card shadow-card rounded-xl border-0 flex-1 flex flex-col overflow-hidden">
           <CardHeader className="flex-shrink-0">
             <CardTitle className="flex items-center gap-2 text-foreground text-lg md:text-xl">
               <Clock className="h-4 w-4 md:h-5 md:w-5 text-healthcare-primary" />
-              📊 Appointment Table ({filteredAppointments.length})
+              📊 Patient Journey Dashboard
             </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Track patient progress through appointment stages
+            </p>
           </CardHeader>
+
+          {/* Status Navigation Tabs */}
+          <div className="px-6 pb-4">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedStatus('all')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all text-sm font-medium ${
+                  selectedStatus === 'all'
+                    ? 'bg-gray-100 text-gray-800 border-gray-300'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <span>📋</span>
+                <span className="hidden sm:inline">All Appointments</span>
+                <span className="bg-white/80 text-xs px-2 py-1 rounded-full">
+                  {mockAppointments.length}
+                </span>
+              </button>
+              <button
+                onClick={() => setSelectedStatus('vitals-required')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all text-sm font-medium ${
+                  selectedStatus === 'vitals-required'
+                    ? 'bg-red-100 text-red-800 border-red-300'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <span>❤️</span>
+                <span className="hidden sm:inline">Vitals Required</span>
+                <span className="bg-white/80 text-xs px-2 py-1 rounded-full">
+                  {mockAppointments.filter(apt => apt.status === 'vitals-required').length}
+                </span>
+              </button>
+              <button
+                onClick={() => setSelectedStatus('ready-consultation')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all text-sm font-medium ${
+                  selectedStatus === 'ready-consultation'
+                    ? 'bg-green-100 text-green-800 border-green-300'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <span>✅</span>
+                <span className="hidden sm:inline">Ready For Consultation</span>
+                <span className="bg-white/80 text-xs px-2 py-1 rounded-full">
+                  {mockAppointments.filter(apt => apt.status === 'ready-consultation').length}
+                </span>
+              </button>
+              <button
+                onClick={() => setSelectedStatus('under-consultation')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all text-sm font-medium ${
+                  selectedStatus === 'under-consultation'
+                    ? 'bg-blue-100 text-blue-800 border-blue-300'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <span>👨‍⚕️</span>
+                <span className="hidden sm:inline">Under Consultation</span>
+                <span className="bg-white/80 text-xs px-2 py-1 rounded-full">
+                  {mockAppointments.filter(apt => apt.status === 'under-consultation').length}
+                </span>
+              </button>
+              <button
+                onClick={() => setSelectedStatus('lab-test-required')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all text-sm font-medium ${
+                  selectedStatus === 'lab-test-required'
+                    ? 'bg-purple-100 text-purple-800 border-purple-300'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <span>🧪</span>
+                <span className="hidden sm:inline">Lab Test Required</span>
+                <span className="bg-white/80 text-xs px-2 py-1 rounded-full">
+                  {mockAppointments.filter(apt => apt.status === 'lab-test-required').length}
+                </span>
+              </button>
+              <button
+                onClick={() => setSelectedStatus('awaiting-reconsultation')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all text-sm font-medium ${
+                  selectedStatus === 'awaiting-reconsultation'
+                    ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <span>⏳</span>
+                <span className="hidden sm:inline">Awaiting Reconsultation</span>
+                <span className="bg-white/80 text-xs px-2 py-1 rounded-full">
+                  {mockAppointments.filter(apt => apt.status === 'awaiting-reconsultation').length}
+                </span>
+              </button>
+              <button
+                onClick={() => setSelectedStatus('completed')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all text-sm font-medium ${
+                  selectedStatus === 'completed'
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <span>✅</span>
+                <span className="hidden sm:inline">Completed</span>
+                <span className="bg-white/80 text-xs px-2 py-1 rounded-full">
+                  {mockAppointments.filter(apt => apt.status === 'completed').length}
+                </span>
+              </button>
+            </div>
+          </div>
           <CardContent className="flex-1 overflow-hidden">
             <div className="hidden lg:block h-full overflow-y-auto">
               <div className="min-w-[800px]">
