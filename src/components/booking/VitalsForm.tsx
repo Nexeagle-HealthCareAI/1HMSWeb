@@ -126,6 +126,9 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
             <Activity className="h-5 w-5" />
             Update Vitals - {patientName}
           </DialogTitle>
+          <p className="text-sm text-muted-foreground mt-2">
+            Recording vital signs is optional but helps provide better care. You can skip this step if needed.
+          </p>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -342,18 +345,24 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
             )}
           </Card>
 
+          <div className="bg-muted/50 p-4 rounded-lg border-l-4 border-healthcare-primary/50 mb-4">
+            <p className="text-sm text-muted-foreground">
+              💡 <strong>Optional Step:</strong> Vital signs help us provide better care, but you can proceed without entering them if you prefer.
+            </p>
+          </div>
+
           <div className="flex gap-3 pt-4">
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={onCancel}
-              className="flex-1"
+              className="flex-1 text-base py-3"
             >
-              Skip Vitals
+              Skip This Step
             </Button>
             <Button
               type="submit"
-              className="flex-1 bg-healthcare-primary hover:bg-healthcare-primary/90"
+              className="flex-1 bg-healthcare-primary hover:bg-healthcare-primary/90 text-base py-3"
             >
               Save Vitals
             </Button>
