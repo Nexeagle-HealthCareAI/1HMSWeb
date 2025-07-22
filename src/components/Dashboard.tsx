@@ -154,12 +154,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     { id: 'admin', name: 'Admin Panel', icon: Settings },
     { id: 'calendar', name: 'Calendar', icon: Calendar },
     { id: 'appointments', name: 'Appointment Scheduler', icon: Calendar },
-    { id: 'patients', name: 'Patients', icon: Users },
     { id: 'billing', name: 'Billing', icon: CreditCard },
     { id: 'doc-ai', name: 'DocAI', icon: Bot },
     { id: 'chat', name: 'Chat', icon: MessageCircle },
-    { id: 'bulk-messaging', name: 'Bulk Messaging', icon: Send },
-    { id: 'user-management', name: 'User Management', icon: Settings }
+    { id: 'bulk-messaging', name: 'Bulk Messaging', icon: Send }
   ];
 
   const getStatusBadge = (status: Patient['status']) => {
@@ -185,8 +183,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         return <AdminDashboard />;
       case 'appointments':
         return <AppointmentDashboard />;
-      case 'patients':
-        return <PatientsPage />;
       case 'billing':
         return <Billing />;
       case 'doc-ai':
@@ -195,8 +191,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         return <InternalChat />;
       case 'bulk-messaging':
         return <BulkMessaging />;
-      case 'user-management':
-        return <UserManagement />;
       default:
         return (
           <div className="space-y-6">
@@ -206,7 +200,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             )}
 
             {/* Quick Navigation */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
               {navigation.map((item) => (
                 <Button
                   key={item.id}

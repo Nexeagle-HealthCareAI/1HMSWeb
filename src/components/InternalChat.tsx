@@ -180,9 +180,9 @@ export const InternalChat: React.FC = () => {
   );
 
   return (
-    <div className="h-[calc(100vh-12rem)] flex">
+    <div className="h-[calc(100vh-2rem)] md:h-[calc(100vh-4rem)] lg:h-[calc(100vh-6rem)] flex flex-col lg:flex-row">
       {/* Left Sidebar */}
-      <div className="w-80 border-r bg-card flex flex-col">
+      <div className="w-full lg:w-80 border-b lg:border-r lg:border-b-0 bg-card flex flex-col max-h-[40vh] lg:max-h-none">
         {/* Header */}
         <div className="p-4 border-b">
           <div className="flex items-center justify-between mb-4">
@@ -285,7 +285,7 @@ export const InternalChat: React.FC = () => {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-h-0">
         {/* Chat Header */}
         <div className="p-4 border-b bg-card">
           <div className="flex items-center justify-between">

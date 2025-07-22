@@ -317,8 +317,85 @@ export const BulkMessaging: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Mobile Message Composer - Show first on mobile */}
+        <div className="lg:hidden order-1">
+          <Card>
+            <CardHeader>
+              <CardTitle>Compose Message</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Message Type</Label>
+                <Select value={messageType} onValueChange={(value: 'sms' | 'whatsapp') => setMessageType(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sms">SMS</SelectItem>
+                    <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Message Templates</Label>
+                <div className="space-y-2 mt-2">
+                  {messageTemplates
+                    .filter(template => template.type === messageType)
+                    .map((template) => (
+                      <div
+                        key={template.id}
+                        onClick={() => {
+                          setSelectedTemplate(template);
+                          setCustomMessage('');
+                        }}
+                        className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                          selectedTemplate?.id === template.id 
+                            ? 'bg-healthcare-primary/10 border-healthcare-primary' 
+                            : 'hover:bg-muted'
+                        }`}
+                      >
+                        <h4 className="font-medium text-sm">{template.name}</h4>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {template.content}
+                        </p>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="customMessage">Or Write Custom Message</Label>
+                <Textarea
+                  id="customMessage"
+                  value={customMessage}
+                  onChange={(e) => {
+                    setCustomMessage(e.target.value);
+                    if (e.target.value) setSelectedTemplate(null);
+                  }}
+                  placeholder="Write your custom message here..."
+                  rows={4}
+                />
+              </div>
+
+              <div className="text-sm text-muted-foreground">
+                <p>Selected recipients: {selectedPatients.length}</p>
+                <p>Message type: {messageType.toUpperCase()}</p>
+              </div>
+
+              <Button 
+                onClick={() => setShowSendDialog(true)} 
+                className="w-full gap-2"
+                disabled={selectedPatients.length === 0 || (!selectedTemplate && !customMessage.trim())}
+              >
+                <Send className="h-4 w-4" />
+                Send Messages
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
         {/* Patient Selection */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 order-2 lg:order-1">
           <Card>
             <CardHeader>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -389,8 +466,8 @@ export const BulkMessaging: React.FC = () => {
           </Card>
         </div>
 
-        {/* Message Composer */}
-        <div>
+        {/* Desktop Message Composer */}
+        <div className="hidden lg:block order-3 lg:order-2">
           <Card>
             <CardHeader>
               <CardTitle>Compose Message</CardTitle>
@@ -474,7 +551,8 @@ export const BulkMessaging: React.FC = () => {
           <CardTitle>Recent Bulk Messages</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
+          {/* Desktop Table */}
+          <div className="hidden md:block space-y-3">
             {recentMessages.map((message) => (
               <div key={message.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex-1">
@@ -499,6 +577,45 @@ export const BulkMessaging: React.FC = () => {
                   </Button>
                 </div>
               </div>
+            ))}
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden space-y-4">
+            {recentMessages.map((message) => (
+              <Card key={message.id} className="p-4">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h4 className="font-medium">{message.templateName}</h4>
+                    <p className="text-sm text-muted-foreground">{message.recipientCount} recipients</p>
+                  </div>
+                  {getStatusBadge(message.status)}
+                </div>
+                
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Date:</span>
+                    <span>{message.sentDate.toLocaleDateString()}</span>
+                  </div>
+                  {message.status === 'sent' && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Delivery:</span>
+                      <span>{message.deliveryRate}%</span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex gap-2 mt-3">
+                  <Button size="sm" variant="outline" className="flex-1">
+                    <Download className="h-3 w-3 mr-1" />
+                    Download
+                  </Button>
+                  <Button size="sm" variant="outline" className="flex-1">
+                    <Edit className="h-3 w-3 mr-1" />
+                    Edit
+                  </Button>
+                </div>
+              </Card>
             ))}
           </div>
         </CardContent>

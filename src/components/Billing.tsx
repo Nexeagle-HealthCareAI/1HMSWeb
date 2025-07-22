@@ -179,7 +179,7 @@ export const Billing: React.FC = () => {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
