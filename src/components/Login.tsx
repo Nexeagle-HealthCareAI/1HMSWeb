@@ -359,18 +359,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
       <div className="w-full lg:w-1/3 flex items-center justify-center p-4 lg:p-8">
         <Card className="w-full max-w-md shadow-elegant">
           <CardHeader className="text-center space-y-2">
-            {/* Register Now Button - Top Position */}
-            <div className="flex justify-end mb-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onSwitchToRegister}
-                className="text-healthcare-primary border-healthcare-primary hover:bg-healthcare-primary hover:text-white"
-              >
-                Register Now
-              </Button>
-            </div>
-            
             <div className="flex justify-center mb-4">
               <div className="p-3 bg-gradient-primary rounded-full">
                 <Stethoscope className="h-8 w-8 text-white" />
@@ -516,6 +504,24 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
                 </form>
               </TabsContent>
             </Tabs>
+            
+            {/* Register Now Button - Bottom Position */}
+            <div className="mt-8 pt-6 border-t border-border">
+              <div className="text-center space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Don't have an account yet?
+                </p>
+                <Button
+                  onClick={onSwitchToRegister}
+                  className="w-full h-12 bg-gradient-to-r from-primary to-primary/80 text-white font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                >
+                  🚀 Register Now - Join 10K+ Doctors!
+                </Button>
+                <p className="text-xs text-muted-foreground/80">
+                  Free account • Setup in 2 minutes • Start managing patients today
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
