@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AppointmentBooking } from './AppointmentBooking';
+import { VitalsForm } from './booking/VitalsForm';
 
 interface Appointment {
   id: string;
@@ -110,6 +111,8 @@ export const AppointmentDashboard = () => {
   const [doctorFilter, setDoctorFilter] = useState('all');
   const [showBooking, setShowBooking] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [showVitalsForm, setShowVitalsForm] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<Appointment | null>(null);
 
   // Calculate KPIs
   const kpis = useMemo(() => {
@@ -143,10 +146,17 @@ export const AppointmentDashboard = () => {
     });
   }, [searchTerm, statusFilter, doctorFilter, selectedStatus]);
 
-  const getStatusBadge = (status: Appointment['status']) => {
+  const getStatusBadge = (status: Appointment['status'], appointment?: Appointment) => {
     switch (status) {
       case 'vitals-required':
-        return <Badge className="bg-red-100 text-red-800 border-red-300">❤️ Vitals Required</Badge>;
+        return (
+          <Badge 
+            className="bg-red-100 text-red-800 border-red-300 cursor-pointer hover:bg-red-200 transition-colors"
+            onClick={() => appointment && handleVitalsClick(appointment)}
+          >
+            ❤️ Vitals Required
+          </Badge>
+        );
       case 'ready-consultation':
         return <Badge className="bg-green-100 text-green-800 border-green-300">✅ Ready For Consultation</Badge>;
       case 'under-consultation':
@@ -160,6 +170,23 @@ export const AppointmentDashboard = () => {
       default:
         return null;
     }
+  };
+
+  const handleVitalsClick = (appointment: Appointment) => {
+    setSelectedPatient(appointment);
+    setShowVitalsForm(true);
+  };
+
+  const handleVitalsSubmit = (vitalsData: any) => {
+    console.log('Vitals submitted for patient:', selectedPatient?.patientName, vitalsData);
+    // Here you would typically update the appointment status and save the vitals data
+    setShowVitalsForm(false);
+    setSelectedPatient(null);
+  };
+
+  const handleVitalsCancel = () => {
+    setShowVitalsForm(false);
+    setSelectedPatient(null);
   };
 
   const uniqueDoctors = [...new Set(mockAppointments.map(apt => apt.doctorName))];
@@ -468,7 +495,7 @@ export const AppointmentDashboard = () => {
                         <TableCell>
                           <Badge variant="outline">#{appointment.tokenNo}</Badge>
                         </TableCell>
-                        <TableCell>{getStatusBadge(appointment.status)}</TableCell>
+                        <TableCell>{getStatusBadge(appointment.status, appointment)}</TableCell>
                         <TableCell>
                           <Button variant="outline" size="sm">
                             <Eye className="h-3 w-3 mr-1" />
@@ -497,7 +524,7 @@ export const AppointmentDashboard = () => {
                       <p>Time: {appointment.appointmentTime}</p>
                     </div>
                     <div className="flex justify-between items-center">
-                      {getStatusBadge(appointment.status)}
+                      {getStatusBadge(appointment.status, appointment)}
                       <Button variant="outline" size="sm">
                         <Eye className="h-3 w-3 mr-1" />
                         View
@@ -510,6 +537,15 @@ export const AppointmentDashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Vitals Form Modal */}
+      {showVitalsForm && selectedPatient && (
+        <VitalsForm
+          patientName={selectedPatient.patientName}
+          onSubmit={handleVitalsSubmit}
+          onCancel={handleVitalsCancel}
+        />
+      )}
     </div>
   );
 };
