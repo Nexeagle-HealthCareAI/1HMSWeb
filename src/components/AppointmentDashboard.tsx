@@ -544,6 +544,7 @@ export const AppointmentDashboard = () => {
           patientName={selectedPatient.patientName}
           onSubmit={handleVitalsSubmit}
           onCancel={handleVitalsCancel}
+          hideSkipButton={true}
         />
       )}
     </div>

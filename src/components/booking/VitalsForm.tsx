@@ -10,12 +10,14 @@ interface VitalsFormProps {
   patientName: string;
   onSubmit: (vitalsData: any) => void;
   onCancel: () => void;
+  hideSkipButton?: boolean;
 }
 
 export const VitalsForm: React.FC<VitalsFormProps> = ({
   patientName,
   onSubmit,
-  onCancel
+  onCancel,
+  hideSkipButton = false
 }) => {
   const [vitalsData, setVitalsData] = useState({
     systolic: '',
@@ -120,7 +122,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
 
   return (
     <Dialog open={true} onOpenChange={onCancel}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-healthcare-primary flex items-center gap-2">
             <Activity className="h-5 w-5" />
@@ -131,14 +133,14 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Blood Pressure & Heart Rate */}
-          <Card className="p-4">
-            <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+          <Card className="p-3">
+            <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
               <Heart className="h-4 w-4 text-red-500" />
               Cardiovascular Vitals
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <Label htmlFor="systolic" className="text-sm font-medium">
                   Systolic BP (mmHg)
@@ -149,12 +151,11 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                   value={vitalsData.systolic}
                   onChange={(e) => setVitalsData(prev => ({ ...prev, systolic: e.target.value }))}
                   placeholder="120"
-                  className={errors.systolic ? "border-red-500" : ""}
+                  className={`h-9 ${errors.systolic ? "border-red-500" : ""}`}
                 />
                 {errors.systolic && (
                   <p className="text-red-500 text-xs mt-1">{errors.systolic}</p>
                 )}
-                <p className="text-xs text-muted-foreground mt-1">Normal: 90-140</p>
               </div>
 
               <div>
@@ -167,12 +168,11 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                   value={vitalsData.diastolic}
                   onChange={(e) => setVitalsData(prev => ({ ...prev, diastolic: e.target.value }))}
                   placeholder="80"
-                  className={errors.diastolic ? "border-red-500" : ""}
+                  className={`h-9 ${errors.diastolic ? "border-red-500" : ""}`}
                 />
                 {errors.diastolic && (
                   <p className="text-red-500 text-xs mt-1">{errors.diastolic}</p>
                 )}
-                <p className="text-xs text-muted-foreground mt-1">Normal: 60-90</p>
               </div>
 
               <div>
@@ -185,23 +185,22 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                   value={vitalsData.heartRate}
                   onChange={(e) => setVitalsData(prev => ({ ...prev, heartRate: e.target.value }))}
                   placeholder="72"
-                  className={errors.heartRate ? "border-red-500" : ""}
+                  className={`h-9 ${errors.heartRate ? "border-red-500" : ""}`}
                 />
                 {errors.heartRate && (
                   <p className="text-red-500 text-xs mt-1">{errors.heartRate}</p>
                 )}
-                <p className="text-xs text-muted-foreground mt-1">Normal: 60-100</p>
               </div>
             </div>
           </Card>
 
           {/* Respiratory & Temperature */}
-          <Card className="p-4">
-            <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+          <Card className="p-3">
+            <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
               <Thermometer className="h-4 w-4 text-orange-500" />
               Respiratory & Temperature
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <Label htmlFor="respiratoryRate" className="text-sm font-medium">
                   Respiratory Rate (breaths/min)
@@ -212,12 +211,11 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                   value={vitalsData.respiratoryRate}
                   onChange={(e) => setVitalsData(prev => ({ ...prev, respiratoryRate: e.target.value }))}
                   placeholder="16"
-                  className={errors.respiratoryRate ? "border-red-500" : ""}
+                  className={`h-9 ${errors.respiratoryRate ? "border-red-500" : ""}`}
                 />
                 {errors.respiratoryRate && (
                   <p className="text-red-500 text-xs mt-1">{errors.respiratoryRate}</p>
                 )}
-                <p className="text-xs text-muted-foreground mt-1">Normal: 12-20</p>
               </div>
 
               <div>
@@ -232,12 +230,12 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                     value={vitalsData.temperature}
                     onChange={(e) => setVitalsData(prev => ({ ...prev, temperature: e.target.value }))}
                     placeholder="37.0"
-                    className={`flex-1 ${errors.temperature ? "border-red-500" : ""}`}
+                    className={`flex-1 h-9 ${errors.temperature ? "border-red-500" : ""}`}
                   />
                   <select
                     value={vitalsData.temperatureUnit}
                     onChange={(e) => setVitalsData(prev => ({ ...prev, temperatureUnit: e.target.value }))}
-                    className="px-3 py-2 border border-input rounded-md bg-background"
+                    className="px-2 py-1 border border-input rounded-md bg-background h-9 text-sm"
                   >
                     <option value="C">°C</option>
                     <option value="F">°F</option>
@@ -246,7 +244,6 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                 {errors.temperature && (
                   <p className="text-red-500 text-xs mt-1">{errors.temperature}</p>
                 )}
-                <p className="text-xs text-muted-foreground mt-1">Normal: 36.1-37.2°C</p>
               </div>
 
               <div>
@@ -259,23 +256,22 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                   value={vitalsData.oxygenSaturation}
                   onChange={(e) => setVitalsData(prev => ({ ...prev, oxygenSaturation: e.target.value }))}
                   placeholder="98"
-                  className={errors.oxygenSaturation ? "border-red-500" : ""}
+                  className={`h-9 ${errors.oxygenSaturation ? "border-red-500" : ""}`}
                 />
                 {errors.oxygenSaturation && (
                   <p className="text-red-500 text-xs mt-1">{errors.oxygenSaturation}</p>
                 )}
-                <p className="text-xs text-muted-foreground mt-1">Normal: 95-100%</p>
               </div>
             </div>
           </Card>
 
           {/* Physical Measurements */}
-          <Card className="p-4">
-            <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+          <Card className="p-3">
+            <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
               <Scale className="h-4 w-4 text-blue-500" />
               Physical Measurements
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <Label htmlFor="height" className="text-sm font-medium">
                   Height
@@ -288,12 +284,12 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                     value={vitalsData.height}
                     onChange={(e) => setVitalsData(prev => ({ ...prev, height: e.target.value }))}
                     placeholder="170"
-                    className="flex-1"
+                    className="flex-1 h-9"
                   />
                   <select
                     value={vitalsData.heightUnit}
                     onChange={(e) => setVitalsData(prev => ({ ...prev, heightUnit: e.target.value }))}
-                    className="px-3 py-2 border border-input rounded-md bg-background"
+                    className="px-2 py-1 border border-input rounded-md bg-background h-9 text-sm"
                   >
                     <option value="cm">cm</option>
                     <option value="ft">ft</option>
@@ -313,12 +309,12 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                     value={vitalsData.weight}
                     onChange={(e) => setVitalsData(prev => ({ ...prev, weight: e.target.value }))}
                     placeholder="70"
-                    className="flex-1"
+                    className="flex-1 h-9"
                   />
                   <select
                     value={vitalsData.weightUnit}
                     onChange={(e) => setVitalsData(prev => ({ ...prev, weightUnit: e.target.value }))}
-                    className="px-3 py-2 border border-input rounded-md bg-background"
+                    className="px-2 py-1 border border-input rounded-md bg-background h-9 text-sm"
                   >
                     <option value="kg">kg</option>
                     <option value="lbs">lbs</option>
@@ -330,50 +326,48 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                 <Label className="text-sm font-medium">
                   BMI (Body Mass Index)
                 </Label>
-                <div className="mt-2 p-3 bg-muted rounded-md border">
+                <div className="mt-1 p-2 bg-muted rounded-md border h-9 flex items-center">
                   {bmi ? (
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-foreground">{bmi}</div>
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-lg font-bold text-foreground">{bmi}</span>
                       {bmiInfo && (
-                        <div className={`text-sm font-medium ${bmiInfo.color} mt-1`}>
+                        <span className={`text-xs font-medium ${bmiInfo.color}`}>
                           {bmiInfo.category}
-                        </div>
+                        </span>
                       )}
                     </div>
                   ) : (
-                    <div className="text-center text-muted-foreground text-sm py-2">
+                    <div className="text-muted-foreground text-xs">
                       Enter height & weight
                     </div>
                   )}
-                </div>
-                <div className="text-xs text-muted-foreground mt-2">
-                  <div>&lt; 18.5: Underweight</div>
-                  <div>18.5-24.9: Normal</div>
-                  <div>25-29.9: Overweight</div>
-                  <div>≥ 30: Obesity</div>
                 </div>
               </div>
             </div>
           </Card>
 
-          <div className="bg-muted/50 p-4 rounded-lg border-l-4 border-healthcare-primary/50 mb-4">
-            <p className="text-sm text-muted-foreground">
-              💡 <strong>Optional Step:</strong> Vital signs help us provide better care, but you can proceed without entering them if you prefer.
-            </p>
-          </div>
+          {!hideSkipButton && (
+            <div className="bg-muted/50 p-3 rounded-lg border-l-4 border-healthcare-primary/50 mb-3">
+              <p className="text-sm text-muted-foreground">
+                💡 <strong>Optional Step:</strong> Vital signs help us provide better care, but you can proceed without entering them if you prefer.
+              </p>
+            </div>
+          )}
 
-          <div className="flex gap-3 pt-4">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={onCancel}
-              className="flex-1 text-base py-3"
-            >
-              Skip This Step
-            </Button>
+          <div className={`flex gap-3 pt-3 ${hideSkipButton ? 'justify-end' : ''}`}>
+            {!hideSkipButton && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={onCancel}
+                className="flex-1 text-base py-2"
+              >
+                Skip This Step
+              </Button>
+            )}
             <Button
               type="submit"
-              className="flex-1 bg-healthcare-primary hover:bg-healthcare-primary/90 text-base py-3"
+              className={`${hideSkipButton ? 'px-8' : 'flex-1'} bg-healthcare-primary hover:bg-healthcare-primary/90 text-base py-2`}
             >
               Save Vitals
             </Button>
