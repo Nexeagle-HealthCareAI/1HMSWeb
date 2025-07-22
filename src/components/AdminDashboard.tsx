@@ -151,28 +151,28 @@ export const AdminDashboard = () => {
 
   const renderKPICard = (title: string, icon: React.ReactNode, data: any, isCurrency = false) => (
     <Card className="hover:shadow-lg transition-shadow">
-      <CardContent className="p-6">
+      <CardContent className="p-4 lg:p-6">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs lg:text-sm font-medium text-muted-foreground truncate">{title}</p>
+            <p className="text-lg lg:text-2xl font-bold">
               {isCurrency ? `$${data.value.toLocaleString()}` : data.value.toLocaleString()}
             </p>
           </div>
-          <div className="p-3 bg-primary/10 rounded-full">
+          <div className="p-2 lg:p-3 bg-primary/10 rounded-full ml-2">
             {icon}
           </div>
         </div>
-        <div className="flex items-center mt-4">
+        <div className="flex items-center mt-2 lg:mt-4">
           {data.trend === 'up' ? (
-            <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+            <TrendingUp className="h-3 w-3 lg:h-4 lg:w-4 text-green-500 mr-1" />
           ) : (
-            <TrendingDown className="h-4 w-4 text-red-500 mr-1" />
+            <TrendingDown className="h-3 w-3 lg:h-4 lg:w-4 text-red-500 mr-1" />
           )}
-          <span className={`text-sm font-medium ${data.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
+          <span className={`text-xs lg:text-sm font-medium ${data.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
             {data.change > 0 ? '+' : ''}{data.change}%
           </span>
-          <span className="text-sm text-muted-foreground ml-1">vs last period</span>
+          <span className="text-xs lg:text-sm text-muted-foreground ml-1 hidden sm:inline">vs last period</span>
         </div>
       </CardContent>
     </Card>
@@ -189,16 +189,16 @@ export const AdminDashboard = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle">
       {/* Top Navigation */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
           <p className="text-muted-foreground">Hospital Management Overview</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-2">
           <Select defaultValue="today">
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="w-[120px] sm:w-[150px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -210,13 +210,13 @@ export const AdminDashboard = () => {
           </Select>
           <Button variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />
-            Export
+            <span className="hidden sm:inline">Export</span>
           </Button>
         </div>
       </div>
 
       {/* Admin Navigation Modules */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 lg:gap-4">
         {adminModules.map((module) => (
           <Card 
             key={module.id}
@@ -227,16 +227,16 @@ export const AdminDashboard = () => {
             }`}
             onClick={() => setCurrentView(module.id)}
           >
-            <CardContent className="p-4 text-center">
-              <module.icon className={`h-8 w-8 mx-auto mb-2 ${
+            <CardContent className="p-3 lg:p-4 text-center">
+              <module.icon className={`h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 ${
                 currentView === module.id ? 'text-primary' : 'text-muted-foreground'
               }`} />
-              <h3 className={`font-medium text-sm mb-1 ${
+              <h3 className={`font-medium text-xs lg:text-sm mb-1 ${
                 currentView === module.id ? 'text-primary' : 'text-foreground'
               }`}>
                 {module.name}
               </h3>
-              <p className="text-xs text-muted-foreground">{module.description}</p>
+              <p className="text-xs text-muted-foreground hidden sm:block">{module.description}</p>
             </CardContent>
           </Card>
         ))}
@@ -246,7 +246,7 @@ export const AdminDashboard = () => {
       {currentView === 'dashboard' && (
         <div className="space-y-6">
           {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             {renderKPICard(
               "Today's Appointments",
               <Calendar className="h-6 w-6 text-primary" />,
@@ -271,18 +271,18 @@ export const AdminDashboard = () => {
           </div>
 
           {/* Charts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
             {/* Appointments Trend */}
             <Card>
               <CardHeader>
-                <CardTitle>Appointments Trend (Last 15 Days)</CardTitle>
+                <CardTitle className="text-sm lg:text-base">Appointments Trend (Last 15 Days)</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={250}>
                   <LineChart data={appointmentTrend}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
+                    <XAxis dataKey="date" fontSize={12} />
+                    <YAxis fontSize={12} />
                     <Tooltip />
                     <Line 
                       type="monotone" 
@@ -299,10 +299,10 @@ export const AdminDashboard = () => {
             {/* Department Load Distribution */}
             <Card>
               <CardHeader>
-                <CardTitle>Department Load Distribution</CardTitle>
+                <CardTitle className="text-sm lg:text-base">Department Load Distribution</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={250}>
                   <PieChart>
                     <Pie
                       data={departmentLoad}
@@ -310,7 +310,7 @@ export const AdminDashboard = () => {
                       cy="50%"
                       labelLine={false}
                       label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
+                      outerRadius={60}
                       fill="#8884d8"
                       dataKey="value"
                     >
@@ -326,18 +326,24 @@ export const AdminDashboard = () => {
           </div>
 
           {/* Revenue and Activity Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
             {/* Revenue by Doctor */}
             <Card>
               <CardHeader>
-                <CardTitle>Revenue by Doctor</CardTitle>
+                <CardTitle className="text-sm lg:text-base">Revenue by Doctor</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={revenueByDoctor}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="doctor" angle={-45} textAnchor="end" height={80} />
-                    <YAxis />
+                    <XAxis 
+                      dataKey="doctor" 
+                      angle={-45} 
+                      textAnchor="end" 
+                      height={80} 
+                      fontSize={10}
+                    />
+                    <YAxis fontSize={12} />
                     <Tooltip />
                     <Bar dataKey="revenue" fill="#82ca9d" />
                   </BarChart>
@@ -348,14 +354,14 @@ export const AdminDashboard = () => {
             {/* Hourly Activity Heatmap */}
             <Card>
               <CardHeader>
-                <CardTitle>OPD Activity by Hour</CardTitle>
+                <CardTitle className="text-sm lg:text-base">OPD Activity by Hour</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={250}>
                   <AreaChart data={hourlyActivity}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="hour" />
-                    <YAxis />
+                    <XAxis dataKey="hour" fontSize={12} />
+                    <YAxis fontSize={12} />
                     <Tooltip />
                     <Area 
                       type="monotone" 
@@ -371,12 +377,12 @@ export const AdminDashboard = () => {
           </div>
 
           {/* Tables Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
             {/* Recent Appointments */}
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Recent Appointments</CardTitle>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <CardTitle className="text-sm lg:text-base">Recent Appointments</CardTitle>
                   <Button variant="outline" size="sm">
                     <Eye className="h-4 w-4 mr-2" />
                     View All
@@ -384,14 +390,14 @@ export const AdminDashboard = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {recentAppointments.map((appointment) => (
-                    <div key={appointment.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{appointment.patient}</p>
-                        <p className="text-sm text-muted-foreground">{appointment.doctor} • {appointment.time}</p>
+                    <div key={appointment.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 border rounded-lg gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm">{appointment.patient}</p>
+                        <p className="text-xs text-muted-foreground">{appointment.doctor} • {appointment.time}</p>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         <Badge variant="outline" className="text-xs">{appointment.type}</Badge>
                         {getStatusBadge(appointment.status)}
                       </div>
@@ -404,8 +410,8 @@ export const AdminDashboard = () => {
             {/* Doctor Performance */}
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Doctor Performance</CardTitle>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <CardTitle className="text-sm lg:text-base">Doctor Performance</CardTitle>
                   <Button variant="outline" size="sm">
                     <Eye className="h-4 w-4 mr-2" />
                     View All
@@ -413,19 +419,19 @@ export const AdminDashboard = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {doctorPerformance.map((doctor, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{doctor.name}</p>
-                        <p className="text-sm text-muted-foreground">{doctor.patients} patients this month</p>
+                    <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 border rounded-lg gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm">{doctor.name}</p>
+                        <p className="text-xs text-muted-foreground">{doctor.patients} patients this month</p>
                       </div>
-                      <div className="text-right">
+                      <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
                         <div className="flex items-center gap-1">
                           <Star className="h-4 w-4 text-yellow-500" />
-                          <span className="font-medium">{doctor.satisfaction}</span>
+                          <span className="font-medium text-sm">{doctor.satisfaction}</span>
                         </div>
-                        <p className="text-sm text-muted-foreground">${doctor.revenue.toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground">${doctor.revenue.toLocaleString()}</p>
                       </div>
                     </div>
                   ))}
@@ -451,7 +457,7 @@ export const AdminDashboard = () => {
       {/* Billing & Insurance Module */}
       {currentView === 'billing-insurance' && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h2 className="text-2xl font-bold text-foreground">Billing & Insurance Management</h2>
               <p className="text-muted-foreground">Comprehensive financial management system</p>
@@ -459,22 +465,22 @@ export const AdminDashboard = () => {
           </div>
           
           <Tabs defaultValue="configuration" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="configuration" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Configuration
+            <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
+              <TabsTrigger value="configuration" className="flex items-center gap-1 lg:gap-2">
+                <Settings className="h-3 w-3 lg:h-4 lg:w-4" />
+                <span className="text-xs lg:text-sm">Config</span>
               </TabsTrigger>
-              <TabsTrigger value="patient-bills" className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Patient Bills
+              <TabsTrigger value="patient-bills" className="flex items-center gap-1 lg:gap-2">
+                <FileText className="h-3 w-3 lg:h-4 lg:w-4" />
+                <span className="text-xs lg:text-sm">Bills</span>
               </TabsTrigger>
-              <TabsTrigger value="insurance" className="flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                Insurance
+              <TabsTrigger value="insurance" className="flex items-center gap-1 lg:gap-2">
+                <Shield className="h-3 w-3 lg:h-4 lg:w-4" />
+                <span className="text-xs lg:text-sm">Insurance</span>
               </TabsTrigger>
-              <TabsTrigger value="reports" className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
-                Reports
+              <TabsTrigger value="reports" className="flex items-center gap-1 lg:gap-2">
+                <BarChart3 className="h-3 w-3 lg:h-4 lg:w-4" />
+                <span className="text-xs lg:text-sm">Reports</span>
               </TabsTrigger>
             </TabsList>
             
