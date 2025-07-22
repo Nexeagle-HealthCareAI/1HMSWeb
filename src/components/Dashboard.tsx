@@ -39,6 +39,8 @@ import {
 import { AppointmentBooking } from './AppointmentBooking';
 import { PatientsPage } from './PatientsPage';
 import { ProfileCompletion } from './ProfileCompletion';
+import { ProfileCompletionBanner } from './ProfileCompletionBanner';
+import WelcomeSetup from './WelcomeSetup';
 import { Billing } from './Billing';
 import { DocAI } from './DocAI';
 import { InternalChat } from './InternalChat';
@@ -150,6 +152,49 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showProfileCompletion, setShowProfileCompletion] = useState(true);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [showSetup, setShowSetup] = useState(false);
+  
+  // Calculate profile completion score
+  const calculateProfileScore = () => {
+    const setupData = localStorage.getItem('easyHMS_setupData');
+    const hasCompletedSetup = localStorage.getItem('easyHMS_setupCompleted');
+    const hasSkippedSetup = localStorage.getItem('easyHMS_setupSkipped');
+    
+    if (hasCompletedSetup && setupData) {
+      const data = JSON.parse(setupData);
+      const requiredFields = [
+        data.hospital?.name,
+        data.hospital?.phone,
+        data.hospital?.registrationNumber,
+        data.hospital?.address,
+        data.doctor?.fullName,
+        data.doctor?.specialization,
+        data.doctor?.licenseNumber,
+        data.doctor?.qualification,
+      ];
+      
+      const optionalFields = [
+        data.hospital?.email,
+        data.doctor?.email,
+        data.doctor?.experience,
+        data.documents?.license,
+        data.documents?.signature,
+        data.documents?.clinicPhotos?.length > 0,
+      ];
+      
+      const requiredComplete = requiredFields.filter(field => field && field.toString().trim() !== '').length;
+      const optionalComplete = optionalFields.filter(field => field).length;
+      
+      const requiredProgress = (requiredComplete / requiredFields.length) * 70;
+      const optionalProgress = (optionalComplete / optionalFields.length) * 30;
+      
+      return Math.round(requiredProgress + optionalProgress);
+    }
+    
+    return hasSkippedSetup ? 30 : 0;
+  };
+  
+  const profileScore = calculateProfileScore();
 
 const navigation = [
     { id: 'dashboard', name: 'Dashboard', icon: Home },
@@ -225,7 +270,16 @@ const navigation = [
         return (
           <div className="space-y-4 lg:space-y-6">
             {/* Profile Completion Banner */}
-            {showProfileCompletion && (
+            {profileScore < 90 && !localStorage.getItem('easyHMS_setupCompleted') && (
+              <ProfileCompletionBanner
+                profileScore={profileScore}
+                onOpenSetup={() => setShowSetup(true)}
+                onDismiss={() => setShowProfileCompletion(false)}
+              />
+            )}
+
+            {/* Legacy Profile Completion Card */}
+            {showProfileCompletion && localStorage.getItem('easyHMS_setupCompleted') && (
               <ProfileCompletion onClose={() => setShowProfileCompletion(false)} />
             )}
 
@@ -565,6 +619,21 @@ const navigation = [
         <PatientProfile
           patientId={selectedPatientId}
           onClose={() => setSelectedPatientId(null)}
+        />
+      )}
+
+      {/* Welcome Setup Modal */}
+      {showSetup && (
+        <WelcomeSetup
+          onComplete={(setupData) => {
+            localStorage.setItem('easyHMS_setupCompleted', 'true');
+            localStorage.setItem('easyHMS_setupData', JSON.stringify(setupData));
+            setShowSetup(false);
+          }}
+          onSkip={() => {
+            localStorage.setItem('easyHMS_setupSkipped', 'true');
+            setShowSetup(false);
+          }}
         />
       )}
 
