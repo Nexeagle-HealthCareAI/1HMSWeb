@@ -244,53 +244,60 @@ export const AppointmentBooking: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       {/* Mobile-First Layout */}
       <div className="min-h-screen">
-        {/* Mobile Header with Compact Selection */}
-        <div className="lg:hidden bg-white shadow-sm border-b p-3">
-          <h1 className="text-lg font-bold text-gray-900 mb-2">Book Appointment</h1>
-          
-          {/* Department & Doctor Selection - Mobile */}
-          <div className="grid grid-cols-1 gap-2">
-            {/* Department Dropdown */}
-            <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Department</label>
-            <Select value={selectedDepartment} onValueChange={handleDepartmentSelect}>
-                <SelectTrigger className="h-9 text-xs">
-                  <SelectValue placeholder="Select Department" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border shadow-lg z-50">
-                  {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.id} className="text-xs">
-                      <div className="flex items-center gap-2">
-                        <dept.icon className="h-3 w-3" />
-                        <span>{dept.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        {/* Mobile Header - Fixed Position */}
+        <div className="lg:hidden sticky top-0 z-40 bg-white shadow-sm border-b">
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between mb-3">
+              <h1 className="text-xl font-bold text-primary">Book Appointment</h1>
+              <div className="text-xs text-muted-foreground">
+                {format(selectedDate, 'MMM dd')}
+              </div>
             </div>
             
-            {/* Doctor Selection */}
-            <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Doctor</label>
-            <Select value={selectedDoctor.id} onValueChange={(value) => {
-                const doctor = selectedDepartmentData?.doctors.find(d => d.id === value);
-                if (doctor) setSelectedDoctor(doctor);
-              }}>
-                <SelectTrigger className="h-9 text-xs">
-                  <SelectValue placeholder="Select Doctor" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border shadow-lg z-50">
-                  {selectedDepartmentData?.doctors.map((doctor) => (
-                    <SelectItem key={doctor.id} value={doctor.id} className="text-xs">
-                      <div>
-                        <div className="font-medium">{doctor.name}</div>
-                        <div className="text-xs text-gray-500">{doctor.specialization}</div>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Compact Selection Row */}
+            <div className="grid grid-cols-2 gap-2">
+              {/* Department Dropdown */}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Department</label>
+                <Select value={selectedDepartment} onValueChange={handleDepartmentSelect}>
+                  <SelectTrigger className="h-8 text-xs bg-background">
+                    <SelectValue placeholder="Department" />
+                  </SelectTrigger>
+                  <SelectContent className="z-50">
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id} className="text-xs">
+                        <div className="flex items-center gap-2">
+                          <dept.icon className="h-3 w-3" />
+                          <span>{dept.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Doctor Selection */}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Doctor</label>
+                <Select value={selectedDoctor.id} onValueChange={(value) => {
+                  const doctor = selectedDepartmentData?.doctors.find(d => d.id === value);
+                  if (doctor) setSelectedDoctor(doctor);
+                }}>
+                  <SelectTrigger className="h-8 text-xs bg-background">
+                    <SelectValue placeholder="Doctor" />
+                  </SelectTrigger>
+                  <SelectContent className="z-50">
+                    {selectedDepartmentData?.doctors.map((doctor) => (
+                      <SelectItem key={doctor.id} value={doctor.id} className="text-xs">
+                        <div>
+                          <div className="font-medium">{doctor.name.split(' ')[1]}</div>
+                          <div className="text-xs text-muted-foreground truncate">{doctor.specialization}</div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         </div>
@@ -381,24 +388,24 @@ export const AppointmentBooking: React.FC = () => {
 
           {/* Main Content */}
           <div className="flex-1 overflow-hidden">
-            <div className="h-full p-3 lg:p-6 overflow-y-auto">
-              <div className="max-w-7xl">
+            <div className="h-full p-4 lg:p-6 overflow-y-auto pb-safe">
+              <div className="max-w-4xl mx-auto">
                 {/* Desktop Header */}
                 <div className="hidden lg:block mb-6">
-                  <h1 className="text-xl font-bold text-gray-900 mb-2">Schedule Appointment</h1>
-                  <p className="text-sm text-gray-600">
-                    Selected: <span className="font-semibold text-blue-600">{selectedDoctor.name}</span>
-                    <span className="text-gray-400"> • </span>
+                  <h1 className="text-2xl font-bold text-foreground mb-2">Schedule Appointment</h1>
+                  <p className="text-sm text-muted-foreground">
+                    Selected: <span className="font-semibold text-primary">{selectedDoctor.name}</span>
+                    <span className="text-muted-foreground/50"> • </span>
                     <span>{selectedDoctor.specialization}</span>
                   </p>
                 </div>
 
                 {/* Date Selection with Calendar */}
                 <div className="mb-4">
-                  <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <h2 className="text-sm lg:text-base font-semibold mb-3 flex items-center gap-2 text-foreground">
                     📅 Select Date
                   </h2>
-                  <div className="flex gap-2 overflow-x-auto pb-2">
+                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                     {Array.from({ length: 7 }, (_, i) => {
                       const date = new Date();
                       date.setDate(date.getDate() + i);
@@ -409,16 +416,16 @@ export const AppointmentBooking: React.FC = () => {
                         <button
                           key={i}
                           onClick={() => setSelectedDate(date)}
-                          className={`px-3 py-2 rounded-lg border text-center min-w-[70px] flex-shrink-0 transition-all text-xs shadow-sm animate-fade-in ${
+                          className={`px-3 py-2.5 rounded-lg border text-center min-w-[68px] lg:min-w-[80px] flex-shrink-0 transition-all text-xs lg:text-sm ${
                             isSelected
-                              ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500 shadow-md scale-105'
-                              : 'bg-white border-gray-200 hover:border-blue-300 hover:shadow-md hover-scale'
+                              ? 'bg-primary text-primary-foreground border-primary shadow-md scale-105'
+                              : 'bg-card border-border hover:border-primary/50 hover:bg-accent hover:scale-105'
                           }`}
                         >
                           <div className="font-medium">
                             {isToday ? 'Today' : date.toLocaleDateString('en', { weekday: 'short' })}
                           </div>
-                          <div className={`text-xs mt-1 ${isSelected ? 'text-blue-100' : 'text-gray-600'}`}>
+                          <div className={`text-xs mt-0.5 ${isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
                             {date.toLocaleDateString('en', { month: 'short', day: 'numeric' })}
                           </div>
                         </button>
@@ -428,12 +435,12 @@ export const AppointmentBooking: React.FC = () => {
                     {/* Calendar Picker */}
                     <Popover>
                       <PopoverTrigger asChild>
-                        <button className="px-3 py-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100 text-center min-w-[70px] text-xs flex-shrink-0 transition-all hover-scale">
-                          <CalendarIcon className="h-4 w-4 mx-auto text-gray-500" />
-                          <div className="mt-1 text-gray-600">Other</div>
+                        <button className="px-3 py-2.5 rounded-lg border border-dashed border-border bg-muted hover:bg-accent text-center min-w-[68px] lg:min-w-[80px] text-xs lg:text-sm flex-shrink-0 transition-all hover:scale-105">
+                          <CalendarIcon className="h-4 w-4 mx-auto text-muted-foreground" />
+                          <div className="mt-0.5 text-muted-foreground">Other</div>
                         </button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 bg-white border shadow-lg z-50" align="start">
+                      <PopoverContent className="w-auto p-0 z-50" align="start">
                         <CalendarComponent
                           mode="single"
                           selected={selectedDate}
