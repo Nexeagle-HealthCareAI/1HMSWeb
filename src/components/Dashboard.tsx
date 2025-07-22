@@ -149,16 +149,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
 
   const navigation = [
-    { id: 'dashboard', name: 'Dashboard', icon: Home },
-    { id: 'admin', name: 'Admin Panel', icon: Settings },
-    { id: 'calendar', name: 'Calendar', icon: Calendar },
-    { id: 'appointments', name: 'Appointment Scheduler', icon: Calendar },
-    { id: 'patients', name: 'Patients', icon: Users },
-    { id: 'billing', name: 'Billing', icon: CreditCard },
-    { id: 'doc-ai', name: 'DocAI', icon: Bot },
-    { id: 'chat', name: 'Chat', icon: MessageCircle },
-    { id: 'bulk-messaging', name: 'Bulk Messaging', icon: Send },
-    { id: 'user-management', name: 'User Management', icon: Settings }
+    { id: 'dashboard', name: 'Dashboard', icon: Home, route: '/' },
+    { id: 'admin', name: 'Admin Panel', icon: Settings, route: '/admin' },
+    { id: 'calendar', name: 'Calendar', icon: Calendar, route: '/calendar' },
+    { id: 'appointments', name: 'Appointment Scheduler', icon: Calendar, route: '/appointment-scheduler' },
+    { id: 'patients', name: 'Patients', icon: Users, route: '/patients' },
+    { id: 'billing', name: 'Billing', icon: CreditCard, route: '/billing' },
+    { id: 'doc-ai', name: 'DocAI', icon: Bot, route: '/docs-ai' },
+    { id: 'chat', name: 'Chat', icon: MessageCircle, route: '/chat' },
+    { id: 'bulk-messaging', name: 'Bulk Messaging', icon: Send, route: '/bulk-messaging' },
+    { id: 'user-management', name: 'User Management', icon: Settings, route: '/user-management' }
   ];
 
   const getStatusBadge = (status: Patient['status']) => {
@@ -211,7 +211,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                   key={item.id}
                   variant="outline"
                   className="h-20 flex-col gap-2"
-                  onClick={() => setCurrentPage(item.id)}
+                  onClick={() => {
+                    if (item.route) {
+                      window.location.href = item.route;
+                    } else {
+                      setCurrentPage(item.id);
+                    }
+                  }}
                 >
                   <item.icon className="h-6 w-6" />
                   <span className="text-xs text-center">{item.name}</span>
@@ -387,8 +393,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
               variant={currentPage === item.id ? "default" : "ghost"}
               className="w-full justify-start gap-3"
               onClick={() => {
-                setCurrentPage(item.id);
-                setSidebarOpen(false);
+                if (item.route) {
+                  window.location.href = item.route;
+                } else {
+                  setCurrentPage(item.id);
+                  setSidebarOpen(false);
+                }
               }}
             >
               <item.icon className="h-4 w-4" />

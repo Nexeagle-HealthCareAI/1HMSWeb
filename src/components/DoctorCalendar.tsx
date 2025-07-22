@@ -204,7 +204,7 @@ export const DoctorCalendar = () => {
         ))}
         
         {timeSlots.map(time => (
-          <React.Fragment key={time}>
+          <div key={time}>
             <div className="h-16 flex items-center justify-end pr-4 text-sm text-muted-foreground border-b border-border/20">
               {time}
             </div>
@@ -244,7 +244,7 @@ export const DoctorCalendar = () => {
                 </div>
               );
             })}
-          </React.Fragment>
+          </div>
         ))}
       </div>
     );
