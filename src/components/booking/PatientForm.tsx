@@ -129,7 +129,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
   return (
     <Dialog open={true} onOpenChange={onCancel}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-7xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-healthcare-primary">
             Book Appointment
@@ -139,73 +139,58 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Appointment Details */}
-          <div className="lg:col-span-1">
-            <Card className="p-4 bg-gradient-subtle border-healthcare-primary/20">
-              <h3 className="font-semibold text-foreground mb-3">Appointment Details</h3>
-              <div className="space-y-3 text-sm">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
+          {/* Appointment Details - Compact */}
+          <div className="xl:col-span-1">
+            <Card className="p-3 bg-gradient-subtle border-healthcare-primary/20 h-fit">
+              <h3 className="font-semibold text-foreground mb-2 text-sm">Appointment Details</h3>
+              <div className="space-y-2 text-xs">
                 <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-healthcare-primary" />
+                  <User className="h-3 w-3 text-healthcare-primary" />
                   <span className="font-medium">{doctor.name}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-healthcare-primary" />
-                  <span>{format(new Date(selectedSlot.date), 'EEEE, MMMM dd, yyyy')}</span>
+                  <Calendar className="h-3 w-3 text-healthcare-primary" />
+                  <span>{format(new Date(selectedSlot.date), 'MMM dd, yyyy')}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-healthcare-primary" />
+                  <Clock className="h-3 w-3 text-healthcare-primary" />
                   <span>{formatTime(selectedSlot.time)}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-healthcare-primary" />
-                  <span className="font-medium">Consultation Fee: ₹500</span>
+                  <DollarSign className="h-3 w-3 text-healthcare-primary" />
+                  <span className="font-medium">Fee: ₹500</span>
                 </div>
+              </div>
+              
+              {/* Patient Search - Moved here for compactness */}
+              <div className="mt-4 pt-3 border-t border-healthcare-primary/20">
+                <h4 className="font-medium text-foreground mb-2 text-sm flex items-center gap-1">
+                  <Search className="h-3 w-3 text-blue-600" />
+                  Search Patient
+                </h4>
+                <Input
+                  placeholder="ID, Name, or Phone"
+                  className="text-xs h-8"
+                  disabled
+                />
+                <p className="text-xs text-orange-600 mt-1">
+                  Connect Supabase to enable
+                </p>
               </div>
             </Card>
           </div>
 
-          {/* Patient Form */}
-          <div className="lg:col-span-2">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Patient Search Section */}
-              <Card className="p-4 border-blue-200 bg-blue-50/50">
-                <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <Search className="h-4 w-4 text-blue-600" />
-                  Search Existing Patient (Optional)
-                </h3>
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    Search for an existing patient by Patient ID, Name, or Contact Number
-                  </p>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Enter Patient ID, Name, or Phone Number"
-                      className="flex-1"
-                      disabled
-                    />
-                    <Button 
-                      type="button" 
-                      variant="outline"
-                      disabled
-                      className="whitespace-nowrap"
-                    >
-                      <Search className="h-4 w-4 mr-2" />
-                      Search
-                    </Button>
-                  </div>
-                  <p className="text-xs text-orange-600">
-                    💡 Connect to Supabase database to enable patient search functionality
-                  </p>
-                </div>
-              </Card>
-              {/* Personal Information */}
+          {/* Main Form - 3 columns */}
+          <div className="xl:col-span-3">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Personal & Contact Information - Single Row */}
               <Card className="p-4">
-                <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
                   <User className="h-4 w-4 text-healthcare-primary" />
                   Personal Information
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                   <div>
                     <Label htmlFor="name" className="text-sm font-medium">
                       Patient Name <span className="text-red-500">*</span>
@@ -215,7 +200,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                       value={formData.name}
                       onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                       placeholder="Enter patient name"
-                      className={errors.name ? "border-red-500" : ""}
+                      className={`h-9 ${errors.name ? "border-red-500" : ""}`}
                     />
                     {errors.name && (
                       <p className="text-red-500 text-xs mt-1">{errors.name}</p>
@@ -230,8 +215,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                       id="phone"
                       value={formData.phone}
                       onChange={handlePhoneChange}
-                      placeholder="+91 8074906808 (International format)"
-                      className={errors.phone ? "border-red-500" : ""}
+                      placeholder="+91 8074906808"
+                      className={`h-9 ${errors.phone ? "border-red-500" : ""}`}
                     />
                     {errors.phone && (
                       <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
@@ -247,10 +232,10 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                       type="number"
                       value={formData.age}
                       onChange={(e) => setFormData(prev => ({ ...prev, age: e.target.value }))}
-                      placeholder="Enter age"
+                      placeholder="Age"
                       min="1"
                       max="120"
-                      className={errors.age ? "border-red-500" : ""}
+                      className={`h-9 ${errors.age ? "border-red-500" : ""}`}
                     />
                     {errors.age && (
                       <p className="text-red-500 text-xs mt-1">{errors.age}</p>
@@ -262,7 +247,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                       Gender <span className="text-red-500">*</span>
                     </Label>
                     <Select value={formData.gender} onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
-                      <SelectTrigger className={errors.gender ? "border-red-500" : ""}>
+                      <SelectTrigger className={`h-9 ${errors.gender ? "border-red-500" : ""}`}>
                         <SelectValue placeholder="Select gender" />
                       </SelectTrigger>
                       <SelectContent>
@@ -278,181 +263,159 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 </div>
               </Card>
 
-              {/* Address Information */}
-              <Card className="p-4">
-                <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-healthcare-primary" />
-                  Address Information
-                </h3>
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <Label htmlFor="address" className="text-sm font-medium">
-                      Address <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="address"
-                      value={formData.address}
-                      onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                      placeholder="Enter full address"
-                      className={errors.address ? "border-red-500" : ""}
-                    />
-                    {errors.address && (
-                      <p className="text-red-500 text-xs mt-1">{errors.address}</p>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Address, Insurance & Payment - Combined */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Address Information */}
+                <Card className="p-4">
+                  <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-healthcare-primary" />
+                    Address Information
+                  </h3>
+                  <div className="space-y-3">
                     <div>
-                      <Label htmlFor="city" className="text-sm font-medium">
-                        City <span className="text-red-500">*</span>
+                      <Label htmlFor="address" className="text-sm font-medium">
+                        Address <span className="text-red-500">*</span>
                       </Label>
                       <Input
-                        id="city"
-                        value={formData.city}
-                        onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                        placeholder="Enter city"
-                        className={errors.city ? "border-red-500" : ""}
+                        id="address"
+                        value={formData.address}
+                        onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                        placeholder="Enter full address"
+                        className={`h-9 ${errors.address ? "border-red-500" : ""}`}
                       />
-                      {errors.city && (
-                        <p className="text-red-500 text-xs mt-1">{errors.city}</p>
+                      {errors.address && (
+                        <p className="text-red-500 text-xs mt-1">{errors.address}</p>
                       )}
                     </div>
 
-                    <div>
-                      <Label htmlFor="pincode" className="text-sm font-medium">
-                        Pincode <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="pincode"
-                        value={formData.pincode}
-                        onChange={(e) => setFormData(prev => ({ ...prev, pincode: e.target.value }))}
-                        placeholder="Enter 6-digit pincode"
-                        maxLength={6}
-                        className={errors.pincode ? "border-red-500" : ""}
-                      />
-                      {errors.pincode && (
-                        <p className="text-red-500 text-xs mt-1">{errors.pincode}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Insurance Information */}
-              <Card className="p-4">
-                <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-green-600" />
-                  Insurance Information (Optional)
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="hasInsurance"
-                      checked={formData.hasInsurance}
-                      onCheckedChange={(checked) => setFormData(prev => ({ 
-                        ...prev, 
-                        hasInsurance: !!checked, 
-                        insuranceId: !!checked ? prev.insuranceId : '',
-                        insuranceType: !!checked ? prev.insuranceType : ''
-                      }))}
-                    />
-                    <Label htmlFor="hasInsurance" className="text-sm font-medium">
-                      Patient has Insurance Coverage
-                    </Label>
-                  </div>
-
-                  {formData.hasInsurance && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <Label htmlFor="insuranceType" className="text-sm font-medium">
-                          Insurance Type
-                        </Label>
-                        <Select value={formData.insuranceType} onValueChange={(value) => setFormData(prev => ({ ...prev, insuranceType: value }))}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select insurance type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="insurance">Insurance ID</SelectItem>
-                            <SelectItem value="abha">ABHA ID</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div>
-                        <Label htmlFor="insuranceId" className="text-sm font-medium">
-                          {formData.insuranceType === 'abha' ? 'ABHA ID' : 'Insurance ID'}
+                        <Label htmlFor="city" className="text-sm font-medium">
+                          City <span className="text-red-500">*</span>
                         </Label>
                         <Input
-                          id="insuranceId"
-                          value={formData.insuranceId}
-                          onChange={(e) => setFormData(prev => ({ ...prev, insuranceId: e.target.value }))}
-                          placeholder={formData.insuranceType === 'abha' ? 'Enter ABHA ID' : 'Enter Insurance ID'}
+                          id="city"
+                          value={formData.city}
+                          onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                          placeholder="Enter city"
+                          className={`h-9 ${errors.city ? "border-red-500" : ""}`}
                         />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {formData.insuranceType === 'abha' 
-                            ? 'Ayushman Bharat Health Account ID' 
-                            : 'Your insurance policy number'
-                          }
-                        </p>
+                        {errors.city && (
+                          <p className="text-red-500 text-xs mt-1">{errors.city}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <Label htmlFor="pincode" className="text-sm font-medium">
+                          Pincode <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="pincode"
+                          value={formData.pincode}
+                          onChange={(e) => setFormData(prev => ({ ...prev, pincode: e.target.value }))}
+                          placeholder="6-digit pincode"
+                          maxLength={6}
+                          className={`h-9 ${errors.pincode ? "border-red-500" : ""}`}
+                        />
+                        {errors.pincode && (
+                          <p className="text-red-500 text-xs mt-1">{errors.pincode}</p>
+                        )}
                       </div>
                     </div>
-                  )}
-                </div>
-              </Card>
-
-              {/* Payment Information */}
-              <Card className="p-4">
-                <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-healthcare-primary" />
-                  Payment Information
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="isPaid"
-                      checked={formData.isPaid}
-                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPaid: !!checked, paymentMode: !!checked ? prev.paymentMode : '' }))}
-                    />
-                    <Label htmlFor="isPaid" className="text-sm font-medium">
-                      Payment Completed
-                    </Label>
                   </div>
+                </Card>
 
-                  {formData.isPaid && (
-                    <div>
-                      <Label htmlFor="paymentMode" className="text-sm font-medium">
-                        Payment Mode <span className="text-red-500">*</span>
-                      </Label>
-                      <Select value={formData.paymentMode} onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMode: value }))}>
-                        <SelectTrigger className={errors.paymentMode ? "border-red-500" : ""}>
-                          <SelectValue placeholder="Select payment mode" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cash">Cash</SelectItem>
-                          <SelectItem value="upi">UPI</SelectItem>
-                          <SelectItem value="card">Card</SelectItem>
-                        </SelectContent>
-                      </Select>
+                {/* Insurance & Payment Combined */}
+                <Card className="p-4">
+                  <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-green-600" />
+                    Insurance & Payment
+                  </h3>
+                  <div className="space-y-3">
+                    {/* Insurance Section */}
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="hasInsurance"
+                          checked={formData.hasInsurance}
+                          onCheckedChange={(checked) => setFormData(prev => ({ 
+                            ...prev, 
+                            hasInsurance: !!checked, 
+                            insuranceId: !!checked ? prev.insuranceId : '',
+                            insuranceType: !!checked ? prev.insuranceType : ''
+                          }))}
+                        />
+                        <Label htmlFor="hasInsurance" className="text-sm font-medium">
+                          Has Insurance
+                        </Label>
+                      </div>
+
+                      {formData.hasInsurance && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <Select value={formData.insuranceType} onValueChange={(value) => setFormData(prev => ({ ...prev, insuranceType: value }))}>
+                            <SelectTrigger className="h-9">
+                              <SelectValue placeholder="Type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="insurance">Insurance ID</SelectItem>
+                              <SelectItem value="abha">ABHA ID</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            value={formData.insuranceId}
+                            onChange={(e) => setFormData(prev => ({ ...prev, insuranceId: e.target.value }))}
+                            placeholder={formData.insuranceType === 'abha' ? 'ABHA ID' : 'Insurance ID'}
+                            className="h-9"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Payment Section */}
+                    <div className="border-t pt-3 space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="isPaid"
+                          checked={formData.isPaid}
+                          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPaid: !!checked, paymentMode: !!checked ? prev.paymentMode : '' }))}
+                        />
+                        <Label htmlFor="isPaid" className="text-sm font-medium">
+                          Payment Completed
+                        </Label>
+                      </div>
+
+                      {formData.isPaid && (
+                        <Select value={formData.paymentMode} onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMode: value }))}>
+                          <SelectTrigger className={`h-9 ${errors.paymentMode ? "border-red-500" : ""}`}>
+                            <SelectValue placeholder="Payment mode" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="cash">Cash</SelectItem>
+                            <SelectItem value="upi">UPI</SelectItem>
+                            <SelectItem value="card">Card</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
                       {errors.paymentMode && (
                         <p className="text-red-500 text-xs mt-1">{errors.paymentMode}</p>
                       )}
                     </div>
-                  )}
-                </div>
-              </Card>
+                  </div>
+                </Card>
+              </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-2">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={onCancel}
-                  className="flex-1"
+                  className="flex-1 h-10"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  className="flex-1 bg-healthcare-primary hover:bg-healthcare-primary/90"
+                  className="flex-1 bg-healthcare-primary hover:bg-healthcare-primary/90 h-10"
                 >
                   Book Appointment
                 </Button>
