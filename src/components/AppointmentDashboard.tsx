@@ -155,13 +155,13 @@ export const AppointmentDashboard = () => {
             <Button
               variant="ghost"
               onClick={() => setShowBooking(false)}
-              className="flex items-center gap-2 text-primary hover:text-primary/80"
+              className="group flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 shadow-sm hover:shadow-md"
             >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Dashboard
+              <ArrowLeft className="h-4 w-4 text-blue-600 group-hover:text-blue-700 transition-colors" />
+              <span className="text-gray-700 group-hover:text-blue-700 font-medium">Back to Dashboard</span>
             </Button>
-            <div className="h-6 w-px bg-border" />
-            <h1 className="text-xl font-semibold">Book New Appointment</h1>
+            <div className="h-6 w-px bg-gray-300" />
+            <h1 className="text-xl font-semibold text-gray-800">📋 Book New Appointment</h1>
           </div>
         </div>
         
