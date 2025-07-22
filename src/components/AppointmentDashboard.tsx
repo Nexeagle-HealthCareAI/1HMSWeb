@@ -402,188 +402,74 @@ export const AppointmentDashboard = () => {
             </div>
           </div>
           
-          <CardContent className="p-6">
-            {/* Debug Info */}
-            <div className="mb-4 p-3 bg-yellow-100 border-l-4 border-yellow-500 rounded">
-              <p className="font-semibold">🔍 Debug Information:</p>
-              <p>Total appointments: {mockAppointments.length}</p>
-              <p>Filtered appointments: {filteredAppointments.length}</p>
-              <p>Selected status: {selectedStatus}</p>
-              <p>Status filter: {statusFilter}</p>
-              <p>Doctor filter: {doctorFilter}</p>
-            </div>
-
-            {/* Desktop & Tablet Table - Fixed Overflow */}
-            <div className="hidden md:block overflow-x-auto">
-              <div className="border border-gray-200 rounded-lg bg-white min-w-full">
-                <Table className="min-w-full">
-                  <TableHeader className="sticky top-0 z-10">
+          <CardContent className="p-6 flex-1 overflow-hidden">
+            {/* Always Show Table */}
+            <div className="w-full">
+              {/* Desktop Table */}
+              <div className="hidden md:block w-full overflow-x-auto">
+                <Table className="w-full">
+                  <TableHeader>
                     <TableRow className="bg-gray-50">
-                      <TableHead className="font-semibold whitespace-nowrap">Patient ID</TableHead>
-                      <TableHead className="font-semibold whitespace-nowrap">Patient Name</TableHead>
-                      <TableHead className="font-semibold whitespace-nowrap">Doctor</TableHead>
-                      <TableHead className="font-semibold whitespace-nowrap">Time</TableHead>
-                      <TableHead className="font-semibold whitespace-nowrap">Token</TableHead>
-                      <TableHead className="font-semibold whitespace-nowrap">Vitals</TableHead>
-                      <TableHead className="font-semibold whitespace-nowrap">Status</TableHead>
-                      <TableHead className="font-semibold whitespace-nowrap">Actions</TableHead>
+                      <TableHead>Patient ID</TableHead>
+                      <TableHead>Patient Name</TableHead>
+                      <TableHead>Doctor</TableHead>
+                      <TableHead>Time</TableHead>
+                      <TableHead>Token</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredAppointments.length > 0 ? (
-                      filteredAppointments.map((appointment, index) => (
-                        <TableRow 
-                          key={appointment.id} 
-                          className={`hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
-                        >
-                          <TableCell className="font-medium">
-                            <Button
-                              variant="link"
-                              className="p-0 h-auto text-blue-600 hover:text-blue-800 font-mono"
-                            >
-                              {appointment.patientId}
-                            </Button>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4 text-gray-500" />
-                              <span>{appointment.patientName}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Stethoscope className="h-4 w-4 text-gray-500" />
-                              <span>{appointment.doctorName}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>{appointment.appointmentTime}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="font-mono">
-                              #{appointment.tokenNo}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {appointment.vitalsUpdated ? (
-                              <div className="flex items-center gap-1">
-                                <span className="text-green-600 text-lg">✅</span>
-                                <span className="text-xs text-green-600 font-medium">Updated</span>
-                              </div>
-                            ) : (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-red-600 border-red-300 hover:bg-red-50"
-                              >
-                                ❤️ Update
-                              </Button>
-                            )}
-                          </TableCell>
-                          <TableCell>{getStatusBadge(appointment.status)}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Button variant="outline" size="sm">
-                                <Eye className="h-3 w-3 mr-1" />
-                                View
-                              </Button>
-                              {appointment.status !== 'completed' && (
-                                <Button variant="outline" size="sm" className="text-red-600">
-                                  <X className="h-3 w-3 mr-1" />
-                                  Cancel
-                                </Button>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8">
-                          <p className="text-gray-500">No appointments found matching the selected criteria</p>
+                    {filteredAppointments.map((appointment) => (
+                      <TableRow key={appointment.id}>
+                        <TableCell className="font-mono text-blue-600">
+                          {appointment.patientId}
+                        </TableCell>
+                        <TableCell>{appointment.patientName}</TableCell>
+                        <TableCell>{appointment.doctorName}</TableCell>
+                        <TableCell>{appointment.appointmentTime}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">#{appointment.tokenNo}</Badge>
+                        </TableCell>
+                        <TableCell>{getStatusBadge(appointment.status)}</TableCell>
+                        <TableCell>
+                          <Button variant="outline" size="sm">
+                            <Eye className="h-3 w-3 mr-1" />
+                            View
+                          </Button>
                         </TableCell>
                       </TableRow>
-                    )}
+                    ))}
                   </TableBody>
                 </Table>
               </div>
-            </div>
 
-            {/* Mobile Cards - Simplified */}
-            <div className="md:hidden">
-              <div className="mb-4 p-3 bg-blue-100 border-l-4 border-blue-500 rounded">
-                <p className="font-semibold">📱 Mobile Debug:</p>
-                <p>Filtered appointments: {filteredAppointments.length}</p>
-              </div>
-              
-              <div className="space-y-3">
-                {filteredAppointments.length > 0 ? (
-                  filteredAppointments.map((appointment) => (
-                    <Card key={appointment.id} className="p-4 border border-gray-200 rounded-lg bg-white">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <Button 
-                            variant="link" 
-                            className="p-0 h-auto font-bold text-blue-600 text-base font-mono"
-                          >
-                            {appointment.patientId}
-                          </Button>
-                          <h3 className="font-semibold text-gray-900 text-lg mt-1">{appointment.patientName}</h3>
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <Badge variant="outline" className="font-mono">
-                            #{appointment.tokenNo}
-                          </Badge>
-                          {getStatusBadge(appointment.status)}
-                        </div>
+              {/* Mobile Cards */}
+              <div className="md:hidden space-y-3">
+                {filteredAppointments.map((appointment) => (
+                  <Card key={appointment.id} className="p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="font-mono text-blue-600 text-sm">{appointment.patientId}</p>
+                        <p className="font-semibold">{appointment.patientName}</p>
                       </div>
-                      
-                      <div className="space-y-2 mb-4 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Doctor:</span>
-                          <span className="font-medium">{appointment.doctorName}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Time:</span>
-                          <span className="font-medium">{appointment.appointmentTime}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Vitals:</span>
-                          {appointment.vitalsUpdated ? (
-                            <span className="text-green-600 font-semibold">✅ Updated</span>
-                          ) : (
-                            <span className="text-red-600 font-semibold">❤️ Pending</span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="flex-1">
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                        {appointment.status !== 'completed' && (
-                          <Button variant="outline" size="sm" className="flex-1 text-red-600">
-                            <X className="h-4 w-4 mr-1" />
-                            Cancel
-                          </Button>
-                        )}
-                      </div>
-                    </Card>
-                  ))
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">No appointments found</p>
-                  </div>
-                )}
+                      <Badge variant="outline">#{appointment.tokenNo}</Badge>
+                    </div>
+                    <div className="space-y-1 text-sm text-gray-600 mb-3">
+                      <p>Doctor: {appointment.doctorName}</p>
+                      <p>Time: {appointment.appointmentTime}</p>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      {getStatusBadge(appointment.status)}
+                      <Button variant="outline" size="sm">
+                        <Eye className="h-3 w-3 mr-1" />
+                        View
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
               </div>
             </div>
-            
-            {filteredAppointments.length === 0 && (
-              <div className="text-center py-12">
-                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground text-lg">No appointments found matching your criteria</p>
-                <p className="text-muted-foreground/70 text-sm">Try adjusting your search or filters</p>
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>
