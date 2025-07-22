@@ -169,9 +169,9 @@ export const FloatingAIChatbot: React.FC<FloatingAIChatbotProps> = ({ currentPag
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
-      <Card className={`w-80 sm:w-96 shadow-elegant transition-all duration-300 ${
-        isMinimized ? 'h-16' : 'h-[500px]'
+    <div className="fixed bottom-4 right-4 z-50">
+      <Card className={`w-72 sm:w-80 md:w-96 shadow-elegant transition-all duration-300 ${
+        isMinimized ? 'h-16' : 'h-[80vh] sm:h-[500px]'
       }`}>
         <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
           <div className="flex items-center gap-2">
@@ -210,25 +210,25 @@ export const FloatingAIChatbot: React.FC<FloatingAIChatbotProps> = ({ currentPag
         {!isMinimized && (
           <CardContent className="p-0 flex flex-col h-[calc(100%-4rem)]">
             {/* Quick Actions */}
-            <div className="p-4 border-b">
-              <div className="flex gap-2 flex-wrap">
+            <div className="p-2 md:p-4 border-b">
+              <div className="flex gap-1 md:gap-2 flex-wrap">
                 {quickActions.map((action, index) => (
                   <Button
                     key={index}
                     variant="outline"
                     size="sm"
-                    className="flex items-center gap-1 text-xs"
+                    className="flex items-center gap-1 text-xs h-7 md:h-8 px-2"
                     onClick={() => setInputMessage(action.action)}
                   >
                     <action.icon className="h-3 w-3" />
-                    {action.label}
+                    <span className="hidden sm:inline">{action.label}</span>
                   </Button>
                 ))}
               </div>
             </div>
 
             {/* Messages */}
-            <ScrollArea className="flex-1 p-4">
+            <ScrollArea className="flex-1 p-2 md:p-4">
               <div className="space-y-4">
                 {messages.map((message) => (
                   <div
@@ -295,7 +295,7 @@ export const FloatingAIChatbot: React.FC<FloatingAIChatbotProps> = ({ currentPag
             </ScrollArea>
 
             {/* Input */}
-            <div className="p-4 border-t">
+            <div className="p-2 md:p-4 border-t">
               <div className="flex gap-2">
                 <div className="flex-1 relative">
                   <Input
@@ -303,25 +303,25 @@ export const FloatingAIChatbot: React.FC<FloatingAIChatbotProps> = ({ currentPag
                     onChange={(e) => setInputMessage(e.target.value)}
                     placeholder="Ask me anything..."
                     onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                    className="pr-10"
+                    className="pr-10 text-sm"
                   />
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={handleVoiceInput}
-                    className={`absolute right-1 top-1/2 transform -translate-y-1/2 ${
+                    className={`absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 ${
                       isRecording ? 'text-red-500' : ''
                     }`}
                   >
-                    {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                    {isRecording ? <MicOff className="h-3 w-3" /> : <Mic className="h-3 w-3" />}
                   </Button>
                 </div>
                 <Button
                   onClick={handleSendMessage}
                   disabled={!inputMessage.trim()}
-                  className="bg-gradient-primary text-white"
+                  className="bg-gradient-primary text-white h-8 w-8 p-0"
                 >
-                  <Send className="h-4 w-4" />
+                  <Send className="h-3 w-3" />
                 </Button>
               </div>
               

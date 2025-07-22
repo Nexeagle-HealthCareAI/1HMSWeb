@@ -298,13 +298,13 @@ export const DoctorCalendar = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-subtle p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="h-screen bg-gradient-subtle p-2 md:p-6 overflow-hidden">
+      <div className="h-full w-full flex flex-col space-y-4 md:space-y-6">
         {/* Header */}
-        <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
+        <div className="flex flex-col sm:flex-row gap-2 md:gap-4 justify-between items-start sm:items-center flex-shrink-0">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Doctor Calendar</h1>
-            <p className="text-muted-foreground">Manage appointments and schedules</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Doctor Calendar</h1>
+            <p className="text-sm md:text-base text-muted-foreground">Manage appointments and schedules</p>
           </div>
           
           <div className="flex items-center gap-4">
@@ -329,32 +329,32 @@ export const DoctorCalendar = () => {
         </div>
 
         {/* Filters and Controls */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-              <div className="flex flex-col sm:flex-row gap-4 items-center">
+        <Card className="flex-shrink-0">
+          <CardContent className="p-3 md:p-4">
+            <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:gap-4 md:items-center md:justify-between">
+              <div className="flex flex-col sm:flex-row gap-2 md:gap-4 items-start sm:items-center">
                 <Tabs value={view} onValueChange={(value: any) => setView(value)}>
-                  <TabsList>
+                  <TabsList className="grid w-full grid-cols-3 sm:w-auto">
                     <TabsTrigger value="day">Day</TabsTrigger>
                     <TabsTrigger value="week">Week</TabsTrigger>
                     <TabsTrigger value="month">Month</TabsTrigger>
                   </TabsList>
                 </Tabs>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                   <Search className="h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search patients..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-64"
+                    className="w-full sm:w-48 md:w-64"
                   />
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-2 items-center">
+              <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
                 <Select value={filterDoctor} onValueChange={setFilterDoctor}>
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-full sm:w-32 md:w-40">
                     <SelectValue placeholder="All Doctors" />
                   </SelectTrigger>
                   <SelectContent>
@@ -365,7 +365,7 @@ export const DoctorCalendar = () => {
                 </Select>
 
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-full sm:w-32 md:w-40">
                     <SelectValue placeholder="All Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -377,7 +377,7 @@ export const DoctorCalendar = () => {
                 </Select>
 
                 <Select value={filterType} onValueChange={setFilterType}>
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-full sm:w-32 md:w-40">
                     <SelectValue placeholder="All Types" />
                   </SelectTrigger>
                   <SelectContent>
@@ -391,9 +391,10 @@ export const DoctorCalendar = () => {
 
                 <Dialog open={isNewAppointmentOpen} onOpenChange={setIsNewAppointmentOpen}>
                   <DialogTrigger asChild>
-                    <Button className="gap-2">
+                    <Button className="gap-2 w-full sm:w-auto">
                       <Plus className="h-4 w-4" />
-                      New Appointment
+                      <span className="hidden sm:inline">New Appointment</span>
+                      <span className="sm:hidden">New</span>
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-md">
@@ -469,10 +470,10 @@ export const DoctorCalendar = () => {
           </CardContent>
         </Card>
 
-        {/* Calendar Grid */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="overflow-auto">
+        {/* Calendar Content */}
+        <Card className="shadow-card flex-1 flex flex-col overflow-hidden">
+          <CardContent className="p-3 md:p-6 flex-1 overflow-hidden">
+            <div className="h-full overflow-auto">
               {view === 'day' && renderDayView()}
               {view === 'week' && renderWeekView()}
               {view === 'month' && renderMonthView()}

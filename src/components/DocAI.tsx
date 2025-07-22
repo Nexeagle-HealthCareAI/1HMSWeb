@@ -105,18 +105,20 @@ export const DocAI: React.FC = () => {
   };
 
   return (
-    <div className="h-[calc(100vh-12rem)] flex flex-col">
+    <div className="h-screen flex flex-col bg-gradient-subtle p-2 md:p-6 overflow-hidden">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 bg-gradient-primary rounded-lg">
-            <Bot className="h-6 w-6 text-white" />
+      <div className="mb-4 md:mb-6 flex-shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-primary rounded-lg">
+              <Bot className="h-5 w-5 md:h-6 md:w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold text-foreground">DocAI Assistant</h1>
+              <p className="text-sm md:text-base text-muted-foreground">Your intelligent medical companion</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">DocAI Assistant</h1>
-            <p className="text-muted-foreground">Your intelligent medical companion</p>
-          </div>
-          <Badge variant="secondary" className="ml-auto">
+          <Badge variant="secondary" className="w-fit">
             <Sparkles className="h-3 w-3 mr-1" />
             AI Powered
           </Badge>
@@ -124,26 +126,26 @@ export const DocAI: React.FC = () => {
       </div>
 
       {/* Quick Questions */}
-      <div className="mb-4">
+      <div className="mb-3 md:mb-4 flex-shrink-0">
         <h3 className="text-sm font-medium text-muted-foreground mb-2">Quick Questions:</h3>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1 md:gap-2">
           {predefinedQuestions.map((question, index) => (
             <Button
               key={index}
               variant="outline"
               size="sm"
               onClick={() => handlePredefinedQuestion(question)}
-              className="text-xs h-8"
+              className="text-xs h-7 md:h-8 px-2 md:px-3"
             >
-              {question}
+              <span className="truncate">{question}</span>
             </Button>
           ))}
         </div>
       </div>
 
       {/* Chat Messages */}
-      <Card className="flex-1 flex flex-col">
-        <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+      <Card className="flex-1 flex flex-col overflow-hidden">
+        <CardContent className="flex-1 overflow-y-auto p-2 md:p-4 space-y-3 md:space-y-4">
           {messages.map((message) => (
             <div
               key={message.id}
@@ -204,14 +206,14 @@ export const DocAI: React.FC = () => {
         </CardContent>
 
         {/* Input Area */}
-        <div className="border-t p-4">
+        <div className="border-t p-2 md:p-4 flex-shrink-0">
           <div className="flex gap-2">
             <div className="flex-1 relative">
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask me anything about medical conditions, ICD codes, treatments..."
-                className="resize-none pr-20"
+                className="resize-none pr-16 md:pr-20 text-sm"
                 rows={2}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -225,7 +227,7 @@ export const DocAI: React.FC = () => {
                   size="sm"
                   variant="ghost"
                   onClick={handleFileUpload}
-                  className="h-6 w-6 p-0"
+                  className="h-5 w-5 md:h-6 md:w-6 p-0"
                 >
                   <Paperclip className="h-3 w-3" />
                 </Button>
@@ -233,7 +235,7 @@ export const DocAI: React.FC = () => {
                   size="sm"
                   variant="ghost"
                   onClick={handleVoiceInput}
-                  className={`h-6 w-6 p-0 ${isListening ? 'text-healthcare-primary' : ''}`}
+                  className={`h-5 w-5 md:h-6 md:w-6 p-0 ${isListening ? 'text-healthcare-primary' : ''}`}
                 >
                   <Mic className="h-3 w-3" />
                 </Button>
@@ -242,14 +244,15 @@ export const DocAI: React.FC = () => {
             <Button
               onClick={handleSendMessage}
               disabled={!input.trim() || isLoading}
-              className="self-end"
+              className="self-end h-8 w-8 md:h-10 md:w-10 p-0"
             >
-              <Send className="h-4 w-4" />
+              <Send className="h-3 w-3 md:h-4 md:w-4" />
             </Button>
           </div>
           
           <div className="flex justify-between items-center mt-2 text-xs text-muted-foreground">
-            <span>Press Enter to send, Shift+Enter for new line</span>
+            <span className="hidden sm:inline">Press Enter to send, Shift+Enter for new line</span>
+            <span className="sm:hidden">Enter to send</span>
             <span>{input.length}/1000</span>
           </div>
         </div>

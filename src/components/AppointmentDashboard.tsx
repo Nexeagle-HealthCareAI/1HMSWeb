@@ -172,14 +172,14 @@ export const AppointmentDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-subtle">
-      <div className="max-w-7xl mx-auto space-y-8 p-6">
+    <div className="h-screen flex flex-col bg-gradient-subtle overflow-hidden">
+      <div className="flex-1 flex flex-col p-2 md:p-6 space-y-4 md:space-y-6 overflow-hidden">
         
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Calendar className="h-8 w-8 text-healthcare-primary" />
-            <h1 className="text-3xl font-bold text-foreground">📅 Appointment Dashboard</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 md:gap-4 flex-shrink-0">
+          <div className="flex items-center gap-2 md:gap-3">
+            <Calendar className="h-6 w-6 md:h-8 md:w-8 text-healthcare-primary" />
+            <h1 className="text-xl md:text-3xl font-bold text-foreground">📅 Appointment Dashboard</h1>
           </div>
           <Button 
             onClick={() => setShowBooking(true)} 
@@ -191,7 +191,7 @@ export const AppointmentDashboard = () => {
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 md:gap-6 flex-shrink-0">
           <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Today's Appointments</CardTitle>
@@ -298,15 +298,16 @@ export const AppointmentDashboard = () => {
         </Card>
 
         {/* Appointments Table */}
-        <Card className="bg-card shadow-card rounded-xl border-0">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-foreground">
-              <Clock className="h-5 w-5 text-healthcare-primary" />
-              📊 Appointment Table
+        <Card className="bg-card shadow-card rounded-xl border-0 flex-1 flex flex-col overflow-hidden">
+          <CardHeader className="flex-shrink-0">
+            <CardTitle className="flex items-center gap-2 text-foreground text-lg md:text-xl">
+              <Clock className="h-4 w-4 md:h-5 md:w-5 text-healthcare-primary" />
+              📊 Appointment Table ({filteredAppointments.length})
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
+          <CardContent className="flex-1 overflow-hidden">
+            {/* Desktop Table */}
+            <div className="hidden md:block h-full overflow-auto">
               <Table>
                 <TableHeader className="sticky top-0 bg-muted/50">
                   <TableRow>
@@ -398,6 +399,71 @@ export const AppointmentDashboard = () => {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="md:hidden h-full overflow-auto space-y-3">
+              {filteredAppointments.map((appointment) => (
+                <Card key={appointment.id} className="p-4 shadow-sm border">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <Button 
+                        variant="link" 
+                        className="p-0 h-auto font-medium text-healthcare-primary text-lg"
+                      >
+                        {appointment.patientId}
+                      </Button>
+                      <h3 className="font-semibold text-foreground">{appointment.patientName}</h3>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant="outline" className="font-mono">
+                        #{appointment.tokenNo}
+                      </Badge>
+                      {getStatusBadge(appointment.status)}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2 text-sm mb-4">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Doctor:</span>
+                      <span className="font-medium">{appointment.doctorName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Time:</span>
+                      <span className="font-medium">{appointment.appointmentTime}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Vitals:</span>
+                      {appointment.vitalsUpdated ? (
+                        <span className="text-healthcare-success font-semibold">✅ Updated</span>
+                      ) : (
+                        <span className="text-healthcare-error font-semibold">❌ Pending</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 hover:bg-healthcare-primary/10 border-healthcare-primary/30"
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      View
+                    </Button>
+                    {appointment.status !== 'completed' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 hover:bg-healthcare-error/10 text-healthcare-error border-healthcare-error/30"
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              ))}
             </div>
             
             {filteredAppointments.length === 0 && (
