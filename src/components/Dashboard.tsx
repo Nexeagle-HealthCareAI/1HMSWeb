@@ -50,6 +50,8 @@ import { DoctorCalendar } from './DoctorCalendar';
 import { EPrescription } from './EPrescription';
 import { AdminDashboard } from './AdminDashboard';
 import { AppointmentDashboard } from './AppointmentDashboard';
+import { ContextualGuide } from './guide/ContextualGuide';
+import { DASHBOARD_GUIDES } from './guide/GuideData';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -200,61 +202,66 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             )}
 
             {/* Quick Navigation */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
-              {navigation.map((item) => (
-                <Button
-                  key={item.id}
-                  variant="outline"
-                  className="h-20 flex-col gap-2"
-                  onClick={() => setCurrentPage(item.id)}
-                >
-                  <item.icon className="h-6 w-6" />
-                  <span className="text-xs text-center">{item.name}</span>
-                </Button>
-              ))}
-            </div>
+            <ContextualGuide {...DASHBOARD_GUIDES['quick-nav']}>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+                {navigation.map((item) => (
+                  <Button
+                    key={item.id}
+                    variant="outline"
+                    className="h-20 flex-col gap-2"
+                    onClick={() => setCurrentPage(item.id)}
+                  >
+                    <item.icon className="h-6 w-6" />
+                    <span className="text-xs text-center">{item.name}</span>
+                  </Button>
+                ))}
+              </div>
+            </ContextualGuide>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {kpiData.map((kpi, index) => (
-                <Card key={index} className="shadow-card hover:shadow-hover transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">
-                          {kpi.title}
-                        </p>
-                        <p className="text-3xl font-bold text-foreground">
-                          {kpi.value}
-                        </p>
-                        <p className={`text-xs ${
-                          kpi.change.startsWith('+') ? 'text-healthcare-success' : 'text-healthcare-error'
-                        }`}>
-                          {kpi.change} from yesterday
-                        </p>
+            <ContextualGuide {...DASHBOARD_GUIDES['kpi-cards']}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {kpiData.map((kpi, index) => (
+                  <Card key={index} className="shadow-card hover:shadow-hover transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">
+                            {kpi.title}
+                          </p>
+                          <p className="text-3xl font-bold text-foreground">
+                            {kpi.value}
+                          </p>
+                          <p className={`text-xs ${
+                            kpi.change.startsWith('+') ? 'text-healthcare-success' : 'text-healthcare-error'
+                          }`}>
+                            {kpi.change} from yesterday
+                          </p>
+                        </div>
+                        <div className={`p-3 rounded-full bg-${kpi.color}/10`}>
+                          <kpi.icon className={`h-6 w-6 text-${kpi.color}`} />
+                        </div>
                       </div>
-                      <div className={`p-3 rounded-full bg-${kpi.color}/10`}>
-                        <kpi.icon className={`h-6 w-6 text-${kpi.color}`} />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </ContextualGuide>
 
             {/* Today's Patients Table */}
-            <Card className="shadow-card">
-              <CardHeader>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <CardTitle className="text-xl font-bold">Today's Patients</CardTitle>
-                  <div className="flex gap-2 overflow-x-auto">
-                    <Button variant="outline" size="sm" className="whitespace-nowrap">Yesterday</Button>
-                    <Button variant="default" size="sm" className="whitespace-nowrap">Today</Button>
-                    <Button variant="outline" size="sm" className="whitespace-nowrap">Last Month</Button>
+            <ContextualGuide {...DASHBOARD_GUIDES['patient-table']}>
+              <Card className="shadow-card">
+                <CardHeader>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <CardTitle className="text-xl font-bold">Today's Patients</CardTitle>
+                    <div className="flex gap-2 overflow-x-auto">
+                      <Button variant="outline" size="sm" className="whitespace-nowrap">Yesterday</Button>
+                      <Button variant="default" size="sm" className="whitespace-nowrap">Today</Button>
+                      <Button variant="outline" size="sm" className="whitespace-nowrap">Last Month</Button>
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent>
+                </CardHeader>
+                <CardContent>
                 {/* Desktop Table */}
                 <div className="hidden lg:block overflow-x-auto">
                   <table className="w-full">
@@ -335,6 +342,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 </div>
               </CardContent>
             </Card>
+            </ContextualGuide>
           </div>
         );
     }
