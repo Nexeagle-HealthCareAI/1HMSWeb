@@ -457,7 +457,7 @@ const navigation = [
       {/* Main Content */}
       <div className="lg:ml-64">
         {/* Top Bar */}
-        <header className="bg-card border-b px-6 py-4">
+        <header className="sticky top-0 z-30 bg-card border-b px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button
