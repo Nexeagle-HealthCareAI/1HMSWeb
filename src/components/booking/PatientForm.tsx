@@ -38,6 +38,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     insuranceType: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
 
   const formatTime = (time: string) => {
     const [hour, minute] = time.split(':');
@@ -163,20 +165,38 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 </div>
               </div>
               
-              {/* Patient Search - Moved here for compactness */}
+              {/* Patient Search - Enhanced */}
               <div className="mt-4 pt-3 border-t border-healthcare-primary/20">
                 <h4 className="font-medium text-foreground mb-2 text-sm flex items-center gap-1">
                   <Search className="h-3 w-3 text-blue-600" />
-                  Search Patient
+                  Search Existing Patient
                 </h4>
-                <Input
-                  placeholder="ID, Name, or Phone"
-                  className="text-xs h-8"
-                  disabled
-                />
-                <p className="text-xs text-orange-600 mt-1">
-                  Connect Supabase to enable
-                </p>
+                <div className="space-y-2">
+                  <Input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="P001 or John Doe or +91 9876543210"
+                    className="text-xs h-8"
+                  />
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p>💡 <strong>Search by:</strong></p>
+                    <p>• Patient ID: P001, PAT123</p>
+                    <p>• Name: John Doe, Sarah</p>
+                    <p>• Phone: +91 9876543210</p>
+                  </div>
+                  <Button 
+                    type="button" 
+                    size="sm"
+                    className="w-full h-7 text-xs"
+                    onClick={() => {
+                      // Mock search functionality - replace with actual API call
+                      console.log('Searching for:', searchQuery);
+                    }}
+                  >
+                    <Search className="h-3 w-3 mr-1" />
+                    Search Patient
+                  </Button>
+                </div>
               </div>
             </Card>
           </div>
