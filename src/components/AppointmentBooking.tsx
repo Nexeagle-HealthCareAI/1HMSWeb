@@ -205,155 +205,149 @@ export const AppointmentBooking: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="flex h-screen">
-        {/* Left Sidebar */}
-        <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-          {/* Department Selection */}
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold mb-4">Select Department</h3>
-            <div className="space-y-2">
+      <div className="flex flex-col lg:flex-row h-screen">
+        {/* Compact Sidebar - Responsive */}
+        <div className="w-full lg:w-72 bg-white border-b lg:border-r border-gray-200 flex flex-col">
+          {/* Department Selection - Compact */}
+          <div className="p-3 border-b border-gray-200">
+            <h3 className="text-sm font-semibold mb-2">Department</h3>
+            <div className="grid grid-cols-2 lg:grid-cols-1 gap-1">
               {departments.map((dept) => (
                 <button
                   key={dept.id}
                   onClick={() => handleDepartmentSelect(dept)}
-                  className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
+                  className={`flex items-center gap-2 p-2 rounded text-left transition-colors text-xs ${
                     selectedDepartment.id === dept.id
                       ? 'bg-blue-500 text-white'
                       : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
                   }`}
                 >
-                  <dept.icon className="h-5 w-5" />
+                  <dept.icon className="h-3 w-3" />
                   <span className="font-medium">{dept.name}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Available Doctors */}
-          <div className="flex-1 p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold mb-4">Available Doctors</h3>
-            <div className="space-y-3">
+          {/* Available Doctors - Compact */}
+          <div className="flex-1 p-3">
+            <h3 className="text-sm font-semibold mb-2">Doctors</h3>
+            <div className="space-y-1">
               {selectedDepartment.doctors.map((doctor) => (
                 <button
                   key={doctor.id}
                   onClick={() => setSelectedDoctor(doctor)}
-                  className={`w-full p-3 rounded-lg border text-left transition-all ${
+                  className={`w-full p-2 rounded border text-left transition-all text-xs ${
                     selectedDoctor.id === doctor.id
                       ? 'border-blue-200 bg-blue-50'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <div className="font-medium text-blue-600">{doctor.name}</div>
-                  <div className="text-sm text-gray-600">{doctor.specialization}</div>
+                  <div className="font-medium text-blue-600 text-xs">{doctor.name}</div>
+                  <div className="text-xs text-gray-600 truncate">{doctor.specialization}</div>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Slot Legend */}
-          <div className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Slot Legend</h3>
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <div className="w-4 h-4 bg-green-200 rounded"></div>
-                <span className="text-sm text-gray-600">Available</span>
+          {/* Compact Legend */}
+          <div className="p-3 border-t border-gray-200">
+            <div className="flex flex-wrap gap-3 text-xs">
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-green-200 rounded"></div>
+                <span>Available</span>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-4 h-4 bg-red-200 rounded"></div>
-                <span className="text-sm text-gray-600">Booked</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-4 h-4 bg-blue-200 rounded"></div>
-                <span className="text-sm text-gray-600">Selected</span>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-red-200 rounded"></div>
+                <span>Booked</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Main Content */}
+        {/* Main Content - Optimized Grid Layout */}
         <div className="flex-1 overflow-hidden">
-          <div className="h-full p-8 overflow-y-auto">
-            <div className="max-w-6xl">
-              {/* Header */}
-              <div className="mb-8">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Schedule Appointment</h1>
-                <p className="text-gray-600">
-                  Selected Doctor: <span className="font-semibold text-blue-600">{selectedDoctor.name}</span>
-                  <span className="text-gray-400"> • </span>
-                  <span>{selectedDoctor.specialization}</span>
+          <div className="h-full p-4 overflow-y-auto">
+            <div className="max-w-7xl">
+              {/* Compact Header */}
+              <div className="mb-4">
+                <h1 className="text-lg font-bold text-gray-900 mb-1">Schedule Appointment</h1>
+                <p className="text-sm text-gray-600">
+                  Dr: <span className="font-semibold text-blue-600">{selectedDoctor.name}</span>
+                  <span className="text-gray-400 hidden sm:inline"> • {selectedDoctor.specialization}</span>
                 </p>
               </div>
 
-              {/* Date Selection */}
-              <div className="mb-8">
-                <h2 className="text-lg font-semibold mb-4">Select Date</h2>
-                <div className="flex gap-3">
-                  {Array.from({ length: 5 }, (_, i) => {
-                    const date = new Date();
-                    date.setDate(date.getDate() + i);
-                    const isToday = i === 0;
-                    const isSelected = selectedDate.toDateString() === date.toDateString();
-                    
-                    return (
+              {/* Combined Date & Shift Selection - Single Row */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
+                {/* Date Selection - Horizontal Scroll */}
+                <div>
+                  <h2 className="text-sm font-semibold mb-2">Select Date</h2>
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {Array.from({ length: 5 }, (_, i) => {
+                      const date = new Date();
+                      date.setDate(date.getDate() + i);
+                      const isToday = i === 0;
+                      const isSelected = selectedDate.toDateString() === date.toDateString();
+                      
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => setSelectedDate(date)}
+                          className={`px-3 py-2 rounded border text-center min-w-[70px] transition-all text-xs ${
+                            isSelected
+                              ? 'bg-blue-500 text-white border-blue-500'
+                              : 'bg-white border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="font-medium">
+                            {isToday ? 'Today' : date.toLocaleDateString('en', { weekday: 'short' })}
+                          </div>
+                          <div className="text-xs mt-1">
+                            {date.toLocaleDateString('en', { month: 'short', day: 'numeric' })}
+                          </div>
+                        </button>
+                      );
+                    })}
+                    <button className="px-3 py-2 rounded border border-gray-200 bg-white hover:border-gray-300 text-center min-w-[70px] text-xs">
+                      <div>📅</div>
+                      <div className="mt-1">Other</div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Time Shift Selection - Compact Grid */}
+                <div>
+                  <h2 className="text-sm font-semibold mb-2">Select Shift</h2>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                    {[
+                      { id: 'morning', label: 'Morning', time: '8-12', icon: '🌅' },
+                      { id: 'afternoon', label: 'Afternoon', time: '12-4', icon: '☀️' },
+                      { id: 'evening', label: 'Evening', time: '4-8', icon: '🌇' },
+                      { id: 'night', label: 'Night', time: '8-11', icon: '🌙' }
+                    ].map((shift) => (
                       <button
-                        key={i}
-                        onClick={() => setSelectedDate(date)}
-                        className={`px-6 py-4 rounded-lg border text-center min-w-[100px] transition-all ${
-                          isSelected
-                            ? 'bg-blue-500 text-white border-blue-500'
-                            : 'bg-white border-gray-200 hover:border-gray-300'
+                        key={shift.id}
+                        onClick={() => setSelectedShift(shift.id)}
+                        className={`p-2 rounded border text-center transition-all text-xs ${
+                          selectedShift === shift.id
+                            ? 'border-blue-300 bg-blue-50'
+                            : 'border-gray-200 bg-white hover:border-gray-300'
                         }`}
                       >
-                        <div className="font-medium">
-                          {isToday ? 'Today' : date.toLocaleDateString('en', { weekday: 'short' })}
-                        </div>
-                        <div className="text-sm mt-1">
-                          {date.toLocaleDateString('en', { month: 'short', day: 'numeric' })}
-                        </div>
+                        <div className="text-lg mb-1">{shift.icon}</div>
+                        <div className="font-medium">{shift.label}</div>
+                        <div className="text-xs text-gray-600">{shift.time}</div>
                       </button>
-                    );
-                  })}
-                  <button className="px-6 py-4 rounded-lg border border-gray-200 bg-white hover:border-gray-300 text-center min-w-[100px]">
-                    <div className="text-gray-600">📅</div>
-                    <div className="text-sm mt-1">Other Date</div>
-                  </button>
-                </div>
-                <div className="mt-3 text-sm text-blue-600">
-                  Selected Date: <span className="font-medium">{selectedDate.toLocaleDateString('en', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Time Shift Selection */}
-              <div className="mb-8">
-                <h2 className="text-lg font-semibold mb-4">Select Time Shift</h2>
-                <div className="grid grid-cols-4 gap-4">
-                  {[
-                    { id: 'morning', label: 'Morning', time: '8AM - 12PM', icon: '🌅', color: 'orange' },
-                    { id: 'afternoon', label: 'Afternoon', time: '12PM - 4PM', icon: '☀️', color: 'yellow' },
-                    { id: 'evening', label: 'Evening', time: '4PM - 8PM', icon: '🌇', color: 'orange' },
-                    { id: 'night', label: 'Night', time: '8PM - 11PM', icon: '🌙', color: 'blue' }
-                  ].map((shift) => (
-                    <button
-                      key={shift.id}
-                      onClick={() => setSelectedShift(shift.id)}
-                      className={`p-6 rounded-lg border text-center transition-all ${
-                        selectedShift === shift.id
-                          ? `border-${shift.color}-300 bg-${shift.color}-50`
-                          : 'border-gray-200 bg-white hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="text-2xl mb-2">{shift.icon}</div>
-                      <div className="font-medium text-gray-900">{shift.label}</div>
-                      <div className="text-sm text-gray-600 mt-1">{shift.time}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Available Time Slots */}
+              {/* Time Slots - Responsive Grid */}
               <div>
-                <h2 className="text-lg font-semibold mb-4">Available Time Slots</h2>
-                <div className="grid grid-cols-4 gap-4">
+                <h2 className="text-sm font-semibold mb-3">Available Time Slots</h2>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
                   {timeSlots
                     .filter(slot => {
                       if (selectedShift === 'morning') return parseInt(slot.time) < 12;
@@ -367,7 +361,7 @@ export const AppointmentBooking: React.FC = () => {
                       key={slot.id}
                       onClick={() => !slot.isBooked && handleSlotSelect(slot)}
                       disabled={slot.isBooked}
-                      className={`p-6 rounded-lg border text-center transition-all ${
+                      className={`p-2 rounded border text-center transition-all text-xs aspect-square flex flex-col justify-center ${
                         slot.isBooked
                           ? 'bg-red-50 border-red-200 cursor-not-allowed'
                           : selectedSlot?.id === slot.id
@@ -375,24 +369,18 @@ export const AppointmentBooking: React.FC = () => {
                           : 'bg-green-50 border-green-200 hover:bg-green-100'
                       }`}
                     >
-                      <div className={`text-2xl mb-2 ${
-                        slot.isBooked ? 'text-red-500' : 'text-green-500'
-                      }`}>
-                        {slot.isBooked ? '🕐' : '🕐'}
-                      </div>
-                      <div className="font-medium">{slot.time}</div>
-                      <div className={`text-sm px-3 py-1 rounded-full mt-2 ${
+                      <div className="font-medium text-xs">{slot.time}</div>
+                      <div className={`text-xs px-1 py-0.5 rounded mt-1 ${
                         slot.isBooked
                           ? 'bg-red-100 text-red-700'
                           : 'bg-blue-100 text-blue-700'
                       }`}>
-                        {slot.isBooked ? 'Booked' : 'Available'}
+                        {slot.isBooked ? 'Booked' : 'Free'}
                       </div>
                       {slot.isBooked && (
-                        <div className="flex justify-center gap-2 mt-3">
-                          <button className="p-1 text-gray-400 hover:text-gray-600">📋</button>
-                          <button className="p-1 text-gray-400 hover:text-gray-600">✏️</button>
-                          <button className="p-1 text-gray-400 hover:text-gray-600">❌</button>
+                        <div className="flex justify-center gap-1 mt-1">
+                          <button className="text-xs text-gray-400 hover:text-gray-600">📋</button>
+                          <button className="text-xs text-gray-400 hover:text-gray-600">✏️</button>
                         </div>
                       )}
                     </button>
