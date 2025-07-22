@@ -236,6 +236,11 @@ export const AppointmentBooking: React.FC = () => {
           setShowSuccess(false);
           setSelectedSlot(null);
         }}
+        onClose={() => {
+          setShowSuccess(false);
+          setSelectedSlot(null);
+        }}
+        open={showSuccess}
       />
     );
   }
