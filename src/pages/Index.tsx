@@ -1,22 +1,23 @@
 import React, { useState } from 'react';
 import { Login } from '@/components/Login';
 import { Registration } from '@/components/Registration';
-import { useNavigate } from 'react-router-dom';
+import { Dashboard } from '@/components/Dashboard';
 
-type AppState = 'login' | 'register';
+type AppState = 'login' | 'register' | 'dashboard';
 
 const Index = () => {
   const [currentState, setCurrentState] = useState<AppState>('login');
-  const navigate = useNavigate();
 
   const handleLogin = () => {
-    // Redirect to the appointment scheduler with the new layout
-    navigate('/appointment-scheduler');
+    setCurrentState('dashboard');
   };
 
   const handleRegister = () => {
-    // Redirect to the appointment scheduler with the new layout
-    navigate('/appointment-scheduler');
+    setCurrentState('dashboard');
+  };
+
+  const handleLogout = () => {
+    setCurrentState('login');
   };
 
   const renderCurrentView = () => {
@@ -35,6 +36,8 @@ const Index = () => {
             onSwitchToLogin={() => setCurrentState('login')}
           />
         );
+      case 'dashboard':
+        return <Dashboard onLogout={handleLogout} />;
       default:
         return null;
     }
