@@ -26,13 +26,8 @@ const Index = () => {
     if (userRole) {
       localStorage.setItem('easyHMS_userRole', userRole);
     }
-    const hasCompletedSetup = localStorage.getItem('easyHMS_setupCompleted');
-    
-    if (!hasCompletedSetup) {
-      setCurrentState('welcome');
-    } else {
-      setCurrentState('dashboard');
-    }
+    // Directly go to dashboard (which will be admin panel based on role)
+    setCurrentState('dashboard');
   };
 
   const handleRegister = (userRole?: string) => {
@@ -40,7 +35,8 @@ const Index = () => {
     if (userRole) {
       localStorage.setItem('easyHMS_userRole', userRole);
     }
-    setCurrentState('welcome');
+    // Directly go to dashboard (which will be admin panel based on role)
+    setCurrentState('dashboard');
   };
 
   const handleSetupComplete = (setupData: any) => {
@@ -82,10 +78,11 @@ const Index = () => {
           />
         );
       case 'dashboard':
-        const userRole = localStorage.getItem('easyHMS_userRole') || 'doctor';
-        return userRole === 'admin' || userRole === 'admin-doctor' ? 
-          <AdminDashboard /> : 
-          <Dashboard onLogout={handleLogout} />;
+        const userRole = localStorage.getItem('easyHMS_userRole') || 'admin';
+        // Admin Panel comes first - most users should see this
+        return userRole === 'doctor' ? 
+          <Dashboard onLogout={handleLogout} /> : 
+          <AdminDashboard />;
       default:
         return null;
     }
