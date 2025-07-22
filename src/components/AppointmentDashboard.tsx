@@ -331,74 +331,111 @@ export const AppointmentDashboard = () => {
             </p>
           </CardHeader>
 
-          {/* Simple Patient Journey Navigation */}
-          <div className="px-6 pb-4">
-            <div className="flex flex-wrap gap-3">
-              <button
-                onClick={() => setSelectedStatus('vitals-required')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
-                  selectedStatus === 'vitals-required'
-                    ? 'bg-red-50 text-red-700 border-red-300'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-red-50'
-                }`}
-              >
-                <span>❤️ Vitals Required (1 patient)</span>
-              </button>
+          {/* Enhanced Patient Journey Navigation Header */}
+          <div className="px-3 md:px-6 pb-4">
+            <div className="bg-gradient-to-r from-healthcare-primary/10 to-healthcare-secondary/10 rounded-xl p-4 border border-healthcare-primary/20">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-healthcare-primary rounded-full animate-pulse"></div>
+                  <h3 className="text-lg font-semibold text-healthcare-primary">Patient Journey Flow</h3>
+                </div>
+                <Badge className="bg-healthcare-primary/20 text-healthcare-primary border-healthcare-primary/30">
+                  Live Tracking
+                </Badge>
+              </div>
+              
+              {/* Single Row Navigation */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+                <button
+                  onClick={() => setSelectedStatus('vitals-required')}
+                  className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 ${
+                    selectedStatus === 'vitals-required'
+                      ? 'bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/25'
+                      : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300'
+                  }`}
+                >
+                  <Heart className="h-5 w-5" />
+                  <div className="text-center">
+                    <div className="font-semibold text-xs">Vitals</div>
+                    <div className="text-xs opacity-80">1 patient</div>
+                  </div>
+                </button>
 
-              <button
-                onClick={() => setSelectedStatus('ready-consultation')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
-                  selectedStatus === 'ready-consultation'
-                    ? 'bg-green-50 text-green-700 border-green-300'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-green-50'
-                }`}
-              >
-                <span>✅ Ready For Consultation (1 patient)</span>
-              </button>
+                <button
+                  onClick={() => setSelectedStatus('ready-consultation')}
+                  className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 ${
+                    selectedStatus === 'ready-consultation'
+                      ? 'bg-green-500 text-white border-green-500 shadow-lg shadow-green-500/25'
+                      : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300'
+                  }`}
+                >
+                  <CheckCircle className="h-5 w-5" />
+                  <div className="text-center">
+                    <div className="font-semibold text-xs">Ready</div>
+                    <div className="text-xs opacity-80">1 patient</div>
+                  </div>
+                </button>
 
-              <button
-                onClick={() => setSelectedStatus('under-consultation')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
-                  selectedStatus === 'under-consultation'
-                    ? 'bg-blue-50 text-blue-700 border-blue-300'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-blue-50'
-                }`}
-              >
-                <span>👨‍⚕️ Under Consultation (1 patient)</span>
-              </button>
+                <button
+                  onClick={() => setSelectedStatus('under-consultation')}
+                  className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 ${
+                    selectedStatus === 'under-consultation'
+                      ? 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-500/25'
+                      : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300'
+                  }`}
+                >
+                  <Stethoscope className="h-5 w-5" />
+                  <div className="text-center">
+                    <div className="font-semibold text-xs">Consulting</div>
+                    <div className="text-xs opacity-80">1 patient</div>
+                  </div>
+                </button>
 
-              <button
-                onClick={() => setSelectedStatus('lab-test-required')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
-                  selectedStatus === 'lab-test-required'
-                    ? 'bg-purple-50 text-purple-700 border-purple-300'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-purple-50'
-                }`}
-              >
-                <span>🧪 Lab Test Required (0 patients)</span>
-              </button>
+                <button
+                  onClick={() => setSelectedStatus('lab-test-required')}
+                  className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 ${
+                    selectedStatus === 'lab-test-required'
+                      ? 'bg-purple-500 text-white border-purple-500 shadow-lg shadow-purple-500/25'
+                      : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 hover:border-purple-300'
+                  }`}
+                >
+                  <FlaskConical className="h-5 w-5" />
+                  <div className="text-center">
+                    <div className="font-semibold text-xs">Lab Test</div>
+                    <div className="text-xs opacity-80">1 patient</div>
+                  </div>
+                </button>
 
-              <button
-                onClick={() => setSelectedStatus('awaiting-reconsultation')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
-                  selectedStatus === 'awaiting-reconsultation'
-                    ? 'bg-yellow-50 text-yellow-700 border-yellow-300'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-yellow-50'
-                }`}
-              >
-                <span>⏳ Awaiting Reconsultation (0 patients)</span>
-              </button>
+                <button
+                  onClick={() => setSelectedStatus('awaiting-reconsultation')}
+                  className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 ${
+                    selectedStatus === 'awaiting-reconsultation'
+                      ? 'bg-yellow-500 text-white border-yellow-500 shadow-lg shadow-yellow-500/25'
+                      : 'bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100 hover:border-yellow-300'
+                  }`}
+                >
+                  <Clock className="h-5 w-5" />
+                  <div className="text-center">
+                    <div className="font-semibold text-xs">Re-consult</div>
+                    <div className="text-xs opacity-80">1 patient</div>
+                  </div>
+                </button>
 
-              <button
-                onClick={() => setSelectedStatus('completed')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
-                  selectedStatus === 'completed'
-                    ? 'bg-green-50 text-green-700 border-green-300'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-green-50'
-                }`}
-              >
-                <span>✅ Completed (1 patient)</span>
-              </button>
+                <button
+                  onClick={() => setSelectedStatus('completed')}
+                  className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 ${
+                    selectedStatus === 'completed'
+                      ? 'bg-green-600 text-white border-green-600 shadow-lg shadow-green-600/25'
+                      : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300'
+                  }`}
+                >
+                  <CheckCircle className="h-5 w-5" />
+                  <div className="text-center">
+                    <div className="font-semibold text-xs">Completed</div>
+                    <div className="text-xs opacity-80">1 patient</div>
+                  </div>
+                </button>
+              </div>
             </div>
           </div>
           

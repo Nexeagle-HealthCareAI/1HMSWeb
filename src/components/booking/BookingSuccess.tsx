@@ -139,6 +139,35 @@ export const BookingSuccess: React.FC<BookingSuccessProps> = ({
             Back to Dashboard
           </Button>
           
+          <div className="grid grid-cols-3 gap-2">
+            <Button
+              onClick={() => {/* Edit appointment */}}
+              variant="outline"
+              className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+              size="sm"
+            >
+              Edit
+            </Button>
+            
+            <Button
+              onClick={() => {/* Reschedule appointment */}}
+              variant="outline"
+              className="bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100"
+              size="sm"
+            >
+              Reschedule
+            </Button>
+            
+            <Button
+              onClick={() => {/* Cancel appointment */}}
+              variant="outline"
+              className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+              size="sm"
+            >
+              Cancel
+            </Button>
+          </div>
+          
           <Button
             onClick={onBookAnother}
             variant="outline"

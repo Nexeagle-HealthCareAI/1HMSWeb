@@ -128,8 +128,8 @@ const generateTimeSlots = (doctorId: string, date: string): TimeSlot[] => {
 };
 
 export const AppointmentBooking: React.FC = () => {
-  const [selectedDepartment, setSelectedDepartment] = useState(departments[0]);
-  const [selectedDoctor, setSelectedDoctor] = useState(departments[0].doctors[0]);
+  const [selectedDepartment, setSelectedDepartment] = useState<string>(departments[0].id);
+  const [selectedDoctor, setSelectedDoctor] = useState<Doctor>(departments[0].doctors[0]);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedShift, setSelectedShift] = useState('morning');
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
@@ -140,14 +140,28 @@ export const AppointmentBooking: React.FC = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [patientData, setPatientData] = useState<any>(null);
 
+  const selectedDepartmentData = departments.find(d => d.id === selectedDepartment);
+  const next7Days = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() + i);
+    return date;
+  });
+
+  const isSameDay = (date1: Date, date2: Date) => {
+    return date1.toDateString() === date2.toDateString();
+  };
+
   React.useEffect(() => {
     const dateStr = selectedDate.toISOString().split('T')[0];
     setTimeSlots(generateTimeSlots(selectedDoctor.id, dateStr));
   }, [selectedDoctor, selectedDate]);
 
-  const handleDepartmentSelect = (department: Department) => {
-    setSelectedDepartment(department);
-    setSelectedDoctor(department.doctors[0]);
+  const handleDepartmentSelect = (departmentId: string) => {
+    const department = departments.find(d => d.id === departmentId);
+    if (department) {
+      setSelectedDepartment(departmentId);
+      setSelectedDoctor(department.doctors[0]);
+    }
   };
 
   const handleSlotSelect = (slot: TimeSlot) => {
@@ -239,10 +253,7 @@ export const AppointmentBooking: React.FC = () => {
             {/* Department Dropdown */}
             <div>
               <label className="text-xs font-medium text-gray-700 mb-1 block">Department</label>
-              <Select value={selectedDepartment.id} onValueChange={(value) => {
-                const dept = departments.find(d => d.id === value);
-                if (dept) handleDepartmentSelect(dept);
-              }}>
+            <Select value={selectedDepartment} onValueChange={handleDepartmentSelect}>
                 <SelectTrigger className="h-9 text-xs">
                   <SelectValue placeholder="Select Department" />
                 </SelectTrigger>
@@ -262,15 +273,15 @@ export const AppointmentBooking: React.FC = () => {
             {/* Doctor Selection */}
             <div>
               <label className="text-xs font-medium text-gray-700 mb-1 block">Doctor</label>
-              <Select value={selectedDoctor.id} onValueChange={(value) => {
-                const doctor = selectedDepartment.doctors.find(d => d.id === value);
+            <Select value={selectedDoctor.id} onValueChange={(value) => {
+                const doctor = selectedDepartmentData?.doctors.find(d => d.id === value);
                 if (doctor) setSelectedDoctor(doctor);
               }}>
                 <SelectTrigger className="h-9 text-xs">
                   <SelectValue placeholder="Select Doctor" />
                 </SelectTrigger>
                 <SelectContent className="bg-white border shadow-lg z-50">
-                  {selectedDepartment.doctors.map((doctor) => (
+                  {selectedDepartmentData?.doctors.map((doctor) => (
                     <SelectItem key={doctor.id} value={doctor.id} className="text-xs">
                       <div>
                         <div className="font-medium">{doctor.name}</div>
@@ -297,9 +308,9 @@ export const AppointmentBooking: React.FC = () => {
                 {departments.slice(0, 4).map((dept) => (
                   <button
                     key={dept.id}
-                    onClick={() => handleDepartmentSelect(dept)}
+                    onClick={() => handleDepartmentSelect(dept.id)}
                     className={`flex flex-col items-center gap-2 p-3 rounded-lg border text-center transition-all text-xs ${
-                      selectedDepartment.id === dept.id
+                      selectedDepartment === dept.id
                         ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500 shadow-md'
                         : 'bg-gray-50 border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700'
                     }`}
@@ -312,10 +323,7 @@ export const AppointmentBooking: React.FC = () => {
 
               {/* More Departments Dropdown */}
               <div className="mb-4">
-                <Select value={selectedDepartment.id} onValueChange={(value) => {
-                  const dept = departments.find(d => d.id === value);
-                  if (dept) handleDepartmentSelect(dept);
-                }}>
+              <Select value={selectedDepartment} onValueChange={handleDepartmentSelect}>
                   <SelectTrigger className="h-9 text-xs">
                     <SelectValue placeholder="More Departments..." />
                   </SelectTrigger>
@@ -338,7 +346,7 @@ export const AppointmentBooking: React.FC = () => {
                   👩‍⚕️ Available Doctors
                 </h3>
                 <div className="space-y-2">
-                  {selectedDepartment.doctors.map((doctor) => (
+                  {selectedDepartmentData?.doctors.map((doctor) => (
                     <button
                       key={doctor.id}
                       onClick={() => setSelectedDoctor(doctor)}
