@@ -121,21 +121,23 @@ export function AppSidebar() {
             <SidebarMenu className="space-y-1">
               {navigationItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton className="h-12">
+                  <SidebarMenuButton asChild>
                     <NavLink 
                       to={item.url} 
-                      className={`flex items-center gap-3 w-full ${getNavClassName(item.url)}`}
+                      className={`flex items-center gap-3 h-12 px-3 ${getNavClassName(item.url)}`}
                       title={collapsed ? item.title : undefined}
                     >
-                      <item.icon className="h-5 w-5 flex-shrink-0" />
-                      {!collapsed && (
-                        <div className="flex flex-col items-start">
-                          <span className="font-medium">{item.title}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {item.description}
-                          </span>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-3 w-full">
+                        <item.icon className="h-5 w-5 flex-shrink-0" />
+                        {!collapsed && (
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">{item.title}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {item.description}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

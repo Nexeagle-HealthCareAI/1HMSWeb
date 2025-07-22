@@ -17,10 +17,8 @@ export function MainLayout({ children }: MainLayoutProps) {
           {/* Top Header */}
           <header className="h-14 border-b bg-card flex items-center justify-between px-4 sticky top-0 z-10">
             <div className="flex items-center gap-2">
-              <SidebarTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <Menu className="h-4 w-4" />
-                </Button>
+              <SidebarTrigger>
+                <Menu className="h-4 w-4" />
               </SidebarTrigger>
               <div className="h-6 w-px bg-border mx-2" />
               <h1 className="font-semibold text-foreground">Healthcare Management System</h1>
