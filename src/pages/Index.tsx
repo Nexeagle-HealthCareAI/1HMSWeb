@@ -40,7 +40,7 @@ const Index = () => {
     if (userRole) {
       localStorage.setItem('easyHMS_userRole', userRole);
     }
-    setCurrentState('welcome');
+    setCurrentState('dashboard');
   };
 
   const handleSetupComplete = (setupData: any) => {
