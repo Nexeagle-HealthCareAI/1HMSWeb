@@ -155,7 +155,7 @@ export const AppointmentDashboard = () => {
             <h1 className="text-3xl font-bold text-gray-900">📅 Appointment Dashboard</h1>
           </div>
           <Button 
-            onClick={() => navigate('/')} 
+            onClick={() => navigate('/appointment-scheduler/book')} 
             className="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
           >
             <Plus className="h-5 w-5 mr-2" />
