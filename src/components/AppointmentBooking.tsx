@@ -5,6 +5,7 @@ import { DateSelector } from './booking/DateSelector';
 import { ShiftTabs } from './booking/ShiftTabs';
 import { TimeSlots } from './booking/TimeSlots';
 import { PatientForm } from './booking/PatientForm';
+import { VitalsForm } from './booking/VitalsForm';
 import { BookingSuccess } from './booking/BookingSuccess';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -110,9 +111,11 @@ export const AppointmentBooking: React.FC = () => {
   const [selectedShift, setSelectedShift] = useState('morning');
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [showPatientForm, setShowPatientForm] = useState(false);
+  const [showVitalsForm, setShowVitalsForm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [appointmentId, setAppointmentId] = useState('');
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [patientData, setPatientData] = useState<any>(null);
 
   React.useEffect(() => {
     const dateStr = selectedDate.toISOString().split('T')[0];
@@ -132,19 +135,43 @@ export const AppointmentBooking: React.FC = () => {
   };
 
   const handleBookingComplete = (patientInfo: any) => {
+    setPatientData(patientInfo);
+    setShowPatientForm(false);
+    setShowVitalsForm(true);
+  };
+
+  const handleVitalsComplete = (vitalsData: any) => {
     const newAppointmentId = `APT${Date.now()}`;
     setAppointmentId(newAppointmentId);
     
-    // Update the slot as booked
+    // Update the slot as booked with both patient and vitals data
     setTimeSlots(prev => prev.map(slot => 
       slot.id === selectedSlot?.id 
-        ? { ...slot, isBooked: true, patientInfo }
+        ? { ...slot, isBooked: true, patientInfo: { ...patientData, vitals: vitalsData } }
         : slot
     ));
     
-    setShowPatientForm(false);
+    setShowVitalsForm(false);
     setShowSuccess(true);
     setSelectedSlot(null);
+    setPatientData(null);
+  };
+
+  const handleVitalsSkip = () => {
+    const newAppointmentId = `APT${Date.now()}`;
+    setAppointmentId(newAppointmentId);
+    
+    // Update the slot as booked with only patient data
+    setTimeSlots(prev => prev.map(slot => 
+      slot.id === selectedSlot?.id 
+        ? { ...slot, isBooked: true, patientInfo: patientData }
+        : slot
+    ));
+    
+    setShowVitalsForm(false);
+    setShowSuccess(true);
+    setSelectedSlot(null);
+    setPatientData(null);
   };
 
   const handleSlotUpdate = (updatedSlot: TimeSlot) => {
@@ -387,6 +414,15 @@ export const AppointmentBooking: React.FC = () => {
             setShowPatientForm(false);
             setSelectedSlot(null);
           }}
+        />
+      )}
+
+      {/* Vitals Form Modal */}
+      {showVitalsForm && patientData && (
+        <VitalsForm
+          patientName={patientData.name}
+          onSubmit={handleVitalsComplete}
+          onCancel={handleVitalsSkip}
         />
       )}
     </div>
