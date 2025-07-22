@@ -6,7 +6,7 @@ import { Card } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Checkbox } from '../ui/checkbox';
 import { format } from 'date-fns';
 
@@ -131,6 +131,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           <DialogTitle className="text-xl font-bold text-healthcare-primary">
             Book Appointment
           </DialogTitle>
+          <DialogDescription>
+            Please fill in the patient information to schedule your appointment.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

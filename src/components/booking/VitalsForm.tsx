@@ -4,7 +4,7 @@ import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 
 interface VitalsFormProps {
   patientName: string;
@@ -126,9 +126,9 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
             <Activity className="h-5 w-5" />
             Update Vitals - {patientName}
           </DialogTitle>
-          <p className="text-sm text-muted-foreground mt-2">
+          <DialogDescription>
             Recording vital signs is optional but helps provide better care. You can skip this step if needed.
-          </p>
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
