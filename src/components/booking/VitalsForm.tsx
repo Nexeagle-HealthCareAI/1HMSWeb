@@ -57,10 +57,10 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
 
   const getBMICategory = (bmi: string) => {
     const bmiValue = parseFloat(bmi);
-    if (bmiValue < 18.5) return { category: 'Underweight', color: 'text-blue-600' };
-    if (bmiValue < 25) return { category: 'Normal', color: 'text-green-600' };
-    if (bmiValue < 30) return { category: 'Overweight', color: 'text-orange-600' };
-    return { category: 'Obese', color: 'text-red-600' };
+    if (bmiValue < 18.5) return { category: 'Underweight', color: 'text-blue-500' };
+    if (bmiValue < 25) return { category: 'Normal weight', color: 'text-green-500' };
+    if (bmiValue < 30) return { category: 'Overweight', color: 'text-orange-500' };
+    return { category: 'Obesity', color: 'text-red-500' };
   };
 
   const validateVitals = () => {
@@ -275,7 +275,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
               <Scale className="h-4 w-4 text-blue-500" />
               Physical Measurements
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="height" className="text-sm font-medium">
                   Height
@@ -325,24 +325,35 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                   </select>
                 </div>
               </div>
-            </div>
 
-            {/* BMI Display */}
-            {bmi && (
-              <div className="mt-4 p-3 bg-muted rounded-lg">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">BMI (Body Mass Index):</span>
-                  <div className="text-right">
-                    <span className="text-lg font-bold">{bmi}</span>
-                    {bmiInfo && (
-                      <span className={`ml-2 text-sm font-medium ${bmiInfo.color}`}>
-                        ({bmiInfo.category})
-                      </span>
-                    )}
-                  </div>
+              <div>
+                <Label className="text-sm font-medium">
+                  BMI (Body Mass Index)
+                </Label>
+                <div className="mt-2 p-3 bg-muted rounded-md border">
+                  {bmi ? (
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-foreground">{bmi}</div>
+                      {bmiInfo && (
+                        <div className={`text-sm font-medium ${bmiInfo.color} mt-1`}>
+                          {bmiInfo.category}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center text-muted-foreground text-sm py-2">
+                      Enter height & weight
+                    </div>
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground mt-2">
+                  <div>&lt; 18.5: Underweight</div>
+                  <div>18.5-24.9: Normal</div>
+                  <div>25-29.9: Overweight</div>
+                  <div>≥ 30: Obesity</div>
                 </div>
               </div>
-            )}
+            </div>
           </Card>
 
           <div className="bg-muted/50 p-4 rounded-lg border-l-4 border-healthcare-primary/50 mb-4">
