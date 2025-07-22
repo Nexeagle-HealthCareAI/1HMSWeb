@@ -193,42 +193,46 @@ export const AppointmentBooking: React.FC = () => {
         </ContextualGuide>
 
         {/* Main Content */}
-        <div className="flex-1 p-4 lg:p-6">
-          <Card className="p-4 lg:p-6 shadow-card">
-            {/* Header */}
-            <div className="mb-6">
-              <h2 className="text-xl lg:text-2xl font-bold text-foreground mb-2">
-                Schedule Appointment
-              </h2>
-              <p className="text-sm lg:text-base text-muted-foreground">
-                Selected Doctor: <span className="font-semibold text-healthcare-primary">{selectedDoctor.name}</span>
-                <span className="hidden sm:inline">{' '}• {selectedDoctor.specialization}</span>
-              </p>
-            </div>
+        <div className="flex-1 overflow-hidden">
+          <div className="h-full p-4 lg:p-6 overflow-y-auto">
+            <Card className="h-[calc(100vh-8rem)] flex flex-col shadow-card">
+              {/* Header */}
+              <div className="p-4 lg:p-6 flex-shrink-0 border-b">
+                <h2 className="text-xl lg:text-2xl font-bold text-foreground mb-2">
+                  Schedule Appointment
+                </h2>
+                <p className="text-sm lg:text-base text-muted-foreground">
+                  Selected Doctor: <span className="font-semibold text-healthcare-primary">{selectedDoctor.name}</span>
+                  <span className="hidden sm:inline">{' '}• {selectedDoctor.specialization}</span>
+                </p>
+              </div>
 
-            {/* Date Selection */}
-            <DateSelector
-              selectedDate={selectedDate}
-              onDateSelect={setSelectedDate}
-            />
+              {/* Date Selection */}
+              <div className="flex-1 p-4 lg:p-6 space-y-6 overflow-y-auto">
+                <DateSelector
+                  selectedDate={selectedDate}
+                  onDateSelect={setSelectedDate}
+                />
 
-            {/* Shift Tabs */}
-            <ShiftTabs
-              selectedShift={selectedShift}
-              onShiftSelect={setSelectedShift}
-            />
+                {/* Shift Tabs */}
+                <ShiftTabs
+                  selectedShift={selectedShift}
+                  onShiftSelect={setSelectedShift}
+                />
 
-            {/* Time Slots */}
-            <ContextualGuide {...APPOINTMENT_GUIDES['time-slots']}>
-              <TimeSlots
-                timeSlots={timeSlots}
-                selectedShift={selectedShift}
-                onSlotSelect={handleSlotSelect}
-                onSlotUpdate={handleSlotUpdate}
-                onSlotCancel={handleSlotCancel}
-              />
-            </ContextualGuide>
-          </Card>
+                {/* Time Slots */}
+                <ContextualGuide {...APPOINTMENT_GUIDES['time-slots']}>
+                  <TimeSlots
+                    timeSlots={timeSlots}
+                    selectedShift={selectedShift}
+                    onSlotSelect={handleSlotSelect}
+                    onSlotUpdate={handleSlotUpdate}
+                    onSlotCancel={handleSlotCancel}
+                  />
+                </ContextualGuide>
+              </div>
+            </Card>
+          </div>
         </div>
       </div>
 

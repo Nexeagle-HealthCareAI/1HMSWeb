@@ -306,99 +306,100 @@ export const AppointmentDashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="flex-1 overflow-hidden">
-            {/* Desktop Table */}
-            <div className="hidden md:block h-full overflow-auto">
-              <Table>
-                <TableHeader className="sticky top-0 bg-muted/50">
-                  <TableRow>
-                    <TableHead className="font-semibold text-foreground">Patient ID</TableHead>
-                    <TableHead className="font-semibold text-foreground">Patient Name</TableHead>
-                    <TableHead className="font-semibold text-foreground">Doctor Assigned</TableHead>
-                    <TableHead className="font-semibold text-foreground">Appointment Time</TableHead>
-                    <TableHead className="font-semibold text-foreground">Token No.</TableHead>
-                    <TableHead className="font-semibold text-foreground">Vitals Updated</TableHead>
-                    <TableHead className="font-semibold text-foreground">Status</TableHead>
-                    <TableHead className="font-semibold text-foreground">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAppointments.map((appointment, index) => (
-                    <TableRow 
-                      key={appointment.id} 
-                      className={`hover:bg-muted/50 transition-colors ${
-                        index % 2 === 0 ? 'bg-card' : 'bg-muted/20'
-                      }`}
-                    >
-                      <TableCell className="font-medium">
-                        <Button
-                          variant="link"
-                          className="p-0 h-auto text-healthcare-primary hover:text-healthcare-primary/80"
-                          onClick={() => {/* Navigate to patient profile */}}
-                        >
-                          {appointment.patientId}
-                        </Button>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-foreground">{appointment.patientName}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Stethoscope className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-foreground">{appointment.doctorName}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-foreground">{appointment.appointmentTime}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="font-mono">
-                          #{appointment.tokenNo}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {appointment.vitalsUpdated ? (
-                          <span className="text-healthcare-success font-semibold">✅</span>
-                        ) : (
+            <div className="hidden lg:block h-full overflow-y-auto">
+              <div className="min-w-[800px]">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10 border-b">
+                    <TableRow>
+                      <TableHead className="font-semibold text-foreground min-w-[100px]">Patient ID</TableHead>
+                      <TableHead className="font-semibold text-foreground min-w-[150px]">Patient Name</TableHead>
+                      <TableHead className="font-semibold text-foreground min-w-[150px]">Doctor Assigned</TableHead>
+                      <TableHead className="font-semibold text-foreground min-w-[120px]">Appointment Time</TableHead>
+                      <TableHead className="font-semibold text-foreground min-w-[80px]">Token No.</TableHead>
+                      <TableHead className="font-semibold text-foreground min-w-[120px]">Vitals Updated</TableHead>
+                      <TableHead className="font-semibold text-foreground min-w-[100px]">Status</TableHead>
+                      <TableHead className="font-semibold text-foreground min-w-[150px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAppointments.map((appointment, index) => (
+                      <TableRow 
+                        key={appointment.id} 
+                        className={`hover:bg-muted/50 transition-colors ${
+                          index % 2 === 0 ? 'bg-card' : 'bg-muted/20'
+                        }`}
+                      >
+                        <TableCell className="font-medium">
                           <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-healthcare-error border-healthcare-error/30 hover:bg-healthcare-error/10"
-                            onClick={() => {/* Open vitals form */}}
+                            variant="link"
+                            className="p-0 h-auto text-healthcare-primary hover:text-healthcare-primary/80"
+                            onClick={() => {/* Navigate to patient profile */}}
                           >
-                            ❌ Update
+                            {appointment.patientId}
                           </Button>
-                        )}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(appointment.status)}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="hover:bg-healthcare-primary/10 border-healthcare-primary/30"
-                            onClick={() => {/* View details */}}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
-                          {appointment.status !== 'completed' && (
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-foreground">{appointment.patientName}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Stethoscope className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-foreground">{appointment.doctorName}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-foreground">{appointment.appointmentTime}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-mono">
+                            #{appointment.tokenNo}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {appointment.vitalsUpdated ? (
+                            <span className="text-healthcare-success font-semibold">✅</span>
+                          ) : (
                             <Button
                               variant="outline"
                               size="sm"
-                              className="hover:bg-healthcare-error/10 text-healthcare-error border-healthcare-error/30"
-                              onClick={() => {/* Cancel appointment */}}
+                              className="text-healthcare-error border-healthcare-error/30 hover:bg-healthcare-error/10"
+                              onClick={() => {/* Open vitals form */}}
                             >
-                              <X className="h-4 w-4 mr-1" />
-                              Cancel
+                              ❌ Update
                             </Button>
                           )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                        </TableCell>
+                        <TableCell>{getStatusBadge(appointment.status)}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="hover:bg-healthcare-primary/10 border-healthcare-primary/30"
+                              onClick={() => {/* View details */}}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                            {appointment.status !== 'completed' && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="hover:bg-healthcare-error/10 text-healthcare-error border-healthcare-error/30"
+                                onClick={() => {/* Cancel appointment */}}
+                              >
+                                <X className="h-4 w-4 mr-1" />
+                                Cancel
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
 
             {/* Mobile Cards */}
