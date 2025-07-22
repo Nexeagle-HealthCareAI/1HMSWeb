@@ -121,10 +121,10 @@ export function AppSidebar() {
             <SidebarMenu className="space-y-1">
               {navigationItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild className="h-12">
+                  <SidebarMenuButton className="h-12">
                     <NavLink 
                       to={item.url} 
-                      className={getNavClassName(item.url)}
+                      className={`flex items-center gap-3 w-full ${getNavClassName(item.url)}`}
                       title={collapsed ? item.title : undefined}
                     >
                       <item.icon className="h-5 w-5 flex-shrink-0" />
