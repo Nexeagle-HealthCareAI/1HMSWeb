@@ -10,6 +10,7 @@ import {
   UserCog
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -148,7 +149,7 @@ export function AppSidebar() {
 
         {!collapsed && (
           <div className="mt-auto p-4 border-t">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 mb-3">
               <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                 <UserCog className="h-4 w-4 text-primary" />
               </div>
@@ -157,6 +158,13 @@ export function AppSidebar() {
                 <p className="text-xs text-muted-foreground">Healthcare Professional</p>
               </div>
             </div>
+            <Button 
+              variant="outline" 
+              className="w-full text-destructive hover:text-destructive"
+              onClick={() => window.location.href = '/'}
+            >
+              Logout
+            </Button>
           </div>
         )}
       </SidebarContent>
