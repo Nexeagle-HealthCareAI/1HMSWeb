@@ -82,19 +82,12 @@ export const ContextualGuide: React.FC<ContextualGuideProps> = ({
     <Popover open={isOpen} onOpenChange={handleToggle}>
       <PopoverTrigger asChild>
         <div 
-          className="relative inline-block"
+          className="relative inline-block w-full"
           onMouseEnter={() => triggerMode === 'hover' && !isDismissed && setIsOpen(true)}
           onMouseLeave={() => triggerMode === 'hover' && setIsOpen(false)}
           onClick={() => triggerMode === 'click' && !isDismissed && setIsOpen(!isOpen)}
         >
           {children}
-          {/* Cute indicator dot */}
-          {!isDismissed && (
-            <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full ${getPriorityColor().replace('text-', 'bg-')} animate-pulse`}>
-              <div className="absolute inset-0 w-3 h-3 rounded-full bg-current animate-ping opacity-75"></div>
-              <div className="relative w-3 h-3 rounded-full bg-current"></div>
-            </div>
-          )}
         </div>
       </PopoverTrigger>
       

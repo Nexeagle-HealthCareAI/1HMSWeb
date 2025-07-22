@@ -223,7 +223,7 @@ const navigation = [
         return <BulkMessaging />;
       default:
         return (
-          <div className="space-y-6">
+          <div className="space-y-4 lg:space-y-6">
             {/* Profile Completion Banner */}
             {showProfileCompletion && (
               <ProfileCompletion onClose={() => setShowProfileCompletion(false)} />
@@ -231,16 +231,16 @@ const navigation = [
 
             {/* Quick Navigation */}
             <ContextualGuide {...DASHBOARD_GUIDES['quick-nav']}>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 lg:gap-4 mb-6">
                 {navigation.map((item) => (
                   <Button
                     key={item.id}
                     variant="outline"
-                    className="h-20 flex-col gap-2"
+                    className="h-16 sm:h-18 lg:h-20 flex-col gap-1 lg:gap-2 text-xs"
                     onClick={() => setCurrentPage(item.id)}
                   >
-                    <item.icon className="h-6 w-6" />
-                    <span className="text-xs text-center">{item.name}</span>
+                    <item.icon className="h-4 w-4 lg:h-6 lg:w-6" />
+                    <span className="text-center leading-tight">{item.name}</span>
                   </Button>
                 ))}
               </div>
@@ -248,16 +248,16 @@ const navigation = [
 
             {/* KPI Cards */}
             <ContextualGuide {...DASHBOARD_GUIDES['kpi-cards']}>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
                 {kpiData.map((kpi, index) => (
                   <Card key={index} className="shadow-card hover:shadow-hover transition-shadow">
-                    <CardContent className="p-6">
+                    <CardContent className="p-4 lg:p-6">
                       <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-muted-foreground truncate">
                             {kpi.title}
                           </p>
-                          <p className="text-3xl font-bold text-foreground">
+                          <p className="text-2xl lg:text-3xl font-bold text-foreground">
                             {kpi.value}
                           </p>
                           <p className={`text-xs ${
@@ -266,8 +266,8 @@ const navigation = [
                             {kpi.change} from yesterday
                           </p>
                         </div>
-                        <div className={`p-3 rounded-full bg-${kpi.color}/10`}>
-                          <kpi.icon className={`h-6 w-6 text-${kpi.color}`} />
+                        <div className={`p-2 lg:p-3 rounded-full bg-${kpi.color}/10 flex-shrink-0`}>
+                          <kpi.icon className={`h-5 w-5 lg:h-6 lg:w-6 text-${kpi.color}`} />
                         </div>
                       </div>
                     </CardContent>
@@ -292,38 +292,38 @@ const navigation = [
                 <CardContent>
                 {/* Desktop Table */}
                 <div className="hidden lg:block overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full min-w-full">
                     <thead>
                       <tr className="border-b">
-                        <th className="text-left py-3 px-4 font-semibold">Patient ID</th>
-                        <th className="text-left py-3 px-4 font-semibold">Name</th>
-                        <th className="text-left py-3 px-4 font-semibold">Contact</th>
-                        <th className="text-left py-3 px-4 font-semibold">Token</th>
-                        <th className="text-left py-3 px-4 font-semibold">Doctor</th>
-                        <th className="text-left py-3 px-4 font-semibold">Time</th>
-                        <th className="text-left py-3 px-4 font-semibold">Status</th>
+                        <th className="text-left py-3 px-2 lg:px-4 font-semibold text-sm">Patient ID</th>
+                        <th className="text-left py-3 px-2 lg:px-4 font-semibold text-sm">Name</th>
+                        <th className="text-left py-3 px-2 lg:px-4 font-semibold text-sm">Contact</th>
+                        <th className="text-left py-3 px-2 lg:px-4 font-semibold text-sm">Token</th>
+                        <th className="text-left py-3 px-2 lg:px-4 font-semibold text-sm">Doctor</th>
+                        <th className="text-left py-3 px-2 lg:px-4 font-semibold text-sm">Time</th>
+                        <th className="text-left py-3 px-2 lg:px-4 font-semibold text-sm">Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {todayPatients.map((patient) => (
                         <tr key={patient.id} className="border-b hover:bg-muted/50 transition-colors">
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-2 lg:px-4">
                             <Button 
                               variant="link" 
-                              className="p-0 h-auto font-medium text-healthcare-primary"
-                             onClick={() => setSelectedPatientId(patient.id)}
+                              className="p-0 h-auto font-medium text-healthcare-primary text-sm"
+                              onClick={() => setSelectedPatientId(patient.id)}
                             >
                               {patient.id}
                             </Button>
                           </td>
-                          <td className="py-3 px-4 font-medium">{patient.name}</td>
-                          <td className="py-3 px-4 text-muted-foreground">{patient.contact}</td>
-                          <td className="py-3 px-4">
-                            <Badge variant="outline">{patient.token}</Badge>
+                          <td className="py-3 px-2 lg:px-4 font-medium text-sm">{patient.name}</td>
+                          <td className="py-3 px-2 lg:px-4 text-muted-foreground text-sm">{patient.contact}</td>
+                          <td className="py-3 px-2 lg:px-4">
+                            <Badge variant="outline" className="text-xs">{patient.token}</Badge>
                           </td>
-                          <td className="py-3 px-4">{patient.doctor}</td>
-                          <td className="py-3 px-4">{patient.time}</td>
-                          <td className="py-3 px-4">{getStatusBadge(patient.status)}</td>
+                          <td className="py-3 px-2 lg:px-4 text-sm">{patient.doctor}</td>
+                          <td className="py-3 px-2 lg:px-4 text-sm">{patient.time}</td>
+                          <td className="py-3 px-2 lg:px-4">{getStatusBadge(patient.status)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -331,34 +331,34 @@ const navigation = [
                 </div>
 
                 {/* Mobile Cards */}
-                <div className="lg:hidden space-y-4">
+                <div className="lg:hidden space-y-3 lg:space-y-4">
                   {todayPatients.map((patient) => (
-                    <Card key={patient.id} className="p-4 shadow-sm border">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
+                    <Card key={patient.id} className="p-3 lg:p-4 shadow-sm border">
+                      <div className="flex justify-between items-start mb-2 lg:mb-3">
+                        <div className="min-w-0 flex-1">
                           <Button 
                             variant="link" 
-                            className="p-0 h-auto font-medium text-healthcare-primary text-lg"
+                            className="p-0 h-auto font-medium text-healthcare-primary text-base lg:text-lg"
                             onClick={() => setSelectedPatientId(patient.id)}
                           >
                             {patient.id}
                           </Button>
-                          <h3 className="font-semibold text-foreground">{patient.name}</h3>
+                          <h3 className="font-semibold text-foreground text-sm lg:text-base truncate">{patient.name}</h3>
                         </div>
-                        <div className="flex flex-col items-end gap-1">
-                          <Badge variant="outline">{patient.token}</Badge>
+                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                          <Badge variant="outline" className="text-xs">{patient.token}</Badge>
                           {getStatusBadge(patient.status)}
                         </div>
                       </div>
                       
-                      <div className="space-y-2 text-sm">
+                      <div className="space-y-1.5 lg:space-y-2 text-xs lg:text-sm">
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Contact:</span>
-                          <span className="font-medium">{patient.contact}</span>
+                          <span className="font-medium truncate ml-2">{patient.contact}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Doctor:</span>
-                          <span className="font-medium">{patient.doctor}</span>
+                          <span className="font-medium truncate ml-2">{patient.doctor}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Time:</span>
@@ -554,7 +554,8 @@ const navigation = [
         </header>
 
         {/* Content */}
-        <main className="p-6">
+        {/* Main Content Area */}
+        <main className="p-3 lg:p-6">
           {renderContent()}
         </main>
       </div>
