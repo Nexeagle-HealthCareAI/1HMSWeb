@@ -131,12 +131,12 @@ export const BookingSuccess: React.FC<BookingSuccessProps> = ({
         {/* Actions */}
         <div className="space-y-3">
           <Button
-            onClick={() => navigate('/appointment-scheduler')}
+            onClick={() => navigate('/')}
             className="w-full bg-healthcare-primary hover:bg-healthcare-primary/90"
             size="lg"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Appointment Dashboard
+            Back to Dashboard
           </Button>
           
           <Button
