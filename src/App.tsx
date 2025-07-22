@@ -20,7 +20,9 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={<AdminDashboard />} />
+          <Route path="/login" element={<Index />} />
+          <Route path="/doctor-dashboard" element={<Index />} />
           <Route path="/calendar" element={<DoctorCalendar />} />
           <Route path="/prescription/:patientId" element={<EPrescription />} />
           <Route path="/admin" element={<AdminDashboard />} />
