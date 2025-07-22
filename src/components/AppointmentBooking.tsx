@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, User, Phone, Users, Stethoscope } from 'lucide-react';
+import { Calendar, Clock, User, Phone, Users, Stethoscope, ChevronDown, CalendarIcon } from 'lucide-react';
 import { DepartmentSidebar } from './booking/DepartmentSidebar';
 import { DateSelector } from './booking/DateSelector';
 import { ShiftTabs } from './booking/ShiftTabs';
@@ -11,6 +11,11 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { ContextualGuide } from './guide/ContextualGuide';
 import { APPOINTMENT_GUIDES } from './guide/GuideData';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Calendar as CalendarComponent } from './ui/calendar';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 export interface Doctor {
   id: string;
@@ -75,6 +80,24 @@ const departments: Department[] = [
     doctors: [
       { id: '5', name: 'Dr. Lisa Anderson', department: 'General Medicine', specialization: 'Family Medicine' },
       { id: '6', name: 'Dr. James Brown', department: 'General Medicine', specialization: 'Internal Medicine' }
+    ]
+  },
+  {
+    id: 'dermatology',
+    name: 'Dermatology',
+    icon: User,
+    doctors: [
+      { id: '9', name: 'Dr. Maria Garcia', department: 'Dermatology', specialization: 'Skin Specialist' },
+      { id: '10', name: 'Dr. David Kim', department: 'Dermatology', specialization: 'Cosmetic Dermatology' }
+    ]
+  },
+  {
+    id: 'orthopedics',
+    name: 'Orthopedics',
+    icon: Clock,
+    doctors: [
+      { id: '11', name: 'Dr. John Miller', department: 'Orthopedics', specialization: 'Bone & Joint Surgery' },
+      { id: '12', name: 'Dr. Susan Taylor', department: 'Orthopedics', specialization: 'Sports Medicine' }
     ]
   }
 ];
@@ -204,216 +227,316 @@ export const AppointmentBooking: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <div className="flex flex-col lg:flex-row min-h-screen">
-        {/* Ultra-Compact Sidebar */}
-        <div className="w-full lg:w-64 bg-white/90 backdrop-blur-sm border-b lg:border-r border-gray-200/50 shadow-lg lg:shadow-none">
-          {/* Combined Department & Doctor Selection */}
-          <div className="p-2 lg:p-3">
-            <h3 className="text-xs font-semibold mb-2 text-gray-700 flex items-center gap-1">
-              🏥 Department & Doctor
-            </h3>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+      {/* Mobile-First Layout */}
+      <div className="min-h-screen">
+        {/* Mobile Header with Compact Selection */}
+        <div className="lg:hidden bg-white shadow-sm border-b p-3">
+          <h1 className="text-lg font-bold text-gray-900 mb-2">Book Appointment</h1>
+          
+          {/* Department & Doctor Selection - Mobile */}
+          <div className="grid grid-cols-1 gap-2">
+            {/* Department Dropdown */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Department</label>
+              <Select value={selectedDepartment.id} onValueChange={(value) => {
+                const dept = departments.find(d => d.id === value);
+                if (dept) handleDepartmentSelect(dept);
+              }}>
+                <SelectTrigger className="h-9 text-xs">
+                  <SelectValue placeholder="Select Department" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border shadow-lg z-50">
+                  {departments.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.id} className="text-xs">
+                      <div className="flex items-center gap-2">
+                        <dept.icon className="h-3 w-3" />
+                        <span>{dept.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             
-            {/* Department Pills - Mobile Horizontal */}
-            <div className="flex lg:grid lg:grid-cols-1 gap-1 overflow-x-auto pb-2 lg:pb-0 mb-2">
-              {departments.map((dept) => (
-                <button
-                  key={dept.id}
-                  onClick={() => handleDepartmentSelect(dept)}
-                  className={`flex items-center gap-1 px-2 py-1 rounded-full text-left transition-all text-xs flex-shrink-0 ${
-                    selectedDepartment.id === dept.id
-                      ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md'
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                  }`}
-                >
-                  <dept.icon className="h-3 w-3" />
-                  <span className="font-medium whitespace-nowrap">{dept.name}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Doctors - Compact */}
-            <div className="grid grid-cols-1 gap-1">
-              {selectedDepartment.doctors.map((doctor) => (
-                <button
-                  key={doctor.id}
-                  onClick={() => setSelectedDoctor(doctor)}
-                  className={`w-full p-2 rounded-lg border text-left transition-all text-xs ${
-                    selectedDoctor.id === doctor.id
-                      ? 'border-blue-300 bg-gradient-to-r from-blue-50 to-blue-100 shadow-sm'
-                      : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="font-medium text-blue-600 text-xs">{doctor.name}</div>
-                  <div className="text-xs text-gray-500 truncate">{doctor.specialization}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Mini Legend */}
-          <div className="px-2 lg:px-3 pb-2 lg:pb-3 border-t border-gray-200/50 mt-2">
-            <div className="flex gap-3 text-xs">
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-gradient-to-r from-green-400 to-green-500 rounded-full"></div>
-                <span className="text-gray-600">Available</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-gradient-to-r from-red-400 to-red-500 rounded-full"></div>
-                <span className="text-gray-600">Booked</span>
-              </div>
+            {/* Doctor Selection */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Doctor</label>
+              <Select value={selectedDoctor.id} onValueChange={(value) => {
+                const doctor = selectedDepartment.doctors.find(d => d.id === value);
+                if (doctor) setSelectedDoctor(doctor);
+              }}>
+                <SelectTrigger className="h-9 text-xs">
+                  <SelectValue placeholder="Select Doctor" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border shadow-lg z-50">
+                  {selectedDepartment.doctors.map((doctor) => (
+                    <SelectItem key={doctor.id} value={doctor.id} className="text-xs">
+                      <div>
+                        <div className="font-medium">{doctor.name}</div>
+                        <div className="text-xs text-gray-500">{doctor.specialization}</div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
 
-        {/* Main Content - Optimized Grid Layout */}
-        <div className="flex-1 overflow-hidden">
-          <div className="h-full p-4 overflow-y-auto">
-            <div className="max-w-7xl">
-              {/* Compact Header */}
-              <div className="mb-4">
-                <h1 className="text-lg font-bold text-gray-900 mb-1">Schedule Appointment</h1>
-                <p className="text-sm text-gray-600">
-                  Dr: <span className="font-semibold text-blue-600">{selectedDoctor.name}</span>
-                  <span className="text-gray-400 hidden sm:inline"> • {selectedDoctor.specialization}</span>
-                </p>
+        <div className="flex flex-col lg:flex-row min-h-screen lg:h-screen">
+          {/* Desktop Sidebar */}
+          <div className="hidden lg:block w-80 bg-white/95 backdrop-blur-sm border-r border-gray-200/50 shadow-sm">
+            <div className="p-4">
+              <h3 className="text-sm font-semibold mb-3 text-gray-700 flex items-center gap-2">
+                🏥 Department Selection
+              </h3>
+              
+              {/* Department Grid - Desktop */}
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {departments.slice(0, 4).map((dept) => (
+                  <button
+                    key={dept.id}
+                    onClick={() => handleDepartmentSelect(dept)}
+                    className={`flex flex-col items-center gap-2 p-3 rounded-lg border text-center transition-all text-xs ${
+                      selectedDepartment.id === dept.id
+                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500 shadow-md'
+                        : 'bg-gray-50 border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700'
+                    }`}
+                  >
+                    <dept.icon className="h-5 w-5" />
+                    <span className="font-medium">{dept.name}</span>
+                  </button>
+                ))}
               </div>
 
-              {/* Date Selection */}
-              <div className="mb-3">
-                <h2 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                  📅 Select Date
-                </h2>
-                <div className="flex gap-2 overflow-x-auto pb-2">
-                  {Array.from({ length: 7 }, (_, i) => {
-                    const date = new Date();
-                    date.setDate(date.getDate() + i);
-                    const isToday = i === 0;
-                    const isSelected = selectedDate.toDateString() === date.toDateString();
+              {/* More Departments Dropdown */}
+              <div className="mb-4">
+                <Select value={selectedDepartment.id} onValueChange={(value) => {
+                  const dept = departments.find(d => d.id === value);
+                  if (dept) handleDepartmentSelect(dept);
+                }}>
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue placeholder="More Departments..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border shadow-lg z-50">
+                    {departments.slice(4).map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id} className="text-xs">
+                        <div className="flex items-center gap-2">
+                          <dept.icon className="h-3 w-3" />
+                          <span>{dept.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Doctor Selection - Desktop */}
+              <div className="border-t pt-4">
+                <h3 className="text-sm font-semibold mb-3 text-gray-700 flex items-center gap-2">
+                  👩‍⚕️ Available Doctors
+                </h3>
+                <div className="space-y-2">
+                  {selectedDepartment.doctors.map((doctor) => (
+                    <button
+                      key={doctor.id}
+                      onClick={() => setSelectedDoctor(doctor)}
+                      className={`w-full p-3 rounded-lg border text-left transition-all text-xs ${
+                        selectedDoctor.id === doctor.id
+                          ? 'border-blue-300 bg-gradient-to-r from-blue-50 to-blue-100 shadow-sm'
+                          : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="font-medium text-blue-600 text-sm">{doctor.name}</div>
+                      <div className="text-xs text-gray-500">{doctor.specialization}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Legend */}
+              <div className="border-t pt-4 mt-4">
+                <div className="flex gap-4 text-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-gradient-to-r from-teal-400 to-emerald-500 rounded-full"></div>
+                    <span className="text-gray-600">Available</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-gradient-to-r from-rose-400 to-red-500 rounded-full"></div>
+                    <span className="text-gray-600">Booked</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="flex-1 overflow-hidden">
+            <div className="h-full p-3 lg:p-6 overflow-y-auto">
+              <div className="max-w-7xl">
+                {/* Desktop Header */}
+                <div className="hidden lg:block mb-6">
+                  <h1 className="text-xl font-bold text-gray-900 mb-2">Schedule Appointment</h1>
+                  <p className="text-sm text-gray-600">
+                    Selected: <span className="font-semibold text-blue-600">{selectedDoctor.name}</span>
+                    <span className="text-gray-400"> • </span>
+                    <span>{selectedDoctor.specialization}</span>
+                  </p>
+                </div>
+
+                {/* Date Selection with Calendar */}
+                <div className="mb-4">
+                  <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    📅 Select Date
+                  </h2>
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {Array.from({ length: 7 }, (_, i) => {
+                      const date = new Date();
+                      date.setDate(date.getDate() + i);
+                      const isToday = i === 0;
+                      const isSelected = selectedDate.toDateString() === date.toDateString();
+                      
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => setSelectedDate(date)}
+                          className={`px-3 py-2 rounded-lg border text-center min-w-[70px] flex-shrink-0 transition-all text-xs shadow-sm animate-fade-in ${
+                            isSelected
+                              ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500 shadow-md scale-105'
+                              : 'bg-white border-gray-200 hover:border-blue-300 hover:shadow-md hover-scale'
+                          }`}
+                        >
+                          <div className="font-medium">
+                            {isToday ? 'Today' : date.toLocaleDateString('en', { weekday: 'short' })}
+                          </div>
+                          <div className={`text-xs mt-1 ${isSelected ? 'text-blue-100' : 'text-gray-600'}`}>
+                            {date.toLocaleDateString('en', { month: 'short', day: 'numeric' })}
+                          </div>
+                        </button>
+                      );
+                    })}
                     
-                    return (
+                    {/* Calendar Picker */}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="px-3 py-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100 text-center min-w-[70px] text-xs flex-shrink-0 transition-all hover-scale">
+                          <CalendarIcon className="h-4 w-4 mx-auto text-gray-500" />
+                          <div className="mt-1 text-gray-600">Other</div>
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 bg-white border shadow-lg z-50" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={(date) => date && setSelectedDate(date)}
+                          disabled={(date) => date < new Date() || date < new Date("1900-01-01")}
+                          initialFocus
+                          className="p-3 pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+
+                {/* Medical-Appropriate Shift Selection */}
+                <div className="mb-4">
+                  <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    ⏰ Select Time Shift
+                  </h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { id: 'morning', label: 'Morning', time: '8AM-12PM', icon: '🌅', gradient: 'from-teal-400 to-cyan-500', medical: 'General Consultation' },
+                      { id: 'afternoon', label: 'Afternoon', time: '12PM-4PM', icon: '☀️', gradient: 'from-amber-400 to-orange-400', medical: 'Specialist Care' },
+                      { id: 'evening', label: 'Evening', time: '4PM-8PM', icon: '🌇', gradient: 'from-blue-400 to-indigo-500', medical: 'Follow-up' },
+                      { id: 'night', label: 'Night', time: '8PM-11PM', icon: '🌙', gradient: 'from-slate-500 to-gray-600', medical: 'Emergency' }
+                    ].map((shift) => (
                       <button
-                        key={i}
-                        onClick={() => setSelectedDate(date)}
-                        className={`px-3 py-2 rounded-lg border text-center min-w-[70px] flex-shrink-0 transition-all text-xs shadow-sm ${
-                          isSelected
-                            ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500 shadow-md'
-                            : 'bg-white border-gray-200 hover:border-blue-300 hover:shadow-md'
+                        key={shift.id}
+                        onClick={() => setSelectedShift(shift.id)}
+                        className={`p-3 rounded-lg border text-center transition-all text-xs shadow-sm animate-scale-in ${
+                          selectedShift === shift.id
+                            ? `bg-gradient-to-r ${shift.gradient} text-white border-transparent shadow-md scale-105`
+                            : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md hover-scale'
                         }`}
                       >
-                        <div className="font-medium">
-                          {isToday ? 'Today' : date.toLocaleDateString('en', { weekday: 'short' })}
-                        </div>
-                        <div className={`text-xs mt-1 ${isSelected ? 'text-blue-100' : 'text-gray-600'}`}>
-                          {date.toLocaleDateString('en', { month: 'short', day: 'numeric' })}
+                        <div className="text-lg mb-1">{shift.icon}</div>
+                        <div className="font-medium">{shift.label}</div>
+                        <div className={`text-xs mt-1 ${
+                          selectedShift === shift.id ? 'text-white/90' : 'text-gray-600'
+                        }`}>
+                          {shift.time}
                         </div>
                       </button>
-                    );
-                  })}
-                  <button className="px-3 py-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100 text-center min-w-[70px] text-xs flex-shrink-0 transition-all">
-                    <div className="text-gray-500">📅</div>
-                    <div className="mt-1 text-gray-600">Other</div>
-                  </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Time Shift Selection */}
-              <div className="mb-4">
-                <h2 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                  ⏰ Select Time Shift
-                </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {[
-                    { id: 'morning', label: 'Morning', time: '8AM-12PM', icon: '🌅', gradient: 'from-orange-400 to-yellow-500' },
-                    { id: 'afternoon', label: 'Afternoon', time: '12PM-4PM', icon: '☀️', gradient: 'from-yellow-400 to-orange-400' },
-                    { id: 'evening', label: 'Evening', time: '4PM-8PM', icon: '🌇', gradient: 'from-orange-500 to-red-500' },
-                    { id: 'night', label: 'Night', time: '8PM-11PM', icon: '🌙', gradient: 'from-indigo-500 to-purple-600' }
-                  ].map((shift) => (
-                    <button
-                      key={shift.id}
-                      onClick={() => setSelectedShift(shift.id)}
-                      className={`p-3 rounded-lg border text-center transition-all text-xs shadow-sm ${
-                        selectedShift === shift.id
-                          ? `bg-gradient-to-r ${shift.gradient} text-white border-transparent shadow-md scale-105`
-                          : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md hover:scale-102'
-                      }`}
-                    >
-                      <div className="text-lg mb-1">{shift.icon}</div>
-                      <div className="font-medium">{shift.label}</div>
-                      <div className={`text-xs mt-1 ${
-                        selectedShift === shift.id ? 'text-white/90' : 'text-gray-600'
-                      }`}>
-                        {shift.time}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Time Slots - Ultra-Responsive Grid */}
-              <div>
-                <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  🕐 Available Time Slots
-                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                    {timeSlots.filter(slot => {
-                      if (selectedShift === 'morning') return parseInt(slot.time) < 12;
-                      if (selectedShift === 'afternoon') return parseInt(slot.time) >= 12 && parseInt(slot.time) < 16;
-                      if (selectedShift === 'evening') return parseInt(slot.time) >= 16 && parseInt(slot.time) < 20;
-                      if (selectedShift === 'night') return parseInt(slot.time) >= 20;
-                      return true;
-                    }).filter(slot => !slot.isBooked).length} Available
-                  </span>
-                </h2>
-                
-                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2">
-                  {timeSlots
-                    .filter(slot => {
-                      if (selectedShift === 'morning') return parseInt(slot.time) < 12;
-                      if (selectedShift === 'afternoon') return parseInt(slot.time) >= 12 && parseInt(slot.time) < 16;
-                      if (selectedShift === 'evening') return parseInt(slot.time) >= 16 && parseInt(slot.time) < 20;
-                      if (selectedShift === 'night') return parseInt(slot.time) >= 20;
-                      return true;
-                    })
-                    .map((slot) => (
-                    <button
-                      key={slot.id}
-                      onClick={() => !slot.isBooked && handleSlotSelect(slot)}
-                      disabled={slot.isBooked}
-                      className={`p-2 rounded-lg border text-center transition-all text-xs min-h-[60px] flex flex-col justify-center shadow-sm hover:shadow-md ${
-                        slot.isBooked
-                          ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-200 cursor-not-allowed opacity-60'
-                          : selectedSlot?.id === slot.id
-                          ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-blue-500 text-white shadow-lg scale-105'
-                          : 'bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:from-green-100 hover:to-green-200 hover:border-green-300'
-                      }`}
-                    >
-                      <div className={`font-bold text-xs mb-1 ${
-                        selectedSlot?.id === slot.id ? 'text-white' : slot.isBooked ? 'text-red-700' : 'text-green-700'
-                      }`}>
-                        {slot.time}
-                      </div>
-                      <div className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        slot.isBooked
-                          ? 'bg-red-200 text-red-800'
-                          : selectedSlot?.id === slot.id
-                          ? 'bg-white/20 text-white'
-                          : 'bg-green-200 text-green-800'
-                      }`}>
-                        {slot.isBooked ? '❌' : selectedSlot?.id === slot.id ? '✅' : '✓'}
-                      </div>
-                      {slot.isBooked && (
-                        <div className="flex justify-center gap-1 mt-1 opacity-60">
-                          <span className="text-xs">📋</span>
-                          <span className="text-xs">✏️</span>
+                {/* Time Slots - Ultra-Responsive Grid */}
+                <div>
+                  <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    🕐 Available Time Slots
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                      {timeSlots.filter(slot => {
+                        if (selectedShift === 'morning') return parseInt(slot.time) < 12;
+                        if (selectedShift === 'afternoon') return parseInt(slot.time) >= 12 && parseInt(slot.time) < 16;
+                        if (selectedShift === 'evening') return parseInt(slot.time) >= 16 && parseInt(slot.time) < 20;
+                        if (selectedShift === 'night') return parseInt(slot.time) >= 20;
+                        return true;
+                      }).filter(slot => !slot.isBooked).length} Available
+                    </span>
+                  </h2>
+                  
+                  <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2">
+                    {timeSlots
+                      .filter(slot => {
+                        if (selectedShift === 'morning') return parseInt(slot.time) < 12;
+                        if (selectedShift === 'afternoon') return parseInt(slot.time) >= 12 && parseInt(slot.time) < 16;
+                        if (selectedShift === 'evening') return parseInt(slot.time) >= 16 && parseInt(slot.time) < 20;
+                        if (selectedShift === 'night') return parseInt(slot.time) >= 20;
+                        return true;
+                      })
+                      .map((slot) => (
+                      <button
+                        key={slot.id}
+                        onClick={() => !slot.isBooked && handleSlotSelect(slot)}
+                        disabled={slot.isBooked}
+                        className={`p-2 rounded-lg border text-center transition-all text-xs min-h-[60px] flex flex-col justify-center shadow-sm hover:shadow-md animate-fade-in ${
+                          slot.isBooked
+                            ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-200 cursor-not-allowed opacity-60'
+                            : selectedSlot?.id === slot.id
+                            ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-blue-500 text-white shadow-lg scale-105'
+                            : 'bg-gradient-to-br from-teal-50 to-emerald-100 border-teal-200 hover:from-teal-100 hover:to-emerald-200 hover:border-teal-300 hover-scale'
+                        }`}
+                      >
+                        <div className={`font-bold text-xs mb-1 ${
+                          selectedSlot?.id === slot.id ? 'text-white' : slot.isBooked ? 'text-red-700' : 'text-teal-700'
+                        }`}>
+                          {slot.time}
                         </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-                
-                {/* Quick Info */}
-                <div className="mt-3 text-xs text-gray-600 bg-white/50 p-3 rounded-lg border border-gray-200">
-                  💡 <strong>Tip:</strong> Tap any green slot to book an appointment. Slots are 30 minutes each.
+                        <div className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          slot.isBooked
+                            ? 'bg-red-200 text-red-800'
+                            : selectedSlot?.id === slot.id
+                            ? 'bg-white/20 text-white'
+                            : 'bg-teal-200 text-teal-800'
+                        }`}>
+                          {slot.isBooked ? '❌' : selectedSlot?.id === slot.id ? '✅' : '✓'}
+                        </div>
+                        {slot.isBooked && (
+                          <div className="flex justify-center gap-1 mt-1 opacity-60">
+                            <span className="text-xs">📋</span>
+                            <span className="text-xs">✏️</span>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {/* Quick Info */}
+                  <div className="mt-3 text-xs text-gray-600 bg-white/50 p-3 rounded-lg border border-gray-200">
+                    💡 <strong>Tip:</strong> Tap any green slot to book an appointment. Slots are 30 minutes each.
+                  </div>
                 </div>
               </div>
             </div>
