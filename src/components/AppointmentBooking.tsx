@@ -204,62 +204,63 @@ export const AppointmentBooking: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex flex-col lg:flex-row h-screen">
-        {/* Compact Sidebar - Responsive */}
-        <div className="w-full lg:w-72 bg-white border-b lg:border-r border-gray-200 flex flex-col">
-          {/* Department Selection - Compact */}
-          <div className="p-3 border-b border-gray-200">
-            <h3 className="text-sm font-semibold mb-2">Department</h3>
-            <div className="grid grid-cols-2 lg:grid-cols-1 gap-1">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="flex flex-col lg:flex-row min-h-screen">
+        {/* Ultra-Compact Sidebar */}
+        <div className="w-full lg:w-64 bg-white/90 backdrop-blur-sm border-b lg:border-r border-gray-200/50 shadow-lg lg:shadow-none">
+          {/* Combined Department & Doctor Selection */}
+          <div className="p-2 lg:p-3">
+            <h3 className="text-xs font-semibold mb-2 text-gray-700 flex items-center gap-1">
+              🏥 Department & Doctor
+            </h3>
+            
+            {/* Department Pills - Mobile Horizontal */}
+            <div className="flex lg:grid lg:grid-cols-1 gap-1 overflow-x-auto pb-2 lg:pb-0 mb-2">
               {departments.map((dept) => (
                 <button
                   key={dept.id}
                   onClick={() => handleDepartmentSelect(dept)}
-                  className={`flex items-center gap-2 p-2 rounded text-left transition-colors text-xs ${
+                  className={`flex items-center gap-1 px-2 py-1 rounded-full text-left transition-all text-xs flex-shrink-0 ${
                     selectedDepartment.id === dept.id
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
+                      ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                   }`}
                 >
                   <dept.icon className="h-3 w-3" />
-                  <span className="font-medium">{dept.name}</span>
+                  <span className="font-medium whitespace-nowrap">{dept.name}</span>
                 </button>
               ))}
             </div>
-          </div>
 
-          {/* Available Doctors - Compact */}
-          <div className="flex-1 p-3">
-            <h3 className="text-sm font-semibold mb-2">Doctors</h3>
-            <div className="space-y-1">
+            {/* Doctors - Compact */}
+            <div className="grid grid-cols-1 gap-1">
               {selectedDepartment.doctors.map((doctor) => (
                 <button
                   key={doctor.id}
                   onClick={() => setSelectedDoctor(doctor)}
-                  className={`w-full p-2 rounded border text-left transition-all text-xs ${
+                  className={`w-full p-2 rounded-lg border text-left transition-all text-xs ${
                     selectedDoctor.id === doctor.id
-                      ? 'border-blue-200 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-blue-300 bg-gradient-to-r from-blue-50 to-blue-100 shadow-sm'
+                      : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
                   }`}
                 >
                   <div className="font-medium text-blue-600 text-xs">{doctor.name}</div>
-                  <div className="text-xs text-gray-600 truncate">{doctor.specialization}</div>
+                  <div className="text-xs text-gray-500 truncate">{doctor.specialization}</div>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Compact Legend */}
-          <div className="p-3 border-t border-gray-200">
-            <div className="flex flex-wrap gap-3 text-xs">
+          {/* Mini Legend */}
+          <div className="px-2 lg:px-3 pb-2 lg:pb-3 border-t border-gray-200/50 mt-2">
+            <div className="flex gap-3 text-xs">
               <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-green-200 rounded"></div>
-                <span>Available</span>
+                <div className="w-2 h-2 bg-gradient-to-r from-green-400 to-green-500 rounded-full"></div>
+                <span className="text-gray-600">Available</span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-red-200 rounded"></div>
-                <span>Booked</span>
+                <div className="w-2 h-2 bg-gradient-to-r from-red-400 to-red-500 rounded-full"></div>
+                <span className="text-gray-600">Booked</span>
               </div>
             </div>
           </div>
@@ -278,76 +279,93 @@ export const AppointmentBooking: React.FC = () => {
                 </p>
               </div>
 
-              {/* Combined Date & Shift Selection - Single Row */}
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
-                {/* Date Selection - Horizontal Scroll */}
-                <div>
-                  <h2 className="text-sm font-semibold mb-2">Select Date</h2>
-                  <div className="flex gap-2 overflow-x-auto pb-2">
-                    {Array.from({ length: 5 }, (_, i) => {
-                      const date = new Date();
-                      date.setDate(date.getDate() + i);
-                      const isToday = i === 0;
-                      const isSelected = selectedDate.toDateString() === date.toDateString();
-                      
-                      return (
-                        <button
-                          key={i}
-                          onClick={() => setSelectedDate(date)}
-                          className={`px-3 py-2 rounded border text-center min-w-[70px] transition-all text-xs ${
-                            isSelected
-                              ? 'bg-blue-500 text-white border-blue-500'
-                              : 'bg-white border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          <div className="font-medium">
-                            {isToday ? 'Today' : date.toLocaleDateString('en', { weekday: 'short' })}
-                          </div>
-                          <div className="text-xs mt-1">
-                            {date.toLocaleDateString('en', { month: 'short', day: 'numeric' })}
-                          </div>
-                        </button>
-                      );
-                    })}
-                    <button className="px-3 py-2 rounded border border-gray-200 bg-white hover:border-gray-300 text-center min-w-[70px] text-xs">
-                      <div>📅</div>
-                      <div className="mt-1">Other</div>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Time Shift Selection - Compact Grid */}
-                <div>
-                  <h2 className="text-sm font-semibold mb-2">Select Shift</h2>
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-                    {[
-                      { id: 'morning', label: 'Morning', time: '8-12', icon: '🌅' },
-                      { id: 'afternoon', label: 'Afternoon', time: '12-4', icon: '☀️' },
-                      { id: 'evening', label: 'Evening', time: '4-8', icon: '🌇' },
-                      { id: 'night', label: 'Night', time: '8-11', icon: '🌙' }
-                    ].map((shift) => (
+              {/* Date Selection */}
+              <div className="mb-3">
+                <h2 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                  📅 Select Date
+                </h2>
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {Array.from({ length: 7 }, (_, i) => {
+                    const date = new Date();
+                    date.setDate(date.getDate() + i);
+                    const isToday = i === 0;
+                    const isSelected = selectedDate.toDateString() === date.toDateString();
+                    
+                    return (
                       <button
-                        key={shift.id}
-                        onClick={() => setSelectedShift(shift.id)}
-                        className={`p-2 rounded border text-center transition-all text-xs ${
-                          selectedShift === shift.id
-                            ? 'border-blue-300 bg-blue-50'
-                            : 'border-gray-200 bg-white hover:border-gray-300'
+                        key={i}
+                        onClick={() => setSelectedDate(date)}
+                        className={`px-3 py-2 rounded-lg border text-center min-w-[70px] flex-shrink-0 transition-all text-xs shadow-sm ${
+                          isSelected
+                            ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500 shadow-md'
+                            : 'bg-white border-gray-200 hover:border-blue-300 hover:shadow-md'
                         }`}
                       >
-                        <div className="text-lg mb-1">{shift.icon}</div>
-                        <div className="font-medium">{shift.label}</div>
-                        <div className="text-xs text-gray-600">{shift.time}</div>
+                        <div className="font-medium">
+                          {isToday ? 'Today' : date.toLocaleDateString('en', { weekday: 'short' })}
+                        </div>
+                        <div className={`text-xs mt-1 ${isSelected ? 'text-blue-100' : 'text-gray-600'}`}>
+                          {date.toLocaleDateString('en', { month: 'short', day: 'numeric' })}
+                        </div>
                       </button>
-                    ))}
-                  </div>
+                    );
+                  })}
+                  <button className="px-3 py-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100 text-center min-w-[70px] text-xs flex-shrink-0 transition-all">
+                    <div className="text-gray-500">📅</div>
+                    <div className="mt-1 text-gray-600">Other</div>
+                  </button>
                 </div>
               </div>
 
-              {/* Time Slots - Responsive Grid */}
+              {/* Time Shift Selection */}
+              <div className="mb-4">
+                <h2 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                  ⏰ Select Time Shift
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { id: 'morning', label: 'Morning', time: '8AM-12PM', icon: '🌅', gradient: 'from-orange-400 to-yellow-500' },
+                    { id: 'afternoon', label: 'Afternoon', time: '12PM-4PM', icon: '☀️', gradient: 'from-yellow-400 to-orange-400' },
+                    { id: 'evening', label: 'Evening', time: '4PM-8PM', icon: '🌇', gradient: 'from-orange-500 to-red-500' },
+                    { id: 'night', label: 'Night', time: '8PM-11PM', icon: '🌙', gradient: 'from-indigo-500 to-purple-600' }
+                  ].map((shift) => (
+                    <button
+                      key={shift.id}
+                      onClick={() => setSelectedShift(shift.id)}
+                      className={`p-3 rounded-lg border text-center transition-all text-xs shadow-sm ${
+                        selectedShift === shift.id
+                          ? `bg-gradient-to-r ${shift.gradient} text-white border-transparent shadow-md scale-105`
+                          : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md hover:scale-102'
+                      }`}
+                    >
+                      <div className="text-lg mb-1">{shift.icon}</div>
+                      <div className="font-medium">{shift.label}</div>
+                      <div className={`text-xs mt-1 ${
+                        selectedShift === shift.id ? 'text-white/90' : 'text-gray-600'
+                      }`}>
+                        {shift.time}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Time Slots - Ultra-Responsive Grid */}
               <div>
-                <h2 className="text-sm font-semibold mb-3">Available Time Slots</h2>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
+                <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  🕐 Available Time Slots
+                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                    {timeSlots.filter(slot => {
+                      if (selectedShift === 'morning') return parseInt(slot.time) < 12;
+                      if (selectedShift === 'afternoon') return parseInt(slot.time) >= 12 && parseInt(slot.time) < 16;
+                      if (selectedShift === 'evening') return parseInt(slot.time) >= 16 && parseInt(slot.time) < 20;
+                      if (selectedShift === 'night') return parseInt(slot.time) >= 20;
+                      return true;
+                    }).filter(slot => !slot.isBooked).length} Available
+                  </span>
+                </h2>
+                
+                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2">
                   {timeSlots
                     .filter(slot => {
                       if (selectedShift === 'morning') return parseInt(slot.time) < 12;
@@ -361,30 +379,41 @@ export const AppointmentBooking: React.FC = () => {
                       key={slot.id}
                       onClick={() => !slot.isBooked && handleSlotSelect(slot)}
                       disabled={slot.isBooked}
-                      className={`p-2 rounded border text-center transition-all text-xs aspect-square flex flex-col justify-center ${
+                      className={`p-2 rounded-lg border text-center transition-all text-xs min-h-[60px] flex flex-col justify-center shadow-sm hover:shadow-md ${
                         slot.isBooked
-                          ? 'bg-red-50 border-red-200 cursor-not-allowed'
+                          ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-200 cursor-not-allowed opacity-60'
                           : selectedSlot?.id === slot.id
-                          ? 'bg-blue-50 border-blue-200'
-                          : 'bg-green-50 border-green-200 hover:bg-green-100'
+                          ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-blue-500 text-white shadow-lg scale-105'
+                          : 'bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:from-green-100 hover:to-green-200 hover:border-green-300'
                       }`}
                     >
-                      <div className="font-medium text-xs">{slot.time}</div>
-                      <div className={`text-xs px-1 py-0.5 rounded mt-1 ${
-                        slot.isBooked
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-blue-100 text-blue-700'
+                      <div className={`font-bold text-xs mb-1 ${
+                        selectedSlot?.id === slot.id ? 'text-white' : slot.isBooked ? 'text-red-700' : 'text-green-700'
                       }`}>
-                        {slot.isBooked ? 'Booked' : 'Free'}
+                        {slot.time}
+                      </div>
+                      <div className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        slot.isBooked
+                          ? 'bg-red-200 text-red-800'
+                          : selectedSlot?.id === slot.id
+                          ? 'bg-white/20 text-white'
+                          : 'bg-green-200 text-green-800'
+                      }`}>
+                        {slot.isBooked ? '❌' : selectedSlot?.id === slot.id ? '✅' : '✓'}
                       </div>
                       {slot.isBooked && (
-                        <div className="flex justify-center gap-1 mt-1">
-                          <button className="text-xs text-gray-400 hover:text-gray-600">📋</button>
-                          <button className="text-xs text-gray-400 hover:text-gray-600">✏️</button>
+                        <div className="flex justify-center gap-1 mt-1 opacity-60">
+                          <span className="text-xs">📋</span>
+                          <span className="text-xs">✏️</span>
                         </div>
                       )}
                     </button>
                   ))}
+                </div>
+                
+                {/* Quick Info */}
+                <div className="mt-3 text-xs text-gray-600 bg-white/50 p-3 rounded-lg border border-gray-200">
+                  💡 <strong>Tip:</strong> Tap any green slot to book an appointment. Slots are 30 minutes each.
                 </div>
               </div>
             </div>
