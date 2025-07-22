@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Login } from '@/components/Login';
 import { Registration } from '@/components/Registration';
 import { Dashboard } from '@/components/Dashboard';
+import { AdminDashboard } from '@/components/AdminDashboard';
 import WelcomeSetup from '@/components/WelcomeSetup';
 
 type AppState = 'login' | 'register' | 'welcome' | 'dashboard';
@@ -20,8 +21,11 @@ const Index = () => {
     }
   }, [currentState]);
 
-  const handleLogin = () => {
+  const handleLogin = (userRole?: string) => {
     localStorage.setItem('easyHMS_loggedIn', 'true');
+    if (userRole) {
+      localStorage.setItem('easyHMS_userRole', userRole);
+    }
     const hasCompletedSetup = localStorage.getItem('easyHMS_setupCompleted');
     
     if (!hasCompletedSetup) {
@@ -31,8 +35,11 @@ const Index = () => {
     }
   };
 
-  const handleRegister = () => {
+  const handleRegister = (userRole?: string) => {
     localStorage.setItem('easyHMS_loggedIn', 'true');
+    if (userRole) {
+      localStorage.setItem('easyHMS_userRole', userRole);
+    }
     setCurrentState('welcome');
   };
 
@@ -75,7 +82,10 @@ const Index = () => {
           />
         );
       case 'dashboard':
-        return <Dashboard onLogout={handleLogout} />;
+        const userRole = localStorage.getItem('easyHMS_userRole') || 'doctor';
+        return userRole === 'admin' || userRole === 'admin-doctor' ? 
+          <AdminDashboard /> : 
+          <Dashboard onLogout={handleLogout} />;
       default:
         return null;
     }

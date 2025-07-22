@@ -29,6 +29,7 @@ import {
 interface WelcomeSetupProps {
   onComplete: (data: SetupData) => void;
   onSkip: () => void;
+  isDialog?: boolean;
 }
 
 interface SetupData {
@@ -54,7 +55,7 @@ interface SetupData {
   };
 }
 
-const WelcomeSetup: React.FC<WelcomeSetupProps> = ({ onComplete, onSkip }) => {
+const WelcomeSetup: React.FC<WelcomeSetupProps> = ({ onComplete, onSkip, isDialog = false }) => {
   const [showSetup, setShowSetup] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [setupData, setSetupData] = useState<SetupData>({
@@ -101,16 +102,24 @@ const WelcomeSetup: React.FC<WelcomeSetupProps> = ({ onComplete, onSkip }) => {
   }, []);
 
   const calculateProgress = (): number => {
-    const requiredFields = [
+    const userRole = localStorage.getItem('easyHMS_userRole') || 'doctor';
+    
+    let requiredFields = [
       setupData.hospital.name,
       setupData.hospital.phone,
       setupData.hospital.registrationNumber,
       setupData.hospital.address,
-      setupData.doctor.fullName,
-      setupData.doctor.specialization,
-      setupData.doctor.licenseNumber,
-      setupData.doctor.qualification,
     ];
+
+    // Add doctor fields only if user is a doctor
+    if (userRole === 'doctor' || userRole === 'admin-doctor') {
+      requiredFields = requiredFields.concat([
+        setupData.doctor.fullName,
+        setupData.doctor.specialization,
+        setupData.doctor.licenseNumber,
+        setupData.doctor.qualification,
+      ]);
+    }
     
     const optionalFields = [
       setupData.hospital.email,
@@ -134,11 +143,15 @@ const WelcomeSetup: React.FC<WelcomeSetupProps> = ({ onComplete, onSkip }) => {
   };
 
   const isStepValid = (step: number): boolean => {
+    const userRole = localStorage.getItem('easyHMS_userRole') || 'doctor';
+    
     switch (step) {
       case 1:
         return !!(setupData.hospital.name && setupData.hospital.phone && 
                  setupData.hospital.registrationNumber && setupData.hospital.address);
       case 2:
+        // Skip doctor validation if user is admin-only
+        if (userRole === 'admin') return true;
         return !!(setupData.doctor.fullName && setupData.doctor.specialization && 
                  setupData.doctor.licenseNumber && setupData.doctor.qualification);
       case 3:
@@ -151,9 +164,17 @@ const WelcomeSetup: React.FC<WelcomeSetupProps> = ({ onComplete, onSkip }) => {
   };
 
   const handleNext = () => {
-    if (currentStep < 4) {
+    const userRole = localStorage.getItem('easyHMS_userRole') || 'doctor';
+    const maxSteps = userRole === 'admin' ? 3 : 4; // Skip doctor step for admin-only users
+    
+    if (currentStep < maxSteps) {
       if (isStepValid(currentStep)) {
-        setCurrentStep(currentStep + 1);
+        let nextStep = currentStep + 1;
+        // Skip step 2 (doctor info) for admin-only users
+        if (userRole === 'admin' && nextStep === 2) {
+          nextStep = 3;
+        }
+        setCurrentStep(nextStep);
         toast({
           title: "Progress Saved",
           description: "Your information has been saved automatically.",
@@ -195,6 +216,8 @@ const WelcomeSetup: React.FC<WelcomeSetupProps> = ({ onComplete, onSkip }) => {
   };
 
   const renderStepContent = () => {
+    const userRole = localStorage.getItem('easyHMS_userRole') || 'doctor';
+    
     switch (currentStep) {
       case 1:
         return (
@@ -288,6 +311,10 @@ const WelcomeSetup: React.FC<WelcomeSetupProps> = ({ onComplete, onSkip }) => {
         );
         
       case 2:
+        // Skip doctor step for admin-only users
+        if (userRole === 'admin') {
+          return renderStepContent(); // This will redirect to the next valid step
+        }
         return (
           <div className="space-y-6">
             <div className="flex items-center gap-3 mb-6">
@@ -507,7 +534,12 @@ const WelcomeSetup: React.FC<WelcomeSetupProps> = ({ onComplete, onSkip }) => {
     }
   };
 
-  if (!showSetup) {
+  // For dialog mode, start directly without welcome screen
+  if (isDialog) {
+    setShowSetup(true);
+  }
+
+  if (!showSetup && !isDialog) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 flex items-center justify-center p-4">
         <Card className="w-full max-w-md mx-auto shadow-lg">
@@ -544,22 +576,28 @@ const WelcomeSetup: React.FC<WelcomeSetupProps> = ({ onComplete, onSkip }) => {
     );
   }
 
-  return (
-    <Dialog open={showSetup} onOpenChange={() => {}}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            <div className="p-1.5 rounded-lg bg-primary/10">
-              <Building2 className="h-5 w-5 text-primary" />
-            </div>
-            EasyHMS Setup - Step {currentStep} of 4
-          </DialogTitle>
-        </DialogHeader>
+  const userRole = localStorage.getItem('easyHMS_userRole') || 'doctor';
+  const maxSteps = userRole === 'admin' ? 3 : 4; // Skip doctor step for admin-only
+
+  if (isDialog) {
+    // For dialog mode, return only the content without wrapper
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 rounded-lg bg-primary/10">
+            <Building2 className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold">EasyHMS Setup</h2>
+            <p className="text-sm text-muted-foreground">Step {currentStep} of {maxSteps}</p>
+          </div>
+        </div>
         
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2">
-              {[1, 2, 3, 4].map((step) => (
+        <div className="flex items-center justify-between">
+          <div className="flex gap-2">
+            {(() => {
+              const steps = userRole === 'admin' ? [1, 3, 4] : [1, 2, 3, 4];
+              return steps.map((step) => (
                 <div
                   key={step}
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
@@ -570,12 +608,102 @@ const WelcomeSetup: React.FC<WelcomeSetupProps> = ({ onComplete, onSkip }) => {
                 >
                   {step}
                 </div>
-              ))}
+              ));
+            })()}
+          </div>
+          <Badge variant="outline">{calculateProgress()}% Complete</Badge>
+        </div>
+        
+        <Progress value={(currentStep / maxSteps) * 100} className="h-2" />
+        
+        <Separator />
+        
+        {renderStepContent()}
+        
+        <Separator />
+        
+        <div className="flex justify-between">
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (currentStep > 1) {
+                let prevStep = currentStep - 1;
+                if (userRole === 'admin' && prevStep === 2) {
+                  prevStep = 1;
+                }
+                setCurrentStep(prevStep);
+              } else {
+                handleSkipSetup();
+              }
+            }}
+          >
+            {currentStep > 1 ? 'Previous' : 'Skip Setup'}
+          </Button>
+          
+          <div className="flex gap-2">
+            {currentStep === 3 && (
+              <Button variant="ghost" onClick={() => setCurrentStep(userRole === 'admin' ? 4 : 4)}>
+                Skip Documents
+              </Button>
+            )}
+            
+            {currentStep < maxSteps ? (
+              <Button onClick={handleNext} disabled={!isStepValid(currentStep)}>
+                Next: {currentStep === 1 ? (userRole === 'admin' ? 'Upload Docs' : 'Doctor Profile') : 
+                       currentStep === 2 ? 'Upload Docs' : 'Final Step'}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => onComplete(setupData)}>
+                  Complete Later
+                </Button>
+                <Button onClick={handleComplete}>
+                  Go to Dashboard
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Dialog open={showSetup} onOpenChange={() => {}}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-3">
+            <div className="p-1.5 rounded-lg bg-primary/10">
+              <Building2 className="h-5 w-5 text-primary" />
+            </div>
+            EasyHMS Setup - Step {currentStep} of {maxSteps}
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex gap-2">
+              {(() => {
+                const steps = userRole === 'admin' ? [1, 3, 4] : [1, 2, 3, 4];
+                return steps.map((step) => (
+                  <div
+                    key={step}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                      step <= currentStep
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    {step}
+                  </div>
+                ));
+              })()}
             </div>
             <Badge variant="outline">{calculateProgress()}% Complete</Badge>
           </div>
           
-          <Progress value={(currentStep / 4) * 100} className="h-2" />
+          <Progress value={(currentStep / maxSteps) * 100} className="h-2" />
           
           <Separator />
           
@@ -586,21 +714,32 @@ const WelcomeSetup: React.FC<WelcomeSetupProps> = ({ onComplete, onSkip }) => {
           <div className="flex justify-between">
             <Button
               variant="outline"
-              onClick={() => currentStep > 1 ? setCurrentStep(currentStep - 1) : handleSkipSetup()}
+              onClick={() => {
+                if (currentStep > 1) {
+                  let prevStep = currentStep - 1;
+                  if (userRole === 'admin' && prevStep === 2) {
+                    prevStep = 1;
+                  }
+                  setCurrentStep(prevStep);
+                } else {
+                  handleSkipSetup();
+                }
+              }}
             >
               {currentStep > 1 ? 'Previous' : 'Skip Setup'}
             </Button>
             
             <div className="flex gap-2">
               {currentStep === 3 && (
-                <Button variant="ghost" onClick={() => setCurrentStep(4)}>
+                <Button variant="ghost" onClick={() => setCurrentStep(userRole === 'admin' ? 4 : 4)}>
                   Skip Documents
                 </Button>
               )}
               
-              {currentStep < 4 ? (
+              {currentStep < maxSteps ? (
                 <Button onClick={handleNext} disabled={!isStepValid(currentStep)}>
-                  Next: {currentStep === 1 ? 'Doctor Profile' : currentStep === 2 ? 'Upload Docs' : 'Final Step'}
+                  Next: {currentStep === 1 ? (userRole === 'admin' ? 'Upload Docs' : 'Doctor Profile') : 
+                         currentStep === 2 ? 'Upload Docs' : 'Final Step'}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               ) : (

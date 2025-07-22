@@ -57,6 +57,9 @@ import { BillingConfiguration } from './billing/BillingConfiguration';
 import { FinancialReports } from './billing/FinancialReports';
 import { PatientBillManagement } from './billing/PatientBillManagement';
 import { InsuranceManagement } from './billing/InsuranceManagement';
+import { ProfileCompletionBanner } from './ProfileCompletionBanner';
+import WelcomeSetup from './WelcomeSetup';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 // Mock data
 const kpiData = {
@@ -135,6 +138,71 @@ export const AdminDashboard = () => {
   const [dateFilter, setDateFilter] = useState('today');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentView, setCurrentView] = useState('dashboard');
+  const [showSetupDialog, setShowSetupDialog] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  // Calculate profile completion score
+  const calculateProfileScore = (): number => {
+    const setupData = localStorage.getItem('easyHMS_setupData');
+    const hasCompleted = localStorage.getItem('easyHMS_setupCompleted');
+    
+    if (hasCompleted) return 100;
+    
+    if (!setupData) return 20;
+    
+    const data = JSON.parse(setupData);
+    const userRole = localStorage.getItem('easyHMS_userRole') || 'doctor';
+    
+    let requiredFields = [
+      data.hospital?.name,
+      data.hospital?.phone,
+      data.hospital?.registrationNumber,
+      data.hospital?.address,
+    ];
+
+    // Add doctor fields only if user is a doctor
+    if (userRole === 'doctor' || userRole === 'admin-doctor') {
+      requiredFields = requiredFields.concat([
+        data.doctor?.fullName,
+        data.doctor?.specialization,
+        data.doctor?.licenseNumber,
+        data.doctor?.qualification,
+      ]);
+    }
+    
+    const optionalFields = [
+      data.hospital?.email,
+      data.doctor?.email,
+      data.doctor?.experience,
+      data.documents?.license,
+      data.documents?.signature,
+      data.documents?.clinicPhotos?.length > 0,
+    ];
+    
+    const requiredComplete = requiredFields.filter(field => field && field.toString().trim() !== '').length;
+    const optionalComplete = optionalFields.filter(field => field).length;
+    
+    const requiredWeight = 70;
+    const optionalWeight = 30;
+    
+    const requiredProgress = (requiredComplete / requiredFields.length) * requiredWeight;
+    const optionalProgress = (optionalComplete / optionalFields.length) * optionalWeight;
+    
+    return Math.round(requiredProgress + optionalProgress);
+  };
+
+  const profileScore = calculateProfileScore();
+
+  const handleSetupComplete = (setupData: any) => {
+    localStorage.setItem('easyHMS_setupCompleted', 'true');
+    localStorage.setItem('easyHMS_setupData', JSON.stringify(setupData));
+    setShowSetupDialog(false);
+  };
+
+  const handleSetupSkip = () => {
+    localStorage.setItem('easyHMS_setupSkipped', 'true');
+    setShowSetupDialog(false);
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -190,6 +258,26 @@ export const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle">
+      {/* Profile Completion Banner */}
+      {!bannerDismissed && (
+        <ProfileCompletionBanner
+          profileScore={profileScore}
+          onOpenSetup={() => setShowSetupDialog(true)}
+          onDismiss={() => setBannerDismissed(true)}
+        />
+      )}
+
+      {/* Setup Dialog */}
+      <Dialog open={showSetupDialog} onOpenChange={setShowSetupDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+          <WelcomeSetup
+            onComplete={handleSetupComplete}
+            onSkip={handleSetupSkip}
+            isDialog={true}
+          />
+        </DialogContent>
+      </Dialog>
+
       {/* Top Navigation */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
