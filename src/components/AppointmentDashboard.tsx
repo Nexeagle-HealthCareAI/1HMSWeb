@@ -133,11 +133,11 @@ export const AppointmentDashboard = () => {
   const getStatusBadge = (status: Appointment['status']) => {
     switch (status) {
       case 'completed':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">✅ Completed</Badge>;
+        return <Badge className="bg-healthcare-success/10 text-healthcare-success border-healthcare-success/20 hover:bg-healthcare-success/10">✅ Completed</Badge>;
       case 'ongoing':
-        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">🔵 Ongoing</Badge>;
+        return <Badge className="bg-healthcare-primary/10 text-healthcare-primary border-healthcare-primary/20 hover:bg-healthcare-primary/10">🔵 Ongoing</Badge>;
       case 'upcoming':
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">🟡 Upcoming</Badge>;
+        return <Badge className="bg-healthcare-warning/10 text-healthcare-warning border-healthcare-warning/20 hover:bg-healthcare-warning/10">🟡 Upcoming</Badge>;
       default:
         return null;
     }
@@ -148,20 +148,20 @@ export const AppointmentDashboard = () => {
   // If booking view is active, show the booking component
   if (showBooking) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-gradient-subtle">
         {/* Header with Back Button */}
-        <div className="bg-white shadow-sm border-b px-6 py-4">
+        <div className="bg-card border-b border-border px-6 py-4 shadow-card">
           <div className="max-w-7xl mx-auto flex items-center gap-4">
             <Button
-              variant="ghost"
+              variant="outline"
               onClick={() => setShowBooking(false)}
-              className="group flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 shadow-sm hover:shadow-md"
+              className="group flex items-center gap-2 border-healthcare-primary/20 hover:border-healthcare-primary hover:bg-healthcare-primary/5 transition-all duration-200"
             >
-              <ArrowLeft className="h-4 w-4 text-blue-600 group-hover:text-blue-700 transition-colors" />
-              <span className="text-gray-700 group-hover:text-blue-700 font-medium">Back to Dashboard</span>
+              <ArrowLeft className="h-4 w-4 text-healthcare-primary transition-transform group-hover:-translate-x-1" />
+              <span className="text-healthcare-primary font-medium">Back to Dashboard</span>
             </Button>
-            <div className="h-6 w-px bg-gray-300" />
-            <h1 className="text-xl font-semibold text-gray-800">📋 Book New Appointment</h1>
+            <div className="h-6 w-px bg-border" />
+            <h1 className="text-xl font-semibold text-foreground">📋 Book New Appointment</h1>
           </div>
         </div>
         
@@ -172,18 +172,18 @@ export const AppointmentDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-gradient-subtle">
+      <div className="max-w-7xl mx-auto space-y-8 p-6">
         
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Calendar className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold text-gray-900">📅 Appointment Dashboard</h1>
+            <Calendar className="h-8 w-8 text-healthcare-primary" />
+            <h1 className="text-3xl font-bold text-foreground">📅 Appointment Dashboard</h1>
           </div>
           <Button 
             onClick={() => setShowBooking(true)} 
-            className="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+            className="bg-healthcare-primary hover:bg-healthcare-primary/90 text-white px-6 py-3 rounded-lg shadow-card hover:shadow-hover transition-all duration-300 transform hover:scale-105"
           >
             <Plus className="h-5 w-5 mr-2" />
             📋 Book New Appointment
@@ -192,67 +192,67 @@ export const AppointmentDashboard = () => {
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-          <Card className="bg-white shadow-lg rounded-xl border-0 hover:shadow-xl transition-all duration-300">
+          <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Today's Appointments</CardTitle>
-              <Calendar className="h-5 w-5 text-blue-600" />
+              <CardTitle className="text-sm font-medium text-muted-foreground">Today's Appointments</CardTitle>
+              <Calendar className="h-5 w-5 text-healthcare-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-blue-600">📅 {kpis.totalToday}</div>
-              <p className="text-xs text-gray-500 mt-1">Total booked for today</p>
+              <div className="text-3xl font-bold text-healthcare-primary">📅 {kpis.totalToday}</div>
+              <p className="text-xs text-muted-foreground mt-1">Total booked for today</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white shadow-lg rounded-xl border-0 hover:shadow-xl transition-all duration-300">
+          <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Vitals Update Required</CardTitle>
-              <Heart className="h-5 w-5 text-red-500" />
+              <CardTitle className="text-sm font-medium text-muted-foreground">Vitals Update Required</CardTitle>
+              <Heart className="h-5 w-5 text-healthcare-error" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-red-500">❤️‍🩹 {kpis.vitalsRequired}</div>
-              <p className="text-xs text-gray-500 mt-1">Vitals not yet filled</p>
+              <div className="text-3xl font-bold text-healthcare-error">❤️‍🩹 {kpis.vitalsRequired}</div>
+              <p className="text-xs text-muted-foreground mt-1">Vitals not yet filled</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white shadow-lg rounded-xl border-0 hover:shadow-xl transition-all duration-300">
+          <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Doctor Follow-Ups</CardTitle>
-              <UserCheck className="h-5 w-5 text-green-600" />
+              <CardTitle className="text-sm font-medium text-muted-foreground">Doctor Follow-Ups</CardTitle>
+              <UserCheck className="h-5 w-5 text-healthcare-success" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-green-600">👨‍⚕️ {kpis.doctorFollowUps}</div>
-              <p className="text-xs text-gray-500 mt-1">Follow-up visits today</p>
+              <div className="text-3xl font-bold text-healthcare-success">👨‍⚕️ {kpis.doctorFollowUps}</div>
+              <p className="text-xs text-muted-foreground mt-1">Follow-up visits today</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white shadow-lg rounded-xl border-0 hover:shadow-xl transition-all duration-300">
+          <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Lab Follow-Ups</CardTitle>
-              <FlaskConical className="h-5 w-5 text-purple-600" />
+              <CardTitle className="text-sm font-medium text-muted-foreground">Lab Follow-Ups</CardTitle>
+              <FlaskConical className="h-5 w-5 text-healthcare-secondary" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-purple-600">🧬 {kpis.labFollowUps}</div>
-              <p className="text-xs text-gray-500 mt-1">Pending follow-up</p>
+              <div className="text-3xl font-bold text-healthcare-secondary">🧬 {kpis.labFollowUps}</div>
+              <p className="text-xs text-muted-foreground mt-1">Pending follow-up</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white shadow-lg rounded-xl border-0 hover:shadow-xl transition-all duration-300">
+          <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Completed Today</CardTitle>
-              <CheckCircle className="h-5 w-5 text-emerald-600" />
+              <CardTitle className="text-sm font-medium text-muted-foreground">Completed Today</CardTitle>
+              <CheckCircle className="h-5 w-5 text-healthcare-success" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-emerald-600">✅ {kpis.completed}</div>
-              <p className="text-xs text-gray-500 mt-1">Finished consultations</p>
+              <div className="text-3xl font-bold text-healthcare-success">✅ {kpis.completed}</div>
+              <p className="text-xs text-muted-foreground mt-1">Finished consultations</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Filters & Search */}
-        <Card className="bg-white shadow-lg rounded-xl border-0">
+        <Card className="bg-card shadow-card rounded-xl border-0">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-foreground">
+              <Filter className="h-5 w-5 text-healthcare-primary" />
               🔍 Filters & Search
             </CardTitle>
           </CardHeader>
@@ -260,12 +260,12 @@ export const AppointmentDashboard = () => {
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search by Patient ID or Name..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 border-input focus:border-healthcare-primary focus:ring-healthcare-primary/20"
                   />
                 </div>
               </div>
@@ -298,40 +298,40 @@ export const AppointmentDashboard = () => {
         </Card>
 
         {/* Appointments Table */}
-        <Card className="bg-white shadow-lg rounded-xl border-0">
+        <Card className="bg-card shadow-card rounded-xl border-0">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-foreground">
+              <Clock className="h-5 w-5 text-healthcare-primary" />
               📊 Appointment Table
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader className="sticky top-0 bg-gray-50">
+                <TableHeader className="sticky top-0 bg-muted/50">
                   <TableRow>
-                    <TableHead className="font-semibold">Patient ID</TableHead>
-                    <TableHead className="font-semibold">Patient Name</TableHead>
-                    <TableHead className="font-semibold">Doctor Assigned</TableHead>
-                    <TableHead className="font-semibold">Appointment Time</TableHead>
-                    <TableHead className="font-semibold">Token No.</TableHead>
-                    <TableHead className="font-semibold">Vitals Updated</TableHead>
-                    <TableHead className="font-semibold">Status</TableHead>
-                    <TableHead className="font-semibold">Actions</TableHead>
+                    <TableHead className="font-semibold text-foreground">Patient ID</TableHead>
+                    <TableHead className="font-semibold text-foreground">Patient Name</TableHead>
+                    <TableHead className="font-semibold text-foreground">Doctor Assigned</TableHead>
+                    <TableHead className="font-semibold text-foreground">Appointment Time</TableHead>
+                    <TableHead className="font-semibold text-foreground">Token No.</TableHead>
+                    <TableHead className="font-semibold text-foreground">Vitals Updated</TableHead>
+                    <TableHead className="font-semibold text-foreground">Status</TableHead>
+                    <TableHead className="font-semibold text-foreground">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredAppointments.map((appointment, index) => (
                     <TableRow 
                       key={appointment.id} 
-                      className={`hover:bg-gray-50 transition-colors ${
-                        index % 2 === 0 ? 'bg-white' : 'bg-gray-25'
+                      className={`hover:bg-muted/50 transition-colors ${
+                        index % 2 === 0 ? 'bg-card' : 'bg-muted/20'
                       }`}
                     >
                       <TableCell className="font-medium">
                         <Button
                           variant="link"
-                          className="p-0 h-auto text-primary hover:text-primary/80"
+                          className="p-0 h-auto text-healthcare-primary hover:text-healthcare-primary/80"
                           onClick={() => {/* Navigate to patient profile */}}
                         >
                           {appointment.patientId}
@@ -339,17 +339,17 @@ export const AppointmentDashboard = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-gray-500" />
-                          {appointment.patientName}
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-foreground">{appointment.patientName}</span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Stethoscope className="h-4 w-4 text-gray-500" />
-                          {appointment.doctorName}
+                          <Stethoscope className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-foreground">{appointment.doctorName}</span>
                         </div>
                       </TableCell>
-                      <TableCell>{appointment.appointmentTime}</TableCell>
+                      <TableCell className="text-foreground">{appointment.appointmentTime}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="font-mono">
                           #{appointment.tokenNo}
@@ -357,12 +357,12 @@ export const AppointmentDashboard = () => {
                       </TableCell>
                       <TableCell>
                         {appointment.vitalsUpdated ? (
-                          <span className="text-green-600 font-semibold">✅</span>
+                          <span className="text-healthcare-success font-semibold">✅</span>
                         ) : (
                           <Button
                             variant="outline"
                             size="sm"
-                            className="text-red-600 border-red-200 hover:bg-red-50"
+                            className="text-healthcare-error border-healthcare-error/30 hover:bg-healthcare-error/10"
                             onClick={() => {/* Open vitals form */}}
                           >
                             ❌ Update
@@ -375,7 +375,7 @@ export const AppointmentDashboard = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="hover:bg-blue-50"
+                            className="hover:bg-healthcare-primary/10 border-healthcare-primary/30"
                             onClick={() => {/* View details */}}
                           >
                             <Eye className="h-4 w-4 mr-1" />
@@ -385,7 +385,7 @@ export const AppointmentDashboard = () => {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="hover:bg-red-50 text-red-600 border-red-200"
+                              className="hover:bg-healthcare-error/10 text-healthcare-error border-healthcare-error/30"
                               onClick={() => {/* Cancel appointment */}}
                             >
                               <X className="h-4 w-4 mr-1" />
@@ -402,9 +402,9 @@ export const AppointmentDashboard = () => {
             
             {filteredAppointments.length === 0 && (
               <div className="text-center py-12">
-                <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 text-lg">No appointments found matching your criteria</p>
-                <p className="text-gray-400 text-sm">Try adjusting your search or filters</p>
+                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground text-lg">No appointments found matching your criteria</p>
+                <p className="text-muted-foreground/70 text-sm">Try adjusting your search or filters</p>
               </div>
             )}
           </CardContent>
