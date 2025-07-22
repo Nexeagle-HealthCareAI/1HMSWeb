@@ -455,9 +455,9 @@ const navigation = [
       </div>
 
       {/* Main Content */}
-      <div className="lg:ml-64">
+      <div className="lg:ml-64 flex flex-col h-screen">
         {/* Top Bar */}
-        <header className="sticky top-0 z-30 bg-card border-b px-6 py-4">
+        <header className="sticky top-0 z-30 bg-card border-b px-6 py-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button
@@ -514,7 +514,7 @@ const navigation = [
                   <DropdownMenuContent>
                     <DropdownMenuItem>English</DropdownMenuItem>
                     <DropdownMenuItem>हिंदी</DropdownMenuItem>
-                    <DropdownMenuItem>தமিழ்</DropdownMenuItem>
+                    <DropdownMenuItem>தமிழ்</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </ContextualGuide>
@@ -555,7 +555,7 @@ const navigation = [
 
         {/* Content */}
         {/* Main Content Area */}
-        <main className="p-3 lg:p-6">
+        <main className="flex-1 overflow-y-auto p-3 lg:p-6">
           {renderContent()}
         </main>
       </div>
