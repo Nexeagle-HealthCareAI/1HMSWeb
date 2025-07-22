@@ -1,10 +1,11 @@
 import React from 'react';
-import { CheckCircle, Calendar, Clock, User, Phone, Copy } from 'lucide-react';
+import { CheckCircle, Calendar, Clock, User, Phone, Copy, ArrowLeft } from 'lucide-react';
 import { TimeSlot, Doctor } from '../AppointmentBooking';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface BookingSuccessProps {
   appointmentId: string;
@@ -22,6 +23,7 @@ export const BookingSuccess: React.FC<BookingSuccessProps> = ({
   onBookAnother
 }) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const formatTime = (time: string) => {
     const [hour, minute] = time.split(':');
@@ -129,8 +131,18 @@ export const BookingSuccess: React.FC<BookingSuccessProps> = ({
         {/* Actions */}
         <div className="space-y-3">
           <Button
-            onClick={onBookAnother}
+            onClick={() => navigate('/appointment-scheduler')}
             className="w-full bg-healthcare-primary hover:bg-healthcare-primary/90"
+            size="lg"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Appointment Dashboard
+          </Button>
+          
+          <Button
+            onClick={onBookAnother}
+            variant="outline"
+            className="w-full"
             size="lg"
           >
             Book Another Appointment

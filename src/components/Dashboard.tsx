@@ -49,6 +49,7 @@ import { FloatingAIChatbot } from './FloatingAIChatbot';
 import { DoctorCalendar } from './DoctorCalendar';
 import { EPrescription } from './EPrescription';
 import { AdminDashboard } from './AdminDashboard';
+import { AppointmentDashboard } from './AppointmentDashboard';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -183,7 +184,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       case 'admin':
         return <AdminDashboard />;
       case 'appointments':
-        return <AppointmentBooking />;
+        return <AppointmentDashboard />;
       case 'patients':
         return <PatientsPage />;
       case 'billing':
