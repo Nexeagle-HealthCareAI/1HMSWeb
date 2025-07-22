@@ -167,14 +167,14 @@ export const PatientsPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Patient Management</h2>
           <p className="text-muted-foreground">Manage patient records and information</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={exportData}>
             <Download className="h-4 w-4 mr-2" />
             Export
@@ -228,7 +228,7 @@ export const PatientsPage: React.FC = () => {
       </Card>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">

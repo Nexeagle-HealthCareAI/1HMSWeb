@@ -34,6 +34,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
   const [forgotStep, setForgotStep] = useState(1); // 1: mobile, 2: otp, 3: new password
   
   const [isLoading, setIsLoading] = useState(false);
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [forgotOtpTimer, setForgotOtpTimer] = useState(0);
 
   const handleMobileLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,6 +173,39 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
   };
 
   const resendOtp = () => {
+    if (otpTimer > 0) return;
+    
+    setOtpTimer(30);
+    const timer = setInterval(() => {
+      setOtpTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    toast({
+      title: "OTP Resent!",
+      description: "Please check your mobile for the new verification code"
+    });
+  };
+
+  const resendForgotOtp = () => {
+    if (forgotOtpTimer > 0) return;
+    
+    setForgotOtpTimer(30);
+    const timer = setInterval(() => {
+      setForgotOtpTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
     toast({
       title: "OTP Resent!",
       description: "Please check your mobile for the new verification code"
@@ -233,9 +268,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
                       type="button"
                       variant="link"
                       className="p-0 h-auto text-sm"
-                      onClick={resendOtp}
+                      onClick={resendForgotOtp}
+                      disabled={forgotOtpTimer > 0}
                     >
-                      Resend OTP
+                      {forgotOtpTimer > 0 ? `Resend OTP (${forgotOtpTimer}s)` : 'Resend OTP'}
                     </Button>
                   </div>
                 )}
@@ -421,9 +457,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
                           variant="link"
                           className="p-0 h-auto text-sm"
                           onClick={resendOtp}
+                          disabled={otpTimer > 0}
                         >
                           <RefreshCw className="h-3 w-3 mr-1" />
-                          Resend OTP
+                          {otpTimer > 0 ? `Resend OTP (${otpTimer}s)` : 'Resend OTP'}
                         </Button>
                       </div>
                     </div>

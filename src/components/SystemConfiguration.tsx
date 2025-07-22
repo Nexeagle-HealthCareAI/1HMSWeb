@@ -19,7 +19,9 @@ import {
   Calendar,
   Stethoscope,
   X,
-  Check
+  Check,
+  Download,
+  Printer
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -291,8 +293,8 @@ export const SystemConfiguration: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-foreground">System Configuration</h2>
           <p className="text-muted-foreground">Configure departments, prescriptions, and hospital branding</p>
@@ -300,25 +302,25 @@ export const SystemConfiguration: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="departments">
-            <Building2 className="h-4 w-4 mr-2" />
-            Departments
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="departments" className="flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Departments</span>
           </TabsTrigger>
-          <TabsTrigger value="prescription">
-            <FileText className="h-4 w-4 mr-2" />
-            Prescription
+          <TabsTrigger value="prescription" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            <span className="hidden sm:inline">Prescription</span>
           </TabsTrigger>
-          <TabsTrigger value="branding">
-            <Palette className="h-4 w-4 mr-2" />
-            Branding
+          <TabsTrigger value="branding" className="flex items-center gap-2">
+            <Palette className="h-4 w-4" />
+            <span className="hidden sm:inline">Branding</span>
           </TabsTrigger>
         </TabsList>
 
         {/* Departments Tab */}
         <TabsContent value="departments">
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <h3 className="text-lg font-semibold">Manage Departments</h3>
               <Dialog open={showDepartmentDialog} onOpenChange={setShowDepartmentDialog}>
                 <DialogTrigger asChild>
@@ -484,12 +486,12 @@ export const SystemConfiguration: React.FC = () => {
         {/* Prescription Tab */}
         <TabsContent value="prescription">
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
               <div>
                 <h3 className="text-lg font-semibold">Prescription Template Configuration</h3>
                 <p className="text-sm text-muted-foreground">Customize the prescription format and layout</p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button variant="outline" onClick={() => setShowTemplatePreview(true)}>
                   <FileText className="h-4 w-4 mr-2" />
                   Preview
@@ -652,7 +654,7 @@ export const SystemConfiguration: React.FC = () => {
         {/* Branding Tab */}
         <TabsContent value="branding">
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
                 <h3 className="text-lg font-semibold">Hospital Branding</h3>
                 <p className="text-sm text-muted-foreground">Customize hospital information and visual identity</p>
@@ -809,6 +811,186 @@ export const SystemConfiguration: React.FC = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Prescription Preview Dialog */}
+      <Dialog open={showTemplatePreview} onOpenChange={setShowTemplatePreview}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Prescription Template Preview</DialogTitle>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export PDF
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => window.print()}>
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print
+                </Button>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          <div className="bg-white text-black p-8 rounded-lg border shadow-lg print:shadow-none">
+            {/* Header */}
+            {(prescriptionTemplate.header.showLogo || prescriptionTemplate.header.hospitalName || prescriptionTemplate.header.contactInfo) && (
+              <div className="border-b pb-4 mb-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    {prescriptionTemplate.header.showLogo && (
+                      <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <Stethoscope className="h-8 w-8 text-primary" />
+                      </div>
+                    )}
+                    <div>
+                      <h1 className="text-2xl font-bold text-primary">{prescriptionTemplate.header.hospitalName}</h1>
+                      {prescriptionTemplate.header.contactInfo && (
+                        <div className="text-sm text-muted-foreground mt-1">
+                          <div>{hospitalBranding.phone} | {hospitalBranding.email}</div>
+                          <div>{hospitalBranding.address}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right text-sm">
+                    <div className="font-medium">Prescription #12345</div>
+                    <div className="text-muted-foreground">Date: {new Date().toLocaleDateString()}</div>
+                  </div>
+                </div>
+                {prescriptionTemplate.header.customText && (
+                  <div className="mt-3 text-sm text-center font-medium">
+                    {prescriptionTemplate.header.customText}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Patient Info */}
+            <div className="grid grid-cols-2 gap-6 mb-6">
+              <div>
+                <h3 className="font-semibold mb-2">Patient Information</h3>
+                <div className="space-y-1 text-sm">
+                  <div><strong>Name:</strong> John Doe</div>
+                  <div><strong>Age:</strong> 45 years</div>
+                  <div><strong>Gender:</strong> Male</div>
+                  <div><strong>Contact:</strong> +91-9876543210</div>
+                </div>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-2">Doctor Information</h3>
+                <div className="space-y-1 text-sm">
+                  <div><strong>Dr. Sarah Johnson</strong></div>
+                  <div>Consultant Cardiologist</div>
+                  <div>Reg. No: 12345</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Vitals */}
+            {prescriptionTemplate.sections.vitals && (
+              <div className="mb-6">
+                <h3 className="font-semibold mb-2 flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  Vitals
+                </h3>
+                <div className="grid grid-cols-4 gap-4 text-sm">
+                  <div><strong>BP:</strong> 120/80 mmHg</div>
+                  <div><strong>Pulse:</strong> 72 bpm</div>
+                  <div><strong>Weight:</strong> 70 kg</div>
+                  <div><strong>Temperature:</strong> 98.6°F</div>
+                </div>
+              </div>
+            )}
+
+            {/* Diagnosis */}
+            {prescriptionTemplate.sections.diagnosis && (
+              <div className="mb-6">
+                <h3 className="font-semibold mb-2">Diagnosis</h3>
+                <div className="text-sm">
+                  1. Hypertension (Essential)<br/>
+                  2. Type 2 Diabetes Mellitus
+                </div>
+              </div>
+            )}
+
+            {/* Medicines */}
+            {prescriptionTemplate.sections.medicines && (
+              <div className="mb-6">
+                <h3 className="font-semibold mb-2">Medications</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>1. Amlodipine 5mg</span>
+                    <span>1-0-0 x 30 days</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>2. Metformin 500mg</span>
+                    <span>1-0-1 x 30 days</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>3. Aspirin 75mg</span>
+                    <span>0-0-1 x 30 days</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Advice */}
+            {prescriptionTemplate.sections.advice && (
+              <div className="mb-6">
+                <h3 className="font-semibold mb-2">Doctor's Advice</h3>
+                <div className="text-sm">
+                  • Regular exercise for 30 minutes daily<br/>
+                  • Low salt and sugar diet<br/>
+                  • Monitor blood pressure daily<br/>
+                  • Take medications as prescribed
+                </div>
+              </div>
+            )}
+
+            {/* Next Appointment */}
+            {prescriptionTemplate.sections.nextAppointment && (
+              <div className="mb-6">
+                <h3 className="font-semibold mb-2">Next Appointment</h3>
+                <div className="text-sm">
+                  <strong>Date:</strong> {new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}<br/>
+                  <strong>Time:</strong> 10:00 AM<br/>
+                  <strong>Department:</strong> Cardiology
+                </div>
+              </div>
+            )}
+
+            {/* Footer */}
+            {(prescriptionTemplate.footer.signature || prescriptionTemplate.footer.qrCode || prescriptionTemplate.footer.customNotes) && (
+              <div className="border-t pt-4 mt-6">
+                <div className="flex justify-between items-end">
+                  <div>
+                    {prescriptionTemplate.footer.customNotes && (
+                      <div className="text-xs text-muted-foreground mb-2">
+                        {prescriptionTemplate.footer.customNotes}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    {prescriptionTemplate.footer.signature && (
+                      <div className="text-sm">
+                        <div className="border-t border-gray-300 w-48 mb-1"></div>
+                        <div>Doctor's Signature</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {prescriptionTemplate.footer.qrCode && (
+                  <div className="flex justify-center mt-4">
+                    <div className="w-20 h-20 bg-gray-200 flex items-center justify-center text-xs">
+                      QR Code
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -335,8 +335,8 @@ export const UserManagement: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-foreground">User Management</h2>
           <p className="text-muted-foreground">Manage users, roles, permissions and track activities</p>
@@ -344,16 +344,16 @@ export const UserManagement: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
-          <TabsTrigger value="activity">User Activity</TabsTrigger>
+          <TabsTrigger value="activity">Activity</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-4">
           {/* Users Header Actions */}
-          <div className="flex justify-between items-center">
-            <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex flex-wrap gap-2">
               <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
                 <DialogTrigger asChild>
                   <Button>
@@ -425,55 +425,55 @@ export const UserManagement: React.FC = () => {
             {filteredUsers.map(user => (
               <Card key={user.id}>
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                        <Users className="h-5 w-5 text-primary" />
+                    <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                          <Users className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">{user.name}</h3>
+                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                          <p className="text-sm text-muted-foreground">{user.phone}</p>
+                          {user.department && (
+                            <p className="text-xs text-muted-foreground">Department: {user.department}</p>
+                          )}
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {user.roles.map(roleId => {
+                              const role = roles.find(r => r.id === roleId);
+                              return role ? (
+                                <Badge key={roleId} className={role.color}>{role.name}</Badge>
+                              ) : null;
+                            })}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-semibold">{user.name}</h3>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
-                        <p className="text-sm text-muted-foreground">{user.phone}</p>
-                        {user.department && (
-                          <p className="text-xs text-muted-foreground">Department: {user.department}</p>
-                        )}
-                        <div className="flex gap-1 mt-1">
-                          {user.roles.map(roleId => {
-                            const role = roles.find(r => r.id === roleId);
-                            return role ? (
-                              <Badge key={roleId} className={role.color}>{role.name}</Badge>
-                            ) : null;
-                          })}
+                      
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full lg:w-auto">
+                        <div className="text-left sm:text-right">
+                          <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
+                            {user.status}
+                          </Badge>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Last login: {user.lastLogin}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {getRolePermissionSummary(user.roles)} permissions
+                          </p>
+                        </div>
+                        
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => setSelectedUser(user)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                     </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
-                          {user.status}
-                        </Badge>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Last login: {user.lastLogin}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {getRolePermissionSummary(user.roles)} permissions
-                        </p>
-                      </div>
-                      
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedUser(user)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
                 </CardContent>
               </Card>
             ))}
