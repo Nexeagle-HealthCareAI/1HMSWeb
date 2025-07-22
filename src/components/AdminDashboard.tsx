@@ -51,6 +51,7 @@ import {
 } from 'lucide-react';
 import { UserManagement } from './UserManagement';
 import { PatientsPage } from './PatientsPage';
+import { AppointmentOversight } from './AppointmentOversight';
 
 // Mock data
 const kpiData = {
@@ -436,8 +437,11 @@ export const AdminDashboard = () => {
       {/* Patient Management Module */}
       {currentView === 'patient-management' && <PatientsPage />}
 
+      {/* Appointment Oversight Module */}
+      {currentView === 'appointment-oversight' && <AppointmentOversight />}
+
       {/* Other Modules - Placeholder */}
-      {['appointment-oversight', 'billing-insurance', 'system-config', 'audit-security'].includes(currentView) && (
+      {['billing-insurance', 'system-config', 'audit-security'].includes(currentView) && (
         <Card>
           <CardContent className="p-12 text-center">
             <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
