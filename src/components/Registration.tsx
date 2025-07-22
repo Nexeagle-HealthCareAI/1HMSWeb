@@ -449,7 +449,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
                       type="button"
                       onClick={handleSkip}
                       variant="outline"
-                      className="flex-1 h-12 font-semibold border-2 hover:bg-gray-50"
+                      className="flex-1 h-12 font-semibold border-2 hover:bg-gray-50 hover:text-gray-900 text-gray-700"
                       disabled={isLoading}
                     >
                       Skip for Now
