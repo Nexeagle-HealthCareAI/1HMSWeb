@@ -26,7 +26,7 @@ import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { BillingConfiguration } from './billing/BillingConfiguration';
+
 import { FinancialReports } from './billing/FinancialReports';
 import { PatientBillManagement } from './billing/PatientBillManagement';
 import { InsuranceManagement } from './billing/InsuranceManagement';
@@ -198,14 +198,10 @@ export const Billing: React.FC = () => {
       </div>
 
       <Tabs defaultValue="bills" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="bills" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Patient Bills
-          </TabsTrigger>
-          <TabsTrigger value="configuration" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            Configuration
           </TabsTrigger>
           <TabsTrigger value="reports" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
@@ -219,10 +215,6 @@ export const Billing: React.FC = () => {
 
         <TabsContent value="bills">
           <PatientBillManagement />
-        </TabsContent>
-
-        <TabsContent value="configuration">
-          <BillingConfiguration />
         </TabsContent>
 
         <TabsContent value="reports">
