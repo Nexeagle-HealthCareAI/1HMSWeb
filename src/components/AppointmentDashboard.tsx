@@ -77,8 +77,30 @@ const mockAppointments: Appointment[] = [
     appointmentTime: '02:00 PM',
     tokenNo: 4,
     vitalsUpdated: true,
-    status: 'completed',
+    status: 'lab-test-required',
     phone: '+1234567893'
+  },
+  {
+    id: 'APT005',
+    patientId: 'P005',
+    patientName: 'David Wilson',
+    doctorName: 'Dr. Sarah Wilson',
+    appointmentTime: '03:30 PM',
+    tokenNo: 5,
+    vitalsUpdated: true,
+    status: 'awaiting-reconsultation',
+    phone: '+1234567894'
+  },
+  {
+    id: 'APT006',
+    patientId: 'P006',
+    patientName: 'Lisa Chen',
+    doctorName: 'Dr. Michael Brown',
+    appointmentTime: '01:00 PM',
+    tokenNo: 6,
+    vitalsUpdated: true,
+    status: 'completed',
+    phone: '+1234567895'
   }
 ];
 
@@ -92,9 +114,9 @@ export const AppointmentDashboard = () => {
   // Calculate KPIs
   const kpis = useMemo(() => {
     const totalToday = mockAppointments.length;
-    const vitalsRequired = mockAppointments.filter(apt => !apt.vitalsUpdated).length;
-    const doctorFollowUps = mockAppointments.filter(apt => apt.status === 'upcoming').length;
-    const labFollowUps = 3; // Mock data
+    const vitalsRequired = mockAppointments.filter(apt => apt.status === 'vitals-required').length;
+    const doctorFollowUps = mockAppointments.filter(apt => apt.status === 'awaiting-reconsultation').length;
+    const labFollowUps = mockAppointments.filter(apt => apt.status === 'lab-test-required').length;
     const completed = mockAppointments.filter(apt => apt.status === 'completed').length;
 
     return {
@@ -115,19 +137,26 @@ export const AppointmentDashboard = () => {
       
       const matchesStatus = statusFilter === 'all' || appointment.status === statusFilter;
       const matchesDoctor = doctorFilter === 'all' || appointment.doctorName === doctorFilter;
+      const matchesSelectedStatus = selectedStatus === 'all' || appointment.status === selectedStatus;
       
-      return matchesSearch && matchesStatus && matchesDoctor;
+      return matchesSearch && matchesStatus && matchesDoctor && matchesSelectedStatus;
     });
-  }, [searchTerm, statusFilter, doctorFilter]);
+  }, [searchTerm, statusFilter, doctorFilter, selectedStatus]);
 
   const getStatusBadge = (status: Appointment['status']) => {
     switch (status) {
+      case 'vitals-required':
+        return <Badge className="bg-red-100 text-red-800 border-red-300">❤️ Vitals Required</Badge>;
+      case 'ready-consultation':
+        return <Badge className="bg-green-100 text-green-800 border-green-300">✅ Ready For Consultation</Badge>;
+      case 'under-consultation':
+        return <Badge className="bg-blue-100 text-blue-800 border-blue-300">👨‍⚕️ Under Consultation</Badge>;
+      case 'lab-test-required':
+        return <Badge className="bg-purple-100 text-purple-800 border-purple-300">🧪 Lab Test Required</Badge>;
+      case 'awaiting-reconsultation':
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">⏳ Awaiting Reconsultation</Badge>;
       case 'completed':
-        return <Badge className="bg-healthcare-success/10 text-healthcare-success border-healthcare-success/20 hover:bg-healthcare-success/10">✅ Completed</Badge>;
-      case 'ongoing':
-        return <Badge className="bg-healthcare-primary/10 text-healthcare-primary border-healthcare-primary/20 hover:bg-healthcare-primary/10">🔵 Ongoing</Badge>;
-      case 'upcoming':
-        return <Badge className="bg-healthcare-warning/10 text-healthcare-warning border-healthcare-warning/20 hover:bg-healthcare-warning/10">🟡 Upcoming</Badge>;
+        return <Badge className="bg-green-100 text-green-800 border-green-300">🏁 Completed</Badge>;
       default:
         return null;
     }
@@ -266,9 +295,12 @@ export const AppointmentDashboard = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="upcoming">🟡 Upcoming</SelectItem>
-                  <SelectItem value="ongoing">🔵 Ongoing</SelectItem>
-                  <SelectItem value="completed">🟢 Completed</SelectItem>
+                  <SelectItem value="vitals-required">❤️ Vitals Required</SelectItem>
+                  <SelectItem value="ready-consultation">✅ Ready For Consultation</SelectItem>
+                  <SelectItem value="under-consultation">👨‍⚕️ Under Consultation</SelectItem>
+                  <SelectItem value="lab-test-required">🧪 Lab Test Required</SelectItem>
+                  <SelectItem value="awaiting-reconsultation">⏳ Awaiting Reconsultation</SelectItem>
+                  <SelectItem value="completed">🏁 Completed</SelectItem>
                 </SelectContent>
               </Select>
 
