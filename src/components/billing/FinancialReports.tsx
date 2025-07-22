@@ -4,7 +4,7 @@ import { Calendar, Download, DollarSign, TrendingUp, Users, FileText, Filter } f
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { DatePickerWithRange } from '../ui/date-range-picker';
+
 import { Badge } from '../ui/badge';
 
 interface RevenueData {
@@ -57,7 +57,6 @@ const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3
 export const FinancialReports: React.FC = () => {
   const [reportType, setReportType] = useState('daily');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
-  const [dateRange, setDateRange] = useState({ from: new Date(), to: new Date() });
 
   const totalRevenue = sampleRevenueData.reduce((sum, data) => sum + data.total, 0);
   const totalRefunds = 15000;
@@ -131,10 +130,7 @@ export const FinancialReports: React.FC = () => {
             </Select>
 
             <div className="flex-1">
-              {/* <DatePickerWithRange 
-                date={dateRange} 
-                onDateChange={setDateRange}
-              /> */}
+              {/* Date range picker can be added here in the future */}
             </div>
           </div>
         </CardContent>
