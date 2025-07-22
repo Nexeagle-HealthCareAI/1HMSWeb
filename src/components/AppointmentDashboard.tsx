@@ -145,18 +145,18 @@ export const AppointmentDashboard = () => {
   const uniqueDoctors = [...new Set(mockAppointments.map(apt => apt.doctorName))];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+    <div className="p-6 space-y-8">
       <div className="max-w-7xl mx-auto space-y-8">
         
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
             <Calendar className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold text-gray-900">📅 Appointment Dashboard</h1>
+            <h1 className="text-3xl font-bold text-foreground">📅 Appointment Dashboard</h1>
           </div>
           <Button 
             onClick={() => navigate('/appointment-scheduler/book')} 
-            className="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
           >
             <Plus className="h-5 w-5 mr-2" />
             🔘 Book New Appointment
