@@ -24,7 +24,10 @@ import {
   Calendar,
   Stethoscope,
   X,
-  Check
+  Check,
+  Shield,
+  Copy,
+  UserCheck
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -96,6 +99,106 @@ interface HospitalBranding {
   primaryColor: string;
   secondaryColor: string;
 }
+
+interface Permission {
+  view: boolean;
+  create: boolean;
+  edit: boolean;
+  delete: boolean;
+  approve: boolean;
+}
+
+interface RolePermissions {
+  id: string;
+  name: string;
+  description: string;
+  permissions: {
+    [moduleName: string]: Permission;
+  };
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  department: string;
+  isActive: boolean;
+}
+
+const systemModules = [
+  { key: 'patientProfile', name: 'Patient Profile' },
+  { key: 'appointments', name: 'Appointments' },
+  { key: 'billing', name: 'Billing' },
+  { key: 'prescriptions', name: 'Prescriptions' },
+  { key: 'labReports', name: 'Lab Reports' },
+  { key: 'pharmacy', name: 'Pharmacy' },
+  { key: 'userManagement', name: 'User Management' },
+  { key: 'systemConfig', name: 'System Configuration' }
+];
+
+const defaultPermission: Permission = {
+  view: false,
+  create: false,
+  edit: false,
+  delete: false,
+  approve: false
+};
+
+const sampleRoles: RolePermissions[] = [
+  {
+    id: 'doctor',
+    name: 'Doctor',
+    description: 'Medical practitioners with patient care permissions',
+    permissions: {
+      patientProfile: { view: true, create: false, edit: true, delete: false, approve: false },
+      appointments: { view: true, create: true, edit: true, delete: true, approve: false },
+      billing: { view: false, create: false, edit: false, delete: false, approve: false },
+      prescriptions: { view: true, create: true, edit: true, delete: false, approve: true },
+      labReports: { view: true, create: false, edit: false, delete: false, approve: true },
+      pharmacy: { view: true, create: false, edit: false, delete: false, approve: false },
+      userManagement: { view: false, create: false, edit: false, delete: false, approve: false },
+      systemConfig: { view: false, create: false, edit: false, delete: false, approve: false }
+    }
+  },
+  {
+    id: 'receptionist',
+    name: 'Receptionist',
+    description: 'Front desk staff with appointment and basic patient management',
+    permissions: {
+      patientProfile: { view: true, create: true, edit: true, delete: false, approve: false },
+      appointments: { view: true, create: true, edit: true, delete: false, approve: false },
+      billing: { view: true, create: true, edit: false, delete: false, approve: false },
+      prescriptions: { view: true, create: false, edit: false, delete: false, approve: false },
+      labReports: { view: true, create: false, edit: false, delete: false, approve: false },
+      pharmacy: { view: true, create: false, edit: false, delete: false, approve: false },
+      userManagement: { view: false, create: false, edit: false, delete: false, approve: false },
+      systemConfig: { view: false, create: false, edit: false, delete: false, approve: false }
+    }
+  },
+  {
+    id: 'admin',
+    name: 'Administrator',
+    description: 'Full system access with all permissions',
+    permissions: {
+      patientProfile: { view: true, create: true, edit: true, delete: true, approve: true },
+      appointments: { view: true, create: true, edit: true, delete: true, approve: true },
+      billing: { view: true, create: true, edit: true, delete: true, approve: true },
+      prescriptions: { view: true, create: true, edit: true, delete: true, approve: true },
+      labReports: { view: true, create: true, edit: true, delete: true, approve: true },
+      pharmacy: { view: true, create: true, edit: true, delete: true, approve: true },
+      userManagement: { view: true, create: true, edit: true, delete: true, approve: true },
+      systemConfig: { view: true, create: true, edit: true, delete: true, approve: true }
+    }
+  }
+];
+
+const sampleUsers: User[] = [
+  { id: 'U001', name: 'Dr. Sarah Johnson', email: 'sarah.johnson@hospital.com', role: 'doctor', department: 'Cardiology', isActive: true },
+  { id: 'U002', name: 'Mary Smith', email: 'mary.smith@hospital.com', role: 'receptionist', department: 'General', isActive: true },
+  { id: 'U003', name: 'John Admin', email: 'admin@hospital.com', role: 'admin', department: 'IT', isActive: true },
+  { id: 'U004', name: 'Dr. Emily Davis', email: 'emily.davis@hospital.com', role: 'doctor', department: 'Pediatrics', isActive: true }
+];
 
 const sampleDepartments: Department[] = [
   {
@@ -174,9 +277,15 @@ export const SystemConfiguration: React.FC = () => {
   const [departments, setDepartments] = useState<Department[]>(sampleDepartments);
   const [prescriptionTemplate, setPrescriptionTemplate] = useState<PrescriptionTemplate>(defaultTemplate);
   const [hospitalBranding, setHospitalBranding] = useState<HospitalBranding>(defaultBranding);
+  const [roles, setRoles] = useState<RolePermissions[]>(sampleRoles);
+  const [users, setUsers] = useState<User[]>(sampleUsers);
   const [showDepartmentDialog, setShowDepartmentDialog] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [showTemplatePreview, setShowTemplatePreview] = useState(false);
+  const [editingRole, setEditingRole] = useState<RolePermissions | null>(null);
+  const [showRoleDialog, setShowRoleDialog] = useState(false);
+  const [showUserRoleDialog, setShowUserRoleDialog] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const { toast } = useToast();
 
   const [newDepartment, setNewDepartment] = useState({
@@ -294,6 +403,310 @@ export const SystemConfiguration: React.FC = () => {
       description: "Hospital branding settings have been saved.",
     });
   };
+
+  // Role & Permissions Management handlers
+  const handleSaveRole = () => {
+    if (!editingRole) return;
+
+    setRoles(prev => prev.map(role => 
+      role.id === editingRole.id ? editingRole : role
+    ));
+
+    setEditingRole(null);
+    setShowRoleDialog(false);
+    
+    toast({
+      title: "Role Updated",
+      description: `${editingRole.name} role permissions have been updated.`,
+    });
+  };
+
+  const duplicateRole = (sourceRoleId: string) => {
+    const sourceRole = roles.find(r => r.id === sourceRoleId);
+    if (!sourceRole || !editingRole) return;
+
+    setEditingRole(prev => prev ? {
+      ...prev,
+      permissions: { ...sourceRole.permissions }
+    } : null);
+
+    toast({
+      title: "Permissions Duplicated",
+      description: `Permissions copied from ${sourceRole.name}.`,
+    });
+  };
+
+  const updatePermission = (moduleName: string, permissionType: keyof Permission, value: boolean) => {
+    if (!editingRole) return;
+
+    setEditingRole(prev => prev ? {
+      ...prev,
+      permissions: {
+        ...prev.permissions,
+        [moduleName]: {
+          ...prev.permissions[moduleName],
+          [permissionType]: value
+        }
+      }
+    } : null);
+  };
+
+  const handleAssignUserRole = (userId: string, newRole: string) => {
+    setUsers(prev => prev.map(user => 
+      user.id === userId ? { ...user, role: newRole } : user
+    ));
+
+    setSelectedUser(null);
+    setShowUserRoleDialog(false);
+
+    toast({
+      title: "Role Assigned",
+      description: "User role has been updated successfully.",
+    });
+  };
+
+  const renderRolePermissions = () => (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-xl font-semibold">Role & Permissions Manager</h2>
+          <p className="text-sm text-muted-foreground">Manage user roles and system permissions</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Roles Management */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">System Roles</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {roles.map((role) => (
+                <div key={role.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <h4 className="font-medium">{role.name}</h4>
+                    <p className="text-sm text-muted-foreground">{role.description}</p>
+                    <div className="flex gap-1 mt-2">
+                      {Object.values(role.permissions).reduce((acc, perm) => 
+                        acc + Object.values(perm).filter(Boolean).length, 0
+                      )} permissions active
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setEditingRole(role);
+                      setShowRoleDialog(true);
+                    }}
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                    Edit
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* User Role Assignment */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Assign Roles to Users</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {users.filter(u => u.isActive).map((user) => (
+                <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <h4 className="font-medium">{user.name}</h4>
+                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                    <Badge variant="outline" className="mt-1">{user.department}</Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className="capitalize">{user.role}</Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedUser(user);
+                        setShowUserRoleDialog(true);
+                      }}
+                    >
+                      <UserCheck className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Permissions Matrix Preview */}
+        <div className="lg:sticky lg:top-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Permissions Overview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm">
+                <div className="grid grid-cols-6 gap-1 mb-2 font-medium text-center">
+                  <div className="text-left">Module</div>
+                  <div>View</div>
+                  <div>Create</div>
+                  <div>Edit</div>
+                  <div>Delete</div>
+                  <div>Approve</div>
+                </div>
+                
+                {systemModules.map((module) => {
+                  const doctorPerms = roles.find(r => r.id === 'doctor')?.permissions[module.key] || defaultPermission;
+                  return (
+                    <div key={module.key} className="grid grid-cols-6 gap-1 py-1 border-b border-muted/50">
+                      <div className="text-sm truncate">{module.name}</div>
+                      <div className="text-center">{doctorPerms.view ? '✅' : '❌'}</div>
+                      <div className="text-center">{doctorPerms.create ? '✅' : '❌'}</div>
+                      <div className="text-center">{doctorPerms.edit ? '✅' : '❌'}</div>
+                      <div className="text-center">{doctorPerms.delete ? '✅' : '❌'}</div>
+                      <div className="text-center">{doctorPerms.approve ? '✅' : '❌'}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                This shows Doctor role permissions. Click "Edit" on any role to modify permissions.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Role Permissions Dialog */}
+      <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Edit {editingRole?.name} Permissions
+            </DialogTitle>
+          </DialogHeader>
+          
+          {editingRole && (
+            <div className="space-y-6">
+              {/* Duplicate from another role */}
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                <Copy className="h-4 w-4" />
+                <span className="text-sm">Duplicate permissions from:</span>
+                <Select onValueChange={(roleId) => duplicateRole(roleId)}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roles.filter(r => r.id !== editingRole.id).map((role) => (
+                      <SelectItem key={role.id} value={role.id}>
+                        {role.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Permissions Matrix */}
+              <div className="border rounded-lg overflow-hidden">
+                <div className="bg-muted/50 p-3">
+                  <h3 className="font-medium">Module Permissions</h3>
+                </div>
+                
+                <div className="p-0">
+                  <div className="grid grid-cols-6 gap-2 p-3 bg-muted/30 font-medium text-sm">
+                    <div>Module</div>
+                    <div className="text-center">View</div>
+                    <div className="text-center">Create</div>
+                    <div className="text-center">Edit</div>
+                    <div className="text-center">Delete</div>
+                    <div className="text-center">Approve</div>
+                  </div>
+                  
+                  {systemModules.map((module) => {
+                    const modulePerms = editingRole.permissions[module.key] || defaultPermission;
+                    
+                    return (
+                      <div key={module.key} className="grid grid-cols-6 gap-2 p-3 border-b border-muted/50 items-center">
+                        <div className="font-medium">{module.name}</div>
+                        {(['view', 'create', 'edit', 'delete', 'approve'] as const).map((permType) => (
+                          <div key={permType} className="flex justify-center">
+                            <Switch
+                              checked={modulePerms[permType]}
+                              onCheckedChange={(checked) => updatePermission(module.key, permType, checked)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button onClick={handleSaveRole} className="flex-1">
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Role Permissions
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setEditingRole(null);
+                    setShowRoleDialog(false);
+                  }} 
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* User Role Assignment Dialog */}
+      <Dialog open={showUserRoleDialog} onOpenChange={setShowUserRoleDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign Role</DialogTitle>
+          </DialogHeader>
+          
+          {selectedUser && (
+            <div className="space-y-4">
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <h4 className="font-medium">{selectedUser.name}</h4>
+                <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+                <p className="text-sm">Department: {selectedUser.department}</p>
+                <Badge variant="outline" className="mt-2">Current Role: {selectedUser.role}</Badge>
+              </div>
+
+              <div>
+                <Label>Select New Role</Label>
+                <Select 
+                  defaultValue={selectedUser.role} 
+                  onValueChange={(role) => handleAssignUserRole(selectedUser.id, role)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roles.map((role) => (
+                      <SelectItem key={role.id} value={role.id}>
+                        {role.name} - {role.description}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 
   const renderDepartmentManagement = () => (
     <div className="space-y-6">
@@ -1063,7 +1476,7 @@ export const SystemConfiguration: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="departments" className="gap-2">
             <Building2 className="h-4 w-4" />
             <span className="hidden sm:inline">Departments</span>
@@ -1075,6 +1488,10 @@ export const SystemConfiguration: React.FC = () => {
           <TabsTrigger value="branding" className="gap-2">
             <Palette className="h-4 w-4" />
             <span className="hidden sm:inline">Branding</span>
+          </TabsTrigger>
+          <TabsTrigger value="roles" className="gap-2">
+            <Shield className="h-4 w-4" />
+            <span className="hidden sm:inline">Roles</span>
           </TabsTrigger>
         </TabsList>
 
@@ -1088,6 +1505,10 @@ export const SystemConfiguration: React.FC = () => {
 
         <TabsContent value="branding">
           {renderHospitalBranding()}
+        </TabsContent>
+
+        <TabsContent value="roles">
+          {renderRolePermissions()}
         </TabsContent>
       </Tabs>
     </div>
