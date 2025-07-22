@@ -413,20 +413,20 @@ export const AppointmentDashboard = () => {
               <p>Doctor filter: {doctorFilter}</p>
             </div>
 
-            {/* Desktop & Tablet Table - Simplified */}
-            <div className="hidden md:block">
-              <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
-                <Table>
-                  <TableHeader>
+            {/* Desktop & Tablet Table - Fixed Overflow */}
+            <div className="hidden md:block overflow-x-auto">
+              <div className="border border-gray-200 rounded-lg bg-white min-w-full">
+                <Table className="min-w-full">
+                  <TableHeader className="sticky top-0 z-10">
                     <TableRow className="bg-gray-50">
-                      <TableHead className="font-semibold">Patient ID</TableHead>
-                      <TableHead className="font-semibold">Patient Name</TableHead>
-                      <TableHead className="font-semibold">Doctor</TableHead>
-                      <TableHead className="font-semibold">Time</TableHead>
-                      <TableHead className="font-semibold">Token</TableHead>
-                      <TableHead className="font-semibold">Vitals</TableHead>
-                      <TableHead className="font-semibold">Status</TableHead>
-                      <TableHead className="font-semibold">Actions</TableHead>
+                      <TableHead className="font-semibold whitespace-nowrap">Patient ID</TableHead>
+                      <TableHead className="font-semibold whitespace-nowrap">Patient Name</TableHead>
+                      <TableHead className="font-semibold whitespace-nowrap">Doctor</TableHead>
+                      <TableHead className="font-semibold whitespace-nowrap">Time</TableHead>
+                      <TableHead className="font-semibold whitespace-nowrap">Token</TableHead>
+                      <TableHead className="font-semibold whitespace-nowrap">Vitals</TableHead>
+                      <TableHead className="font-semibold whitespace-nowrap">Status</TableHead>
+                      <TableHead className="font-semibold whitespace-nowrap">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
