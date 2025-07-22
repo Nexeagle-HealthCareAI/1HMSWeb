@@ -321,7 +321,7 @@ export const AppointmentDashboard = () => {
 
         {/* Enhanced Appointments Table with Status Navigation */}
         <Card className="bg-card shadow-card rounded-xl border-0 flex-1 flex flex-col overflow-hidden">
-          <CardHeader className="flex-shrink-0">
+          <CardHeader className="flex-shrink-0 pb-3">
             <CardTitle className="flex items-center gap-2 text-foreground text-lg md:text-xl">
               <Clock className="h-4 w-4 md:h-5 md:w-5 text-healthcare-primary" />
               📊 Patient Journey Dashboard
@@ -331,269 +331,297 @@ export const AppointmentDashboard = () => {
             </p>
           </CardHeader>
 
-          {/* Status Navigation Tabs */}
-          <div className="px-6 pb-4">
-            <div className="flex flex-wrap gap-2">
+          {/* Status Navigation Tabs - Improved Design */}
+          <div className="px-6 pb-4 flex-shrink-0">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
               <button
                 onClick={() => setSelectedStatus('all')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all text-sm font-medium ${
+                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 hover:scale-105 ${
                   selectedStatus === 'all'
-                    ? 'bg-gray-100 text-gray-800 border-gray-300'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    ? 'bg-slate-100 text-slate-800 border-slate-300 shadow-sm'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
                 }`}
               >
-                <span>📋</span>
-                <span className="hidden sm:inline">All Appointments</span>
-                <span className="bg-white/80 text-xs px-2 py-1 rounded-full">
+                <span className="text-2xl mb-1">📋</span>
+                <span className="text-xs font-medium text-center">All</span>
+                <span className="text-xs bg-slate-200 px-2 py-0.5 rounded-full mt-1">
                   {mockAppointments.length}
                 </span>
               </button>
+              
               <button
                 onClick={() => setSelectedStatus('vitals-required')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all text-sm font-medium ${
+                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 hover:scale-105 ${
                   selectedStatus === 'vitals-required'
-                    ? 'bg-red-100 text-red-800 border-red-300'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    ? 'bg-red-50 text-red-800 border-red-300 shadow-sm'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-red-50 hover:border-red-200'
                 }`}
               >
-                <span>❤️</span>
-                <span className="hidden sm:inline">Vitals Required</span>
-                <span className="bg-white/80 text-xs px-2 py-1 rounded-full">
+                <span className="text-2xl mb-1">❤️</span>
+                <span className="text-xs font-medium text-center">Vitals</span>
+                <span className="text-xs bg-red-100 px-2 py-0.5 rounded-full mt-1">
                   {mockAppointments.filter(apt => apt.status === 'vitals-required').length}
                 </span>
               </button>
+              
               <button
                 onClick={() => setSelectedStatus('ready-consultation')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all text-sm font-medium ${
+                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 hover:scale-105 ${
                   selectedStatus === 'ready-consultation'
-                    ? 'bg-green-100 text-green-800 border-green-300'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    ? 'bg-green-50 text-green-800 border-green-300 shadow-sm'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-green-50 hover:border-green-200'
                 }`}
               >
-                <span>✅</span>
-                <span className="hidden sm:inline">Ready For Consultation</span>
-                <span className="bg-white/80 text-xs px-2 py-1 rounded-full">
+                <span className="text-2xl mb-1">✅</span>
+                <span className="text-xs font-medium text-center">Ready</span>
+                <span className="text-xs bg-green-100 px-2 py-0.5 rounded-full mt-1">
                   {mockAppointments.filter(apt => apt.status === 'ready-consultation').length}
                 </span>
               </button>
+              
               <button
                 onClick={() => setSelectedStatus('under-consultation')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all text-sm font-medium ${
+                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 hover:scale-105 ${
                   selectedStatus === 'under-consultation'
-                    ? 'bg-blue-100 text-blue-800 border-blue-300'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    ? 'bg-blue-50 text-blue-800 border-blue-300 shadow-sm'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-blue-50 hover:border-blue-200'
                 }`}
               >
-                <span>👨‍⚕️</span>
-                <span className="hidden sm:inline">Under Consultation</span>
-                <span className="bg-white/80 text-xs px-2 py-1 rounded-full">
+                <span className="text-2xl mb-1">👨‍⚕️</span>
+                <span className="text-xs font-medium text-center">Active</span>
+                <span className="text-xs bg-blue-100 px-2 py-0.5 rounded-full mt-1">
                   {mockAppointments.filter(apt => apt.status === 'under-consultation').length}
                 </span>
               </button>
+              
               <button
                 onClick={() => setSelectedStatus('lab-test-required')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all text-sm font-medium ${
+                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 hover:scale-105 ${
                   selectedStatus === 'lab-test-required'
-                    ? 'bg-purple-100 text-purple-800 border-purple-300'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    ? 'bg-purple-50 text-purple-800 border-purple-300 shadow-sm'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-purple-50 hover:border-purple-200'
                 }`}
               >
-                <span>🧪</span>
-                <span className="hidden sm:inline">Lab Test Required</span>
-                <span className="bg-white/80 text-xs px-2 py-1 rounded-full">
+                <span className="text-2xl mb-1">🧪</span>
+                <span className="text-xs font-medium text-center">Lab Test</span>
+                <span className="text-xs bg-purple-100 px-2 py-0.5 rounded-full mt-1">
                   {mockAppointments.filter(apt => apt.status === 'lab-test-required').length}
                 </span>
               </button>
+              
               <button
                 onClick={() => setSelectedStatus('awaiting-reconsultation')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all text-sm font-medium ${
+                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 hover:scale-105 ${
                   selectedStatus === 'awaiting-reconsultation'
-                    ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    ? 'bg-yellow-50 text-yellow-800 border-yellow-300 shadow-sm'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-yellow-50 hover:border-yellow-200'
                 }`}
               >
-                <span>⏳</span>
-                <span className="hidden sm:inline">Awaiting Reconsultation</span>
-                <span className="bg-white/80 text-xs px-2 py-1 rounded-full">
+                <span className="text-2xl mb-1">⏳</span>
+                <span className="text-xs font-medium text-center">Waiting</span>
+                <span className="text-xs bg-yellow-100 px-2 py-0.5 rounded-full mt-1">
                   {mockAppointments.filter(apt => apt.status === 'awaiting-reconsultation').length}
                 </span>
               </button>
+              
               <button
                 onClick={() => setSelectedStatus('completed')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all text-sm font-medium ${
+                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 hover:scale-105 ${
                   selectedStatus === 'completed'
-                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-sm'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-emerald-50 hover:border-emerald-200'
                 }`}
               >
-                <span>✅</span>
-                <span className="hidden sm:inline">Completed</span>
-                <span className="bg-white/80 text-xs px-2 py-1 rounded-full">
+                <span className="text-2xl mb-1">🏁</span>
+                <span className="text-xs font-medium text-center">Done</span>
+                <span className="text-xs bg-emerald-100 px-2 py-0.5 rounded-full mt-1">
                   {mockAppointments.filter(apt => apt.status === 'completed').length}
                 </span>
               </button>
             </div>
           </div>
           <CardContent className="flex-1 overflow-hidden">
-            <div className="hidden lg:block h-full overflow-y-auto">
-              <div className="min-w-[800px]">
-                <Table>
-                  <TableHeader className="sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10 border-b">
-                    <TableRow>
-                      <TableHead className="font-semibold text-foreground min-w-[100px]">Patient ID</TableHead>
-                      <TableHead className="font-semibold text-foreground min-w-[150px]">Patient Name</TableHead>
-                      <TableHead className="font-semibold text-foreground min-w-[150px]">Doctor Assigned</TableHead>
-                      <TableHead className="font-semibold text-foreground min-w-[120px]">Appointment Time</TableHead>
-                      <TableHead className="font-semibold text-foreground min-w-[80px]">Token No.</TableHead>
-                      <TableHead className="font-semibold text-foreground min-w-[120px]">Vitals Updated</TableHead>
-                      <TableHead className="font-semibold text-foreground min-w-[100px]">Status</TableHead>
-                      <TableHead className="font-semibold text-foreground min-w-[150px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAppointments.map((appointment, index) => (
-                      <TableRow 
-                        key={appointment.id} 
-                        className={`hover:bg-muted/50 transition-colors ${
-                          index % 2 === 0 ? 'bg-card' : 'bg-muted/20'
-                        }`}
-                      >
-                        <TableCell className="font-medium">
-                          <Button
-                            variant="link"
-                            className="p-0 h-auto text-healthcare-primary hover:text-healthcare-primary/80"
-                            onClick={() => {/* Navigate to patient profile */}}
-                          >
-                            {appointment.patientId}
-                          </Button>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-foreground">{appointment.patientName}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Stethoscope className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-foreground">{appointment.doctorName}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-foreground">{appointment.appointmentTime}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="font-mono">
-                            #{appointment.tokenNo}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {appointment.vitalsUpdated ? (
-                            <span className="text-healthcare-success font-semibold">✅</span>
-                          ) : (
+            {/* Desktop & Tablet Table */}
+            <div className="hidden md:block h-full">
+              <div className="h-full border border-border rounded-lg overflow-hidden">
+                <div className="h-full overflow-auto">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-sm z-10 border-b border-border shadow-sm">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="font-semibold text-foreground bg-card/95 backdrop-blur-sm">Patient ID</TableHead>
+                        <TableHead className="font-semibold text-foreground bg-card/95 backdrop-blur-sm">Patient Name</TableHead>
+                        <TableHead className="font-semibold text-foreground bg-card/95 backdrop-blur-sm">Doctor</TableHead>
+                        <TableHead className="font-semibold text-foreground bg-card/95 backdrop-blur-sm">Time</TableHead>
+                        <TableHead className="font-semibold text-foreground bg-card/95 backdrop-blur-sm">Token</TableHead>
+                        <TableHead className="font-semibold text-foreground bg-card/95 backdrop-blur-sm">Vitals</TableHead>
+                        <TableHead className="font-semibold text-foreground bg-card/95 backdrop-blur-sm">Status</TableHead>
+                        <TableHead className="font-semibold text-foreground bg-card/95 backdrop-blur-sm">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredAppointments.map((appointment, index) => (
+                        <TableRow 
+                          key={appointment.id} 
+                          className={`hover:bg-muted/50 transition-colors border-b border-border/50 ${
+                            index % 2 === 0 ? 'bg-card' : 'bg-muted/20'
+                          }`}
+                        >
+                          <TableCell className="font-medium">
                             <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-healthcare-error border-healthcare-error/30 hover:bg-healthcare-error/10"
-                              onClick={() => {/* Open vitals form */}}
+                              variant="link"
+                              className="p-0 h-auto text-healthcare-primary hover:text-healthcare-primary/80 font-mono"
+                              onClick={() => {/* Navigate to patient profile */}}
                             >
-                              ❌ Update
+                              {appointment.patientId}
                             </Button>
-                          )}
-                        </TableCell>
-                        <TableCell>{getStatusBadge(appointment.status)}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="hover:bg-healthcare-primary/10 border-healthcare-primary/30"
-                              onClick={() => {/* View details */}}
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
-                            {appointment.status !== 'completed' && (
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <span className="text-foreground font-medium">{appointment.patientName}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Stethoscope className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <span className="text-foreground">{appointment.doctorName}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-foreground font-medium">{appointment.appointmentTime}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="font-mono font-bold text-healthcare-primary">
+                              #{appointment.tokenNo}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {appointment.vitalsUpdated ? (
+                              <div className="flex items-center gap-1">
+                                <span className="text-healthcare-success text-lg">✅</span>
+                                <span className="text-xs text-healthcare-success font-medium">Updated</span>
+                              </div>
+                            ) : (
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="hover:bg-healthcare-error/10 text-healthcare-error border-healthcare-error/30"
-                                onClick={() => {/* Cancel appointment */}}
+                                className="text-healthcare-error border-healthcare-error/30 hover:bg-healthcare-error/10 text-xs"
+                                onClick={() => {/* Open vitals form */}}
                               >
-                                <X className="h-4 w-4 mr-1" />
-                                Cancel
+                                ❤️ Update
                               </Button>
                             )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                          </TableCell>
+                          <TableCell>{getStatusBadge(appointment.status)}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="hover:bg-healthcare-primary/10 border-healthcare-primary/30 text-xs"
+                                onClick={() => {/* View details */}}
+                              >
+                                <Eye className="h-3 w-3 mr-1" />
+                                View
+                              </Button>
+                              {appointment.status !== 'completed' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="hover:bg-healthcare-error/10 text-healthcare-error border-healthcare-error/30 text-xs"
+                                  onClick={() => {/* Cancel appointment */}}
+                                >
+                                  <X className="h-3 w-3 mr-1" />
+                                  Cancel
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             </div>
 
             {/* Mobile Cards */}
-            <div className="md:hidden h-full overflow-auto space-y-3">
-              {filteredAppointments.map((appointment) => (
-                <Card key={appointment.id} className="p-4 shadow-sm border">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <Button 
-                        variant="link" 
-                        className="p-0 h-auto font-medium text-healthcare-primary text-lg"
-                      >
-                        {appointment.patientId}
-                      </Button>
-                      <h3 className="font-semibold text-foreground">{appointment.patientName}</h3>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <Badge variant="outline" className="font-mono">
-                        #{appointment.tokenNo}
-                      </Badge>
-                      {getStatusBadge(appointment.status)}
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2 text-sm mb-4">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Doctor:</span>
-                      <span className="font-medium">{appointment.doctorName}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Time:</span>
-                      <span className="font-medium">{appointment.appointmentTime}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Vitals:</span>
-                      {appointment.vitalsUpdated ? (
-                        <span className="text-healthcare-success font-semibold">✅ Updated</span>
-                      ) : (
-                        <span className="text-healthcare-error font-semibold">❌ Pending</span>
-                      )}
-                    </div>
-                  </div>
+            <div className="md:hidden h-full">
+              <div className="h-full overflow-auto">
+                <div className="space-y-3 pr-2">
+                  {filteredAppointments.map((appointment) => (
+                    <Card key={appointment.id} className="p-4 shadow-card border border-border/50 rounded-xl bg-card hover:shadow-hover transition-all duration-200">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex-1">
+                          <Button 
+                            variant="link" 
+                            className="p-0 h-auto font-bold text-healthcare-primary text-base font-mono"
+                          >
+                            {appointment.patientId}
+                          </Button>
+                          <h3 className="font-semibold text-foreground text-lg mt-1">{appointment.patientName}</h3>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge variant="outline" className="font-mono font-bold text-healthcare-primary">
+                            #{appointment.tokenNo}
+                          </Badge>
+                          {getStatusBadge(appointment.status)}
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-3 mb-4">
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <span className="text-muted-foreground block">Doctor:</span>
+                            <div className="flex items-center gap-1 mt-1">
+                              <Stethoscope className="h-3 w-3 text-muted-foreground" />
+                              <span className="font-medium text-foreground">{appointment.doctorName}</span>
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground block">Time:</span>
+                            <span className="font-medium text-foreground">{appointment.appointmentTime}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex justify-between items-center p-2 bg-muted/30 rounded-lg">
+                          <span className="text-sm text-muted-foreground">Vitals Status:</span>
+                          {appointment.vitalsUpdated ? (
+                            <div className="flex items-center gap-1">
+                              <span className="text-healthcare-success text-lg">✅</span>
+                              <span className="text-healthcare-success font-semibold text-sm">Updated</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <span className="text-healthcare-error text-lg">❤️</span>
+                              <span className="text-healthcare-error font-semibold text-sm">Pending</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
 
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 hover:bg-healthcare-primary/10 border-healthcare-primary/30"
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
-                    </Button>
-                    {appointment.status !== 'completed' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 hover:bg-healthcare-error/10 text-healthcare-error border-healthcare-error/30"
-                      >
-                        <X className="h-4 w-4 mr-1" />
-                        Cancel
-                      </Button>
-                    )}
-                  </div>
-                </Card>
-              ))}
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 hover:bg-healthcare-primary/10 border-healthcare-primary/30 font-medium"
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View Details
+                        </Button>
+                        {appointment.status !== 'completed' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 hover:bg-healthcare-error/10 text-healthcare-error border-healthcare-error/30 font-medium"
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Cancel
+                          </Button>
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
             </div>
             
             {filteredAppointments.length === 0 && (
