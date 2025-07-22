@@ -9,7 +9,11 @@ import {
   DollarSign,
   Calendar,
   User,
-  X
+  X,
+  Settings,
+  BarChart3,
+  FileText,
+  Shield
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -20,7 +24,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { BillingConfiguration } from './billing/BillingConfiguration';
+import { FinancialReports } from './billing/FinancialReports';
+import { PatientBillManagement } from './billing/PatientBillManagement';
+import { InsuranceManagement } from './billing/InsuranceManagement';
 
 interface BillItem {
   service: string;
@@ -183,293 +192,216 @@ export const Billing: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Billing Management</h1>
-          <p className="text-muted-foreground">Generate and manage patient bills</p>
+          <h1 className="text-2xl font-bold text-foreground">Billing & Insurance</h1>
+          <p className="text-muted-foreground">Comprehensive billing and insurance management</p>
         </div>
-        
-        <Dialog open={showNewBill} onOpenChange={setShowNewBill}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              New Bill
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create New Bill</DialogTitle>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              {/* Patient Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="patientName">Patient Name</Label>
-                  <Input
-                    id="patientName"
-                    value={newBill.patientName}
-                    onChange={(e) => setNewBill(prev => ({ ...prev, patientName: e.target.value }))}
-                    placeholder="Enter patient name"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="patientId">Patient ID</Label>
-                  <Input
-                    id="patientId"
-                    value={newBill.patientId}
-                    onChange={(e) => setNewBill(prev => ({ ...prev, patientId: e.target.value }))}
-                    placeholder="Enter patient ID"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="doctor">Doctor</Label>
-                <Select value={newBill.doctor} onValueChange={(value) => setNewBill(prev => ({ ...prev, doctor: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select doctor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Dr. Sarah Johnson">Dr. Sarah Johnson</SelectItem>
-                    <SelectItem value="Dr. Michael Chen">Dr. Michael Chen</SelectItem>
-                    <SelectItem value="Dr. Emily Davis">Dr. Emily Davis</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Bill Items */}
-              <div>
-                <div className="flex justify-between items-center mb-3">
-                  <Label>Bill Items</Label>
-                  <Button onClick={addBillItem} size="sm" variant="outline">
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Item
-                  </Button>
-                </div>
-                
-                <div className="space-y-3">
-                  {newBill.items.map((item, index) => (
-                    <div key={index} className="flex gap-2 items-end">
-                      <div className="flex-1">
-                        <Input
-                          placeholder="Service"
-                          value={item.service}
-                          onChange={(e) => updateBillItem(index, 'service', e.target.value)}
-                        />
-                      </div>
-                      <div className="w-24">
-                        <Input
-                          type="number"
-                          placeholder="Amount"
-                          value={item.amount}
-                          onChange={(e) => updateBillItem(index, 'amount', Number(e.target.value))}
-                        />
-                      </div>
-                      <div className="w-16">
-                        <Input
-                          type="number"
-                          placeholder="Qty"
-                          value={item.quantity}
-                          onChange={(e) => updateBillItem(index, 'quantity', Number(e.target.value))}
-                        />
-                      </div>
-                      {newBill.items.length > 1 && (
-                        <Button
-                          onClick={() => removeBillItem(index)}
-                          size="sm"
-                          variant="outline"
-                          className="px-2"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Discount & GST */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="discount">Discount (₹)</Label>
-                  <Input
-                    id="discount"
-                    type="number"
-                    value={newBill.discount}
-                    onChange={(e) => setNewBill(prev => ({ ...prev, discount: Number(e.target.value) }))}
-                    placeholder="0"
-                  />
-                </div>
-                <div>
-                  <Label>GST (18%)</Label>
-                  <Select 
-                    value={newBill.gstEnabled ? 'yes' : 'no'} 
-                    onValueChange={(value) => setNewBill(prev => ({ ...prev, gstEnabled: value === 'yes' }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="yes">Include GST</SelectItem>
-                      <SelectItem value="no">Exclude GST</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Payment Mode</Label>
-                  <Select value={newBill.paymentMode} onValueChange={(value) => setNewBill(prev => ({ ...prev, paymentMode: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="upi">UPI</SelectItem>
-                      <SelectItem value="card">Card</SelectItem>
-                      <SelectItem value="wallet">Wallet</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Total */}
-              <div className="bg-muted p-4 rounded-lg">
-                <div className="text-lg font-semibold">
-                  Total: ₹{calculateBillTotal().toFixed(2)}
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <Button onClick={handleCreateBill} className="flex-1">
-                  Create Bill
-                </Button>
-                <Button variant="outline" onClick={() => setShowNewBill(false)} className="flex-1">
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
 
-      {/* Search & Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search bills..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="paid">Paid</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="partial">Partial</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <Tabs defaultValue="bills" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="bills" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Patient Bills
+          </TabsTrigger>
+          <TabsTrigger value="configuration" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Configuration
+          </TabsTrigger>
+          <TabsTrigger value="reports" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Reports
+          </TabsTrigger>
+          <TabsTrigger value="insurance" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            Insurance
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Bills Table */}
-      <Card>
+        <TabsContent value="bills">
+          <PatientBillManagement />
+        </TabsContent>
+
+        <TabsContent value="configuration">
+          <BillingConfiguration />
+        </TabsContent>
+
+        <TabsContent value="reports">
+          <FinancialReports />
+        </TabsContent>
+
+        <TabsContent value="insurance">
+          <InsuranceManagement />
+        </TabsContent>
+      </Tabs>
+
+      {/* Legacy Bill Creation - Keep for quick access */}
+      <Card className="mt-8">
         <CardHeader>
-          <CardTitle>Recent Bills</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle>Quick Bill Creation</CardTitle>
+            <Dialog open={showNewBill} onOpenChange={setShowNewBill}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  New Bill
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Create New Bill</DialogTitle>
+                </DialogHeader>
+                
+                <div className="space-y-4">
+                  {/* ... keep existing code (patient info, bill items, etc.) */}
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="patientName">Patient Name</Label>
+                      <Input
+                        id="patientName"
+                        value={newBill.patientName}
+                        onChange={(e) => setNewBill(prev => ({ ...prev, patientName: e.target.value }))}
+                        placeholder="Enter patient name"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="patientId">Patient ID</Label>
+                      <Input
+                        id="patientId"
+                        value={newBill.patientId}
+                        onChange={(e) => setNewBill(prev => ({ ...prev, patientId: e.target.value }))}
+                        placeholder="Enter patient ID"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="doctor">Doctor</Label>
+                    <Select value={newBill.doctor} onValueChange={(value) => setNewBill(prev => ({ ...prev, doctor: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select doctor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Dr. Sarah Johnson">Dr. Sarah Johnson</SelectItem>
+                        <SelectItem value="Dr. Michael Chen">Dr. Michael Chen</SelectItem>
+                        <SelectItem value="Dr. Emily Davis">Dr. Emily Davis</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-3">
+                      <Label>Bill Items</Label>
+                      <Button onClick={addBillItem} size="sm" variant="outline">
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add Item
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {newBill.items.map((item, index) => (
+                        <div key={index} className="flex gap-2 items-end">
+                          <div className="flex-1">
+                            <Input
+                              placeholder="Service"
+                              value={item.service}
+                              onChange={(e) => updateBillItem(index, 'service', e.target.value)}
+                            />
+                          </div>
+                          <div className="w-24">
+                            <Input
+                              type="number"
+                              placeholder="Amount"
+                              value={item.amount}
+                              onChange={(e) => updateBillItem(index, 'amount', Number(e.target.value))}
+                            />
+                          </div>
+                          <div className="w-16">
+                            <Input
+                              type="number"
+                              placeholder="Qty"
+                              value={item.quantity}
+                              onChange={(e) => updateBillItem(index, 'quantity', Number(e.target.value))}
+                            />
+                          </div>
+                          {newBill.items.length > 1 && (
+                            <Button
+                              onClick={() => removeBillItem(index)}
+                              size="sm"
+                              variant="outline"
+                              className="px-2"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="discount">Discount (₹)</Label>
+                      <Input
+                        id="discount"
+                        type="number"
+                        value={newBill.discount}
+                        onChange={(e) => setNewBill(prev => ({ ...prev, discount: Number(e.target.value) }))}
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <Label>GST (18%)</Label>
+                      <Select 
+                        value={newBill.gstEnabled ? 'yes' : 'no'} 
+                        onValueChange={(value) => setNewBill(prev => ({ ...prev, gstEnabled: value === 'yes' }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="yes">Include GST</SelectItem>
+                          <SelectItem value="no">Exclude GST</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Payment Mode</Label>
+                      <Select value={newBill.paymentMode} onValueChange={(value) => setNewBill(prev => ({ ...prev, paymentMode: value }))}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cash">Cash</SelectItem>
+                          <SelectItem value="upi">UPI</SelectItem>
+                          <SelectItem value="card">Card</SelectItem>
+                          <SelectItem value="wallet">Wallet</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="bg-muted p-4 rounded-lg">
+                    <div className="text-lg font-semibold">
+                      Total: ₹{calculateBillTotal().toFixed(2)}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 pt-4">
+                    <Button onClick={handleCreateBill} className="flex-1">
+                      Create Bill
+                    </Button>
+                    <Button variant="outline" onClick={() => setShowNewBill(false)} className="flex-1">
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardHeader>
         <CardContent>
-          {/* Desktop Table */}
-          <div className="hidden lg:block overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-semibold">Bill ID</th>
-                  <th className="text-left py-3 px-4 font-semibold">Patient</th>
-                  <th className="text-left py-3 px-4 font-semibold">Doctor</th>
-                  <th className="text-left py-3 px-4 font-semibold">Date</th>
-                  <th className="text-left py-3 px-4 font-semibold">Total</th>
-                  <th className="text-left py-3 px-4 font-semibold">Payment</th>
-                  <th className="text-left py-3 px-4 font-semibold">Status</th>
-                  <th className="text-left py-3 px-4 font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredBills.map((bill) => (
-                  <tr key={bill.id} className="border-b hover:bg-muted/50 transition-colors">
-                    <td className="py-3 px-4 font-medium text-healthcare-primary">{bill.id}</td>
-                    <td className="py-3 px-4">
-                      <div>
-                        <div className="font-medium">{bill.patientName}</div>
-                        <div className="text-sm text-muted-foreground">{bill.patientId}</div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">{bill.doctor}</td>
-                    <td className="py-3 px-4">{bill.date}</td>
-                    <td className="py-3 px-4 font-semibold">₹{bill.total.toFixed(2)}</td>
-                    <td className="py-3 px-4 capitalize">{bill.paymentMode}</td>
-                    <td className="py-3 px-4">{getStatusBadge(bill.status)}</td>
-                    <td className="py-3 px-4">
-                      <div className="flex gap-1">
-                        <Button size="sm" variant="outline">
-                          <Download className="h-3 w-3" />
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          <Printer className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile Cards */}
-          <div className="lg:hidden space-y-4">
-            {filteredBills.map((bill) => (
-              <Card key={bill.id} className="p-4">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h3 className="font-semibold text-healthcare-primary">{bill.id}</h3>
-                    <p className="text-sm font-medium">{bill.patientName}</p>
-                    <p className="text-xs text-muted-foreground">{bill.patientId}</p>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-semibold">₹{bill.total.toFixed(2)}</div>
-                    {getStatusBadge(bill.status)}
-                  </div>
-                </div>
-                
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Doctor:</span>
-                    <span>{bill.doctor}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Date:</span>
-                    <span>{bill.date}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Payment:</span>
-                    <span className="capitalize">{bill.paymentMode}</span>
-                  </div>
-                </div>
-                
-                <div className="flex gap-2 mt-3">
-                  <Button size="sm" variant="outline" className="flex-1">
-                    <Download className="h-3 w-3 mr-1" />
-                    Download
-                  </Button>
-                  <Button size="sm" variant="outline" className="flex-1">
-                    <Printer className="h-3 w-3 mr-1" />
-                    Print
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
+          <p className="text-muted-foreground">Use this quick form to create basic bills. For advanced billing features, use the tabs above.</p>
         </CardContent>
       </Card>
     </div>
