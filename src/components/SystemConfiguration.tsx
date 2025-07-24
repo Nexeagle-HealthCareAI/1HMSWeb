@@ -173,18 +173,19 @@ const HospitalRegistrationTab: React.FC = () => {
     const savedData = localStorage.getItem('easyHMS_setupData');
     if (savedData) {
       const data = JSON.parse(savedData);
-      return data.hospital || {
-        name: '',
-        phone: '',
-        email: '',
-        registrationNumber: '',
-        address: '',
-        establishedYear: '',
-        totalBeds: '',
-        specializations: [],
-        accreditation: '',
-        website: '',
-        emergencyContact: ''
+      const hospital = data.hospital || {};
+      return {
+        name: hospital.name || '',
+        phone: hospital.phone || '',
+        email: hospital.email || '',
+        registrationNumber: hospital.registrationNumber || '',
+        address: hospital.address || '',
+        establishedYear: hospital.establishedYear || '',
+        totalBeds: hospital.totalBeds || '',
+        specializations: Array.isArray(hospital.specializations) ? hospital.specializations : [],
+        accreditation: hospital.accreditation || '',
+        website: hospital.website || '',
+        emergencyContact: hospital.emergencyContact || ''
       };
     }
     return {
@@ -216,7 +217,7 @@ const HospitalRegistrationTab: React.FC = () => {
       hospitalData.email,
       hospitalData.establishedYear,
       hospitalData.totalBeds,
-      hospitalData.specializations?.length > 0,
+      Array.isArray(hospitalData.specializations) && hospitalData.specializations.length > 0,
       hospitalData.accreditation,
       hospitalData.website,
       hospitalData.emergencyContact
@@ -258,12 +259,15 @@ const HospitalRegistrationTab: React.FC = () => {
   };
 
   const handleSpecializationToggle = (specialization: string) => {
-    setHospitalData(prev => ({
-      ...prev,
-      specializations: prev.specializations.includes(specialization)
-        ? prev.specializations.filter(s => s !== specialization)
-        : [...prev.specializations, specialization]
-    }));
+    setHospitalData(prev => {
+      const currentSpecs = Array.isArray(prev.specializations) ? prev.specializations : [];
+      return {
+        ...prev,
+        specializations: currentSpecs.includes(specialization)
+          ? currentSpecs.filter(s => s !== specialization)
+          : [...currentSpecs, specialization]
+      };
+    });
   };
 
   const completionScore = calculateCompletionScore();
@@ -459,19 +463,22 @@ const HospitalRegistrationTab: React.FC = () => {
             <div>
               <Label>Hospital Specializations</Label>
               <div className="mt-2 flex flex-wrap gap-2">
-                {availableSpecializations.map((spec) => (
-                  <Badge
-                    key={spec}
-                    variant={hospitalData.specializations.includes(spec) ? "default" : "outline"}
-                    className="cursor-pointer hover:bg-primary/20"
-                    onClick={() => handleSpecializationToggle(spec)}
-                  >
-                    {spec}
-                    {hospitalData.specializations.includes(spec) && (
-                      <Check className="ml-1 h-3 w-3" />
-                    )}
-                  </Badge>
-                ))}
+                {availableSpecializations.map((spec) => {
+                  const isSelected = Array.isArray(hospitalData.specializations) && hospitalData.specializations.includes(spec);
+                  return (
+                    <Badge
+                      key={spec}
+                      variant={isSelected ? "default" : "outline"}
+                      className="cursor-pointer hover:bg-primary/20"
+                      onClick={() => handleSpecializationToggle(spec)}
+                    >
+                      {spec}
+                      {isSelected && (
+                        <Check className="ml-1 h-3 w-3" />
+                      )}
+                    </Badge>
+                  );
+                })}
               </div>
             </div>
           </CardContent>
