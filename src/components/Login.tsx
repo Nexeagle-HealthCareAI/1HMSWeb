@@ -220,7 +220,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
             <CardHeader className="text-center space-y-2">
               <div className="flex justify-center mb-4">
                 <div className="p-3 bg-white rounded-full">
-                  <img src="/lovable-uploads/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" alt="Company Logo" className="h-8 w-8" />
+                  <img src="/lovable-uploads/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" alt="Company Logo" className="h-12 w-12" />
                 </div>
               </div>
               <CardTitle className="text-2xl font-bold text-healthcare-primary">
@@ -333,7 +333,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
         <div className="hidden lg:flex w-2/3 bg-gradient-primary items-center justify-center p-12 lg:order-1">
           <div className="text-white max-w-2xl">
             <div className="flex items-center gap-3 mb-6">
-              <img src="/lovable-uploads/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" alt="Company Logo" className="h-12 w-12" />
+              <img src="/lovable-uploads/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" alt="Company Logo" className="h-16 w-16" />
               <h1 className="text-4xl font-bold">Secure Recovery</h1>
             </div>
             
@@ -357,7 +357,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
       <div className="hidden lg:flex w-2/3 bg-gradient-primary items-center justify-center p-12">
         <div className="text-white max-w-2xl">
           <div className="flex items-center gap-3 mb-6">
-            <img src="/lovable-uploads/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" alt="Company Logo" className="h-12 w-12" />
+            <img src="/lovable-uploads/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" alt="Company Logo" className="h-16 w-16" />
             <h1 className="text-4xl font-bold">NexEagle easyHMS</h1>
           </div>
           
@@ -397,7 +397,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
           <CardHeader className="text-center space-y-2">
             <div className="flex justify-center mb-4">
               <div className="p-3 bg-white rounded-full">
-                <img src="/lovable-uploads/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" alt="Company Logo" className="h-8 w-8" />
+                <img src="/lovable-uploads/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" alt="Company Logo" className="h-12 w-12" />
               </div>
             </div>
             <CardTitle className="text-2xl font-bold text-healthcare-primary">
