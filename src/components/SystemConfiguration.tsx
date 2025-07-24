@@ -21,7 +21,8 @@ import {
   X,
   Check,
   Download,
-  Printer
+  Printer,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -166,8 +167,334 @@ const defaultBranding: HospitalBranding = {
   secondaryColor: '#64748b'
 };
 
-export const SystemConfiguration: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('departments');
+// Hospital Registration Component
+const HospitalRegistrationTab: React.FC = () => {
+  const [hospitalData, setHospitalData] = useState(() => {
+    const savedData = localStorage.getItem('easyHMS_setupData');
+    if (savedData) {
+      const data = JSON.parse(savedData);
+      return data.hospital || {
+        name: '',
+        phone: '',
+        email: '',
+        registrationNumber: '',
+        address: '',
+        establishedYear: '',
+        totalBeds: '',
+        specializations: [],
+        accreditation: '',
+        website: '',
+        emergencyContact: ''
+      };
+    }
+    return {
+      name: '',
+      phone: '',
+      email: '',
+      registrationNumber: '',
+      address: '',
+      establishedYear: '',
+      totalBeds: '',
+      specializations: [],
+      accreditation: '',
+      website: '',
+      emergencyContact: ''
+    };
+  });
+
+  const { toast } = useToast();
+
+  const calculateCompletionScore = (): number => {
+    const requiredFields = [
+      hospitalData.name,
+      hospitalData.phone,
+      hospitalData.registrationNumber,
+      hospitalData.address
+    ];
+    
+    const optionalFields = [
+      hospitalData.email,
+      hospitalData.establishedYear,
+      hospitalData.totalBeds,
+      hospitalData.specializations?.length > 0,
+      hospitalData.accreditation,
+      hospitalData.website,
+      hospitalData.emergencyContact
+    ];
+    
+    const requiredComplete = requiredFields.filter(field => field && field.toString().trim() !== '').length;
+    const optionalComplete = optionalFields.filter(field => field).length;
+    
+    const requiredWeight = 70;
+    const optionalWeight = 30;
+    
+    const requiredProgress = (requiredComplete / requiredFields.length) * requiredWeight;
+    const optionalProgress = (optionalComplete / optionalFields.length) * optionalWeight;
+    
+    return Math.round(requiredProgress + optionalProgress);
+  };
+
+  const handleSave = () => {
+    const savedData = localStorage.getItem('easyHMS_setupData');
+    const existingData = savedData ? JSON.parse(savedData) : {};
+    
+    const updatedData = {
+      ...existingData,
+      hospital: hospitalData
+    };
+    
+    localStorage.setItem('easyHMS_setupData', JSON.stringify(updatedData));
+    
+    // Mark hospital registration as complete if all required fields are filled
+    const score = calculateCompletionScore();
+    if (score >= 70) {
+      localStorage.setItem('easyHMS_hospitalRegistrationComplete', 'true');
+    }
+    
+    toast({
+      title: "Hospital Details Saved",
+      description: `Registration is ${score}% complete`,
+    });
+  };
+
+  const handleSpecializationToggle = (specialization: string) => {
+    setHospitalData(prev => ({
+      ...prev,
+      specializations: prev.specializations.includes(specialization)
+        ? prev.specializations.filter(s => s !== specialization)
+        : [...prev.specializations, specialization]
+    }));
+  };
+
+  const completionScore = calculateCompletionScore();
+  const availableSpecializations = [
+    'Cardiology', 'Neurology', 'Orthopedics', 'Pediatrics', 'General Medicine',
+    'Surgery', 'Dermatology', 'Psychiatry', 'Gynecology', 'ENT', 'Ophthalmology'
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Header with completion indicator */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-6 rounded-lg border border-blue-200 dark:border-blue-800">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-xl font-semibold text-blue-900 dark:text-blue-100">
+              🏥 Hospital Registration
+            </h3>
+            <p className="text-blue-700 dark:text-blue-300">
+              Complete your hospital details to unlock all features
+            </p>
+          </div>
+          <div className="text-right">
+            <div className="text-2xl font-bold text-blue-600">{completionScore}%</div>
+            <div className="text-sm text-blue-500">Complete</div>
+          </div>
+        </div>
+        
+        <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-3">
+          <div 
+            className="bg-blue-600 h-3 rounded-full transition-all duration-300"
+            style={{ width: `${completionScore}%` }}
+          />
+        </div>
+        
+        {completionScore < 70 && (
+          <div className="mt-3 text-sm text-blue-600 dark:text-blue-400 flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            Complete required fields (marked with *) to unlock admin features
+          </div>
+        )}
+      </div>
+
+      {/* Registration Form */}
+      <div className="grid gap-6">
+        {/* Basic Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              Basic Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="hospitalName">Hospital Name *</Label>
+              <Input
+                id="hospitalName"
+                value={hospitalData.name}
+                onChange={(e) => setHospitalData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Enter hospital name"
+                className="mt-1"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="regNumber">Registration Number *</Label>
+                <Input
+                  id="regNumber"
+                  value={hospitalData.registrationNumber}
+                  onChange={(e) => setHospitalData(prev => ({ ...prev, registrationNumber: e.target.value }))}
+                  placeholder="REG123456789"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="establishedYear">Established Year</Label>
+                <Input
+                  id="establishedYear"
+                  value={hospitalData.establishedYear}
+                  onChange={(e) => setHospitalData(prev => ({ ...prev, establishedYear: e.target.value }))}
+                  placeholder="2000"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="address">Hospital Address *</Label>
+              <Textarea
+                id="address"
+                value={hospitalData.address}
+                onChange={(e) => setHospitalData(prev => ({ ...prev, address: e.target.value }))}
+                placeholder="Enter complete hospital address"
+                className="mt-1"
+                rows={3}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Contact Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Phone className="h-5 w-5" />
+              Contact Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="phone">Primary Phone *</Label>
+                <Input
+                  id="phone"
+                  value={hospitalData.phone}
+                  onChange={(e) => setHospitalData(prev => ({ ...prev, phone: e.target.value }))}
+                  placeholder="+1 (555) 123-4567"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="emergencyContact">Emergency Contact</Label>
+                <Input
+                  id="emergencyContact"
+                  value={hospitalData.emergencyContact}
+                  onChange={(e) => setHospitalData(prev => ({ ...prev, emergencyContact: e.target.value }))}
+                  placeholder="+1 (555) 987-6543"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="email">Hospital Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={hospitalData.email}
+                  onChange={(e) => setHospitalData(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="info@hospital.com"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="website">Website</Label>
+                <Input
+                  id="website"
+                  value={hospitalData.website}
+                  onChange={(e) => setHospitalData(prev => ({ ...prev, website: e.target.value }))}
+                  placeholder="https://www.hospital.com"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Additional Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Stethoscope className="h-5 w-5" />
+              Additional Details
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="totalBeds">Total Beds</Label>
+                <Input
+                  id="totalBeds"
+                  type="number"
+                  value={hospitalData.totalBeds}
+                  onChange={(e) => setHospitalData(prev => ({ ...prev, totalBeds: e.target.value }))}
+                  placeholder="100"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="accreditation">Accreditation</Label>
+                <Input
+                  id="accreditation"
+                  value={hospitalData.accreditation}
+                  onChange={(e) => setHospitalData(prev => ({ ...prev, accreditation: e.target.value }))}
+                  placeholder="NABH, JCI, etc."
+                  className="mt-1"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label>Hospital Specializations</Label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {availableSpecializations.map((spec) => (
+                  <Badge
+                    key={spec}
+                    variant={hospitalData.specializations.includes(spec) ? "default" : "outline"}
+                    className="cursor-pointer hover:bg-primary/20"
+                    onClick={() => handleSpecializationToggle(spec)}
+                  >
+                    {spec}
+                    {hospitalData.specializations.includes(spec) && (
+                      <Check className="ml-1 h-3 w-3" />
+                    )}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Save Button */}
+        <div className="flex justify-end">
+          <Button onClick={handleSave} className="px-8">
+            <Save className="h-4 w-4 mr-2" />
+            Save Hospital Details
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface SystemConfigurationProps {
+  focusTab?: string;
+}
+
+export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusTab }) => {
+  const [activeTab, setActiveTab] = useState(focusTab || 'departments');
   const [departments, setDepartments] = useState<Department[]>(sampleDepartments);
   const [prescriptionTemplate, setPrescriptionTemplate] = useState<PrescriptionTemplate>(defaultTemplate);
   const [hospitalBranding, setHospitalBranding] = useState<HospitalBranding>(defaultBranding);
@@ -302,7 +629,11 @@ export const SystemConfiguration: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="hospital" className="flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Hospital</span>
+          </TabsTrigger>
           <TabsTrigger value="departments" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             <span className="hidden sm:inline">Departments</span>
@@ -316,6 +647,11 @@ export const SystemConfiguration: React.FC = () => {
             <span className="hidden sm:inline">Branding</span>
           </TabsTrigger>
         </TabsList>
+
+        {/* Hospital Registration Tab */}
+        <TabsContent value="hospital">
+          <HospitalRegistrationTab />
+        </TabsContent>
 
         {/* Departments Tab */}
         <TabsContent value="departments">

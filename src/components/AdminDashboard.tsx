@@ -314,7 +314,7 @@ export const AdminDashboard = () => {
             </div>
             <div className="flex items-center gap-2">
               <Button 
-                onClick={() => setCurrentView('system-config')} 
+                onClick={() => setCurrentView('system-config-hospital')} 
                 size="sm" 
                 className="bg-orange-600 hover:bg-orange-700 text-white"
               >
@@ -629,6 +629,9 @@ export const AdminDashboard = () => {
 
       {/* System Configuration Module */}
       {currentView === 'system-config' && <SystemConfiguration />}
+
+      {/* Hospital Registration Module */}
+      {currentView === 'system-config-hospital' && <SystemConfiguration focusTab="hospital" />}
 
       {/* Billing & Insurance Module */}
       {currentView === 'billing-insurance' && (
