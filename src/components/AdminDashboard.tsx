@@ -226,6 +226,11 @@ export const AdminDashboard = () => {
   const hospitalScore = calculateHospitalCompletionScore();
   const userRole = localStorage.getItem('easyHMS_userRole') || 'admin';
 
+  // Debug logging
+  console.log('AdminDashboard - User Role:', userRole);
+  console.log('AdminDashboard - Hospital Score:', hospitalScore);
+  console.log('AdminDashboard - Should show meter:', hospitalScore < 100);
+
   const handleSetupComplete = (setupData: any) => {
     localStorage.setItem('easyHMS_setupCompleted', 'true');
     localStorage.setItem('easyHMS_setupData', JSON.stringify(setupData));
