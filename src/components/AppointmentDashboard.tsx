@@ -360,6 +360,151 @@ export const AppointmentDashboard = () => {
             </p>
           </CardHeader>
 
+          {/* Enhanced Patient Journey Navigation Header */}
+          <div className="px-3 md:px-6 pb-4">
+            <div className="bg-gradient-to-r from-healthcare-primary/10 to-healthcare-secondary/10 rounded-xl p-4 border border-healthcare-primary/20">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-healthcare-primary rounded-full animate-pulse"></div>
+                  <h3 className="text-lg font-semibold text-healthcare-primary">Patient Journey Flow</h3>
+                </div>
+                <Badge className="bg-healthcare-primary/20 text-healthcare-primary border-healthcare-primary/30">
+                  Live Tracking
+                </Badge>
+              </div>
+              
+              {/* Single Row Navigation with ALL and Future Appointments */}
+              <div className="flex flex-wrap gap-2 justify-start">
+                {/* ALL Tab - First Position */}
+                <button
+                  onClick={() => setSelectedStatus('all')}
+                  className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
+                    selectedStatus === 'all'
+                      ? 'bg-healthcare-primary text-white border-healthcare-primary shadow-lg shadow-healthcare-primary/25'
+                      : 'bg-healthcare-primary/5 text-healthcare-primary border-healthcare-primary/20 hover:bg-healthcare-primary/10 hover:border-healthcare-primary/30'
+                  }`}
+                >
+                  <List className="h-5 w-5" />
+                  <div className="text-center">
+                    <div className="font-semibold text-xs">ALL</div>
+                    <div className="text-xs opacity-80">{kpis.totalToday} patients</div>
+                  </div>
+                </button>
+
+                {/* Vitals Required */}
+                <button
+                  onClick={() => setSelectedStatus('vitals-required')}
+                  className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
+                    selectedStatus === 'vitals-required'
+                      ? 'bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/25'
+                      : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300'
+                  }`}
+                >
+                  <Heart className="h-5 w-5" />
+                  <div className="text-center">
+                    <div className="font-semibold text-xs">Vitals</div>
+                    <div className="text-xs opacity-80">{kpis.vitalsRequired} patient</div>
+                  </div>
+                </button>
+
+                {/* Ready for Consultation */}
+                <button
+                  onClick={() => setSelectedStatus('ready-consultation')}
+                  className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
+                    selectedStatus === 'ready-consultation'
+                      ? 'bg-green-500 text-white border-green-500 shadow-lg shadow-green-500/25'
+                      : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300'
+                  }`}
+                >
+                  <CheckCircle className="h-5 w-5" />
+                  <div className="text-center">
+                    <div className="font-semibold text-xs">Ready</div>
+                    <div className="text-xs opacity-80">1 patient</div>
+                  </div>
+                </button>
+
+                {/* Under Consultation */}
+                <button
+                  onClick={() => setSelectedStatus('under-consultation')}
+                  className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
+                    selectedStatus === 'under-consultation'
+                      ? 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-500/25'
+                      : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300'
+                  }`}
+                >
+                  <Stethoscope className="h-5 w-5" />
+                  <div className="text-center">
+                    <div className="font-semibold text-xs">Consulting</div>
+                    <div className="text-xs opacity-80">1 patient</div>
+                  </div>
+                </button>
+
+                {/* Lab Test Required */}
+                <button
+                  onClick={() => setSelectedStatus('lab-test-required')}
+                  className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
+                    selectedStatus === 'lab-test-required'
+                      ? 'bg-purple-500 text-white border-purple-500 shadow-lg shadow-purple-500/25'
+                      : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 hover:border-purple-300'
+                  }`}
+                >
+                  <FlaskConical className="h-5 w-5" />
+                  <div className="text-center">
+                    <div className="font-semibold text-xs">Lab Test</div>
+                    <div className="text-xs opacity-80">{kpis.labFollowUps} patient</div>
+                  </div>
+                </button>
+
+                {/* Awaiting Reconsultation */}
+                <button
+                  onClick={() => setSelectedStatus('awaiting-reconsultation')}
+                  className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
+                    selectedStatus === 'awaiting-reconsultation'
+                      ? 'bg-yellow-500 text-white border-yellow-500 shadow-lg shadow-yellow-500/25'
+                      : 'bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100 hover:border-yellow-300'
+                  }`}
+                >
+                  <Clock className="h-5 w-5" />
+                  <div className="text-center">
+                    <div className="font-semibold text-xs">Re-consult</div>
+                    <div className="text-xs opacity-80">{kpis.doctorFollowUps} patient</div>
+                  </div>
+                </button>
+
+                {/* Completed */}
+                <button
+                  onClick={() => setSelectedStatus('completed')}
+                  className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
+                    selectedStatus === 'completed'
+                      ? 'bg-green-600 text-white border-green-600 shadow-lg shadow-green-600/25'
+                      : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300'
+                  }`}
+                >
+                  <CheckCircle className="h-5 w-5" />
+                  <div className="text-center">
+                    <div className="font-semibold text-xs">Completed</div>
+                    <div className="text-xs opacity-80">{kpis.completed} patient</div>
+                  </div>
+                </button>
+
+                {/* Future Appointments Tab - Last Position */}
+                <button
+                  onClick={() => setSelectedStatus('future')}
+                  className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
+                    selectedStatus === 'future'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/25'
+                      : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300'
+                  }`}
+                >
+                  <CalendarDays className="h-5 w-5" />
+                  <div className="text-center">
+                    <div className="font-semibold text-xs">Future</div>
+                    <div className="text-xs opacity-80">3 upcoming</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
           
           <CardContent className="p-6">
             {/* Always Show Table */}
