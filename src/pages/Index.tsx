@@ -90,6 +90,10 @@ const Index = () => {
       case 'dashboard':
         const userRole = localStorage.getItem('easyHMS_userRole') || 'doctor';
         
+        // Debug info
+        console.log('Index - Current user role:', userRole);
+        console.log('Index - Should show AdminDashboard:', userRole === 'admin' || userRole === 'admin-doctor');
+        
         // Admin and Admin-Doctor users see AdminDashboard
         if (userRole === 'admin' || userRole === 'admin-doctor') {
           return <AdminDashboard />;
