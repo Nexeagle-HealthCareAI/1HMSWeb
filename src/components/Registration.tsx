@@ -183,7 +183,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-3 mb-6">
               <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl">
-                <Sparkles className="h-8 w-8" />
+                <img src="/lovable-uploads/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" alt="Company Logo" className="h-8 w-8" />
               </div>
               <h1 className="text-5xl font-bold">Join NexEagle</h1>
             </div>
@@ -245,10 +245,8 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
             {/* Header */}
             <div className="space-y-2">
               <div className="flex justify-center">
-                <div className="p-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg">
-                  {step === 1 && <Building2 className="h-8 w-8 text-white" />}
-                  {step === 2 && <Phone className="h-8 w-8 text-white" />}
-                  {step === 3 && <User className="h-8 w-8 text-white" />}
+                <div className="p-4 bg-white rounded-2xl shadow-lg">
+                  <img src="/lovable-uploads/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" alt="Company Logo" className="h-8 w-8" />
                 </div>
               </div>
               
