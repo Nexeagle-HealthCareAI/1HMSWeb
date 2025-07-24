@@ -141,13 +141,13 @@ const doctorPerformance = [
 ];
 
 export const AdminDashboard = () => {
+  const { toast } = useToast();
   const [dateFilter, setDateFilter] = useState('today');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentView, setCurrentView] = useState('dashboard');
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [showProfilePage, setShowProfilePage] = useState(false);
-  const { toast } = useToast();
 
   // Calculate hospital registration completion score
   const calculateHospitalCompletionScore = (): number => {
