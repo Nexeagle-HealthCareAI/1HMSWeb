@@ -426,22 +426,6 @@ const navigation = [
               <ProfileCompletion onClose={() => setShowProfileCompletion(false)} />
             )}
 
-            {/* Quick Navigation */}
-            <ContextualGuide {...DASHBOARD_GUIDES['quick-nav']}>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 lg:gap-4 mb-6">
-                {navigation.map((item) => (
-                  <Button
-                    key={item.id}
-                    variant="outline"
-                    className="h-16 sm:h-18 lg:h-20 flex-col gap-1 lg:gap-2 text-xs"
-                    onClick={() => setCurrentPage(item.id)}
-                  >
-                    <item.icon className="h-4 w-4 lg:h-6 lg:w-6" />
-                    <span className="text-center leading-tight">{item.name}</span>
-                  </Button>
-                ))}
-              </div>
-            </ContextualGuide>
 
             {/* KPI Cards */}
             <ContextualGuide {...DASHBOARD_GUIDES['kpi-cards']}>
