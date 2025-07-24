@@ -333,21 +333,20 @@ export const AppointmentDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Enhanced Appointments Table with Status Navigation */}
-        <Card className="bg-card shadow-card rounded-xl border-0">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-foreground text-lg md:text-xl">
+        {/* Enhanced Appointments Table with Status Navigation - Full Screen */}
+        <div className="w-full">
+          <div className="mb-6">
+            <div className="flex items-center gap-2 text-foreground text-lg md:text-xl mb-2">
               <Clock className="h-4 w-4 md:h-5 md:w-5 text-healthcare-primary" />
               📊 Patient Journey Dashboard
-            </CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
+            </div>
+            <p className="text-sm text-muted-foreground">
               Track patient progress through appointment stages
             </p>
-          </CardHeader>
+          </div>
 
-          {/* Enhanced Patient Journey Navigation Header */}
-          <div className="px-3 md:px-6 pb-4">
-            <div className="bg-gradient-to-r from-healthcare-primary/10 to-healthcare-secondary/10 rounded-xl p-4 border border-healthcare-primary/20">
+          {/* Enhanced Patient Journey Navigation Header - Full Screen */}
+          <div className="bg-gradient-to-r from-healthcare-primary/10 to-healthcare-secondary/10 rounded-xl p-6 border border-healthcare-primary/20 mb-6 w-full">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 bg-healthcare-primary rounded-full animate-pulse"></div>
@@ -489,9 +488,10 @@ export const AppointmentDashboard = () => {
                 </button>
               </div>
             </div>
-          </div>
-          
-          <CardContent className="p-6">
+
+          {/* Appointments Table */}
+          <Card className="bg-card shadow-card rounded-xl border-0">
+            <CardContent className="p-6">
             {/* Always Show Table */}
             <div className="w-full">
               {/* Desktop Table */}
@@ -559,9 +559,9 @@ export const AppointmentDashboard = () => {
                 ))}
               </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
 
       {/* Vitals Form Modal */}
       {showVitalsForm && selectedPatient && (
@@ -572,6 +572,7 @@ export const AppointmentDashboard = () => {
           hideSkipButton={true}
         />
       )}
+      </div>
     </div>
   );
 };

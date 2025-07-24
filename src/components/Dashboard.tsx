@@ -510,22 +510,20 @@ const navigation = [
               </CardContent>
             </Card>
 
-            {/* Patient Journey Dashboard */}
-            <ContextualGuide {...DASHBOARD_GUIDES['patient-table']}>
-              <Card className="bg-card shadow-card rounded-xl border-0">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-foreground text-lg md:text-xl">
-                    <Clock className="h-4 w-4 md:h-5 md:w-5 text-healthcare-primary" />
-                    📊 Patient Journey Dashboard
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Track patient progress through appointment stages
-                  </p>
-                </CardHeader>
+            {/* Enhanced Appointments Table with Status Navigation - Full Screen */}
+            <div className="w-full">
+              <div className="mb-6">
+                <div className="flex items-center gap-2 text-foreground text-lg md:text-xl mb-2">
+                  <Clock className="h-4 w-4 md:h-5 md:w-5 text-healthcare-primary" />
+                  📊 Patient Journey Dashboard
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Track patient progress through appointment stages
+                </p>
+              </div>
 
-                {/* Patient Journey Navigation */}
-                <div className="px-3 md:px-6 pb-4">
-                  <div className="bg-gradient-to-r from-healthcare-primary/10 to-healthcare-secondary/10 rounded-xl p-4 border border-healthcare-primary/20">
+              {/* Patient Journey Navigation - Full Screen */}
+              <div className="bg-gradient-to-r from-healthcare-primary/10 to-healthcare-secondary/10 rounded-xl p-6 border border-healthcare-primary/20 mb-6 w-full">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-healthcare-primary rounded-full animate-pulse"></div>
@@ -665,9 +663,11 @@ const navigation = [
                           <div className="text-xs opacity-80">3 upcoming</div>
                         </div>
                       </button>
-                    </div>
-                  </div>
                 </div>
+              </div>
+
+              {/* Appointments Table */}
+              <Card className="bg-card shadow-card rounded-xl border-0">
                 
                 <CardContent className="p-6">
                   {/* Enhanced Appointment Table */}
@@ -739,7 +739,7 @@ const navigation = [
                   </div>
                 </CardContent>
               </Card>
-            </ContextualGuide>
+            </div>
           </div>
         );
     }
