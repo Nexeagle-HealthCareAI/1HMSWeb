@@ -49,7 +49,9 @@ import {
   Cog,
   ShieldCheck,
   X,
-  User
+  User,
+  CheckCircle2,
+  ArrowRight
 } from 'lucide-react';
 import { UserManagement } from './UserManagement';
 import { PatientsPage } from './PatientsPage';
@@ -63,6 +65,7 @@ import { ProfileCompletionBanner } from './ProfileCompletionBanner';
 import WelcomeSetup from './WelcomeSetup';
 import { ProfilePage } from './ProfilePage';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 
 // Mock data
 const kpiData = {
@@ -144,6 +147,7 @@ export const AdminDashboard = () => {
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [showProfilePage, setShowProfilePage] = useState(false);
+  const { toast } = useToast();
 
   // Calculate hospital registration completion score
   const calculateHospitalCompletionScore = (): number => {
@@ -297,38 +301,70 @@ export const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle">
-      {/* Hospital Registration Completion Banner */}
-      {hospitalScore < 80 && !bannerDismissed && (
-        <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20 border-l-4 border-orange-500 p-4 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Building2 className="h-6 w-6 text-orange-600" />
+      {/* Hospital Registration Meter - Always visible for admins */}
+      {hospitalScore < 100 && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl p-6 shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-600 rounded-full">
+                <Building2 className="h-8 w-8 text-white" />
+              </div>
               <div>
-                <h3 className="font-semibold text-orange-800 dark:text-orange-200">
-                  🏥 Complete Hospital Registration ({hospitalScore}%)
-                </h3>
-                <p className="text-sm text-orange-700 dark:text-orange-300">
-                  Complete your hospital details to unlock all admin features
+                <h2 className="text-xl font-bold text-blue-900 dark:text-blue-100">
+                  🏥 Hospital Registration Progress
+                </h2>
+                <p className="text-blue-700 dark:text-blue-300">
+                  Complete hospital details to unlock all admin features
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button 
-                onClick={() => setCurrentView('system-config-hospital')} 
-                size="sm" 
-                className="bg-orange-600 hover:bg-orange-700 text-white"
-              >
-                Update Details
-              </Button>
-              <Button 
-                onClick={() => setBannerDismissed(true)} 
-                variant="ghost" 
-                size="sm"
-                className="text-orange-600"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-blue-600 mb-1">{hospitalScore}%</div>
+              <div className="text-sm text-blue-500 uppercase tracking-wide">Complete</div>
             </div>
+          </div>
+          
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Progress</span>
+              <span className="text-sm text-blue-600">{hospitalScore}/100%</span>
+            </div>
+            <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-4 overflow-hidden">
+              <div 
+                className="bg-gradient-to-r from-blue-600 to-blue-500 h-4 rounded-full transition-all duration-500 ease-out relative"
+                style={{ width: `${hospitalScore}%` }}
+              >
+                <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm">
+              {hospitalScore < 70 ? (
+                <>
+                  <X className="h-4 w-4 text-red-500" />
+                  <span className="text-red-700 dark:text-red-300 font-medium">
+                    Admin features locked - Complete required fields
+                  </span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span className="text-green-700 dark:text-green-300 font-medium">
+                    Basic features unlocked - Complete for full access
+                  </span>
+                </>
+              )}
+            </div>
+            
+            <Button 
+              onClick={() => setCurrentView('system-config-hospital')} 
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2"
+            >
+              {hospitalScore < 70 ? 'Complete Required Fields' : 'Update Hospital Details'}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           </div>
         </div>
       )}
@@ -393,29 +429,64 @@ export const AdminDashboard = () => {
 
       {/* Admin Navigation Modules */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 lg:gap-4">
-        {adminModules.map((module) => (
-          <Card 
-            key={module.id}
-            className={`cursor-pointer transition-all hover:shadow-lg ${
-              currentView === module.id 
-                ? 'ring-2 ring-primary bg-primary/5' 
-                : 'hover:bg-muted/50'
-            }`}
-            onClick={() => setCurrentView(module.id)}
-          >
-            <CardContent className="p-3 lg:p-4 text-center">
-              <module.icon className={`h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 ${
-                currentView === module.id ? 'text-primary' : 'text-muted-foreground'
-              }`} />
-              <h3 className={`font-medium text-xs lg:text-sm mb-1 ${
-                currentView === module.id ? 'text-primary' : 'text-foreground'
-              }`}>
-                {module.name}
-              </h3>
-              <p className="text-xs text-muted-foreground hidden sm:block">{module.description}</p>
-            </CardContent>
-          </Card>
-        ))}
+        {adminModules.map((module) => {
+          const isLocked = hospitalScore < 70 && module.id !== 'dashboard' && module.id !== 'system-config';
+          
+          return (
+            <Card 
+              key={module.id}
+              className={`cursor-pointer transition-all relative ${
+                isLocked 
+                  ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800' 
+                  : currentView === module.id 
+                    ? 'ring-2 ring-primary bg-primary/5 hover:shadow-lg' 
+                    : 'hover:bg-muted/50 hover:shadow-lg'
+              }`}
+              onClick={() => {
+                if (!isLocked) {
+                  setCurrentView(module.id);
+                } else {
+                  toast({
+                    title: "Feature Locked",
+                    description: "Complete hospital registration to unlock this feature.",
+                    variant: "destructive"
+                  });
+                }
+              }}
+            >
+              <CardContent className="p-3 lg:p-4 text-center">
+                <div className="relative">
+                  <module.icon className={`h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 ${
+                    isLocked 
+                      ? 'text-gray-400' 
+                      : currentView === module.id 
+                        ? 'text-primary' 
+                        : 'text-muted-foreground'
+                  }`} />
+                  {isLocked && (
+                    <div className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1">
+                      <X className="h-3 w-3" />
+                    </div>
+                  )}
+                </div>
+                <h3 className={`font-medium text-xs lg:text-sm mb-1 ${
+                  isLocked 
+                    ? 'text-gray-400' 
+                    : currentView === module.id 
+                      ? 'text-primary' 
+                      : 'text-foreground'
+                }`}>
+                  {module.name}
+                </h3>
+                <p className={`text-xs hidden sm:block ${
+                  isLocked ? 'text-gray-400' : 'text-muted-foreground'
+                }`}>
+                  {isLocked ? 'Locked' : module.description}
+                </p>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Dashboard Content */}
