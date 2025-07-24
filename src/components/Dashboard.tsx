@@ -51,6 +51,7 @@ import { AppointmentBooking } from './AppointmentBooking';
 import { PatientsPage } from './PatientsPage';
 import { ProfileCompletion } from './ProfileCompletion';
 import { ProfileCompletionBanner } from './ProfileCompletionBanner';
+import { ProfilePage } from './ProfilePage';
 import WelcomeSetup from './WelcomeSetup';
 import { Billing } from './Billing';
 import { DocAI } from './DocAI';
@@ -246,6 +247,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [showProfileCompletion, setShowProfileCompletion] = useState(true);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [showSetup, setShowSetup] = useState(false);
+  const [showProfilePage, setShowProfilePage] = useState(false);
   
   // Patient journey dashboard states
   const [searchTerm, setSearchTerm] = useState('');
@@ -294,6 +296,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   };
   
   const profileScore = calculateProfileScore();
+  const userRole = localStorage.getItem('easyHMS_userRole') || 'doctor';
 
 const navigation = [
     { id: 'dashboard', name: 'Dashboard', icon: Home },
@@ -389,6 +392,16 @@ const navigation = [
 
   const uniqueDoctors = [...new Set(mockAppointments.map(apt => apt.doctorName))];
 
+  // Show profile page if requested
+  if (showProfilePage) {
+    return (
+      <ProfilePage 
+        onBack={() => setShowProfilePage(false)} 
+        userType={userRole as any}
+      />
+    );
+  }
+
   const renderContent = () => {
     if (selectedPatientId) {
       return <EPrescription patientId={selectedPatientId} />;
@@ -416,7 +429,7 @@ const navigation = [
             {profileScore < 90 && !localStorage.getItem('easyHMS_setupCompleted') && (
               <ProfileCompletionBanner
                 profileScore={profileScore}
-                onOpenSetup={() => setShowSetup(true)}
+                onOpenSetup={() => setShowProfilePage(true)}
                 onDismiss={() => setShowProfileCompletion(false)}
               />
             )}
@@ -833,15 +846,15 @@ const navigation = [
                   <div className="w-16 h-2 bg-background rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-gradient-primary transition-all duration-300" 
-                      style={{ width: '75%' }}
+                      style={{ width: `${profileScore}%` }}
                     />
                   </div>
-                  <span className="text-xs font-medium">75%</span>
+                  <span className="text-xs font-medium">{profileScore}%</span>
                   <Button
                     variant="link"
                     size="sm"
                     className="p-0 h-auto text-xs text-healthcare-primary"
-                    onClick={() => setShowProfileCompletion(true)}
+                    onClick={() => setShowProfilePage(true)}
                   >
                     Complete Profile
                   </Button>
@@ -887,14 +900,16 @@ const navigation = [
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowProfilePage(true)}>
                     <User className="mr-2 h-4 w-4" />
-                    Profile
+                    My Profile
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowProfileCompletion(true)}>
-                    <UserCheck className="mr-2 h-4 w-4" />
-                    Complete Profile (75%)
-                  </DropdownMenuItem>
+                  {profileScore < 90 && (
+                    <DropdownMenuItem onClick={() => setShowProfilePage(true)} className="text-blue-600">
+                      <UserCheck className="mr-2 h-4 w-4" />
+                      Complete Profile ({profileScore}%)
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onLogout} className="text-healthcare-error">
                     <LogOut className="mr-2 h-4 w-4" />

@@ -40,7 +40,13 @@ const Index = () => {
     if (userRole) {
       localStorage.setItem('easyHMS_userRole', userRole);
     }
-    setCurrentState('dashboard');
+    
+    // For admin-doctor after quick registration, land on Admin Panel
+    if (userRole === 'admin-doctor') {
+      setCurrentState('dashboard'); // Will show AdminDashboard with setup requirements
+    } else {
+      setCurrentState('dashboard');
+    }
   };
 
   const handleSetupComplete = (setupData: any) => {
@@ -83,9 +89,14 @@ const Index = () => {
         );
       case 'dashboard':
         const userRole = localStorage.getItem('easyHMS_userRole') || 'doctor';
-        return userRole === 'admin' || userRole === 'admin-doctor' ? 
-          <AdminDashboard /> : 
-          <Dashboard onLogout={handleLogout} />;
+        
+        // Admin and Admin-Doctor users see AdminDashboard
+        if (userRole === 'admin' || userRole === 'admin-doctor') {
+          return <AdminDashboard />;
+        }
+        
+        // Regular doctors and staff see regular Dashboard
+        return <Dashboard onLogout={handleLogout} />;
       default:
         return null;
     }

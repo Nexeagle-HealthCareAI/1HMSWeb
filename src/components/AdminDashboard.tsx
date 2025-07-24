@@ -47,7 +47,9 @@ import {
   CreditCard,
   BarChart3,
   Cog,
-  ShieldCheck
+  ShieldCheck,
+  X,
+  User
 } from 'lucide-react';
 import { UserManagement } from './UserManagement';
 import { PatientsPage } from './PatientsPage';
@@ -59,6 +61,7 @@ import { PatientBillManagement } from './billing/PatientBillManagement';
 import { InsuranceManagement } from './billing/InsuranceManagement';
 import { ProfileCompletionBanner } from './ProfileCompletionBanner';
 import WelcomeSetup from './WelcomeSetup';
+import { ProfilePage } from './ProfilePage';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 // Mock data
@@ -140,18 +143,42 @@ export const AdminDashboard = () => {
   const [currentView, setCurrentView] = useState('dashboard');
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [showProfilePage, setShowProfilePage] = useState(false);
 
-  // Calculate profile completion score
+  // Calculate hospital registration completion score
+  const calculateHospitalCompletionScore = (): number => {
+    const setupData = localStorage.getItem('easyHMS_setupData');
+    const hasCompleted = localStorage.getItem('easyHMS_setupCompleted');
+    
+    if (hasCompleted) return 100;
+    
+    if (!setupData) return 0;
+    
+    const data = JSON.parse(setupData);
+    
+    const hospitalFields = [
+      data.hospital?.name,
+      data.hospital?.phone,
+      data.hospital?.registrationNumber,
+      data.hospital?.address,
+      data.hospital?.email,
+    ];
+    
+    const completed = hospitalFields.filter(field => field && field.toString().trim() !== '').length;
+    return Math.round((completed / hospitalFields.length) * 100);
+  };
+
+  // Calculate profile completion score for admin/doctor
   const calculateProfileScore = (): number => {
     const setupData = localStorage.getItem('easyHMS_setupData');
     const hasCompleted = localStorage.getItem('easyHMS_setupCompleted');
+    const userRole = localStorage.getItem('easyHMS_userRole') || 'admin';
     
     if (hasCompleted) return 100;
     
     if (!setupData) return 20;
     
     const data = JSON.parse(setupData);
-    const userRole = localStorage.getItem('easyHMS_userRole') || 'doctor';
     
     let requiredFields = [
       data.hospital?.name,
@@ -192,6 +219,8 @@ export const AdminDashboard = () => {
   };
 
   const profileScore = calculateProfileScore();
+  const hospitalScore = calculateHospitalCompletionScore();
+  const userRole = localStorage.getItem('easyHMS_userRole') || 'admin';
 
   const handleSetupComplete = (setupData: any) => {
     localStorage.setItem('easyHMS_setupCompleted', 'true');
@@ -256,13 +285,59 @@ export const AdminDashboard = () => {
     { id: 'audit-security', name: 'Audit & Security', icon: ShieldCheck, description: 'Logs & Security' }
   ];
 
+  // Show profile page if requested
+  if (showProfilePage) {
+    return (
+      <ProfilePage 
+        onBack={() => setShowProfilePage(false)} 
+        userType={userRole as any}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle">
-      {/* Profile Completion Banner */}
-      {!bannerDismissed && (
+      {/* Hospital Registration Completion Banner */}
+      {hospitalScore < 80 && !bannerDismissed && (
+        <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20 border-l-4 border-orange-500 p-4 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Building2 className="h-6 w-6 text-orange-600" />
+              <div>
+                <h3 className="font-semibold text-orange-800 dark:text-orange-200">
+                  🏥 Complete Hospital Registration ({hospitalScore}%)
+                </h3>
+                <p className="text-sm text-orange-700 dark:text-orange-300">
+                  Complete your hospital details to unlock all admin features
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button 
+                onClick={() => setCurrentView('system-config')} 
+                size="sm" 
+                className="bg-orange-600 hover:bg-orange-700 text-white"
+              >
+                Update Details
+              </Button>
+              <Button 
+                onClick={() => setBannerDismissed(true)} 
+                variant="ghost" 
+                size="sm"
+                className="text-orange-600"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Profile Completion Banner for Admin as Doctor */}
+      {(userRole === 'admin-doctor' || userRole === 'doctor') && profileScore < 90 && !bannerDismissed && (
         <ProfileCompletionBanner
           profileScore={profileScore}
-          onOpenSetup={() => setShowSetupDialog(true)}
+          onOpenSetup={() => setShowProfilePage(true)}
           onDismiss={() => setBannerDismissed(true)}
         />
       )}
@@ -285,6 +360,19 @@ export const AdminDashboard = () => {
           <p className="text-muted-foreground">Hospital Management Overview</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {/* Profile Completion Indicator */}
+          {(userRole === 'admin-doctor' || userRole === 'doctor') && profileScore < 90 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowProfilePage(true)}
+              className="text-blue-600 border-blue-200 hover:bg-blue-50"
+            >
+              <User className="h-4 w-4 mr-2" />
+              Profile {profileScore}%
+            </Button>
+          )}
+          
           <Select defaultValue="today">
             <SelectTrigger className="w-[120px] sm:w-[150px]">
               <SelectValue />

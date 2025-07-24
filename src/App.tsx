@@ -10,6 +10,7 @@ import { EPrescription } from "./components/EPrescription";
 import { AdminDashboard } from "./components/AdminDashboard";
 import { AppointmentDashboard } from "./components/AppointmentDashboard";
 import { AppointmentBooking } from "./components/AppointmentBooking";
+import { ProfilePage } from "./components/ProfilePage";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/appointment-dashboard" element={<AppointmentDashboard />} />
           <Route path="/appointment-scheduler" element={<AppointmentDashboard />} />
           <Route path="/book-appointment" element={<AppointmentBooking />} />
+          <Route path="/profile" element={<ProfilePage onBack={() => window.history.back()} />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
