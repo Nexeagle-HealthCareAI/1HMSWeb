@@ -90,22 +90,9 @@ const Index = () => {
       case 'dashboard':
         const userRole = localStorage.getItem('easyHMS_userRole') || 'doctor';
         
-        // Check if profile is complete before allowing dashboard access
-        const isProfileComplete = checkProfileCompletion(userRole);
-        
+        // Debug info
         console.log('Index - Current user role:', userRole);
-        console.log('Index - Profile complete:', isProfileComplete);
-        
-        // If profile not complete, force to welcome setup
-        if (!isProfileComplete) {
-          console.log('Index - Redirecting to setup due to incomplete profile');
-          return (
-            <WelcomeSetup
-              onComplete={handleSetupComplete}
-              onSkip={handleSetupSkip}
-            />
-          );
-        }
+        console.log('Index - Should show AdminDashboard:', userRole === 'admin' || userRole === 'admin-doctor');
         
         // Admin and Admin-Doctor users see AdminDashboard
         if (userRole === 'admin' || userRole === 'admin-doctor') {
@@ -117,77 +104,6 @@ const Index = () => {
       default:
         return null;
     }
-  };
-
-  // Function to check if profile is complete enough for dashboard access
-  const checkProfileCompletion = (userRole: string): boolean => {
-    const setupData = localStorage.getItem('easyHMS_setupData');
-    const hasCompleted = localStorage.getItem('easyHMS_setupCompleted');
-    
-    // If user marked setup as completed, allow access
-    if (hasCompleted) return true;
-    
-    // If no setup data exists, profile is not complete
-    if (!setupData) return false;
-    
-    const data = JSON.parse(setupData);
-    
-    // For admin users, check hospital registration completion
-    if (userRole === 'admin') {
-      const hospitalFields = [
-        data.hospital?.name,
-        data.hospital?.phone,
-        data.hospital?.registrationNumber,
-        data.hospital?.address,
-      ];
-      
-      const completed = hospitalFields.filter(field => field && field.toString().trim() !== '').length;
-      const hospitalScore = Math.round((completed / hospitalFields.length) * 100);
-      
-      console.log('Admin hospital completion score:', hospitalScore);
-      return hospitalScore >= 70; // Require 70% completion for dashboard access
-    }
-    
-    // For admin-doctor users, check both hospital and doctor fields
-    if (userRole === 'admin-doctor') {
-      const hospitalFields = [
-        data.hospital?.name,
-        data.hospital?.phone,
-        data.hospital?.registrationNumber,
-        data.hospital?.address,
-      ];
-      
-      const doctorFields = [
-        data.doctor?.fullName,
-        data.doctor?.specialization,
-        data.doctor?.licenseNumber,
-        data.doctor?.qualification,
-      ];
-      
-      const hospitalComplete = hospitalFields.filter(field => field && field.toString().trim() !== '').length;
-      const doctorComplete = doctorFields.filter(field => field && field.toString().trim() !== '').length;
-      
-      const hospitalScore = (hospitalComplete / hospitalFields.length) * 50;
-      const doctorScore = (doctorComplete / doctorFields.length) * 50;
-      const totalScore = Math.round(hospitalScore + doctorScore);
-      
-      console.log('Admin-doctor completion score:', totalScore);
-      return totalScore >= 70; // Require 70% completion for dashboard access
-    }
-    
-    // For doctors and other staff, check doctor profile completion
-    const doctorFields = [
-      data.doctor?.fullName,
-      data.doctor?.specialization,
-      data.doctor?.licenseNumber,
-      data.doctor?.qualification,
-    ];
-    
-    const completed = doctorFields.filter(field => field && field.toString().trim() !== '').length;
-    const doctorScore = Math.round((completed / doctorFields.length) * 100);
-    
-    console.log('Doctor profile completion score:', doctorScore);
-    return doctorScore >= 70; // Require 70% completion for dashboard access
   };
 
   return renderCurrentView();
