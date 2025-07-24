@@ -494,21 +494,6 @@ const navigation = [
                       />
                     </div>
                   </div>
-                  
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-full sm:w-48">
-                      <SelectValue placeholder="Filter by Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="vitals-required">❤️ Vitals Required</SelectItem>
-                      <SelectItem value="ready-consultation">✅ Ready For Consultation</SelectItem>
-                      <SelectItem value="under-consultation">👨‍⚕️ Under Consultation</SelectItem>
-                      <SelectItem value="lab-test-required">🧪 Lab Test Required</SelectItem>
-                      <SelectItem value="awaiting-reconsultation">⏳ Awaiting Reconsultation</SelectItem>
-                      <SelectItem value="completed">🏁 Completed</SelectItem>
-                    </SelectContent>
-                  </Select>
 
                   <Select value={doctorFilter} onValueChange={setDoctorFilter}>
                     <SelectTrigger className="w-full sm:w-48">
