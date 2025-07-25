@@ -26,13 +26,8 @@ const Index = () => {
     if (userRole) {
       localStorage.setItem('easyHMS_userRole', userRole);
     }
-    const hasCompletedSetup = localStorage.getItem('easyHMS_setupCompleted');
-    
-    if (!hasCompletedSetup) {
-      setCurrentState('welcome');
-    } else {
-      setCurrentState('dashboard');
-    }
+    // Skip welcome setup and go directly to dashboard
+    setCurrentState('dashboard');
   };
 
   const handleRegister = (userRole?: string) => {
