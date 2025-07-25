@@ -13,17 +13,17 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
-  const [loginType, setLoginType] = useState('mobile');
+  const [loginType, setLoginType] = useState('password'); // 'password' or 'otp'
   
-  // Mobile + OTP fields
+  // Main login fields
+  const [userid, setUserid] = useState(''); // Can be mobile or email
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  
+  // OTP login fields
   const [mobile, setMobile] = useState('');
   const [otp, setOtp] = useState('');
   const [isOtpSent, setIsOtpSent] = useState(false);
-  
-  // Email + Password fields
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   
   // Forgot password
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -83,10 +83,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
     }, 1000);
   };
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
+  const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !password) {
+    if (!userid || !password) {
       toast({
         title: "Error",
         description: "Please fill in all fields",
@@ -409,19 +409,78 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
           </CardHeader>
           
           <CardContent>
-            <Tabs value={loginType} onValueChange={setLoginType} className="space-y-4">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="mobile" className="gap-2">
-                  <Phone className="h-4 w-4" />
-                  Mobile + OTP
-                </TabsTrigger>
-                <TabsTrigger value="email" className="gap-2">
-                  <Mail className="h-4 w-4" />
-                  Email + Password
-                </TabsTrigger>
-              </TabsList>
+            {loginType === 'password' ? (
+              <div className="space-y-4">
+                <form onSubmit={handlePasswordLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="userid">Mobile Number or Email</Label>
+                    <Input
+                      id="userid"
+                      type="text"
+                      value={userid}
+                      onChange={(e) => setUserid(e.target.value)}
+                      placeholder="Enter mobile number or email"
+                      className="h-11"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Enter your password"
+                        className="h-11 pr-10"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
 
-              <TabsContent value="mobile">
+                  <div className="flex justify-between items-center">
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="p-0 h-auto text-sm text-primary"
+                      onClick={() => setLoginType('otp')}
+                    >
+                      Login with OTP
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="p-0 h-auto text-sm text-healthcare-primary"
+                      onClick={() => setShowForgotPassword(true)}
+                    >
+                      Forgot Password?
+                    </Button>
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    className="w-full h-11 bg-gradient-primary text-white font-semibold"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Signing in..." : "Login"}
+                  </Button>
+                </form>
+              </div>
+            ) : (
+              <div className="space-y-4">
                 <form onSubmit={handleMobileLogin} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="mobile">Mobile Number</Label>
@@ -466,68 +525,19 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
                     </div>
                   )}
 
-                  <Button 
-                    type="submit" 
-                    className="w-full h-11 bg-gradient-primary text-white font-semibold"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "Processing..." : isOtpSent ? "Verify & Login" : "Send OTP"}
-                  </Button>
-                </form>
-              </TabsContent>
-
-              <TabsContent value="email">
-                <form onSubmit={handleEmailLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="Enter your email"
-                        className="h-11 pl-10"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="emailPassword">Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="emailPassword"
-                        type={showPassword ? "text" : "password"}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Enter your password"
-                        className="h-11 pr-10"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end">
+                  <div className="flex justify-start">
                     <Button
                       type="button"
                       variant="link"
-                      className="p-0 h-auto text-sm text-healthcare-primary"
-                      onClick={() => setShowForgotPassword(true)}
+                      className="p-0 h-auto text-sm text-primary"
+                      onClick={() => {
+                        setLoginType('password');
+                        setIsOtpSent(false);
+                        setMobile('');
+                        setOtp('');
+                      }}
                     >
-                      Forgot Password?
+                      ← Back to Password Login
                     </Button>
                   </div>
 
@@ -536,11 +546,11 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
                     className="w-full h-11 bg-gradient-primary text-white font-semibold"
                     disabled={isLoading}
                   >
-                    {isLoading ? "Signing in..." : "Login"}
+                    {isLoading ? "Processing..." : isOtpSent ? "Verify & Login" : "Send OTP"}
                   </Button>
                 </form>
-              </TabsContent>
-            </Tabs>
+              </div>
+            )}
             
             {/* Register Now Button - Bottom Position */}
             <div className="mt-8 pt-6 border-t border-border">
