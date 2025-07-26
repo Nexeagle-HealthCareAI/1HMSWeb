@@ -64,7 +64,6 @@ import { InsuranceManagement } from './billing/InsuranceManagement';
 import { ProfileCompletionBanner } from './ProfileCompletionBanner';
 import WelcomeSetup from './WelcomeSetup';
 import { ProfilePage } from './ProfilePage';
-import { PrescriptionSettings } from './PrescriptionSettings';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 
@@ -295,7 +294,6 @@ export const AdminDashboard = () => {
     { id: 'patient-management', name: 'Patient Management', icon: Users, description: 'Patient Records & Data' },
     { id: 'appointment-oversight', name: 'Appointment Oversight', icon: Calendar, description: 'Appointment Management' },
     { id: 'billing-insurance', name: 'Billing & Insurance', icon: CreditCard, description: 'Financial Management' },
-    { id: 'prescription-settings', name: 'Prescription Settings', icon: FileText, description: 'Doctor Content & Identity' },
     { id: 'system-config', name: 'System Configuration', icon: Cog, description: 'Hospital Settings' },
     { id: 'audit-security', name: 'Audit & Security', icon: ShieldCheck, description: 'Logs & Security' }
   ];
@@ -714,9 +712,6 @@ export const AdminDashboard = () => {
 
       {/* Hospital Registration Module */}
       {currentView === 'system-config-hospital' && <SystemConfiguration focusTab="hospital" />}
-
-      {/* Prescription Settings Module */}
-      {currentView === 'prescription-settings' && <PrescriptionSettings />}
 
       {/* Billing & Insurance Module */}
       {currentView === 'billing-insurance' && (

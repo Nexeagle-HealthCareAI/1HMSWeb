@@ -31,7 +31,8 @@ import {
   CalendarDays,
   Eye,
   Filter,
-  Search
+  Search,
+  FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -66,6 +67,7 @@ import { AdminDashboard } from './AdminDashboard';
 import { AppointmentDashboard } from './AppointmentDashboard';
 import { ContextualGuide } from './guide/ContextualGuide';
 import { DASHBOARD_GUIDES } from './guide/GuideData';
+import { PrescriptionSettings } from './PrescriptionSettings';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -303,6 +305,7 @@ const navigation = [
     { id: 'admin', name: 'Admin Panel', icon: Settings },
     { id: 'calendar', name: 'Calendar', icon: Calendar },
     { id: 'appointments', name: 'Appointment Scheduler', icon: Calendar },
+    { id: 'prescription-settings', name: 'Prescription Settings', icon: FileText },
     { id: 'billing', name: 'Billing', icon: CreditCard },
     { id: 'doc-ai', name: 'DocAI', icon: Bot },
     { id: 'chat', name: 'Chat', icon: MessageCircle },
@@ -315,6 +318,7 @@ const navigation = [
       case 'admin': return 'Manage users, system settings, and hospital configuration.';
       case 'calendar': return 'View your schedule and manage appointments efficiently.';
       case 'appointments': return 'Book, reschedule, and manage patient appointments.';
+      case 'prescription-settings': return 'Personalize your medical content and identity for prescriptions.';
       case 'billing': return 'Handle payments, insurance claims, and financial reports.';
       case 'doc-ai': return 'Get AI-powered medical assistance and clinical insights.';
       case 'chat': return 'Communicate with your team and colleagues instantly.';
@@ -329,6 +333,7 @@ const navigation = [
       case 'admin': return ['User management', 'Role permissions', 'System configuration'];
       case 'calendar': return ['Color-coded appointments', 'Drag & drop scheduling', 'Multiple view modes'];
       case 'appointments': return ['Real-time availability', 'Auto-conflict detection', 'SMS confirmations'];
+      case 'prescription-settings': return ['Doctor name customization', 'Qualifications display', 'Registration number setup'];
       case 'billing': return ['Multiple payment methods', 'Insurance processing', 'Automated reports'];
       case 'doc-ai': return ['Medical consultations', 'Drug interactions', 'Diagnosis assistance'];
       case 'chat': return ['Team communication', 'File sharing', 'Real-time messaging'];
@@ -414,6 +419,8 @@ const navigation = [
         return <AdminDashboard />;
       case 'appointments':
         return <AppointmentDashboard />;
+      case 'prescription-settings':
+        return <PrescriptionSettings />;
       case 'billing':
         return <Billing />;
       case 'doc-ai':
