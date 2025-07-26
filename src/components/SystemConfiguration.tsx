@@ -908,35 +908,6 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
                 </CardContent>
               </Card>
 
-              {/* Sections */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings className="h-5 w-5" />
-                    Content Sections
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {Object.entries({
-                    vitals: 'Patient Vitals',
-                    diagnosis: 'Diagnosis',
-                    advice: "Doctor's Advice",
-                    medicines: 'Medications',
-                    nextAppointment: 'Next Appointment'
-                  }).map(([key, label]) => (
-                    <div key={key} className="flex items-center justify-between">
-                      <Label>{label}</Label>
-                      <Switch
-                        checked={prescriptionTemplate.sections[key as keyof typeof prescriptionTemplate.sections]}
-                        onCheckedChange={(checked) => setPrescriptionTemplate(prev => ({
-                          ...prev,
-                          sections: { ...prev.sections, [key]: checked }
-                        }))}
-                      />
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
 
               {/* Footer Settings */}
               <Card>
