@@ -428,14 +428,14 @@ const navigation = [
       default:
         return (
           <Tabs defaultValue="dashboard" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="dashboard" className="flex items-center gap-2">
-                <Home className="h-4 w-4" />
-                Dashboard
+            <TabsList className="grid w-full grid-cols-2 lg:grid-cols-2 bg-muted p-1 h-12">
+              <TabsTrigger value="dashboard" className="flex items-center gap-2 text-sm lg:text-base font-medium">
+                <Home className="h-4 w-4 lg:h-5 lg:w-5" />
+                <span>Dashboard</span>
               </TabsTrigger>
-              <TabsTrigger value="prescription-settings" className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Prescription Settings
+              <TabsTrigger value="prescription-settings" className="flex items-center gap-2 text-sm lg:text-base font-medium">
+                <FileText className="h-4 w-4 lg:h-5 lg:w-5" />
+                <span>Prescription Settings</span>
               </TabsTrigger>
             </TabsList>
             
