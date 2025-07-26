@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff, Shield, Stethoscope, Phone, Mail, RefreshCw, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Eye, EyeOff, Shield, Stethoscope, Phone, Mail, RefreshCw, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,18 +7,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { ValidationUtils } from '@/utils/validation';
 
 interface LoginProps {
   onLogin: () => void;
   onSwitchToRegister: () => void;
 }
 
-export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
+export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
   const { login, loginWithOTP, sendOTP, forgotPasswordSendOTP, resetPassword } = useAuth();
-  const [loginType, setLoginType] = useState('password'); // 'password' or 'otp'
+  const [loginType, setLoginType] = useState('password');
   
-  // Main login fields
-  const [userid, setUserid] = useState(''); // Can be mobile or email
+  // Main login fields with sanitization
+  const [userid, setUserid] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   
@@ -33,28 +34,112 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
   const [forgotOtp, setForgotOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [forgotStep, setForgotStep] = useState(1); // 1: mobile, 2: otp, 3: new password
+  const [forgotStep, setForgotStep] = useState(1);
   
+  // Security states
   const [isLoading, setIsLoading] = useState(false);
   const [otpTimer, setOtpTimer] = useState(0);
   const [forgotOtpTimer, setForgotOtpTimer] = useState(0);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockoutTimeRemaining, setLockoutTimeRemaining] = useState(0);
+  const [passwordStrength, setPasswordStrength] = useState<{ isValid: boolean; strength: 'weak' | 'medium' | 'strong'; errors: string[] }>({ isValid: false, strength: 'weak', errors: [] });
+
+  // Check for account lockout and handle countdown
+  useEffect(() => {
+    const lockoutUntil = localStorage.getItem('accountLockout');
+    if (lockoutUntil && Date.now() < parseInt(lockoutUntil)) {
+      setIsLocked(true);
+      const remainingTime = Math.ceil((parseInt(lockoutUntil) - Date.now()) / 1000);
+      setLockoutTimeRemaining(remainingTime);
+      
+      if (remainingTime > 0) {
+        toast({
+          title: "Account Temporarily Locked",
+          description: `Too many failed attempts. Try again in ${Math.ceil(remainingTime / 60)} minutes.`,
+          variant: "destructive"
+        });
+      }
+    } else {
+      // Clear lockout if expired
+      localStorage.removeItem('accountLockout');
+      setIsLocked(false);
+      setLockoutTimeRemaining(0);
+      setFailedAttempts(0);
+    }
+  }, []);
+
+  // Countdown timer for lockout
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isLocked && lockoutTimeRemaining > 0) {
+      interval = setInterval(() => {
+        setLockoutTimeRemaining(prev => {
+          if (prev <= 1) {
+            // Lockout expired
+            localStorage.removeItem('accountLockout');
+            setIsLocked(false);
+            setFailedAttempts(0);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [isLocked, lockoutTimeRemaining]);
+
+  // Password strength validation
+  useEffect(() => {
+    if (newPassword) {
+      setPasswordStrength(ValidationUtils.validatePassword(newPassword));
+    }
+  }, [newPassword]);
 
   const handleMobileLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!mobile) {
+    //if user had enetered multiple times
+    if (isLocked) {
+      const minutes = Math.floor(lockoutTimeRemaining / 60);
+      const seconds = lockoutTimeRemaining % 60;
       toast({
-        title: "Error",
-        description: "Please enter your mobile number",
+        title: "Account Locked",
+        description: `Too many failed attempts. Please try again in ${minutes}:${seconds.toString().padStart(2, '0')}`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const sanitizedMobile = ValidationUtils.sanitizeInput(mobile);
+    if (!sanitizedMobile || !ValidationUtils.isValidMobile(sanitizedMobile)) {
+      toast({
+        title: "Invalid Input",
+        description: "Please enter a valid mobile number",
         variant: "destructive"
       });
       return;
     }
 
     if (!isOtpSent) {
+      // Rate limiting for OTP requests
+      if (!ValidationUtils.checkRateLimit(`otp_${sanitizedMobile}`, 3, 5 * 60 * 1000)) {
+        toast({
+          title: "Rate Limit Exceeded",
+          description: "Too many OTP requests. Please wait 5 minutes.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       setIsLoading(true);
       try {
-        await sendOTP(mobile);
+        await sendOTP(sanitizedMobile);
         setIsOtpSent(true);
         toast({
           title: "OTP Sent!",
@@ -63,7 +148,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
       } catch (error) {
         toast({
           title: "Error",
-          description: error instanceof Error ? error.message : "Failed to send OTP",
+          description: "Failed to send OTP. Please try again.",
           variant: "destructive"
         });
       } finally {
@@ -72,10 +157,11 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
       return;
     }
 
-    if (!otp || otp.length !== 6) {
+    const sanitizedOtp = ValidationUtils.sanitizeInput(otp);
+    if (!sanitizedOtp || !ValidationUtils.isValidOTP(sanitizedOtp)) {
       toast({
-        title: "Error",
-        description: "Please enter the 6-digit OTP",
+        title: "Invalid OTP",
+        description: "Please enter a valid 6-digit OTP",
         variant: "destructive"
       });
       return;
@@ -83,16 +169,19 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
 
     setIsLoading(true);
     try {
-      await loginWithOTP(mobile, otp);
+      await loginWithOTP(sanitizedMobile, sanitizedOtp);
+      ValidationUtils.clearRateLimit(`otp_${sanitizedMobile}`);
+      setFailedAttempts(0);
       toast({
         title: "Welcome back!",
         description: "Successfully logged in to NexEagle easyHMS"
       });
       onLogin();
     } catch (error) {
+      handleFailedLogin();
       toast({
         title: "Login Failed",
-        description: error instanceof Error ? error.message : "Invalid OTP",
+        description: "Invalid OTP. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -103,10 +192,37 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!userid || !password) {
+    if (isLocked) {
+      const minutes = Math.floor(lockoutTimeRemaining / 60);
+      const seconds = lockoutTimeRemaining % 60;
       toast({
-        title: "Error",
+        title: "Account Locked",
+        description: `Too many failed attempts. Please try again in ${minutes}:${seconds.toString().padStart(2, '0')}`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const sanitizedUserid = ValidationUtils.sanitizeInput(userid);
+    const sanitizedPassword = ValidationUtils.sanitizeInput(password);
+
+    if (!sanitizedUserid || !sanitizedPassword) {
+      toast({
+        title: "Invalid Input",
         description: "Please fill in all fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate email/mobile format
+    const isEmail = ValidationUtils.isValidEmail(sanitizedUserid);
+    const isMobile = ValidationUtils.isValidMobile(sanitizedUserid);
+    
+    if (!isEmail && !isMobile) {
+      toast({
+        title: "Invalid Input",
+        description: "Please enter a valid email or mobile number",
         variant: "destructive"
       });
       return;
@@ -114,16 +230,19 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
 
     setIsLoading(true);
     try {
-      await login(userid, password);
+      await login(sanitizedUserid, sanitizedPassword);
+      ValidationUtils.clearRateLimit('login_attempts');
+      setFailedAttempts(0);
       toast({
         title: "Welcome back!",
         description: "Successfully logged in to NexEagle easyHMS"
       });
       onLogin();
     } catch (error) {
+      handleFailedLogin();
       toast({
         title: "Login Failed",
-        description: error instanceof Error ? error.message : "Invalid credentials",
+        description: "Invalid credentials. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -131,21 +250,55 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
     }
   };
 
+  const handleFailedLogin = () => {
+    setFailedAttempts(prev => {
+      const newAttempts = prev + 1;
+      
+             // Lock account after 5 failed attempts for 1 minute
+       if (newAttempts >= 5) {
+         const lockoutUntil = Date.now() + (1 * 60 * 1000); // 1 minute lockout
+        localStorage.setItem('accountLockout', lockoutUntil.toString());
+        setIsLocked(true);
+        setLockoutTimeRemaining(60); // 60 seconds
+        
+        toast({
+          title: "Account Locked",
+          description: "Too many failed attempts. Account locked for 1 minute.",
+          variant: "destructive"
+        });
+      }
+      
+      return newAttempts;
+    });
+  };
+
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (forgotStep === 1) {
-      if (!forgotMobile) {
+      const sanitizedMobile = ValidationUtils.sanitizeInput(forgotMobile);
+      if (!sanitizedMobile || !ValidationUtils.isValidMobile(sanitizedMobile)) {
         toast({
-          title: "Error",
-          description: "Please enter your mobile number",
+          title: "Invalid Input",
+          description: "Please enter a valid mobile number",
           variant: "destructive"
         });
         return;
       }
+
+      // Rate limiting for forgot password OTP
+      if (!ValidationUtils.checkRateLimit(`forgot_otp_${sanitizedMobile}`, 2, 10 * 60 * 1000)) {
+        toast({
+          title: "Rate Limit Exceeded",
+          description: "Too many password reset requests. Please wait 10 minutes.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       setIsLoading(true);
       try {
-        await forgotPasswordSendOTP(forgotMobile);
+        await forgotPasswordSendOTP(sanitizedMobile);
         setForgotStep(2);
         toast({
           title: "OTP Sent!",
@@ -154,35 +307,49 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
       } catch (error) {
         toast({
           title: "Error",
-          description: error instanceof Error ? error.message : "Failed to send OTP",
+          description: "Failed to send OTP. Please try again.",
           variant: "destructive"
         });
       } finally {
         setIsLoading(false);
       }
     } else if (forgotStep === 2) {
-      if (!forgotOtp || forgotOtp.length !== 6) {
+      const sanitizedOtp = ValidationUtils.sanitizeInput(forgotOtp);
+      if (!sanitizedOtp || !ValidationUtils.isValidOTP(sanitizedOtp)) {
         toast({
-          title: "Error",
-          description: "Please enter the 6-digit OTP",
+          title: "Invalid OTP",
+          description: "Please enter a valid 6-digit OTP",
           variant: "destructive"
         });
         return;
       }
       setForgotStep(3);
     } else {
-      if (!newPassword || !confirmPassword) {
+      const sanitizedNewPassword = ValidationUtils.sanitizeInput(newPassword);
+      const sanitizedConfirmPassword = ValidationUtils.sanitizeInput(confirmPassword);
+
+      if (!sanitizedNewPassword || !sanitizedConfirmPassword) {
         toast({
-          title: "Error",
+          title: "Invalid Input",
           description: "Please fill in all fields",
           variant: "destructive"
         });
         return;
       }
-      if (newPassword !== confirmPassword) {
+
+      if (sanitizedNewPassword !== sanitizedConfirmPassword) {
         toast({
-          title: "Error",
-          description: "Passwords do not match",
+          title: "Passwords Don't Match",
+          description: "New password and confirm password must match",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!passwordStrength.isValid) {
+        toast({
+          title: "Weak Password",
+          description: passwordStrength.errors.join(', '),
           variant: "destructive"
         });
         return;
@@ -190,7 +357,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
       
       setIsLoading(true);
       try {
-        await resetPassword(forgotMobile, forgotOtp, newPassword);
+        await resetPassword(forgotMobile, forgotOtp, sanitizedNewPassword);
+        ValidationUtils.clearRateLimit(`forgot_otp_${forgotMobile}`);
         setShowForgotPassword(false);
         setForgotStep(1);
         setForgotMobile('');
@@ -204,7 +372,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
       } catch (error) {
         toast({
           title: "Error",
-          description: error instanceof Error ? error.message : "Failed to reset password",
+          description: "Failed to reset password. Please try again.",
           variant: "destructive"
         });
       } finally {
@@ -216,8 +384,18 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
   const resendOtp = async () => {
     if (otpTimer > 0) return;
     
+    const sanitizedMobile = ValidationUtils.sanitizeInput(mobile);
+    if (!ValidationUtils.checkRateLimit(`resend_otp_${sanitizedMobile}`, 3, 5 * 60 * 1000)) {
+      toast({
+        title: "Rate Limit Exceeded",
+        description: "Too many resend requests. Please wait 5 minutes.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
-      await sendOTP(mobile);
+      await sendOTP(sanitizedMobile);
       setOtpTimer(30);
       const timer = setInterval(() => {
         setOtpTimer((prev) => {
@@ -236,7 +414,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to resend OTP",
+        description: "Failed to resend OTP. Please try again.",
         variant: "destructive"
       });
     }
@@ -245,8 +423,18 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
   const resendForgotOtp = async () => {
     if (forgotOtpTimer > 0) return;
     
+    const sanitizedMobile = ValidationUtils.sanitizeInput(forgotMobile);
+    if (!ValidationUtils.checkRateLimit(`resend_forgot_otp_${sanitizedMobile}`, 2, 10 * 60 * 1000)) {
+      toast({
+        title: "Rate Limit Exceeded",
+        description: "Too many resend requests. Please wait 10 minutes.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
-      await forgotPasswordSendOTP(forgotMobile);
+      await forgotPasswordSendOTP(sanitizedMobile);
       setForgotOtpTimer(30);
       const timer = setInterval(() => {
         setForgotOtpTimer((prev) => {
@@ -265,36 +453,101 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to resend OTP",
+        description: "Failed to resend OTP. Please try again.",
         variant: "destructive"
       });
     }
   };
 
-  // Mobile-friendly Forgot Password Screen
-  if (showForgotPassword) {
+  // Show security warning if account is locked
+  if (isLocked) {
     return (
-      <div className="min-h-screen bg-gradient-subtle flex flex-col">
+      <div className="min-h-screen bg-gradient-subtle flex flex-col lg:flex-row">
         {/* Mobile Header */}
         <div className="lg:hidden bg-white shadow-sm border-b px-4 py-3">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowForgotPassword(false)}
-              className="p-2"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center gap-2">
+            <img 
+              src="/easyHMS/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
+              alt="Company Logo" 
+              className="h-8 w-8"
+              style={{ width: '32px', height: '32px' }}
+            />
+            <span className="font-bold text-lg">NexEagle easyHMS</span>
+          </div>
+        </div>
+
+        {/* Desktop Promotional Banner (2/3) */}
+        <div className="hidden lg:flex w-2/3 bg-gradient-primary items-center justify-center p-12">
+          <div className="text-white max-w-2xl">
+            <div className="flex items-center gap-4 mb-8">
               <img 
-                src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
+                src="/easyHMS/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
                 alt="Company Logo" 
-                className="h-8 w-8"
-                style={{ width: '32px', height: '32px' }}
+                className="h-16 w-16" 
+                style={{ width: '96px', height: '96px' }} 
               />
-              <span className="font-semibold text-lg">Reset Password</span>
+              <h1 className="text-4xl font-bold">Account Security</h1>
             </div>
+            
+            <h2 className="text-2xl font-semibold mb-6">
+              Protecting Your Healthcare Practice
+            </h2>
+            
+            <p className="text-xl opacity-90 mb-8 leading-relaxed">
+              Your account has been temporarily locked for security reasons. 
+              This helps protect your sensitive healthcare data.
+            </p>
+          </div>
+        </div>
+
+        {/* Locked Account Form */}
+        <div className="w-full lg:w-1/3 flex items-center justify-center p-4 lg:p-8 flex-1">
+          <Card className="w-full max-w-md shadow-elegant">
+            <CardHeader className="text-center space-y-4 pb-6">
+              <div className="hidden lg:flex justify-center mb-4">
+                <div className="p-3 bg-red-100 rounded-full">
+                  <AlertTriangle className="h-8 w-8 text-red-600" />
+                </div>
+              </div>
+              <CardTitle className="text-2xl lg:text-3xl font-bold text-red-600">
+                Account Temporarily Locked
+              </CardTitle>
+              <p className="text-muted-foreground text-sm lg:text-base">
+                Too many failed login attempts. Please try again in:
+              </p>
+              <div className="text-3xl font-bold text-red-600">
+                {Math.floor(lockoutTimeRemaining / 60)}:{(lockoutTimeRemaining % 60).toString().padStart(2, '0')}
+              </div>
+            </CardHeader>
+            <CardContent className="text-center">
+              <Button
+                onClick={() => window.location.reload()}
+                className="w-full h-14 bg-gradient-primary text-white font-semibold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                disabled={isLocked}
+              >
+                {isLocked ? 'Please Wait...' : 'Try Again'}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Forgot Password Screen
+  if (showForgotPassword) {
+    return (
+      <div className="min-h-screen bg-gradient-subtle flex flex-col lg:flex-row">
+        {/* Mobile Header */}
+        <div className="lg:hidden bg-white shadow-sm border-b px-4 py-3">
+          <div className="flex items-center justify-center gap-2">
+            <img 
+              src="/easyHMS/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
+              alt="Company Logo" 
+              className="h-8 w-8"
+              style={{ width: '32px', height: '32px' }}
+            />
+            <span className="font-bold text-lg">Reset Password</span>
           </div>
         </div>
 
@@ -307,7 +560,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
                 <div className="hidden lg:flex justify-center mb-4">
                   <div className="p-3 bg-white rounded-full">
                     <img 
-                      src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
+                      src="/easyHMS/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
                       alt="Company Logo" 
                       className="h-12 w-12" 
                       style={{ width: '96px', height: '96px' }} 
@@ -337,9 +590,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
                           id="forgotMobile"
                           type="tel"
                           value={forgotMobile}
-                          onChange={(e) => setForgotMobile(e.target.value)}
+                          onChange={(e) => setForgotMobile(ValidationUtils.sanitizeInput(e.target.value))}
                           placeholder="+91-XXXXXXXXXX"
                           className="h-14 pl-12 text-base"
+                          disabled={isLoading}
                         />
                       </div>
                     </div>
@@ -354,17 +608,18 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
                         id="forgotOtp"
                         type="text"
                         value={forgotOtp}
-                        onChange={(e) => setForgotOtp(e.target.value)}
+                        onChange={(e) => setForgotOtp(ValidationUtils.sanitizeInput(e.target.value))}
                         placeholder="Enter 6-digit OTP"
                         className="h-14 text-center tracking-widest text-lg font-mono"
                         maxLength={6}
+                        disabled={isLoading}
                       />
                       <Button
                         type="button"
                         variant="link"
                         className="p-0 h-auto text-sm"
                         onClick={resendForgotOtp}
-                        disabled={forgotOtpTimer > 0}
+                        disabled={forgotOtpTimer > 0 || isLoading}
                       >
                         {forgotOtpTimer > 0 ? `Resend OTP in ${forgotOtpTimer}s` : 'Resend OTP'}
                       </Button>
@@ -381,9 +636,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
                           id="newPassword"
                           type="password"
                           value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
+                          onChange={(e) => setNewPassword(ValidationUtils.sanitizeInput(e.target.value))}
                           placeholder="Enter new password"
                           className="h-14 text-base"
+                          disabled={isLoading}
                         />
                       </div>
                       <div className="space-y-3">
@@ -394,9 +650,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
                           id="confirmPassword"
                           type="password"
                           value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          onChange={(e) => setConfirmPassword(ValidationUtils.sanitizeInput(e.target.value))}
                           placeholder="Confirm new password"
                           className="h-14 text-base"
+                          disabled={isLoading}
                         />
                       </div>
                     </>
@@ -425,6 +682,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
                     variant="link"
                     className="p-0 h-auto text-sm text-muted-foreground"
                     onClick={() => setShowForgotPassword(false)}
+                    disabled={isLoading}
                   >
                     ← Back to Login
                   </Button>
@@ -438,7 +696,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
             <div className="text-white max-w-2xl">
               <div className="flex items-center gap-4 mb-8">
                 <img 
-                  src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
+                  src="/easyHMS/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
                   alt="Company Logo" 
                   className="h-16 w-16" 
                   style={{ width: '96px', height: '96px' }} 
@@ -468,7 +726,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
       <div className="lg:hidden bg-white shadow-sm border-b px-4 py-3">
         <div className="flex items-center justify-center gap-2">
           <img 
-            src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
+            src="/easyHMS/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
             alt="Company Logo" 
             className="h-8 w-8"
             style={{ width: '32px', height: '32px' }}
@@ -482,7 +740,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
         <div className="text-white max-w-2xl">
           <div className="flex items-center gap-4 mb-8">
             <img 
-              src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
+              src="/easyHMS/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
               alt="Company Logo" 
               className="h-16 w-16" 
               style={{ width: '96px', height: '96px' }} 
@@ -528,7 +786,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
             <div className="hidden lg:flex justify-center mb-4">
               <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl">
                 <img 
-                  src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
+                  src="/easyHMS/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
                   alt="Company Logo" 
                   className="h-20 w-20" 
                   style={{ width: '96px', height: '96px' }}
@@ -555,9 +813,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
                       id="userid"
                       type="text"
                       value={userid}
-                      onChange={(e) => setUserid(e.target.value)}
+                      onChange={(e) => setUserid(ValidationUtils.sanitizeInput(e.target.value))}
                       placeholder="Enter mobile number or email"
                       className="h-14 text-base"
+                      disabled={isLoading}
                     />
                   </div>
                   
@@ -570,9 +829,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
                         id="password"
                         type={showPassword ? "text" : "password"}
                         value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        onChange={(e) => setPassword(ValidationUtils.sanitizeInput(e.target.value))}
                         placeholder="Enter your password"
                         className="h-14 pr-12 text-base"
+                        disabled={isLoading}
                       />
                       <Button
                         type="button"
@@ -580,6 +840,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
                         size="sm"
                         className="absolute right-0 top-0 h-full px-4 hover:bg-transparent"
                         onClick={() => setShowPassword(!showPassword)}
+                        disabled={isLoading}
                       >
                         {showPassword ? (
                           <EyeOff className="h-5 w-5" />
@@ -596,6 +857,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
                       variant="link"
                       className="p-0 h-auto text-sm text-primary"
                       onClick={() => setLoginType('otp')}
+                      disabled={isLoading}
                     >
                       Login with OTP
                     </Button>
@@ -604,10 +866,20 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
                       variant="link"
                       className="p-0 h-auto text-sm text-healthcare-primary"
                       onClick={() => setShowForgotPassword(true)}
+                      disabled={isLoading}
                     >
                       Forgot Password?
                     </Button>
                   </div>
+
+                                     {/* Failed attempts warning */}
+                   {failedAttempts > 0 && failedAttempts < 5 && (
+                     <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                       <p className="text-sm text-yellow-800">
+                         ⚠️ {5 - failedAttempts} login attempt{5 - failedAttempts !== 1 ? 's' : ''} remaining before account lockout
+                       </p>
+                     </div>
+                   )}
 
                   <Button 
                     type="submit" 
@@ -638,10 +910,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
                         id="mobile"
                         type="tel"
                         value={mobile}
-                        onChange={(e) => setMobile(e.target.value)}
+                        onChange={(e) => setMobile(ValidationUtils.sanitizeInput(e.target.value))}
                         placeholder="+91-XXXXXXXXXX"
                         className="h-14 pl-12 text-base"
-                        disabled={isOtpSent}
+                        disabled={isOtpSent || isLoading}
                       />
                     </div>
                   </div>
@@ -655,10 +927,11 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
                         id="otp"
                         type="text"
                         value={otp}
-                        onChange={(e) => setOtp(e.target.value)}
+                        onChange={(e) => setOtp(ValidationUtils.sanitizeInput(e.target.value))}
                         placeholder="Enter 6-digit OTP"
                         className="h-14 text-center tracking-widest text-lg font-mono"
                         maxLength={6}
+                        disabled={isLoading}
                       />
                       <div className="flex justify-between items-center">
                         <Button
@@ -666,7 +939,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
                           variant="link"
                           className="p-0 h-auto text-sm"
                           onClick={resendOtp}
-                          disabled={otpTimer > 0}
+                          disabled={otpTimer > 0 || isLoading}
                         >
                           <RefreshCw className="h-4 w-4 mr-1" />
                           {otpTimer > 0 ? `Resend OTP (${otpTimer}s)` : 'Resend OTP'}
@@ -686,6 +959,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
                         setMobile('');
                         setOtp('');
                       }}
+                      disabled={isLoading}
                     >
                       ← Back to Password Login
                     </Button>
@@ -718,6 +992,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
                 <Button
                   onClick={onSwitchToRegister}
                   className="w-full h-14 bg-gradient-to-r from-primary to-primary/80 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                  disabled={isLoading}
                 >
                   🚀 Register Now - Join 10K+ Doctors!
                 </Button>
@@ -731,4 +1006,4 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => 
       </div>
     </div>
   );
-};
+}; 

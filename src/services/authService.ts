@@ -19,17 +19,20 @@ export interface ApiError {
 }
 
 import { API_BASE_URL, API_ENDPOINTS, DEFAULT_HEADERS } from '@/config/api';
+import { SessionManager } from '@/utils/sessionManager';
+import { CSRFProtection } from '@/utils/csrfProtection';
 
 // API configuration
 
 // Auth service class
 export class AuthService {
   public static getAuthHeaders(): HeadersInit {
-    const token = localStorage.getItem('accessToken');
-    return {
+    const token = SessionManager.getToken();
+    const headers = {
       'Content-Type': 'application/json',
       ...(token && { 'Authorization': `Bearer ${token}` }),
     };
+    return CSRFProtection.addCSRFHeader(headers);
   }
 
   // Login with email and password
@@ -135,23 +138,22 @@ export class AuthService {
 
   // Logout
   static logout(): void {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('user');
+    SessionManager.clearSession();
   }
 
   // Check if user is authenticated
   static isAuthenticated(): boolean {
-    return !!localStorage.getItem('accessToken');
+    return SessionManager.isAuthenticated();
   }
 
   // Get access token
   static getAccessToken(): string | null {
-    return localStorage.getItem('accessToken');
+    return SessionManager.getToken();
   }
 
   // Set access token
   static setAccessToken(token: string): void {
-    localStorage.setItem('accessToken', token);
+    SessionManager.setToken(token);
   }
 }
 

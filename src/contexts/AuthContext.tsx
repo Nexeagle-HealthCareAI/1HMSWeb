@@ -124,9 +124,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
+    // Clear all authentication data
     AuthService.logout();
+    
+    // Reset local state
     setIsAuthenticated(false);
     setUser(null);
+    setIsLoading(false);
+    
+    // Force a page reload to clear any cached data
+    // This ensures all components are properly reset
+    window.location.href = '/';
   };
 
   const value: AuthContextType = {
