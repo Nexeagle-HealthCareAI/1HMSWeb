@@ -62,7 +62,6 @@ import { FinancialReports } from './billing/FinancialReports';
 import { PatientBillManagement } from './billing/PatientBillManagement';
 import { InsuranceManagement } from './billing/InsuranceManagement';
 import { ProfileCompletionBanner } from './ProfileCompletionBanner';
-import WelcomeSetup from './WelcomeSetup';
 import { ProfilePage } from './ProfilePage';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -235,16 +234,7 @@ export const AdminDashboard = () => {
   console.log('Setup completed:', !!localStorage.getItem('easyHMS_setupCompleted'));
 
 
-  const handleSetupComplete = (setupData: any) => {
-    localStorage.setItem('easyHMS_setupCompleted', 'true');
-    localStorage.setItem('easyHMS_setupData', JSON.stringify(setupData));
-    setShowSetupDialog(false);
-  };
 
-  const handleSetupSkip = () => {
-    localStorage.setItem('easyHMS_setupSkipped', 'true');
-    setShowSetupDialog(false);
-  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -289,7 +279,7 @@ export const AdminDashboard = () => {
   );
 
   const adminModules = [
-    { id: 'dashboard', name: 'DocBoard', icon: Activity, description: 'Overview & Analytics' },
+    { id: 'dashboard', name: 'DashBoard', icon: Activity, description: 'Overview & Analytics' },
     { id: 'user-management', name: 'User Management', icon: Shield, description: 'Users, Roles & Permissions' },
     { id: 'patient-management', name: 'Patient Management', icon: Users, description: 'Patient Records & Data' },
     { id: 'appointment-oversight', name: 'Appointment Oversight', icon: Calendar, description: 'Appointment Management' },
@@ -387,21 +377,25 @@ export const AdminDashboard = () => {
         />
       )}
 
-      {/* Setup Dialog */}
+      {/* Setup Dialog - Removed WelcomeSetup component */}
       <Dialog open={showSetupDialog} onOpenChange={setShowSetupDialog}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
-          <WelcomeSetup
-            onComplete={handleSetupComplete}
-            onSkip={handleSetupSkip}
-            isDialog={true}
-          />
+          <div className="text-center py-8">
+            <h2 className="text-2xl font-bold mb-4">Setup Complete</h2>
+            <p className="text-muted-foreground mb-6">
+              Welcome to NexEagle easyHMS! Your hospital management system is ready to use.
+            </p>
+            <Button onClick={() => setShowSetupDialog(false)}>
+              Get Started
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Top Navigation */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Admin DocBoard</h1>
+          <h1 className="text-2xl font-bold text-foreground">Admin Board</h1>
           <p className="text-muted-foreground">Hospital Management Overview</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
