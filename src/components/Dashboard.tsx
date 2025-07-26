@@ -41,6 +41,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -426,325 +427,247 @@ const navigation = [
         return <BulkMessaging />;
       default:
         return (
-          <div className="space-y-4 lg:space-y-6">
-            {/* Profile Completion Banner */}
-            {profileScore < 90 && !localStorage.getItem('easyHMS_setupCompleted') && (
-              <ProfileCompletionBanner
-                profileScore={profileScore}
-                onOpenSetup={() => setShowProfilePage(true)}
-                onDismiss={() => setShowProfileCompletion(false)}
-              />
-            )}
+          <Tabs defaultValue="dashboard" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="dashboard" className="flex items-center gap-2">
+                <Home className="h-4 w-4" />
+                Dashboard
+              </TabsTrigger>
+              <TabsTrigger value="prescription-settings" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Prescription Settings
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="dashboard" className="space-y-4 lg:space-y-6">
+              {/* Profile Completion Banner */}
+              {profileScore < 90 && !localStorage.getItem('easyHMS_setupCompleted') && (
+                <ProfileCompletionBanner
+                  profileScore={profileScore}
+                  onOpenSetup={() => setShowProfilePage(true)}
+                  onDismiss={() => setShowProfileCompletion(false)}
+                />
+              )}
 
-            {/* Legacy Profile Completion Card */}
-            {showProfileCompletion && localStorage.getItem('easyHMS_setupCompleted') && (
-              <ProfileCompletion onClose={() => setShowProfileCompletion(false)} />
-            )}
+              {/* Legacy Profile Completion Card */}
+              {showProfileCompletion && localStorage.getItem('easyHMS_setupCompleted') && (
+                <ProfileCompletion onClose={() => setShowProfileCompletion(false)} />
+              )}
 
-
-            {/* KPI Cards */}
-            <ContextualGuide {...DASHBOARD_GUIDES['kpi-cards']}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-                {kpiData.map((kpi, index) => (
-                  <Card key={index} className="shadow-card hover:shadow-hover transition-shadow">
-                    <CardContent className="p-4 lg:p-6">
-                      <div className="flex items-center justify-between">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-muted-foreground truncate">
-                            {kpi.title}
-                          </p>
-                          <p className="text-2xl lg:text-3xl font-bold text-foreground">
-                            {kpi.value}
-                          </p>
-                          <p className={`text-xs ${
-                            kpi.change.startsWith('+') ? 'text-healthcare-success' : 'text-healthcare-error'
-                          }`}>
-                            {kpi.change} from yesterday
-                          </p>
+              {/* KPI Cards */}
+              <ContextualGuide {...DASHBOARD_GUIDES['kpi-cards']}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                  {kpiData.map((kpi, index) => (
+                    <Card key={index} className="shadow-card hover:shadow-hover transition-shadow">
+                      <CardContent className="p-4 lg:p-6">
+                        <div className="flex items-center justify-between">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-muted-foreground truncate">
+                              {kpi.title}
+                            </p>
+                            <p className="text-2xl lg:text-3xl font-bold text-foreground">
+                              {kpi.value}
+                            </p>
+                            <p className={`text-xs ${
+                              kpi.change.startsWith('+') ? 'text-healthcare-success' : 'text-healthcare-error'
+                            }`}>
+                              {kpi.change} from yesterday
+                            </p>
+                          </div>
+                          <div className={`p-2 lg:p-3 rounded-full bg-${kpi.color}/10 flex-shrink-0`}>
+                            <kpi.icon className={`h-5 w-5 lg:h-6 lg:w-6 text-${kpi.color}`} />
+                          </div>
                         </div>
-                        <div className={`p-2 lg:p-3 rounded-full bg-${kpi.color}/10 flex-shrink-0`}>
-                          <kpi.icon className={`h-5 w-5 lg:h-6 lg:w-6 text-${kpi.color}`} />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </ContextualGuide>
-
-            {/* Filters & Search */}
-            <Card className="bg-card shadow-card rounded-xl border-0">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-foreground">
-                  <Filter className="h-5 w-5 text-healthcare-primary" />
-                  🔍 Filters & Search
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex-1">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search by Patient ID or Name..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 border-input focus:border-healthcare-primary focus:ring-healthcare-primary/20"
-                      />
-                    </div>
-                  </div>
-
-                  <Select value={doctorFilter} onValueChange={setDoctorFilter}>
-                    <SelectTrigger className="w-full sm:w-48">
-                      <SelectValue placeholder="Filter by Doctor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Doctors</SelectItem>
-                      {uniqueDoctors.map(doctor => (
-                        <SelectItem key={doctor} value={doctor}>🧑‍⚕️ {doctor}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
+              </ContextualGuide>
 
-            {/* Enhanced Appointments Table with Status Navigation - Full Screen */}
-            <div className="w-full">
-              <div className="mb-6">
-                <div className="flex items-center gap-2 text-foreground text-lg md:text-xl mb-2">
-                  <Clock className="h-4 w-4 md:h-5 md:w-5 text-healthcare-primary" />
-                  📊 Patient Journey Dashboard
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Track patient progress through appointment stages
-                </p>
-              </div>
-
-              {/* Patient Journey Navigation - Full Screen */}
-              <div className="bg-gradient-to-r from-healthcare-primary/10 to-healthcare-secondary/10 rounded-xl p-6 border border-healthcare-primary/20 mb-6 w-full">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-healthcare-primary rounded-full animate-pulse"></div>
-                        <h3 className="text-lg font-semibold text-healthcare-primary">Patient Journey Flow</h3>
-                      </div>
-                      <Badge className="bg-healthcare-primary/20 text-healthcare-primary border-healthcare-primary/30">
-                        Live Tracking
-                      </Badge>
-                    </div>
-                    
-                    {/* Single Row Navigation with ALL and Future Appointments */}
-                    <div className="flex flex-wrap gap-2 justify-start">
-                      {/* ALL Tab - First Position */}
-                      <button
-                        onClick={() => setSelectedStatus('all')}
-                        className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
-                          selectedStatus === 'all'
-                            ? 'bg-healthcare-primary text-white border-healthcare-primary shadow-lg shadow-healthcare-primary/25'
-                            : 'bg-healthcare-primary/5 text-healthcare-primary border-healthcare-primary/20 hover:bg-healthcare-primary/10 hover:border-healthcare-primary/30'
-                        }`}
-                      >
-                        <List className="h-5 w-5" />
-                        <div className="text-center">
-                          <div className="font-semibold text-xs">ALL</div>
-                          <div className="text-xs opacity-80">{appointmentKPIs.totalToday} patients</div>
-                        </div>
-                      </button>
-
-                      {/* Vitals Required */}
-                      <button
-                        onClick={() => setSelectedStatus('vitals-required')}
-                        className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
-                          selectedStatus === 'vitals-required'
-                            ? 'bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/25'
-                            : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300'
-                        }`}
-                      >
-                        <Heart className="h-5 w-5" />
-                        <div className="text-center">
-                          <div className="font-semibold text-xs">Vitals</div>
-                          <div className="text-xs opacity-80">{appointmentKPIs.vitalsRequired} patient</div>
-                        </div>
-                      </button>
-
-                      {/* Ready for Consultation */}
-                      <button
-                        onClick={() => setSelectedStatus('ready-consultation')}
-                        className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
-                          selectedStatus === 'ready-consultation'
-                            ? 'bg-green-500 text-white border-green-500 shadow-lg shadow-green-500/25'
-                            : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300'
-                        }`}
-                      >
-                        <CheckCircle className="h-5 w-5" />
-                        <div className="text-center">
-                          <div className="font-semibold text-xs">Ready</div>
-                          <div className="text-xs opacity-80">1 patient</div>
-                        </div>
-                      </button>
-
-                      {/* Under Consultation */}
-                      <button
-                        onClick={() => setSelectedStatus('under-consultation')}
-                        className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
-                          selectedStatus === 'under-consultation'
-                            ? 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-500/25'
-                            : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300'
-                        }`}
-                      >
-                        <Stethoscope className="h-5 w-5" />
-                        <div className="text-center">
-                          <div className="font-semibold text-xs">Consulting</div>
-                          <div className="text-xs opacity-80">1 patient</div>
-                        </div>
-                      </button>
-
-                      {/* Lab Test Required */}
-                      <button
-                        onClick={() => setSelectedStatus('lab-test-required')}
-                        className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
-                          selectedStatus === 'lab-test-required'
-                            ? 'bg-purple-500 text-white border-purple-500 shadow-lg shadow-purple-500/25'
-                            : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 hover:border-purple-300'
-                        }`}
-                      >
-                        <FlaskConical className="h-5 w-5" />
-                        <div className="text-center">
-                          <div className="font-semibold text-xs">Lab Test</div>
-                          <div className="text-xs opacity-80">{appointmentKPIs.labFollowUps} patient</div>
-                        </div>
-                      </button>
-
-                      {/* Awaiting Reconsultation */}
-                      <button
-                        onClick={() => setSelectedStatus('awaiting-reconsultation')}
-                        className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
-                          selectedStatus === 'awaiting-reconsultation'
-                            ? 'bg-yellow-500 text-white border-yellow-500 shadow-lg shadow-yellow-500/25'
-                            : 'bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100 hover:border-yellow-300'
-                        }`}
-                      >
-                        <Clock className="h-5 w-5" />
-                        <div className="text-center">
-                          <div className="font-semibold text-xs">Re-consult</div>
-                          <div className="text-xs opacity-80">{appointmentKPIs.doctorFollowUps} patient</div>
-                        </div>
-                      </button>
-
-                      {/* Completed */}
-                      <button
-                        onClick={() => setSelectedStatus('completed')}
-                        className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
-                          selectedStatus === 'completed'
-                            ? 'bg-green-600 text-white border-green-600 shadow-lg shadow-green-600/25'
-                            : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300'
-                        }`}
-                      >
-                        <CheckCircle className="h-5 w-5" />
-                        <div className="text-center">
-                          <div className="font-semibold text-xs">Completed</div>
-                          <div className="text-xs opacity-80">{appointmentKPIs.completed} patient</div>
-                        </div>
-                      </button>
-
-                      {/* Future Appointments Tab - Last Position */}
-                      <button
-                        onClick={() => setSelectedStatus('future')}
-                        className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
-                          selectedStatus === 'future'
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/25'
-                            : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300'
-                        }`}
-                      >
-                        <CalendarDays className="h-5 w-5" />
-                        <div className="text-center">
-                          <div className="font-semibold text-xs">Future</div>
-                          <div className="text-xs opacity-80">3 upcoming</div>
-                        </div>
-                      </button>
-                </div>
-              </div>
-
-              {/* Appointments Table */}
+              {/* Filters & Search */}
               <Card className="bg-card shadow-card rounded-xl border-0">
-                
-                <CardContent className="p-6">
-                  {/* Enhanced Appointment Table */}
-                  <div className="w-full">
-                    {/* Desktop Table */}
-                    <div className="hidden md:block w-full overflow-x-auto">
-                      <Table className="w-full">
-                        <TableHeader>
-                          <TableRow className="bg-gray-50">
-                            <TableHead>Patient ID</TableHead>
-                            <TableHead>Patient Name</TableHead>
-                            <TableHead>Doctor</TableHead>
-                            <TableHead>Time</TableHead>
-                            <TableHead>Token</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredAppointments.map((appointment) => (
-                            <TableRow key={appointment.id}>
-                              <TableCell className="font-mono text-blue-600">
-                                {appointment.patientId}
-                              </TableCell>
-                              <TableCell>{appointment.patientName}</TableCell>
-                              <TableCell>{appointment.doctorName}</TableCell>
-                              <TableCell>{appointment.appointmentTime}</TableCell>
-                              <TableCell>
-                                <Badge variant="outline">#{appointment.tokenNo}</Badge>
-                              </TableCell>
-                              <TableCell>{getAppointmentStatusBadge(appointment.status)}</TableCell>
-                              <TableCell>
-                                <Button variant="outline" size="sm">
-                                  <Eye className="h-3 w-3 mr-1" />
-                                  View
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-foreground">
+                    <Filter className="h-5 w-5 text-healthcare-primary" />
+                    🔍 Filters & Search
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex-1">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search by Patient ID or Name..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10 border-input focus:border-healthcare-primary focus:ring-healthcare-primary/20"
+                        />
+                      </div>
                     </div>
 
-                    {/* Mobile Cards */}
-                    <div className="md:hidden space-y-3">
-                      {filteredAppointments.map((appointment) => (
-                        <Card key={appointment.id} className="p-4">
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <p className="font-mono text-blue-600 text-sm">{appointment.patientId}</p>
-                              <p className="font-semibold">{appointment.patientName}</p>
-                            </div>
-                            <Badge variant="outline">#{appointment.tokenNo}</Badge>
-                          </div>
-                          <div className="space-y-1 text-sm text-gray-600 mb-3">
-                            <p>Doctor: {appointment.doctorName}</p>
-                            <p>Time: {appointment.appointmentTime}</p>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            {getAppointmentStatusBadge(appointment.status)}
-                            <Button variant="outline" size="sm">
-                              <Eye className="h-3 w-3 mr-1" />
-                              View
-                            </Button>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
+                    <Select value={doctorFilter} onValueChange={setDoctorFilter}>
+                      <SelectTrigger className="w-full sm:w-48">
+                        <SelectValue placeholder="Filter by Doctor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Doctors</SelectItem>
+                        {uniqueDoctors.map(doctor => (
+                          <SelectItem key={doctor} value={doctor}>{doctor}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </CardContent>
               </Card>
-            </div>
 
-            {/* Prescription Settings Section */}
-            <div className="mt-8">
+              {/* Patient Journey */}
+              <Card className="bg-card shadow-card rounded-xl border-0">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-foreground">
+                    <Clock className="h-5 w-5 text-healthcare-primary" />
+                    📊 Patient Journey Dashboard
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Track patient progress through appointment stages
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {/* KPI Row */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4 mb-6">
+                    <div className="flex items-center justify-between p-3 lg:p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <div>
+                        <p className="text-xs lg:text-sm text-blue-600 dark:text-blue-400 font-medium">Total Today</p>
+                        <p className="text-lg lg:text-xl font-bold text-blue-800 dark:text-blue-200">{appointmentKPIs.totalToday}</p>
+                      </div>
+                      <List className="h-4 w-4 lg:h-5 lg:w-5 text-blue-600" />
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-3 lg:p-4 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+                      <div>
+                        <p className="text-xs lg:text-sm text-red-600 dark:text-red-400 font-medium">Need Vitals</p>
+                        <p className="text-lg lg:text-xl font-bold text-red-800 dark:text-red-200">{appointmentKPIs.vitalsRequired}</p>
+                      </div>
+                      <Heart className="h-4 w-4 lg:h-5 lg:w-5 text-red-600" />
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 lg:p-4 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                      <div>
+                        <p className="text-xs lg:text-sm text-yellow-600 dark:text-yellow-400 font-medium">Doc Follow-ups</p>
+                        <p className="text-lg lg:text-xl font-bold text-yellow-800 dark:text-yellow-200">{appointmentKPIs.doctorFollowUps}</p>
+                      </div>
+                      <Stethoscope className="h-4 w-4 lg:h-5 lg:w-5 text-yellow-600" />
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 lg:p-4 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                      <div>
+                        <p className="text-xs lg:text-sm text-purple-600 dark:text-purple-400 font-medium">Lab Follow-ups</p>
+                        <p className="text-lg lg:text-xl font-bold text-purple-800 dark:text-purple-200">{appointmentKPIs.labFollowUps}</p>
+                      </div>
+                      <FlaskConical className="h-4 w-4 lg:h-5 lg:w-5 text-purple-600" />
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 lg:p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                      <div>
+                        <p className="text-xs lg:text-sm text-green-600 dark:text-green-400 font-medium">Completed</p>
+                        <p className="text-lg lg:text-xl font-bold text-green-800 dark:text-green-200">{appointmentKPIs.completed}</p>
+                      </div>
+                      <CheckCircle className="h-4 w-4 lg:h-5 lg:w-5 text-green-600" />
+                    </div>
+                  </div>
+
+                  {/* Status Navigation */}
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {[
+                      { id: 'all', label: 'All', count: filteredAppointments.length },
+                      { id: 'vitals-required', label: 'Vitals Required', count: filteredAppointments.filter(a => a.status === 'vitals-required').length },
+                      { id: 'ready-consultation', label: 'Ready', count: filteredAppointments.filter(a => a.status === 'ready-consultation').length },
+                      { id: 'under-consultation', label: 'Consulting', count: filteredAppointments.filter(a => a.status === 'under-consultation').length },
+                      { id: 'lab-test-required', label: 'Lab Test', count: filteredAppointments.filter(a => a.status === 'lab-test-required').length },
+                      { id: 'awaiting-reconsultation', label: 'Re-consult', count: filteredAppointments.filter(a => a.status === 'awaiting-reconsultation').length },
+                      { id: 'completed', label: 'Completed', count: filteredAppointments.filter(a => a.status === 'completed').length }
+                    ].map((status) => (
+                      <Button
+                        key={status.id}
+                        variant={selectedStatus === status.id ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setSelectedStatus(status.id)}
+                        className="text-xs lg:text-sm"
+                      >
+                        {status.label} ({status.count})
+                      </Button>
+                    ))}
+                  </div>
+
+                  {/* Appointments Table */}
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs lg:text-sm">Token</TableHead>
+                          <TableHead className="text-xs lg:text-sm">Patient</TableHead>
+                          <TableHead className="hidden sm:table-cell text-xs lg:text-sm">Doctor</TableHead>
+                          <TableHead className="text-xs lg:text-sm">Time</TableHead>
+                          <TableHead className="text-xs lg:text-sm">Status</TableHead>
+                          <TableHead className="hidden lg:table-cell text-xs lg:text-sm">Vitals</TableHead>
+                          <TableHead className="text-xs lg:text-sm">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredAppointments.slice(0, 10).map((appointment) => (
+                          <TableRow key={appointment.id} className="hover:bg-muted/50">
+                            <TableCell className="font-medium text-xs lg:text-sm">
+                              #{appointment.tokenNo}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-6 w-6 lg:h-8 lg:w-8">
+                                  <AvatarFallback className="text-xs">
+                                    {appointment.patientName.split(' ').map(n => n[0]).join('')}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <div className="font-medium text-xs lg:text-sm">{appointment.patientName}</div>
+                                  <div className="text-xs text-muted-foreground hidden sm:block">ID: {appointment.patientId}</div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell text-xs lg:text-sm">{appointment.doctorName}</TableCell>
+                            <TableCell className="text-xs lg:text-sm">{appointment.appointmentTime}</TableCell>
+                            <TableCell>{getAppointmentStatusBadge(appointment.status)}</TableCell>
+                            <TableCell className="hidden lg:table-cell">
+                              {appointment.vitalsUpdated ? (
+                                <Badge className="bg-green-100 text-green-800 text-xs">✓ Updated</Badge>
+                              ) : (
+                                <Badge className="bg-red-100 text-red-800 text-xs">⚠ Pending</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1 lg:gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setSelectedPatientId(appointment.patientId)}
+                                  className="text-xs lg:text-sm"
+                                >
+                                  <Eye className="h-3 w-3 lg:h-4 lg:w-4" />
+                                  <span className="hidden lg:inline ml-1">View</span>
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="prescription-settings">
               <PrescriptionSettings />
-            </div>
-          </div>
+            </TabsContent>
+          </Tabs>
         );
     }
   };
