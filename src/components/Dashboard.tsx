@@ -302,8 +302,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const userRole = localStorage.getItem('easyHMS_userRole') || 'doctor';
 
 const navigation = [
-    { id: 'dashboard', name: 'DocBoard', icon: Home },
-    { id: 'admin', name: 'Admin Panel', icon: Settings },
+     { id: 'admin', name: 'Admin Panel', icon: Settings },
+    { id: 'dashboard', name: 'DocBoard', icon: Home },    
     { id: 'calendar', name: 'Calendar', icon: Calendar },
     { id: 'appointments', name: 'Appointment Scheduler', icon: Calendar },
     { id: 'billing', name: 'Billing', icon: CreditCard },
@@ -314,8 +314,8 @@ const navigation = [
 
   const getNavDescription = (id: string) => {
     switch (id) {
-      case 'dashboard': return 'Your main control center with key metrics and today\'s overview.';
       case 'admin': return 'Manage users, system settings, and hospital configuration.';
+      case 'dashboard': return 'Your main control center with key metrics and today\'s overview.';      
       case 'calendar': return 'View your schedule and manage appointments efficiently.';
       case 'appointments': return 'Book, reschedule, and manage patient appointments.';
       case 'billing': return 'Handle payments, insurance claims, and financial reports.';
@@ -690,7 +690,7 @@ const navigation = [
         <div className="flex items-center justify-between p-6 border-b">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white rounded-lg">
-              <img src="/lovable-uploads/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" alt="Company Logo" className="h-8 w-8" />
+              <img src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" alt="Company Logo" className="h-12 w-12" />
             </div>
             <div>
               <h1 className="font-bold text-healthcare-primary">NexEagle</h1>
