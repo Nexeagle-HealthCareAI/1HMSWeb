@@ -636,7 +636,7 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="hospital" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             <span className="hidden sm:inline">Hospital</span>
@@ -648,10 +648,6 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
           <TabsTrigger value="prescription" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             <span className="hidden sm:inline">Prescription</span>
-          </TabsTrigger>
-          <TabsTrigger value="branding" className="flex items-center gap-2">
-            <Palette className="h-4 w-4" />
-            <span className="hidden sm:inline">Branding</span>
           </TabsTrigger>
         </TabsList>
 
@@ -990,113 +986,26 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
                   </div>
                 </CardContent>
               </Card>
-            </div>
-          </div>
-        </TabsContent>
 
-        {/* Branding Tab */}
-        <TabsContent value="branding">
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h3 className="text-lg font-semibold">Hospital Branding</h3>
-                <p className="text-sm text-muted-foreground">Customize hospital information and visual identity</p>
-              </div>
-              <Button onClick={handleSaveBranding}>
-                <Save className="h-4 w-4 mr-2" />
-                Save Changes
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Basic Information */}
+              {/* Visual Identity & Branding */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5" />
-                    Basic Information
+                    <Palette className="h-5 w-5" />
+                    Visual Identity & Branding
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <Label htmlFor="hospitalName">Hospital Name</Label>
+                    <Label htmlFor="hospitalTagline">Hospital Tagline</Label>
                     <Input
-                      id="hospitalName"
-                      value={hospitalBranding.name}
-                      onChange={(e) => setHospitalBranding(prev => ({ ...prev, name: e.target.value }))}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="tagline">Tagline</Label>
-                    <Input
-                      id="tagline"
+                      id="hospitalTagline"
                       value={hospitalBranding.tagline}
                       onChange={(e) => setHospitalBranding(prev => ({ ...prev, tagline: e.target.value }))}
                       placeholder="e.g., Your Health, Our Priority"
                     />
                   </div>
 
-                  <div>
-                    <Label htmlFor="address">Address</Label>
-                    <Textarea
-                      id="address"
-                      value={hospitalBranding.address}
-                      onChange={(e) => setHospitalBranding(prev => ({ ...prev, address: e.target.value }))}
-                      rows={3}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Contact Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Phone className="h-5 w-5" />
-                    Contact Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <Input
-                      value={hospitalBranding.phone}
-                      onChange={(e) => setHospitalBranding(prev => ({ ...prev, phone: e.target.value }))}
-                      placeholder="Phone number"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="email"
-                      value={hospitalBranding.email}
-                      onChange={(e) => setHospitalBranding(prev => ({ ...prev, email: e.target.value }))}
-                      placeholder="Email address"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-muted-foreground" />
-                    <Input
-                      value={hospitalBranding.website}
-                      onChange={(e) => setHospitalBranding(prev => ({ ...prev, website: e.target.value }))}
-                      placeholder="Website URL"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Visual Identity */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Palette className="h-5 w-5" />
-                    Visual Identity
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
                   <div>
                     <Label htmlFor="primaryColor">Primary Color</Label>
                     <div className="flex items-center gap-2">
@@ -1111,6 +1020,7 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
                         value={hospitalBranding.primaryColor}
                         onChange={(e) => setHospitalBranding(prev => ({ ...prev, primaryColor: e.target.value }))}
                         className="flex-1"
+                        placeholder="#2563eb"
                       />
                     </div>
                   </div>
@@ -1129,6 +1039,7 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
                         value={hospitalBranding.secondaryColor}
                         onChange={(e) => setHospitalBranding(prev => ({ ...prev, secondaryColor: e.target.value }))}
                         className="flex-1"
+                        placeholder="#64748b"
                       />
                     </div>
                   </div>
@@ -1141,18 +1052,66 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
                       accept="image/*"
                       onChange={(e) => {
                         // Handle file upload logic here
-                        console.log('Logo file:', e.target.files?.[0]);
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          console.log('Logo file:', file);
+                          // You can add logic here to upload and save the logo
+                        }
                       }}
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Upload a logo image (PNG, JPG, or SVG recommended)
+                      Upload a logo image (PNG, JPG, or SVG recommended, max 2MB)
                     </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="hospitalAddress">Hospital Address</Label>
+                    <Textarea
+                      id="hospitalAddress"
+                      value={hospitalBranding.address}
+                      onChange={(e) => setHospitalBranding(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder="Enter complete hospital address"
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="hospitalPhone">Hospital Phone</Label>
+                      <Input
+                        id="hospitalPhone"
+                        value={hospitalBranding.phone}
+                        onChange={(e) => setHospitalBranding(prev => ({ ...prev, phone: e.target.value }))}
+                        placeholder="+91-9876543210"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="hospitalEmail">Hospital Email</Label>
+                      <Input
+                        id="hospitalEmail"
+                        type="email"
+                        value={hospitalBranding.email}
+                        onChange={(e) => setHospitalBranding(prev => ({ ...prev, email: e.target.value }))}
+                        placeholder="info@hospital.com"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="hospitalWebsite">Hospital Website</Label>
+                    <Input
+                      id="hospitalWebsite"
+                      value={hospitalBranding.website}
+                      onChange={(e) => setHospitalBranding(prev => ({ ...prev, website: e.target.value }))}
+                      placeholder="https://www.hospital.com"
+                    />
                   </div>
                 </CardContent>
               </Card>
             </div>
           </div>
         </TabsContent>
+
       </Tabs>
 
       {/* Prescription Preview Dialog */}
