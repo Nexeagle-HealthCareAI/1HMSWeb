@@ -1,11 +1,11 @@
 trigger:
-  - main  # or your default branch
+  - main
 
 pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  buildDir: 'build'
+  buildDir: 'dist'  # Vite outputs to dist
 
 steps:
   - task: UseNode@1
@@ -13,15 +13,17 @@ steps:
       version: '22.x'
     displayName: 'Use Node.js 22'
 
-  - script: npm install
+  - script: |
+      npm ci
     displayName: 'Install dependencies'
 
-  - script: npm run build
-    displayName: 'Build React app'
+  - script: |
+      npx vite build
+    displayName: 'Build app using Vite'
 
   - task: CopyFiles@2
     inputs:
-      SourceFolder: '$(buildDir)'
+      SourceFolder: '$(buildDir)'  # <- 'dist'
       Contents: '**'
       TargetFolder: '$(Build.ArtifactStagingDirectory)'
     displayName: 'Copy built files to staging'
