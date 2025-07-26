@@ -290,7 +290,7 @@ export const AdminDashboard = () => {
   );
 
   const adminModules = [
-    { id: 'dashboard', name: 'Dashboard', icon: Activity, description: 'Overview & Analytics' },
+    { id: 'dashboard', name: 'DocBoard', icon: Activity, description: 'Overview & Analytics' },
     { id: 'user-management', name: 'User Management', icon: Shield, description: 'Users, Roles & Permissions' },
     { id: 'patient-management', name: 'Patient Management', icon: Users, description: 'Patient Records & Data' },
     { id: 'appointment-oversight', name: 'Appointment Oversight', icon: Calendar, description: 'Appointment Management' },
@@ -403,7 +403,7 @@ export const AdminDashboard = () => {
       {/* Top Navigation */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
+          <h1 className="text-2xl font-bold text-foreground">Admin DocBoard</h1>
           <p className="text-muted-foreground">Hospital Management Overview</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
