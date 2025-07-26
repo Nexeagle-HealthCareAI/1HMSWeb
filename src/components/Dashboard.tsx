@@ -299,7 +299,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const userRole = localStorage.getItem('easyHMS_userRole') || 'doctor';
 
 const navigation = [
-    { id: 'dashboard', name: 'Dashboard', icon: Home },
+    { id: 'dashboard', name: 'DocBoard', icon: Home },
     { id: 'admin', name: 'Admin Panel', icon: Settings },
     { id: 'calendar', name: 'Calendar', icon: Calendar },
     { id: 'appointments', name: 'Appointment Scheduler', icon: Calendar },
@@ -835,7 +835,7 @@ const navigation = [
                 <Menu className="h-4 w-4" />
               </Button>
               <h2 className="text-xl font-semibold capitalize">
-                {currentPage === 'dashboard' ? 'Dashboard' : navigation.find(n => n.id === currentPage)?.name}
+                {currentPage === 'dashboard' ? 'DocBoard' : navigation.find(n => n.id === currentPage)?.name}
               </h2>
             </div>
 
