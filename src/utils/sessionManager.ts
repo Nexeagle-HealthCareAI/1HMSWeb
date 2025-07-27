@@ -41,10 +41,12 @@ export const SessionManager = {
       sessionStorage.removeItem('accessToken');
       sessionStorage.removeItem('tokenExpiry');
       sessionStorage.removeItem('user');
+      sessionStorage.removeItem('userId');
       
       // Also clear localStorage items
       localStorage.removeItem('easyHMS_loggedIn');
       localStorage.removeItem('easyHMS_userRole');
+      localStorage.removeItem('easyHMS_userId');
     } catch (error) {
       console.error('Failed to clear token:', error);
     }
@@ -69,6 +71,25 @@ export const SessionManager = {
       sessionStorage.setItem('user', JSON.stringify(safeUserData));
     } catch (error) {
       console.error('Failed to store user data:', error);
+    }
+  },
+
+  // Store userId
+  setUserId: (userId: string): void => {
+    try {
+      sessionStorage.setItem('userId', userId);
+    } catch (error) {
+      console.error('Failed to store userId:', error);
+    }
+  },
+
+  // Get userId
+  getUserId: (): string | null => {
+    try {
+      return sessionStorage.getItem('userId');
+    } catch (error) {
+      console.error('Failed to retrieve userId:', error);
+      return null;
     }
   },
 

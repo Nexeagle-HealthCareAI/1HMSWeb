@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AuthService } from '@/services/authService';
+import { SessionManager } from '@/utils/sessionManager';
 
 interface User {
   email?: string;
@@ -11,7 +12,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (emailOrPhone: string, password: string) => Promise<void>;
   loginWithOTP: (mobile: string, otp: string) => Promise<void>;
   sendOTP: (mobile: string) => Promise<{ success: boolean; message: string }>;
   forgotPasswordSendOTP: (mobile: string) => Promise<{ success: boolean; message: string }>;
@@ -50,21 +51,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsLoading(false);
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (emailOrPhone: string, password: string) => {
     try {
       setIsLoading(true);
-      const response = await AuthService.loginWithEmail(email, password);
+      const response = await AuthService.loginWithPassword(emailOrPhone, password);
       
-      if (response.success) {
+      if (response.success && response.accessToken) {
         AuthService.setAccessToken(response.accessToken);
         setIsAuthenticated(true);
-        setUser({ email });
+        setUser({ email: emailOrPhone, mobile: emailOrPhone });
+        
+        // Store userId if needed
+        if (response.userId) {
+          SessionManager.setUserId(response.userId);
+        }
         
         // You can decode the JWT token to get more user info
         // const decodedToken = jwt_decode(response.accessToken);
         // setUser(decodedToken);
       } else {
-        throw new Error(response.message);
+        throw new Error(response.message || 'Login failed');
       }
     } catch (error) {
       setIsAuthenticated(false);
@@ -80,12 +86,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       const response = await AuthService.loginWithOTP(mobile, otp);
       
-      if (response.success) {
+      if (response.success && response.accessToken) {
         AuthService.setAccessToken(response.accessToken);
         setIsAuthenticated(true);
         setUser({ mobile });
+        
+        // Store userId if needed
+        if (response.userId) {
+          SessionManager.setUserId(response.userId);
+        }
       } else {
-        throw new Error(response.message);
+        throw new Error(response.message || 'Login failed');
       }
     } catch (error) {
       setIsAuthenticated(false);

@@ -5,9 +5,12 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://easyhm
 export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: '/Auth/login',
-    SEND_OTP: '/Auth/send-otp',
-    FORGOT_PASSWORD_SEND_OTP: '/Auth/forgot-password-send-otp',
-    RESET_PASSWORD: '/Auth/reset-password',
+    SEND_OTP: '/Auth/otp-generater',
+    SIGN_UP: '/Auth/signup',
+    OTP_CHECKER: '/Auth/otp-checker',
+  },
+  USER: {
+    PROFILE_UPDATE: '/User/user-profile-update',
   },
   PATIENTS: '/patients',
   APPOINTMENTS: '/appointments',

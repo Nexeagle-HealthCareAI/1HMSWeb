@@ -177,7 +177,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         <div className="flex items-center justify-between p-6 border-b">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white rounded-lg">
-              <img src="/easyHMS/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" alt="Company Logo" className="h-12 w-12" />
+              <img src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" alt="Company Logo" className="h-12 w-12" />
             </div>
             <div>
               <h1 className="font-bold text-healthcare-primary">NexEagle</h1>
