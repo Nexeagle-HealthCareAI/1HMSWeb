@@ -462,38 +462,38 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
   // Show security warning if account is locked
   if (isLocked) {
     return (
-      <div className="min-h-screen bg-gradient-subtle flex flex-col lg:flex-row">
+      <div className="h-screen bg-gradient-subtle flex flex-col lg:flex-row overflow-hidden">
         {/* Mobile Header */}
-        <div className="lg:hidden bg-white shadow-sm border-b px-4 py-3">
+        <div className="lg:hidden bg-white shadow-sm border-b px-4 py-2 flex-shrink-0">
           <div className="flex items-center justify-center gap-2">
             <img 
-              src="/easyHMS/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
+              src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
               alt="Company Logo" 
-              className="h-8 w-8"
-              style={{ width: '32px', height: '32px' }}
+              className="h-6 w-6"
+              style={{ width: '24px', height: '24px' }}
             />
-            <span className="font-bold text-lg">NexEagle easyHMS</span>
+            <span className="font-bold text-base">NexEagle easyHMS</span>
           </div>
         </div>
 
         {/* Desktop Promotional Banner (2/3) */}
-        <div className="hidden lg:flex w-2/3 bg-gradient-primary items-center justify-center p-12">
+        <div className="hidden lg:flex w-2/3 bg-gradient-primary items-center justify-center p-8">
           <div className="text-white max-w-2xl">
-            <div className="flex items-center gap-4 mb-8">
+            <div className="flex items-center gap-3 mb-6">
               <img 
-                src="/easyHMS/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
+                src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
                 alt="Company Logo" 
-                className="h-16 w-16" 
-                style={{ width: '96px', height: '96px' }} 
+                className="h-12 w-12" 
+                style={{ width: '48px', height: '48px' }} 
               />
-              <h1 className="text-4xl font-bold">Account Security</h1>
+              <h1 className="text-3xl font-bold">Account Security</h1>
             </div>
             
-            <h2 className="text-2xl font-semibold mb-6">
+            <h2 className="text-xl font-semibold mb-4">
               Protecting Your Healthcare Practice
             </h2>
             
-            <p className="text-xl opacity-90 mb-8 leading-relaxed">
+            <p className="text-lg opacity-90 mb-6 leading-relaxed">
               Your account has been temporarily locked for security reasons. 
               This helps protect your sensitive healthcare data.
             </p>
@@ -501,28 +501,28 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
         </div>
 
         {/* Locked Account Form */}
-        <div className="w-full lg:w-1/3 flex items-center justify-center p-4 lg:p-8 flex-1">
+        <div className="w-full lg:w-1/3 flex items-center justify-center p-4 lg:p-6 flex-1">
           <Card className="w-full max-w-md shadow-elegant">
-            <CardHeader className="text-center space-y-4 pb-6">
-              <div className="hidden lg:flex justify-center mb-4">
-                <div className="p-3 bg-red-100 rounded-full">
-                  <AlertTriangle className="h-8 w-8 text-red-600" />
+            <CardHeader className="text-center space-y-3 pb-4">
+              <div className="hidden lg:flex justify-center mb-3">
+                <div className="p-2 bg-red-100 rounded-full">
+                  <AlertTriangle className="h-6 w-6 text-red-600" />
                 </div>
               </div>
-              <CardTitle className="text-2xl lg:text-3xl font-bold text-red-600">
+              <CardTitle className="text-xl lg:text-2xl font-bold text-red-600">
                 Account Temporarily Locked
               </CardTitle>
-              <p className="text-muted-foreground text-sm lg:text-base">
+              <p className="text-muted-foreground text-sm">
                 Too many failed login attempts. Please try again in:
               </p>
-              <div className="text-3xl font-bold text-red-600">
+              <div className="text-2xl font-bold text-red-600">
                 {Math.floor(lockoutTimeRemaining / 60)}:{(lockoutTimeRemaining % 60).toString().padStart(2, '0')}
               </div>
             </CardHeader>
             <CardContent className="text-center">
               <Button
                 onClick={() => window.location.reload()}
-                className="w-full h-14 bg-gradient-primary text-white font-semibold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                className="w-full h-12 bg-gradient-primary text-white font-semibold text-base rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
                 disabled={isLocked}
               >
                 {isLocked ? 'Please Wait...' : 'Try Again'}
@@ -537,50 +537,50 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
   // Forgot Password Screen
   if (showForgotPassword) {
     return (
-      <div className="min-h-screen bg-gradient-subtle flex flex-col lg:flex-row">
+      <div className="h-screen bg-gradient-subtle flex flex-col lg:flex-row overflow-hidden">
         {/* Mobile Header */}
-        <div className="lg:hidden bg-white shadow-sm border-b px-4 py-3">
+        <div className="lg:hidden bg-white shadow-sm border-b px-4 py-2 flex-shrink-0">
           <div className="flex items-center justify-center gap-2">
             <img 
-              src="/easyHMS/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
+              src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
               alt="Company Logo" 
-              className="h-8 w-8"
-              style={{ width: '32px', height: '32px' }}
+              className="h-6 w-6"
+              style={{ width: '24px', height: '24px' }}
             />
-            <span className="font-bold text-lg">Reset Password</span>
+            <span className="font-bold text-base">Reset Password</span>
           </div>
         </div>
 
         <div className="flex-1 flex flex-col lg:flex-row">
           {/* Mobile: Full width, Desktop: 1/3 */}
-          <div className="w-full lg:w-1/3 flex items-center justify-center p-4 lg:p-8 order-2 lg:order-2">
+          <div className="w-full lg:w-1/3 flex items-center justify-center p-4 lg:p-6 order-2 lg:order-2 overflow-y-auto">
             <Card className="w-full max-w-md shadow-elegant">
-              <CardHeader className="text-center space-y-4 pb-6">
+              <CardHeader className="text-center space-y-3 pb-4">
                 {/* Desktop Logo */}
-                <div className="hidden lg:flex justify-center mb-4">
-                  <div className="p-3 bg-white rounded-full">
+                <div className="hidden lg:flex justify-center mb-3">
+                  <div className="p-2 bg-white rounded-full">
                     <img 
-                      src="/easyHMS/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
+                      src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
                       alt="Company Logo" 
-                      className="h-12 w-12" 
-                      style={{ width: '96px', height: '96px' }} 
+                      className="h-10 w-10" 
+                      style={{ width: '40px', height: '40px' }} 
                     />
                   </div>
                 </div>
-                <CardTitle className="text-2xl lg:text-3xl font-bold text-healthcare-primary">
+                <CardTitle className="text-xl lg:text-2xl font-bold text-healthcare-primary">
                   Reset Password
                 </CardTitle>
-                <p className="text-muted-foreground text-sm lg:text-base">
+                <p className="text-muted-foreground text-sm">
                   {forgotStep === 1 && "Enter your mobile number to receive OTP"}
                   {forgotStep === 2 && "Enter the 6-digit OTP sent to your mobile"}
                   {forgotStep === 3 && "Create a new secure password"}
                 </p>
               </CardHeader>
               
-              <CardContent className="px-6 pb-8">
-                <form onSubmit={handleForgotPassword} className="space-y-6">
+              <CardContent className="px-6 pb-6">
+                <form onSubmit={handleForgotPassword} className="space-y-4">
                   {forgotStep === 1 && (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       <Label htmlFor="forgotMobile" className="text-sm font-medium">
                         Mobile Number
                       </Label>
@@ -592,7 +592,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
                           value={forgotMobile}
                           onChange={(e) => setForgotMobile(ValidationUtils.sanitizeInput(e.target.value))}
                           placeholder="+91-XXXXXXXXXX"
-                          className="h-14 pl-12 text-base"
+                          className="h-12 pl-12 text-base"
                           disabled={isLoading}
                         />
                       </div>
@@ -600,7 +600,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
                   )}
 
                   {forgotStep === 2 && (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       <Label htmlFor="forgotOtp" className="text-sm font-medium">
                         Enter OTP
                       </Label>
@@ -610,7 +610,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
                         value={forgotOtp}
                         onChange={(e) => setForgotOtp(ValidationUtils.sanitizeInput(e.target.value))}
                         placeholder="Enter 6-digit OTP"
-                        className="h-14 text-center tracking-widest text-lg font-mono"
+                        className="h-12 text-center tracking-widest text-base font-mono"
                         maxLength={6}
                         disabled={isLoading}
                       />
@@ -628,7 +628,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
 
                   {forgotStep === 3 && (
                     <>
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         <Label htmlFor="newPassword" className="text-sm font-medium">
                           New Password
                         </Label>
@@ -638,11 +638,11 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
                           value={newPassword}
                           onChange={(e) => setNewPassword(ValidationUtils.sanitizeInput(e.target.value))}
                           placeholder="Enter new password"
-                          className="h-14 text-base"
+                          className="h-12 text-base"
                           disabled={isLoading}
                         />
                       </div>
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         <Label htmlFor="confirmPassword" className="text-sm font-medium">
                           Confirm Password
                         </Label>
@@ -652,7 +652,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(ValidationUtils.sanitizeInput(e.target.value))}
                           placeholder="Confirm new password"
-                          className="h-14 text-base"
+                          className="h-12 text-base"
                           disabled={isLoading}
                         />
                       </div>
@@ -661,12 +661,12 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
 
                   <Button 
                     type="submit" 
-                    className="w-full h-14 bg-gradient-primary text-white font-semibold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                    className="w-full h-12 bg-gradient-primary text-white font-semibold text-base rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
                     disabled={isLoading}
                   >
                     {isLoading ? (
                       <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                         Processing...
                       </div>
                     ) : (
@@ -677,7 +677,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
                   </Button>
                 </form>
 
-                <div className="mt-6 text-center">
+                <div className="mt-4 text-center">
                   <Button
                     variant="link"
                     className="p-0 h-auto text-sm text-muted-foreground"
@@ -692,23 +692,23 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
           </div>
           
           {/* Desktop Promotional Banner */}
-          <div className="hidden lg:flex w-2/3 bg-gradient-primary items-center justify-center p-12 order-1">
+          <div className="hidden lg:flex w-2/3 bg-gradient-primary items-center justify-center p-8 order-1">
             <div className="text-white max-w-2xl">
-              <div className="flex items-center gap-4 mb-8">
+              <div className="flex items-center gap-3 mb-6">
                 <img 
-                  src="/easyHMS/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
+                  src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
                   alt="Company Logo" 
-                  className="h-16 w-16" 
-                  style={{ width: '96px', height: '96px' }} 
+                  className="h-12 w-12" 
+                  style={{ width: '48px', height: '48px' }} 
                 />
-                <h1 className="text-4xl font-bold">Secure Recovery</h1>
+                <h1 className="text-3xl font-bold">Secure Recovery</h1>
               </div>
               
-              <h2 className="text-2xl font-semibold mb-6">
+              <h2 className="text-xl font-semibold mb-4">
                 Your Account Security Matters
               </h2>
               
-              <p className="text-xl opacity-90 mb-8 leading-relaxed">
+              <p className="text-lg opacity-90 mb-6 leading-relaxed">
                 We use advanced OTP verification to ensure your account remains secure 
                 while providing quick password recovery.
               </p>
@@ -721,57 +721,57 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
 
   // Main Login Screen
   return (
-    <div className="min-h-screen bg-gradient-subtle flex flex-col lg:flex-row">
+    <div className="h-screen bg-gradient-subtle flex flex-col lg:flex-row overflow-hidden">
       {/* Mobile Header */}
-      <div className="lg:hidden bg-white shadow-sm border-b px-4 py-3">
+      <div className="lg:hidden bg-white shadow-sm border-b px-4 py-2 flex-shrink-0">
         <div className="flex items-center justify-center gap-2">
           <img 
-            src="/easyHMS/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
+            src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
             alt="Company Logo" 
-            className="h-8 w-8"
-            style={{ width: '32px', height: '32px' }}
+            className="h-6 w-6"
+            style={{ width: '24px', height: '24px' }}
           />
-          <span className="font-bold text-lg">NexEagle easyHMS</span>
+          <span className="font-bold text-base">NexEagle easyHMS</span>
         </div>
       </div>
 
       {/* Desktop Promotional Banner (2/3) */}
-      <div className="hidden lg:flex w-2/3 bg-gradient-primary items-center justify-center p-12">
+      <div className="hidden lg:flex w-2/3 bg-gradient-primary items-center justify-center p-8">
         <div className="text-white max-w-2xl">
-          <div className="flex items-center gap-4 mb-8">
+          <div className="flex items-center gap-3 mb-6">
             <img 
-              src="/easyHMS/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
+              src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
               alt="Company Logo" 
-              className="h-16 w-16" 
-              style={{ width: '96px', height: '96px' }} 
+              className="h-12 w-12" 
+              style={{ width: '48px', height: '48px' }} 
             />
-            <h1 className="text-4xl font-bold">NexEagle easyHMS</h1>
+            <h1 className="text-3xl font-bold">NexEagle easyHMS</h1>
           </div>
           
-          <h2 className="text-2xl font-semibold mb-6">
+          <h2 className="text-xl font-semibold mb-4">
             Streamline Your Healthcare Practice
           </h2>
           
-          <p className="text-xl opacity-90 mb-8 leading-relaxed">
+          <p className="text-lg opacity-90 mb-6 leading-relaxed">
             Complete patient management, appointments, billing, and more. 
             Experience the future of healthcare administration.
           </p>
           
-          <div className="grid grid-cols-2 gap-8 mt-10">
+          <div className="grid grid-cols-2 gap-6 mt-8">
             <div className="text-center">
-              <div className="text-3xl font-bold">99.9%</div>
+              <div className="text-2xl font-bold">99.9%</div>
               <div className="text-sm opacity-75">Uptime</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold">10K+</div>
+              <div className="text-2xl font-bold">10K+</div>
               <div className="text-sm opacity-75">Doctors</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold">50M+</div>
+              <div className="text-2xl font-bold">50M+</div>
               <div className="text-sm opacity-75">Patients</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold">24/7</div>
+              <div className="text-2xl font-bold">24/7</div>
               <div className="text-sm opacity-75">Support</div>
             </div>
           </div>
@@ -779,33 +779,33 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
       </div>
 
       {/* Login Form - Mobile: Full width, Desktop: 1/3 */}
-      <div className="w-full lg:w-1/3 flex items-center justify-center p-4 lg:p-8 flex-1">
+      <div className="w-full lg:w-1/3 flex items-center justify-center p-4 lg:p-6 flex-1 overflow-y-auto">
         <Card className="w-full max-w-md shadow-elegant">
-          <CardHeader className="text-center space-y-4 pb-6">
+          <CardHeader className="text-center space-y-3 pb-4">
             {/* Desktop Logo */}
-            <div className="hidden lg:flex justify-center mb-4">
-              <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl">
+            <div className="hidden lg:flex justify-center mb-3">
+              <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
                 <img 
-                  src="/easyHMS/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
+                  src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
                   alt="Company Logo" 
-                  className="h-20 w-20" 
-                  style={{ width: '96px', height: '96px' }}
+                  className="h-12 w-12" 
+                  style={{ width: '48px', height: '48px' }}
                 />
               </div>
             </div>
-            <CardTitle className="text-2xl lg:text-3xl font-bold text-healthcare-primary">
+            <CardTitle className="text-xl lg:text-2xl font-bold text-healthcare-primary">
               NexEagle easyHMS
             </CardTitle>
-            <p className="text-muted-foreground text-sm lg:text-base">
+            <p className="text-muted-foreground text-sm">
               Healthcare Management System
             </p>
           </CardHeader>
           
-          <CardContent className="px-6 pb-8">
+          <CardContent className="px-6 pb-6">
             {loginType === 'password' ? (
-              <div className="space-y-6">
-                <form onSubmit={handlePasswordLogin} className="space-y-6">
-                  <div className="space-y-3">
+              <div className="space-y-4">
+                <form onSubmit={handlePasswordLogin} className="space-y-4">
+                  <div className="space-y-2">
                     <Label htmlFor="userid" className="text-sm font-medium">
                       Mobile Number or Email
                     </Label>
@@ -815,12 +815,12 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
                       value={userid}
                       onChange={(e) => setUserid(ValidationUtils.sanitizeInput(e.target.value))}
                       placeholder="Enter mobile number or email"
-                      className="h-14 text-base"
+                      className="h-12 text-base"
                       disabled={isLoading}
                     />
                   </div>
                   
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     <Label htmlFor="password" className="text-sm font-medium">
                       Password
                     </Label>
@@ -831,7 +831,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
                         value={password}
                         onChange={(e) => setPassword(ValidationUtils.sanitizeInput(e.target.value))}
                         placeholder="Enter your password"
-                        className="h-14 pr-12 text-base"
+                        className="h-12 pr-12 text-base"
                         disabled={isLoading}
                       />
                       <Button
@@ -851,7 +851,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
                     </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                     <Button
                       type="button"
                       variant="link"
@@ -872,23 +872,23 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
                     </Button>
                   </div>
 
-                                     {/* Failed attempts warning */}
-                   {failedAttempts > 0 && failedAttempts < 5 && (
-                     <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                       <p className="text-sm text-yellow-800">
-                         ⚠️ {5 - failedAttempts} login attempt{5 - failedAttempts !== 1 ? 's' : ''} remaining before account lockout
-                       </p>
-                     </div>
-                   )}
+                  {/* Failed attempts warning */}
+                  {failedAttempts > 0 && failedAttempts < 5 && (
+                    <div className="p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-xs text-yellow-800">
+                        ⚠️ {5 - failedAttempts} login attempt{5 - failedAttempts !== 1 ? 's' : ''} remaining before account lockout
+                      </p>
+                    </div>
+                  )}
 
                   <Button 
                     type="submit" 
-                    className="w-full h-14 bg-gradient-primary text-white font-semibold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                    className="w-full h-12 bg-gradient-primary text-white font-semibold text-base rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
                     disabled={isLoading}
                   >
                     {isLoading ? (
                       <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                         Signing in...
                       </div>
                     ) : (
@@ -898,9 +898,9 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
                 </form>
               </div>
             ) : (
-              <div className="space-y-6">
-                <form onSubmit={handleMobileLogin} className="space-y-6">
-                  <div className="space-y-3">
+              <div className="space-y-4">
+                <form onSubmit={handleMobileLogin} className="space-y-4">
+                  <div className="space-y-2">
                     <Label htmlFor="mobile" className="text-sm font-medium">
                       Mobile Number
                     </Label>
@@ -912,14 +912,14 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
                         value={mobile}
                         onChange={(e) => setMobile(ValidationUtils.sanitizeInput(e.target.value))}
                         placeholder="+91-XXXXXXXXXX"
-                        className="h-14 pl-12 text-base"
+                        className="h-12 pl-12 text-base"
                         disabled={isOtpSent || isLoading}
                       />
                     </div>
                   </div>
                   
                   {isOtpSent && (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       <Label htmlFor="otp" className="text-sm font-medium">
                         Enter OTP
                       </Label>
@@ -929,7 +929,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
                         value={otp}
                         onChange={(e) => setOtp(ValidationUtils.sanitizeInput(e.target.value))}
                         placeholder="Enter 6-digit OTP"
-                        className="h-14 text-center tracking-widest text-lg font-mono"
+                        className="h-12 text-center tracking-widest text-base font-mono"
                         maxLength={6}
                         disabled={isLoading}
                       />
@@ -967,12 +967,12 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
 
                   <Button 
                     type="submit" 
-                    className="w-full h-14 bg-gradient-primary text-white font-semibold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                    className="w-full h-12 bg-gradient-primary text-white font-semibold text-base rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
                     disabled={isLoading}
                   >
                     {isLoading ? (
                       <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                         Processing...
                       </div>
                     ) : (
@@ -983,20 +983,20 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
               </div>
             )}
             
-            {/* Register Now Button - Mobile Optimized */}
-            <div className="mt-8 pt-6 border-t border-border">
-              <div className="text-center space-y-4">
+            {/* Register Now Button - Compact */}
+            <div className="mt-6 pt-4 border-t border-border">
+              <div className="text-center space-y-3">
                 <p className="text-sm text-muted-foreground">
                   Don't have an account yet?
                 </p>
                 <Button
                   onClick={onSwitchToRegister}
-                  className="w-full h-14 bg-gradient-to-r from-primary to-primary/80 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                  className="w-full h-12 bg-gradient-to-r from-primary to-primary/80 text-white font-bold text-base rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
                   disabled={isLoading}
                 >
                   🚀 Register Now - Join 10K+ Doctors!
                 </Button>
-                <p className="text-xs text-muted-foreground/80 px-4">
+                <p className="text-xs text-muted-foreground/80 px-2">
                   Free account • Setup in 2 minutes • Start managing patients today
                 </p>
               </div>
