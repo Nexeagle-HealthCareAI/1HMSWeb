@@ -15,7 +15,7 @@ interface AuthContextType {
   login: (emailOrPhone: string, password: string) => Promise<void>;
   loginWithOTP: (mobile: string, otp: string) => Promise<void>;
   sendOTP: (mobile: string) => Promise<{ success: boolean; message: string }>;
-  forgotPasswordSendOTP: (mobile: string) => Promise<{ success: boolean; message: string }>;
+  forgotPasswordSendOTP: (mobile: string) => Promise<{ success: boolean; message: string; userId?: string }>;
   resetPassword: (mobile: string, otp: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
   checkAuth: () => void;
