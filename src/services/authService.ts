@@ -144,58 +144,57 @@ export class AuthService {
   }
 
   // Forgot password - send OTP (using OTP generator API)
-  static async forgotPasswordSendOTP(mobile: string): Promise<{ success: boolean; message: string }> {
-    console.log('Forgot password OTP request to:', `${API_BASE_URL}${API_ENDPOINTS.AUTH.SEND_OTP}`);
+  static async forgotPasswordSendOTP(mobile: string): Promise<{ success: boolean; message: string; userId?: string }> {
+    console.log('=== FORGOT PASSWORD OTP REQUEST ===');
+    console.log('API URL:', `${API_BASE_URL}${API_ENDPOINTS.AUTH.SEND_OTP}`);
     console.log('Payload:', { mobileNumber: mobile });
+    console.log('Headers:', DEFAULT_HEADERS);
     
-    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH.SEND_OTP}`, {
-      method: 'POST',
-      headers: DEFAULT_HEADERS,
-      body: JSON.stringify({ mobileNumber: mobile }),
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH.SEND_OTP}`, {
+        method: 'POST',
+        headers: DEFAULT_HEADERS,
+        body: JSON.stringify({ mobileNumber: mobile }),
+      });
 
-    const data = await response.json();
-    console.log('Forgot password OTP response:', data);
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
 
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to send OTP');
+      const data = await response.json();
+      console.log('Forgot password OTP response:', data);
+
+      if (!response.ok) {
+        console.error('API Error:', data);
+        throw new Error(data.message || 'Failed to send OTP');
+      }
+
+      console.log('=== OTP SENT SUCCESSFULLY ===');
+      console.log('Response data:', data);
+      return data;
+    } catch (error) {
+      console.error('=== FORGOT PASSWORD OTP ERROR ===');
+      console.error('Error details:', error);
+      throw error;
     }
-
-    return data;
   }
 
-  // Reset password (using OTP checker + profile update APIs)
+  // Reset password (using profile update API only)
   static async resetPassword(mobile: string, otp: string, newPassword: string): Promise<{ success: boolean; message: string }> {
-    console.log('Reset password - OTP check request to:', `${API_BASE_URL}${API_ENDPOINTS.AUTH.OTP_CHECKER}`);
-    console.log('Payload:', { mobileNumber: mobile, otp });
+    console.log('=== RESET PASSWORD REQUEST ===');
+    console.log('Mobile:', mobile);
+    console.log('OTP:', otp);
     
-    // First, verify OTP using OTP checker API
-    const otpResponse = await fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH.OTP_CHECKER}`, {
-      method: 'POST',
-      headers: DEFAULT_HEADERS,
-      body: JSON.stringify({
-        mobileNumber: mobile,
-        otp: otp
-      }),
-    });
-
-    const otpData = await otpResponse.json();
-    console.log('OTP check response:', otpData);
-
-    if (!otpResponse.ok) {
-      throw new Error(otpData.message || 'Failed to verify OTP');
-    }
-
-    // If OTP is valid, get userId from response
-    const userId = otpData.userId;
+    // Get userId from session (should be set during OTP verification in step 2)
+    const userId = SessionManager.getUserId();
     if (!userId) {
-      throw new Error('User ID not found in OTP response');
+      console.error('UserId not found in session. OTP verification may have failed.');
+      throw new Error('User ID not found. Please verify OTP first.');
     }
 
-    // Then update password using profile update API
     console.log('Reset password - Profile update request to:', `${API_BASE_URL}${API_ENDPOINTS.USER.PROFILE_UPDATE}`);
     console.log('Payload:', { userId, password: newPassword });
     
+    // Update password using profile update API
     const profileResponse = await fetch(`${API_BASE_URL}${API_ENDPOINTS.USER.PROFILE_UPDATE}`, {
       method: 'PUT',
       headers: DEFAULT_HEADERS,
