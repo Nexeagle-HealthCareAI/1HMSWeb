@@ -1,0 +1,1 @@
+export { SharedMobileVerification, type SharedMobileVerificationProps } from './SharedMobileVerification';

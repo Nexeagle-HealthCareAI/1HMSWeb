@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthService } from '@/services/authService';
@@ -7,8 +7,7 @@ import {
   RegistrationLayout,
   UserTypeSelection,
   MobileVerification,
-  ProfileCompletion,
-  RegistrationProgress
+  ProfileCompletion
 } from '@/components/registration-steps';
 
 interface RegistrationProps {
@@ -23,9 +22,6 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
   const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [gender, setGender] = useState('');
-  const [language, setLanguage] = useState('English');
   const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
@@ -52,8 +48,13 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
     setUserType(type);
   };
 
-  const handleNextFromStep1 = () => {
-    if (!userType) {
+  const handleNextFromStep1 = (selectedType?: string) => {
+    console.log('handleNextFromStep1 called with selectedType:', selectedType, 'current userType:', userType);
+    const typeToCheck = selectedType || userType;
+    console.log('Type to check:', typeToCheck);
+    
+    if (!typeToCheck) {
+      console.log('No type selected, showing error toast');
       toast({
         title: "Selection Required",
         description: "Please select a user type to continue",
@@ -61,6 +62,12 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
       });
       return;
     }
+    // If selectedType is provided, update the state
+    if (selectedType && selectedType !== userType) {
+      console.log('Updating userType from', userType, 'to', selectedType);
+      setUserType(selectedType);
+    }
+    console.log('Proceeding to step 2 with type:', typeToCheck);
     setStep(2);
   };
 
@@ -127,7 +134,52 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
     }
   };
 
+  const resendOTP = async () => {
+    console.log('=== RESEND OTP CALLED ===');
+    const cleanMobile = ValidationUtils.cleanMobileNumber(mobile);
+    if (!cleanMobile) {
+      toast({
+        title: "Invalid Mobile",
+        description: "Please enter a valid mobile number",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      console.log('Resending OTP for mobile:', cleanMobile);
+      // Only call OTP generator API for resend (no signup needed)
+      await authSendOTP(cleanMobile);
+      setResendTimer(30);
+      
+      console.log('OTP resent successfully');
+      toast({
+        title: "OTP Resent!",
+        description: "Please check your mobile for the new verification code"
+      });
+    } catch (error) {
+      console.error('Error in resendOTP:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to resend OTP. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const verifyOTP = async () => {
+    console.log('=== VERIFY OTP CALLED ===');
+    console.log('Current state:', { 
+      verificationInProgress: verificationInProgressRef.current,
+      isLoading,
+      otpLength: otp.length,
+      otpSent,
+      step
+    });
+    
     if (verificationInProgressRef.current) {
       console.log('OTP verification already in progress, skipping...');
       return;
@@ -137,6 +189,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
     const cleanOtp = otp.replace(/\D/g, '');
 
     if (!cleanOtp || cleanOtp.length !== 6) {
+      console.log('Invalid OTP, not proceeding with verification');
       toast({
         title: "Invalid OTP",
         description: "Please enter a valid 6-digit OTP",
@@ -145,6 +198,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
       return;
     }
 
+    console.log('Starting OTP verification...');
     verificationInProgressRef.current = true;
     setIsVerifyingOTP(true);
     setIsLoading(true);
@@ -155,6 +209,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
       console.log('OTP verification response:', response);
 
       if (response.success) {
+        console.log('OTP verification successful, moving to step 3');
         toast({
           title: "OTP Verified!",
           description: "Mobile number verified successfully"
@@ -171,6 +226,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
         variant: "destructive"
       });
     } finally {
+      console.log('OTP verification completed, resetting flags');
       setIsVerifyingOTP(false);
       setIsLoading(false);
       verificationInProgressRef.current = false;
@@ -193,9 +249,9 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
         userId: userId,
         email: email.trim(),
         password: password.trim(),
-        fullName: fullName.trim(),
-        gender: gender,
-        language: language,
+        fullName: '', // Removed fullName
+        gender: '', // Removed gender
+        language: '', // Removed language
         profilePictureUrl: ''
       };
 
@@ -236,9 +292,9 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
         userId: userId,
         email: '',
         password: '',
-        fullName: fullName.trim() || 'User',
-        gender: '',
-        language: language,
+        fullName: '', // Removed fullName
+        gender: '', // Removed gender
+        language: '', // Removed language
         profilePictureUrl: ''
       };
 
@@ -286,6 +342,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
             onMobileChange={setMobile}
             onOtpChange={setOtp}
             onSendOTP={sendOTP}
+            onResendOTP={resendOTP}
             onVerifyOTP={verifyOTP}
             onBack={handleBackFromStep2}
             onNext={handleNextFromStep2}
@@ -294,17 +351,11 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
       case 3:
         return (
           <ProfileCompletion
-            fullName={fullName}
             email={email}
             password={password}
-            gender={gender}
-            language={language}
             isLoading={isLoading}
-            onFullNameChange={setFullName}
             onEmailChange={setEmail}
             onPasswordChange={setPassword}
-            onGenderChange={setGender}
-            onLanguageChange={setLanguage}
             onComplete={handleFinalStep}
             onSkip={handleSkip}
             onBack={handleBackFromStep3}
@@ -315,61 +366,13 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
     }
   };
 
-  // Promotional content for the layout
-  const promotionalContent = (
-    <div className="text-white max-w-2xl relative z-10">
-      {/* Logo and Brand */}
-      <div className="flex items-center gap-3 mb-8">
-        <div className="h-12 w-12 bg-white/20 rounded-xl flex items-center justify-center">
-          <span className="text-2xl">🏥</span>
-        </div>
-        <h1 className="text-3xl font-bold">Join NexEagle</h1>
-      </div>
-      
-      <h2 className="text-xl font-semibold mb-6 text-center">
-        The most advanced Hospital Management System trusted by thousands of healthcare professionals worldwide
-      </h2>
-      
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold mb-1">10K+</div>
-          <div className="text-sm opacity-90">Active Doctors</div>
-        </div>
-        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold mb-1">1M+</div>
-          <div className="text-sm opacity-90">Patients Served</div>
-        </div>
-        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold mb-1">99.9%</div>
-          <div className="text-sm opacity-90">Uptime</div>
-        </div>
-      </div>
-      
-      {/* Limited Time Offer */}
-      <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg p-4 border border-purple-500/30">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-yellow-300">⭐</span>
-          <span className="font-semibold">Limited Time Offer</span>
-        </div>
-        <p className="text-sm opacity-90">
-          First 100 doctors get 3 months FREE premium features!
-        </p>
-      </div>
-    </div>
-  );
-
   return (
     <RegistrationLayout
-      promotionalContent={promotionalContent}
+      currentStep={step}
+      onBack={step === 2 ? handleBackFromStep2 : step === 3 ? handleBackFromStep3 : undefined}
+      onSwitchToLogin={onSwitchToLogin}
     >
       <div className="space-y-6">
-        {/* Progress Indicator */}
-        <RegistrationProgress 
-          currentStep={step} 
-          onBack={step === 2 ? handleBackFromStep2 : step === 3 ? handleBackFromStep3 : undefined}
-        />
-        
         {/* Current Step Content */}
         {renderCurrentStep()}
         

@@ -9,6 +9,10 @@ export class ApiClient {
     const token = AuthService.getAccessToken();
     return {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       ...(token && { 'Authorization': `Bearer ${token}` }),
     };
   }
@@ -18,6 +22,8 @@ export class ApiClient {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'GET',
       headers: this.getHeaders(),
+      mode: 'cors',
+      credentials: 'omit',
     });
 
     if (!response.ok) {
@@ -39,6 +45,8 @@ export class ApiClient {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify(data),
+      mode: 'cors',
+      credentials: 'omit',
     });
 
     if (!response.ok) {
@@ -60,6 +68,8 @@ export class ApiClient {
       method: 'PUT',
       headers: this.getHeaders(),
       body: JSON.stringify(data),
+      mode: 'cors',
+      credentials: 'omit',
     });
 
     if (!response.ok) {
@@ -80,6 +90,8 @@ export class ApiClient {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'DELETE',
       headers: this.getHeaders(),
+      mode: 'cors',
+      credentials: 'omit',
     });
 
     if (!response.ok) {
