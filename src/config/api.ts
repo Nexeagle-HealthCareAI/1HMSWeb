@@ -10,7 +10,7 @@ export const API_ENDPOINTS = {
     OTP_CHECKER: '/Auth/otp-checker',
   },
   USER: {
-    PROFILE_UPDATE: '/User/user-profile-update',
+    PROFILE_UPDATE: '/User/update-user-details',
   },
   PATIENTS: '/patients',
   APPOINTMENTS: '/appointments',
