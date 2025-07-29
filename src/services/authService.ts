@@ -76,13 +76,18 @@ export class AuthService {
   static async loginWithPassword(emailOrPhone: string, password: string): Promise<LoginResponse> {
     const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH.LOGIN}`, {
       method: 'POST',
-      headers: DEFAULT_HEADERS,
+      headers: {
+        ...DEFAULT_HEADERS,
+        'Accept': 'application/json',
+      },
       body: JSON.stringify({
         isLoginWithOtp: false,
         emailOrPhone: emailOrPhone,
         password: password,
         otp: ""
       } as LoginRequest),
+      mode: 'cors',
+      credentials: 'omit',
     });
 
     const data = await response.json();
@@ -108,8 +113,13 @@ export class AuthService {
     
     const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH.LOGIN}`, {
       method: 'POST',
-      headers: DEFAULT_HEADERS,
+      headers: {
+        ...DEFAULT_HEADERS,
+        'Accept': 'application/json',
+      },
       body: JSON.stringify(payload),
+      mode: 'cors',
+      credentials: 'omit',
     });
 
     const data = await response.json();
@@ -129,8 +139,13 @@ export class AuthService {
     
     const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH.SEND_OTP}`, {
       method: 'POST',
-      headers: DEFAULT_HEADERS,
+      headers: {
+        ...DEFAULT_HEADERS,
+        'Accept': 'application/json',
+      },
       body: JSON.stringify({ mobileNumber: mobile }),
+      mode: 'cors',
+      credentials: 'omit',
     });
 
     const data = await response.json();
@@ -153,8 +168,13 @@ export class AuthService {
     try {
       const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH.SEND_OTP}`, {
         method: 'POST',
-        headers: DEFAULT_HEADERS,
+        headers: {
+          ...DEFAULT_HEADERS,
+          'Accept': 'application/json',
+        },
         body: JSON.stringify({ mobileNumber: mobile }),
+        mode: 'cors',
+        credentials: 'omit',
       });
 
       console.log('Response status:', response.status);
@@ -197,7 +217,10 @@ export class AuthService {
     // Update password using profile update API
     const profileResponse = await fetch(`${API_BASE_URL}${API_ENDPOINTS.USER.PROFILE_UPDATE}`, {
       method: 'PUT',
-      headers: DEFAULT_HEADERS,
+      headers: {
+        ...DEFAULT_HEADERS,
+        'Accept': 'application/json',
+      },
       body: JSON.stringify({
         userId: userId,
         email: '', // Keep existing email
@@ -207,6 +230,8 @@ export class AuthService {
         language: '', // Keep existing language
         profilePictureUrl: '' // Keep existing profile picture
       }),
+      mode: 'cors',
+      credentials: 'omit',
     });
 
     const profileData = await profileResponse.json();
@@ -226,11 +251,16 @@ export class AuthService {
     
     const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH.SIGN_UP}`, {
       method: 'POST',
-      headers: DEFAULT_HEADERS,
+      headers: {
+        ...DEFAULT_HEADERS,
+        'Accept': 'application/json',
+      },
       body: JSON.stringify({
         mobileNumber: mobileNumber,
         roles: roles
       } as SignUpRequest),
+      mode: 'cors',
+      credentials: 'omit',
     });
 
     const data = await response.json();
@@ -250,11 +280,16 @@ export class AuthService {
     
     const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.AUTH.OTP_CHECKER}`, {
       method: 'POST',
-      headers: DEFAULT_HEADERS,
+      headers: {
+        ...DEFAULT_HEADERS,
+        'Accept': 'application/json',
+      },
       body: JSON.stringify({
         mobileNumber: mobileNumber,
         otp: otp
       } as OTPCheckerRequest),
+      mode: 'cors',
+      credentials: 'omit',
     });
 
     const data = await response.json();
@@ -274,8 +309,13 @@ export class AuthService {
     
     const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.USER.PROFILE_UPDATE}`, {
       method: 'PUT',
-      headers: DEFAULT_HEADERS,
+      headers: {
+        ...DEFAULT_HEADERS,
+        'Accept': 'application/json',
+      },
       body: JSON.stringify(profileData),
+      mode: 'cors',
+      credentials: 'omit',
     });
 
     const data = await response.json();
