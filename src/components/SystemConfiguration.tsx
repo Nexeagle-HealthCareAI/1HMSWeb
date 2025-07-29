@@ -1,133 +1,87 @@
 import React, { useState } from 'react';
 import { 
+  Settings,
   Building2,
   FileText,
-  Settings,
-  Plus,
-  Edit,
-  Trash2,
-  Save,
-  RotateCcw,
-  User,
-  Phone,
-  Mail,
-  MapPin,
-  Globe,
-  Palette,
-  Image,
-  BarChart3,
-  Calendar,
-  Stethoscope,
-  X,
-  Check,
-  Download,
-  Printer,
-  AlertTriangle
+  Palette
 } from 'lucide-react';
-import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Badge } from './ui/badge';
-import { Switch } from './ui/switch';
-import { Separator } from './ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  DepartmentManagement, 
+  PrescriptionTemplateConfig, 
+  HospitalBrandingConfig,
+  type Department,
+  type PrescriptionTemplate,
+  type HospitalBranding
+} from './system-config';
 
-interface Department {
-  id: string;
-  name: string;
-  shortCode: string;
-  description: string;
-  doctors: DoctorAssignment[];
-  stats: {
-    totalPatients: number;
-    todayAppointments: number;
-    monthlyRevenue: number;
-  };
-  isActive: boolean;
-}
-
-interface DoctorAssignment {
-  doctorId: string;
-  doctorName: string;
-  role: 'Consultant' | 'Assistant' | 'Visiting Doctor' | 'HOD';
-  schedule?: string;
-}
-
-interface PrescriptionTemplate {
-  id: string;
-  name: string;
-  isDefault: boolean;
-  header: {
-    showLogo: boolean;
-    hospitalName: string;
-    contactInfo: boolean;
-    customText?: string;
-  };
-  sections: {
-    vitals: boolean;
-    diagnosis: boolean;
-    advice: boolean;
-    medicines: boolean;
-    nextAppointment: boolean;
-  };
-  footer: {
-    signature: boolean;
-    qrCode: boolean;
-    customNotes?: string;
-  };
-  doctorSpecific?: string;
-}
-
-interface HospitalBranding {
-  name: string;
-  tagline: string;
-  phone: string;
-  email: string;
-  website: string;
-  address: string;
-  logo?: string;
-  primaryColor: string;
-  secondaryColor: string;
-}
-
+// Sample data
 const sampleDepartments: Department[] = [
   {
     id: 'CARD',
     name: 'Cardiology',
     shortCode: 'CARD',
-    description: 'Heart and cardiovascular diseases treatment',
+    description: 'Specialized care for heart and cardiovascular conditions',
     doctors: [
-      { doctorId: 'D001', doctorName: 'Dr. Sarah Johnson', role: 'HOD', schedule: 'Mon-Fri 9AM-5PM' },
-      { doctorId: 'D005', doctorName: 'Dr. Robert Chen', role: 'Consultant', schedule: 'Mon-Wed-Fri 10AM-3PM' }
+      {
+        doctorId: 'D001',
+        doctorName: 'Dr. Sarah Johnson',
+        role: 'HOD',
+        schedule: 'Mon-Fri 9AM-5PM'
+      },
+      {
+        doctorId: 'D004',
+        doctorName: 'Dr. Robert Chen',
+        role: 'Consultant',
+        schedule: 'Mon, Wed, Fri 2PM-8PM'
+      }
     ],
-    stats: { totalPatients: 1250, todayAppointments: 18, monthlyRevenue: 125000 },
+    stats: {
+      totalPatients: 1250,
+      todayAppointments: 45,
+      monthlyRevenue: 850000
+    },
     isActive: true
   },
   {
     id: 'PEDI',
     name: 'Pediatrics',
     shortCode: 'PEDI',
-    description: 'Children healthcare and treatment',
+    description: 'Comprehensive healthcare for children and adolescents',
     doctors: [
-      { doctorId: 'D002', doctorName: 'Dr. Emily Davis', role: 'HOD', schedule: 'Mon-Sat 8AM-6PM' }
+      {
+        doctorId: 'D002',
+        doctorName: 'Dr. Emily Davis',
+        role: 'HOD',
+        schedule: 'Mon-Sat 8AM-4PM'
+      }
     ],
-    stats: { totalPatients: 890, todayAppointments: 12, monthlyRevenue: 78000 },
+    stats: {
+      totalPatients: 890,
+      todayAppointments: 32,
+      monthlyRevenue: 520000
+    },
     isActive: true
   },
   {
-    id: 'NEURO',
+    id: 'NEUR',
     name: 'Neurology',
-    shortCode: 'NEURO',
-    description: 'Neurological disorders and brain health',
+    shortCode: 'NEUR',
+    description: 'Expert care for neurological disorders and conditions',
     doctors: [
-      { doctorId: 'D003', doctorName: 'Dr. Michael Wilson', role: 'Consultant', schedule: 'Tue-Thu-Sat 11AM-4PM' }
+      {
+        doctorId: 'D003',
+        doctorName: 'Dr. Michael Wilson',
+        role: 'HOD',
+        schedule: 'Tue-Thu 10AM-6PM'
+      }
     ],
-    stats: { totalPatients: 654, todayAppointments: 8, monthlyRevenue: 95000 },
+    stats: {
+      totalPatients: 650,
+      todayAppointments: 18,
+      monthlyRevenue: 420000
+    },
     isActive: true
   }
 ];
@@ -140,7 +94,7 @@ const defaultTemplate: PrescriptionTemplate = {
     showLogo: true,
     hospitalName: 'NexEagle Hospital',
     contactInfo: true,
-    customText: ''
+    customText: 'Providing Quality Healthcare'
   },
   sections: {
     vitals: true,
@@ -151,349 +105,20 @@ const defaultTemplate: PrescriptionTemplate = {
   },
   footer: {
     signature: true,
-    qrCode: false,
-    customNotes: 'Get tests from NABL-certified labs only'
+    qrCode: true,
+    customNotes: 'Thank you for choosing our services'
   }
 };
 
 const defaultBranding: HospitalBranding = {
   name: 'NexEagle Hospital',
-  tagline: 'Your Health, Our Priority',
-  phone: '+91-9876543210',
+  tagline: 'Providing Quality Healthcare',
+  phone: '+91 98765 43210',
   email: 'info@nexeagle.com',
-  website: 'https://www.nexeagle.com',
-  address: '123 Medical Complex, Healthcare District, City - 123456',
+  website: 'www.nexeagle.com',
+  address: '123 Hospital Street, Medical District, City - 123456',
   primaryColor: '#2563eb',
   secondaryColor: '#64748b'
-};
-
-// Hospital Registration Component
-const HospitalRegistrationTab: React.FC = () => {
-  const [hospitalData, setHospitalData] = useState(() => {
-    const savedData = localStorage.getItem('easyHMS_setupData');
-    if (savedData) {
-      const data = JSON.parse(savedData);
-      const hospital = data.hospital || {};
-      return {
-        name: hospital.name || '',
-        phone: hospital.phone || '',
-        email: hospital.email || '',
-        registrationNumber: hospital.registrationNumber || '',
-        address: hospital.address || '',
-        establishedYear: hospital.establishedYear || '',
-        totalBeds: hospital.totalBeds || '',
-        specializations: Array.isArray(hospital.specializations) ? hospital.specializations : [],
-        accreditation: hospital.accreditation || '',
-        website: hospital.website || '',
-        emergencyContact: hospital.emergencyContact || ''
-      };
-    }
-    return {
-      name: '',
-      phone: '',
-      email: '',
-      registrationNumber: '',
-      address: '',
-      establishedYear: '',
-      totalBeds: '',
-      specializations: [],
-      accreditation: '',
-      website: '',
-      emergencyContact: ''
-    };
-  });
-
-  const { toast } = useToast();
-
-  const calculateCompletionScore = (): number => {
-    const requiredFields = [
-      hospitalData.name,
-      hospitalData.phone,
-      hospitalData.registrationNumber,
-      hospitalData.address
-    ];
-    
-    const optionalFields = [
-      hospitalData.email,
-      hospitalData.establishedYear,
-      hospitalData.totalBeds,
-      Array.isArray(hospitalData.specializations) && hospitalData.specializations.length > 0,
-      hospitalData.accreditation,
-      hospitalData.website,
-      hospitalData.emergencyContact
-    ];
-    
-    const requiredComplete = requiredFields.filter(field => field && field.toString().trim() !== '').length;
-    const optionalComplete = optionalFields.filter(field => field).length;
-    
-    const requiredWeight = 70;
-    const optionalWeight = 30;
-    
-    const requiredProgress = (requiredComplete / requiredFields.length) * requiredWeight;
-    const optionalProgress = (optionalComplete / optionalFields.length) * optionalWeight;
-    
-    return Math.round(requiredProgress + optionalProgress);
-  };
-
-  const handleSave = () => {
-    const savedData = localStorage.getItem('easyHMS_setupData');
-    const existingData = savedData ? JSON.parse(savedData) : {};
-    
-    const updatedData = {
-      ...existingData,
-      hospital: hospitalData
-    };
-    
-    localStorage.setItem('easyHMS_setupData', JSON.stringify(updatedData));
-    
-    // Mark hospital registration as complete if all required fields are filled
-    const score = calculateCompletionScore();
-    if (score >= 70) {
-      localStorage.setItem('easyHMS_hospitalRegistrationComplete', 'true');
-    }
-    
-    toast({
-      title: "Hospital Details Saved",
-      description: `Registration is ${score}% complete`,
-    });
-  };
-
-  const handleSpecializationToggle = (specialization: string) => {
-    setHospitalData(prev => {
-      const currentSpecs = Array.isArray(prev.specializations) ? prev.specializations : [];
-      return {
-        ...prev,
-        specializations: currentSpecs.includes(specialization)
-          ? currentSpecs.filter(s => s !== specialization)
-          : [...currentSpecs, specialization]
-      };
-    });
-  };
-
-  const completionScore = calculateCompletionScore();
-  const availableSpecializations = [
-    'Cardiology', 'Neurology', 'Orthopedics', 'Pediatrics', 'General Medicine',
-    'Surgery', 'Dermatology', 'Psychiatry', 'Gynecology', 'ENT', 'Ophthalmology'
-  ];
-
-  return (
-    <div className="space-y-6">
-      {/* Header with completion indicator */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-6 rounded-lg border border-blue-200 dark:border-blue-800">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-xl font-semibold text-blue-900 dark:text-blue-100">
-              🏥 Hospital Registration
-            </h3>
-            <p className="text-blue-700 dark:text-blue-300">
-              Complete your hospital details to unlock all features
-            </p>
-          </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold text-blue-600">{completionScore}%</div>
-            <div className="text-sm text-blue-500">Complete</div>
-          </div>
-        </div>
-        
-        <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-3">
-          <div 
-            className="bg-blue-600 h-3 rounded-full transition-all duration-300"
-            style={{ width: `${completionScore}%` }}
-          />
-        </div>
-        
-        {completionScore < 70 && (
-          <div className="mt-3 text-sm text-blue-600 dark:text-blue-400 flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4" />
-            Complete required fields (marked with *) to unlock admin features
-          </div>
-        )}
-      </div>
-
-      {/* Registration Form */}
-      <div className="grid gap-6">
-        {/* Basic Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
-              Basic Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="hospitalName">Hospital Name *</Label>
-              <Input
-                id="hospitalName"
-                value={hospitalData.name}
-                onChange={(e) => setHospitalData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Enter hospital name"
-                className="mt-1"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="regNumber">Registration Number *</Label>
-                <Input
-                  id="regNumber"
-                  value={hospitalData.registrationNumber}
-                  onChange={(e) => setHospitalData(prev => ({ ...prev, registrationNumber: e.target.value }))}
-                  placeholder="REG123456789"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="establishedYear">Established Year</Label>
-                <Input
-                  id="establishedYear"
-                  value={hospitalData.establishedYear}
-                  onChange={(e) => setHospitalData(prev => ({ ...prev, establishedYear: e.target.value }))}
-                  placeholder="2000"
-                  className="mt-1"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="address">Hospital Address *</Label>
-              <Textarea
-                id="address"
-                value={hospitalData.address}
-                onChange={(e) => setHospitalData(prev => ({ ...prev, address: e.target.value }))}
-                placeholder="Enter complete hospital address"
-                className="mt-1"
-                rows={3}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Contact Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Phone className="h-5 w-5" />
-              Contact Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="phone">Primary Phone *</Label>
-                <Input
-                  id="phone"
-                  value={hospitalData.phone}
-                  onChange={(e) => setHospitalData(prev => ({ ...prev, phone: e.target.value }))}
-                  placeholder="+1 (555) 123-4567"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="emergencyContact">Emergency Contact</Label>
-                <Input
-                  id="emergencyContact"
-                  value={hospitalData.emergencyContact}
-                  onChange={(e) => setHospitalData(prev => ({ ...prev, emergencyContact: e.target.value }))}
-                  placeholder="+1 (555) 987-6543"
-                  className="mt-1"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="email">Hospital Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={hospitalData.email}
-                  onChange={(e) => setHospitalData(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="info@hospital.com"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="website">Website</Label>
-                <Input
-                  id="website"
-                  value={hospitalData.website}
-                  onChange={(e) => setHospitalData(prev => ({ ...prev, website: e.target.value }))}
-                  placeholder="https://www.hospital.com"
-                  className="mt-1"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Additional Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Stethoscope className="h-5 w-5" />
-              Additional Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="totalBeds">Total Beds</Label>
-                <Input
-                  id="totalBeds"
-                  type="number"
-                  value={hospitalData.totalBeds}
-                  onChange={(e) => setHospitalData(prev => ({ ...prev, totalBeds: e.target.value }))}
-                  placeholder="100"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="accreditation">Accreditation</Label>
-                <Input
-                  id="accreditation"
-                  value={hospitalData.accreditation}
-                  onChange={(e) => setHospitalData(prev => ({ ...prev, accreditation: e.target.value }))}
-                  placeholder="NABH, JCI, etc."
-                  className="mt-1"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label>Hospital Specializations</Label>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {availableSpecializations.map((spec) => {
-                  const isSelected = Array.isArray(hospitalData.specializations) && hospitalData.specializations.includes(spec);
-                  return (
-                    <Badge
-                      key={spec}
-                      variant={isSelected ? "default" : "outline"}
-                      className="cursor-pointer hover:bg-primary/20"
-                      onClick={() => handleSpecializationToggle(spec)}
-                    >
-                      {spec}
-                      {isSelected && (
-                        <Check className="ml-1 h-3 w-3" />
-                      )}
-                    </Badge>
-                  );
-                })}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Save Button */}
-        <div className="flex justify-end">
-          <Button onClick={handleSave} className="px-8">
-            <Save className="h-4 w-4 mr-2" />
-            Save Hospital Details
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
 };
 
 interface SystemConfigurationProps {
@@ -505,142 +130,17 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
   const [departments, setDepartments] = useState<Department[]>(sampleDepartments);
   const [prescriptionTemplate, setPrescriptionTemplate] = useState<PrescriptionTemplate>(defaultTemplate);
   const [hospitalBranding, setHospitalBranding] = useState<HospitalBranding>(defaultBranding);
-  const [showDepartmentDialog, setShowDepartmentDialog] = useState(false);
-  const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
-  const [showTemplatePreview, setShowTemplatePreview] = useState(false);
   const { toast } = useToast();
 
-  const [newDepartment, setNewDepartment] = useState({
-    name: '',
-    shortCode: '',
-    description: '',
-    doctors: [] as DoctorAssignment[]
-  });
-
-  const availableDoctors = [
-    { id: 'D001', name: 'Dr. Sarah Johnson', specialty: 'Cardiology' },
-    { id: 'D002', name: 'Dr. Emily Davis', specialty: 'Pediatrics' },
-    { id: 'D003', name: 'Dr. Michael Wilson', specialty: 'Neurology' },
-    { id: 'D004', name: 'Dr. Robert Chen', specialty: 'Cardiology' },
-    { id: 'D005', name: 'Dr. Lisa Anderson', specialty: 'Dermatology' }
-  ];
-
-  const handleAddDepartment = () => {
-    if (!newDepartment.name || !newDepartment.shortCode) {
-      toast({
-        title: "Missing Information",
-        description: "Please provide department name and short code.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const department: Department = {
-      id: newDepartment.shortCode.toUpperCase(),
-      name: newDepartment.name,
-      shortCode: newDepartment.shortCode.toUpperCase(),
-      description: newDepartment.description,
-      doctors: newDepartment.doctors,
-      stats: { totalPatients: 0, todayAppointments: 0, monthlyRevenue: 0 },
-      isActive: true
-    };
-
-    setDepartments(prev => [...prev, department]);
-    setNewDepartment({ name: '', shortCode: '', description: '', doctors: [] });
-    setShowDepartmentDialog(false);
-
-    toast({
-      title: "Department Added",
-      description: `${department.name} has been added successfully.`,
-    });
-  };
-
-  const handleUpdateDepartment = () => {
-    if (!editingDepartment) return;
-
-    setDepartments(prev => prev.map(dept => 
-      dept.id === editingDepartment.id ? editingDepartment : dept
-    ));
-
-    setEditingDepartment(null);
-    toast({
-      title: "Department Updated",
-      description: "Department has been updated successfully.",
-    });
-  };
-
-  const handleDeleteDepartment = (departmentId: string) => {
-    setDepartments(prev => prev.map(dept => 
-      dept.id === departmentId ? { ...dept, isActive: false } : dept
-    ));
-
-    toast({
-      title: "Department Deactivated",
-      description: "Department has been deactivated.",
-    });
-  };
-
-  const addDoctorToDepartment = (doctorId: string, role: DoctorAssignment['role']) => {
-    const doctor = availableDoctors.find(d => d.id === doctorId);
-    if (!doctor) return;
-
-    const newAssignment: DoctorAssignment = {
-      doctorId: doctor.id,
-      doctorName: doctor.name,
-      role,
-      schedule: ''
-    };
-
-    if (editingDepartment) {
-      setEditingDepartment(prev => prev ? {
-        ...prev,
-        doctors: [...prev.doctors, newAssignment]
-      } : null);
-    } else {
-      setNewDepartment(prev => ({
-        ...prev,
-        doctors: [...prev.doctors, newAssignment]
-      }));
-    }
-  };
-
-  const handleSaveTemplate = () => {
-    toast({
-      title: "Template Saved",
-      description: "Prescription template has been saved successfully.",
-    });
-  };
-
-  const handleResetTemplate = () => {
-    setPrescriptionTemplate(defaultTemplate);
-    toast({
-      title: "Template Reset",
-      description: "Template has been reset to default settings.",
-    });
-  };
-
-  const handleSaveBranding = () => {
-    toast({
-      title: "Branding Updated",
-      description: "Hospital branding settings have been saved.",
-    });
-  };
-
   return (
-    <div className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">System Configuration</h2>
-          <p className="text-muted-foreground">Configure departments, prescriptions, and hospital branding</p>
-        </div>
+    <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <Settings className="h-6 w-6 text-primary" />
+        <h2 className="text-2xl font-bold">System Configuration</h2>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="hospital" className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Hospital</span>
-          </TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="departments" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             <span className="hidden sm:inline">Departments</span>
@@ -649,621 +149,36 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
             <FileText className="h-4 w-4" />
             <span className="hidden sm:inline">Prescription</span>
           </TabsTrigger>
+          <TabsTrigger value="branding" className="flex items-center gap-2">
+            <Palette className="h-4 w-4" />
+            <span className="hidden sm:inline">Branding</span>
+          </TabsTrigger>
         </TabsList>
-
-        {/* Hospital Registration Tab */}
-        <TabsContent value="hospital">
-          <HospitalRegistrationTab />
-        </TabsContent>
 
         {/* Departments Tab */}
         <TabsContent value="departments">
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <h3 className="text-lg font-semibold">Manage Departments</h3>
-              <Dialog open={showDepartmentDialog} onOpenChange={setShowDepartmentDialog}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Department
-                  </Button>
-                </DialogTrigger>
-              </Dialog>
-            </div>
-
-            <div className="grid gap-4">
-              {departments.map(dept => (
-                <Card key={dept.id} className={!dept.isActive ? 'opacity-50' : ''}>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <div className="flex items-center space-x-2">
-                      <Building2 className="h-5 w-5 text-primary" />
-                      <div>
-                        <CardTitle className="text-base">{dept.name}</CardTitle>
-                        <Badge variant="outline">{dept.shortCode}</Badge>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditingDepartment(dept)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteDepartment(dept.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-3">{dept.description}</p>
-                    
-                    <div className="grid grid-cols-3 gap-4 mb-4">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-primary">{dept.stats.totalPatients}</div>
-                        <div className="text-xs text-muted-foreground">Total Patients</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-primary">{dept.stats.todayAppointments}</div>
-                        <div className="text-xs text-muted-foreground">Today's Appointments</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-primary">₹{dept.stats.monthlyRevenue.toLocaleString()}</div>
-                        <div className="text-xs text-muted-foreground">Monthly Revenue</div>
-                      </div>
-                    </div>
-
-                    {dept.doctors.length > 0 && (
-                      <div>
-                        <h4 className="font-medium mb-2">Assigned Doctors</h4>
-                        <div className="space-y-2">
-                          {dept.doctors.map((doc, idx) => (
-                            <div key={idx} className="flex justify-between items-center p-2 bg-muted rounded">
-                              <div>
-                                <div className="font-medium text-sm">{doc.doctorName}</div>
-                                <Badge variant="outline" className="text-xs">{doc.role}</Badge>
-                              </div>
-                              {doc.schedule && (
-                                <div className="text-xs text-muted-foreground">{doc.schedule}</div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {/* Add/Edit Department Dialog */}
-            <Dialog open={showDepartmentDialog || !!editingDepartment} onOpenChange={(open) => {
-              if (!open) {
-                setShowDepartmentDialog(false);
-                setEditingDepartment(null);
-              }
-            }}>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingDepartment ? 'Edit Department' : 'Add New Department'}
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="deptName">Department Name</Label>
-                      <Input
-                        id="deptName"
-                        value={editingDepartment ? editingDepartment.name : newDepartment.name}
-                        onChange={(e) => {
-                          if (editingDepartment) {
-                            setEditingDepartment({ ...editingDepartment, name: e.target.value });
-                          } else {
-                            setNewDepartment({ ...newDepartment, name: e.target.value });
-                          }
-                        }}
-                        placeholder="Enter department name"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="deptCode">Short Code</Label>
-                      <Input
-                        id="deptCode"
-                        value={editingDepartment ? editingDepartment.shortCode : newDepartment.shortCode}
-                        onChange={(e) => {
-                          if (editingDepartment) {
-                            setEditingDepartment({ ...editingDepartment, shortCode: e.target.value });
-                          } else {
-                            setNewDepartment({ ...newDepartment, shortCode: e.target.value });
-                          }
-                        }}
-                        placeholder="e.g., CARD"
-                        className="uppercase"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="deptDesc">Description</Label>
-                    <Textarea
-                      id="deptDesc"
-                      value={editingDepartment ? editingDepartment.description : newDepartment.description}
-                      onChange={(e) => {
-                        if (editingDepartment) {
-                          setEditingDepartment({ ...editingDepartment, description: e.target.value });
-                        } else {
-                          setNewDepartment({ ...newDepartment, description: e.target.value });
-                        }
-                      }}
-                      placeholder="Enter department description"
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => {
-                      setShowDepartmentDialog(false);
-                      setEditingDepartment(null);
-                    }}>
-                      Cancel
-                    </Button>
-                    <Button onClick={editingDepartment ? handleUpdateDepartment : handleAddDepartment}>
-                      {editingDepartment ? 'Update' : 'Add'} Department
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
+          <DepartmentManagement
+            departments={departments}
+            onDepartmentsChange={setDepartments}
+          />
         </TabsContent>
 
-        {/* Prescription Tab */}
+        {/* Prescription Template Tab */}
         <TabsContent value="prescription">
-          <div className="space-y-6">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-              <div>
-                <h3 className="text-lg font-semibold">Prescription Template Configuration</h3>
-                <p className="text-sm text-muted-foreground">Customize the prescription format and layout</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" onClick={() => setShowTemplatePreview(true)}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Preview
-                </Button>
-                <Button variant="outline" onClick={handleResetTemplate}>
-                  <RotateCcw className="h-4 w-4 mr-2" />
-                  Reset
-                </Button>
-                <Button onClick={handleSaveTemplate}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Template
-                </Button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Header Settings */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Image className="h-5 w-5" />
-                    Header Settings
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="showLogo">Show Hospital Logo</Label>
-                    <Switch
-                      id="showLogo"
-                      checked={prescriptionTemplate.header.showLogo}
-                      onCheckedChange={(checked) => setPrescriptionTemplate(prev => ({
-                        ...prev,
-                        header: { ...prev.header, showLogo: checked }
-                      }))}
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="hospitalName">Hospital Name</Label>
-                    <Input
-                      id="hospitalName"
-                      value={prescriptionTemplate.header.hospitalName}
-                      onChange={(e) => setPrescriptionTemplate(prev => ({
-                        ...prev,
-                        header: { ...prev.header, hospitalName: e.target.value }
-                      }))}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="contactInfo">Show Contact Information</Label>
-                    <Switch
-                      id="contactInfo"
-                      checked={prescriptionTemplate.header.contactInfo}
-                      onCheckedChange={(checked) => setPrescriptionTemplate(prev => ({
-                        ...prev,
-                        header: { ...prev.header, contactInfo: checked }
-                      }))}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="customText">Custom Header Text</Label>
-                    <Textarea
-                      id="customText"
-                      value={prescriptionTemplate.header.customText || ''}
-                      onChange={(e) => setPrescriptionTemplate(prev => ({
-                        ...prev,
-                        header: { ...prev.header, customText: e.target.value }
-                      }))}
-                      placeholder="Add custom text to header"
-                      rows={2}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-
-              {/* Footer Settings */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    Footer Settings
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="signature">Digital Signature</Label>
-                    <Switch
-                      id="signature"
-                      checked={prescriptionTemplate.footer.signature}
-                      onCheckedChange={(checked) => setPrescriptionTemplate(prev => ({
-                        ...prev,
-                        footer: { ...prev.footer, signature: checked }
-                      }))}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="qrCode">QR Code</Label>
-                    <Switch
-                      id="qrCode"
-                      checked={prescriptionTemplate.footer.qrCode}
-                      onCheckedChange={(checked) => setPrescriptionTemplate(prev => ({
-                        ...prev,
-                        footer: { ...prev.footer, qrCode: checked }
-                      }))}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="customNotes">Custom Footer Notes</Label>
-                    <Textarea
-                      id="customNotes"
-                      value={prescriptionTemplate.footer.customNotes || ''}
-                      onChange={(e) => setPrescriptionTemplate(prev => ({
-                        ...prev,
-                        footer: { ...prev.footer, customNotes: e.target.value }
-                      }))}
-                      placeholder="Add custom footer text"
-                      rows={3}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Visual Identity & Branding */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Palette className="h-5 w-5" />
-                    Visual Identity & Branding
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="hospitalTagline">Hospital Tagline</Label>
-                    <Input
-                      id="hospitalTagline"
-                      value={hospitalBranding.tagline}
-                      onChange={(e) => setHospitalBranding(prev => ({ ...prev, tagline: e.target.value }))}
-                      placeholder="e.g., Your Health, Our Priority"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="primaryColor">Primary Color</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        id="primaryColor"
-                        type="color"
-                        value={hospitalBranding.primaryColor}
-                        onChange={(e) => setHospitalBranding(prev => ({ ...prev, primaryColor: e.target.value }))}
-                        className="w-12 h-8 p-0 border-0"
-                      />
-                      <Input
-                        value={hospitalBranding.primaryColor}
-                        onChange={(e) => setHospitalBranding(prev => ({ ...prev, primaryColor: e.target.value }))}
-                        className="flex-1"
-                        placeholder="#2563eb"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="secondaryColor">Secondary Color</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        id="secondaryColor"
-                        type="color"
-                        value={hospitalBranding.secondaryColor}
-                        onChange={(e) => setHospitalBranding(prev => ({ ...prev, secondaryColor: e.target.value }))}
-                        className="w-12 h-8 p-0 border-0"
-                      />
-                      <Input
-                        value={hospitalBranding.secondaryColor}
-                        onChange={(e) => setHospitalBranding(prev => ({ ...prev, secondaryColor: e.target.value }))}
-                        className="flex-1"
-                        placeholder="#64748b"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="logo">Hospital Logo</Label>
-                    <Input
-                      id="logo"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        // Handle file upload logic here
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          console.log('Logo file:', file);
-                          // You can add logic here to upload and save the logo
-                        }
-                      }}
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Upload a logo image (PNG, JPG, or SVG recommended, max 2MB)
-                    </p>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="hospitalAddress">Hospital Address</Label>
-                    <Textarea
-                      id="hospitalAddress"
-                      value={hospitalBranding.address}
-                      onChange={(e) => setHospitalBranding(prev => ({ ...prev, address: e.target.value }))}
-                      placeholder="Enter complete hospital address"
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="hospitalPhone">Hospital Phone</Label>
-                      <Input
-                        id="hospitalPhone"
-                        value={hospitalBranding.phone}
-                        onChange={(e) => setHospitalBranding(prev => ({ ...prev, phone: e.target.value }))}
-                        placeholder="+91-9876543210"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="hospitalEmail">Hospital Email</Label>
-                      <Input
-                        id="hospitalEmail"
-                        type="email"
-                        value={hospitalBranding.email}
-                        onChange={(e) => setHospitalBranding(prev => ({ ...prev, email: e.target.value }))}
-                        placeholder="info@hospital.com"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="hospitalWebsite">Hospital Website</Label>
-                    <Input
-                      id="hospitalWebsite"
-                      value={hospitalBranding.website}
-                      onChange={(e) => setHospitalBranding(prev => ({ ...prev, website: e.target.value }))}
-                      placeholder="https://www.hospital.com"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+          <PrescriptionTemplateConfig
+            template={prescriptionTemplate}
+            onTemplateChange={setPrescriptionTemplate}
+          />
         </TabsContent>
 
+        {/* Hospital Branding Tab */}
+        <TabsContent value="branding">
+          <HospitalBrandingConfig
+            branding={hospitalBranding}
+            onBrandingChange={setHospitalBranding}
+          />
+        </TabsContent>
       </Tabs>
-
-      {/* Prescription Preview Dialog */}
-      <Dialog open={showTemplatePreview} onOpenChange={setShowTemplatePreview}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>Prescription Template Preview</DialogTitle>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export PDF
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => window.print()}>
-                  <Printer className="h-4 w-4 mr-2" />
-                  Print
-                </Button>
-              </div>
-            </div>
-          </DialogHeader>
-          
-          <div className="bg-white text-black p-8 rounded-lg border shadow-lg print:shadow-none">
-            {/* Header */}
-            {(prescriptionTemplate.header.showLogo || prescriptionTemplate.header.hospitalName || prescriptionTemplate.header.contactInfo) && (
-              <div className="border-b pb-4 mb-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    {prescriptionTemplate.header.showLogo && (
-                      <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <Stethoscope className="h-8 w-8 text-primary" />
-                      </div>
-                    )}
-                    <div>
-                      <h1 className="text-2xl font-bold text-primary">{prescriptionTemplate.header.hospitalName}</h1>
-                      {prescriptionTemplate.header.contactInfo && (
-                        <div className="text-sm text-muted-foreground mt-1">
-                          <div>{hospitalBranding.phone} | {hospitalBranding.email}</div>
-                          <div>{hospitalBranding.address}</div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-right text-sm">
-                    <div className="font-medium">Prescription #12345</div>
-                    <div className="text-muted-foreground">Date: {new Date().toLocaleDateString()}</div>
-                  </div>
-                </div>
-                {prescriptionTemplate.header.customText && (
-                  <div className="mt-3 text-sm text-center font-medium">
-                    {prescriptionTemplate.header.customText}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Patient Info */}
-            <div className="grid grid-cols-2 gap-6 mb-6">
-              <div>
-                <h3 className="font-semibold mb-2">Patient Information</h3>
-                <div className="space-y-1 text-sm">
-                  <div><strong>Name:</strong> John Doe</div>
-                  <div><strong>Age:</strong> 45 years</div>
-                  <div><strong>Gender:</strong> Male</div>
-                  <div><strong>Contact:</strong> +91-9876543210</div>
-                </div>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-2">Doctor Information</h3>
-                <div className="space-y-1 text-sm">
-                  <div><strong>Dr. Sarah Johnson</strong></div>
-                  <div>Consultant Cardiologist</div>
-                  <div>Reg. No: 12345</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Vitals */}
-            {prescriptionTemplate.sections.vitals && (
-              <div className="mb-6">
-                <h3 className="font-semibold mb-2 flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4" />
-                  Vitals
-                </h3>
-                <div className="grid grid-cols-4 gap-4 text-sm">
-                  <div><strong>BP:</strong> 120/80 mmHg</div>
-                  <div><strong>Pulse:</strong> 72 bpm</div>
-                  <div><strong>Weight:</strong> 70 kg</div>
-                  <div><strong>Temperature:</strong> 98.6°F</div>
-                </div>
-              </div>
-            )}
-
-            {/* Diagnosis */}
-            {prescriptionTemplate.sections.diagnosis && (
-              <div className="mb-6">
-                <h3 className="font-semibold mb-2">Diagnosis</h3>
-                <div className="text-sm">
-                  1. Hypertension (Essential)<br/>
-                  2. Type 2 Diabetes Mellitus
-                </div>
-              </div>
-            )}
-
-            {/* Medicines */}
-            {prescriptionTemplate.sections.medicines && (
-              <div className="mb-6">
-                <h3 className="font-semibold mb-2">Medications</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>1. Amlodipine 5mg</span>
-                    <span>1-0-0 x 30 days</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>2. Metformin 500mg</span>
-                    <span>1-0-1 x 30 days</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>3. Aspirin 75mg</span>
-                    <span>0-0-1 x 30 days</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Advice */}
-            {prescriptionTemplate.sections.advice && (
-              <div className="mb-6">
-                <h3 className="font-semibold mb-2">Doctor's Advice</h3>
-                <div className="text-sm">
-                  • Regular exercise for 30 minutes daily<br/>
-                  • Low salt and sugar diet<br/>
-                  • Monitor blood pressure daily<br/>
-                  • Take medications as prescribed
-                </div>
-              </div>
-            )}
-
-            {/* Next Appointment */}
-            {prescriptionTemplate.sections.nextAppointment && (
-              <div className="mb-6">
-                <h3 className="font-semibold mb-2">Next Appointment</h3>
-                <div className="text-sm">
-                  <strong>Date:</strong> {new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}<br/>
-                  <strong>Time:</strong> 10:00 AM<br/>
-                  <strong>Department:</strong> Cardiology
-                </div>
-              </div>
-            )}
-
-            {/* Footer */}
-            {(prescriptionTemplate.footer.signature || prescriptionTemplate.footer.qrCode || prescriptionTemplate.footer.customNotes) && (
-              <div className="border-t pt-4 mt-6">
-                <div className="flex justify-between items-end">
-                  <div>
-                    {prescriptionTemplate.footer.customNotes && (
-                      <div className="text-xs text-muted-foreground mb-2">
-                        {prescriptionTemplate.footer.customNotes}
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    {prescriptionTemplate.footer.signature && (
-                      <div className="text-sm">
-                        <div className="border-t border-gray-300 w-48 mb-1"></div>
-                        <div>Doctor's Signature</div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {prescriptionTemplate.footer.qrCode && (
-                  <div className="flex justify-center mt-4">
-                    <div className="w-20 h-20 bg-gray-200 flex items-center justify-center text-xs">
-                      QR Code
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
