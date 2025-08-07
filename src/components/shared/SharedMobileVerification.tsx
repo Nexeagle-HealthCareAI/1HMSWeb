@@ -19,6 +19,7 @@ export interface SharedMobileVerificationProps {
   onSendOTP: () => void;
   onResendOTP: () => void;
   onVerifyOTP: () => void;
+  onClearVerificationError?: () => void;
   onBack?: () => void;
   onNext?: () => void;
   
@@ -29,6 +30,14 @@ export interface SharedMobileVerificationProps {
   showProgress?: boolean;
   currentStep?: number;
   totalSteps?: number;
+  
+  // Error states
+  hasVerificationError?: boolean;
+  verificationErrorMessage?: string;
+  
+  // Mobile tracking
+  originalMobile?: string;
+  allowSendOTP?: boolean;
   
   // UI customization
   title?: string;
@@ -50,6 +59,7 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
   onSendOTP,
   onResendOTP,
   onVerifyOTP,
+  onClearVerificationError,
   onBack,
   onNext,
   mode = 'registration',
@@ -58,6 +68,10 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
   showProgress = false,
   currentStep = 2,
   totalSteps = 3,
+  hasVerificationError = false,
+  verificationErrorMessage = '',
+  originalMobile = '',
+  allowSendOTP = true,
   title,
   subtitle,
   sendButtonText = 'Send OTP',
@@ -88,6 +102,12 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
     if (errors.mobile) {
       setErrors(prev => ({ ...prev, mobile: undefined }));
     }
+    
+    // Enable send OTP button if mobile number has changed from original
+    if (originalMobile && formatted !== originalMobile) {
+      // We need to notify parent component that mobile has changed
+      // This will be handled by the parent component
+    }
   };
 
   const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,6 +117,11 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
     // Clear error when user starts typing
     if (errors.otp) {
       setErrors(prev => ({ ...prev, otp: undefined }));
+    }
+    
+    // Clear verification error when user starts typing new OTP
+    if (hasVerificationError && onClearVerificationError) {
+      onClearVerificationError();
     }
     
     // Reset auto-verification flag when user manually types
@@ -213,7 +238,7 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
             onChange={handleMobileChange}
             placeholder="+91-XXX-XXX-XXXX"
             className={`h-10 pl-10 text-sm ${errors.mobile ? 'border-red-500' : ''}`}
-            disabled={otpSent || isLoading || mobileDisabled}
+            disabled={isLoading || mobileDisabled}
           />
         </div>
         {errors.mobile && (
@@ -227,7 +252,7 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
       {!otpSent && (
         <Button
           onClick={handleSendOTP}
-          disabled={!mobile || isLoading || mobileDisabled}
+          disabled={!mobile || isLoading || mobileDisabled || !allowSendOTP}
           className="w-full h-10 bg-primary text-white font-medium text-sm rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
         >
           {isLoading ? (
@@ -239,6 +264,15 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
             sendButtonText
           )}
         </Button>
+      )}
+      
+      {/* Show message when mobile hasn't changed */}
+      {!otpSent && !allowSendOTP && mobile && (
+        <div className="text-center py-2">
+          <p className="text-sm text-muted-foreground">
+            Change mobile number to send new OTP
+          </p>
+        </div>
       )}
 
       {/* OTP Input */}
@@ -254,13 +288,20 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
               value={otp}
               onChange={handleOtpChange}
               placeholder="Enter 6-digit OTP"
-              className={`h-10 text-center tracking-widest text-sm font-mono ${errors.otp ? 'border-red-500' : ''}`}
+              className={`h-10 text-center tracking-widest text-sm font-mono ${
+                errors.otp || hasVerificationError ? 'border-red-500' : ''
+              }`}
               maxLength={6}
               disabled={isLoading}
             />
             {errors.otp && (
               <div className="text-xs text-red-600 mt-1">
                 {errors.otp}
+              </div>
+            )}
+            {hasVerificationError && verificationErrorMessage && (
+              <div className="text-xs text-red-600 mt-1">
+                {verificationErrorMessage}
               </div>
             )}
           </div>

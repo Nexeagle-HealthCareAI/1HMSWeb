@@ -1,0 +1,1 @@
+export { PasswordResetSuccessModal } from './PasswordResetSuccessModal';
