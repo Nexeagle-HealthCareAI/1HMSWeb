@@ -71,6 +71,8 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
     };
   }, [updateSystemPreferences]);
 
+  // Removed hospital mapping fetch here to prevent duplicate calls.
+
   // Track user activity
   useEffect(() => {
     const updateActivity = () => {

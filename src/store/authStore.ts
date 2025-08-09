@@ -22,6 +22,7 @@ export interface AuthState {
   userRole: string | null;
   permissions: string[];
   hospitalId: string | null;
+  employeeId: string | null;
 }
 
 export interface AuthActions {
@@ -39,6 +40,8 @@ export interface AuthActions {
   getPermissions: () => string[];
   setHospitalId: (hospitalId: string) => void;
   getHospitalId: () => string | null;
+  setEmployeeId: (employeeId: string) => void;
+  getEmployeeId: () => string | null;
   setAuthenticatedUser: (userId: string, token: string) => void;
   clearSession: () => void;
   logout: () => void;
@@ -56,6 +59,7 @@ const initialState: AuthState = {
   userRole: null,
   permissions: [],
   hospitalId: null,
+  employeeId: null,
 };
 
 // Create auth store
@@ -141,6 +145,14 @@ export const useAuthStore = create<AuthStore>()(
           return get().hospitalId;
         },
 
+        setEmployeeId: (employeeId: string) => {
+          set({ employeeId });
+        },
+
+        getEmployeeId: () => {
+          return get().employeeId;
+        },
+
         clearSession: () => {
           set(initialState);
         },
@@ -156,6 +168,8 @@ export const useAuthStore = create<AuthStore>()(
           tokenExpiry: state.tokenExpiry,
           userId: state.userId,
           userRole: state.userRole,
+          hospitalId: state.hospitalId,
+          employeeId: state.employeeId,
         }),
       }
     )

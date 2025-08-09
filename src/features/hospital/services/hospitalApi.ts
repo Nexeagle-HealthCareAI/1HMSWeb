@@ -80,6 +80,14 @@ export interface HospitalData {
 // API Functions
 export const hospitalApi = {
   /**
+   * Get hospital-user record by userId
+   */
+  getHospitalUserByUserId: async (
+    userId: string
+  ): Promise<{ hospitalUserId: string; hospitalId: string; userId: string; employeeID: string; isPrimary: string; createdAt: string }> => {
+    return apiClient.get(API_ENDPOINTS.HOSPITALS.GET_BY_USER_ID(userId));
+  },
+  /**
    * Register a new hospital
    */
   registerHospital: async (data: HospitalRegistrationRequest): Promise<HospitalRegistrationResponse> => {

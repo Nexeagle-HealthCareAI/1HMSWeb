@@ -12,7 +12,7 @@ const AppointmentDashboard = lazy(() => import('@/features/appointment/component
 const AppointmentBooking = lazy(() => import('@/features/appointment/components/AppointmentBooking').then(module => ({ default: module.AppointmentBooking })));
 const AppointmentOversight = lazy(() => import('@/features/appointment/components/AppointmentOversight').then(module => ({ default: module.AppointmentOversight })));
 const DocAI = lazy(() => import('@/features/ai/components/DocAI').then(module => ({ default: module.DocAI })));
-const ProfilePage = lazy(() => import('@/features/patient/components/ProfilePage').then(module => ({ default: module.ProfilePage })));
+const ProfilePage = lazy(() => import('@/features/profile/components/ProfilePage').then(module => ({ default: module.ProfilePage })));
 const Billing = lazy(() => import('@/features/billing/components/Billing').then(module => ({ default: module.Billing })));
 const NotFoundPage = lazy(() => import('@/components/shared/NotFoundPage').then(module => ({ default: module.default })));
 

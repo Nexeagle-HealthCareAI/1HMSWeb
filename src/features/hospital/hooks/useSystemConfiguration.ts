@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
+// import { useToast } from '@/hooks/use-toast';
 import { Department } from '../components/DepartmentManagement';
 import { PrescriptionTemplate } from '../components/PrescriptionTemplateConfig';
 import { HospitalBranding } from '../components/HospitalBrandingConfig';
@@ -100,26 +100,25 @@ const defaultTemplate: PrescriptionTemplate = {
 
 const defaultBranding: HospitalBranding = {
   // Core Info
-  name: 'NexEagle Hospital',
-  type: 'Multispeciality',
-  
+  name: '',
+  type: '',
+
   // Contact
-  email: 'info@nexeagle.com',
-  contact: '+91 98765 43210',
-  alternateContact: '+91 98765 43211',
-  website: 'www.nexeagle.com',
-  
+  email: '',
+  contact: '',
+  alternateContact: '',
+  website: '',
+
   // Location
-  location: '123 Hospital Street, Medical District',
-  city: 'Mumbai',
-  state: 'Maharashtra',
-  country: 'India',
-  pincode: '400001',
-  
+  location: '',
+  city: '',
+  state: '',
+  country: '',
+  pincode: '',
+
   // Config & Metadata
-  timeZone: 'Asia/Kolkata',
-  registrationNumber: 'HOSP123456789'
-  
+  timeZone: '',
+  registrationNumber: ''
 };
 
 export const useSystemConfiguration = (focusTab?: string) => {
@@ -135,7 +134,8 @@ export const useSystemConfiguration = (focusTab?: string) => {
   const [departments, setDepartments] = useState<Department[]>(sampleDepartments);
   const [prescriptionTemplate, setPrescriptionTemplate] = useState<PrescriptionTemplate>(defaultTemplate);
   const [hospitalBranding, setHospitalBranding] = useState<HospitalBranding>(defaultBranding);
-  const { toast } = useToast();
+  // Disable toasts temporarily
+  const toast = (_?: any) => {};
 
   // Update active tab when focusTab changes
   useEffect(() => {
@@ -163,10 +163,7 @@ export const useSystemConfiguration = (focusTab?: string) => {
 
   const handleBrandingChange = (updatedBranding: HospitalBranding) => {
     setHospitalBranding(updatedBranding);
-    toast({
-      title: "Branding Updated",
-      description: "Hospital branding has been saved successfully."
-    });
+    // toast removed temporarily
   };
 
   const addDepartment = (department: Department) => {

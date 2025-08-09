@@ -177,6 +177,18 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
   }, [isLocked, lockoutTimeRemaining]);
 
   // Handler functions for child components
+  const fetchAndStoreHospitalMapping = async (userId: string) => {
+    try {
+      const { hospitalApi } = await import('@/features/hospital/services/hospitalApi');
+      const res = await hospitalApi.getHospitalUserByUserId(userId);
+      const authStore = useAuthStore.getState();
+      if (res?.hospitalId) authStore.setHospitalId(res.hospitalId);
+      if (res?.employeeID) authStore.setEmployeeId(res.employeeID);
+    } catch (e) {
+      console.warn('Hospital mapping fetch failed (non-blocking):', e);
+    }
+  };
+
   const handlePasswordLogin = async (userid: string, password: string) => {
     if (isLocked) {
       const minutes = Math.floor(lockoutTimeRemaining / 60);
@@ -219,14 +231,16 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
            name: sanitizedUserid,
          });
 
-         // Fetch and store user permissions
+         // Fetch hospital mapping once here
+         if (response.userId) {
+           await fetchAndStoreHospitalMapping(response.userId);
+         }
+
+         // Fetch and store user permissions (non-blocking)
          if (response.userId && response.accessToken) {
-           try {
-             await fetchAndStoreUserPermissions(response.userId, response.accessToken);
-           } catch (error) {
-             console.error('Failed to fetch permissions:', error);
-             // Continue with login even if permissions fetch fails
-           }
+           fetchAndStoreUserPermissions(response.userId, response.accessToken).catch((error) => {
+             console.warn('Failed to fetch permissions (non-blocking):', error);
+           });
          }
 
          // Invalidate and refetch auth data
@@ -342,14 +356,14 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
            const tokenToUse = response.accessToken || 'otp-login';
            useAuthStore.getState().setAuthenticatedUser(storedUserId, tokenToUse);
            
-           // Fetch and store user permissions
+           // Fetch hospital mapping once here
+           await fetchAndStoreHospitalMapping(storedUserId);
+
+           // Fetch and store user permissions (non-blocking)
            if (response.accessToken) {
-             try {
-               await fetchAndStoreUserPermissions(storedUserId, response.accessToken);
-             } catch (error) {
-               console.error('Failed to fetch permissions:', error);
-               // Continue with login even if permissions fetch fails
-             }
+             fetchAndStoreUserPermissions(storedUserId, response.accessToken).catch((error) => {
+               console.warn('Failed to fetch permissions (non-blocking):', error);
+             });
            }
            
            toast({

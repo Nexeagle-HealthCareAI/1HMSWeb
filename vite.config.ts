@@ -47,8 +47,8 @@ export default defineConfig(({ mode }) => ({
           'ai-feature': [
             './src/features/ai/components/DocAI.tsx'
           ],
-          'patient-feature': [
-            './src/features/patient/components/ProfilePage.tsx'
+          'profile-feature': [
+            './src/features/profile/components/ProfilePage.tsx'
           ],
           'hospital-feature': [
             './src/features/hospital/components/SystemConfiguration.tsx'

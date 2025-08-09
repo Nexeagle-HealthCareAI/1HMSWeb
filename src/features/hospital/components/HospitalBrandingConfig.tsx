@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
+// import { useToast } from '@/hooks/use-toast';
 import { useHospitalApi } from '@/hooks/useApi';
 import { useAuthStore } from '@/store/authStore';
 
@@ -53,36 +53,60 @@ interface HospitalBrandingConfigProps {
 
 const defaultBranding: HospitalBranding = {
   // Core Info
-  name: 'NexEagle Hospital',
-  type: 'Multispeciality',
+  name: '',
+  type: '',
   
   // Contact
-  email: 'info@nexeagle.com',
-  contact: '+91 98765 43210',
-  alternateContact: '+91 98765 43211',
-  website: 'www.nexeagle.com',
+  email: '',
+  contact: '',
+  alternateContact: '',
+  website: '',
   
   // Location
-  location: '123 Hospital Street, Medical District',
-  city: 'Mumbai',
-  state: 'Maharashtra',
-  country: 'India',
-  pincode: '400001',
+  location: '',
+  city: '',
+  state: '',
+  country: '',
+  pincode: '',
   
   // Config & Metadata
-  timeZone: 'Asia/Kolkata',
-  registrationNumber: 'HOSP123456789',
+  timeZone: '',
+  registrationNumber: '',
 
 };
 
 const hospitalTypes = [
-  { value: 'Clinic', label: 'Clinic' },
-  { value: 'Diagnostic', label: 'Diagnostic Center' },
-  { value: 'Multispeciality', label: 'Multispeciality Hospital' },
-  { value: 'Speciality', label: 'Speciality Hospital' },
-  { value: 'General', label: 'General Hospital' },
-  { value: 'DayCare', label: 'Day Care Center' },
-  { value: 'Rehabilitation', label: 'Rehabilitation Center' }
+  { value: 'Clinic', label: 'Clinic', description: 'Small outpatient care unit, usually run by one or more doctors' },
+  { value: 'Polyclinic', label: 'Polyclinic', description: 'Multi-specialty outpatient facility without in-patient beds' },
+  { value: 'Nursing Home', label: 'Nursing Home', description: 'Small in-patient facility with basic medical care' },
+  { value: 'General Hospital', label: 'General Hospital', description: 'Treats a wide range of conditions with in-patient and emergency care' },
+  { value: 'Community Hospital', label: 'Community Hospital', description: 'Serves a local area with limited services' },
+  { value: 'Multispeciality Hospital', label: 'Multispeciality Hospital', description: 'Offers multiple medical disciplines under one roof' },
+  { value: 'Speciality Hospital', label: 'Speciality Hospital', description: 'Hospital specialized in limited disciplines' },
+  { value: 'Super Speciality Hospital', label: 'Super Speciality Hospital', description: 'Focused on advanced treatment in one or two specialties' },
+  { value: 'Eye Hospital', label: 'Eye Hospital', description: 'Specialized in ophthalmology and eye care' },
+  { value: 'Dental Hospital', label: 'Dental Hospital', description: 'Specialized in oral and dental care' },
+  { value: 'Orthopedic Hospital', label: 'Orthopedic Hospital', description: 'Specialized in bones, joints, and musculoskeletal care' },
+  { value: 'Cardiac Hospital', label: 'Cardiac Hospital', description: 'Specialized in heart care and cardiothoracic surgery' },
+  { value: 'Cancer Hospital', label: 'Cancer Hospital', description: 'Oncology-focused care including chemotherapy and radiotherapy' },
+  { value: 'Women’s Hospital', label: 'Women’s Hospital', description: 'Specialized in obstetrics, gynecology, and maternity care' },
+  { value: 'Children’s Hospital', label: 'Children’s Hospital', description: 'Specialized in pediatric and neonatal care' },
+  { value: 'Psychiatric Hospital', label: 'Psychiatric Hospital', description: 'Focused on mental health and behavioral disorders' },
+  { value: 'Rehabilitation Hospital', label: 'Rehabilitation Hospital', description: 'Focused on long-term recovery and physiotherapy' },
+  { value: 'Infectious Disease Hospital', label: 'Infectious Disease Hospital', description: 'Specialized in TB, HIV, and isolation facilities' },
+  { value: 'Neuro Hospital', label: 'Neuro Hospital', description: 'Specialized in neurology and neurosurgery' },
+  { value: 'Diagnostic Centre', label: 'Diagnostic Centre', description: 'Specialized in pathology, imaging, and lab tests' },
+  { value: 'Radiology Centre', label: 'Radiology Centre', description: 'Specialized in X-ray, MRI, and CT scan services' },
+  { value: 'Dialysis Centre', label: 'Dialysis Centre', description: 'Specialized in kidney care and dialysis' },
+  { value: 'Blood Bank / Transfusion Centre', label: 'Blood Bank / Transfusion Centre', description: 'Blood storage and transfusion services' },
+  { value: 'Emergency Hospital', label: 'Emergency Hospital', description: 'Dedicated to trauma and urgent care' },
+  { value: 'Trauma Centre', label: 'Trauma Centre', description: 'Specialized in severe accident and injury cases' },
+  { value: 'Ayurvedic Hospital', label: 'Ayurvedic Hospital', description: 'Focused on Ayurveda-based treatment' },
+  { value: 'Homeopathic Hospital', label: 'Homeopathic Hospital', description: 'Specialized in homeopathy care' },
+  { value: 'Unani / Siddha Hospital', label: 'Unani / Siddha Hospital', description: 'Specialized in Unani or Siddha traditional medicine' },
+  { value: 'Naturopathy & Wellness Centre', label: 'Naturopathy & Wellness Centre', description: 'Focused on holistic healing, yoga, and diet therapy' },
+  { value: 'Teaching Hospital', label: 'Teaching Hospital', description: 'Attached to a medical college for training doctors' },
+  { value: 'Research Hospital', label: 'Research Hospital', description: 'Focused on clinical trials and advanced research' },
 ];
 
 const timeZones = [
@@ -99,7 +123,8 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
   branding,
   onBrandingChange
 }) => {
-  const { toast } = useToast();
+  // Temporarily disable toasts
+  const toast = (_?: any) => {};
   const queryClient = useQueryClient();
   const { userId, hospitalId, setHospitalId } = useAuthStore();
   const registerHospitalMutation = useHospitalApi.registerHospital();
@@ -173,16 +198,9 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
           setHospitalId(response.hospitalId);
           setIsEditMode(false);
           queryClient.invalidateQueries({ queryKey: ['hospital', response.hospitalId] });
-          toast({
-            title: "Hospital Registration Successful",
-            description: response.message || "Hospital has been registered successfully.",
-          });
+          // toast removed temporarily
         } else {
-          toast({
-            title: "Registration Failed",
-            description: response.message || "Failed to register hospital. Please try again.",
-            variant: "destructive"
-          });
+          // toast removed temporarily
         }
       } else {
         // Subsequent edits: update
@@ -208,25 +226,14 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
           if (hospitalId) {
             queryClient.invalidateQueries({ queryKey: ['hospital', hospitalId] });
           }
-          toast({
-            title: "Hospital Details Updated",
-            description: response.message || "Hospital information has been updated.",
-          });
+          // toast removed temporarily
         } else {
-          toast({
-            title: "Update Failed",
-            description: response.message || "Failed to update hospital. Please try again.",
-            variant: "destructive"
-          });
+          // toast removed temporarily
         }
       }
     } catch (error: any) {
       console.error('Hospital save error:', error);
-      toast({
-        title: "Save Error",
-        description: error?.response?.data?.message || "Failed to save hospital details. Please try again.",
-        variant: "destructive"
-      });
+      // toast removed temporarily
     }
   };
 
@@ -324,11 +331,17 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                   <Type className="h-4 w-4" />
                   Hospital Type *
                 </Label>
-                <Select value={branding.type} onValueChange={(value) => updateBranding('type', value)} disabled={isExistingHospital && !isEditMode}>
-                  <SelectTrigger>
+                <Select
+                  value={hospitalTypes.some(t=>t.value===branding.type) ? branding.type : undefined}
+                  onValueChange={(value) => {
+                    updateBranding('type', value)
+                  }}
+                  disabled={isExistingHospital && !isEditMode}
+                >
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select hospital type" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-48 overflow-y-auto">
                     {hospitalTypes.map((type) => (
                       <SelectItem key={type.value} value={type.value}>
                         {type.label}

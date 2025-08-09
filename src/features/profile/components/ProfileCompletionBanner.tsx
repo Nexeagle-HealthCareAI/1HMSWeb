@@ -1,10 +1,9 @@
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, Settings, ArrowRight, X } from 'lucide-react';
+import { AlertTriangle, ArrowRight, X } from 'lucide-react';
 
 interface ProfileCompletionBannerProps {
   profileScore: number;
@@ -28,7 +27,7 @@ export const ProfileCompletionBanner: React.FC<ProfileCompletionBannerProps> = (
         <div className="flex-1 mr-4">
           <div className="flex items-center gap-3 mb-2">
             <span className="font-medium text-amber-800 dark:text-amber-200">
-              Complete your hospital & doctor details to unlock prescription, appointment, and billing features.
+              Complete your profile to unlock all features.
             </span>
             <Badge variant="outline" className="text-amber-700 border-amber-300">
               🚧 Profile {profileScore}%
@@ -62,3 +61,6 @@ export const ProfileCompletionBanner: React.FC<ProfileCompletionBannerProps> = (
     </Alert>
   );
 };
+
+
+

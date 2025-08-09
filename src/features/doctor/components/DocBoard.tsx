@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useAuthStore } from '@/store/authStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -78,6 +79,10 @@ interface Appointment {
 
 export const DocBoard: React.FC = () => {
   const navigate = useNavigate();
+  const rawRole = useAuthStore.getState().getUserRole?.() || 'doctor';
+  const userRole = rawRole?.toLowerCase() === 'admindoctor' ? 'admin-doctor' : rawRole;
+  const profileTarget = (userRole === 'doctor' || userRole === 'admin-doctor') ? '/profile?tab=professional' : '/profile';
+  const profileCompletion = 20; // TODO: compute from store when profile is implemented
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [doctorFilter, setDoctorFilter] = useState('all');
@@ -221,6 +226,26 @@ export const DocBoard: React.FC = () => {
 
   return (
     <Tabs defaultValue="dashboard" className="space-y-6">
+      {/* Doctor Profile Completion Banner */}
+      {(userRole === 'doctor' || userRole === 'admin-doctor') && profileCompletion < 100 && (
+        <div className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 rounded-xl p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Stethoscope className="h-5 w-5 text-amber-700" />
+            <div>
+              <div className="font-medium text-amber-800">Complete your professional details</div>
+              <div className="text-xs text-amber-700">Required to use DocBoard features</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-24 h-2 bg-amber-200 rounded-full overflow-hidden">
+              <div className="h-full bg-amber-600" style={{ width: `${profileCompletion}%` }} />
+            </div>
+            <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white" onClick={() => navigate(profileTarget)}>
+              Update Now
+            </Button>
+          </div>
+        </div>
+      )}
       <TabsList className="grid w-full grid-cols-2 lg:grid-cols-2 bg-muted p-1 h-12">
         <TabsTrigger value="dashboard" className="flex items-center gap-2 text-sm lg:text-base font-medium">
           <Home className="h-4 w-4 lg:h-5 lg:w-5" />

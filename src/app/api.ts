@@ -13,10 +13,16 @@ export const API_ENDPOINTS = {
   },
   USER: {    
     PERMISSIONS: '/user/permissions',
+    PROFILE_PHOTO: {
+      UPLOAD: '/user/profile/photo/upload',
+      FINALIZE: '/user/profile/photo/finalize',
+      DELETE: '/user/profile/photo',
+    },
   },
   HOSPITALS: {
     REGISTER: '/hospitals/register',
     GET_BY_ID: (id: string) => `/hospitals/${id}`,
+    GET_BY_USER_ID: (userId: string) => `/hospitals/users/${userId}`,
   },
 } as const;
 

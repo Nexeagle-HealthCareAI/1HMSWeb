@@ -83,10 +83,10 @@ export interface UserPermissionsRequest {
 }
 
 export interface UserPermissionsResponse {
-  success: boolean;
-  message: string;
-  role: string;
-  permissions: string[];
+  roleId: string;
+  roleName: string; // e.g., AdminDoctor
+  description?: string;
+  permissionKeys: string[];
 }
 
 // Auth API service
@@ -134,25 +134,25 @@ export const fetchAndStoreUserPermissions = async (userId: string, token: string
     authStore.setToken(token);
     
     // Fetch permissions
-    const response = await authApi.getUserPermissions({ userId });
-    
-    if (response.success) {
-      // Store role and permissions
-      authStore.setUserRole(response.role);
-      authStore.setPermissions(response.permissions);
-      
+    const perms = await authApi.getUserPermissions({ userId });
+    if (perms && perms.roleName) {
+      // Normalize role to our expected store format (lowercase, hyphenated)
+      const normalizedRole = perms.roleName.toLowerCase().replace(/\s+/g, '-');
+      authStore.setUserRole(normalizedRole);
+      authStore.setPermissions(perms.permissionKeys || []);
+
       console.log('✅ Permissions fetched and stored:', {
-        role: response.role,
-        permissions: response.permissions
+        role: normalizedRole,
+        permissions: perms.permissionKeys || []
       });
       
-      return response;
+      return { success: true, message: 'ok', role: normalizedRole, permissions: perms.permissionKeys || [] } as any;
     } else {
-      console.error('❌ Failed to fetch permissions:', response.message);
-      throw new Error(response.message || 'Failed to fetch permissions');
+      console.warn('❌ Failed to fetch permissions: empty response');
+      return { success: false, message: 'empty', role: '', permissions: [] } as any;
     }
   } catch (error) {
-    console.error('❌ Error fetching permissions:', error);
-    throw error;
+    console.warn('❌ Error fetching permissions:', error);
+    return { success: false, message: 'Failed to fetch permissions', role: '', permissions: [] } as any;
   }
 };

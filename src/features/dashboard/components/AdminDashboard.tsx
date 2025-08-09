@@ -49,8 +49,9 @@ import {
   SystemConfigModule,
   AuditSecurityModule
 } from './index';
-import { ProfileCompletionBanner } from '@/features/patient/components/ProfileCompletionBanner';
-import { ProfilePage } from '@/features/patient/components/ProfilePage';
+// Removed ProfileCompletionBanner from Admin panel
+import { useHospitalApi } from '@/hooks/useApi';
+import { ProfilePage } from '@/features/profile/components/ProfilePage';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 
@@ -65,29 +66,15 @@ export const AdminDashboard = () => {
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [showProfilePage, setShowProfilePage] = useState(false);
 
-  // Calculate hospital registration completion score
-  const calculateHospitalCompletionScore = (): number => {
-    // TODO: Move setup data to Zustand store
-    const setupData = null;
-    const hasCompleted = null;
-    
-    if (hasCompleted) return 100;
-    
-    if (!setupData) return 0;
-    
-    const data = JSON.parse(setupData);
-    
-    const hospitalFields = [
-      data.hospital?.name,
-      data.hospital?.phone,
-      data.hospital?.registrationNumber,
-      data.hospital?.address,
-      data.hospital?.email,
-    ];
-    
-    const completed = hospitalFields.filter(field => field && field.toString().trim() !== '').length;
-    return Math.round((completed / hospitalFields.length) * 100);
-  };
+  // Fetch hospital profile status and compute completion from API
+  const authStoreRef = useAuthStore.getState();
+  const hospitalId = authStoreRef.getHospitalId() || '';
+  const { data: hospitalData } = useHospitalApi.getHospitalById(hospitalId);
+  const hospitalScore = hospitalData?.profileStatus?.profileCompletionPercent ?? 0;
+  const isBasicInfoComplete = hospitalData?.profileStatus?.isBasicInfoComplete ?? false;
+  const isLocationInfoComplete = hospitalData?.profileStatus?.isLocationInfoComplete ?? false;
+  const isContactInfoComplete = hospitalData?.profileStatus?.isContactInfoComplete ?? false;
+  const accessUnlocked = isBasicInfoComplete && isLocationInfoComplete; // allow admin access if both true
 
   // Calculate profile completion score for admin/doctor
   const calculateProfileScore = (): number => {
@@ -142,9 +129,9 @@ export const AdminDashboard = () => {
   };
 
   const profileScore = calculateProfileScore();
-  const hospitalScore = calculateHospitalCompletionScore();
   const authStore = useAuthStore.getState();
-  const userRole = authStore.getUserRole() || 'admin';
+  const rawRole = authStore.getUserRole() || 'admin';
+  const userRole = rawRole?.toLowerCase() === 'admindoctor' ? 'admin-doctor' : rawRole;
 
 
 
@@ -213,7 +200,7 @@ export const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle">
-      {/* Hospital Registration Meter - Always visible for admins */}
+      {/* Hospital Registration Meter - show until 100% */}
       {hospitalScore < 100 && (
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl p-6 shadow-lg">
           <div className="flex items-center justify-between mb-4">
@@ -253,7 +240,7 @@ export const AdminDashboard = () => {
           
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm">
-              {hospitalScore < 70 ? (
+              {!accessUnlocked ? (
                 <>
                   <X className="h-4 w-4 text-red-500" />
                   <span className="text-red-700 dark:text-red-300 font-medium">
@@ -274,21 +261,15 @@ export const AdminDashboard = () => {
               onClick={() => setCurrentView('system-config-hospital')} 
               className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2"
             >
-              {hospitalScore < 70 ? 'Complete Hospital Info' : 'Update Hospital Details'}
+              {!accessUnlocked ? 'Complete Hospital Info' : 'Update Hospital Details'}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
         </div>
       )}
+      {/* Removed the completion banner at 100% as requested */}
 
-      {/* Profile Completion Banner for Admin as Doctor */}
-      {(userRole === 'admin-doctor' || userRole === 'doctor') && profileScore < 90 && !bannerDismissed && (
-        <ProfileCompletionBanner
-          profileScore={profileScore}
-          onOpenSetup={() => setShowProfilePage(true)}
-          onDismiss={() => setBannerDismissed(true)}
-        />
-      )}
+      {/* Profile completion banner removed for Admin panel */}
 
       {/* Setup Dialog - Removed WelcomeSetup component */}
       <Dialog open={showSetupDialog} onOpenChange={setShowSetupDialog}>
@@ -308,7 +289,15 @@ export const AdminDashboard = () => {
       {/* Top Navigation */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Admin Board</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-foreground">Admin Board</h1>
+            {hospitalScore === 100 && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 px-2.5 py-0.5 shadow-sm text-[11px] font-medium">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Hospital setup 100%
+              </span>
+            )}
+          </div>
           <p className="text-muted-foreground">Hospital Management Overview</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -346,7 +335,7 @@ export const AdminDashboard = () => {
       {/* Admin Navigation Modules */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 lg:gap-4">
         {adminModules.map((module) => {
-          const isLocked = hospitalScore < 70 && module.id !== 'dashboard' && module.id !== 'system-config';
+          const isLocked = !accessUnlocked && module.id !== 'dashboard' && module.id !== 'system-config';
           
           return (
             <Card 

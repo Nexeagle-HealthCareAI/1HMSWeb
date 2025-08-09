@@ -100,7 +100,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   const profileScore = calculateProfileScore();
   const authStore = useAuthStore.getState();
-  const userRole = authStore.getUserRole() || 'doctor';
+  const rawRole = authStore.getUserRole() || 'doctor';
+  const userRole = rawRole?.toLowerCase() === 'admindoctor' ? 'admin-doctor' : rawRole;
+  const profileTarget = (userRole === 'doctor' || userRole === 'admin-doctor') ? '/profile?tab=professional' : '/profile';
 
   // Navigation items
   const navigation: NavigationItem[] = [
@@ -289,7 +291,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   variant="link"
                   size="sm"
                   className="p-0 h-auto text-xs text-healthcare-primary"
-                  onClick={() => navigate('/profile')}
+                  onClick={() => navigate(profileTarget)}
                 >
                   Complete Profile
                 </Button>
@@ -325,7 +327,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     </div>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate('/profile')}>
+                  <DropdownMenuItem onClick={() => navigate(profileTarget)}>
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>

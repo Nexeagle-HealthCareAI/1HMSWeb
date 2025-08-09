@@ -49,6 +49,12 @@ export const useAuthApi = {
 
 // Hospital API hooks
 export const useHospitalApi = {
+  // Get hospital-user mapping by userId
+  getHospitalUserByUserId: (userId?: string) => createApiHook(
+    ['hospitalUserByUserId', userId || ''],
+    () => hospitalApi.getHospitalUserByUserId(userId!),
+    { enabled: !!userId, staleTime: 5 * 60 * 1000 }
+  ),
   // Register hospital
   registerHospital: () => createMutationHook(hospitalApi.registerHospital),
   // Update hospital
