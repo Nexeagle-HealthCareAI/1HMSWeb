@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
 import { authApi } from '@/services';
-import { appointmentApi } from '@/features/appointment/services/appointmentApi';
+import { hospitalApi } from '@/features/hospital/services/hospitalApi';
 
 // Generic API hook factory
 export const createApiHook = <TData, TError = Error>(
@@ -44,6 +44,27 @@ export const useAuthApi = {
   
   // Reset password with userId (for forgot password)
   resetPasswordWithUserId: () => createMutationHook(authApi.resetPasswordWithUserId),
+  getUserPermissions: () => createMutationHook(authApi.getUserPermissions),
+};
+
+// Hospital API hooks
+export const useHospitalApi = {
+  // Register hospital
+  registerHospital: () => createMutationHook(hospitalApi.registerHospital),
+  // Update hospital
+  updateHospital: (hospitalId: string) =>
+    createMutationHook((data: Parameters<typeof hospitalApi.updateHospital>[1]) =>
+      hospitalApi.updateHospital(hospitalId, data)
+    ),
+  // Get hospital by ID
+  getHospitalById: (hospitalId: string) => createApiHook(
+    ['hospital', hospitalId],
+    () => hospitalApi.getHospitalById(hospitalId),
+    {
+      enabled: !!hospitalId,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    }
+  ),
 };
 // Utility hook for invalidating queries
 export const useInvalidateQueries = () => {
@@ -52,8 +73,6 @@ export const useInvalidateQueries = () => {
   return {
     invalidateAuth: () => queryClient.invalidateQueries({ queryKey: ['auth'] }),
     invalidateUser: () => queryClient.invalidateQueries({ queryKey: ['auth', 'user'] }),
-    invalidateAppointments: () => queryClient.invalidateQueries({ queryKey: ['appointments'] }),
-    invalidateTimeSlots: () => queryClient.invalidateQueries({ queryKey: ['timeSlots'] }),
     invalidateAll: () => queryClient.invalidateQueries(),
   };
 };

@@ -20,6 +20,8 @@ export interface AuthState {
   tokenExpiry: number | null;
   userId: string | null;
   userRole: string | null;
+  permissions: string[];
+  hospitalId: string | null;
 }
 
 export interface AuthActions {
@@ -33,7 +35,11 @@ export interface AuthActions {
   getUserId: () => string | null;
   setUserRole: (role: string) => void;
   getUserRole: () => string | null;
-  setAuthenticatedUser: (userId: string, userRole: string, token: string) => void;
+  setPermissions: (permissions: string[]) => void;
+  getPermissions: () => string[];
+  setHospitalId: (hospitalId: string) => void;
+  getHospitalId: () => string | null;
+  setAuthenticatedUser: (userId: string, token: string) => void;
   clearSession: () => void;
   logout: () => void;
 }
@@ -48,6 +54,8 @@ const initialState: AuthState = {
   tokenExpiry: null,
   userId: null,
   userRole: null,
+  permissions: [],
+  hospitalId: null,
 };
 
 // Create auth store
@@ -74,11 +82,10 @@ export const useAuthStore = create<AuthStore>()(
         },
 
         // Set authenticated user
-        setAuthenticatedUser: (userId: string, userRole: string, token: string) => {
+        setAuthenticatedUser: (userId: string, token: string) => {
           const tokenExpiry = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
           const user: User = {
             id: userId,
-            role: userRole,
           };
           set({
             user,
@@ -86,7 +93,6 @@ export const useAuthStore = create<AuthStore>()(
             token,
             tokenExpiry,
             userId,
-            userRole,
           });
         },
 
@@ -117,6 +123,22 @@ export const useAuthStore = create<AuthStore>()(
 
         getUserRole: () => {
           return get().userRole;
+        },
+
+        setPermissions: (permissions: string[]) => {
+          set({ permissions });
+        },
+
+        getPermissions: () => {
+          return get().permissions;
+        },
+
+        setHospitalId: (hospitalId: string) => {
+          set({ hospitalId });
+        },
+
+        getHospitalId: () => {
+          return get().hospitalId;
         },
 
         clearSession: () => {

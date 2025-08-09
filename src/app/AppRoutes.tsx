@@ -13,7 +13,8 @@ const AppointmentBooking = lazy(() => import('@/features/appointment/components/
 const AppointmentOversight = lazy(() => import('@/features/appointment/components/AppointmentOversight').then(module => ({ default: module.AppointmentOversight })));
 const DocAI = lazy(() => import('@/features/ai/components/DocAI').then(module => ({ default: module.DocAI })));
 const ProfilePage = lazy(() => import('@/features/patient/components/ProfilePage').then(module => ({ default: module.ProfilePage })));
-const Billing = lazy(() => import('@/features/hospital/components/Billing').then(module => ({ default: module.Billing })));
+const Billing = lazy(() => import('@/features/billing/components/Billing').then(module => ({ default: module.Billing })));
+const NotFoundPage = lazy(() => import('@/components/shared/NotFoundPage').then(module => ({ default: module.default })));
 
 
 // Loading component for lazy routes
@@ -57,22 +58,39 @@ export const AppRoutes: React.FC = () => {
           } 
         />
 
+        {/* 404 Route */}
+        <Route 
+          path="/404" 
+          element={<NotFoundPage />} 
+        />
+
+        {/* Admin Route - Accessible without authentication for development */}
+        <Route 
+          path="/admin" 
+          element={
+            <MainLayout>
+              <AdminDashboard />
+            </MainLayout>
+          } 
+        />
+
         {/* Protected Routes */}
         {isAuthenticated ? (
           <>
-            {/* Admin Routes */}
-            <Route 
-              path="/admin" 
-              element={
-                <MainLayout>
-                  <AdminDashboard />
-                </MainLayout>
-              } 
-            />
 
             {/* Dashboard Routes */}
             <Route 
               path="/dashboard" 
+              element={
+                <MainLayout>
+                  <DocBoard />
+                </MainLayout>
+              } 
+            />
+
+            {/* DocBoard Route */}
+            <Route 
+              path="/docboard" 
               element={
                 <MainLayout>
                   <DocBoard />
@@ -136,15 +154,15 @@ export const AppRoutes: React.FC = () => {
               } 
             />
 
-            {/* Catch-all route - redirect to dashboard */}
+            {/* Catch-all route - show 404 page */}
             <Route 
               path="*" 
-              element={<Navigate to="/dashboard" replace />} 
+              element={<NotFoundPage />} 
             />
           </>
         ) : (
-          // Redirect to login if not authenticated
-          <Route path="*" element={<Navigate to="/" replace />} />
+          // Show 404 page for unauthenticated users too
+          <Route path="*" element={<NotFoundPage />} />
         )}
       </Routes>
     </Suspense>

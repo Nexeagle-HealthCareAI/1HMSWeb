@@ -51,7 +51,10 @@ export default defineConfig(({ mode }) => ({
             './src/features/patient/components/ProfilePage.tsx'
           ],
           'hospital-feature': [
-            './src/features/hospital/components/Billing.tsx'
+            './src/features/hospital/components/SystemConfiguration.tsx'
+          ],
+          'billing-feature': [
+            './src/features/billing/components/Billing.tsx'
           ]
         }
       }

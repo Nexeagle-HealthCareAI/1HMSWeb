@@ -1,5 +1,6 @@
 import { apiClient, ApiResponse } from '@/services/axiosClient';
 import { API_ENDPOINTS } from '@/app/api';
+import { useAuthStore } from '@/store/authStore';
 
 // Types
 export interface LoginRequest {
@@ -42,17 +43,7 @@ export interface VerifyOTPResponse {
   success: boolean;
   message: string;
   userId: string;
-  accessToken?: string;
-}
-
-export interface UserProfile {
-  id: string;
-  email: string;
-  mobile: string;
-  name: string;
-  role: string;
-  permissions: string[];
-  profilePicture?: string;
+  accessToken: string;
 }
 
 export interface ForgotPasswordRequest {
@@ -63,16 +54,6 @@ export interface ResetPasswordRequest {
   mobileNumber: string;
   otp: string;
   newPassword: string;
-}
-
-export interface UpdateProfileRequest {
-  userId: string;
-  email: string;
-  password: string;
-  fullName: string;
-  gender: string;
-  language: string;
-  profilePictureUrl: string;
 }
 
 export interface SetPasswordRequest {
@@ -95,6 +76,17 @@ export interface ResetPasswordWithUserIdRequest {
 export interface ResetPasswordWithUserIdResponse {
   success: boolean;
   message: string;
+}
+
+export interface UserPermissionsRequest {
+  userId: string;
+}
+
+export interface UserPermissionsResponse {
+  success: boolean;
+  message: string;
+  role: string;
+  permissions: string[];
 }
 
 // Auth API service
@@ -126,5 +118,41 @@ export const authApi = {
   // Reset password with userId (for forgot password)
   resetPasswordWithUserId: (data: ResetPasswordWithUserIdRequest): Promise<ResetPasswordWithUserIdResponse> => {
     return apiClient.patch(API_ENDPOINTS.AUTH.RESET_PASSWORD, data);
+  },
+
+  // Get user permissions
+  getUserPermissions: (data: UserPermissionsRequest): Promise<UserPermissionsResponse> => {
+    return apiClient.get(`${API_ENDPOINTS.USER.PERMISSIONS}?userId=${data.userId}`);
+  }
+};
+
+// Utility function to fetch and store user permissions
+export const fetchAndStoreUserPermissions = async (userId: string, token: string) => {
+  try {
+    // Set token for the API call
+    const authStore = useAuthStore.getState();
+    authStore.setToken(token);
+    
+    // Fetch permissions
+    const response = await authApi.getUserPermissions({ userId });
+    
+    if (response.success) {
+      // Store role and permissions
+      authStore.setUserRole(response.role);
+      authStore.setPermissions(response.permissions);
+      
+      console.log('✅ Permissions fetched and stored:', {
+        role: response.role,
+        permissions: response.permissions
+      });
+      
+      return response;
+    } else {
+      console.error('❌ Failed to fetch permissions:', response.message);
+      throw new Error(response.message || 'Failed to fetch permissions');
+    }
+  } catch (error) {
+    console.error('❌ Error fetching permissions:', error);
+    throw error;
   }
 };

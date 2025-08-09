@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/store/authStore';
 import { useAuthApi } from '@/hooks/useApi';
+import { fetchAndStoreUserPermissions } from '@/features/auth/services/authApi';
 import { ValidationUtils } from '@/utils/validation';
 import {
   RegistrationLayout,
@@ -367,6 +368,12 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
           console.log('🔍 After setUserId from OTP - userId from store:', getUserId());
         }
         
+        // Store accessToken from verifyOTP response
+        if (response.accessToken) {
+          console.log('🔑 Storing accessToken from OTP verification:', response.accessToken);
+          setToken(response.accessToken);
+        }
+        
         toast({
           title: "OTP Verified!",
           description: "Mobile number verified successfully"
@@ -429,7 +436,15 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
         const userRole = userType === 'Admin Only' ? 'Admin' : 'AdminDoctor';
         const token = getToken();
         if (userId && token) {
-          setAuthenticatedUser(userId, userRole, token);
+          setAuthenticatedUser(userId, token);
+          
+          // Fetch and store user permissions
+          try {
+            await fetchAndStoreUserPermissions(userId, token);
+          } catch (error) {
+            console.error('Failed to fetch permissions:', error);
+            // Continue with registration even if permissions fetch fails
+          }
         }
         
         toast({
@@ -456,7 +471,15 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
     const userId = getUserId();
     const token = getToken();
     if (userId && token) {
-      setAuthenticatedUser(userId, userRole, token);
+      setAuthenticatedUser(userId, token);
+      
+      // Fetch and store user permissions
+      try {
+        await fetchAndStoreUserPermissions(userId, token);
+      } catch (error) {
+        console.error('Failed to fetch permissions:', error);
+        // Continue with registration even if permissions fetch fails
+      }
     }
     onRegister(userRole);
   };

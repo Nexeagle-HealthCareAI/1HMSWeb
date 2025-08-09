@@ -4,6 +4,7 @@ import { toast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/store/authStore';
 import { ValidationUtils } from '@/utils/validation';
 import { useAuthApi, useInvalidateQueries } from '@/hooks/useApi';
+import { fetchAndStoreUserPermissions } from '@/features/auth/services/authApi';
 import {
   PasswordLoginForm,
   OTPLoginForm,
@@ -208,27 +209,37 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
         otp: ''
       });
       
-      if (response.success) {
-        // Update auth store
-        setToken(response.accessToken!);
-        setUser({
-          id: response.userId || undefined,
-          email: sanitizedUserid,
-          mobile: sanitizedUserid,
-          name: sanitizedUserid,
-        });
+             if (response.success) {
+         // Update auth store
+         setToken(response.accessToken!);
+         setUser({
+           id: response.userId || undefined,
+           email: sanitizedUserid,
+           mobile: sanitizedUserid,
+           name: sanitizedUserid,
+         });
 
-        // Invalidate and refetch auth data
-        invalidateAuth();
+         // Fetch and store user permissions
+         if (response.userId && response.accessToken) {
+           try {
+             await fetchAndStoreUserPermissions(response.userId, response.accessToken);
+           } catch (error) {
+             console.error('Failed to fetch permissions:', error);
+             // Continue with login even if permissions fetch fails
+           }
+         }
 
-        toast({
-          title: "Login Successful",
-          description: "Welcome back!"
-        });
-        onLogin();
-      } else {
-        handleFailedLogin();
-      }
+         // Invalidate and refetch auth data
+         invalidateAuth();
+
+         toast({
+           title: "Login Successful",
+           description: "Welcome back!"
+         });
+         onLogin();
+       } else {
+         handleFailedLogin();
+       }
     } catch (error) {
       console.error('Login error:', error);
       
@@ -309,7 +320,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
         otp: sanitizedOtp
       });
       
-      console.log('OTP verification response:', response);
+      
       
       if (response.success) {
         // Store userId from OTP verification response
@@ -317,25 +328,41 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
           useAuthStore.getState().setUserId(response.userId);
         }
         
+        // Store accessToken from OTP verification response
+        if (response.accessToken) {
+          useAuthStore.getState().setToken(response.accessToken);
+        }
+        
         // For OTP login, check if we have userId from the response
         const storedUserId = response.userId || useAuthStore.getState().getUserId();
         
-        if (storedUserId) {
-          // For OTP login, we need to set the user as authenticated
-          // Since OTP verification is successful, we can authenticate the user
-          useAuthStore.getState().setAuthenticatedUser(storedUserId, 'Admin', 'otp-login');
-          
-          toast({
-            title: "Login Successful",
-            description: "Welcome back!"
-          });
-          onLogin();
-        } else {
-          toast({
-            title: "OTP Verification Failed",
-            description: "User ID not found. Please try again."
-          });
-        }
+                 if (storedUserId) {
+           // For OTP login, we need to set the user as authenticated
+           // Use the actual accessToken from the response instead of placeholder
+           const tokenToUse = response.accessToken || 'otp-login';
+           useAuthStore.getState().setAuthenticatedUser(storedUserId, tokenToUse);
+           
+           // Fetch and store user permissions
+           if (response.accessToken) {
+             try {
+               await fetchAndStoreUserPermissions(storedUserId, response.accessToken);
+             } catch (error) {
+               console.error('Failed to fetch permissions:', error);
+               // Continue with login even if permissions fetch fails
+             }
+           }
+           
+           toast({
+             title: "Login Successful",
+             description: "Welcome back!"
+           });
+           onLogin();
+         } else {
+           toast({
+             title: "OTP Verification Failed",
+             description: "User ID not found. Please try again."
+           });
+         }
       } else {
         throw new Error(response.message || 'OTP verification failed');
       }

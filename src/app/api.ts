@@ -11,21 +11,13 @@ export const API_ENDPOINTS = {
     SET_PASSWORD: '/auth/user/password?scope=set-password',
     RESET_PASSWORD: '/auth/user/password?scope=reset-password',
   },
-  USER: {
-    PROFILE_UPDATE: '/User/update-user-details',
+  USER: {    
+    PERMISSIONS: '/user/permissions',
   },
-  PATIENTS: '/patients',
-  APPOINTMENTS: '/appointments',
-  DOCTORS: '/doctors',
-  BILLING: '/billing',
-  MESSAGING: '/messaging',
-  AI: '/ai',
-  HOSPITAL: '/hospital',
-  REPORTS: '/reports',
-  PRESCRIPTIONS: '/prescriptions',
-  CALENDAR: '/calendar',
-  NOTIFICATIONS: '/notifications',
-  SETTINGS: '/settings'
+  HOSPITALS: {
+    REGISTER: '/hospitals/register',
+    GET_BY_ID: (id: string) => `/hospitals/${id}`,
+  },
 } as const;
 
 // Default headers
