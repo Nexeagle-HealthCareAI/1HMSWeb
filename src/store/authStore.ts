@@ -16,6 +16,7 @@ export interface AuthState {
   // State
   user: User | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   token: string | null;
   tokenExpiry: number | null;
   userId: string | null;
@@ -43,6 +44,7 @@ export interface AuthActions {
   setEmployeeId: (employeeId: string) => void;
   getEmployeeId: () => string | null;
   setAuthenticatedUser: (userId: string, token: string) => void;
+  setLoading: (loading: boolean) => void;
   clearSession: () => void;
   logout: () => void;
 }
@@ -53,6 +55,7 @@ export type AuthStore = AuthState & AuthActions;
 const initialState: AuthState = {
   user: null,
   isAuthenticated: false,
+  isLoading: false,
   token: null,
   tokenExpiry: null,
   userId: null,
@@ -151,6 +154,10 @@ export const useAuthStore = create<AuthStore>()(
 
         getEmployeeId: () => {
           return get().employeeId;
+        },
+
+        setLoading: (loading: boolean) => {
+          set({ isLoading: loading });
         },
 
         clearSession: () => {

@@ -33,6 +33,8 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
       // Token is invalid or expired, clear any stored auth data
       useAuthStore.getState().clearSession();
     }
+    // Note: We don't automatically restore authentication state on refresh
+    // Users must go through proper login flow to be authenticated
 
     // Detect system preferences
     const detectSystemPreferences = () => {

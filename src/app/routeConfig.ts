@@ -10,6 +10,7 @@ export interface RouteConfig {
 export const ROUTES = {
   // Public routes
   HOME: '/',
+  LOGIN: '/login',
   NOT_FOUND: '/404',
   FORGOT_PASSWORD: '/forgot-password',
 
@@ -36,6 +37,12 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   // Public routes
   {
     path: ROUTES.HOME,
+    component: 'LoginPage',
+    allowedRoles: [],
+    requiresAuth: false,
+  },
+  {
+    path: ROUTES.LOGIN,
     component: 'LoginPage',
     allowedRoles: [],
     requiresAuth: false,

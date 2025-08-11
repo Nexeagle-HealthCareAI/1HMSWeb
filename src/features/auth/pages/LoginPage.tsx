@@ -35,6 +35,10 @@ const LoginPage = () => {
         navigate('/admin');
       } else if (userRole === 'AdminDoctor') {
         navigate('/docboard');
+      } else if (userRole === 'Receptionist' || userRole === 'Nurse') {
+        navigate('/appointment-dashboard');
+      } else if (userRole === 'Doctor') {
+        navigate('/docboard');
       } else {
         // Default fallback
         navigate('/docboard');
@@ -48,13 +52,20 @@ const LoginPage = () => {
       authStore.setUserRole(userRole);
     }
     
+    // Get the user role from the store if not provided as parameter
+    const currentUserRole = userRole || authStore.getUserRole();
+    
     // Navigate to appropriate dashboard based on role
     const intendedPath = location.state?.from?.pathname;
     if (intendedPath && intendedPath !== '/') {
       navigate(intendedPath);
-    } else if (userRole === 'Admin') {
+    } else if (currentUserRole === 'Admin') {
       navigate('/admin');
-    } else if (userRole === 'AdminDoctor') {
+    } else if (currentUserRole === 'AdminDoctor') {
+      navigate('/docboard');
+    } else if (currentUserRole === 'Receptionist' || currentUserRole === 'Nurse') {
+      navigate('/appointment-dashboard');
+    } else if (currentUserRole === 'Doctor') {
       navigate('/docboard');
     } else {
       // Default fallback
@@ -76,11 +87,17 @@ const LoginPage = () => {
       navigate('/admin');
     } else if (userRole === 'AdminDoctor') {
       navigate('/admin');
+    } else if (userRole === 'Receptionist' || userRole === 'Nurse') {
+      navigate('/appointment-dashboard');
+    } else if (userRole === 'Doctor') {
+      navigate('/docboard');
     } else {
       // Default fallback - check stored role
       const storedRole = authStore.getUserRole();
       if (storedRole === 'Admin') {
         navigate('/admin');
+      } else if (storedRole === 'Receptionist' || storedRole === 'Nurse') {
+        navigate('/appointment-dashboard');
       } else {
         navigate('/docboard');
       }

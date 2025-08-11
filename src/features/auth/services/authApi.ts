@@ -15,6 +15,15 @@ export interface RegisterRequest {
   roles: string;
 }
 
+export interface OnboardingRegisterRequest {
+  fullName: string;
+  userRole: string;
+  mobileNumber: string;
+  email?: string;
+  password: string;
+  onboardingToken: string;
+}
+
 export interface AuthResponse {
   success: boolean;
   message: string;
@@ -99,6 +108,11 @@ export const authApi = {
   // Register
   register: (data: RegisterRequest): Promise<AuthResponse> => {
     return apiClient.post(API_ENDPOINTS.AUTH.SIGN_UP, data);
+  },
+
+  // Onboarding Register
+  onboardingRegister: (data: OnboardingRegisterRequest): Promise<AuthResponse> => {
+    return apiClient.post(API_ENDPOINTS.AUTH.ONBOARDING_REGISTER, data);
   }, 
 
   // Send OTP
@@ -136,17 +150,16 @@ export const fetchAndStoreUserPermissions = async (userId: string, token: string
     // Fetch permissions
     const perms = await authApi.getUserPermissions({ userId });
     if (perms && perms.roleName) {
-      // Normalize role to our expected store format (lowercase, hyphenated)
-      const normalizedRole = perms.roleName.toLowerCase().replace(/\s+/g, '-');
-      authStore.setUserRole(normalizedRole);
+      // Use the original role name from API
+      authStore.setUserRole(perms.roleName);
       authStore.setPermissions(perms.permissionKeys || []);
 
       console.log('✅ Permissions fetched and stored:', {
-        role: normalizedRole,
+        role: perms.roleName,
         permissions: perms.permissionKeys || []
       });
       
-      return { success: true, message: 'ok', role: normalizedRole, permissions: perms.permissionKeys || [] } as any;
+      return { success: true, message: 'ok', role: perms.roleName, permissions: perms.permissionKeys || [] } as any;
     } else {
       console.warn('❌ Failed to fetch permissions: empty response');
       return { success: false, message: 'empty', role: '', permissions: [] } as any;

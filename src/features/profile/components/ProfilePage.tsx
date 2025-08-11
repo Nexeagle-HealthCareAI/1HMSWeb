@@ -42,7 +42,7 @@ import { z } from 'zod';
 
 interface ProfilePageProps {
   onBack: () => void;
-  userType?: 'admin-doctor' | 'admin' | 'doctor' | 'staff';
+  userType?: 'AdminDoctor' | 'Admin' | 'Doctor' | 'Staff';
 }
 
 interface ProfileData {
@@ -89,13 +89,13 @@ interface ProfileData {
 
 export const ProfilePage: React.FC<ProfilePageProps> = ({ 
   onBack, 
-  userType = 'doctor' 
+  userType = 'Doctor' 
 }) => {
   const [activeTab, setActiveTab] = useState('personal');
   const [isEditing, setIsEditing] = useState(false);
   const roleFromStore = useAuthStore((state) => state.userRole);
   const effectiveRole = roleFromStore || userType;
-  const isDoctorUser = effectiveRole?.toLowerCase() === 'doctor' || effectiveRole?.toLowerCase() === 'admindoctor' || effectiveRole?.toLowerCase() === 'admin-doctor';
+  const isDoctorUser = effectiveRole === 'Doctor' || effectiveRole === 'AdminDoctor';
   const employeeIdFromStore = useAuthStore((state) => state.employeeId);
   const departmentOptions = [
     'Cardiology',

@@ -348,8 +348,8 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
             </div>
           )}
 
-          {/* Navigation buttons */}
-          {(onBack || onNext) && (
+          {/* Navigation buttons - Hide when OTP is sent */}
+          {(onBack || onNext) && !otpSent && (
             <div className="flex gap-3 pt-4">
               {onBack && (
                 <Button

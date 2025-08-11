@@ -100,12 +100,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   const profileScore = calculateProfileScore();
   const authStore = useAuthStore.getState();
-  const rawRole = authStore.getUserRole() || 'doctor';
-  const userRole = rawRole?.toLowerCase() === 'admindoctor' ? 'admin-doctor' : rawRole;
-  const profileTarget = (userRole === 'doctor' || userRole === 'admin-doctor') ? '/profile?tab=professional' : '/profile';
+  const userRole = authStore.getUserRole() || 'Doctor';
+  const profileTarget = (userRole === 'Doctor' || userRole === 'AdminDoctor') ? '/profile?tab=professional' : '/profile';
 
-  // Navigation items
-  const navigation: NavigationItem[] = [
+  // Navigation items with role-based filtering
+  const allNavigationItems: NavigationItem[] = [
     { id: 'admin', name: 'Admin Panel', icon: Settings, path: '/admin' },
     { id: 'dashboard', name: 'DocBoard', icon: Home, path: '/dashboard' },    
 //{ id: 'calendar', name: 'Calendar', icon: Calendar, path: '/calendar' },
@@ -114,8 +113,24 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     { id: 'doc-ai', name: 'DocAI', icon: Bot, path: '/doc-ai' },
    // { id: 'chat', name: 'Chat', icon: MessageCircle, path: '/chat' },
    // { id: 'bulk-messaging', name: 'Bulk Messaging', icon: Send, path: '/bulk-messaging' },
-  
   ];
+
+  // Filter navigation items based on user role
+  const navigation: NavigationItem[] = allNavigationItems.filter(item => {
+    if (item.id === 'admin') {
+      // Only show admin panel for Admin and AdminDoctor roles
+      return userRole === 'Admin' || userRole === 'AdminDoctor';
+    }
+    if (item.id === 'dashboard' || item.id === 'doc-ai') {
+      // Only show DocBoard and DocAI for Doctor and AdminDoctor roles
+      return userRole === 'Doctor' || userRole === 'AdminDoctor';
+    }
+    if (item.id === 'appointments') {
+      // Show appointments for Admin, AdminDoctor, Receptionist, and Nurse roles
+      return userRole === 'Admin' || userRole === 'AdminDoctor' || userRole === 'Receptionist' || userRole === 'Nurse';
+    }
+    return true; // Show all other items
+  });
 
   // Get current page from location
   useEffect(() => {
@@ -309,21 +324,21 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src="/avatars/01.png" alt="User" />
-                      <AvatarFallback className="bg-healthcare-primary text-white text-xs font-medium">
-                        {userRole === 'admin' ? 'A' : 'D'}
-                      </AvatarFallback>
+                                             <AvatarFallback className="bg-healthcare-primary text-white text-xs font-medium">
+                         {userRole === 'Admin' ? 'A' : 'D'}
+                       </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <DropdownMenuItem className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {userRole === 'admin' ? 'Administrator' : 'Doctor'}
-                      </p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {userRole === 'admin' ? 'admin@nexeagle.com' : 'doctor@nexeagle.com'}
-                      </p>
+                                             <p className="text-sm font-medium leading-none">
+                         {userRole === 'Admin' ? 'Administrator' : 'Doctor'}
+                       </p>
+                       <p className="text-xs leading-none text-muted-foreground">
+                         {userRole === 'Admin' ? 'admin@nexeagle.com' : 'doctor@nexeagle.com'}
+                       </p>
                     </div>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />

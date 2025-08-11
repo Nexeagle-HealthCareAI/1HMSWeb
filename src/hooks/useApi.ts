@@ -32,7 +32,11 @@ export const useAuthApi = {
   login: () => createMutationHook(authApi.login),
   
   // Register
-  register: () => createMutationHook(authApi.register),  
+  register: () => createMutationHook(authApi.register),
+  
+  // Onboarding Register
+  onboardingRegister: () => createMutationHook(authApi.onboardingRegister),
+  
   // Send OTP
   sendOTP: () => createMutationHook(authApi.sendOTP),
   

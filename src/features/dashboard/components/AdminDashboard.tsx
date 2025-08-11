@@ -98,7 +98,7 @@ export const AdminDashboard = () => {
     ];
 
     // Add doctor fields only if user is a doctor
-    if (userRole === 'doctor' || userRole === 'admin-doctor') {
+    if (userRole === 'Doctor' || userRole === 'AdminDoctor') {
       requiredFields = requiredFields.concat([
         data.doctor?.fullName,
         data.doctor?.specialization,
@@ -130,8 +130,7 @@ export const AdminDashboard = () => {
 
   const profileScore = calculateProfileScore();
   const authStore = useAuthStore.getState();
-  const rawRole = authStore.getUserRole() || 'admin';
-  const userRole = rawRole?.toLowerCase() === 'admindoctor' ? 'admin-doctor' : rawRole;
+  const userRole = authStore.getUserRole() || 'Admin';
 
 
 
@@ -181,11 +180,11 @@ export const AdminDashboard = () => {
     { id: 'dashboard', name: 'DashBoard', icon: Activity, description: 'Overview & Analytics' },
     { id: 'user-management', name: 'User Management', icon: Shield, description: 'Users, Roles & Permissions' },
     { id: 'patient-management', name: 'Patient Management', icon: Users, description: 'Patient Records & Data' },
-    { id: 'appointment-oversight', name: 'Appointment Oversight', icon: Calendar, description: 'Appointment Management' },
-    { id: 'billing-insurance', name: 'Billing & Insurance', icon: CreditCard, description: 'Financial Management' },
-    { id: 'bulk-messaging', name: 'Bulk Messaging', icon: MessageSquare, description: 'Communication Management' },
+//{ id: 'appointment-oversight', name: 'Appointment Oversight', icon: Calendar, description: 'Appointment Management' },
+    //{ id: 'billing-insurance', name: 'Billing & Insurance', icon: CreditCard, description: 'Financial Management' },
+//{ id: 'bulk-messaging', name: 'Bulk Messaging', icon: MessageSquare, description: 'Communication Management' },
     { id: 'system-config', name: 'System Configuration', icon: Cog, description: 'Hospital Settings' },
-    { id: 'audit-security', name: 'Audit & Security', icon: ShieldCheck, description: 'Logs & Security' }
+   // { id: 'audit-security', name: 'Audit & Security', icon: ShieldCheck, description: 'Logs & Security' }
   ];
 
   // Show profile page if requested
@@ -302,7 +301,7 @@ export const AdminDashboard = () => {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {/* Profile Completion Indicator */}
-          {(userRole === 'admin-doctor' || userRole === 'doctor') && profileScore < 90 && (
+          {(userRole === 'AdminDoctor' || userRole === 'Doctor') && profileScore < 90 && (
             <Button
               variant="outline"
               size="sm"

@@ -1,11 +1,13 @@
-export { RegistrationLayout } from './RegistrationLayout';
-export { UserTypeSelection } from './UserTypeSelection';
-export { MobileVerification } from './MobileVerification';
-
-export { EmailPasswordSetup } from './EmailPasswordSetup';
-export { RegistrationProgress } from './RegistrationProgress';
+export { SecureLogin } from './SecureLogin';
+export { Registration } from './Registration';
 export { PasswordLoginForm } from './PasswordLoginForm';
 export { OTPLoginForm } from './OTPLoginForm';
 export { ForgotPasswordForm } from './ForgotPasswordForm';
 export { LockedAccountScreen } from './LockedAccountScreen';
-export { LoginLayout } from './LoginLayout'; 
+export { LoginLayout } from './LoginLayout';
+export { UserOnboardingRegistration } from './UserOnboardingRegistration';
+export { EmailPasswordSetup } from './EmailPasswordSetup';
+export { RegistrationLayout } from './RegistrationLayout';
+export { UserTypeSelection } from './UserTypeSelection';
+export { MobileVerification } from './MobileVerification';
+export { RegistrationProgress } from './RegistrationProgress'; 

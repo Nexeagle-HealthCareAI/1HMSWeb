@@ -89,7 +89,7 @@ interface UserActivity {
 
 const defaultRoles: Role[] = [
   {
-    id: 'doctor',
+    id: 'Doctor',
     name: 'Doctor',
     description: 'Medical practitioner with full patient access',
     permissions: {
@@ -149,7 +149,7 @@ const sampleUsers: User[] = [
     name: 'Dr. Sarah Johnson',
     email: 'sarah.johnson@hospital.com',
     phone: '+1-555-0101',
-    roles: ['doctor'],
+    roles: ['Doctor'],
     department: 'Cardiology',
     status: 'active',
     lastLogin: '2024-01-15 09:30',

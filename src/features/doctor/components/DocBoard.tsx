@@ -79,9 +79,8 @@ interface Appointment {
 
 export const DocBoard: React.FC = () => {
   const navigate = useNavigate();
-  const rawRole = useAuthStore.getState().getUserRole?.() || 'doctor';
-  const userRole = rawRole?.toLowerCase() === 'admindoctor' ? 'admin-doctor' : rawRole;
-  const profileTarget = (userRole === 'doctor' || userRole === 'admin-doctor') ? '/profile?tab=professional' : '/profile';
+  const userRole = useAuthStore.getState().getUserRole?.() || 'Doctor';
+  const profileTarget = (userRole === 'Doctor' || userRole === 'AdminDoctor') ? '/profile?tab=professional' : '/profile';
   const profileCompletion = 20; // TODO: compute from store when profile is implemented
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -227,7 +226,7 @@ export const DocBoard: React.FC = () => {
   return (
     <Tabs defaultValue="dashboard" className="space-y-6">
       {/* Doctor Profile Completion Banner */}
-      {(userRole === 'doctor' || userRole === 'admin-doctor') && profileCompletion < 100 && (
+      {(userRole === 'Doctor' || userRole === 'AdminDoctor') && profileCompletion < 100 && (
         <div className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 rounded-xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Stethoscope className="h-5 w-5 text-amber-700" />

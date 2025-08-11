@@ -10,7 +10,8 @@ import {
   Clock,
   FileText,
   Hash,
-  Type
+  Type,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -131,6 +132,48 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
   const updateHospitalMutation = useHospitalApi.updateHospital(hospitalId || '');
   const [isEditMode, setIsEditMode] = useState(false);
   const [snapshotBeforeEdit, setSnapshotBeforeEdit] = useState<HospitalBranding | null>(null);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  // Validation functions
+  const validateEmail = (email: string): string | null => {
+    if (!email) return null; // Allow empty email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email) ? null : 'Please enter a valid email address';
+  };
+
+  const validatePhone = (phone: string): string | null => {
+    if (!phone) return null; // Allow empty phone
+    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+    return phoneRegex.test(phone.replace(/\s/g, '')) ? null : 'Please enter a valid phone number';
+  };
+
+  const validateWebsite = (website: string): string | null => {
+    if (!website) return null; // Allow empty website
+    const urlRegex = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+    return urlRegex.test(website) ? null : 'Please enter a valid website URL';
+  };
+
+  const validatePincode = (pincode: string): string | null => {
+    if (!pincode) return null; // Allow empty pincode
+    const pincodeRegex = /^[0-9]{4,10}$/;
+    return pincodeRegex.test(pincode) ? null : 'Please enter a valid postal code (4-10 digits)';
+  };
+
+  const validateField = (field: string, value: string): string | null => {
+    switch (field) {
+      case 'email':
+        return validateEmail(value);
+      case 'contact':
+      case 'alternateContact':
+        return validatePhone(value);
+      case 'website':
+        return validateWebsite(value);
+      case 'pincode':
+        return validatePincode(value);
+      default:
+        return null;
+    }
+  };
   
   // Only fetch when a valid hospitalId is available
   const hospitalIdToUse = hospitalId || '';
@@ -141,6 +184,11 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
   // Update branding when hospital data is fetched
   useEffect(() => {
     if (hospitalData && hospitalData.hospitalId && hospitalData.name) {
+      // Don't update branding if we're currently in edit mode to prevent conflicts
+      if (isEditMode) {
+        return;
+      }
+      
       const updatedBranding = {
         name: hospitalData.name || '',
         type: hospitalData.type || '',
@@ -156,12 +204,20 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
         timeZone: hospitalData.timeZone || '',
         registrationNumber: hospitalData.registrationNumber || '',
       };
-      onBrandingChange(updatedBranding);
+      
+      // Only update if the data is actually different to prevent unnecessary re-renders
+      const hasChanges = Object.keys(updatedBranding).some(key => 
+        updatedBranding[key as keyof HospitalBranding] !== branding[key as keyof HospitalBranding]
+      );
+      
+      if (hasChanges) {
+        onBrandingChange(updatedBranding);
+      }
       
       // Store the hospitalId in auth store
       setHospitalId(hospitalData.hospitalId);
     }
-  }, [hospitalData, onBrandingChange, setHospitalId]);
+  }, [hospitalData, onBrandingChange, setHospitalId, branding, isEditMode]);
 
   const handleSaveBranding = async () => {
     if (!userId) {
@@ -196,7 +252,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
         if (response.success) {
           onBrandingChange(branding);
           setHospitalId(response.hospitalId);
-          setIsEditMode(false);
+          // Don't exit edit mode for initial save - let user continue editing
           queryClient.invalidateQueries({ queryKey: ['hospital', response.hospitalId] });
           // toast removed temporarily
         } else {
@@ -242,6 +298,13 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
       ...branding,
       [field]: value
     });
+    
+    // Validate the field and update validation errors
+    const error = validateField(field, value);
+    setValidationErrors(prev => ({
+      ...prev,
+      [field]: error || ''
+    }));
   };
 
   // Show loading state
@@ -272,11 +335,14 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
     );
   }
 
-  const isExistingHospital = !!hospitalId;
+  // Consider it an existing hospital only if we have loaded hospital data from the server
+  // This prevents the fields from being disabled immediately after the first save
+  const isExistingHospital = !!(hospitalId && hospitalData && hospitalData.hospitalId);
 
   const handleStartEdit = () => {
     setSnapshotBeforeEdit({ ...branding });
     setIsEditMode(true);
+    setValidationErrors({}); // Clear validation errors when starting edit
   };
 
   const handleCancelEdit = () => {
@@ -284,6 +350,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
       onBrandingChange(snapshotBeforeEdit);
     }
     setIsEditMode(false);
+    setValidationErrors({}); // Clear validation errors when canceling edit
   };
 
   return (
@@ -379,7 +446,14 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                   placeholder="Enter primary phone number"
                   required
                   disabled={isExistingHospital && !isEditMode}
+                  className={validationErrors.contact ? 'border-red-500 focus:border-red-500' : ''}
                 />
+                {validationErrors.contact && (
+                  <div className="flex items-center gap-1 text-xs text-red-500">
+                    <AlertCircle className="h-3 w-3" />
+                    {validationErrors.contact}
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground">Main contact number</p>
               </div>
               <div className="space-y-2">
@@ -393,7 +467,14 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                   onChange={(e) => updateBranding('alternateContact', e.target.value)}
                   placeholder="Enter alternate phone number"
                   disabled={isExistingHospital && !isEditMode}
+                  className={validationErrors.alternateContact ? 'border-red-500 focus:border-red-500' : ''}
                 />
+                {validationErrors.alternateContact && (
+                  <div className="flex items-center gap-1 text-xs text-red-500">
+                    <AlertCircle className="h-3 w-3" />
+                    {validationErrors.alternateContact}
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground">Secondary contact number</p>
               </div>
             </div>
@@ -411,7 +492,14 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                   onChange={(e) => updateBranding('email', e.target.value)}
                   placeholder="Enter email address"
                   disabled={isExistingHospital && !isEditMode}
+                  className={validationErrors.email ? 'border-red-500 focus:border-red-500' : ''}
                 />
+                {validationErrors.email && (
+                  <div className="flex items-center gap-1 text-xs text-red-500">
+                    <AlertCircle className="h-3 w-3" />
+                    {validationErrors.email}
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground">Primary email for communications</p>
               </div>
               <div className="space-y-2">
@@ -425,7 +513,14 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                   onChange={(e) => updateBranding('website', e.target.value)}
                   placeholder="Enter website URL"
                   disabled={isExistingHospital && !isEditMode}
+                  className={validationErrors.website ? 'border-red-500 focus:border-red-500' : ''}
                 />
+                {validationErrors.website && (
+                  <div className="flex items-center gap-1 text-xs text-red-500">
+                    <AlertCircle className="h-3 w-3" />
+                    {validationErrors.website}
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground">Hospital's official website</p>
               </div>
             </div>
@@ -507,7 +602,14 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                    placeholder="Enter postal code"
                     required
                     disabled={isExistingHospital && !isEditMode}
+                    className={validationErrors.pincode ? 'border-red-500 focus:border-red-500' : ''}
                  />
+                 {validationErrors.pincode && (
+                   <div className="flex items-center gap-1 text-xs text-red-500">
+                     <AlertCircle className="h-3 w-3" />
+                     {validationErrors.pincode}
+                   </div>
+                 )}
                </div>
              </div>
            </CardContent>
