@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import Draggable from "react-draggable";
 import { Card, CardHeader, CardTitle, CardContent } from "./card";
 import { Badge } from "./badge";
@@ -73,6 +73,8 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
 }) => {
   const [showDraggable, setShowDraggable] = useState(false);
   const [previewMode, setPreviewMode] = useState<'design' | 'final'>('design');
+  const logoRef = useRef<HTMLImageElement>(null);
+  const hospitalNameRef = useRef<HTMLDivElement>(null);
 
   const handleExportHTML = () => {
     const headerHTML = generateCompleteHeaderHTML();
@@ -273,8 +275,9 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
             
             {template.header.showLogo && template.header.logoUrl && (
               showDraggable ? (
-                <Draggable bounds="parent" defaultPosition={{ x: 10, y: 30 }}>
+                <Draggable bounds="parent" defaultPosition={{ x: 10, y: 30 }} nodeRef={logoRef}>
                   <img
+                    ref={logoRef}
                     src={template.header.logoUrl}
                     alt="Logo"
                     className="absolute w-20 h-20 object-contain border rounded shadow cursor-move bg-white p-1"
@@ -292,8 +295,9 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
 
             {template.header.hospitalName && (
               showDraggable ? (
-                <Draggable bounds="parent" defaultPosition={{ x: template.header.showLogo ? 120 : 20, y: 40 }}>
+                <Draggable bounds="parent" defaultPosition={{ x: template.header.showLogo ? 120 : 20, y: 40 }} nodeRef={hospitalNameRef}>
                   <div
+                    ref={hospitalNameRef}
                     className="absolute p-2 cursor-move font-bold  rounded  border"
                     style={{...applyStyles(template.header.styles?.hospitalName), zIndex: 4}}
                   >

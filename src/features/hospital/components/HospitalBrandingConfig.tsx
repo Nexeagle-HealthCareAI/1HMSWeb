@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { 
   Building2,
@@ -133,6 +133,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
   const [isEditMode, setIsEditMode] = useState(false);
   const [snapshotBeforeEdit, setSnapshotBeforeEdit] = useState<HospitalBranding | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const previousBrandingRef = useRef<HospitalBranding | null>(null);
 
   // Validation functions
   const validateEmail = (email: string): string | null => {
@@ -183,12 +184,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
 
   // Update branding when hospital data is fetched
   useEffect(() => {
-    if (hospitalData && hospitalData.hospitalId && hospitalData.name) {
-      // Don't update branding if we're currently in edit mode to prevent conflicts
-      if (isEditMode) {
-        return;
-      }
-      
+    if (hospitalData && hospitalData.hospitalId && hospitalData.name && !isEditMode) {
       const updatedBranding = {
         name: hospitalData.name || '',
         type: hospitalData.type || '',
@@ -207,17 +203,18 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
       
       // Only update if the data is actually different to prevent unnecessary re-renders
       const hasChanges = Object.keys(updatedBranding).some(key => 
-        updatedBranding[key as keyof HospitalBranding] !== branding[key as keyof HospitalBranding]
+        updatedBranding[key as keyof HospitalBranding] !== previousBrandingRef.current?.[key as keyof HospitalBranding]
       );
       
       if (hasChanges) {
         onBrandingChange(updatedBranding);
+        previousBrandingRef.current = updatedBranding;
       }
       
       // Store the hospitalId in auth store
       setHospitalId(hospitalData.hospitalId);
     }
-  }, [hospitalData, onBrandingChange, setHospitalId, branding, isEditMode]);
+  }, [hospitalData, onBrandingChange, setHospitalId, isEditMode]);
 
   const handleSaveBranding = async () => {
     if (!userId) {

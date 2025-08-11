@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 // import { useToast } from '@/hooks/use-toast';
 import { Department } from '../components/DepartmentManagement';
 import { PrescriptionTemplate } from '../components/PrescriptionTemplateConfig';
@@ -145,26 +145,26 @@ export const useSystemConfiguration = (focusTab?: string) => {
     }
   }, [focusTab]);
 
-  const handleDepartmentChange = (updatedDepartments: Department[]) => {
+  const handleDepartmentChange = useCallback((updatedDepartments: Department[]) => {
     setDepartments(updatedDepartments);
     toast({
       title: "Departments Updated",
       description: "Department configuration has been saved successfully."
     });
-  };
+  }, []);
 
-  const handleTemplateChange = (updatedTemplate: PrescriptionTemplate) => {
+  const handleTemplateChange = useCallback((updatedTemplate: PrescriptionTemplate) => {
     setPrescriptionTemplate(updatedTemplate);
     toast({
       title: "Template Updated",
       description: "Prescription template has been saved successfully."
     });
-  };
+  }, []);
 
-  const handleBrandingChange = (updatedBranding: HospitalBranding) => {
+  const handleBrandingChange = useCallback((updatedBranding: HospitalBranding) => {
     setHospitalBranding(updatedBranding);
     // toast removed temporarily
-  };
+  }, []);
 
   const addDepartment = (department: Department) => {
     setDepartments(prev => [...prev, department]);

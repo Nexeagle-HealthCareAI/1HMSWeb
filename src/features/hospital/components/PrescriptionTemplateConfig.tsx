@@ -134,7 +134,17 @@ export const PrescriptionTemplateConfig: React.FC<PrescriptionTemplateConfigProp
       role: "admin"
     };
 
-    localStorage.setItem("easyHMS_adminTemplatePayload", JSON.stringify(adminPayload));
+    try {
+      localStorage.setItem("easyHMS_adminTemplatePayload", JSON.stringify(adminPayload));
+    } catch (error) {
+      console.warn("Failed to save to localStorage (quota exceeded):", error);
+      // Fallback: try to save a smaller version
+      const minimalPayload = {
+        templateId: updatedTemplate.id,
+        role: "admin"
+      };
+      localStorage.setItem("easyHMS_adminTemplatePayload", JSON.stringify(minimalPayload));
+    }
     payloadToSend = adminPayload;
 
     toast({
@@ -152,7 +162,11 @@ export const PrescriptionTemplateConfig: React.FC<PrescriptionTemplateConfigProp
       baseAdminTemplate: doctorTemplate
     };
 
-    localStorage.setItem("easyHMS_doctorTemplate", JSON.stringify(finalTemplate));
+    try {
+      localStorage.setItem("easyHMS_doctorTemplate", JSON.stringify(finalTemplate));
+    } catch (error) {
+      console.warn("Failed to save doctor template to localStorage (quota exceeded):", error);
+    }
 
     const headerHTML = generateDoctorHeaderHTML(updatedTemplate, doctorSettings);
     const footerHTML = generateDoctorFooterHTML(updatedTemplate, doctorSettings);
@@ -166,7 +180,18 @@ export const PrescriptionTemplateConfig: React.FC<PrescriptionTemplateConfigProp
       role: "doctor"
     };
 
-    localStorage.setItem("easyHMS_doctorTemplatePayload", JSON.stringify(doctorPayload));
+    try {
+      localStorage.setItem("easyHMS_doctorTemplatePayload", JSON.stringify(doctorPayload));
+    } catch (error) {
+      console.warn("Failed to save doctor payload to localStorage (quota exceeded):", error);
+      // Fallback: try to save a smaller version
+      const minimalPayload = {
+        doctorId: doctorSettings.doctorId || "doctor_123",
+        templateId: updatedTemplate.id,
+        role: "doctor"
+      };
+      localStorage.setItem("easyHMS_doctorTemplatePayload", JSON.stringify(minimalPayload));
+    }
     payloadToSend = doctorPayload;
 
     toast({
@@ -477,7 +502,7 @@ export const PrescriptionTemplateConfig: React.FC<PrescriptionTemplateConfigProp
                       value={template.header.hospitalName}
                       onChange={(e) => updateHeader('hospitalName', e.target.value)}
                       placeholder="Enter hospital name"
-                      disabled={userRole === 'doctor' && doctorTemplate?.header.hospitalName}
+                      disabled={userRole === 'doctor' && !!doctorTemplate?.header.hospitalName}
                     />
                   </div>
                   
@@ -525,7 +550,7 @@ export const PrescriptionTemplateConfig: React.FC<PrescriptionTemplateConfigProp
                       onChange={(e) => updateHeader('contactDetails', e.target.value)}
                       placeholder="Phone: +91 12345 67890&#10;Email: info@hospital.com&#10;Address: Hospital Address"
                       rows={3}
-                      disabled ={userRole === 'doctor' && doctorTemplate?.header.contactDetails}
+                      disabled={userRole === 'doctor' && !!doctorTemplate?.header.contactDetails}
                     />
                   </div>
                   
