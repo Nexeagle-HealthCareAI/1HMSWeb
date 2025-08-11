@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import Draggable from 'react-draggable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { 
   FileText,
@@ -16,267 +14,300 @@ import {
   AlertCircle,
   Stethoscope,
   GraduationCap,
-  Badge as BadgeIcon
+  Badge as LucideBadgeIcon
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+interface FieldStyle {
+  fontFamily?: string;
+  fontSize?: string;
+  color?: string;
+}
 
 interface PrescriptionSettingsData {
   doctorName: string;
   qualifications: string;
   designationRegNumber: string;
+  styles?: {
+    doctorName?: FieldStyle;
+    qualifications?: FieldStyle;
+    designationRegNumber?: FieldStyle;
+  };
+  doctorId?: string;
+}
+
+interface AdminTemplateData {
+  header: {
+    hospitalName: string;
+    contactInfo: string;
+    customText: string;
+    logoUrl: string;
+    styles: {
+      hospitalName: { color: string; fontSize: string; fontFamily: string; };
+      contactInfo: { color: string; fontSize: string; fontFamily: string; };
+      customText: { color: string; fontSize: string; fontFamily: string; };
+    };
+  };
+  footer: {
+    customNotes: string;
+    styles: {
+      customNotes: { color: string; fontSize: string; fontFamily: string; };
+    };
+  };
 }
 
 export const PrescriptionSettings = () => {
   const { toast } = useToast();
   const [isDirty, setIsDirty] = useState(false);
-  
-  // Load existing data from localStorage
+  const [adminTemplate, setAdminTemplate] = useState<AdminTemplateData | null>(null);
+
+  const defaultFieldStyle: FieldStyle = {
+    fontFamily: 'Arial',
+    fontSize: '16px',
+    color: '#000000'
+  };
+
   const loadSettings = (): PrescriptionSettingsData => {
-    // TODO: Move prescription settings to Zustand store
-    const stored = null;
+    const stored = localStorage.getItem('easyHMS_prescriptionSettings');
     if (stored) {
-      return JSON.parse(stored);
+      try {
+        const parsed = JSON.parse(stored) as PrescriptionSettingsData;
+        parsed.styles = {
+          doctorName: { ...defaultFieldStyle, ...(parsed.styles?.doctorName || {}) },
+          qualifications: { ...defaultFieldStyle, ...(parsed.styles?.qualifications || {}) },
+          designationRegNumber: { ...defaultFieldStyle, ...(parsed.styles?.designationRegNumber || {}) },
+        };
+        return parsed;
+      } catch {}
     }
-    
-    // Try to load from setup data as fallback
-    // TODO: Move setup data to Zustand store
-    const setupData = null;
-    if (setupData) {
-      const data = JSON.parse(setupData);
-      return {
-        doctorName: data.doctor?.fullName || '',
-        qualifications: data.doctor?.qualification || '',
-        designationRegNumber: data.doctor?.licenseNumber || '',
-      };
-    }
-    
     return {
       doctorName: '',
       qualifications: '',
       designationRegNumber: '',
+      styles: {
+        doctorName: { ...defaultFieldStyle },
+        qualifications: { ...defaultFieldStyle },
+        designationRegNumber: { ...defaultFieldStyle }
+      }
     };
   };
 
   const [settings, setSettings] = useState<PrescriptionSettingsData>(loadSettings());
 
+  useEffect(() => {
+    const adminTemplateData = localStorage.getItem('easyHMS_adminTemplate');
+    if (adminTemplateData) {
+      try {
+        setAdminTemplate(JSON.parse(adminTemplateData));
+      } catch {}
+    }
+  }, []);
+
   const handleInputChange = (field: keyof PrescriptionSettingsData, value: string) => {
+    setSettings(prev => ({ ...prev, [field]: value }));
+    setIsDirty(true);
+  };
+
+  const handleStyleChange = (
+    field: 'doctorName' | 'qualifications' | 'designationRegNumber',
+    prop: keyof FieldStyle,
+    value: string
+  ) => {
     setSettings(prev => ({
       ...prev,
-      [field]: value
+      styles: {
+        ...prev.styles,
+        [field]: { ...prev.styles?.[field], [prop]: value }
+      }
     }));
     setIsDirty(true);
   };
 
   const handleSave = () => {
-    // TODO: Save to Zustand store instead of localStorage
-    console.log('Saving prescription settings:', settings);
-    setIsDirty(false);
+    localStorage.setItem('easyHMS_prescriptionSettings', JSON.stringify(settings));
     toast({
       title: "Settings Saved",
-      description: "Prescription settings have been successfully updated.",
+      description: "Prescription settings updated successfully."
     });
+    setIsDirty(false);
   };
 
   const handleReset = () => {
-    const originalSettings = loadSettings();
-    setSettings(originalSettings);
+    setSettings(loadSettings());
     setIsDirty(false);
     toast({
       title: "Settings Reset",
-      description: "All changes have been reverted to the last saved state.",
+      description: "Changes reverted to last saved state.",
       variant: "destructive",
     });
   };
 
   const getCompletionPercentage = () => {
     const fields = [settings.doctorName, settings.qualifications, settings.designationRegNumber];
-    const completed = fields.filter(field => field.trim() !== '').length;
+    const completed = fields.filter(f => f.trim() !== '').length;
     return Math.round((completed / fields.length) * 100);
   };
 
   const completionPercentage = getCompletionPercentage();
   const isComplete = completionPercentage === 100;
 
+  const [headerPos, setHeaderPos] = useState({ x: 0, y: 0 });
+  const [doctorPos, setDoctorPos] = useState({ x: 0, y: 0 });
+  const [footerPos, setFooterPos] = useState({ x: 0, y: 0 });
+  const previewRef = useRef<HTMLDivElement>(null);
+
   return (
-    <div className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle">
+    <div className="min-h-screen w-full p-4 lg:p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <FileText className="h-6 w-6 text-healthcare-primary" />
-            Prescription Settings
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <FileText className="h-6 w-6" />
+            Doctor Prescription Settings
           </h1>
-          <p className="text-muted-foreground">Personalize your medical content and identity</p>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Badge 
-            variant={isComplete ? "default" : "secondary"}
-            className="flex items-center gap-1"
-          >
-            {isComplete ? (
-              <CheckCircle className="h-3 w-3" />
-            ) : (
-              <AlertCircle className="h-3 w-3" />
-            )}
-            {completionPercentage}% Complete
-          </Badge>
+          <p className="text-muted-foreground">Configure your details with the admin template</p>
         </div>
       </div>
 
-      {/* Completion Progress */}
-      {!isComplete && (
-        <div className="bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-950/20 dark:to-yellow-950/20 border-2 border-orange-200 dark:border-orange-800 rounded-xl p-6 shadow-lg">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 bg-orange-600 rounded-full">
-              <Stethoscope className="h-8 w-8 text-white" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-orange-900 dark:text-orange-100">
-                🩺 Complete Your Prescription Profile
-              </h2>
-              <p className="text-orange-700 dark:text-orange-300">
-                Fill in all details to ensure professional prescription headers
-              </p>
-            </div>
-          </div>
-          
-          <div className="mb-4">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-orange-800 dark:text-orange-200">Progress</span>
-              <span className="text-sm text-orange-600">{completionPercentage}/100%</span>
-            </div>
-            <div className="w-full bg-orange-200 dark:bg-orange-800 rounded-full h-4 overflow-hidden">
-              <div 
-                className="bg-gradient-to-r from-orange-600 to-orange-500 h-4 rounded-full transition-all duration-500 ease-out relative"
-                style={{ width: `${completionPercentage}%` }}
-              >
-                <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+      {/* Form + Preview */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Doctor Information</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Form */}
+            <div className="w-full lg:w-1/2 space-y-4">
+              {[
+                { label: 'Doctor Name', field: 'doctorName', placeholder: 'Dr. John Doe' },
+                { label: 'Qualifications', field: 'qualifications', placeholder: 'MBBS, MS' },
+                { label: 'Registration Number', field: 'designationRegNumber', placeholder: 'Reg-12345' }
+              ].map(item => (
+                <div key={item.field}>
+                  <Label>{item.label}</Label>
+                  <Input
+                    value={(settings as any)[item.field]}
+                    placeholder={item.placeholder}
+                    onChange={e => handleInputChange(item.field as any, e.target.value)}
+                  />
+                  {/* Font Family */}
+                  <select
+                    value={(settings.styles as any)?.[item.field]?.fontFamily || 'Arial'}
+                    onChange={e => handleStyleChange(item.field as any, 'fontFamily', e.target.value)}
+                    className="border rounded p-1 mt-1 w-full"
+                  >
+                    <option value="Arial">Arial</option>
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="Courier New">Courier New</option>
+                    <option value="Verdana">Verdana</option>
+                  </select>
+                  {/* Font Size */}
+                  <Input
+                    type="text"
+                    className="mt-1"
+                    placeholder="Font size (e.g. 16px)"
+                    value={(settings.styles as any)?.[item.field]?.fontSize || ''}
+                    onChange={e => handleStyleChange(item.field as any, 'fontSize', e.target.value)}
+                  />
+                  {/* Font Color */}
+                  <input
+                    type="color"
+                    className="mt-1 w-full h-8 p-0 border"
+                    value={(settings.styles as any)?.[item.field]?.color || '#000000'}
+                    onChange={e => handleStyleChange(item.field as any, 'color', e.target.value)}
+                  />
+                </div>
+              ))}
+              <div className="flex gap-3">
+                <Button onClick={handleSave} disabled={!isDirty}>
+                  <Save className="h-4 w-4" /> Save
+                </Button>
+                <Button variant="outline" onClick={handleReset} disabled={!isDirty}>
+                  <RotateCcw className="h-4 w-4" /> Reset
+                </Button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* Settings Form */}
-      <Card className="shadow-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5 text-healthcare-primary" />
-            Header Add-on Settings
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Configure how your name and credentials appear on prescription headers
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Doctor Name */}
-          <div className="space-y-2">
-            <Label htmlFor="doctorName" className="flex items-center gap-2 text-base font-medium">
-              <User className="h-4 w-4 text-healthcare-primary" />
-              Doctor Name
-            </Label>
-            <Input
-              id="doctorName"
-              placeholder="Enter your full name (e.g., Dr. John Smith)"
-              value={settings.doctorName}
-              onChange={(e) => handleInputChange('doctorName', e.target.value)}
-              className="text-base"
-            />
-            <p className="text-xs text-muted-foreground">
-              This will appear as the primary doctor name on all prescriptions
-            </p>
-          </div>
-
-          <Separator />
-
-          {/* Qualifications */}
-          <div className="space-y-2">
-            <Label htmlFor="qualifications" className="flex items-center gap-2 text-base font-medium">
-              <GraduationCap className="h-4 w-4 text-healthcare-primary" />
-              Qualifications
-            </Label>
-            <Input
-              id="qualifications"
-              placeholder="Enter your qualifications (e.g., MBBS, MS, MD)"
-              value={settings.qualifications}
-              onChange={(e) => handleInputChange('qualifications', e.target.value)}
-              className="text-base"
-            />
-            <p className="text-xs text-muted-foreground">
-              Your medical qualifications and degrees (separate multiple with commas)
-            </p>
-          </div>
-
-          <Separator />
-
-          {/* Designation/Registration Number */}
-          <div className="space-y-2">
-            <Label htmlFor="designationRegNumber" className="flex items-center gap-2 text-base font-medium">
-              <BadgeIcon className="h-4 w-4 text-healthcare-primary" />
-              Designation/Registration Number
-            </Label>
-            <Input
-              id="designationRegNumber"
-              placeholder="Enter your designation or registration number"
-              value={settings.designationRegNumber}
-              onChange={(e) => handleInputChange('designationRegNumber', e.target.value)}
-              className="text-base"
-            />
-            <p className="text-xs text-muted-foreground">
-              Your medical council registration number or professional designation
-            </p>
-          </div>
-
-          <Separator />
-
-          {/* Preview Section */}
-          <div className="space-y-3">
-            <Label className="text-base font-medium">Preview</Label>
-            <div className="bg-muted/50 p-4 rounded-lg border-2 border-dashed border-muted-foreground/20">
-              <div className="text-center space-y-1">
-                <h3 className="font-bold text-lg text-foreground">
-                  {settings.doctorName || 'Doctor Name'}
-                </h3>
-                {settings.qualifications && (
-                  <p className="text-sm text-muted-foreground">
+            {/* Preview */}
+      <div
+              ref={previewRef}
+              className="w-full lg:w-1/2 bg-muted/50 p-6 rounded-lg border-2 border-dashed border-muted-foreground/20 flex flex-col justify-start min-h-[400px] relative overflow-hidden"
+              style={{ position: 'relative' }}
+            >
+              <Label className="text-base font-medium mb-4 select-none">Combined Template Preview (Drag to reposition)</Label>
+              
+              {/* Draggable Admin Template Header */}
+              {adminTemplate && (
+                <Draggable
+                  bounds="parent"
+                  position={headerPos}
+                  onDrag={(e, data) => setHeaderPos({ x: data.x, y: data.y })}
+                >
+                  <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded border-l-4 border-blue-500 cursor-move select-none absolute" style={{ width: 'calc(100% - 48px)' }}>
+                    <p className="text-xs text-blue-600 mb-2">Admin Template Header</p>
+                    <div className="text-sm">
+                      <strong>{adminTemplate.header.hospitalName}</strong>
+                      {adminTemplate.header.customText && <p className="text-xs italic">{adminTemplate.header.customText}</p>}
+                    </div>
+                  </div>
+                </Draggable>
+              )}
+              <Draggable
+                bounds="parent"
+                position={doctorPos}
+                onDrag={(e, data) => setDoctorPos({ x: data.x, y: data.y })}
+              >
+                <div className="absolute text-center p-2 bg-green-50 border-l-4 border-green-500 cursor-move" style={{ width: 'calc(100% - 48px)' }}>
+                  <h3
+                    style={{
+                      fontFamily: settings.styles?.doctorName?.fontFamily,
+                      fontSize: settings.styles?.doctorName?.fontSize,
+                      color: settings.styles?.doctorName?.color
+                    }}
+                  >
+                    {settings.doctorName || 'Doctor Name'}
+                  </h3>
+                  <p
+                    style={{
+                      fontFamily: settings.styles?.qualifications?.fontFamily,
+                      fontSize: settings.styles?.qualifications?.fontSize,
+                      color: settings.styles?.qualifications?.color
+                    }}
+                  >
                     {settings.qualifications}
                   </p>
-                )}
-                {settings.designationRegNumber && (
-                  <p className="text-xs text-muted-foreground">
+                  <p
+                    style={{
+                      fontFamily: settings.styles?.designationRegNumber?.fontFamily,
+                      fontSize: settings.styles?.designationRegNumber?.fontSize,
+                      color: settings.styles?.designationRegNumber?.color
+                    }}
+                  >
                     {settings.designationRegNumber}
                   </p>
-                )}
-              </div>
+                </div>
+              </Draggable>
+             {/* Draggable Footer Preview */}
+              {adminTemplate && adminTemplate.footer.customNotes && (
+                <Draggable
+                  bounds="parent"
+                  position={footerPos}
+                  onDrag={(e, data) => setFooterPos({ x: data.x, y: data.y })}
+                >
+                  <div className="p-3 bg-orange-50 dark:bg-orange-950/20 rounded border-l-4 border-orange-500 cursor-move select-none absolute" style={{ width: 'calc(100% - 48px)' }}>
+                    <p className="text-xs text-orange-600 mb-2">Admin Template Footer</p>
+                    <p className="text-xs">{adminTemplate.footer.customNotes}</p>
+                  </div>
+                </Draggable>
+              )}
+
               {!settings.doctorName && !settings.qualifications && !settings.designationRegNumber && (
                 <p className="text-xs text-muted-foreground text-center italic mt-2">
-                  Fill in the fields above to see how your prescription header will look
+                  Fill in your details to see the complete template preview
                 </p>
               )}
             </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-4">
-            <Button 
-              onClick={handleSave}
-              disabled={!isDirty}
-              className="flex items-center gap-2"
-            >
-              <Save className="h-4 w-4" />
-              Save Settings
-            </Button>
-            
-            <Button 
-              variant="outline"
-              onClick={handleReset}
-              disabled={!isDirty}
-              className="flex items-center gap-2"
-            >
-              <RotateCcw className="h-4 w-4" />
-              Reset Changes
-            </Button>
           </div>
         </CardContent>
       </Card>
