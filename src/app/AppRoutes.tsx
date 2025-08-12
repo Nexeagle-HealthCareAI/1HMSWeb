@@ -12,7 +12,7 @@ const RoleBasedRedirect = () => {
   if (userRole === 'Admin') {
     return <Navigate to="/admin" replace />;
   } else if (userRole === 'Doctor' || userRole === 'AdminDoctor') {
-    return <Navigate to="/docboard" replace />;
+    return <Navigate to="/dashboard" replace />;
   } else if (userRole === 'Receptionist' || userRole === 'Nurse') {
     // Receptionist and Nurse should go to appointment dashboard
     return <Navigate to="/appointment-dashboard" replace />;
@@ -34,6 +34,7 @@ const DocAI = lazy(() => import('@/features/ai/components/DocAI').then(module =>
 const ProfilePage = lazy(() => import('@/features/profile/components/ProfilePage').then(module => ({ default: module.ProfilePage })));
 const Billing = lazy(() => import('@/features/billing/components/Billing').then(module => ({ default: module.Billing })));
 const UserOnboardingRegistration = lazy(() => import('@/features/auth/components/UserOnboardingRegistration').then(module => ({ default: module.UserOnboardingRegistration })));
+const CanvasPage = lazy(() => import('@/pages/admin/prescriptions/canvas').then(module => ({ default: module.default })));
 const NotFoundPage = lazy(() => import('@/components/shared/NotFoundPage').then(module => ({ default: module.default })));
 
 
@@ -134,7 +135,7 @@ export const AppRoutes: React.FC = () => {
         {/* Protected Routes */}
         {isActuallyAuthenticated ? (
           <>
-            {/* Dashboard Routes - Restricted to Doctor and AdminDoctor roles */}
+            {/* DocBoard Route - Restricted to Doctor and AdminDoctor roles */}
             <Route 
               path="/dashboard" 
               element={
@@ -146,16 +147,10 @@ export const AppRoutes: React.FC = () => {
               } 
             />
 
-            {/* DocBoard Route - Restricted to Doctor and AdminDoctor roles */}
+            {/* Redirect /docboard to /dashboard for consistency */}
             <Route 
               path="/docboard" 
-              element={
-                <RouteGuard requiredRoles={['Doctor', 'AdminDoctor']}>
-                  <MainLayout>
-                    <DocBoard />
-                  </MainLayout>
-                </RouteGuard>
-              } 
+              element={<Navigate to="/dashboard" replace />}
             />
 
             {/* Appointment Routes - Accessible to Admin, AdminDoctor, Receptionist, and Nurse roles */}
@@ -221,6 +216,18 @@ export const AppRoutes: React.FC = () => {
                 <RouteGuard>
                   <MainLayout>
                     <Billing />
+                  </MainLayout>
+                </RouteGuard>
+              } 
+            />
+
+            {/* Prescription Canvas Editor Route - Restricted to Admin and AdminDoctor roles */}
+            <Route 
+              path="/admin/prescriptions/canvas" 
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                  <MainLayout>
+                    <CanvasPage />
                   </MainLayout>
                 </RouteGuard>
               } 

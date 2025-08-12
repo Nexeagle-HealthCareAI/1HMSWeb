@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/authStore';
 import { ValidationUtils } from '@/utils/validation';
 import { useAuthApi, useInvalidateQueries } from '@/hooks/useApi';
 import { fetchAndStoreUserPermissions } from '@/features/auth/services/authApi';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   PasswordLoginForm,
   OTPLoginForm,
@@ -22,6 +23,7 @@ interface LoginProps {
 export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
   const { setUser, setToken } = useAuthStore();
   const { invalidateAuth } = useInvalidateQueries();
+  const queryClient = useQueryClient();
   
   // Using useAuthApi for all auth operations
   const loginMutation = useAuthApi.login();
@@ -179,9 +181,18 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
   // Handler functions for child components
   const fetchAndStoreHospitalMapping = async (userId: string) => {
     try {
+      // Clear any existing hospitalId first to prevent stale data
+      const authStore = useAuthStore.getState();
+      authStore.setHospitalId(null);
+      authStore.setEmployeeId(null);
+      
+             // Clear any cached hospital data from React Query
+       queryClient.removeQueries({ queryKey: ['hospitalUserByUserId'] });
+       queryClient.removeQueries({ queryKey: ['hospital'] });
+      
       const { hospitalApi } = await import('@/features/hospital/services/hospitalApi');
       const res = await hospitalApi.getHospitalUserByUserId(userId);
-      const authStore = useAuthStore.getState();
+      
       if (res?.hospitalId) authStore.setHospitalId(res.hospitalId);
       if (res?.employeeID) authStore.setEmployeeId(res.employeeID);
     } catch (e) {
@@ -222,7 +233,11 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
       });
       
              if (response.success) {
-         // Update auth store
+         // Clear any existing auth data first to prevent stale data
+         const authStore = useAuthStore.getState();
+         authStore.clearSession();
+         
+         // Update auth store with new user data
          setToken(response.accessToken!);
          setUser({
            id: response.userId || undefined,
@@ -351,10 +366,14 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
         const storedUserId = response.userId || useAuthStore.getState().getUserId();
         
                  if (storedUserId) {
+           // Clear any existing auth data first to prevent stale data
+           const authStore = useAuthStore.getState();
+           authStore.clearSession();
+           
            // For OTP login, we need to set the user as authenticated
            // Use the actual accessToken from the response instead of placeholder
            const tokenToUse = response.accessToken || 'otp-login';
-           useAuthStore.getState().setAuthenticatedUser(storedUserId, tokenToUse);
+           authStore.setAuthenticatedUser(storedUserId, tokenToUse);
            
            // Fetch hospital mapping once here
            await fetchAndStoreHospitalMapping(storedUserId);

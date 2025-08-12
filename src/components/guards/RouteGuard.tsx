@@ -159,7 +159,7 @@ export const PublicGuard: React.FC<PublicGuardProps> = ({
   // If user is authenticated, redirect to appropriate dashboard
   if (isAuthenticated) {
     const userRole = RoleService.getRole();
-    const targetPath = redirectTo || (userRole === 'Admin' ? '/admin' : '/docboard');
+    const targetPath = redirectTo || (userRole === 'Admin' ? '/admin' : '/dashboard');
     return <Navigate to={targetPath} replace />;
   }
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ProfilePhotoUploader } from './ProfilePhotoUploader';
+
+import { useProfileCompletion } from '@/hooks/useProfileCompletion';
+import { DoctorProfile } from '@/features/doctor/components/DoctorProfile';
+import { useUserDetails, useUpdateUserDetails } from '@/hooks/useUserProfileApi';
+import { UserProfileUpdateRequest, UserDetailsResponse } from '@/features/profile/services/userProfileApi';
 import { 
   User, 
   Building2, 
@@ -39,6 +45,53 @@ import {
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
+
+// Gender options
+const genderOptions = [
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+  { value: 'other', label: 'Other' },
+  { value: 'prefer-not-to-say', label: 'Prefer not to say' }
+];
+
+// Indian Languages options
+const indianLanguages = [
+  { value: 'hindi', label: 'Hindi' },
+  { value: 'english', label: 'English' },
+  { value: 'bengali', label: 'Bengali' },
+  { value: 'telugu', label: 'Telugu' },
+  { value: 'marathi', label: 'Marathi' },
+  { value: 'tamil', label: 'Tamil' },
+  { value: 'urdu', label: 'Urdu' },
+  { value: 'gujarati', label: 'Gujarati' },
+  { value: 'kannada', label: 'Kannada' },
+  { value: 'odia', label: 'Odia' },
+  { value: 'punjabi', label: 'Punjabi' },
+  { value: 'malayalam', label: 'Malayalam' },
+  { value: 'assamese', label: 'Assamese' },
+  { value: 'sanskrit', label: 'Sanskrit' },
+  { value: 'konkani', label: 'Konkani' },
+  { value: 'manipuri', label: 'Manipuri' },
+  { value: 'nepali', label: 'Nepali' },
+  { value: 'bodo', label: 'Bodo' },
+  { value: 'dogri', label: 'Dogri' },
+  { value: 'kashmiri', label: 'Kashmiri' },
+  { value: 'maithili', label: 'Maithili' },
+  { value: 'santali', label: 'Santali' },
+  { value: 'sindhi', label: 'Sindhi' }
+];
+
+// Blood Group options
+const bloodGroupOptions = [
+  { value: 'A+', label: 'A+' },
+  { value: 'A-', label: 'A-' },
+  { value: 'B+', label: 'B+' },
+  { value: 'B-', label: 'B-' },
+  { value: 'AB+', label: 'AB+' },
+  { value: 'AB-', label: 'AB-' },
+  { value: 'O+', label: 'O+' },
+  { value: 'O-', label: 'O-' }
+];
 
 interface ProfilePageProps {
   onBack: () => void;
@@ -70,8 +123,8 @@ interface ProfileData {
     department: string;
     role: string;
     joiningDate: string;
-    qualification?: string;
-    specialization?: string;
+    qualifications: string[];
+    specializations: string[];
     licenseNumber?: string;
     // Extended doctor-only fields
     experienceYears?: number;
@@ -91,42 +144,36 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   onBack, 
   userType = 'Doctor' 
 }) => {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('personal');
   const [isEditing, setIsEditing] = useState(false);
   const roleFromStore = useAuthStore((state) => state.userRole);
   const effectiveRole = roleFromStore || userType;
   const isDoctorUser = effectiveRole === 'Doctor' || effectiveRole === 'AdminDoctor';
   const employeeIdFromStore = useAuthStore((state) => state.employeeId);
-  const departmentOptions = [
-    'Cardiology',
-    'Pediatrics',
-    'Neurology',
-    'Orthopedics',
-    'General Medicine',
-    'General Surgery',
-    'Gynecology',
-    'Dermatology',
-    'ENT',
-    'Ophthalmology',
-    'Oncology',
-    'Radiology',
-    'Pathology',
-    'Emergency',
-  ];
-  const [expanded, setExpanded] = useState<string[]>(['basic', 'address']);
+  const userId = useAuthStore((state) => state.userId);
+  
+  // Profile completion hook
+  const { completionPercentage } = useProfileCompletion();
+  
+  // User profile API hooks
+  const { data: userDetailsResponse, isLoading: userDetailsLoading } = useUserDetails(userId || '');
+  const updateUserDetailsMutation = useUpdateUserDetails();
+
+
+  const [expanded, setExpanded] = useState<string[]>(['personal']);
   const [saving, setSaving] = useState<{ basic?: boolean; address?: boolean; employment?: boolean; doctor?: boolean }>({});
   type FieldErrors = Record<string, string | undefined>;
   const [basicErrors, setBasicErrors] = useState<FieldErrors>({});
   const [addressErrors, setAddressErrors] = useState<FieldErrors>({});
   const [employmentErrors, setEmploymentErrors] = useState<FieldErrors>({});
-  const [doctorErrors, setDoctorErrors] = useState<FieldErrors>({});
+
 
   // Validation schemas (Zod)
   const BasicInfoSchema = z.object({
     fullName: z.string().min(1, 'Full name is required'),
     gender: z.string().optional(),
     language: z.string().optional(),
-    profilePicture: z.string().url('Enter a valid URL').optional().or(z.literal('')),
     dateOfBirth: z
       .string()
       .optional()
@@ -154,24 +201,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     employeeId: z.string().max(50, 'Employee ID too long').optional(),
   });
 
-  const DoctorSchema = z.object({
-    licenseNumber: z.string().min(1, 'License number is required'),
-    qualification: z.string().optional(),
-    experienceYears: z
-      .union([z.string(), z.number()])
-      .transform((v) => (typeof v === 'string' ? Number(v || 0) : v))
-      .refine((v) => Number.isInteger(v) && v >= 0, { message: 'Experience must be a non-negative integer' })
-      .optional(),
-    medicalCouncil: z.string().max(100, 'Too long').optional(),
-    registrationYear: z
-      .union([z.string(), z.number()])
-      .transform((v) => (v === '' ? undefined : Number(v)))
-      .refine((v) => v === undefined || (Number.isInteger(v) && v <= new Date().getFullYear()), {
-        message: 'Invalid year',
-      })
-      .optional(),
-    bio: z.string().optional(),
-  });
+
   const [profileData, setProfileData] = useState<ProfileData>({
     personal: {
       fullName: '',
@@ -196,8 +226,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       department: '',
       role: '',
       joiningDate: '',
-      qualification: '',
-      specialization: '',
+      qualifications: [],
+      specializations: [],
       licenseNumber: '',
       experienceYears: 0,
       medicalCouncil: '',
@@ -214,78 +244,52 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
   // Load existing data on component mount
   useEffect(() => {
-    loadProfileData();
-  }, []);
-
-  const loadProfileData = () => {
-    // TODO: Move setup data to Zustand store
-    const setupData = null;
-    const authStore = useAuthStore.getState();
-    const userRole = authStore.getUserRole() || userType;
-    
-    if (setupData) {
-      const data = JSON.parse(setupData);
+    if (userDetailsResponse && (userDetailsResponse as UserDetailsResponse).userProfile) {
+      const userProfile = (userDetailsResponse as UserDetailsResponse).userProfile;
+      const userDetails = userDetailsResponse as UserDetailsResponse;
       
-      // Map setup data to profile structure
+      // Map API data to profile structure
       setProfileData({
         personal: {
-          fullName: data.doctor?.fullName || '',
-          email: data.doctor?.email || '',
-          phone: data.doctor?.phone || '',
-          profilePicture: data.documents?.profilePicture || '',
-          dateOfBirth: data.doctor?.dateOfBirth || '',
-          gender: data.doctor?.gender || '',
-          language: data.doctor?.language || '',
-          bloodGroup: data.doctor?.bloodGroup || '',
-          addressLine1: data.doctor?.addressLine1 || '',
-          addressLine2: data.doctor?.addressLine2 || '',
-          city: data.doctor?.city || '',
-          state: data.doctor?.state || '',
-          country: data.doctor?.country || '',
-          pincode: data.doctor?.pincode || '',
-          emergencyContactName: data.doctor?.emergencyContactName || '',
-          emergencyContactNumber: data.doctor?.emergencyContactNumber || '',
-          employeeId: employeeIdFromStore || ''
+          fullName: userProfile.fullName || '',
+          email: userDetails.email || '',
+          phone: userDetails.mobileNumber || '',
+          profilePicture: userProfile.profilePictureURL || '',
+          dateOfBirth: userProfile.dateOfBirth ? new Date(userProfile.dateOfBirth).toISOString().split('T')[0] : '',
+          gender: userProfile.gender || '',
+          language: userProfile.language || '',
+          bloodGroup: userProfile.bloodGroup || '',
+          addressLine1: userProfile.addressLine1 || '',
+          addressLine2: userProfile.addressLine2 || '',
+          city: userProfile.city || '',
+          state: userProfile.state || '',
+          country: userProfile.country || '',
+          pincode: userProfile.pincode || '',
+          emergencyContactName: userProfile.emergencyContactName || '',
+          emergencyContactNumber: userProfile.emergencyContactNumber || '',
+          employeeId: userProfile.employeeID || employeeIdFromStore || ''
         },
         professional: {
-          department: data.doctor?.department || data.doctor?.specialization || '',
-          role: userRole,
-          joiningDate: data.doctor?.joiningDate || new Date().toISOString().split('T')[0],
-          qualification: data.doctor?.qualification || '',
-          specialization: data.doctor?.specialization || '',
-          licenseNumber: data.doctor?.licenseNumber || '',
-          experienceYears: data.doctor?.experienceYears || 0,
-          medicalCouncil: data.doctor?.medicalCouncil || '',
-          registrationYear: data.doctor?.registrationYear || undefined,
-          bio: data.doctor?.bio || ''
+          department: '',
+          role: effectiveRole,
+          joiningDate: new Date().toISOString().split('T')[0],
+          qualifications: [],
+          specializations: [],
+          licenseNumber: '',
+          experienceYears: 0,
+          medicalCouncil: '',
+          registrationYear: undefined,
+          bio: ''
         },
         achievements: {
           totalPatients: Math.floor(Math.random() * 500) + 100,
           satisfactionRating: 4.5 + Math.random() * 0.5,
-          yearsOfService: parseInt(data.doctor?.experience?.split(' ')[0] || '1'),
+          yearsOfService: 1,
           certificationsCount: Math.floor(Math.random() * 10) + 3
         }
       });
     }
-  };
-
-  const calculateCompletionPercentage = () => {
-    const allFields = [
-      profileData.personal.fullName,
-      profileData.personal.email,
-      profileData.personal.phone,
-      profileData.professional.department,
-      profileData.professional.qualification,
-      profileData.professional.specialization,
-      profileData.professional.licenseNumber,
-      profileData.personal.addressLine1,
-      profileData.personal.profilePicture,
-      profileData.professional.experienceYears
-    ];
-    
-    const filledFields = allFields.filter(field => field && field.toString().trim() !== '').length;
-    return Math.round((filledFields / allFields.length) * 100);
-  };
+  }, [userDetailsResponse, effectiveRole, employeeIdFromStore]);
 
   const handleSave = () => {
     // Update localStorage with new profile data
@@ -319,7 +323,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     }));
   };
 
-  const completionPercentage = calculateCompletionPercentage();
+
+
+
   
   // Auto-expand Doctor section if focus=doctor or tab=professional
   useEffect(() => {
@@ -336,7 +342,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       fullName: profileData.personal.fullName,
       gender: profileData.personal.gender,
       language: profileData.personal.language,
-      profilePicture: profileData.personal.profilePicture,
       dateOfBirth: profileData.personal.dateOfBirth,
       bloodGroup: profileData.personal.bloodGroup,
     });
@@ -369,27 +374,45 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     return true;
   };
 
-  const validateDoctor = (): boolean => {
-    if (!isDoctorUser) return true;
-    const result = DoctorSchema.safeParse({
-      licenseNumber: profileData.professional.licenseNumber,
-      qualification: profileData.professional.qualification,
-      experienceYears: profileData.professional.experienceYears,
-      medicalCouncil: profileData.professional.medicalCouncil,
-      registrationYear: profileData.professional.registrationYear,
-      bio: profileData.professional.bio,
-    });
-    const errs: FieldErrors = {};
-    if (!result.success) result.error.issues.forEach((i) => (errs[i.path[0] as string] = i.message));
-    setDoctorErrors(errs);
-    return result.success;
-  };
+
 
   const saveBasic = async () => {
     if (!validateBasic()) return;
     setSaving((s) => ({ ...s, basic: true }));
     try {
-      toast({ title: 'Saved', description: 'Basic info updated.' });
+      if (!userId) {
+        toast({ title: 'Error', description: 'User ID not found.', variant: 'destructive' });
+        return;
+      }
+
+      const updateData: UserProfileUpdateRequest = {
+        userId,
+        mobileNumber: profileData.personal.phone,
+        isActive: true,
+        fullName: profileData.personal.fullName,
+        gender: profileData.personal.gender || '',
+        language: profileData.personal.language || '',
+        profilePictureURL: profileData.personal.profilePicture || '',
+        employeeID: profileData.personal.employeeId || '',
+        dateOfBirth: profileData.personal.dateOfBirth ? new Date(profileData.personal.dateOfBirth).toISOString() : '',
+        bloodGroup: profileData.personal.bloodGroup || '',
+        addressLine1: profileData.personal.addressLine1 || '',
+        addressLine2: profileData.personal.addressLine2 || '',
+        city: profileData.personal.city || '',
+        state: profileData.personal.state || '',
+        country: profileData.personal.country || '',
+        pincode: profileData.personal.pincode || '',
+        emergencyContactName: profileData.personal.emergencyContactName || '',
+        emergencyContactNumber: profileData.personal.emergencyContactNumber || ''
+      };
+
+      await updateUserDetailsMutation.mutateAsync(updateData);
+      
+      // Refresh profile completion data
+      queryClient.invalidateQueries({ queryKey: ['profile', 'completion'] });
+      
+    } catch (error) {
+      console.error('Error saving basic info:', error);
     } finally {
       setSaving((s) => ({ ...s, basic: false }));
     }
@@ -399,7 +422,39 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     if (!validateAddress()) return;
     setSaving((s) => ({ ...s, address: true }));
     try {
-      toast({ title: 'Saved', description: 'Address & contact updated.' });
+      if (!userId) {
+        toast({ title: 'Error', description: 'User ID not found.', variant: 'destructive' });
+        return;
+      }
+
+      const updateData: UserProfileUpdateRequest = {
+        userId,
+        mobileNumber: profileData.personal.phone,
+        isActive: true,
+        fullName: profileData.personal.fullName,
+        gender: profileData.personal.gender || '',
+        language: profileData.personal.language || '',
+        profilePictureURL: profileData.personal.profilePicture || '',
+        employeeID: profileData.personal.employeeId || '',
+        dateOfBirth: profileData.personal.dateOfBirth ? new Date(profileData.personal.dateOfBirth).toISOString() : '',
+        bloodGroup: profileData.personal.bloodGroup || '',
+        addressLine1: profileData.personal.addressLine1 || '',
+        addressLine2: profileData.personal.addressLine2 || '',
+        city: profileData.personal.city || '',
+        state: profileData.personal.state || '',
+        country: profileData.personal.country || '',
+        pincode: profileData.personal.pincode || '',
+        emergencyContactName: profileData.personal.emergencyContactName || '',
+        emergencyContactNumber: profileData.personal.emergencyContactNumber || ''
+      };
+
+      await updateUserDetailsMutation.mutateAsync(updateData);
+      
+      // Refresh profile completion data
+      queryClient.invalidateQueries({ queryKey: ['profile', 'completion'] });
+      
+    } catch (error) {
+      console.error('Error saving address info:', error);
     } finally {
       setSaving((s) => ({ ...s, address: false }));
     }
@@ -415,15 +470,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     }
   };
 
-  const saveDoctor = async () => {
-    if (!validateDoctor()) return;
-    setSaving((s) => ({ ...s, doctor: true }));
-    try {
-      toast({ title: 'Saved', description: 'Professional details updated.' });
-    } finally {
-      setSaving((s) => ({ ...s, doctor: false }));
-    }
-  };
+
 
   // Gamification elements
   const getProgressColor = (percentage: number) => {
@@ -448,6 +495,18 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   };
 
   const badge = getBadgeForCompletion(completionPercentage);
+
+  // Show loading state while fetching user details
+  if (userDetailsLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-subtle p-4 lg:p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading profile information...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-subtle p-4 lg:p-6">
@@ -563,312 +622,291 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             <Accordion type="multiple" value={expanded} onValueChange={(v) => setExpanded(v as string[])}>
               {/* Doctor Professional at top */}
               {isDoctorUser && (
-              <AccordionItem value="doctor">
-                <AccordionTrigger>
-                  <div className="flex items-center gap-2">
-                    <Stethoscope className="h-4 w-4" />
-                    <span>Doctor Professional</span>
-                    <span className={`text-xs ml-2 ${Object.keys(doctorErrors).length ? 'text-amber-600' : 'text-green-600'}`}>
-                      {Object.keys(doctorErrors).length ? '⚠︎' : '✓'}
-                    </span>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <Label htmlFor="department">Department</Label>
-                    <Select
-                      value={profileData.professional.department || ''}
-                      onValueChange={(val) => handleInputChange('professional', 'department' as any, val)}
-                      disabled={!isEditing}
-                    >
-                      <SelectTrigger id="department" className="mt-1">
-                        <SelectValue placeholder="Select department" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-56 overflow-y-auto">
-                        {departmentOptions.map((d) => (
-                          <SelectItem key={d} value={d}>{d}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="licenseNumber">Medical License Number *</Label>
-                    <Input
-                      id="licenseNumber"
-                      value={profileData.professional.licenseNumber}
-                      onChange={(e) => handleInputChange('professional', 'licenseNumber', e.target.value)}
-                      disabled={!isEditing}
-                      className="mt-1"
-                    />
-                    {doctorErrors.licenseNumber && <p className="text-xs text-amber-600 mt-1">{doctorErrors.licenseNumber}</p>}
-                  </div>
-                  <div>
-                    <Label htmlFor="qualification">Qualification</Label>
-                    <Input
-                      id="qualification"
-                      value={profileData.professional.qualification || ''}
-                      onChange={(e) => handleInputChange('professional', 'qualification', e.target.value)}
-                      disabled={!isEditing}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="experienceYears">Years of Experience</Label>
-                    <Input
-                      id="experienceYears"
-                      type="number"
-                      value={profileData.professional.experienceYears ?? 0}
-                      onChange={(e) => handleInputChange('professional', 'experienceYears' as any, e.target.value)}
-                      disabled={!isEditing}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="medicalCouncil">Medical Council</Label>
-                    <Input
-                      id="medicalCouncil"
-                      value={profileData.professional.medicalCouncil || ''}
-                      onChange={(e) => handleInputChange('professional', 'medicalCouncil' as any, e.target.value)}
-                      disabled={!isEditing}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="registrationYear">Registration Year</Label>
-                    <Input
-                      id="registrationYear"
-                      type="number"
-                      value={profileData.professional.registrationYear || ''}
-                      onChange={(e) => handleInputChange('professional', 'registrationYear' as any, e.target.value)}
-                      disabled={!isEditing}
-                      className="mt-1"
-                    />
-                    {doctorErrors.registrationYear && <p className="text-xs text-amber-600 mt-1">{doctorErrors.registrationYear}</p>}
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label htmlFor="bio">Bio</Label>
-                    <Textarea
-                      id="bio"
-                      value={profileData.professional.bio || ''}
-                      onChange={(e) => handleInputChange('professional', 'bio' as any, e.target.value)}
-                      disabled={!isEditing}
-                      className="mt-1"
-                      rows={4}
-                    />
-                  </div>
-                  </div>
-                  {Object.entries(doctorErrors).map(([k, v]) => v && (
-                    <p key={k} className="text-xs text-amber-600">{v}</p>
-                  ))}
-                  {isEditing && (
-                    <div className="flex justify-end">
-                      <Button onClick={saveDoctor} disabled={!!saving.doctor}>Save Professional</Button>
-                    </div>
-                  )}
-                </AccordionContent>
-              </AccordionItem>
+                <div className="mb-4">
+                  <DoctorProfile 
+                    isEditing={isEditing}
+                    onSave={() => {
+                      // Refresh profile completion data
+                      queryClient.invalidateQueries({ queryKey: ['profile', 'completion'] });
+                    }}
+                    onCancel={() => setIsEditing(false)}
+                  />
+                </div>
               )}
 
-              {/* Basic Info */}
-              <AccordionItem value="basic">
-                <AccordionTrigger>
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    <span>Basic Info</span>
-                    <span className={`text-xs ml-2 ${Object.keys(basicErrors).length ? 'text-amber-600' : 'text-green-600'}`}>
-                      {Object.keys(basicErrors).length ? '⚠︎' : '✓'}
-                    </span>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="space-y-6 mt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="fullName">Full Name *</Label>
-                    <Input
-                      id="fullName"
-                      value={profileData.personal.fullName}
-                      onChange={(e) => handleInputChange('personal', 'fullName', e.target.value)}
-                      disabled={!isEditing}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="email">Email Address *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={profileData.personal.email}
-                      onChange={(e) => handleInputChange('personal', 'email', e.target.value)}
-                      disabled={!isEditing}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="phone">Phone Number *</Label>
-                    <Input
-                      id="phone"
-                      value={profileData.personal.phone}
-                      onChange={(e) => handleInputChange('personal', 'phone', e.target.value)}
-                      disabled={!isEditing}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                    <Input
-                      id="dateOfBirth"
-                      type="date"
-                      value={profileData.personal.dateOfBirth}
-                      onChange={(e) => handleInputChange('personal', 'dateOfBirth', e.target.value)}
-                      disabled={!isEditing}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="gender">Gender</Label>
-                    <Input
-                      id="gender"
-                      value={profileData.personal.gender || ''}
-                      onChange={(e) => handleInputChange('personal', 'gender' as any, e.target.value)}
-                      disabled={!isEditing}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="language">Language</Label>
-                    <Input
-                      id="language"
-                      value={profileData.personal.language || ''}
-                      onChange={(e) => handleInputChange('personal', 'language' as any, e.target.value)}
-                      disabled={!isEditing}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="bloodGroup">Blood Group</Label>
-                    <Input
-                      id="bloodGroup"
-                      value={profileData.personal.bloodGroup || ''}
-                      onChange={(e) => handleInputChange('personal', 'bloodGroup' as any, e.target.value)}
-                      disabled={!isEditing}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="profilePicture">Profile Picture URL</Label>
-                    <Input
-                      id="profilePicture"
-                      value={profileData.personal.profilePicture || ''}
-                      onChange={(e) => handleInputChange('personal', 'profilePicture' as any, e.target.value)}
-                      disabled={!isEditing}
-                      className="mt-1"
-                    />
-                  </div>
-                  {/* Employee ID moved near avatar and read-only */}
-                </div>
-                {Object.entries(basicErrors).map(([k, v]) => v && (
-                  <p key={k} className="text-xs text-amber-600">{v}</p>
-                ))}
-                {isEditing && (
-                  <div className="flex justify-end">
-                    <Button onClick={saveBasic} disabled={!!saving.basic}>Save Basic Info</Button>
-                  </div>
-                )}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
+                             {/* Personal Information */}
+               <div className="mb-4">
+                 <Card>
+                   <CardContent className="p-6">
+                     <Accordion type="single" collapsible defaultValue="personal">
+                       <AccordionItem value="personal">
+                         <AccordionTrigger>
+                           <div className="flex items-center gap-2">
+                             <User className="h-4 w-4" />
+                             <span>Personal Information</span>
+                             <span className={`text-xs ml-2 ${Object.keys(basicErrors).length || Object.keys(addressErrors).length ? 'text-amber-600' : 'text-green-600'}`}>
+                               {Object.keys(basicErrors).length || Object.keys(addressErrors).length ? '⚠︎' : '✓'}
+                             </span>
+                           </div>
+                         </AccordionTrigger>
+                         <AccordionContent>
+                           <div className="space-y-8 mt-4">
+                             {/* Basic Info Section */}
+                             <div>
+                               <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                 <User className="h-4 w-4" />
+                                 Basic Information
+                               </h4>
+                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                 <div>
+                                   <Label htmlFor="fullName">Full Name *</Label>
+                                   <Input
+                                     id="fullName"
+                                     value={profileData.personal.fullName}
+                                     onChange={(e) => handleInputChange('personal', 'fullName', e.target.value)}
+                                     disabled={!isEditing}
+                                     className="mt-1"
+                                   />
+                                 </div>
+                                 <div>
+                                   <Label htmlFor="email">Email Address *</Label>
+                                   <Input
+                                     id="email"
+                                     type="email"
+                                     value={profileData.personal.email}
+                                     onChange={(e) => handleInputChange('personal', 'email', e.target.value)}
+                                     disabled={!isEditing}
+                                     className="mt-1"
+                                   />
+                                 </div>
+                                 <div>
+                                   <Label htmlFor="phone">Phone Number *</Label>
+                                   <Input
+                                     id="phone"
+                                     value={profileData.personal.phone}
+                                     onChange={(e) => handleInputChange('personal', 'phone', e.target.value)}
+                                     disabled={!isEditing}
+                                     className="mt-1"
+                                   />
+                                 </div>
+                                 <div>
+                                   <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                                   <Input
+                                     id="dateOfBirth"
+                                     type="date"
+                                     value={profileData.personal.dateOfBirth}
+                                     onChange={(e) => handleInputChange('personal', 'dateOfBirth', e.target.value)}
+                                     disabled={!isEditing}
+                                     className="mt-1"
+                                   />
+                                 </div>
+                                 <div>
+                                   <Label htmlFor="gender">Gender</Label>
+                                   <Select
+                                     value={profileData.personal.gender || ''}
+                                     onValueChange={(value) => handleInputChange('personal', 'gender', value)}
+                                     disabled={!isEditing}
+                                   >
+                                     <SelectTrigger className="mt-1">
+                                       <SelectValue placeholder="Select a gender" />
+                                     </SelectTrigger>
+                                     <SelectContent>
+                                       {genderOptions.map((option) => (
+                                         <SelectItem key={option.value} value={option.value}>
+                                           {option.label}
+                                         </SelectItem>
+                                       ))}
+                                     </SelectContent>
+                                   </Select>
+                                 </div>
+                                 <div>
+                                   <Label htmlFor="language">Language</Label>
+                                   <Select
+                                     value={profileData.personal.language || ''}
+                                     onValueChange={(value) => handleInputChange('personal', 'language', value)}
+                                     disabled={!isEditing}
+                                   >
+                                     <SelectTrigger className="mt-1">
+                                       <SelectValue placeholder="Select a language" />
+                                     </SelectTrigger>
+                                     <SelectContent className="max-h-60 overflow-y-auto">
+                                       {indianLanguages.map((option) => (
+                                         <SelectItem key={option.value} value={option.value}>
+                                           {option.label}
+                                         </SelectItem>
+                                       ))}
+                                     </SelectContent>
+                                   </Select>
+                                 </div>
+                                                                   <div>
+                                    <Label htmlFor="bloodGroup">Blood Group</Label>
+                                    <Select
+                                      value={profileData.personal.bloodGroup || ''}
+                                      onValueChange={(value) => handleInputChange('personal', 'bloodGroup', value)}
+                                      disabled={!isEditing}
+                                    >
+                                      <SelectTrigger className="mt-1">
+                                        <SelectValue placeholder="Select a blood group" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {bloodGroupOptions.map((option) => (
+                                          <SelectItem key={option.value} value={option.value}>
+                                            {option.label}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                               </div>
+                               {Object.entries(basicErrors).map(([k, v]) => v && (
+                                 <p key={k} className="text-xs text-amber-600 mt-2">{v}</p>
+                               ))}
+                             </div>
 
-              {/* Address & Contact */}
-              <AccordionItem value="address">
-                <AccordionTrigger>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    <span>Address & Contact</span>
-                    <span className={`text-xs ml-2 ${Object.keys(addressErrors).length ? 'text-amber-600' : 'text-green-600'}`}>
-                      {Object.keys(addressErrors).length ? '⚠︎' : '✓'}
-                    </span>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="space-y-6 mt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="address1">Address Line 1</Label>
-                    <Input
-                      id="address1"
-                      value={profileData.personal.addressLine1 || ''}
-                      onChange={(e) => handleInputChange('personal', 'addressLine1' as any, e.target.value)}
-                      disabled={!isEditing}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="address2">Address Line 2</Label>
-                    <Input
-                      id="address2"
-                      value={profileData.personal.addressLine2 || ''}
-                      onChange={(e) => handleInputChange('personal', 'addressLine2' as any, e.target.value)}
-                      disabled={!isEditing}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="city">City</Label>
-                    <Input id="city" value={profileData.personal.city || ''} onChange={(e) => handleInputChange('personal', 'city' as any, e.target.value)} disabled={!isEditing} className="mt-1" />
-                  </div>
-                  <div>
-                    <Label htmlFor="state">State</Label>
-                    <Input id="state" value={profileData.personal.state || ''} onChange={(e) => handleInputChange('personal', 'state' as any, e.target.value)} disabled={!isEditing} className="mt-1" />
-                  </div>
-                  <div>
-                    <Label htmlFor="country">Country</Label>
-                    <Input id="country" value={profileData.personal.country || ''} onChange={(e) => handleInputChange('personal', 'country' as any, e.target.value)} disabled={!isEditing} className="mt-1" />
-                  </div>
-                  <div>
-                    <Label htmlFor="pincode">Pincode</Label>
-                    <Input id="pincode" value={profileData.personal.pincode || ''} onChange={(e) => handleInputChange('personal', 'pincode' as any, e.target.value)} disabled={!isEditing} className="mt-1" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="emergencyName">Emergency Contact Name</Label>
-                    <Input id="emergencyName" value={profileData.personal.emergencyContactName || ''} onChange={(e) => handleInputChange('personal', 'emergencyContactName' as any, e.target.value)} disabled={!isEditing} className="mt-1" />
-                  </div>
-                  <div>
-                    <Label htmlFor="emergencyNumber">Emergency Contact Number</Label>
-                    <Input id="emergencyNumber" value={profileData.personal.emergencyContactNumber || ''} onChange={(e) => handleInputChange('personal', 'emergencyContactNumber' as any, e.target.value)} disabled={!isEditing} className="mt-1" />
-                  </div>
-                </div>
-                {Object.entries(addressErrors).map(([k, v]) => v && (
-                  <p key={k} className="text-xs text-amber-600">{v}</p>
-                ))}
-                {isEditing && (
-                  <div className="flex justify-end">
-                    <Button onClick={saveAddress} disabled={!!saving.address}>Save Address</Button>
-                  </div>
-                )}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
+                             {/* Address & Contact Section */}
+                             <div>
+                               <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                 <MapPin className="h-4 w-4" />
+                                 Address & Contact
+                               </h4>
+                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                 <div>
+                                   <Label htmlFor="address1">Address Line 1</Label>
+                                   <Input
+                                     id="address1"
+                                     value={profileData.personal.addressLine1 || ''}
+                                     onChange={(e) => handleInputChange('personal', 'addressLine1' as any, e.target.value)}
+                                     disabled={!isEditing}
+                                     className="mt-1"
+                                   />
+                                 </div>
+                                 <div>
+                                   <Label htmlFor="address2">Address Line 2</Label>
+                                   <Input
+                                     id="address2"
+                                     value={profileData.personal.addressLine2 || ''}
+                                     onChange={(e) => handleInputChange('personal', 'addressLine2' as any, e.target.value)}
+                                     disabled={!isEditing}
+                                     className="mt-1"
+                                   />
+                                 </div>
+                                 <div>
+                                   <Label htmlFor="city">City</Label>
+                                   <Input 
+                                     id="city" 
+                                     value={profileData.personal.city || ''} 
+                                     onChange={(e) => handleInputChange('personal', 'city' as any, e.target.value)} 
+                                     disabled={!isEditing} 
+                                     className="mt-1" 
+                                   />
+                                 </div>
+                                 <div>
+                                   <Label htmlFor="state">State</Label>
+                                   <Input 
+                                     id="state" 
+                                     value={profileData.personal.state || ''} 
+                                     onChange={(e) => handleInputChange('personal', 'state' as any, e.target.value)} 
+                                     disabled={!isEditing} 
+                                     className="mt-1" 
+                                   />
+                                 </div>
+                                 <div>
+                                   <Label htmlFor="country">Country</Label>
+                                   <Input 
+                                     id="country" 
+                                     value={profileData.personal.country || ''} 
+                                     onChange={(e) => handleInputChange('personal', 'country' as any, e.target.value)} 
+                                     disabled={!isEditing} 
+                                     className="mt-1" 
+                                   />
+                                 </div>
+                                 <div>
+                                   <Label htmlFor="pincode">Pincode</Label>
+                                   <Input 
+                                     id="pincode" 
+                                     value={profileData.personal.pincode || ''} 
+                                     onChange={(e) => handleInputChange('personal', 'pincode' as any, e.target.value)} 
+                                     disabled={!isEditing} 
+                                     className="mt-1" 
+                                   />
+                                 </div>
+                               </div>
+                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                 <div>
+                                   <Label htmlFor="emergencyName">Emergency Contact Name</Label>
+                                   <Input 
+                                     id="emergencyName" 
+                                     value={profileData.personal.emergencyContactName || ''} 
+                                     onChange={(e) => handleInputChange('personal', 'emergencyContactName' as any, e.target.value)} 
+                                     disabled={!isEditing} 
+                                     className="mt-1" 
+                                   />
+                                 </div>
+                                 <div>
+                                   <Label htmlFor="emergencyNumber">Emergency Contact Number</Label>
+                                   <Input 
+                                     id="emergencyNumber" 
+                                     value={profileData.personal.emergencyContactNumber || ''} 
+                                     onChange={(e) => handleInputChange('personal', 'emergencyContactNumber' as any, e.target.value)} 
+                                     disabled={!isEditing} 
+                                     className="mt-1" 
+                                   />
+                                 </div>
+                               </div>
+                               {Object.entries(addressErrors).map(([k, v]) => v && (
+                                 <p key={k} className="text-xs text-amber-600 mt-2">{v}</p>
+                               ))}
+                             </div>
+
+                             {/* Save Button */}
+                             {isEditing && (
+                               <div className="flex justify-end gap-2 pt-4 border-t">
+                                 <Button 
+                                   variant="outline" 
+                                   onClick={() => setIsEditing(false)}
+                                 >
+                                   Cancel
+                                 </Button>
+                                 <Button 
+                                   onClick={async () => {
+                                     const basicValid = validateBasic();
+                                     const addressValid = validateAddress();
+                                     if (basicValid && addressValid) {
+                                       await saveBasic();
+                                       await saveAddress();
+                                     }
+                                   }} 
+                                   disabled={!!saving.basic || !!saving.address}
+                                   className="flex items-center gap-2"
+                                 >
+                                   {saving.basic || saving.address ? (
+                                     <>
+                                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                       Saving...
+                                     </>
+                                   ) : (
+                                     <>
+                                       <Save className="h-4 w-4" />
+                                       Save Personal Information
+                                     </>
+                                   )}
+                                 </Button>
+                               </div>
+                             )}
+                           </div>
+                         </AccordionContent>
+                       </AccordionItem>
+                     </Accordion>
+                   </CardContent>
+                 </Card>
+               </div>
 
               {/* Employment section removed (Employee ID moved near avatar) */}
 
               {/* Doctor Professional (moved to top) removed here to avoid duplicate */}
             </Accordion>
 
-            {isEditing && (
-              <div className="flex justify-end gap-2 mt-6 pt-6 border-t">
-                <Button variant="outline" onClick={() => setIsEditing(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSave} className="flex items-center gap-2">
-                  <Save className="h-4 w-4" />
-                  Save Changes
-                </Button>
-              </div>
-            )}
+
           </CardContent>
         </Card>
       </div>
@@ -881,15 +919,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             <div className="text-2xl font-bold text-blue-700">{profileData.achievements.totalPatients}</div>
             <div className="text-sm text-blue-600">Total Patients Served</div>
           </CardContent>
-        </Card>
+        </Card>       
         
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 border-green-200">
-          <CardContent className="p-4 text-center">
-            <Star className="h-8 w-8 text-green-600 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-green-700">{profileData.achievements.satisfactionRating.toFixed(1)}/5.0</div>
-            <div className="text-sm text-green-600">Patient Satisfaction</div>
-          </CardContent>
-        </Card>
         
         <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-purple-200">
           <CardContent className="p-4 text-center">
@@ -899,13 +930,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           </CardContent>
         </Card>
         
-        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950/20 dark:to-yellow-900/20 border-yellow-200">
-          <CardContent className="p-4 text-center">
-            <Award className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-yellow-700">{profileData.achievements.certificationsCount}</div>
-            <div className="text-sm text-yellow-600">Certifications</div>
-          </CardContent>
-        </Card>
+       
       </div>
     </div>
   );

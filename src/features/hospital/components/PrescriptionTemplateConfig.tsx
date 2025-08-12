@@ -9,14 +9,14 @@ import {
   User
 } from 'lucide-react';
 
-import { Button } from '../../../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
-import { Input } from '../../../components/ui/input';
-import { Label } from '../../../components/ui/label';
-import { Textarea } from '../../../components/ui/textarea';
-import { Switch } from '../../../components/ui/switch';
-import { Badge } from '../../../components/ui/badge';
-import TemplatePreview from "../../../components/ui/TemplatePreview.tsx"; // Adjust the import path as necessary
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import TemplatePreview from "@/components/ui/TemplatePreview";
 
 import { useToast } from '@/hooks/use-toast';
 
@@ -98,10 +98,6 @@ export const PrescriptionTemplateConfig: React.FC<PrescriptionTemplateConfigProp
             header: {
               ...template.header,
               ...adminTemplate.header
-            },
-            footer: {
-              ...template.footer,
-              ...adminTemplate.footer
             }
           });
         }
@@ -109,247 +105,276 @@ export const PrescriptionTemplateConfig: React.FC<PrescriptionTemplateConfigProp
     }
   }, [userRole, template, onTemplateChange]);
 
- const handleSaveTemplate = async () => {
-  const updatedTemplate = {
-    ...template,
-    createdBy: userRole,
-    isAdminTemplate: userRole === "admin",
-    updatedAt: new Date().toISOString()
+  const handleSaveTemplate = async () => {
+    try {
+      // Save to localStorage for now
+      if (userRole === 'admin') {
+        localStorage.setItem('easyHMS_adminTemplate', JSON.stringify(template));
+        localStorage.setItem('easyHMS_adminTemplatePayload', JSON.stringify({
+          headerHtml: generateAdminHeaderHTML(template),
+          footerHtml: generateAdminFooterHTML(template),
+          template: template
+        }));
+      } else {
+        localStorage.setItem('easyHMS_doctorTemplate', JSON.stringify(template));
+        localStorage.setItem('easyHMS_doctorTemplatePayload', JSON.stringify({
+          headerHtml: generateDoctorHeaderHTML(template, doctorTemplate),
+          footerHtml: generateDoctorFooterHTML(template, doctorTemplate),
+          template: template
+        }));
+      }
+      
+      toast({
+        title: "Template saved successfully!",
+        description: `${userRole === 'admin' ? 'Admin' : 'Doctor'} template has been saved.`,
+      });
+    } catch (error) {
+      console.error('Error saving template:', error);
+      toast({
+        title: "Error saving template",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  let payloadToSend: any = null;
-
-  if (userRole === "admin") {
-    // Save locally
-    localStorage.setItem("easyHMS_adminTemplate", JSON.stringify(updatedTemplate));
-
-    const headerHTML = generateAdminHeaderHTML(updatedTemplate);
-    const footerHTML = generateAdminFooterHTML(updatedTemplate);
-
-    const adminPayload = {
-      templateId: updatedTemplate.id,
-      headerHTML,
-      footerHTML,
-      template: updatedTemplate,
-      role: "admin"
-    };
-
-    try {
-      localStorage.setItem("easyHMS_adminTemplatePayload", JSON.stringify(adminPayload));
-    } catch (error) {
-      console.warn("Failed to save to localStorage (quota exceeded):", error);
-      // Fallback: try to save a smaller version
-      const minimalPayload = {
-        templateId: updatedTemplate.id,
-        role: "admin"
-      };
-      localStorage.setItem("easyHMS_adminTemplatePayload", JSON.stringify(minimalPayload));
-    }
-    payloadToSend = adminPayload;
-
-    toast({
-      title: "Admin Template Saved",
-      description: "Master template has been saved and will be available for all doctors."
-    });
-
-  } else {
-    // Doctor flow
-    const doctorSettings = JSON.parse(localStorage.getItem("easyHMS_prescriptionSettings") || "{}");
-
-    const finalTemplate = {
-      ...updatedTemplate,
-      doctorInfo: doctorSettings,
-      baseAdminTemplate: doctorTemplate
-    };
-
-    try {
-      localStorage.setItem("easyHMS_doctorTemplate", JSON.stringify(finalTemplate));
-    } catch (error) {
-      console.warn("Failed to save doctor template to localStorage (quota exceeded):", error);
-    }
-
-    const headerHTML = generateDoctorHeaderHTML(updatedTemplate, doctorSettings);
-    const footerHTML = generateDoctorFooterHTML(updatedTemplate, doctorSettings);
-
-    const doctorPayload = {
-      doctorId: doctorSettings.doctorId || "doctor_123",
-      templateId: updatedTemplate.id,
-      headerHTML,
-      footerHTML,
-      template: finalTemplate,
-      role: "doctor"
-    };
-
-    try {
-      localStorage.setItem("easyHMS_doctorTemplatePayload", JSON.stringify(doctorPayload));
-    } catch (error) {
-      console.warn("Failed to save doctor payload to localStorage (quota exceeded):", error);
-      // Fallback: try to save a smaller version
-      const minimalPayload = {
-        doctorId: doctorSettings.doctorId || "doctor_123",
-        templateId: updatedTemplate.id,
-        role: "doctor"
-      };
-      localStorage.setItem("easyHMS_doctorTemplatePayload", JSON.stringify(minimalPayload));
-    }
-    payloadToSend = doctorPayload;
-
-    toast({
-      title: "Doctor Template Saved",
-      description: "Your customized template has been saved and is ready for prescriptions."
-    });
-  }
-
-  onTemplateChange(updatedTemplate);
-
-  // 🔹 Send to backend
-  try {
-    const response = await fetch("https://your-api.com/save-template", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payloadToSend)
-    });
-
-    if (!response.ok) throw new Error("Failed to save on server");
-
-    const result = await response.json();
-    console.log("Template synced to server:", result);
-  } catch (error) {
-    console.error("Error syncing template to server:", error);
-    toast({
-      title: "Server Save Failed",
-      description: "Template saved locally but could not be synced to the server.",
-      variant: "destructive"
-    });
-  }
-};
-
-
   const generateAdminHeaderHTML = (template: PrescriptionTemplate): string => {
-    return `
-      <div class="admin-prescription-header">
-        ${template.header.showLogo && template.header.logoUrl ? 
-          `<img src="${template.header.logoUrl}" alt="Logo" class="header-logo" style="max-width: 100px; max-height: 100px;" />` : ''}
-        <h1 style="color: ${template.header.styles?.hospitalName?.color || '#000'}; font-size: ${template.header.styles?.hospitalName?.fontSize || '24px'}; font-family: ${template.header.styles?.hospitalName?.fontFamily || 'Arial'}; font-weight: ${template.header.styles?.hospitalName?.fontWeight || 'bold'};">
-          ${template.header.hospitalName}
-        </h1>
-        ${template.header.contactInfo && template.header.contactDetails ? 
-          `<p style="color: ${template.header.styles?.contactInfo?.color || '#666'}; font-size: ${template.header.styles?.contactInfo?.fontSize || '14px'}; font-family: ${template.header.styles?.contactInfo?.fontFamily || 'Arial'};">
-            ${template.header.contactDetails}
-          </p>` : ''}
-        ${template.header.customText ? 
-          `<p style="color: ${template.header.styles?.customText?.color || '#666'}; font-size: ${template.header.styles?.customText?.fontSize || '14px'}; font-family: ${template.header.styles?.customText?.fontFamily || 'Arial'}; font-style: ${template.header.styles?.customText?.fontStyle || 'italic'};">
-            ${template.header.customText}
-          </p>` : ''}
-        <div class="doctor-placeholder">
-          <!-- Doctor information will be inserted here -->
-        </div>
-      </div>
-    `;
+    let headerHTML = '<div class="prescription-header">';
+    
+    if (template.header.showLogo && template.header.logoUrl) {
+      headerHTML += `<img src="${template.header.logoUrl}" alt="Hospital Logo" style="max-height: 60px; margin-bottom: 10px;" />`;
+    }
+    
+    if (template.header.hospitalName) {
+      const styles = template.header.styles?.hospitalName || {};
+      headerHTML += `<h1 style="
+        color: ${styles.color || '#000'};
+        font-size: ${styles.fontSize || '24px'};
+        font-family: ${styles.fontFamily || 'Arial, sans-serif'};
+        font-weight: ${styles.fontWeight || 'bold'};
+        text-align: ${styles.textAlign || 'center'};
+        margin: 10px 0;
+      ">${template.header.hospitalName}</h1>`;
+    }
+    
+    if (template.header.contactInfo && template.header.contactDetails) {
+      const styles = template.header.styles?.contactInfo || {};
+      headerHTML += `<p style="
+        color: ${styles.color || '#666'};
+        font-size: ${styles.fontSize || '14px'};
+        font-family: ${styles.fontFamily || 'Arial, sans-serif'};
+        text-align: ${styles.textAlign || 'center'};
+        margin: 5px 0;
+      ">${template.header.contactDetails}</p>`;
+    }
+    
+    if (template.header.customText) {
+      const styles = template.header.styles?.customText || {};
+      headerHTML += `<p style="
+        color: ${styles.color || '#333'};
+        font-size: ${styles.fontSize || '16px'};
+        font-family: ${styles.fontFamily || 'Arial, sans-serif'};
+        text-align: ${styles.textAlign || 'left'};
+        margin: 10px 0;
+      ">${template.header.customText}</p>`;
+    }
+    
+    headerHTML += '</div>';
+    return headerHTML;
   };
 
   const generateAdminFooterHTML = (template: PrescriptionTemplate): string => {
-    return `
-      <div class="admin-prescription-footer">
-        ${template.footer.customNotes ? 
-          `<p style="color: ${template.footer.styles?.customNotes?.color || '#666'}; font-size: ${template.footer.styles?.customNotes?.fontSize || '12px'}; font-family: ${template.footer.styles?.customNotes?.fontFamily || 'Arial'};">
-            ${template.footer.customNotes}
-          </p>` : ''}
-        <div class="signature-placeholder">
-          <!-- Doctor signature will be inserted here -->
-        </div>
-        ${template.footer.qrCode ? '<div class="qr-code-placeholder">QR Code</div>' : ''}
-      </div>
-    `;
+    let footerHTML = '<div class="prescription-footer">';
+    
+    if (template.footer.customNotes) {
+      const styles = template.footer.styles?.customNotes || {};
+      footerHTML += `<p style="
+        color: ${styles.color || '#333'};
+        font-size: ${styles.fontSize || '14px'};
+        font-family: ${styles.fontFamily || 'Arial, sans-serif'};
+        text-align: ${styles.textAlign || 'left'};
+        margin: 10px 0;
+      ">${template.footer.customNotes}</p>`;
+    }
+    
+    if (template.footer.signature) {
+      const styles = template.footer.styles?.signature || {};
+      footerHTML += `<div style="
+        text-align: ${styles.textAlign || 'right'};
+        margin-top: 20px;
+      ">
+        <p style="
+          color: ${styles.color || '#000'};
+          font-size: ${styles.fontSize || '16px'};
+          font-family: ${styles.fontFamily || 'Arial, sans-serif'};
+          font-weight: ${styles.fontWeight || 'bold'};
+        ">Doctor's Signature</p>
+        <div style="border-top: 2px solid #000; width: 200px; margin-left: auto;"></div>
+      </div>`;
+    }
+    
+    if (template.footer.qrCode) {
+      footerHTML += `<div style="text-align: center; margin-top: 20px;">
+        <div style="
+          width: 100px;
+          height: 100px;
+          border: 1px solid #ccc;
+          display: inline-block;
+          background: #f0f0f0;
+          text-align: center;
+          line-height: 100px;
+        ">QR Code</div>
+      </div>`;
+    }
+    
+    footerHTML += '</div>';
+    return footerHTML;
   };
 
   const generateDoctorHeaderHTML = (template: PrescriptionTemplate, doctorSettings: any): string => {
-    return `
-      <div class="doctor-prescription-header">
-        ${template.header.showLogo && template.header.logoUrl ? 
-          `<img src="${template.header.logoUrl}" alt="Logo" class="header-logo" style="max-width: 100px; max-height: 100px;" />` : ''}
-        <h1 style="color: ${template.header.styles?.hospitalName?.color || '#000'}; font-size: ${template.header.styles?.hospitalName?.fontSize || '24px'}; font-family: ${template.header.styles?.hospitalName?.fontFamily || 'Arial'}; font-weight: ${template.header.styles?.hospitalName?.fontWeight || 'bold'};">
-          ${template.header.hospitalName}
-        </h1>
-        ${template.header.contactInfo && template.header.contactDetails ? 
-          `<p style="color: ${template.header.styles?.contactInfo?.color || '#666'}; font-size: ${template.header.styles?.contactInfo?.fontSize || '14px'}; font-family: ${template.header.styles?.contactInfo?.fontFamily || 'Arial'};">
-            ${template.header.contactDetails}
-          </p>` : ''}
-        ${template.header.customText ? 
-          `<p style="color: ${template.header.styles?.customText?.color || '#666'}; font-size: ${template.header.styles?.customText?.fontSize || '14px'}; font-family: ${template.header.styles?.customText?.fontFamily || 'Arial'}; font-style: ${template.header.styles?.customText?.fontStyle || 'italic'};">
-            ${template.header.customText}
-          </p>` : ''}
-        <div class="doctor-info">
-          <h2 style="font-size: 18px; font-weight: bold; margin: 10px 0 5px 0;">${doctorSettings.doctorName || 'Dr. Name'}</h2>
-          ${doctorSettings.qualifications ? `<p style="font-size: 14px; margin: 2px 0;">${doctorSettings.qualifications}</p>` : ''}
-          ${doctorSettings.designationRegNumber ? `<p style="font-size: 12px; margin: 2px 0; color: #666;">${doctorSettings.designationRegNumber}</p>` : ''}
-        </div>
-      </div>
-    `;
+    let headerHTML = '<div class="prescription-header">';
+    
+    // Use admin logo if available
+    if (doctorSettings?.header?.showLogo && doctorSettings?.header?.logoUrl) {
+      headerHTML += `<img src="${doctorSettings.header.logoUrl}" alt="Hospital Logo" style="max-height: 60px; margin-bottom: 10px;" />`;
+    }
+    
+    // Use admin hospital name
+    if (doctorSettings?.header?.hospitalName) {
+      const styles = doctorSettings.header.styles?.hospitalName || {};
+      headerHTML += `<h1 style="
+        color: ${styles.color || '#000'};
+        font-size: ${styles.fontSize || '24px'};
+        font-family: ${styles.fontFamily || 'Arial, sans-serif'};
+        font-weight: ${styles.fontWeight || 'bold'};
+        text-align: ${styles.textAlign || 'center'};
+        margin: 10px 0;
+      ">${doctorSettings.header.hospitalName}</h1>`;
+    }
+    
+    // Use admin contact info
+    if (doctorSettings?.header?.contactInfo && doctorSettings?.header?.contactDetails) {
+      const styles = doctorSettings.header.styles?.contactInfo || {};
+      headerHTML += `<p style="
+        color: ${styles.color || '#666'};
+        font-size: ${styles.fontSize || '14px'};
+        font-family: ${styles.fontFamily || 'Arial, sans-serif'};
+        text-align: ${styles.textAlign || 'center'};
+        margin: 5px 0;
+      ">${doctorSettings.header.contactDetails}</p>`;
+    }
+    
+    // Add doctor-specific custom text
+    if (template.header.customText) {
+      const styles = template.header.styles?.customText || {};
+      headerHTML += `<p style="
+        color: ${styles.color || '#333'};
+        font-size: ${styles.fontSize || '16px'};
+        font-family: ${styles.fontFamily || 'Arial, sans-serif'};
+        text-align: ${styles.textAlign || 'left'};
+        margin: 10px 0;
+      ">${template.header.customText}</p>`;
+    }
+    
+    headerHTML += '</div>';
+    return headerHTML;
   };
 
   const generateDoctorFooterHTML = (template: PrescriptionTemplate, doctorSettings: any): string => {
-    return `
-      <div class="doctor-prescription-footer">
-        ${template.footer.customNotes ? 
-          `<p style="color: ${template.footer.styles?.customNotes?.color || '#666'}; font-size: ${template.footer.styles?.customNotes?.fontSize || '12px'}; font-family: ${template.footer.styles?.customNotes?.fontFamily || 'Arial'};">
-            ${template.footer.customNotes}
-          </p>` : ''}
-        ${template.footer.signature ? 
-          `<div class="doctor-signature" style="text-align: right; margin-top: 30px;">
-            <div style="border-top: 1px solid #000; width: 200px; margin: 20px 0 10px auto;"></div>
-            <p style="font-size: 14px; font-weight: bold;">Dr. ${doctorSettings.doctorName || 'Doctor Name'}</p>
-            ${doctorSettings.qualifications ? `<p style="font-size: 12px;">${doctorSettings.qualifications}</p>` : ''}
-            ${doctorSettings.designationRegNumber ? `<p style="font-size: 10px; color: #666;">${doctorSettings.designationRegNumber}</p>` : ''}
-          </div>` : ''}
-        ${template.footer.qrCode ? '<div class="qr-code" style="width: 60px; height: 60px; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; font-size: 10px; position: absolute; bottom: 10px; right: 10px;">QR Code</div>' : ''}
-      </div>
-    `;
+    let footerHTML = '<div class="prescription-footer">';
+    
+    // Add doctor-specific custom notes
+    if (template.footer.customNotes) {
+      const styles = template.footer.styles?.customNotes || {};
+      footerHTML += `<p style="
+        color: ${styles.color || '#333'};
+        font-size: ${styles.fontSize || '14px'};
+        font-family: ${styles.fontFamily || 'Arial, sans-serif'};
+        text-align: ${styles.textAlign || 'left'};
+        margin: 10px 0;
+      ">${template.footer.customNotes}</p>`;
+    }
+    
+    // Add doctor signature
+    if (template.footer.signature) {
+      const styles = template.footer.styles?.signature || {};
+      footerHTML += `<div style="
+        text-align: ${styles.textAlign || 'right'};
+        margin-top: 20px;
+      ">
+        <p style="
+          color: ${styles.color || '#000'};
+          font-size: ${styles.fontSize || '16px'};
+          font-family: ${styles.fontFamily || 'Arial, sans-serif'};
+          font-weight: ${styles.fontWeight || 'bold'};
+        ">Doctor's Signature</p>
+        <div style="border-top: 2px solid #000; width: 200px; margin-left: auto;"></div>
+      </div>`;
+    }
+    
+    // Add QR code if enabled
+    if (template.footer.qrCode) {
+      footerHTML += `<div style="text-align: center; margin-top: 20px;">
+        <div style="
+          width: 100px;
+          height: 100px;
+          border: 1px solid #ccc;
+          display: inline-block;
+          background: #f0f0f0;
+          text-align: center;
+          line-height: 100px;
+        ">QR Code</div>
+      </div>`;
+    }
+    
+    footerHTML += '</div>';
+    return footerHTML;
   };
 
   const handleResetTemplate = () => {
-    if (userRole === 'doctor' && doctorTemplate) {
-      // Reset doctor template to admin defaults
-      onTemplateChange({
-        ...template,
-        header: { ...doctorTemplate.header },
-        footer: { ...doctorTemplate.footer }
-      });
-      toast({
-        title: "Template Reset",
-        description: "Template has been reset to admin defaults.",
-      });
-    } else {
-      // Reset admin template to system defaults
-      const defaultTemplate: PrescriptionTemplate = {
-        ...template,
-        header: {
-          showLogo: false,
-          hospitalName: '',
-          contactInfo: false,
-          customText: '',
-          styles: {
-            hospitalName: { color: '#000000', fontSize: '24px', fontFamily: 'Arial' },
-            contactInfo: { color: '#666666', fontSize: '14px', fontFamily: 'Arial' },
-            customText: { color: '#666666', fontSize: '14px', fontFamily: 'Arial' }
-          }
-        },
-        footer: {
-          signature: true,
-          qrCode: false,
-          customNotes: '',
-          styles: {
-            customNotes: { color: '#666666', fontSize: '12px', fontFamily: 'Arial' }
-          }
+    const defaultTemplate: PrescriptionTemplate = {
+      id: template.id,
+      name: template.name,
+      isDefault: true,
+      isAdminTemplate: userRole === 'admin',
+      createdBy: userRole,
+      header: {
+        showLogo: true,
+        hospitalName: userRole === 'admin' ? 'Hospital Name' : '',
+        contactInfo: true,
+        contactDetails: userRole === 'admin' ? 'Contact: +1234567890 | Email: info@hospital.com' : '',
+        customText: '',
+        styles: {
+          hospitalName: { color: '#000', fontSize: '24px', fontFamily: 'Arial, sans-serif', fontWeight: 'bold', textAlign: 'center' },
+          contactInfo: { color: '#666', fontSize: '14px', fontFamily: 'Arial, sans-serif', textAlign: 'center' },
+          customText: { color: '#333', fontSize: '16px', fontFamily: 'Arial, sans-serif', textAlign: 'left' }
         }
-      };
-      
-      onTemplateChange(defaultTemplate);
-      toast({
-        title: "Template Reset",
-        description: "Template has been reset to default settings.",
-      });
-    }
+      },
+      sections: {
+        vitals: true,
+        diagnosis: true,
+        advice: true,
+        medicines: true,
+        nextAppointment: true
+      },
+      footer: {
+        signature: true,
+        qrCode: true,
+        customNotes: '',
+        styles: {
+          customNotes: { color: '#333', fontSize: '14px', fontFamily: 'Arial, sans-serif', textAlign: 'left' },
+          signature: { color: '#000', fontSize: '16px', fontFamily: 'Arial, sans-serif', fontWeight: 'bold', textAlign: 'right' },
+          qrCode: { color: '#666', fontSize: '12px', fontFamily: 'Arial, sans-serif', textAlign: 'center' }
+        }
+      }
+    };
+    
+    onTemplateChange(defaultTemplate);
+    
+    toast({
+      title: "Template reset to default",
+      description: "All settings have been reset to their default values.",
+    });
   };
 
   const updateHeader = (field: keyof PrescriptionTemplate['header'], value: any) => {
@@ -375,10 +400,10 @@ export const PrescriptionTemplateConfig: React.FC<PrescriptionTemplateConfigProp
           ...template.header.styles,
           [element]: {
             ...template.header.styles?.[element],
-            [property]: value,
-          },
-        },
-      },
+            [property]: value
+          }
+        }
+      }
     });
   };
 
@@ -405,325 +430,345 @@ export const PrescriptionTemplateConfig: React.FC<PrescriptionTemplateConfigProp
           ...template.footer.styles,
           [element]: {
             ...template.footer.styles?.[element],
-            [property]: value,
-          },
-        },
-      },
+            [property]: value
+          }
+        }
+      }
     });
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Check file size (limit to 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      toast({
-        title: "File Too Large",
-        description: "Please select an image smaller than 2MB.",
-        variant: "destructive",
-      });
-      return;
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const logoUrl = event.target?.result as string;
+        updateHeader('logoUrl', logoUrl);
+      };
+      reader.readAsDataURL(file);
     }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      updateHeader('logoUrl', reader.result?.toString() || '');
-      toast({
-        title: "Logo Uploaded",
-        description: "Logo has been successfully uploaded.",
-      });
-    };
-    reader.readAsDataURL(file);
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            {userRole === 'admin' ? <Shield className="h-5 w-5 text-blue-600" /> : <User className="h-5 w-5 text-green-600" />}
-            {userRole === 'admin' ? 'Admin Template Configuration' : 'Doctor Template Customization'}
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            {userRole === 'admin' 
-              ? 'Create master template for all doctors'
-              : 'Customize the admin template for your prescriptions'
-            }
+          <h3 className="text-lg font-semibold">Prescription Template Configuration</h3>
+          <p className="text-sm text-gray-600">
+            Configure the layout and content of prescription templates
           </p>
         </div>
-        
         <div className="flex items-center gap-2">
           <Badge variant={userRole === 'admin' ? 'default' : 'secondary'}>
-            {userRole === 'admin' ? 'Admin Mode' : 'Doctor Mode'}
+            {userRole === 'admin' ? 'Admin Template' : 'Doctor Template'}
           </Badge>
-          {userRole === 'doctor' && doctorTemplate && (
-            <Badge variant="outline" className="text-green-600">
-              Based on Admin Template
-            </Badge>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowPreview(!showPreview)}
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            {showPreview ? 'Hide Preview' : 'Show Preview'}
+          </Button>
         </div>
       </div>
 
-      {/* Admin Template Info for Doctors */}
-      {userRole === 'doctor' && doctorTemplate && (
-        <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Shield className="h-4 w-4 text-blue-600" />
-              <h4 className="font-medium text-blue-900 dark:text-blue-100">Admin Template Loaded</h4>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Header Configuration */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Header Configuration
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="showLogo">Show Hospital Logo</Label>
+              <Switch
+                id="showLogo"
+                checked={template.header.showLogo}
+                onCheckedChange={(checked) => updateHeader('showLogo', checked)}
+              />
             </div>
-            <p className="text-sm text-blue-700 dark:text-blue-300">
-              You can customize the admin template below. Your changes will be saved as your personal template.
-            </p>
+
+            {template.header.showLogo && (
+              <div className="space-y-2">
+                <Label>Upload Logo</Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="cursor-pointer"
+                />
+                {template.header.logoUrl && (
+                  <img
+                    src={template.header.logoUrl}
+                    alt="Hospital Logo"
+                    className="w-20 h-20 object-contain border rounded"
+                  />
+                )}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="hospitalName">Hospital Name</Label>
+              <Input
+                id="hospitalName"
+                value={template.header.hospitalName}
+                onChange={(e) => updateHeader('hospitalName', e.target.value)}
+                placeholder="Enter hospital name"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="contactInfo">Show Contact Information</Label>
+              <Switch
+                id="contactInfo"
+                checked={template.header.contactInfo}
+                onCheckedChange={(checked) => updateHeader('contactInfo', checked)}
+              />
+            </div>
+
+            {template.header.contactInfo && (
+              <div className="space-y-2">
+                <Label htmlFor="contactDetails">Contact Details</Label>
+                <Textarea
+                  id="contactDetails"
+                  value={template.header.contactDetails || ''}
+                  onChange={(e) => updateHeader('contactDetails', e.target.value)}
+                  placeholder="Enter contact details"
+                  rows={2}
+                />
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="customText">Custom Header Text</Label>
+              <Textarea
+                id="customText"
+                value={template.header.customText || ''}
+                onChange={(e) => updateHeader('customText', e.target.value)}
+                placeholder="Enter custom header text"
+                rows={3}
+              />
+            </div>
           </CardContent>
         </Card>
-      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="flex flex-col gap-6">
-          {/* Header Configuration */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Header Configuration
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {userRole === 'admin' ? 'Set up hospital header information' : 'Customize header appearance'}
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <Label>Hospital Name</Label>
-                    <Input
-                      value={template.header.hospitalName}
-                      onChange={(e) => updateHeader('hospitalName', e.target.value)}
-                      placeholder="Enter hospital name"
-                      disabled={userRole === 'doctor' && !!doctorTemplate?.header.hospitalName}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Font Size</Label>
-                    <Input
-                      type="text"
-                      value={template.header.styles?.hospitalName?.fontSize || ''}
-                      onChange={(e) => updateHeaderStyle('hospitalName', 'fontSize', e.target.value)}
-                      placeholder="e.g., 24px"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Font Color</Label>
-                    <Input
-                      type="color"
-                      value={template.header.styles?.hospitalName?.color || '#000000'}
-                      onChange={(e) => updateHeaderStyle('hospitalName', 'color', e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Font Family</Label>
-                    <select
-                      value={template.header.styles?.hospitalName?.fontFamily || ''}
-                      onChange={(e) => updateHeaderStyle('hospitalName', 'fontFamily', e.target.value)}
-                      className="w-full border rounded-md p-2 text-sm"
-                    >
-                      <option value="">Default</option>
-                      <option value="Arial">Arial</option>
-                      <option value="Times New Roman">Times New Roman</option>
-                      <option value="Georgia">Georgia</option>
-                      <option value="Courier New">Courier New</option>
-                      <option value="Verdana">Verdana</option>
-                    </select>
-                  </div>
-                </div>
+        {/* Sections Configuration */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Sections Configuration
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="vitals">Include Vitals Section</Label>
+              <Switch
+                id="vitals"
+                checked={template.sections.vitals}
+                onCheckedChange={(checked) =>
+                  onTemplateChange({
+                    ...template,
+                    sections: { ...template.sections, vitals: checked }
+                  })
+                }
+              />
+            </div>
 
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <Label>Contact Details</Label>
-                    <Textarea
-                      value={template.header.contactDetails || ''}
-                      onChange={(e) => updateHeader('contactDetails', e.target.value)}
-                      placeholder="Phone: +91 12345 67890&#10;Email: info@hospital.com&#10;Address: Hospital Address"
-                      rows={3}
-                      disabled={userRole === 'doctor' && !!doctorTemplate?.header.contactDetails}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Custom Text/Tagline</Label>
-                    <Input
-                      value={template.header.customText || ''}
-                      onChange={(e) => updateHeader('customText', e.target.value)}
-                      placeholder="e.g., Providing Quality Healthcare"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Custom Text Font Size</Label>
-                    <Input
-                      type="text"
-                      value={template.header.styles?.customText?.fontSize || ''}
-                      onChange={(e) => updateHeaderStyle('customText', 'fontSize', e.target.value)}
-                      placeholder="e.g., 14px"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Custom Text Color</Label>
-                    <Input
-                      type="color"
-                      value={template.header.styles?.customText?.color || '#000000'}
-                      onChange={(e) => updateHeaderStyle('customText', 'color', e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="diagnosis">Include Diagnosis Section</Label>
+              <Switch
+                id="diagnosis"
+                checked={template.sections.diagnosis}
+                onCheckedChange={(checked) =>
+                  onTemplateChange({
+                    ...template,
+                    sections: { ...template.sections, diagnosis: checked }
+                  })
+                }
+              />
+            </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>Show Logo</Label>
-                  <Switch
-                    checked={template.header.showLogo}
-                    onCheckedChange={(checked) => updateHeader('showLogo', checked)}
-                  />
-                </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="advice">Include Advice Section</Label>
+              <Switch
+                id="advice"
+                checked={template.sections.advice}
+                onCheckedChange={(checked) =>
+                  onTemplateChange({
+                    ...template,
+                    sections: { ...template.sections, advice: checked }
+                  })
+                }
+              />
+            </div>
 
-                {template.header.showLogo && (
-                  <div className="space-y-2">
-                    <Label>Upload Logo</Label>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleLogoUpload}
-                    />
-                    {template.header.logoUrl && (
-                      <div className="flex items-center gap-2">
-                        <img
-                          src={template.header.logoUrl}
-                          alt="Preview Logo"
-                          className="max-w-[80px] max-h-[80px] object-contain border rounded"
-                        />
-                        <div className="text-xs text-muted-foreground">
-                          <p>Logo uploaded successfully</p>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => updateHeader('logoUrl', '')}
-                            className="text-red-600 hover:text-red-700 p-0 h-auto"
-                          >
-                            Remove Logo
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+            <div className="flex items-center justify-between">
+              <Label htmlFor="medicines">Include Medicines Section</Label>
+              <Switch
+                id="medicines"
+                checked={template.sections.medicines}
+                onCheckedChange={(checked) =>
+                  onTemplateChange({
+                    ...template,
+                    sections: { ...template.sections, medicines: checked }
+                  })
+                }
+              />
+            </div>
 
-                <div className="flex items-center justify-between">
-                  <Label>Show Contact Information</Label>
-                  <Switch
-                    checked={template.header.contactInfo}
-                    onCheckedChange={(checked) => updateHeader('contactInfo', checked)}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="nextAppointment">Include Next Appointment Section</Label>
+              <Switch
+                id="nextAppointment"
+                checked={template.sections.nextAppointment}
+                onCheckedChange={(checked) =>
+                  onTemplateChange({
+                    ...template,
+                    sections: { ...template.sections, nextAppointment: checked }
+                  })
+                }
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Footer Configuration */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Footer Configuration</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {userRole === 'admin' ? 'Set up footer information' : 'Customize footer appearance'}
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label>Custom Footer Notes</Label>
-                  <Textarea
-                    value={template.footer.customNotes || ''}
-                    onChange={(e) => updateFooter('customNotes', e.target.value)}
-                    placeholder="Enter custom footer notes (e.g., clinic timings, emergency contact)"
-                    rows={3}
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Font Size</Label>
-                    <Input
-                      type="text"
-                      value={template.footer.styles?.customNotes?.fontSize || ''}
-                      onChange={(e) => updateFooterStyle('customNotes', 'fontSize', e.target.value)}
-                      placeholder="e.g., 12px"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Font Color</Label>
-                    <Input
-                      type="color"
-                      value={template.footer.styles?.customNotes?.color || '#000000'}
-                      onChange={(e) => updateFooterStyle('customNotes', 'color', e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
+        {/* Footer Configuration */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Footer Configuration
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="signature">Include Doctor Signature</Label>
+              <Switch
+                id="signature"
+                checked={template.footer.signature}
+                onCheckedChange={(checked) => updateFooter('signature', checked)}
+              />
+            </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label>Show Doctor Signature</Label>
-                  <Switch
-                    checked={template.footer.signature}
-                    onCheckedChange={(checked) => updateFooter('signature', checked)}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label>Show QR Code</Label>
-                  <Switch
-                    checked={template.footer.qrCode}
-                    onCheckedChange={(checked) => updateFooter('qrCode', checked)}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="qrCode">Include QR Code</Label>
+              <Switch
+                id="qrCode"
+                checked={template.footer.qrCode}
+                onCheckedChange={(checked) => updateFooter('qrCode', checked)}
+              />
+            </div>
 
-          {/* Action Buttons */}
-          <div className="flex justify-start gap-3">
-            <Button variant="outline" onClick={handleResetTemplate}>
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Reset to {userRole === 'doctor' ? 'Admin' : 'Default'}
-            </Button>
-            <Button onClick={handleSaveTemplate}>
+            <div className="space-y-2">
+              <Label htmlFor="customNotes">Custom Footer Notes</Label>
+              <Textarea
+                id="customNotes"
+                value={template.footer.customNotes || ''}
+                onChange={(e) => updateFooter('customNotes', e.target.value)}
+                placeholder="Enter custom footer notes"
+                rows={3}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Actions</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button onClick={handleSaveTemplate} className="w-full">
               <Save className="h-4 w-4 mr-2" />
               Save Template
             </Button>
-            {userRole === 'admin' && (
-              <Button variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Export Template
-              </Button>
-            )}
-          </div>
-        </div>
 
-        {/* Preview Panel */}
-        <div>
-          <TemplatePreview 
-            template={template} 
-            userRole={userRole}
-            doctorSettings={userRole === 'doctor' ? JSON.parse(localStorage.getItem('easyHMS_prescriptionSettings') || '{}') : undefined}
-          />
-        </div>
+            <Button
+              variant="outline"
+              onClick={handleResetTemplate}
+              className="w-full"
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Reset to Default
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => {
+                const html = userRole === 'admin' 
+                  ? generateAdminHeaderHTML(template) + generateAdminFooterHTML(template)
+                  : generateDoctorHeaderHTML(template, doctorTemplate) + generateDoctorFooterHTML(template, doctorTemplate);
+                const newWindow = window.open('', '_blank');
+                if (newWindow) {
+                  newWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                      <title>Template Preview</title>
+                      <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        .prescription-header, .prescription-footer { margin: 20px 0; }
+                      </style>
+                    </head>
+                    <body>
+                      ${html}
+                    </body>
+                    </html>
+                  `);
+                  newWindow.document.close();
+                }
+              }}
+              className="w-full"
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Print Preview
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => {
+                const html = userRole === 'admin' 
+                  ? generateAdminHeaderHTML(template) + generateAdminFooterHTML(template)
+                  : generateDoctorHeaderHTML(template, doctorTemplate) + generateDoctorFooterHTML(template, doctorTemplate);
+                const blob = new Blob([html], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'prescription-template.html';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              }}
+              className="w-full"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download HTML
+            </Button>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Preview */}
+      {showPreview && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Template Preview</CardTitle>
+          </CardHeader>
+          <CardContent>
+                         <TemplatePreview
+               template={template}
+               userRole={userRole}
+               doctorSettings={userRole === 'doctor' ? JSON.parse(localStorage.getItem('easyHMS_prescriptionSettings') || '{}') : undefined}
+             />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

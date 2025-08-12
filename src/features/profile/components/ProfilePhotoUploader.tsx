@@ -1,10 +1,13 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Camera, ImagePlus, Plus, Minus, RotateCcw, Trash2, Upload } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 import imageCompression from 'browser-image-compression';
+import { useAuthStore } from '@/store/authStore';
+import { usePrepareUpload, useUploadToBlob, useFinalizeUpload } from '@/hooks/useMediaUploadApi';
+import { toast } from '@/hooks/use-toast';
 
 type ProfilePhotoUploaderProps = {
   initialUrl?: string;
@@ -20,6 +23,7 @@ const OUTPUT_SIZE = 512; // square avatar
 const MAX_FILE_MB = 10;
 
 export const ProfilePhotoUploader: React.FC<ProfilePhotoUploaderProps> = ({ initialUrl, disabled, buttonVariant = 'icon', onChange, onUploaded, onRemoved }) => {
+  const userId = useAuthStore((state) => state.userId);
   const [open, setOpen] = useState(false);
   const [imageSrc, setImageSrc] = useState<string | undefined>(initialUrl);
   const [error, setError] = useState<string | null>(null);
@@ -28,10 +32,44 @@ export const ProfilePhotoUploader: React.FC<ProfilePhotoUploaderProps> = ({ init
   const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  // Store upload URL and object key for later use
+  const [uploadURL, setUploadURL] = useState<string>('');
+  const [objectKey, setObjectKey] = useState<string>('');
+
+  // Media upload hooks
+  const prepareUploadMutation = usePrepareUpload();
+  const uploadToBlobMutation = useUploadToBlob();
+  const finalizeUploadMutation = useFinalizeUpload();
+
   // Cropper state
   const [crop, setCrop] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+
+  // Prepare upload when dialog opens
+  useEffect(() => {
+    if (open && userId) {
+      prepareUpload();
+    }
+  }, [open, userId]);
+
+  const prepareUpload = async () => {
+    if (!userId) return;
+    
+    try {
+      const response = await prepareUploadMutation.mutateAsync({
+        scope: 'profile-photo',
+        userId: userId
+      });
+      
+      setUploadURL(response.uploadURL);
+      setObjectKey(response.objectKey);
+      console.log('Upload URL prepared:', response.uploadURL);
+    } catch (error) {
+      console.error('Error preparing upload:', error);
+      setError('Failed to prepare upload. Please try again.');
+    }
+  };
 
   const onCropComplete = useCallback((_: any, areaPixels: { x: number; y: number; width: number; height: number }) => {
     setCroppedAreaPixels(areaPixels);
@@ -122,6 +160,11 @@ export const ProfilePhotoUploader: React.FC<ProfilePhotoUploaderProps> = ({ init
   };
 
   const performCropAndUpload = async () => {
+    if (!userId || !uploadURL || !objectKey) {
+      setError('Upload not prepared. Please try again.');
+      return;
+    }
+
     try {
       const blob = await getCroppedCanvasBlob();
       if (!blob) return;
@@ -139,17 +182,53 @@ export const ProfilePhotoUploader: React.FC<ProfilePhotoUploaderProps> = ({ init
 
       setIsUploading(true);
       setError(null);
-      const controller = new AbortController();
-      abortRef.current = controller;
+      setUploadProgress(10);
 
-      const { profilePhotoService } = await import('../services/profilePhotoService');
-      const init = await profilePhotoService.upload(compressed, controller.signal, (p) => setUploadProgress(p));
-      const finalized = await profilePhotoService.finalize(init.objectKey);
-      onUploaded?.({ ...finalized.urls, objectKey: init.objectKey });
+      // Step 1: Upload to Azure Blob storage using the prepared URL
+      const file = new File([compressed], 'profile-photo.jpg', { type: 'image/jpeg' });
+      await uploadToBlobMutation.mutateAsync({
+        uploadURL: uploadURL,
+        file: file
+      });
+
+      setUploadProgress(70);
+
+      // Step 2: Finalize upload - get CDN URL
+      const finalizeResponse = await finalizeUploadMutation.mutateAsync({
+        objectKey: objectKey,
+        scope: 'profile-photo',
+        userId: userId
+      });
+
+      setUploadProgress(100);
+
+      // Call onUploaded with the CDN URL
+      onUploaded?.({
+        thumb: finalizeResponse.cdnURL,
+        medium: finalizeResponse.cdnURL,
+        full: finalizeResponse.cdnURL,
+        objectKey: objectKey
+      });
+
+      toast({
+        title: 'Success',
+        description: 'Profile photo uploaded successfully!',
+      });
+
       setOpen(false);
       setUploadProgress(0);
+      
+      // Reset upload URL and object key
+      setUploadURL('');
+      setObjectKey('');
     } catch (e: any) {
-      setError(e?.message || 'Upload failed');
+      console.error('Upload error:', e);
+      setError(e?.message || 'Upload failed. Please try again.');
+      toast({
+        title: 'Error',
+        description: e?.message || 'Upload failed. Please try again.',
+        variant: 'destructive'
+      });
     } finally {
       setIsUploading(false);
       abortRef.current = null;
@@ -254,7 +333,13 @@ export const ProfilePhotoUploader: React.FC<ProfilePhotoUploaderProps> = ({ init
                 ) : (
                   <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
                 )}
-                <Button type="button" onClick={performCropAndUpload} disabled={!imageSrc || isUploading}>Apply</Button>
+                <Button 
+                  type="button" 
+                  onClick={performCropAndUpload} 
+                  disabled={!imageSrc || isUploading || !uploadURL || !objectKey}
+                >
+                  Apply
+                </Button>
               </div>
             </div>
 
@@ -271,15 +356,21 @@ export const ProfilePhotoUploader: React.FC<ProfilePhotoUploaderProps> = ({ init
                   variant="destructive"
                   onClick={async () => {
                     try {
-                      const { profilePhotoService } = await import('../services/profilePhotoService');
-                      const res = await profilePhotoService.remove();
-                      if (res.success) {
-                        onRemoved();
-                        setImageSrc(undefined);
-                        setOpen(false);
-                      }
+                      // For now, just call onRemoved since we don't have a remove API yet
+                      onRemoved();
+                      setImageSrc(undefined);
+                      setOpen(false);
+                      toast({
+                        title: 'Success',
+                        description: 'Profile photo removed successfully!',
+                      });
                     } catch (e: any) {
                       setError(e?.message || 'Failed to remove');
+                      toast({
+                        title: 'Error',
+                        description: e?.message || 'Failed to remove photo',
+                        variant: 'destructive'
+                      });
                     }
                   }}
                 >

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore, useAppStore, useUserStore, useNotificationStore, useThemeStore } from '@/store';
 import { useQueryClient } from '@tanstack/react-query';
+import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { 
   Calendar, 
   Users, 
@@ -72,33 +73,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState('dashboard');
 
-  // Calculate profile completion score
-  const calculateProfileScore = () => {
-    // TODO: Move setup data to Zustand store
-    const profileData = null;
-    if (!profileData) return 0;
-    
-    try {
-      const data = JSON.parse(profileData);
-      let completedFields = 0;
-      const totalFields = 8; // Total number of profile fields
-      
-      if (data.name) completedFields++;
-      if (data.email) completedFields++;
-      if (data.mobile) completedFields++;
-      if (data.specialization) completedFields++;
-      if (data.experience) completedFields++;
-      if (data.qualification) completedFields++;
-      if (data.address) completedFields++;
-      if (data.consultationFee) completedFields++;
-      
-      return Math.round((completedFields / totalFields) * 100);
-    } catch {
-      return 0;
-    }
-  };
-
-  const profileScore = calculateProfileScore();
+  // Profile completion hook
+  const { completionPercentage, doctorProfileCompletion } = useProfileCompletion();
+  
+  const profileScore = completionPercentage;
   const authStore = useAuthStore.getState();
   const userRole = authStore.getUserRole() || 'Doctor';
   const profileTarget = (userRole === 'Doctor' || userRole === 'AdminDoctor') ? '/profile?tab=professional' : '/profile';
@@ -294,23 +272,54 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
             <div className="flex items-center gap-4">
               {/* Profile Completion Meter */}
-              <div className="hidden md:flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
-                <div className="w-16 h-2 bg-background rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-primary transition-all duration-300" 
-                    style={{ width: `${profileScore}%` }}
-                  />
+              {profileScore < 100 ? (
+                <div className="hidden md:flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
+                  <div className="w-16 h-2 bg-background rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-primary transition-all duration-300"
+                      style={{ width: `${profileScore}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-medium">{profileScore}%</span>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="p-0 h-auto text-xs text-healthcare-primary"
+                    onClick={() => navigate(profileTarget)}
+                  >
+                    Complete Profile
+                  </Button>
                 </div>
-                <span className="text-xs font-medium">{profileScore}%</span>
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="p-0 h-auto text-xs text-healthcare-primary"
-                  onClick={() => navigate(profileTarget)}
-                >
-                  Complete Profile
-                </Button>
-              </div>
+              ) : (
+                <div className="hidden md:flex items-center gap-2 bg-green-100 dark:bg-green-900/20 rounded-lg px-3 py-2 border border-green-200 dark:border-green-800">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-xs font-medium text-green-700 dark:text-green-300">Profile Complete!</span>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="p-0 h-auto text-xs text-green-600 hover:text-green-700"
+                    onClick={() => navigate(profileTarget)}
+                  >
+                    View Profile
+                  </Button>
+                </div>
+              )}
+
+              {/* Doctor Profile Completion Badge */}
+              {(userRole === 'Doctor' || userRole === 'AdminDoctor') && doctorProfileCompletion >= 100 && (
+                <div className="hidden md:flex items-center gap-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg px-3 py-2 border border-blue-200 dark:border-blue-800">
+                  <Stethoscope className="h-4 w-4 text-blue-600" />
+                  <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Professional Profile Complete!</span>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="p-0 h-auto text-xs text-blue-600 hover:text-blue-700"
+                    onClick={() => navigate('/profile?tab=professional')}
+                  >
+                    View
+                  </Button>
+                </div>
+              )}
 
               {/* Notifications */}
               <Button variant="ghost" size="sm" className="relative">

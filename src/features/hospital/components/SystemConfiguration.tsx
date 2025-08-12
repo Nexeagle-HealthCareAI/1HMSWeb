@@ -10,12 +10,15 @@ import { DepartmentManagement } from './DepartmentManagement';
 import { PrescriptionTemplateConfig } from './PrescriptionTemplateConfig';
 import { HospitalBrandingConfig } from './HospitalBrandingConfig';
 import { useSystemConfiguration } from '../hooks';
+import { PrescriptionCanvasEditor } from '@/features/prescriptions';
 
 interface SystemConfigurationProps {
   focusTab?: string;
 }
 
 export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusTab }) => {
+  const [prescriptionEditorMode, setPrescriptionEditorMode] = React.useState<'config' | 'canvas'>('config');
+  
   const {
     activeTab,
     setActiveTab,
@@ -60,10 +63,49 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
 
          {/* Prescription Template Tab */}
          <TabsContent value="prescription">
-           <PrescriptionTemplateConfig
-             template={prescriptionTemplate}
-             onTemplateChange={handleTemplateChange}
-           />
+           <div className="space-y-4">
+             <div className="flex items-center justify-between">
+               <div>
+                 <h3 className="text-lg font-semibold">Prescription Template Editor</h3>
+                 <p className="text-sm text-muted-foreground">
+                   Choose between the traditional template configurator or the new canvas editor
+                 </p>
+               </div>
+               <div className="flex items-center gap-2">
+                 <button
+                   onClick={() => setPrescriptionEditorMode('config')}
+                   className={`px-3 py-2 text-sm rounded-md transition-colors ${
+                     prescriptionEditorMode === 'config'
+                       ? 'bg-primary text-primary-foreground'
+                       : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                   }`}
+                 >
+                   Template Config
+                 </button>
+                 <button
+                   onClick={() => setPrescriptionEditorMode('canvas')}
+                   className={`px-3 py-2 text-sm rounded-md transition-colors ${
+                     prescriptionEditorMode === 'canvas'
+                       ? 'bg-primary text-primary-foreground'
+                       : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                   }`}
+                 >
+                   Canvas Editor
+                 </button>
+               </div>
+             </div>
+             
+             {prescriptionEditorMode === 'config' ? (
+               <PrescriptionTemplateConfig
+                 template={prescriptionTemplate}
+                 onTemplateChange={handleTemplateChange}
+               />
+             ) : (
+               <div className="border rounded-lg p-4">
+                 <PrescriptionCanvasEditor hospitalId="demo-hospital-id" />
+               </div>
+             )}
+           </div>
          </TabsContent>
 
          {/* Hospital Branding Tab */}

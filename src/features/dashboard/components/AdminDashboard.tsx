@@ -103,7 +103,7 @@ export const AdminDashboard = () => {
         data.doctor?.fullName,
         data.doctor?.specialization,
         data.doctor?.licenseNumber,
-        data.doctor?.qualification,
+        data.doctor?.qualifications && data.doctor.qualifications.length > 0 ? data.doctor.qualifications.join(', ') : null,
       ]);
     }
     

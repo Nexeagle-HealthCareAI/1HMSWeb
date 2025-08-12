@@ -14,6 +14,8 @@ export const API_ENDPOINTS = {
   },
   USER: {    
     PERMISSIONS: '/user/permissions',
+    GET_DETAILS: (userId: string) => `/user/get-user-details?userId=${userId}`,
+    UPDATE_DETAILS: '/user/update-user-details',
     PROFILE_PHOTO: {
       UPLOAD: '/user/profile/photo/upload',
       FINALIZE: '/user/profile/photo/finalize',
@@ -24,6 +26,20 @@ export const API_ENDPOINTS = {
     REGISTER: '/hospitals/register',
     GET_BY_ID: (id: string) => `/hospitals/${id}`,
     GET_BY_USER_ID: (userId: string) => `/hospitals/users/${userId}`,
+  },
+  DEPARTMENTS: {
+    GLOBAL: '/departments/global',
+  },
+  SPECIALIZATIONS: {
+    BY_DEPARTMENT: '/doctors/specializations',
+  },
+  DOCTORS: {
+    PROFILE: '/doctors',
+  },
+  MEDIA: {
+    PREPARE_UPLOAD: '/media/upload-assigned-url/prepare',
+    FINALIZE_UPLOAD: '/media/upload-assigned-url/finalize',
+    GET_URL: '/media/get-preassigned-url',
   },
 } as const;
 
