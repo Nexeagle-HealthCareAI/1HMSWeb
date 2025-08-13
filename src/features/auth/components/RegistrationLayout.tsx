@@ -123,7 +123,7 @@ export const RegistrationLayout: React.FC<RegistrationLayoutProps> = ({
             <div className="space-y-2">
               <div className="flex justify-center">
                 <div className="p-4 ">
-                  <img src="/Logo.png" alt="Company Logo" className="h-16 w-16" />
+                  <img src="/Logo.png" alt="Company Logo" className="h-13 w-16" />
                 </div>
               </div>
               
@@ -141,7 +141,7 @@ export const RegistrationLayout: React.FC<RegistrationLayoutProps> = ({
             </div>
           </CardHeader>
           
-          <CardContent className="space-y-6">
+          <CardContent className="bg-white space-y-6">
             {children}
           </CardContent>
         </Card>
