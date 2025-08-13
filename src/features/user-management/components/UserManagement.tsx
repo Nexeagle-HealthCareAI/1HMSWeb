@@ -19,8 +19,6 @@ import {
   Shield, 
   Key,
   Search,
-  Upload,
-  Download,
   Eye,
   Copy,
   Clock,
@@ -221,7 +219,6 @@ export const UserManagement: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showAddUser, setShowAddUser] = useState(false);
-  const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   
   // Role management states
@@ -362,20 +359,6 @@ export const UserManagement: React.FC = () => {
                   </Button>
                 </DialogTrigger>
               </Dialog>
-              
-              <Dialog open={showBulkUpload} onOpenChange={setShowBulkUpload}>
-                <DialogTrigger asChild>
-                  <Button variant="outline">
-                    <Upload className="h-4 w-4 mr-2" />
-                    Bulk Upload
-                  </Button>
-                </DialogTrigger>
-              </Dialog>
-              
-              <Button variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Export Users
-              </Button>
             </div>
           </div>
 
@@ -730,31 +713,7 @@ export const UserManagement: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Bulk Upload Dialog */}
-      <Dialog open={showBulkUpload} onOpenChange={setShowBulkUpload}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Bulk Upload Users</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Upload CSV File</Label>
-              <Input type="file" accept=".csv" className="mt-2" />
-              <p className="text-sm text-muted-foreground mt-1">
-                CSV should include: Name, Email, Phone, Role, Department
-              </p>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowBulkUpload(false)}>
-                Cancel
-              </Button>
-              <Button>
-                Upload Users
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+
 
       {/* Create Role Dialog */}
       <Dialog open={showCreateRole} onOpenChange={setShowCreateRole}>

@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Camera, ImagePlus, Plus, Minus, RotateCcw, Trash2, Upload } from 'lucide-react';
+import { Camera, ImagePlus, Plus, Minus, RotateCcw, Trash2, Upload, Save } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 import imageCompression from 'browser-image-compression';
 import { useAuthStore } from '@/store/authStore';
@@ -46,15 +46,10 @@ export const ProfilePhotoUploader: React.FC<ProfilePhotoUploaderProps> = ({ init
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
 
-  // Prepare upload when dialog opens
-  useEffect(() => {
-    if (open && userId) {
-      prepareUpload();
-    }
-  }, [open, userId]);
+  // Removed automatic upload preparation when dialog opens
 
   const prepareUpload = async () => {
-    if (!userId) return;
+    if (!userId) return null;
     
     try {
       const response = await prepareUploadMutation.mutateAsync({
@@ -62,12 +57,14 @@ export const ProfilePhotoUploader: React.FC<ProfilePhotoUploaderProps> = ({ init
         userId: userId
       });
       
-      setUploadURL(response.uploadURL);
+      setUploadURL(response.uploadUrl);
       setObjectKey(response.objectKey);
-      console.log('Upload URL prepared:', response.uploadURL);
+      console.log('Upload URL prepared:', response.uploadUrl);
+      return response;
     } catch (error) {
       console.error('Error preparing upload:', error);
       setError('Failed to prepare upload. Please try again.');
+      return null;
     }
   };
 
@@ -160,8 +157,25 @@ export const ProfilePhotoUploader: React.FC<ProfilePhotoUploaderProps> = ({ init
   };
 
   const performCropAndUpload = async () => {
-    if (!userId || !uploadURL || !objectKey) {
-      setError('Upload not prepared. Please try again.');
+    if (!userId) {
+      setError('User not authenticated. Please try again.');
+      return;
+    }
+
+    // Always prepare upload to get fresh URLs
+    let currentUploadURL: string;
+    let currentObjectKey: string;
+    
+    try {
+      const uploadResponse = await prepareUpload();
+      if (!uploadResponse) {
+        setError('Failed to prepare upload. Please try again.');
+        return;
+      }
+      currentUploadURL = uploadResponse.uploadUrl;
+      currentObjectKey = uploadResponse.objectKey;
+    } catch (error) {
+      setError('Failed to prepare upload. Please try again.');
       return;
     }
 
@@ -184,18 +198,19 @@ export const ProfilePhotoUploader: React.FC<ProfilePhotoUploaderProps> = ({ init
       setError(null);
       setUploadProgress(10);
 
-      // Step 1: Upload to Azure Blob storage using the prepared URL
-      const file = new File([compressed], 'profile-photo.jpg', { type: 'image/jpeg' });
-      await uploadToBlobMutation.mutateAsync({
-        uploadURL: uploadURL,
-        file: file
-      });
+             // Step 1: Upload to Azure Blob storage using the prepared URL
+       console.log('Using upload URL:', currentUploadURL);
+       const file = new File([compressed], 'profile-photo.jpg', { type: 'image/jpeg' });
+       await uploadToBlobMutation.mutateAsync({
+         uploadURL: currentUploadURL,
+         file: file
+       });
 
       setUploadProgress(70);
 
       // Step 2: Finalize upload - get CDN URL
       const finalizeResponse = await finalizeUploadMutation.mutateAsync({
-        objectKey: objectKey,
+        objectKey: currentObjectKey,
         scope: 'profile-photo',
         userId: userId
       });
@@ -207,7 +222,7 @@ export const ProfilePhotoUploader: React.FC<ProfilePhotoUploaderProps> = ({ init
         thumb: finalizeResponse.cdnURL,
         medium: finalizeResponse.cdnURL,
         full: finalizeResponse.cdnURL,
-        objectKey: objectKey
+        objectKey: currentObjectKey
       });
 
       toast({
@@ -336,9 +351,10 @@ export const ProfilePhotoUploader: React.FC<ProfilePhotoUploaderProps> = ({ init
                 <Button 
                   type="button" 
                   onClick={performCropAndUpload} 
-                  disabled={!imageSrc || isUploading || !uploadURL || !objectKey}
+                  disabled={!imageSrc || isUploading}
                 >
-                  Apply
+                  <Save className="h-4 w-4 mr-2" />
+                  Save
                 </Button>
               </div>
             </div>

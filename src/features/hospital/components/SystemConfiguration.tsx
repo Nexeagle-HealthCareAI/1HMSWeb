@@ -10,7 +10,7 @@ import { DepartmentManagement } from './DepartmentManagement';
 import { PrescriptionTemplateConfig } from './PrescriptionTemplateConfig';
 import { HospitalBrandingConfig } from './HospitalBrandingConfig';
 import { useSystemConfiguration } from '../hooks';
-import { PrescriptionCanvasEditor } from '@/features/prescriptions';
+import { PrescriptionCanvasEditor } from '@/features/prescriptions/PrescriptionCanvasEditor';
 
 interface SystemConfigurationProps {
   focusTab?: string;
@@ -18,6 +18,7 @@ interface SystemConfigurationProps {
 
 export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusTab }) => {
   const [prescriptionEditorMode, setPrescriptionEditorMode] = React.useState<'config' | 'canvas'>('config');
+  
   
   const {
     activeTab,

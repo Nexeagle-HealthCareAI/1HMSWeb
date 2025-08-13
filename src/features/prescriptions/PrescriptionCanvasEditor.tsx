@@ -229,6 +229,7 @@ export const PrescriptionCanvasEditor: React.FC<PrescriptionCanvasEditorProps> =
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showClipboardFallback, setShowClipboardFallback] = useState(false);
   const [clipboardText, setClipboardText] = useState('');
+  const [hasUploadedPhoto, setHasUploadedPhoto] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // Load template on mount

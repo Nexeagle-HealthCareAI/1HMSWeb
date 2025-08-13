@@ -8,7 +8,7 @@ export interface PrepareUploadRequest {
 }
 
 export interface PrepareUploadResponse {
-  uploadURL: string;
+  uploadUrl: string;
   objectKey: string;
 }
 
