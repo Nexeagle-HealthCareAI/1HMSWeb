@@ -56,6 +56,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
   // Track if doctor profile exists
   const [doctorProfileExists, setDoctorProfileExists] = useState<boolean>(false);
   const [doctorId, setDoctorId] = useState<string>('');
+  const updateDoctorProfileMutation = useDoctorApi.updateDoctorProfile(doctorId);
   const [saving, setSaving] = useState<boolean>(false);
   const [doctorErrors, setDoctorErrors] = useState<FieldErrors>({});
   
@@ -249,8 +250,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
         };
         
         // Create update mutation with the correct doctorId
-        const updateDoctorProfileMutation = useDoctorApi.updateDoctorProfile(doctorId);
-        response = await updateDoctorProfileMutation.mutateAsync(updateData);
+              response = await updateDoctorProfileMutation.mutateAsync(updateData);
         toast({ 
           title: 'Success', 
           description: 'Professional details updated successfully.' 

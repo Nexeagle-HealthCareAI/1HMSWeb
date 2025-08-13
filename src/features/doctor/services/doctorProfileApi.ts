@@ -104,7 +104,7 @@ export const doctorProfileApi = {
   // Update doctor profile
   updateDoctorProfile: async (doctorId: string, doctorData: UpdateDoctorProfileRequest): Promise<DoctorProfileResponse> => {
     try {
-      const response = await apiClient.put(`${API_ENDPOINTS.DOCTORS.PROFILE}/${doctorId}`, doctorData);
+      const response = await apiClient.put(`${API_ENDPOINTS.DOCTORS.PROFILE}/profile`, doctorData);
       console.log('Doctor Profile PUT Response:', response);
       return response as DoctorProfileResponse;
     } catch (error) {
