@@ -35,7 +35,7 @@ export const PasswordResetSuccessModal: React.FC<PasswordResetSuccessModalProps>
             onClick={onLogin}
             className="w-full h-12 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold text-base rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
           >
-            🚀 Login Now
+          Login Now
           </Button>
           
           <Button
