@@ -33,6 +33,8 @@ export interface AuthActions {
   getToken: () => string | null;
   clearToken: () => void;
   isTokenValid: () => boolean;
+  isTokenExpiringSoon: () => boolean;
+  refreshToken: () => Promise<void>;
   setUserId: (userId: string) => void;
   getUserId: () => string | null;
   setUserRole: (role: string) => void;
@@ -116,6 +118,25 @@ export const useAuthStore = create<AuthStore>()(
           return !!(token && tokenExpiry && Date.now() < tokenExpiry);
         },
 
+        // Check if token is about to expire (within 5 minutes)
+        isTokenExpiringSoon: () => {
+          const { token, tokenExpiry } = get();
+          if (!token || !tokenExpiry) return false;
+          const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds
+          return Date.now() > (tokenExpiry - fiveMinutes);
+        },
+
+        // Refresh token (to be called during active sessions)
+        refreshToken: async () => {
+          // This would call your refresh token API
+          // For now, just extend the expiry by 24 hours
+          const { token } = get();
+          if (token) {
+            const newTokenExpiry = Date.now() + (24 * 60 * 60 * 1000);
+            set({ tokenExpiry: newTokenExpiry });
+          }
+        },
+
         setUserId: (userId: string) => {
           set({ userId });
         },
@@ -177,6 +198,7 @@ export const useAuthStore = create<AuthStore>()(
           userRole: state.userRole,
           hospitalId: state.hospitalId,
           employeeId: state.employeeId,
+          isAuthenticated: state.isAuthenticated,
         }),
       }
     )

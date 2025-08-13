@@ -28,6 +28,18 @@ export const useProfileCompletion = () => {
   }
 
   const completionPercentage = useMemo(() => {
+    // Check if userProfile has profileCompletionPercentage from API
+    if (userDetailsResponse && (userDetailsResponse as UserDetailsResponse).userProfile) {
+      const userProfile = (userDetailsResponse as UserDetailsResponse).userProfile;
+      
+      // If profileCompletionPercentage is available from API, use it
+      if (userProfile.profileCompletionPercentage !== undefined) {
+        console.log('Using profileCompletionPercentage from API:', userProfile.profileCompletionPercentage);
+        return userProfile.profileCompletionPercentage;
+      }
+    }
+
+    // Fallback to manual calculation if API doesn't provide profileCompletionPercentage
     let totalFields = 0;
     let filledFields = 0;
 

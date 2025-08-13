@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore, useAppStore, useUserStore, useNotificationStore, useThemeStore } from '@/store';
 import { useQueryClient } from '@tanstack/react-query';
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
+import { useUserDetails } from '@/hooks/useUserProfileApi';
 import { 
   Calendar, 
   Users, 
@@ -14,6 +15,7 @@ import {
   Globe,
   Menu,
   X,
+  Settings,
   LogOut,
   Stethoscope,
   Home,
@@ -22,7 +24,6 @@ import {
   Bot,
   MessageCircle,
   Send,
-  Settings,
   Zap,
   Phone,
   DollarSign,
@@ -79,7 +80,19 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const profileScore = completionPercentage;
   const authStore = useAuthStore.getState();
   const userRole = authStore.getUserRole() || 'Doctor';
+  const userId = authStore.getUserId();
   const profileTarget = (userRole === 'Doctor' || userRole === 'AdminDoctor') ? '/profile?tab=professional' : '/profile';
+
+  // Fetch user details for profile dropdown
+  const { data: userDetailsResponse } = useUserDetails(userId || '');
+  
+  // Get user name or fallback to contact number
+  const getUserDisplayName = () => {
+    if (userDetailsResponse?.userProfile?.fullName) {
+      return userDetailsResponse.userProfile.fullName;
+    }
+    return userDetailsResponse?.mobileNumber || 'User';
+  };
 
   // Navigation items with role-based filtering
   const allNavigationItems: NavigationItem[] = [
@@ -187,7 +200,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     // Navigate to home page
     navigate('/');
   };
-
   return (
     <div className="min-h-screen bg-gradient-subtle">
       {/* Mobile sidebar overlay */}
@@ -333,36 +345,27 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src="/avatars/01.png" alt="User" />
-                                             <AvatarFallback className="bg-healthcare-primary text-white text-xs font-medium">
-                         {userRole === 'Admin' ? 'A' : 'D'}
-                       </AvatarFallback>
+                      <AvatarFallback className="bg-healthcare-primary text-white text-xs font-medium">
+                        {getUserDisplayName().charAt(0).toUpperCase()}
+                      </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <DropdownMenuItem className="font-normal">
                     <div className="flex flex-col space-y-1">
-                                             <p className="text-sm font-medium leading-none">
-                         {userRole === 'Admin' ? 'Administrator' : 'Doctor'}
-                       </p>
-                       <p className="text-xs leading-none text-muted-foreground">
-                         {userRole === 'Admin' ? 'admin@nexeagle.com' : 'doctor@nexeagle.com'}
-                       </p>
+                      <p className="text-sm font-medium leading-none">
+                        {getUserDisplayName()}
+                      </p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {userRole}
+                      </p>
                     </div>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate(profileTarget)}>
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

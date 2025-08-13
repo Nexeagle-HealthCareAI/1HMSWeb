@@ -60,6 +60,7 @@ export interface UserProfileDetails {
   pincode: string;
   emergencyContactName: string;
   emergencyContactNumber: string;
+  profileCompletionPercentage: number;
   createdAt: string;
   updatedAt: string;
 }

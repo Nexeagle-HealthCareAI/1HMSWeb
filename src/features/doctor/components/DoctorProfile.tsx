@@ -410,14 +410,23 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                 
                 <div className="md:col-span-2">
                   <Label htmlFor="bio">Bio</Label>
-                  <Textarea
-                    id="bio"
-                    value={profileData.bio || ''}
-                    onChange={(e) => handleInputChange('bio', e.target.value)}
-                    disabled={!isEditing}
-                    className="mt-1"
-                    rows={4}
-                  />
+                  <div className="space-y-2">
+                    <Textarea
+                      id="bio"
+                      value={profileData.bio || ''}
+                      onChange={(e) => handleInputChange('bio', e.target.value)}
+                      disabled={!isEditing}
+                      className="mt-1"
+                      rows={4}
+                      placeholder="Write a brief professional bio about your medical expertise, specializations, and approach to patient care. Aim for around 50 words for better profile visibility."
+                    />
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>💡 Tip: Write around 50 words to improve your profile visibility and help patients understand your expertise better.</span>
+                      <span className={`${profileData.bio ? (profileData.bio.split(' ').length < 30 ? 'text-amber-600' : profileData.bio.split(' ').length > 70 ? 'text-red-600' : 'text-green-600') : 'text-muted-foreground'}`}>
+                        {profileData.bio ? `${profileData.bio.split(' ').length} words` : '0 words'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
               

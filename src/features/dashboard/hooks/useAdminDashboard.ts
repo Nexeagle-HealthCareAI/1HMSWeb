@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/hooks/use-toast';
+import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 
 export const useAdminDashboard = () => {
   const [currentView, setCurrentView] = useState('dashboard');
@@ -36,57 +37,8 @@ export const useAdminDashboard = () => {
     return Math.round((completed / hospitalFields.length) * 100);
   };
 
-  // Calculate profile completion score for admin/doctor
-  const calculateProfileScore = (): number => {
-    // TODO: Move setup data to Zustand store
-    const setupData = null;
-    const hasCompleted = null;
-    
-    if (hasCompleted) return 100;
-    
-    if (!setupData) return 20;
-    
-    const data = JSON.parse(setupData);
-    
-    let requiredFields = [
-      data.hospital?.name,
-      data.hospital?.phone,
-      data.hospital?.registrationNumber,
-      data.hospital?.address,
-    ];
-
-    // Add doctor fields only if user is a doctor
-    if (userRole === 'doctor' || userRole === 'admin-doctor') {
-      requiredFields = requiredFields.concat([
-        data.doctor?.fullName,
-        data.doctor?.specialization,
-        data.doctor?.licenseNumber,
-        data.doctor?.qualification,
-      ]);
-    }
-    
-    const optionalFields = [
-      data.hospital?.email,
-      data.doctor?.email,
-      data.doctor?.experience,
-      data.documents?.license,
-      data.documents?.signature,
-      data.documents?.clinicPhotos?.length > 0,
-    ];
-    
-    const requiredComplete = requiredFields.filter(field => field && field.toString().trim() !== '').length;
-    const optionalComplete = optionalFields.filter(field => field).length;
-    
-    const requiredWeight = 70;
-    const optionalWeight = 30;
-    
-    const requiredProgress = (requiredComplete / requiredFields.length) * requiredWeight;
-    const optionalProgress = (optionalComplete / optionalFields.length) * optionalWeight;
-    
-    return Math.round(requiredProgress + optionalProgress);
-  };
-
-  const profileScore = calculateProfileScore();
+  // Use the profile completion hook to get API-based completion percentage
+  const { completionPercentage: profileScore } = useProfileCompletion();
   const hospitalScore = calculateHospitalCompletionScore();
 
   const handleModuleClick = (moduleId: string) => {

@@ -27,14 +27,26 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
 
   // Initialize stores on mount
   useEffect(() => {
-    // Check authentication status - simplified check
-    const tokenValid = isTokenValid();
-    if (!tokenValid) {
-      // Token is invalid or expired, clear any stored auth data
-      useAuthStore.getState().clearSession();
+    // Note: We don't automatically clear authentication state on refresh
+    // Authentication state is preserved across browser refreshes
+    // Users will only be logged out when they explicitly logout or when token expires during active session
+    
+    // Extend token expiry on app load if user is authenticated
+    const { isAuthenticated, getToken, refreshToken, setAuthenticatedUser } = useAuthStore.getState();
+    const token = getToken();
+    
+    if (token) {
+      // If we have a token, ensure user is authenticated
+      if (!isAuthenticated) {
+        // Restore authentication state if token exists but isAuthenticated is false
+        const userId = useAuthStore.getState().getUserId();
+        if (userId) {
+          setAuthenticatedUser(userId, token);
+        }
+      }
+      // Extend the token expiry by 24 hours when the app loads
+      refreshToken();
     }
-    // Note: We don't automatically restore authentication state on refresh
-    // Users must go through proper login flow to be authenticated
 
     // Detect system preferences
     const detectSystemPreferences = () => {
@@ -91,11 +103,21 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
     // Update activity periodically (every 5 minutes)
     const interval = setInterval(updateActivity, 5 * 60 * 1000);
 
+    // Check and refresh token during active sessions
+    const tokenRefreshInterval = setInterval(() => {
+      const { isTokenExpiringSoon, refreshToken } = useAuthStore.getState();
+      if (isTokenExpiringSoon()) {
+        console.log('Token expiring soon, refreshing...');
+        refreshToken();
+      }
+    }, 60 * 1000); // Check every minute
+
     return () => {
       events.forEach(event => {
         document.removeEventListener(event, updateActivity);
       });
       clearInterval(interval);
+      clearInterval(tokenRefreshInterval);
     };
   }, [updateLastActivity]);
 

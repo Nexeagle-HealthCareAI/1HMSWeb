@@ -53,17 +53,13 @@ export const AppRoutes: React.FC = () => {
   const isLoading = useAuthLoading();
   const { isTokenValid, logout } = useAuthStore();
 
-  // Clean up invalid tokens on app startup (only once)
-  React.useEffect(() => {
-    const tokenValid = isTokenValid();
-    if (isAuthenticated && !tokenValid) {
-      console.log('Clearing invalid token on app startup');
-      logout();
-    }
-  }, []); // Only run once on mount
+  // Note: We don't automatically clear invalid tokens on app startup
+  // Authentication state is preserved across browser refreshes
+  // Users will only be logged out when they explicitly logout or when token expires during active session
 
-  // Check if user is actually authenticated (has valid token)
-  const isActuallyAuthenticated = isAuthenticated && isTokenValid();
+  // Check if user is authenticated - on refresh, we trust the persisted state
+  // Only validate token during active sessions, not on page refresh
+  const isActuallyAuthenticated = isAuthenticated;
 
 
   // Show loading spinner while checking authentication
