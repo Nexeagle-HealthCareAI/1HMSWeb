@@ -10,7 +10,7 @@ import { DepartmentManagement } from './DepartmentManagement';
 import { PrescriptionTemplateConfig } from './PrescriptionTemplateConfig';
 import { HospitalBrandingConfig } from './HospitalBrandingConfig';
 import { useSystemConfiguration } from '../hooks';
-import { PrescriptionCanvasEditor } from '@/features/prescriptions/PrescriptionCanvasEditor';
+import PrescriptionCanvasEditor from '@/features/prescriptions/PrescriptionCanvasEditor';
 
 interface SystemConfigurationProps {
   focusTab?: string;
@@ -103,7 +103,7 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
                />
              ) : (
                <div className="border rounded-lg p-4">
-                 <PrescriptionCanvasEditor hospitalId="demo-hospital-id" />
+                 <PrescriptionCanvasEditor />
                </div>
              )}
            </div>
