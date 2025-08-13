@@ -40,7 +40,7 @@ const userRoles = [
   { value: 'Pharmacist', label: 'Pharmacist' }
 ];
 
-export const UserOnboardingRegistration: React.FC = () => {
+const UserOnboardingRegistration: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get('token');
@@ -550,3 +550,5 @@ export const UserOnboardingRegistration: React.FC = () => {
     </div>
   );
 };
+
+export default UserOnboardingRegistration;

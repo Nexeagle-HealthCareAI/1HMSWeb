@@ -5,7 +5,7 @@ export { OTPLoginForm } from './OTPLoginForm';
 export { ForgotPasswordForm } from './ForgotPasswordForm';
 export { LockedAccountScreen } from './LockedAccountScreen';
 export { LoginLayout } from './LoginLayout';
-export { UserOnboardingRegistration } from './UserOnboardingRegistration';
+export { default as UserOnboardingRegistration } from './UserOnboardingRegistration';
 export { EmailPasswordSetup } from './EmailPasswordSetup';
 export { RegistrationLayout } from './RegistrationLayout';
 export { UserTypeSelection } from './UserTypeSelection';
