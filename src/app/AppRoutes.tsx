@@ -228,17 +228,14 @@ export const AppRoutes: React.FC = () => {
                 </RouteGuard>
               } 
             />
-
-            {/* Catch-all route - show 404 page */}
-            <Route 
-              path="*" 
-              element={<NotFoundPage />} 
-            />
           </>
-        ) : (
-          // Redirect unauthenticated users to login
-          <Route path="*" element={<Navigate to="/" replace />} />
-        )}
+        ) : null}
+
+        {/* Catch-all route - show 404 page (moved outside authentication blocks) */}
+        <Route 
+          path="*" 
+          element={<NotFoundPage />} 
+        />
       </Routes>
     </Suspense>
   );
