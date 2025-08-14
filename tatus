@@ -1,0 +1,474 @@
+[1mdiff --git a/src/components/modals/PasswordResetSuccessModal.tsx b/src/components/modals/PasswordResetSuccessModal.tsx[m
+[1mindex 20b4921..7e87e79 100644[m
+[1m--- a/src/components/modals/PasswordResetSuccessModal.tsx[m
+[1m+++ b/src/components/modals/PasswordResetSuccessModal.tsx[m
+[36m@@ -35,7 +35,7 @@[m [mexport const PasswordResetSuccessModal: React.FC<PasswordResetSuccessModalProps>[m
+             onClick={onLogin}[m
+             className="w-full h-12 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold text-base rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"[m
+           >[m
+[31m-            🚀 Login Now[m
+[32m+[m[32m          Login Now[m
+           </Button>[m
+           [m
+           <Button[m
+[1mdiff --git a/src/components/ui/PrescriptionTemplates.tsx b/src/components/ui/PrescriptionTemplates.tsx[m
+[1mnew file mode 100644[m
+[1mindex 0000000..d180259[m
+[1m--- /dev/null[m
+[1m+++ b/src/components/ui/PrescriptionTemplates.tsx[m
+[36m@@ -0,0 +1,1503 @@[m
+[32m+[m[32mimport React, { useState } from 'react';[m
+[32m+[m[32mimport { nanoid } from 'nanoid';[m
+[32m+[m[32mimport { Search, Star, X, Plus ,  Heart, Clock, Zap, Crown, Sparkles, Filter, Grid, List } from 'lucide-react';[m
+[32m+[m[32mimport { Button } from '@/components/ui/button';[m
+[32m+[m[32mimport { Input } from '@/components/ui/input';[m
+[32m+[m[32mimport { Badge } from '@/components/ui/badge';[m
+[32m+[m[32mimport { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';[m
+[32m+[m
+[32m+[m[32m// Template Categories[m
+[32m+[m[32mconst TEMPLATE_CATEGORIES = [[m
+[32m+[m[32m  { id: 'all', name: 'All Templates', count: 12 },[m
+[32m+[m[32m  { id: 'modern', name: 'Modern', count: 4 },[m
+[32m+[m[32m  { id: 'classic', name: 'Classic', count: 3 },[m
+[32m+[m[32m  { id: 'minimal', name: 'Minimal', count: 3 },[m
+[32m+[m[32m  { id: 'colorful', name: 'Colorful', count: 2 }[m
+[32m+[m[32m];[m
+[32m+[m
+[32m+[m[32m// Predefined Template Data with Unique Layouts[m
+[32m+[m[32mconst PRESCRIPTION_TEMPLATES = [[m
+[32m+[m[32m  {[m
+[32m+[m[32m    id: 'modern-minimal',[m
+[32m+[m[32m    name: 'Modern Minimal',[m
+[32m+[m[32m    category: 'modern',[m
+[32m+[m[32m    tags: ['clean', 'professional', 'blue'],[m
+[32m+[m[32m    popularity: 'trending',[m
+[32m+[m[32m    premium: false,[m
+[32m+[m[32m    elements: [[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'text',[m
+[32m+[m[32m        x: 50,[m
+[32m+[m[32m        y: 40,[m
+[32m+[m[32m        width: 400,[m
+[32m+[m[32m        height: 60,[m
+[32m+[m[32m        content: 'Dr. {{Doctor.FullName}}',[m
+[32m+[m[32m        style: { fontFamily: 'Inter', fontSize: 24, color: '#2563eb', fontWeight: 'bold' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'text',[m
+[32m+[m[32m        x: 50,[m
+[32m+[m[32m        y: 90,[m
+[32m+[m[32m        width: 300,[m
+[32m+[m[32m        height: 30,[m
+[32m+[m[32m        content: '{{Doctor.Qualification}} • {{Doctor.Specialty}}',[m
+[32m+[m[32m        style: { fontFamily: 'Inter', fontSize: 14, color: '#64748b' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'line',[m
+[32m+[m[32m        x: 50,[m
+[32m+[m[32m        y: 140,[m
+[32m+[m[32m        width: 694,[m
+[32m+[m[32m        height: 2,[m
+[32m+[m[32m        style: { strokeColor: '#e2e8f0', strokeWidth: 1 }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'text',[m
+[32m+[m[32m        x: 50,[m
+[32m+[m[32m        y: 180,[m
+[32m+[m[32m        width: 200,[m
+[32m+[m[32m        height: 40,[m
+[32m+[m[32m        content: 'PRESCRIPTION',[m
+[32m+[m[32m        style: { fontFamily: 'Inter', fontSize: 18, color: '#1e293b', fontWeight: 'bold' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'text',[m
+[32m+[m[32m        x: 550,[m
+[32m+[m[32m        y: 180,[m
+[32m+[m[32m        width: 150,[m
+[32m+[m[32m        height: 25,[m
+[32m+[m[32m        content: 'Date: {{Date}}',[m
+[32m+[m[32m        style: { fontFamily: 'Inter', fontSize: 12, color: '#64748b' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'text',[m
+[32m+[m[32m        x: 50,[m
+[32m+[m[32m        y: 250,[m
+[32m+[m[32m        width: 100,[m
+[32m+[m[32m        height: 25,[m
+[32m+[m[32m        content: 'Patient:',[m
+[32m+[m[32m        style: { fontFamily: 'Inter', fontSize: 14, color: '#374151', fontWeight: '600' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'text',[m
+[32m+[m[32m        x: 150,[m
+[32m+[m[32m        y: 250,[m
+[32m+[m[32m        width: 300,[m
+[32m+[m[32m        height: 25,[m
+[32m+[m[32m        content: '{{Patient.Name}}',[m
+[32m+[m[32m        style: { fontFamily: 'Inter', fontSize: 14, color: '#6b7280' }[m
+[32m+[m[32m      }[m
+[32m+[m[32m    ][m
+[32m+[m[32m  },[m
+[32m+[m[32m  {[m
+[32m+[m[32m    id: 'classic-formal',[m
+[32m+[m[32m    name: 'Classic Formal',[m
+[32m+[m[32m    category: 'classic',[m
+[32m+[m[32m    tags: ['formal', 'traditional', 'gray'],[m
+[32m+[m[32m    popularity: 'popular',[m
+[32m+[m[32m    premium: false,[m
+[32m+[m[32m    elements: [[m
+[32m+[m[32m      // Ornate header box[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'rectangle',[m
+[32m+[m[32m        x: 40,[m
+[32m+[m[32m        y: 30,[m
+[32m+[m[32m        width: 714,[m
+[32m+[m[32m        height: 120,[m
+[32m+[m[32m        style: { fillColor: '#f8fafc', strokeColor: '#cbd5e1', strokeWidth: 2, borderRadius: 0 }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      // Inner border[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'rectangle',[m
+[32m+[m[32m        x: 50,[m
+[32m+[m[32m        y: 40,[m
+[32m+[m[32m        width: 694,[m
+[32m+[m[32m        height: 100,[m
+[32m+[m[32m        style: { fillColor: 'transparent', strokeColor: '#94a3b8', strokeWidth: 1, borderRadius: 0 }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'text',[m
+[32m+[m[32m        x: 70,[m
+[32m+[m[32m        y: 60,[m
+[32m+[m[32m        width: 400,[m
+[32m+[m[32m        height: 30,[m
+[32m+[m[32m        content: 'DR. {{Doctor.FullName}}',[m
+[32m+[m[32m        style: { fontFamily: 'Times New Roman', fontSize: 22, color: '#1e293b', fontWeight: 'bold', textAlign: 'center' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'text',[m
+[32m+[m[32m        x: 70,[m
+[32m+[m[32m        y: 90,[m
+[32m+[m[32m        width: 654,[m
+[32m+[m[32m        height: 25,[m
+[32m+[m[32m        content: '{{Doctor.Qualification}} - {{Doctor.Specialty}}',[m
+[32m+[m[32m        style: { fontFamily: 'Times New Roman', fontSize: 14, color: '#475569', textAlign: 'center' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'text',[m
+[32m+[m[32m        x: 70,[m
+[32m+[m[32m        y: 110,[m
+[32m+[m[32m        width: 654,[m
+[32m+[m[32m        height: 25,[m
+[32m+[m[32m        content: '{{Doctor.Address}} • Registration No: {{Doctor.RegNo}} • Phone: {{Doctor.Phone}}',[m
+[32m+[m[32m        style: { fontFamily: 'Times New Roman', fontSize: 11, color: '#64748b', textAlign: 'center' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      // Decorative lines[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'line',[m
+[32m+[m[32m        x: 40,[m
+[32m+[m[32m        y: 170,[m
+[32m+[m[32m        width: 150,[m
+[32m+[m[32m        height: 2,[m
+[32m+[m[32m        style: { strokeColor: '#94a3b8', strokeWidth: 2 }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'line',[m
+[32m+[m[32m        x: 604,[m
+[32m+[m[32m        y: 170,[m
+[32m+[m[32m        width: 150,[m
+[32m+[m[32m        height: 2,[m
+[32m+[m[32m        style: { strokeColor: '#94a3b8', strokeWidth: 2 }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'text',[m
+[32m+[m[32m        x: 300,[m
+[32m+[m[32m        y: 160,[m
+[32m+[m[32m        width: 194,[m
+[32m+[m[32m        height: 30,[m
+[32m+[m[32m        content: 'MEDICAL PRESCRIPTION',[m
+[32m+[m[32m        style: { fontFamily: 'Times New Roman', fontSize: 16, color: '#374151', fontWeight: 'bold', textAlign: 'center' }[m
+[32m+[m[32m      }[m
+[32m+[m[32m    ][m
+[32m+[m[32m  },[m
+[32m+[m[32m  {[m
+[32m+[m[32m    id: 'medical-professional',[m
+[32m+[m[32m    name: 'Medical Professional',[m
+[32m+[m[32m    category: 'modern',[m
+[32m+[m[32m    tags: ['dark', 'professional', 'premium'],[m
+[32m+[m[32m    popularity: 'trending',[m
+[32m+[m[32m    premium: true,[m
+[32m+[m[32m    elements: [[m
+[32m+[m[32m      // Dark header with gradient[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'rectangle',[m
+[32m+[m[32m        x: 0,[m
+[32m+[m[32m        y: 0,[m
+[32m+[m[32m        width: 794,[m
+[32m+[m[32m        height: 140,[m
+[32m+[m[32m        style: { fillColor: '#0f172a', strokeColor: 'transparent', strokeWidth: 0 }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      // Accent gradient strip[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'rectangle',[m
+[32m+[m[32m        x: 0,[m
+[32m+[m[32m        y: 140,[m
+[32m+[m[32m        width: 794,[m
+[32m+[m[32m        height: 6,[m
+[32m+[m[32m        style: { fillColor: '#3b82f6', strokeColor: 'transparent' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      // Medical symbol background[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'circle',[m
+[32m+[m[32m        x: 650,[m
+[32m+[m[32m        y: 20,[m
+[32m+[m[32m        width: 100,[m
+[32m+[m[32m        height: 100,[m
+[32m+[m[32m        style: { fillColor: '#1e293b', strokeColor: '#334155', strokeWidth: 2 }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'text',[m
+[32m+[m[32m        x: 685,[m
+[32m+[m[32m        y: 65,[m
+[32m+[m[32m        width: 30,[m
+[32m+[m[32m        height: 30,[m
+[32m+[m[32m        content: '⚕',[m
+[32m+[m[32m        style: { fontFamily: 'Inter', fontSize: 24, color: '#3b82f6' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'text',[m
+[32m+[m[32m        x: 50,[m
+[32m+[m[32m        y: 40,[m
+[32m+[m[32m        width: 500,[m
+[32m+[m[32m        height: 40,[m
+[32m+[m[32m        content: 'Dr. {{Doctor.FullName}}',[m
+[32m+[m[32m        style: { fontFamily: 'Inter', fontSize: 28, color: '#ffffff', fontWeight: 'bold' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'text',[m
+[32m+[m[32m        x: 50,[m
+[32m+[m[32m        y: 80,[m
+[32m+[m[32m        width: 400,[m
+[32m+[m[32m        height: 25,[m
+[32m+[m[32m        content: '{{Doctor.Qualification}} • {{Doctor.Specialty}}',[m
+[32m+[m[32m        style: { fontFamily: 'Inter', fontSize: 14, color: '#94a3b8' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'text',[m
+[32m+[m[32m        x: 50,[m
+[32m+[m[32m        y: 105,[m
+[32m+[m[32m        width: 500,[m
+[32m+[m[32m        height: 25,[m
+[32m+[m[32m        content: '{{Doctor.Clinic}} | {{Doctor.Address}} | Ph: {{Doctor.Phone}}',[m
+[32m+[m[32m        style: { fontFamily: 'Inter', fontSize: 12, color: '#64748b' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      // Prescription section with dark accent[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'rectangle',[m
+[32m+[m[32m        x: 30,[m
+[32m+[m[32m        y: 170,[m
+[32m+[m[32m        width: 10,[m
+[32m+[m[32m        height: 400,[m
+[32m+[m[32m        style: { fillColor: '#3b82f6', strokeColor: 'transparent' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'text',[m
+[32m+[m[32m        x: 60,[m
+[32m+[m[32m        y: 180,[m
+[32m+[m[32m        width: 200,[m
+[32m+[m[32m        height: 30,[m
+[32m+[m[32m        content: 'PRESCRIPTION',[m
+[32m+[m[32m        style: { fontFamily: 'Inter', fontSize: 18, color: '#0f172a', fontWeight: 'bold' }[m
+[32m+[m[32m      }[m
+[32m+[m[32m    ][m
+[32m+[m[32m  },[m
+[32m+[m[32m  {[m
+[32m+[m[32m    id: 'colorful-modern',[m
+[32m+[m[32m    name: 'Colorful Modern',[m
+[32m+[m[32m    category: 'colorful',[m
+[32m+[m[32m    tags: ['gradient', 'modern', 'vibrant'],[m
+[32m+[m[32m    popularity: 'new',[m
+[32m+[m[32m    premium: false,[m
+[32m+[m[32m    elements: [[m
+[32m+[m[32m      // Rainbow top border[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'rectangle',[m
+[32m+[m[32m        x: 0,[m
+[32m+[m[32m        y: 0,[m
+[32m+[m[32m        width: 794,[m
+[32m+[m[32m        height: 8,[m
+[32m+[m[32m        style: { fillColor: '#3b82f6', strokeColor: 'transparent' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'rectangle',[m
+[32m+[m[32m        x: 0,[m
+[32m+[m[32m        y: 8,[m
+[32m+[m[32m        width: 794,[m
+[32m+[m[32m        height: 4,[m
+[32m+[m[32m        style: { fillColor: '#8b5cf6', strokeColor: 'transparent' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'rectangle',[m
+[32m+[m[32m        x: 0,[m
+[32m+[m[32m        y: 12,[m
+[32m+[m[32m        width: 794,[m
+[32m+[m[32m        height: 4,[m
+[32m+[m[32m        style: { fillColor: '#06d6a0', strokeColor: 'transparent' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      // Circular accent[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'circle',[m
+[32m+[m[32m        x: 20,[m
+[32m+[m[32m        y: 40,[m
+[32m+[m[32m        width: 80,[m
+[32m+[m[32m        height: 80,[m
+[32m+[m[32m        style: { fillColor: '#f0f9ff', strokeColor: '#3b82f6', strokeWidth: 3 }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'text',[m
+[32m+[m[32m        x: 45,[m
+[32m+[m[32m        y: 75,[m
+[32m+[m[32m        width: 30,[m
+[32m+[m[32m        height: 30,[m
+[32m+[m[32m        content: 'Rx',[m
+[32m+[m[32m        style: { fontFamily: 'Poppins', fontSize: 18, color: '#3b82f6', fontWeight: 'bold' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'text',[m
+[32m+[m[32m        x: 120,[m
+[32m+[m[32m        y: 50,[m
+[32m+[m[32m        width: 400,[m
+[32m+[m[32m        height: 35,[m
+[32m+[m[32m        content: 'Dr. {{Doctor.FullName}}',[m
+[32m+[m[32m        style: { fontFamily: 'Poppins', fontSize: 22, color: '#1e293b', fontWeight: 'bold' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'text',[m
+[32m+[m[32m        x: 120,[m
+[32m+[m[32m        y: 85,[m
+[32m+[m[32m        width: 300,[m
+[32m+[m[32m        height: 25,[m
+[32m+[m[32m        content: '{{Doctor.Qualification}} - {{Doctor.Specialty}}',[m
+[32m+[m[32m        style: { fontFamily: 'Poppins', fontSize: 14, color: '#3b82f6', fontWeight: '500' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      // Colorful side accent[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'rectangle',[m
+[32m+[m[32m        x: 50,[m
+[32m+[m[32m        y: 150,[m
+[32m+[m[32m        width: 4,[m
+[32m+[m[32m        height: 200,[m
+[32m+[m[32m        style: { fillColor: '#3b82f6', strokeColor: 'transparent' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'rectangle',[m
+[32m+[m[32m        x: 58,[m
+[32m+[m[32m        y: 150,[m
+[32m+[m[32m        width: 4,[m
+[32m+[m[32m        height: 200,[m
+[32m+[m[32m        style: { fillColor: '#8b5cf6', strokeColor: 'transparent' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'text',[m
+[32m+[m[32m        x: 80,[m
+[32m+[m[32m        y: 160,[m
+[32m+[m[32m        width: 200,[m
+[32m+[m[32m        height: 30,[m
+[32m+[m[32m        content: 'PRESCRIPTION',[m
+[32m+[m[32m        style: { fontFamily: 'Poppins', fontSize: 16, color: '#374151', fontWeight: '600' }[m
+[32m+[m[32m      }[m
+[32m+[m[32m    ][m
+[32m+[m[32m  },[m
+[32m+[m[32m  {[m
+[32m+[m[32m    id: 'elegant-simple',[m
+[32m+[m[32m    name: 'Elegant Simple',[m
+[32m+[m[32m    category: 'minimal',[m
+[32m+[m[32m    tags: ['elegant', 'simple', 'serif'],[m
+[32m+[m[32m    popularity: 'popular',[m
+[32m+[m[32m    premium: false,[m
+[32m+[m[32m    elements: [[m
+[32m+[m[32m      // Centered layout with elegant typography[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'text',[m
+[32m+[m[32m        x: 50,[m
+[32m+[m[32m        y: 80,[m
+[32m+[m[32m        width: 694,[m
+[32m+[m[32m        height: 50,[m
+[32m+[m[32m        content: 'Dr. {{Doctor.FullName}}',[m
+[32m+[m[32m        style: { fontFamily: 'Georgia', fontSize: 32, color: '#374151', fontWeight: 'normal', textAlign: 'center' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'text',[m
+[32m+[m[32m        x: 50,[m
+[32m+[m[32m        y: 135,[m
+[32m+[m[32m        width: 694,[m
+[32m+[m[32m        height: 25,[m
+[32m+[m[32m        content: '{{Doctor.Qualification}}',[m
+[32m+[m[32m        style: { fontFamily: 'Georgia', fontSize: 16, color: '#6b7280', fontStyle: 'italic', textAlign: 'center' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'text',[m
+[32m+[m[32m        x: 50,[m
+[32m+[m[32m        y: 165,[m
+[32m+[m[32m        width: 694,[m
+[32m+[m[32m        height: 25,[m
+[32m+[m[32m        content: '{{Doctor.Specialty}} • {{Doctor.Address}}',[m
+[32m+[m[32m        style: { fontFamily: 'Georgia', fontSize: 12, color: '#9ca3af', textAlign: 'center' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      // Decorative flourish[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'line',[m
+[32m+[m[32m        x: 297,[m
+[32m+[m[32m        y: 210,[m
+[32m+[m[32m        width: 200,[m
+[32m+[m[32m        height: 1,[m
+[32m+[m[32m        style: { strokeColor: '#d1d5db', strokeWidth: 1 }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32m+[m[32m        type: 'circle',[m
+[32m+[m[32m        x: 392,[m
+[32m+[m[32m        y: 205,[m
+[32m+[m[32m        width: 10,[m
+[32m+[m[32m        height: 10,[m
+[32m+[m[32m        style: { fillColor: '#d1d5db', strokeColor: 'transparent' }[m
+[32m+[m[32m      },[m
+[32m+[m[32m      {[m
+[32m+[m[32m        id: nanoid(),[m
+[32
