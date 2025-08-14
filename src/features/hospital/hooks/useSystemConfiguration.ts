@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 // import { useToast } from '@/hooks/use-toast';
 import { Department } from '../components/DepartmentManagement';
-import { PrescriptionTemplate } from '../components/PrescriptionTemplateConfig';
 import { HospitalBranding } from '../components/HospitalBrandingConfig';
 
 // Sample data
@@ -74,30 +73,6 @@ const sampleDepartments: Department[] = [
   }
 ];
 
-const defaultTemplate: PrescriptionTemplate = {
-  id: 'default',
-  name: 'Default Template',
-  isDefault: true,
-  header: {
-    showLogo: true,
-    hospitalName: 'NexEagle Hospital',
-    contactInfo: true,
-    customText: 'Providing Quality Healthcare'
-  },
-  sections: {
-    vitals: true,
-    diagnosis: true,
-    advice: true,
-    medicines: true,
-    nextAppointment: true
-  },
-  footer: {
-    signature: true,
-    qrCode: true,
-    customNotes: 'Thank you for choosing our services'
-  }
-};
-
 const defaultBranding: HospitalBranding = {
   // Core Info
   name: '',
@@ -132,7 +107,6 @@ export const useSystemConfiguration = (focusTab?: string) => {
   
   const [activeTab, setActiveTab] = useState(getInitialTab());
   const [departments, setDepartments] = useState<Department[]>(sampleDepartments);
-  const [prescriptionTemplate, setPrescriptionTemplate] = useState<PrescriptionTemplate>(defaultTemplate);
   const [hospitalBranding, setHospitalBranding] = useState<HospitalBranding>(defaultBranding);
   // Disable toasts temporarily
   const toast = (_?: any) => {};
@@ -150,14 +124,6 @@ export const useSystemConfiguration = (focusTab?: string) => {
     toast({
       title: "Departments Updated",
       description: "Department configuration has been saved successfully."
-    });
-  }, []);
-
-  const handleTemplateChange = useCallback((updatedTemplate: PrescriptionTemplate) => {
-    setPrescriptionTemplate(updatedTemplate);
-    toast({
-      title: "Template Updated",
-      description: "Prescription template has been saved successfully."
     });
   }, []);
 
@@ -194,10 +160,8 @@ export const useSystemConfiguration = (focusTab?: string) => {
     activeTab,
     setActiveTab,
     departments,
-    prescriptionTemplate,
     hospitalBranding,
     handleDepartmentChange,
-    handleTemplateChange,
     handleBrandingChange,
     addDepartment,
     updateDepartment,
