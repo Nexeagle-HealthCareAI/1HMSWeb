@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Rnd } from 'react-rnd';
+import Draggable from 'react-draggable';
 import { nanoid } from 'nanoid';
 import {
   Type,
@@ -433,75 +433,74 @@ const PrescriptionCanvasEditor = () => {
               }}
             >
               {elements.map((element) => (
-                <Rnd
+                <Draggable
                   key={element.id}
                   position={{ x: element.x, y: element.y }}
-                  size={{ width: element.width, height: element.height }}
-                  onDragStop={(e, d) => {
+                  onStop={(e, d) => {
                     updateElement(element.id, { x: d.x, y: d.y });
                   }}
-                  onResizeStop={(e, direction, ref, delta, position) => {
-                    updateElement(element.id, {
-                      x: position.x,
-                      y: position.y,
-                      width: ref.offsetWidth,
-                      height: ref.offsetHeight,
-                    });
-                  }}
                   bounds="parent"
-                  onClick={() => setSelectedId(element.id)}
-                  className={`cursor-move ${
-                    selectedId === element.id
-                      ? 'ring-2 ring-blue-500'
-                      : 'hover:ring-2 hover:ring-blue-300'
-                  }`}
                 >
-                  {element.type === 'text' && (
-                    <div
-                      contentEditable
-                      suppressContentEditableWarning
-                      onBlur={(e) =>
-                        updateElement(element.id, { content: e.currentTarget.textContent })
-                      }
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        fontFamily: element.style?.fontFamily || 'Inter',
-                        fontSize: `${element.style?.fontSize || 16}px`,
-                        color: element.style?.color || '#000000',
-                        fontWeight: element.style?.fontWeight || 'normal',
-                        outline: 'none',
-                        cursor: 'text',
-                        display: 'flex',
-                        alignItems: 'center',
-                      }}
-                    >
-                      {element.content}
-                    </div>
-                  )}
-                  
-                  {element.type === 'line' && (
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        borderTop: `${element.style?.strokeWidth || 2}px solid ${element.style?.strokeColor || '#000000'}`,
-                      }}
-                    />
-                  )}
-                  
-                  {element.type === 'rectangle' && (
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        backgroundColor: element.style?.fillColor || 'transparent',
-                        border: `${element.style?.strokeWidth || 1}px solid ${element.style?.strokeColor || '#000000'}`,
-                        borderRadius: `${element.style?.borderRadius || 0}px`,
-                      }}
-                    />
-                  )}
-                </Rnd>
+                  <div
+                    className={`cursor-move ${
+                      selectedId === element.id
+                        ? 'ring-2 ring-blue-500'
+                        : 'hover:ring-2 hover:ring-blue-300'
+                    }`}
+                    style={{
+                      width: element.width,
+                      height: element.height,
+                      position: 'absolute'
+                    }}
+                    onClick={() => setSelectedId(element.id)}
+                  >
+                    {element.type === 'text' && (
+                      <div
+                        contentEditable
+                        suppressContentEditableWarning
+                        onBlur={(e) =>
+                          updateElement(element.id, { content: e.currentTarget.textContent })
+                        }
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          fontFamily: element.style?.fontFamily || 'Inter',
+                          fontSize: `${element.style?.fontSize || 16}px`,
+                          color: element.style?.color || '#000000',
+                          fontWeight: element.style?.fontWeight || 'normal',
+                          outline: 'none',
+                          cursor: 'text',
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        {element.content}
+                      </div>
+                    )}
+                    
+                    {element.type === 'line' && (
+                      <div
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          borderTop: `${element.style?.strokeWidth || 2}px solid ${element.style?.strokeColor || '#000000'}`,
+                        }}
+                      />
+                    )}
+                    
+                    {element.type === 'rectangle' && (
+                      <div
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          backgroundColor: element.style?.fillColor || 'transparent',
+                          border: `${element.style?.strokeWidth || 1}px solid ${element.style?.strokeColor || '#000000'}`,
+                          borderRadius: `${element.style?.borderRadius || 0}px`,
+                        }}
+                      />
+                    )}
+                  </div>
+                </Draggable>
               ))}
             </div>
           </div>

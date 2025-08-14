@@ -78,19 +78,12 @@ export const AppRoutes: React.FC = () => {
   return (
     <Suspense fallback={<RouteLoadingSpinner />}>
       <Routes>
-        {/* Public Routes */}
+        {/* Public Routes - No Authentication Required */}
         <Route 
-          path="/" 
-          element={
-            isActuallyAuthenticated ? (
-              <RoleBasedRedirect />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          } 
+          path="/user-onboarding" 
+          element={<UserOnboardingRegistration />} 
         />
 
-        {/* Login Route - Main login page */}
         <Route 
           path="/login" 
           element={
@@ -102,35 +95,38 @@ export const AppRoutes: React.FC = () => {
           } 
         />
 
-        {/* User Onboarding Route */}
-        <Route 
-          path="/user-onboarding" 
-          element={<UserOnboardingRegistration />} 
-        />
-
-        {/* 404 Route */}
         <Route 
           path="/404" 
           element={<NotFoundPage />} 
         />
 
-        {/* Admin Route - Now protected with authentication and admin role */}
-        {isActuallyAuthenticated ? (
-          <Route 
-            path="/admin" 
-            element={
-              <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
-                <MainLayout>
-                  <AdminDashboard />
-                </MainLayout>
-              </RouteGuard>
-            } 
-          />
-        ) : null}
+        {/* Root Route */}
+        <Route 
+          path="/" 
+          element={
+            isActuallyAuthenticated ? (
+              <RoleBasedRedirect />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } 
+        />
 
-        {/* Protected Routes */}
+        {/* Protected Routes - Require Authentication */}
         {isActuallyAuthenticated ? (
           <>
+            {/* Admin Route */}
+            <Route 
+              path="/admin" 
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                  <MainLayout>
+                    <AdminDashboard />
+                  </MainLayout>
+                </RouteGuard>
+              } 
+            />
+
             {/* DocBoard Route - Restricted to Doctor and AdminDoctor roles */}
             <Route 
               path="/dashboard" 
@@ -231,7 +227,7 @@ export const AppRoutes: React.FC = () => {
           </>
         ) : null}
 
-        {/* Catch-all route - show 404 page (moved outside authentication blocks) */}
+        {/* Catch-all route - show 404 page */}
         <Route 
           path="*" 
           element={<NotFoundPage />} 
