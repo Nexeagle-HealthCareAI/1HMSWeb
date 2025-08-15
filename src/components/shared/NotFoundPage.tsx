@@ -9,7 +9,7 @@ const NotFoundPage = () => {
   const { isAuthenticated } = useAuthStore();
 
   const handleGoToLogin = () => {
-    navigate('/');
+    navigate('/easyHMS/');
   };
 
   return (
@@ -57,12 +57,11 @@ const NotFoundPage = () => {
               Go to Login
             </Button>
           ) : (
-            <Button asChild className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
-              <Link to="/dashboard">
-                <Home className="mr-2 h-5 w-5" />
+            <Link to="/easyHMS/dashboard">
+              <Button className="bg-healthcare-primary hover:bg-healthcare-primary/90 text-white">
                 Go to Dashboard
-              </Link>
-            </Button>
+              </Button>
+            </Link>
           )}
           
           <Button 
@@ -90,15 +89,15 @@ const NotFoundPage = () => {
 
         {/* Quick Links */}
         <div className="flex flex-wrap justify-center gap-4 text-sm">
-          <Link to="/" className="text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+          <Link to="/easyHMS/" className="text-blue-600 hover:text-blue-800 hover:underline transition-colors">
             Home
           </Link>
           <span className="text-gray-400">•</span>
-          <Link to="/help" className="text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+          <Link to="/easyHMS/help" className="text-blue-600 hover:text-blue-800 hover:underline transition-colors">
             Help Center
           </Link>
           <span className="text-gray-400">•</span>
-          <Link to="/contact" className="text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+          <Link to="/easyHMS/contact" className="text-blue-600 hover:text-blue-800 hover:underline transition-colors">
             Contact Us
           </Link>
         </div>

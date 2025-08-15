@@ -10,15 +10,15 @@ const RoleBasedRedirect = () => {
   const userRole = useAuthStore.getState().getUserRole();
   
   if (userRole === 'Admin') {
-    return <Navigate to="/admin" replace />;
+    return <Navigate to="/easyHMS/admin" replace />;
   } else if (userRole === 'Doctor' || userRole === 'AdminDoctor') {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/easyHMS/dashboard" replace />;
   } else if (userRole === 'Receptionist' || userRole === 'Nurse') {
     // Receptionist and Nurse should go to appointment dashboard
-    return <Navigate to="/appointment-dashboard" replace />;
+    return <Navigate to="/easyHMS/appointment-dashboard" replace />;
   } else {
     // Default fallback - redirect to login if role is not recognized
-    return <Navigate to="/" replace />;
+    return <Navigate to="/easyHMS/" replace />;
   }
 };
 
@@ -80,12 +80,12 @@ export const AppRoutes: React.FC = () => {
       <Routes>
         {/* Public Routes - No Authentication Required */}
         <Route 
-          path="/user-onboarding" 
+          path="/easyHMS/user-onboarding" 
           element={<UserOnboardingRegistration />} 
         />
 
         <Route 
-          path="/login" 
+          path="/easyHMS/login" 
           element={
             isActuallyAuthenticated ? (
               <RoleBasedRedirect />
@@ -96,20 +96,26 @@ export const AppRoutes: React.FC = () => {
         />
 
         <Route 
-          path="/404" 
+          path="/easyHMS/404" 
           element={<NotFoundPage />} 
         />
 
         {/* Root Route */}
         <Route 
-          path="/" 
+          path="/easyHMS/" 
           element={
             isActuallyAuthenticated ? (
               <RoleBasedRedirect />
             ) : (
-              <Navigate to="/login" replace />
+              <Navigate to="/easyHMS/login" replace />
             )
           } 
+        />
+
+        {/* Redirect root to easyHMS */}
+        <Route 
+          path="/" 
+          element={<Navigate to="/easyHMS/" replace />} 
         />
 
         {/* Protected Routes - Require Authentication */}
@@ -117,7 +123,7 @@ export const AppRoutes: React.FC = () => {
           <>
             {/* Admin Route */}
             <Route 
-              path="/admin" 
+              path="/easyHMS/admin" 
               element={
                 <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
                   <MainLayout>
@@ -129,7 +135,7 @@ export const AppRoutes: React.FC = () => {
 
             {/* Clinical Dashboard Route - Restricted to Doctor and AdminDoctor roles */}
             <Route 
-              path="/dashboard" 
+              path="/easyHMS/dashboard" 
               element={
                 <RouteGuard requiredRoles={['Doctor', 'AdminDoctor']}>
                   <MainLayout>
@@ -141,13 +147,13 @@ export const AppRoutes: React.FC = () => {
 
             {/* Redirect /docboard to /dashboard for consistency */}
             <Route 
-              path="/docboard" 
-              element={<Navigate to="/dashboard" replace />}
+              path="/easyHMS/docboard" 
+              element={<Navigate to="/easyHMS/dashboard" replace />}
             />
 
             {/* Appointment Routes - Accessible to Admin, AdminDoctor, Receptionist, and Nurse roles */}
             <Route 
-              path="/appointment-dashboard" 
+              path="/easyHMS/appointment-dashboard" 
               element={
                 <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Receptionist', 'Nurse']}>
                   <MainLayout>
@@ -157,7 +163,7 @@ export const AppRoutes: React.FC = () => {
               } 
             />
             <Route 
-              path="/appointment-booking" 
+              path="/easyHMS/appointment-booking" 
               element={
                 <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Receptionist', 'Nurse']}>
                   <MainLayout>
@@ -167,7 +173,7 @@ export const AppRoutes: React.FC = () => {
               } 
             />
             <Route 
-              path="/appointment-oversight" 
+              path="/easyHMS/appointment-oversight" 
               element={
                 <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Receptionist', 'Nurse']}>
                   <MainLayout>
@@ -179,7 +185,7 @@ export const AppRoutes: React.FC = () => {
 
             {/* AI Routes - Restricted to Doctor and AdminDoctor roles */}
             <Route 
-              path="/doc-ai" 
+              path="/easyHMS/doc-ai" 
               element={
                 <RouteGuard requiredRoles={['Doctor', 'AdminDoctor']}>
                   <MainLayout>
@@ -191,7 +197,7 @@ export const AppRoutes: React.FC = () => {
 
             {/* Profile Routes */}
             <Route 
-              path="/profile" 
+              path="/easyHMS/profile" 
               element={
                 <RouteGuard>
                   <MainLayout>
@@ -203,7 +209,7 @@ export const AppRoutes: React.FC = () => {
 
             {/* Billing Routes */}
             <Route 
-              path="/billing" 
+              path="/easyHMS/billing" 
               element={
                 <RouteGuard>
                   <MainLayout>
@@ -215,7 +221,7 @@ export const AppRoutes: React.FC = () => {
 
             {/* Prescription Canvas Editor Route - Restricted to Admin and AdminDoctor roles */}
             <Route 
-              path="/admin/prescriptions/canvas" 
+              path="/easyHMS/admin/prescriptions/canvas" 
               element={
                 <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
                   <MainLayout>

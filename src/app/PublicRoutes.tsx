@@ -14,13 +14,13 @@ const RoleBasedRedirect = () => {
   const userRole = getUserRole();
   
   if (userRole === 'Admin') {
-    return <Navigate to="/admin" replace />;
+    return <Navigate to="/easyHMS/admin" replace />;
   } else if (userRole === 'Doctor' || userRole === 'AdminDoctor') {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/easyHMS/dashboard" replace />;
   } else if (userRole === 'Receptionist' || userRole === 'Nurse') {
-    return <Navigate to="/appointment-dashboard" replace />;
+    return <Navigate to="/easyHMS/appointment-dashboard" replace />;
   } else {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/easyHMS/" replace />;
   }
 };
 
@@ -33,13 +33,13 @@ export const PublicRoutes: React.FC<PublicRoutesProps> = ({ isAuthenticated }) =
     <>
       {/* User Onboarding - Always accessible */}
       <Route 
-        path="/user-onboarding" 
+        path="/easyHMS/user-onboarding" 
         element={<UserOnboardingRegistration />} 
       />
 
       {/* Login Route */}
       <Route 
-        path="/login" 
+        path="/easyHMS/login" 
         element={
           isAuthenticated ? (
             <RoleBasedRedirect />
@@ -51,18 +51,18 @@ export const PublicRoutes: React.FC<PublicRoutesProps> = ({ isAuthenticated }) =
 
       {/* 404 Route */}
       <Route 
-        path="/404" 
+        path="/easyHMS/404" 
         element={<NotFoundPage />} 
       />
 
       {/* Root Route */}
       <Route 
-        path="/" 
+        path="/easyHMS/" 
         element={
           isAuthenticated ? (
             <RoleBasedRedirect />
           ) : (
-            <Navigate to="/login" replace />
+            <Navigate to="/easyHMS/login" replace />
           )
         } 
       />

@@ -210,7 +210,7 @@ export const ClinicalDashboard: React.FC = () => {
       return; // Disable if profile not complete
     }
     // Navigate to patient details page
-    navigate(`/patient/${patientId}`);
+    navigate(`/easyHMS/patient/${patientId}`);
   };
 
   // Filter appointments

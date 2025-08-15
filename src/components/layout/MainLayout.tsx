@@ -81,7 +81,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const authStore = useAuthStore.getState();
   const userRole = authStore.getUserRole() || 'Doctor';
   const userId = authStore.getUserId();
-  const profileTarget = (userRole === 'Doctor' || userRole === 'AdminDoctor') ? '/profile?tab=professional' : '/profile';
+  const profileTarget = (userRole === 'Doctor' || userRole === 'AdminDoctor') ? '/easyHMS/profile?tab=professional' : '/easyHMS/profile';
 
   // Fetch user details for profile dropdown
   const { data: userDetailsResponse } = useUserDetails(userId || '');
@@ -96,14 +96,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   // Navigation items with role-based filtering
   const allNavigationItems: NavigationItem[] = [
-    { id: 'admin', name: 'Admin Panel', icon: Settings, path: '/admin' },
-    { id: 'dashboard', name: 'Clinical Dashboard', icon: Home, path: '/dashboard' },    
-//{ id: 'calendar', name: 'Calendar', icon: Calendar, path: '/calendar' },
-    { id: 'appointments', name: 'Appointment Scheduler', icon: Calendar, path: '/appointment-dashboard' },
-   // { id: 'billing', name: 'Billing', icon: CreditCard, path: '/billing' },
-    { id: 'doc-ai', name: 'DocAI', icon: Bot, path: '/doc-ai' },
-   // { id: 'chat', name: 'Chat', icon: MessageCircle, path: '/chat' },
-   // { id: 'bulk-messaging', name: 'Bulk Messaging', icon: Send, path: '/bulk-messaging' },
+    { id: 'admin', name: 'Admin Panel', icon: Settings, path: '/easyHMS/admin' },
+    { id: 'dashboard', name: 'Clinical Dashboard', icon: Home, path: '/easyHMS/dashboard' },    
+//{ id: 'calendar', name: 'Calendar', icon: Calendar, path: '/easyHMS/calendar' },
+    { id: 'appointments', name: 'Appointment Scheduler', icon: Calendar, path: '/easyHMS/appointment-dashboard' },
+   // { id: 'billing', name: 'Billing', icon: CreditCard, path: '/easyHMS/billing' },
+    { id: 'doc-ai', name: 'DocAI', icon: Bot, path: '/easyHMS/doc-ai' },
+   // { id: 'chat', name: 'Chat', icon: MessageCircle, path: '/easyHMS/chat' },
+   // { id: 'bulk-messaging', name: 'Bulk Messaging', icon: Send, path: '/easyHMS/bulk-messaging' },
   ];
 
   // Filter navigation items based on user role
@@ -198,7 +198,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     resetColors(); // Theme store
     
     // Navigate to home page
-    navigate('/');
+    navigate('/easyHMS/');
   };
   return (
     <div className="min-h-screen bg-gradient-subtle">
@@ -326,7 +326,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     variant="link"
                     size="sm"
                     className="p-0 h-auto text-xs text-blue-600 hover:text-blue-700"
-                    onClick={() => navigate('/profile?tab=professional')}
+                    onClick={() => navigate('/easyHMS/profile?tab=professional')}
                   >
                     View
                   </Button>

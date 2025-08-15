@@ -32,16 +32,16 @@ const LoginPage = () => {
         // Redirect to the originally requested page
         navigate(intendedPath);
       } else if (userRole === 'Admin') {
-        navigate('/admin');
+        navigate('/easyHMS/admin');
       } else if (userRole === 'AdminDoctor') {
-        navigate('/dashboard');
+        navigate('/easyHMS/dashboard');
       } else if (userRole === 'Receptionist' || userRole === 'Nurse') {
-        navigate('/appointment-dashboard');
+        navigate('/easyHMS/appointment-dashboard');
       } else if (userRole === 'Doctor') {
-        navigate('/dashboard');
+        navigate('/easyHMS/dashboard');
       } else {
         // Default fallback
-        navigate('/dashboard');
+        navigate('/easyHMS/dashboard');
       }
     }
   }, [isAuthenticated, currentState, navigate, location.state]);
@@ -60,16 +60,16 @@ const LoginPage = () => {
     if (intendedPath && intendedPath !== '/') {
       navigate(intendedPath);
     } else if (currentUserRole === 'Admin') {
-      navigate('/admin');
+      navigate('/easyHMS/admin');
     } else if (currentUserRole === 'AdminDoctor') {
-      navigate('/dashboard');
+      navigate('/easyHMS/dashboard');
     } else if (currentUserRole === 'Receptionist' || currentUserRole === 'Nurse') {
-      navigate('/appointment-dashboard');
+      navigate('/easyHMS/appointment-dashboard');
     } else if (currentUserRole === 'Doctor') {
-      navigate('/dashboard');
+      navigate('/easyHMS/dashboard');
     } else {
       // Default fallback
-      navigate('/dashboard');
+      navigate('/easyHMS/dashboard');
     }
   };
 
@@ -84,22 +84,22 @@ const LoginPage = () => {
     if (intendedPath && intendedPath !== '/') {
       navigate(intendedPath);
     } else if (userRole === 'Admin') {
-      navigate('/admin');
+      navigate('/easyHMS/admin');
     } else if (userRole === 'AdminDoctor') {
-      navigate('/admin');
+      navigate('/easyHMS/admin');
     } else if (userRole === 'Receptionist' || userRole === 'Nurse') {
-      navigate('/appointment-dashboard');
+      navigate('/easyHMS/appointment-dashboard');
     } else if (userRole === 'Doctor') {
-      navigate('/dashboard');
+      navigate('/easyHMS/dashboard');
     } else {
       // Default fallback - check stored role
       const storedRole = authStore.getUserRole();
       if (storedRole === 'Admin') {
-        navigate('/admin');
+        navigate('/easyHMS/admin');
       } else if (storedRole === 'Receptionist' || storedRole === 'Nurse') {
-        navigate('/appointment-dashboard');
+        navigate('/easyHMS/appointment-dashboard');
       } else {
-        navigate('/dashboard');
+        navigate('/easyHMS/dashboard');
       }
     }
   };
