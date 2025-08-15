@@ -1490,10 +1490,10 @@ const PrescriptionTemplates = ({ onSelectTemplate, onClose }) => {
           <p className="text-xs text-gray-500 mb-2">
             {filteredTemplates.length} of {PRESCRIPTION_TEMPLATES.length} templates
           </p>
-          <Button variant="outline" size="sm" className="w-full">
+       {/*<Button variant="outline" size="sm" className="w-full">
             <Plus className="h-4 w-4 mr-2" />
             Create Custom Template
-          </Button>
+          </Button> */}   
         </div>
       </div>
     </div>

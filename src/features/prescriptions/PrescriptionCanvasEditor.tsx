@@ -360,18 +360,18 @@ const PrescriptionCanvasEditor = () => {
           
           <Separator orientation="vertical" className="h-6 mx-2" />
           
-          <Button size="sm" variant="ghost">
+         {/* <Button size="sm" variant="ghost">
             <RotateCcw className="h-4 w-4" />
           </Button>
           <Button size="sm" variant="ghost">
             <RotateCw className="h-4 w-4" />
-          </Button>
+          </Button>*/} 
         </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Templates Sidebar */}
-        {showTemplates && (
+        {showTemplates && !showElementToolbar && (
           <PrescriptionTemplates
             onSelectTemplate={handleSelectTemplate}
             onClose={() => setShowTemplates(false)}
@@ -487,7 +487,7 @@ const PrescriptionCanvasEditor = () => {
           </div>
 
           {/* Element Properties Toolbar - Overlay */}
-          {showElementToolbar && selectedElement && !showTemplates && (
+          {showElementToolbar && selectedElement &&  (
   <div className="ml-4 w-72 bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-h-[90vh] overflow-y-auto flex-shrink-0">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold">Element Properties</h3>
