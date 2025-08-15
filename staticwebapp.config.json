@@ -1,6 +1,18 @@
 {
   "navigationFallback": {
-    "rewrite": "index.html",
+    "rewrite": "/easyHMS/index.html",
     "exclude": ["/images/*", "/static/*", "/*.css", "/*.js", "/assets/*", "/*.png", "/*.jpg", "/*.jpeg", "/*.gif", "/*.svg", "/*.ico", "/*.woff", "/*.woff2", "/*.ttf", "/*.eot"]
-  }
+  },
+  "routes": [
+    {
+      "route": "/easyHMS/*",
+      "serve": "/easyHMS/index.html",
+      "statusCode": 200
+    },
+    {
+      "route": "/",
+      "redirect": "/easyHMS/",
+      "statusCode": 301
+    }
+  ]
 }
