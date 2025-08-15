@@ -9,7 +9,7 @@ const NotFoundPage = () => {
   const { isAuthenticated } = useAuthStore();
 
   const handleGoToLogin = () => {
-    navigate('/easyHMS/');
+    navigate('/');
   };
 
   return (
@@ -57,7 +57,7 @@ const NotFoundPage = () => {
               Go to Login
             </Button>
           ) : (
-            <Link to="/easyHMS/dashboard">
+            <Link to="/dashboard">
               <Button className="bg-healthcare-primary hover:bg-healthcare-primary/90 text-white">
                 Go to Dashboard
               </Button>
@@ -89,15 +89,15 @@ const NotFoundPage = () => {
 
         {/* Quick Links */}
         <div className="flex flex-wrap justify-center gap-4 text-sm">
-          <Link to="/easyHMS/" className="text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+          <Link to="/" className="text-blue-600 hover:text-blue-800 hover:underline transition-colors">
             Home
           </Link>
           <span className="text-gray-400">•</span>
-          <Link to="/easyHMS/help" className="text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+          <Link to="/help" className="text-blue-600 hover:text-blue-800 hover:underline transition-colors">
             Help Center
           </Link>
           <span className="text-gray-400">•</span>
-          <Link to="/easyHMS/contact" className="text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+          <Link to="/contact" className="text-blue-600 hover:text-blue-800 hover:underline transition-colors">
             Contact Us
           </Link>
         </div>

@@ -9,29 +9,29 @@ export interface RouteConfig {
 
 export const ROUTES = {
   // Public routes
-  HOME: '/easyHMS/',
-  LOGIN: '/easyHMS/login',
-  NOT_FOUND: '/easyHMS/404',
-  FORGOT_PASSWORD: '/easyHMS/forgot-password',
+  HOME: '/',
+  LOGIN: '/login',
+  NOT_FOUND: '/404',
+  FORGOT_PASSWORD: '/forgot-password',
 
-  USER_TYPE_SELECTION: '/easyHMS/user-type-selection',
-  USER_ONBOARDING: '/easyHMS/user-onboarding',
-  LOCKED_ACCOUNT: '/easyHMS/locked-account',
+  USER_TYPE_SELECTION: '/user-type-selection',
+  USER_ONBOARDING: '/user-onboarding',
+  LOCKED_ACCOUNT: '/locked-account',
 
   // Protected routes
-  DOCBOARD: '/easyHMS/docboard',
-  ADMIN: '/easyHMS/admin',
-  CALENDAR: '/easyHMS/calendar',
-  APPOINTMENT_DASHBOARD: '/easyHMS/appointment-dashboard',
-  APPOINTMENT_SCHEDULER: '/easyHMS/appointment-scheduler',
-  BOOK_APPOINTMENT: '/easyHMS/book-appointment',
-  BILLING: '/easyHMS/billing',
-  DOC_AI: '/easyHMS/doc-ai',
-  CHAT: '/easyHMS/chat',
-  BULK_MESSAGING: '/easyHMS/bulk-messaging',
-  PATIENTS: '/easyHMS/patients',
-  PROFILE: '/easyHMS/profile',
-  PRESCRIPTION: '/easyHMS/prescription/:patientId',
+  DOCBOARD: '/docboard',
+  ADMIN: '/admin',
+  CALENDAR: '/calendar',
+  APPOINTMENT_DASHBOARD: '/appointment-dashboard',
+  APPOINTMENT_SCHEDULER: '/appointment-scheduler',
+  BOOK_APPOINTMENT: '/book-appointment',
+  BILLING: '/billing',
+  DOC_AI: '/doc-ai',
+  CHAT: '/chat',
+  BULK_MESSAGING: '/bulk-messaging',
+  PATIENTS: '/patients',
+  PROFILE: '/profile',
+  PRESCRIPTION: '/prescription/:patientId',
 } as const;
 
 export const ROUTE_CONFIG: RouteConfig[] = [

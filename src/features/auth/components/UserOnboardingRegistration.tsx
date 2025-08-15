@@ -247,7 +247,7 @@ const UserOnboardingRegistration: React.FC = () => {
         
         // Redirect to login page
         setTimeout(() => {
-          navigate('/easyHMS/');
+          navigate('/');
         }, 2000);
       } else {
         throw new Error(response.message || 'Registration failed');
