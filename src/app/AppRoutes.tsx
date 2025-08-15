@@ -25,7 +25,7 @@ const RoleBasedRedirect = () => {
 // Lazy load pages for better performance
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage').then(module => ({ default: module.default })));
 const AdminDashboard = lazy(() => import('@/features/dashboard/components/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
-const DocBoard = lazy(() => import('@/features/doctor/components/DocBoard').then(module => ({ default: module.DocBoard })));
+const ClinicalDashboard = lazy(() => import('@/features/doctor/components/DocBoard').then(module => ({ default: module.ClinicalDashboard })));
 const AppointmentDashboard = lazy(() => import('@/features/appointment/components/AppointmentDashboard').then(module => ({ default: module.AppointmentDashboard })));
 const AppointmentBooking = lazy(() => import('@/features/appointment/components/AppointmentBooking').then(module => ({ default: module.AppointmentBooking })));
 const AppointmentOversight = lazy(() => import('@/features/appointment/components/AppointmentOversight').then(module => ({ default: module.AppointmentOversight })));
@@ -127,13 +127,13 @@ export const AppRoutes: React.FC = () => {
               } 
             />
 
-            {/* DocBoard Route - Restricted to Doctor and AdminDoctor roles */}
+            {/* Clinical Dashboard Route - Restricted to Doctor and AdminDoctor roles */}
             <Route 
               path="/dashboard" 
               element={
                 <RouteGuard requiredRoles={['Doctor', 'AdminDoctor']}>
                   <MainLayout>
-                    <DocBoard />
+                    <ClinicalDashboard />
                   </MainLayout>
                 </RouteGuard>
               } 

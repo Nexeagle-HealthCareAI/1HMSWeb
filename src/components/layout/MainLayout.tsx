@@ -97,7 +97,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   // Navigation items with role-based filtering
   const allNavigationItems: NavigationItem[] = [
     { id: 'admin', name: 'Admin Panel', icon: Settings, path: '/admin' },
-    { id: 'dashboard', name: 'DocBoard', icon: Home, path: '/dashboard' },    
+    { id: 'dashboard', name: 'Clinical Dashboard', icon: Home, path: '/dashboard' },    
 //{ id: 'calendar', name: 'Calendar', icon: Calendar, path: '/calendar' },
     { id: 'appointments', name: 'Appointment Scheduler', icon: Calendar, path: '/appointment-dashboard' },
    // { id: 'billing', name: 'Billing', icon: CreditCard, path: '/billing' },
@@ -278,7 +278,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 <Menu className="h-4 w-4" />
               </Button>
               <h2 className="text-xl font-semibold capitalize">
-                {currentPage === 'dashboard' ? 'DocBoard' : navigation.find(n => n.id === currentPage)?.name}
+                {currentPage === 'dashboard' ? 'Clinical Dashboard' : navigation.find(n => n.id === currentPage)?.name}
               </h2>
             </div>
 
