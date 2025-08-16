@@ -30,6 +30,7 @@ const AppointmentDashboard = lazy(() => import('@/features/appointment/component
 const AppointmentBooking = lazy(() => import('@/features/appointment/components/AppointmentBooking').then(module => ({ default: module.AppointmentBooking })));
 const AppointmentOversight = lazy(() => import('@/features/appointment/components/AppointmentOversight').then(module => ({ default: module.AppointmentOversight })));
 
+const DoctorCalendar = lazy(() => import('@/features/doctor-calendar/DoctorCalendarPage').then(module => ({ default: module.DoctorCalendarPage })));
 const DocAI = lazy(() => import('@/features/ai/components/DocAI').then(module => ({ default: module.DocAI })));
 const ProfilePage = lazy(() => import('@/features/profile/components/ProfilePage').then(module => ({ default: module.ProfilePage })));
 const Billing = lazy(() => import('@/features/billing/components/Billing').then(module => ({ default: module.Billing })));
@@ -140,6 +141,18 @@ export const AppRoutes: React.FC = () => {
                 <RouteGuard requiredRoles={['Doctor', 'AdminDoctor']}>
                   <MainLayout>
                     <ClinicalDashboard />
+                  </MainLayout>
+                </RouteGuard>
+              } 
+            />
+
+            {/* Doctor Calendar Route - Restricted to Doctor and AdminDoctor roles */}
+            <Route 
+              path="/calendar" 
+              element={
+                <RouteGuard requiredRoles={['Doctor', 'AdminDoctor']}>
+                  <MainLayout>
+                    <DoctorCalendar />
                   </MainLayout>
                 </RouteGuard>
               } 

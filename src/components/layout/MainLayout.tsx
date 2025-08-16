@@ -98,7 +98,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const allNavigationItems: NavigationItem[] = [
     { id: 'admin', name: 'Admin Panel', icon: Settings, path: '/admin' },
     { id: 'dashboard', name: 'Clinical Dashboard', icon: Home, path: '/dashboard' },    
-//{ id: 'calendar', name: 'Calendar', icon: Calendar, path: '/calendar' },
+    { id: 'calendar', name: 'Doctor Calendar', icon: Calendar, path: '/calendar' },
     { id: 'appointments', name: 'Appointment Scheduler', icon: Calendar, path: '/appointment-dashboard' },
    // { id: 'billing', name: 'Billing', icon: CreditCard, path: '/billing' },
     { id: 'doc-ai', name: 'DocAI', icon: Bot, path: '/doc-ai' },
@@ -112,8 +112,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       // Only show admin panel for Admin and AdminDoctor roles
       return userRole === 'Admin' || userRole === 'AdminDoctor';
     }
-    if (item.id === 'dashboard' || item.id === 'doc-ai') {
-      // Only show DocBoard and DocAI for Doctor and AdminDoctor roles
+    if (item.id === 'dashboard' || item.id === 'doc-ai' || item.id === 'calendar') {
+      // Only show DocBoard, DocAI, and Calendar for Doctor and AdminDoctor roles
       return userRole === 'Doctor' || userRole === 'AdminDoctor';
     }
     if (item.id === 'appointments') {
@@ -136,7 +136,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     switch (id) {
       case 'admin': return 'Manage users, system settings, and hospital configuration.';
       case 'dashboard': return 'Your main control center with key metrics and today\'s overview.';      
-     // case 'calendar': return 'View your schedule and manage appointments efficiently.';
+      case 'calendar': return 'View your schedule and manage appointments efficiently.';
       case 'appointments': return 'Book, reschedule, and manage patient appointments.';
     //  case 'billing': return 'Handle payments, insurance claims, and financial reports.';
     case 'doc-ai': return 'Get AI-powered medical assistance and clinical insights.';
@@ -152,7 +152,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     switch (id) {
       case 'admin': return ['User management', 'Role permissions', 'System configuration'];
       case 'dashboard': return ['View daily statistics', 'Quick access to all modules', 'Monitor hospital performance'];      
-    //  case 'calendar': return ['Color-coded appointments', 'Drag & drop scheduling', 'Multiple view modes'];
+      case 'calendar': return ['Color-coded appointments', 'Drag & drop scheduling', 'Multiple view modes'];
       case 'appointments': return ['Real-time availability', 'Auto-conflict detection', 'SMS confirmations'];
       //case 'billing': return ['Multiple payment methods', 'Insurance processing', 'Automated reports'];
       case 'doc-ai': return ['Medical consultations', 'Drug interactions', 'Diagnosis assistance'];
