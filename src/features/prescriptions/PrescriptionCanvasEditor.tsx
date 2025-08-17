@@ -33,7 +33,6 @@ import {
   Circle,
   Triangle,
   Move3D,
-  
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,16 +42,61 @@ import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
 import PrescriptionTemplates from '@/components/ui/PrescriptionTemplates';
 
+// Types
+interface ElementStyle {
+  fontFamily?: string;
+  fontSize?: number;
+  color?: string;
+  fontWeight?: string;
+  strokeColor?: string;
+  strokeWidth?: number;
+  fillColor?: string;
+  borderRadius?: number;
+}
+
+interface Element {
+  id: string;
+  type: 'text' | 'line' | 'rectangle' | 'circle' | 'image';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  content?: string;
+  src?: string;
+  style?: ElementStyle;
+}
+
+interface Template {
+  name: string;
+  elements: Element[];
+}
+
+
 
 // Main Editor Component
-const PrescriptionCanvasEditor = () => {
-  const [elements, setElements] = useState([]);
-  const [selectedId, setSelectedId] = useState(null);
+const PrescriptionCanvasEditor: React.FC = () => {
+  const [elements, setElements] = useState<Element[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(true);
   const [canvasBackground, setCanvasBackground] = useState('#ffffff');
   const [showElementToolbar, setShowElementToolbar] = useState(false);
-  const canvasRef = useRef(null);
-  const fileInputRef = useRef(null);
+  
+  // Background image states
+  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
+  const [backgroundSize, setBackgroundSize] = useState(100);
+  const [backgroundBlur, setBackgroundBlur] = useState(0);
+  const [showBackgroundControls, setShowBackgroundControls] = useState(false);
+  
+  // Resize states
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeHandle, setResizeHandle] = useState<string | null>(null);
+  const [resizeStartPos, setResizeStartPos] = useState({ x: 0, y: 0 });
+  const [resizeStartSize, setResizeStartSize] = useState({ width: 0, height: 0 });
+  const [resizeStartElementPos, setResizeStartElementPos] = useState({ x: 0, y: 0 });
+  
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const backgroundFileInputRef = useRef<HTMLInputElement>(null);
 
   // Canvas dimensions (A4)
   const CANVAS_WIDTH = 794;
@@ -103,17 +147,17 @@ const PrescriptionCanvasEditor = () => {
         }
       ]);
     }
-  }, []);
+  }, [elements.length]);
 
-  const handleSelectTemplate = (template) => {
+  const handleSelectTemplate = (template: Template) => {
     setElements(template.elements);
     setShowTemplates(false);
     setSelectedId(null);
     setShowElementToolbar(false);
   };
 
-  const addElement = (type) => {
-    const newElement = {
+  const addElement = (type: Element['type']) => {
+    const newElement: Element = {
       id: nanoid(),
       type,
       x: 100 + elements.length * 20,
@@ -144,7 +188,7 @@ const PrescriptionCanvasEditor = () => {
     setShowElementToolbar(true);
   };
 
-  const updateElement = (id, updates) => {
+  const updateElement = (id: string, updates: Partial<Element>) => {
     setElements(prev =>
       prev.map(el => el.id === id ? { ...el, ...updates } : el)
     );
@@ -162,7 +206,7 @@ const PrescriptionCanvasEditor = () => {
     if (selectedId) {
       const elementToDuplicate = elements.find(el => el.id === selectedId);
       if (elementToDuplicate) {
-        const duplicatedElement = {
+        const duplicatedElement: Element = {
           ...elementToDuplicate,
           id: nanoid(),
           x: elementToDuplicate.x + 20,
@@ -174,19 +218,20 @@ const PrescriptionCanvasEditor = () => {
     }
   };
 
-  const handleImageUpload = (event) => {
-    const file = event.target.files[0];
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
-        const newElement = {
+        const result = e.target?.result as string;
+        const newElement: Element = {
           id: nanoid(),
           type: 'image',
           x: 100,
           y: 100,
           width: 200,
           height: 150,
-          src: e.target.result,
+          src: result,
           style: {}
         };
         setElements(prev => [...prev, newElement]);
@@ -197,20 +242,139 @@ const PrescriptionCanvasEditor = () => {
     }
   };
 
-  const handleCanvasClick = (e) => {
-    if (e.target === canvasRef.current) {
-      setSelectedId(null);
-      setShowElementToolbar(false);
+  const handleBackgroundImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setBackgroundImage(result);
+        setShowBackgroundControls(true);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  const handleElementClick = (elementId, e) => {
+  const removeBackgroundImage = () => {
+    setBackgroundImage(null);
+    setBackgroundSize(100);
+    setBackgroundBlur(0);
+    setShowBackgroundControls(false);
+  };
+
+  // Fixed resize handlers
+  const handleResizeStart = (e: React.MouseEvent, elementId: string, handle: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const element = elements.find(el => el.id === elementId);
+    if (!element) return;
+    
+    setIsResizing(true);
+    setResizeHandle(handle);
+    setResizeStartPos({ x: e.clientX, y: e.clientY });
+    setResizeStartSize({ width: element.width, height: element.height });
+    setResizeStartElementPos({ x: element.x, y: element.y });
+  };
+
+  // Global resize move handler
+  useEffect(() => {
+    const handleResizeMove = (e: MouseEvent) => {
+      if (!isResizing || !selectedId || !resizeHandle) return;
+      
+      const deltaX = e.clientX - resizeStartPos.x;
+      const deltaY = e.clientY - resizeStartPos.y;
+      
+      let newWidth = resizeStartSize.width;
+      let newHeight = resizeStartSize.height;
+      let newX = resizeStartElementPos.x;
+      let newY = resizeStartElementPos.y;
+      
+      // Calculate new dimensions based on resize handle
+      switch (resizeHandle) {
+        case 'se': // Southeast
+          newWidth = Math.max(20, resizeStartSize.width + deltaX);
+          newHeight = Math.max(20, resizeStartSize.height + deltaY);
+          break;
+        case 'sw': // Southwest
+          newWidth = Math.max(20, resizeStartSize.width - deltaX);
+          newHeight = Math.max(20, resizeStartSize.height + deltaY);
+          newX = resizeStartElementPos.x + (resizeStartSize.width - newWidth);
+          break;
+        case 'ne': // Northeast
+          newWidth = Math.max(20, resizeStartSize.width + deltaX);
+          newHeight = Math.max(20, resizeStartSize.height - deltaY);
+          newY = resizeStartElementPos.y + (resizeStartSize.height - newHeight);
+          break;
+        case 'nw': // Northwest
+          newWidth = Math.max(20, resizeStartSize.width - deltaX);
+          newHeight = Math.max(20, resizeStartSize.height - deltaY);
+          newX = resizeStartElementPos.x + (resizeStartSize.width - newWidth);
+          newY = resizeStartElementPos.y + (resizeStartSize.height - newHeight);
+          break;
+        case 'n': // North
+          newHeight = Math.max(20, resizeStartSize.height - deltaY);
+          newY = resizeStartElementPos.y + (resizeStartSize.height - newHeight);
+          break;
+        case 's': // South
+          newHeight = Math.max(20, resizeStartSize.height + deltaY);
+          break;
+        case 'e': // East
+          newWidth = Math.max(20, resizeStartSize.width + deltaX);
+          break;
+        case 'w': // West
+          newWidth = Math.max(20, resizeStartSize.width - deltaX);
+          newX = resizeStartElementPos.x + (resizeStartSize.width - newWidth);
+          break;
+      }
+      
+      // Ensure element stays within canvas bounds
+      newX = Math.max(0, Math.min(newX, CANVAS_WIDTH - newWidth));
+      newY = Math.max(0, Math.min(newY, CANVAS_HEIGHT - newHeight));
+      
+      // Update element with new dimensions and position
+      updateElement(selectedId, { 
+        width: newWidth, 
+        height: newHeight, 
+        x: newX, 
+        y: newY 
+      });
+    };
+
+    const handleResizeEnd = () => {
+      setIsResizing(false);
+      setResizeHandle(null);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleResizeMove);
+      document.addEventListener('mouseup', handleResizeEnd);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleResizeMove);
+        document.removeEventListener('mouseup', handleResizeEnd);
+      };
+    }
+  }, [isResizing, selectedId, resizeHandle, resizeStartPos, resizeStartSize, resizeStartElementPos]);
+
+  const handleCanvasClick = (e: React.MouseEvent) => {
+    if (e.target === canvasRef.current) {
+      setSelectedId(null);
+      setShowElementToolbar(false);
+      setShowTemplates(false);
+    }
+  };
+
+  const handleElementClick = (elementId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedId(elementId);
     setShowElementToolbar(true);
   };
 
   const exportAsHTML = () => {
+    const backgroundStyle = backgroundImage ? 
+      `background-image: url('${backgroundImage}'); background-size: ${backgroundSize}%; background-position: center; background-repeat: no-repeat; filter: blur(${backgroundBlur}px);` : '';
+    
     const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -222,6 +386,7 @@ const PrescriptionCanvasEditor = () => {
             width: ${CANVAS_WIDTH}px; 
             height: ${CANVAS_HEIGHT}px; 
             background-color: ${canvasBackground};
+            ${backgroundStyle}
             margin: 0 auto;
             border: 1px solid #ccc;
         }
@@ -255,13 +420,211 @@ const PrescriptionCanvasEditor = () => {
   };
 
   const downloadPDF = () => {
-    window.print();
+    if (!canvasRef.current) return;
+
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    // Generate the HTML content for printing
+    const backgroundStyle = backgroundImage ? 
+      `background-image: url('${backgroundImage}'); background-size: ${backgroundSize}%; background-position: center; background-repeat: no-repeat;` : '';
+
+    const printHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Prescription</title>
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          
+          body {
+            font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: white;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+          }
+          
+          .prescription-container {
+            position: relative;
+            width: ${CANVAS_WIDTH}px;
+            height: ${CANVAS_HEIGHT}px;
+            background-color: ${canvasBackground};
+            ${backgroundStyle}
+            border: 1px solid #ddd;
+            overflow: hidden;
+          }
+          
+          .background-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            ${backgroundImage ? `
+              background-image: url('${backgroundImage}');
+              background-size: ${backgroundSize}%;
+              background-position: center;
+              background-repeat: no-repeat;
+              filter: blur(${backgroundBlur}px);
+            ` : ''}
+          }
+          
+          .elements-layer {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            height: 100%;
+          }
+          
+          .element {
+            position: absolute;
+            box-sizing: border-box;
+          }
+          
+          .text-element {
+            display: flex;
+            align-items: center;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+          }
+          
+          .line-element {
+            border-top-style: solid;
+          }
+          
+          .rectangle-element {
+            border-style: solid;
+          }
+          
+          .circle-element {
+            border-style: solid;
+            border-radius: 50%;
+          }
+          
+          .image-element {
+            object-fit: cover;
+          }
+          
+          @media print {
+            body {
+              padding: 0;
+              background: white !important;
+            }
+            
+            .prescription-container {
+              border: none;
+              box-shadow: none;
+            }
+            
+            @page {
+              margin: 0.5in;
+              size: A4;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="prescription-container">
+          ${backgroundImage ? '<div class="background-layer"></div>' : ''}
+          <div class="elements-layer">
+            ${elements.map(el => {
+              let elementHtml = '';
+              
+              if (el.type === 'text') {
+                elementHtml = `
+                  <div class="element text-element" style="
+                    left: ${el.x}px; 
+                    top: ${el.y}px; 
+                    width: ${el.width}px; 
+                    height: ${el.height}px; 
+                    font-family: ${el.style?.fontFamily || 'Inter, sans-serif'}; 
+                    font-size: ${el.style?.fontSize || 16}px; 
+                    color: ${el.style?.color || '#000'}; 
+                    font-weight: ${el.style?.fontWeight || 'normal'};
+                  ">${el.content || ''}</div>`;
+              } else if (el.type === 'line') {
+                elementHtml = `
+                  <div class="element line-element" style="
+                    left: ${el.x}px; 
+                    top: ${el.y}px; 
+                    width: ${el.width}px; 
+                    height: ${el.height}px; 
+                    border-top-width: ${el.style?.strokeWidth || 2}px;
+                    border-top-color: ${el.style?.strokeColor || '#000'};
+                  "></div>`;
+              } else if (el.type === 'rectangle') {
+                elementHtml = `
+                  <div class="element rectangle-element" style="
+                    left: ${el.x}px; 
+                    top: ${el.y}px; 
+                    width: ${el.width}px; 
+                    height: ${el.height}px; 
+                    background-color: ${el.style?.fillColor === 'transparent' ? 'transparent' : el.style?.fillColor || 'transparent'}; 
+                    border-width: ${el.style?.strokeWidth || 1}px;
+                    border-color: ${el.style?.strokeColor || '#000'};
+                  "></div>`;
+              } else if (el.type === 'circle') {
+                elementHtml = `
+                  <div class="element circle-element" style="
+                    left: ${el.x}px; 
+                    top: ${el.y}px; 
+                    width: ${el.width}px; 
+                    height: ${el.height}px; 
+                    background-color: ${el.style?.fillColor === 'transparent' ? 'transparent' : el.style?.fillColor || 'transparent'}; 
+                    border-width: ${el.style?.strokeWidth || 1}px;
+                    border-color: ${el.style?.strokeColor || '#000'};
+                  "></div>`;
+              } else if (el.type === 'image' && el.src) {
+                elementHtml = `
+                  <img class="element image-element" 
+                    src="${el.src}" 
+                    alt="Prescription Image"
+                    style="
+                      left: ${el.x}px; 
+                      top: ${el.y}px; 
+                      width: ${el.width}px; 
+                      height: ${el.height}px;
+                    " />`;
+              }
+              
+              return elementHtml;
+            }).join('')}
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Write the HTML to the new window
+    printWindow.document.write(printHTML);
+    printWindow.document.close();
+
+    // Wait for the content to load, then print
+    printWindow.onload = () => {
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 500);
+    };
   };
 
   const saveTemplate = () => {
     const templateData = {
       elements,
       canvasBackground,
+      backgroundImage,
+      backgroundSize,
+      backgroundBlur,
       timestamp: new Date().toISOString()
     };
     const blob = new Blob([JSON.stringify(templateData, null, 2)], { type: 'application/json' });
@@ -274,6 +637,21 @@ const PrescriptionCanvasEditor = () => {
   };
 
   const selectedElement = elements.find(el => el.id === selectedId);
+
+  // Helper function to get cursor style for resize handles
+  const getResizeCursor = (handle: string): string => {
+    const cursors: { [key: string]: string } = {
+      'nw': 'nw-resize',
+      'ne': 'ne-resize',
+      'sw': 'sw-resize',
+      'se': 'se-resize',
+      'n': 'n-resize',
+      's': 's-resize',
+      'e': 'e-resize',
+      'w': 'w-resize',
+    };
+    return cursors[handle] || 'default';
+  };
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
@@ -360,22 +738,148 @@ const PrescriptionCanvasEditor = () => {
           
           <Separator orientation="vertical" className="h-6 mx-2" />
           
-         {/* <Button size="sm" variant="ghost">
-            <RotateCcw className="h-4 w-4" />
+          {/* Background Image Button */}
+          <Button 
+            size="sm" 
+            variant="ghost" 
+            onClick={() => backgroundFileInputRef.current?.click()}
+            className={backgroundImage ? "bg-blue-100 text-blue-700" : ""}
+          >
+            <Image className="h-4 w-4 mr-2" />
+            Background
           </Button>
-          <Button size="sm" variant="ghost">
-            <RotateCw className="h-4 w-4" />
-          </Button>*/} 
+          
+          {backgroundImage && (
+            <>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={() => setShowBackgroundControls(!showBackgroundControls)}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                BG Settings
+              </Button>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={removeBackgroundImage}
+                className="text-red-600"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Templates Sidebar */}
-        {showTemplates && !showElementToolbar && (
+        {showTemplates && !showElementToolbar && !showBackgroundControls &&  (
           <PrescriptionTemplates
             onSelectTemplate={handleSelectTemplate}
             onClose={() => setShowTemplates(false)}
           />
+
+          
+        )}
+
+        {/* Background Controls Sidebar */}
+        {showBackgroundControls && backgroundImage && (
+          <div className="w-72 bg-white border-r border-gray-200 p-4 flex-shrink-0">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold">Background Settings</h3>
+              <Button variant="ghost" size="sm" onClick={() => setShowBackgroundControls(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Background Image Preview */}
+              <div>
+                <Label className="text-sm">Current Background</Label>
+                <div className="mt-2 border border-gray-200 rounded-lg p-2">
+                  <img 
+                    src={backgroundImage} 
+                    alt="Background preview" 
+                    className="w-full h-20 object-cover rounded"
+                    style={{ filter: `blur(${backgroundBlur}px)` }}
+                  />
+                </div>
+              </div>
+
+              {/* Size Control */}
+              <div>
+                <Label className="text-sm">Size: {backgroundSize}%</Label>
+                <Slider
+                  value={[backgroundSize]}
+                  onValueChange={([value]) => setBackgroundSize(value)}
+                  min={10}
+                  max={200}
+                  step={5}
+                  className="mt-2"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>10%</span>
+                  <span>200%</span>
+                </div>
+              </div>
+
+              {/* Blur Control */}
+              <div>
+                <Label className="text-sm">Blur: {backgroundBlur}px</Label>
+                <Slider
+                  value={[backgroundBlur]}
+                  onValueChange={([value]) => setBackgroundBlur(value)}
+                  min={0}
+                  max={20}
+                  step={0.5}
+                  className="mt-2"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>0px</span>
+                  <span>20px</span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-2">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => backgroundFileInputRef.current?.click()}
+                  className="w-full"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Change Background
+                </Button>
+                
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={removeBackgroundImage}
+                  className="w-full text-red-600"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Remove Background
+                </Button>
+              </div>
+
+              {/* Reset Controls */}
+              <div className="pt-4 border-t border-gray-200">
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={() => {
+                    setBackgroundSize(100);
+                    setBackgroundBlur(0);
+                  }}
+                  className="w-full"
+                >
+                  Reset Settings
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Canvas Area */}
@@ -390,6 +894,27 @@ const PrescriptionCanvasEditor = () => {
     }}
     onClick={handleCanvasClick}
   >
+    {/* Background Image Layer - Only this gets blurred */}
+    {backgroundImage && (
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundImage: `url(${backgroundImage})`,
+          backgroundSize: `${backgroundSize}%`,
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          filter: `blur(${backgroundBlur}px)`,
+          zIndex: 0,
+        }}
+      />
+    )}
+    
+    {/* Elements Layer - Never blurred */}
+    <div style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%' }}>
             {elements.map((element) => (
               <Draggable
                 key={element.id}
@@ -408,10 +933,11 @@ const PrescriptionCanvasEditor = () => {
                   style={{
                     width: element.width,
                     height: element.height,
-                    position: 'absolute'
+                    position: 'absolute',
                   }}
                   onClick={(e) => handleElementClick(element.id, e)}
                 >
+                  {/* Element Content */}
                   {element.type === 'text' && (
                     <div
                       contentEditable
@@ -481,13 +1007,63 @@ const PrescriptionCanvasEditor = () => {
                       }}
                     />
                   )}
+
+                  {/* Resize Handles - Only show for selected element */}
+                  {selectedId === element.id && (
+                    <>
+                      {/* Corner resize handles */}
+                      <div
+                        className="absolute w-3 h-3 bg-blue-500 border border-white cursor-nw-resize"
+                        style={{ top: -6, left: -6 }}
+                        onMouseDown={(e) => handleResizeStart(e, element.id, 'nw')}
+                      />
+                      <div
+                        className="absolute w-3 h-3 bg-blue-500 border border-white cursor-ne-resize"
+                        style={{ top: -6, right: -6 }}
+                        onMouseDown={(e) => handleResizeStart(e, element.id, 'ne')}
+                      />
+                      <div
+                        className="absolute w-3 h-3 bg-blue-500 border border-white cursor-sw-resize"
+                        style={{ bottom: -6, left: -6 }}
+                        onMouseDown={(e) => handleResizeStart(e, element.id, 'sw')}
+                      />
+                      <div
+                        className="absolute w-3 h-3 bg-blue-500 border border-white cursor-se-resize"
+                        style={{ bottom: -6, right: -6 }}
+                        onMouseDown={(e) => handleResizeStart(e, element.id, 'se')}
+                      />
+                      
+                      {/* Edge resize handles */}
+                      <div
+                        className="absolute w-3 h-3 bg-blue-500 border border-white cursor-n-resize"
+                        style={{ top: -6, left: '50%', transform: 'translateX(-50%)' }}
+                        onMouseDown={(e) => handleResizeStart(e, element.id, 'n')}
+                      />
+                      <div
+                        className="absolute w-3 h-3 bg-blue-500 border border-white cursor-s-resize"
+                        style={{ bottom: -6, left: '50%', transform: 'translateX(-50%)' }}
+                        onMouseDown={(e) => handleResizeStart(e, element.id, 's')}
+                      />
+                      <div
+                        className="absolute w-3 h-3 bg-blue-500 border border-white cursor-w-resize"
+                        style={{ left: -6, top: '50%', transform: 'translateY(-50%)' }}
+                        onMouseDown={(e) => handleResizeStart(e, element.id, 'w')}
+                      />
+                      <div
+                        className="absolute w-3 h-3 bg-blue-500 border border-white cursor-e-resize"
+                        style={{ right: -6, top: '50%', transform: 'translateY(-50%)' }}
+                        onMouseDown={(e) => handleResizeStart(e, element.id, 'e')}
+                      />
+                    </>
+                  )}
                 </div>
               </Draggable>
             ))}
           </div>
+          </div>
 
           {/* Element Properties Toolbar - Overlay */}
-          {showElementToolbar && selectedElement &&  (
+          {showElementToolbar && selectedElement && !showBackgroundControls && (
   <div className="ml-4 w-72 bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-h-[90vh] overflow-y-auto flex-shrink-0">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold">Element Properties</h3>
@@ -718,12 +1294,20 @@ const PrescriptionCanvasEditor = () => {
         </div>
       </div>
 
-      {/* Hidden file input for image upload */}
+      {/* Hidden file inputs */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
         onChange={handleImageUpload}
+        style={{ display: 'none' }}
+      />
+      
+      <input
+        ref={backgroundFileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleBackgroundImageUpload}
         style={{ display: 'none' }}
       />
     </div>
