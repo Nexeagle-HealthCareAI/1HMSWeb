@@ -57,12 +57,11 @@ const NotFoundPage = () => {
               Go to Login
             </Button>
           ) : (
-            <Button asChild className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
-              <Link to="/dashboard">
-                <Home className="mr-2 h-5 w-5" />
+            <Link to="/dashboard">
+              <Button className="bg-healthcare-primary hover:bg-healthcare-primary/90 text-white">
                 Go to Dashboard
-              </Link>
-            </Button>
+              </Button>
+            </Link>
           )}
           
           <Button 

@@ -8,11 +8,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Stethoscope, Save } from 'lucide-react';
+import { Stethoscope, Save, CheckCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { useAuthStore } from '@/store/authStore';
 import { useDepartmentApi, useDoctorApi } from '@/hooks/useApi';
+import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { SpecializationSelector } from './SpecializationSelector';
 import { QualificationSelector } from './QualificationSelector';
 import { CreateDoctorProfileRequest, UpdateDoctorProfileRequest, DoctorProfileResponse } from '../services/doctorProfileApi';
@@ -45,6 +46,10 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
   const queryClient = useQueryClient();
   const userId = useAuthStore((state) => state.userId);
   const hospitalId = useAuthStore((state) => state.hospitalId);
+  
+  // Profile completion hook
+  const { doctorProfileCompletion } = useProfileCompletion();
+  const isProfileComplete = doctorProfileCompletion >= 100;
   
   // Fetch departments from API
   const { data: departmentsResponse, isLoading: departmentsLoading, error: departmentsError } = useDepartmentApi.getGlobalDepartments();
@@ -296,17 +301,24 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
   };
 
   return (
-    <Card>
+    <Card className={isProfileComplete ? 'border-green-200 bg-green-50/30' : ''}>
       <CardContent className="p-6">
         <Accordion type="single" collapsible defaultValue="doctor">
           <AccordionItem value="doctor">
-            <AccordionTrigger>
+            <AccordionTrigger className={isProfileComplete ? 'hover:bg-green-100/50' : ''}>
               <div className="flex items-center gap-2">
-                <Stethoscope className="h-4 w-4" />
-                <span>Doctor Professional</span>
-                <span className={`text-xs ml-2 ${Object.keys(doctorErrors).length ? 'text-amber-600' : 'text-green-600'}`}>
-                  {Object.keys(doctorErrors).length ? '⚠︎' : '✓'}
-                </span>
+                <Stethoscope className={`h-4 w-4 ${isProfileComplete ? 'text-green-600' : ''}`} />
+                <span className={isProfileComplete ? 'text-green-800 font-medium' : ''}>Doctor Professional</span>
+                {isProfileComplete ? (
+                  <div className="flex items-center gap-1 ml-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="text-xs text-green-600 font-medium">Complete</span>
+                  </div>
+                ) : (
+                  <span className={`text-xs ml-2 ${Object.keys(doctorErrors).length ? 'text-amber-600' : 'text-green-600'}`}>
+                    {Object.keys(doctorErrors).length ? '⚠︎' : '✓'}
+                  </span>
+                )}
               </div>
             </AccordionTrigger>
             <AccordionContent>

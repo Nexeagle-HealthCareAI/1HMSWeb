@@ -25,11 +25,12 @@ const RoleBasedRedirect = () => {
 // Lazy load pages for better performance
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage').then(module => ({ default: module.default })));
 const AdminDashboard = lazy(() => import('@/features/dashboard/components/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
-const DocBoard = lazy(() => import('@/features/doctor/components/DocBoard').then(module => ({ default: module.DocBoard })));
+const ClinicalDashboard = lazy(() => import('@/features/doctor/components/DocBoard').then(module => ({ default: module.ClinicalDashboard })));
 const AppointmentDashboard = lazy(() => import('@/features/appointment/components/AppointmentDashboard').then(module => ({ default: module.AppointmentDashboard })));
 const AppointmentBooking = lazy(() => import('@/features/appointment/components/AppointmentBooking').then(module => ({ default: module.AppointmentBooking })));
 const AppointmentOversight = lazy(() => import('@/features/appointment/components/AppointmentOversight').then(module => ({ default: module.AppointmentOversight })));
 
+const DoctorCalendar = lazy(() => import('@/features/doctor-calendar/DoctorCalendarPage').then(module => ({ default: module.DoctorCalendarPage })));
 const DocAI = lazy(() => import('@/features/ai/components/DocAI').then(module => ({ default: module.DocAI })));
 const ProfilePage = lazy(() => import('@/features/profile/components/ProfilePage').then(module => ({ default: module.ProfilePage })));
 const Billing = lazy(() => import('@/features/billing/components/Billing').then(module => ({ default: module.Billing })));
@@ -112,6 +113,12 @@ export const AppRoutes: React.FC = () => {
           } 
         />
 
+        {/* Redirect root to easyHMS */}
+        <Route 
+          path="/" 
+          element={<Navigate to="/" replace />} 
+        />
+
         {/* Protected Routes - Require Authentication */}
         {isActuallyAuthenticated ? (
           <>
@@ -127,13 +134,25 @@ export const AppRoutes: React.FC = () => {
               } 
             />
 
-            {/* DocBoard Route - Restricted to Doctor and AdminDoctor roles */}
+            {/* Clinical Dashboard Route - Restricted to Doctor and AdminDoctor roles */}
             <Route 
               path="/dashboard" 
               element={
                 <RouteGuard requiredRoles={['Doctor', 'AdminDoctor']}>
                   <MainLayout>
-                    <DocBoard />
+                    <ClinicalDashboard />
+                  </MainLayout>
+                </RouteGuard>
+              } 
+            />
+
+            {/* Doctor Calendar Route - Restricted to Doctor and AdminDoctor roles */}
+            <Route 
+              path="/calendar" 
+              element={
+                <RouteGuard requiredRoles={['Doctor', 'AdminDoctor']}>
+                  <MainLayout>
+                    <DoctorCalendar />
                   </MainLayout>
                 </RouteGuard>
               } 
