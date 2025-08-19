@@ -52,6 +52,7 @@ interface ElementStyle {
   strokeWidth?: number;
   fillColor?: string;
   borderRadius?: number;
+  rotation?: number;
 }
 
 interface Element {
@@ -149,11 +150,17 @@ const PrescriptionCanvasEditor: React.FC = () => {
     }
   }, [elements.length]);
 
+  // Auto close toolbars function
+  const closeAllToolbars = () => {
+    setShowElementToolbar(false);
+    setShowBackgroundControls(false);
+    setShowTemplates(false);
+  };
+
   const handleSelectTemplate = (template: Template) => {
     setElements(template.elements);
-    setShowTemplates(false);
     setSelectedId(null);
-    setShowElementToolbar(false);
+    closeAllToolbars();
   };
 
   const addElement = (type: Element['type']) => {
@@ -169,7 +176,7 @@ const PrescriptionCanvasEditor: React.FC = () => {
         style: { fontFamily: 'Inter', fontSize: 16, color: '#000000' }
       }),
       ...(type === 'line' && {
-        style: { strokeColor: '#000000', strokeWidth: 2 }
+        style: { strokeColor: '#000000', strokeWidth: 2, rotation: 0 }
       }),
       ...(type === 'rectangle' && {
         style: { fillColor: 'transparent', strokeColor: '#000000', strokeWidth: 1 }
@@ -186,6 +193,8 @@ const PrescriptionCanvasEditor: React.FC = () => {
     setElements(prev => [...prev, newElement]);
     setSelectedId(newElement.id);
     setShowElementToolbar(true);
+    setShowBackgroundControls(false);
+    setShowTemplates(false);
   };
 
   const updateElement = (id: string, updates: Partial<Element>) => {
@@ -237,6 +246,8 @@ const PrescriptionCanvasEditor: React.FC = () => {
         setElements(prev => [...prev, newElement]);
         setSelectedId(newElement.id);
         setShowElementToolbar(true);
+        setShowBackgroundControls(false);
+        setShowTemplates(false);
       };
       reader.readAsDataURL(file);
     }
@@ -250,6 +261,8 @@ const PrescriptionCanvasEditor: React.FC = () => {
         const result = e.target?.result as string;
         setBackgroundImage(result);
         setShowBackgroundControls(true);
+        setShowElementToolbar(false);
+        setShowTemplates(false);
       };
       reader.readAsDataURL(file);
     }
@@ -360,8 +373,7 @@ const PrescriptionCanvasEditor: React.FC = () => {
   const handleCanvasClick = (e: React.MouseEvent) => {
     if (e.target === canvasRef.current) {
       setSelectedId(null);
-      setShowElementToolbar(false);
-      setShowTemplates(false);
+      closeAllToolbars();
     }
   };
 
@@ -369,11 +381,13 @@ const PrescriptionCanvasEditor: React.FC = () => {
     e.stopPropagation();
     setSelectedId(elementId);
     setShowElementToolbar(true);
+    setShowBackgroundControls(false);
+    setShowTemplates(false);
   };
 
   const exportAsHTML = () => {
     const backgroundStyle = backgroundImage ? 
-      `background-image: url('${backgroundImage}'); background-size: ${backgroundSize}%; background-position: center; background-repeat: no-repeat; filter: blur(${backgroundBlur}px);` : '';
+      `background-image: url('${backgroundImage}'); background-size: ${backgroundSize}%; background-position: center; background-repeat: no-repeat;` : '';
     
     const html = `<!DOCTYPE html>
 <html>
@@ -400,7 +414,8 @@ const PrescriptionCanvasEditor: React.FC = () => {
           if (el.type === 'text') {
             elementHtml = `<div class="element" style="left: ${el.x}px; top: ${el.y}px; width: ${el.width}px; height: ${el.height}px; font-family: ${el.style?.fontFamily || 'Inter'}; font-size: ${el.style?.fontSize || 16}px; color: ${el.style?.color || '#000'}; font-weight: ${el.style?.fontWeight || 'normal'}; display: flex; align-items: center;">${el.content}</div>`;
           } else if (el.type === 'line') {
-            elementHtml = `<div class="element" style="left: ${el.x}px; top: ${el.y}px; width: ${el.width}px; height: ${el.height}px; border-top: ${el.style?.strokeWidth || 2}px solid ${el.style?.strokeColor || '#000'};"></div>`;
+            const rotation = el.style?.rotation || 0;
+            elementHtml = `<div class="element" style="left: ${el.x}px; top: ${el.y}px; width: ${el.width}px; height: ${el.height}px; border-top: ${el.style?.strokeWidth || 2}px solid ${el.style?.strokeColor || '#000'}; transform: rotate(${rotation}deg); transform-origin: center;"></div>`;
           } else if (el.type === 'rectangle') {
             elementHtml = `<div class="element" style="left: ${el.x}px; top: ${el.y}px; width: ${el.width}px; height: ${el.height}px; background-color: ${el.style?.fillColor || 'transparent'}; border: ${el.style?.strokeWidth || 1}px solid ${el.style?.strokeColor || '#000'};"></div>`;
           } else if (el.type === 'circle') {
@@ -426,10 +441,7 @@ const PrescriptionCanvasEditor: React.FC = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    // Generate the HTML content for printing
-    const backgroundStyle = backgroundImage ? 
-      `background-image: url('${backgroundImage}'); background-size: ${backgroundSize}%; background-position: center; background-repeat: no-repeat;` : '';
-
+    // Generate the HTML content for printing - Fixed background image issue
     const printHTML = `
       <!DOCTYPE html>
       <html>
@@ -458,7 +470,6 @@ const PrescriptionCanvasEditor: React.FC = () => {
             width: ${CANVAS_WIDTH}px;
             height: ${CANVAS_HEIGHT}px;
             background-color: ${canvasBackground};
-            ${backgroundStyle}
             border: 1px solid #ddd;
             overflow: hidden;
           }
@@ -500,6 +511,7 @@ const PrescriptionCanvasEditor: React.FC = () => {
           
           .line-element {
             border-top-style: solid;
+            transform-origin: center;
           }
           
           .rectangle-element {
@@ -524,6 +536,12 @@ const PrescriptionCanvasEditor: React.FC = () => {
             .prescription-container {
               border: none;
               box-shadow: none;
+            }
+            
+            .background-layer {
+              -webkit-print-color-adjust: exact !important;
+              color-adjust: exact !important;
+              print-color-adjust: exact !important;
             }
             
             @page {
@@ -553,6 +571,7 @@ const PrescriptionCanvasEditor: React.FC = () => {
                     font-weight: ${el.style?.fontWeight || 'normal'};
                   ">${el.content || ''}</div>`;
               } else if (el.type === 'line') {
+                const rotation = el.style?.rotation || 0;
                 elementHtml = `
                   <div class="element line-element" style="
                     left: ${el.x}px; 
@@ -561,6 +580,7 @@ const PrescriptionCanvasEditor: React.FC = () => {
                     height: ${el.height}px; 
                     border-top-width: ${el.style?.strokeWidth || 2}px;
                     border-top-color: ${el.style?.strokeColor || '#000'};
+                    transform: rotate(${rotation}deg);
                   "></div>`;
               } else if (el.type === 'rectangle') {
                 elementHtml = `
@@ -638,21 +658,6 @@ const PrescriptionCanvasEditor: React.FC = () => {
 
   const selectedElement = elements.find(el => el.id === selectedId);
 
-  // Helper function to get cursor style for resize handles
-  const getResizeCursor = (handle: string): string => {
-    const cursors: { [key: string]: string } = {
-      'nw': 'nw-resize',
-      'ne': 'ne-resize',
-      'sw': 'sw-resize',
-      'se': 'se-resize',
-      'n': 'n-resize',
-      's': 's-resize',
-      'e': 'e-resize',
-      'w': 'w-resize',
-    };
-    return cursors[handle] || 'default';
-  };
-
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
       {/* Top Navigation */}
@@ -662,7 +667,13 @@ const PrescriptionCanvasEditor: React.FC = () => {
             <Button 
               variant="ghost" 
               size="sm"
-              onClick={() => setShowTemplates(!showTemplates)}
+              onClick={() => {
+                setShowTemplates(!showTemplates);
+                if (!showTemplates) {
+                  setShowElementToolbar(false);
+                  setShowBackgroundControls(false);
+                }
+              }}
             >
               <Menu className="h-4 w-4 mr-2" />
               Templates
@@ -754,7 +765,13 @@ const PrescriptionCanvasEditor: React.FC = () => {
               <Button 
                 size="sm" 
                 variant="ghost" 
-                onClick={() => setShowBackgroundControls(!showBackgroundControls)}
+                onClick={() => {
+                  setShowBackgroundControls(!showBackgroundControls);
+                  if (!showBackgroundControls) {
+                    setShowElementToolbar(false);
+                    setShowTemplates(false);
+                  }
+                }}
               >
                 <Settings className="h-4 w-4 mr-2" />
                 BG Settings
@@ -774,13 +791,11 @@ const PrescriptionCanvasEditor: React.FC = () => {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Templates Sidebar */}
-        {showTemplates && !showElementToolbar && !showBackgroundControls &&  (
+        {showTemplates && !showElementToolbar && !showBackgroundControls && (
           <PrescriptionTemplates
             onSelectTemplate={handleSelectTemplate}
             onClose={() => setShowTemplates(false)}
           />
-
-          
         )}
 
         {/* Background Controls Sidebar */}
@@ -883,188 +898,190 @@ const PrescriptionCanvasEditor: React.FC = () => {
         )}
 
         {/* Canvas Area */}
-      <div className="flex-1 flex justify-center items-start p-8 bg-gray-100 overflow-auto relative">
-  <div
-    ref={canvasRef}
-    className="relative shadow-xl border border-gray-300"
-    style={{
-      width: CANVAS_WIDTH,
-      height: CANVAS_HEIGHT,
-      backgroundColor: canvasBackground,
-    }}
-    onClick={handleCanvasClick}
-  >
-    {/* Background Image Layer - Only this gets blurred */}
-    {backgroundImage && (
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          backgroundImage: `url(${backgroundImage})`,
-          backgroundSize: `${backgroundSize}%`,
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          filter: `blur(${backgroundBlur}px)`,
-          zIndex: 0,
-        }}
-      />
-    )}
-    
-    {/* Elements Layer - Never blurred */}
-    <div style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%' }}>
-            {elements.map((element) => (
-              <Draggable
-                key={element.id}
-                position={{ x: element.x, y: element.y }}
-                onStop={(e, d) => {
-                  updateElement(element.id, { x: d.x, y: d.y });
+        <div className="flex-1 flex justify-center items-start p-8 bg-gray-100 overflow-auto relative">
+          <div
+            ref={canvasRef}
+            className="relative shadow-xl border border-gray-300"
+            style={{
+              width: CANVAS_WIDTH,
+              height: CANVAS_HEIGHT,
+              backgroundColor: canvasBackground,
+            }}
+            onClick={handleCanvasClick}
+          >
+            {/* Background Image Layer - Only this gets blurred */}
+            {backgroundImage && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  backgroundImage: `url(${backgroundImage})`,
+                  backgroundSize: `${backgroundSize}%`,
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat',
+                  filter: `blur(${backgroundBlur}px)`,
+                  zIndex: 0,
                 }}
-                bounds="parent"
-              >
-                <div
-                  className={`cursor-move ${
-                    selectedId === element.id
-                      ? 'ring-2 ring-blue-500'
-                      : 'hover:ring-2 hover:ring-blue-300'
-                  }`}
-                  style={{
-                    width: element.width,
-                    height: element.height,
-                    position: 'absolute',
+              />
+            )}
+            
+            {/* Elements Layer - Never blurred */}
+            <div style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%' }}>
+              {elements.map((element) => (
+                <Draggable
+                  key={element.id}
+                  position={{ x: element.x, y: element.y }}
+                  onStop={(e, d) => {
+                    updateElement(element.id, { x: d.x, y: d.y });
                   }}
-                  onClick={(e) => handleElementClick(element.id, e)}
+                  bounds="parent"
                 >
-                  {/* Element Content */}
-                  {element.type === 'text' && (
-                    <div
-                      contentEditable
-                      suppressContentEditableWarning
-                      onBlur={(e) =>
-                        updateElement(element.id, { content: e.currentTarget.textContent })
-                      }
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        fontFamily: element.style?.fontFamily || 'Inter',
-                        fontSize: `${element.style?.fontSize || 16}px`,
-                        color: element.style?.color || '#000000',
-                        fontWeight: element.style?.fontWeight || 'normal',
-                        outline: 'none',
-                        cursor: 'text',
-                        display: 'flex',
-                        alignItems: 'center',
-                      }}
-                    >
-                      {element.content}
-                    </div>
-                  )}
-                  
-                  {element.type === 'line' && (
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        borderTop: `${element.style?.strokeWidth || 2}px solid ${element.style?.strokeColor || '#000000'}`,
-                      }}
-                    />
-                  )}
-                  
-                  {element.type === 'rectangle' && (
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        backgroundColor: element.style?.fillColor || 'transparent',
-                        border: `${element.style?.strokeWidth || 1}px solid ${element.style?.strokeColor || '#000000'}`,
-                        borderRadius: `${element.style?.borderRadius || 0}px`,
-                      }}
-                    />
-                  )}
-                  
-                  {element.type === 'circle' && (
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        backgroundColor: element.style?.fillColor || 'transparent',
-                        border: `${element.style?.strokeWidth || 1}px solid ${element.style?.strokeColor || '#000000'}`,
-                        borderRadius: '50%',
-                      }}
-                    />
-                  )}
-                  
-                  {element.type === 'image' && element.src && (
-                    <img
-                      src={element.src}
-                      alt="Uploaded"
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                      }}
-                    />
-                  )}
+                  <div
+                    className={`cursor-move ${
+                      selectedId === element.id
+                        ? 'ring-2 ring-blue-500'
+                        : 'hover:ring-2 hover:ring-blue-300'
+                    }`}
+                    style={{
+                      width: element.width,
+                      height: element.height,
+                      position: 'absolute',
+                    }}
+                    onClick={(e) => handleElementClick(element.id, e)}
+                  >
+                    {/* Element Content */}
+                    {element.type === 'text' && (
+                      <div
+                        contentEditable
+                        suppressContentEditableWarning
+                        onBlur={(e) =>
+                          updateElement(element.id, { content: e.currentTarget.textContent })
+                        }
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          fontFamily: element.style?.fontFamily || 'Inter',
+                          fontSize: `${element.style?.fontSize || 16}px`,
+                          color: element.style?.color || '#000000',
+                          fontWeight: element.style?.fontWeight || 'normal',
+                          outline: 'none',
+                          cursor: 'text',
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        {element.content}
+                      </div>
+                    )}
+                    
+                    {element.type === 'line' && (
+                      <div
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          borderTop: `${element.style?.strokeWidth || 2}px solid ${element.style?.strokeColor || '#000000'}`,
+                          transform: `rotate(${element.style?.rotation || 0}deg)`,
+                          transformOrigin: 'center',
+                        }}
+                      />
+                    )}
+                    
+                    {element.type === 'rectangle' && (
+                      <div
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          backgroundColor: element.style?.fillColor || 'transparent',
+                          border: `${element.style?.strokeWidth || 1}px solid ${element.style?.strokeColor || '#000000'}`,
+                          borderRadius: `${element.style?.borderRadius || 0}px`,
+                        }}
+                      />
+                    )}
+                    
+                    {element.type === 'circle' && (
+                      <div
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          backgroundColor: element.style?.fillColor || 'transparent',
+                          border: `${element.style?.strokeWidth || 1}px solid ${element.style?.strokeColor || '#000000'}`,
+                          borderRadius: '50%',
+                        }}
+                      />
+                    )}
+                    
+                    {element.type === 'image' && element.src && (
+                      <img
+                        src={element.src}
+                        alt="Uploaded"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                        }}
+                      />
+                    )}
 
-                  {/* Resize Handles - Only show for selected element */}
-                  {selectedId === element.id && (
-                    <>
-                      {/* Corner resize handles */}
-                      <div
-                        className="absolute w-3 h-3 bg-blue-500 border border-white cursor-nw-resize"
-                        style={{ top: -6, left: -6 }}
-                        onMouseDown={(e) => handleResizeStart(e, element.id, 'nw')}
-                      />
-                      <div
-                        className="absolute w-3 h-3 bg-blue-500 border border-white cursor-ne-resize"
-                        style={{ top: -6, right: -6 }}
-                        onMouseDown={(e) => handleResizeStart(e, element.id, 'ne')}
-                      />
-                      <div
-                        className="absolute w-3 h-3 bg-blue-500 border border-white cursor-sw-resize"
-                        style={{ bottom: -6, left: -6 }}
-                        onMouseDown={(e) => handleResizeStart(e, element.id, 'sw')}
-                      />
-                      <div
-                        className="absolute w-3 h-3 bg-blue-500 border border-white cursor-se-resize"
-                        style={{ bottom: -6, right: -6 }}
-                        onMouseDown={(e) => handleResizeStart(e, element.id, 'se')}
-                      />
-                      
-                      {/* Edge resize handles */}
-                      <div
-                        className="absolute w-3 h-3 bg-blue-500 border border-white cursor-n-resize"
-                        style={{ top: -6, left: '50%', transform: 'translateX(-50%)' }}
-                        onMouseDown={(e) => handleResizeStart(e, element.id, 'n')}
-                      />
-                      <div
-                        className="absolute w-3 h-3 bg-blue-500 border border-white cursor-s-resize"
-                        style={{ bottom: -6, left: '50%', transform: 'translateX(-50%)' }}
-                        onMouseDown={(e) => handleResizeStart(e, element.id, 's')}
-                      />
-                      <div
-                        className="absolute w-3 h-3 bg-blue-500 border border-white cursor-w-resize"
-                        style={{ left: -6, top: '50%', transform: 'translateY(-50%)' }}
-                        onMouseDown={(e) => handleResizeStart(e, element.id, 'w')}
-                      />
-                      <div
-                        className="absolute w-3 h-3 bg-blue-500 border border-white cursor-e-resize"
-                        style={{ right: -6, top: '50%', transform: 'translateY(-50%)' }}
-                        onMouseDown={(e) => handleResizeStart(e, element.id, 'e')}
-                      />
-                    </>
-                  )}
-                </div>
-              </Draggable>
-            ))}
-          </div>
+                    {/* Resize Handles - Only show for selected element */}
+                    {selectedId === element.id && (
+                      <>
+                        {/* Corner resize handles */}
+                        <div
+                          className="absolute w-3 h-3 bg-blue-500 border border-white cursor-nw-resize"
+                          style={{ top: -6, left: -6 }}
+                          onMouseDown={(e) => handleResizeStart(e, element.id, 'nw')}
+                        />
+                        <div
+                          className="absolute w-3 h-3 bg-blue-500 border border-white cursor-ne-resize"
+                          style={{ top: -6, right: -6 }}
+                          onMouseDown={(e) => handleResizeStart(e, element.id, 'ne')}
+                        />
+                        <div
+                          className="absolute w-3 h-3 bg-blue-500 border border-white cursor-sw-resize"
+                          style={{ bottom: -6, left: -6 }}
+                          onMouseDown={(e) => handleResizeStart(e, element.id, 'sw')}
+                        />
+                        <div
+                          className="absolute w-3 h-3 bg-blue-500 border border-white cursor-se-resize"
+                          style={{ bottom: -6, right: -6 }}
+                          onMouseDown={(e) => handleResizeStart(e, element.id, 'se')}
+                        />
+                        
+                        {/* Edge resize handles */}
+                        <div
+                          className="absolute w-3 h-3 bg-blue-500 border border-white cursor-n-resize"
+                          style={{ top: -6, left: '50%', transform: 'translateX(-50%)' }}
+                          onMouseDown={(e) => handleResizeStart(e, element.id, 'n')}
+                        />
+                        <div
+                          className="absolute w-3 h-3 bg-blue-500 border border-white cursor-s-resize"
+                          style={{ bottom: -6, left: '50%', transform: 'translateX(-50%)' }}
+                          onMouseDown={(e) => handleResizeStart(e, element.id, 's')}
+                        />
+                        <div
+                          className="absolute w-3 h-3 bg-blue-500 border border-white cursor-w-resize"
+                          style={{ left: -6, top: '50%', transform: 'translateY(-50%)' }}
+                          onMouseDown={(e) => handleResizeStart(e, element.id, 'w')}
+                        />
+                        <div
+                          className="absolute w-3 h-3 bg-blue-500 border border-white cursor-e-resize"
+                          style={{ right: -6, top: '50%', transform: 'translateY(-50%)' }}
+                          onMouseDown={(e) => handleResizeStart(e, element.id, 'e')}
+                        />
+                      </>
+                    )}
+                  </div>
+                </Draggable>
+              ))}
+            </div>
           </div>
 
           {/* Element Properties Toolbar - Overlay */}
           {showElementToolbar && selectedElement && !showBackgroundControls && (
-  <div className="ml-4 w-72 bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-h-[90vh] overflow-y-auto flex-shrink-0">
+            <div className="ml-4 w-72 bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-h-[90vh] overflow-y-auto flex-shrink-0">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold">Element Properties</h3>
                 <Button variant="ghost" size="sm" onClick={() => setShowElementToolbar(false)}>
@@ -1208,8 +1225,8 @@ const PrescriptionCanvasEditor: React.FC = () => {
                 </div>
               )}
 
-              {/* Shape-specific properties */}
-              {(selectedElement.type === 'rectangle' || selectedElement.type === 'circle' || selectedElement.type === 'line') && (
+              {/* Line-specific properties with rotation */}
+              {selectedElement.type === 'line' && (
                 <div className="space-y-3">
                   <div>
                     <Label className="text-xs">Stroke Color</Label>
@@ -1241,34 +1258,162 @@ const PrescriptionCanvasEditor: React.FC = () => {
                     />
                   </div>
 
-                  {(selectedElement.type === 'rectangle' || selectedElement.type === 'circle') && (
-                    <div>
-                      <Label className="text-xs">Fill Color</Label>
-                      <div className="flex gap-2 mt-1">
-                        <Input
-                          type="color"
-                          value={selectedElement.style?.fillColor === 'transparent' ? '#ffffff' : selectedElement.style?.fillColor || '#ffffff'}
-                          onChange={(e) =>
-                            updateElement(selectedId, {
-                              style: { ...selectedElement.style, fillColor: e.target.value }
-                            })
-                          }
-                          className="h-8 flex-1"
-                        />
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            updateElement(selectedId, {
-                              style: { ...selectedElement.style, fillColor: 'transparent' }
-                            })
-                          }
-                        >
-                          None
-                        </Button>
-                      </div>
+                  {/* Line Rotation Controls */}
+                  <div>
+                    <Label className="text-xs">Rotation: {selectedElement.style?.rotation || 0}°</Label>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          updateElement(selectedId, {
+                            style: { ...selectedElement.style, rotation: (selectedElement.style?.rotation || 0) - 15 }
+                          })
+                        }
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                      </Button>
+                      
+                      <Slider
+                        value={[selectedElement.style?.rotation || 0]}
+                        onValueChange={([value]) =>
+                          updateElement(selectedId, {
+                            style: { ...selectedElement.style, rotation: value }
+                          })
+                        }
+                        min={-180}
+                        max={180}
+                        step={15}
+                        className="flex-1"
+                      />
+                      
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          updateElement(selectedId, {
+                            style: { ...selectedElement.style, rotation: (selectedElement.style?.rotation || 0) + 15 }
+                          })
+                        }
+                      >
+                        <RotateCw className="h-4 w-4" />
+                      </Button>
                     </div>
-                  )}
+                    
+                    {/* Quick rotation buttons */}
+                    <div className="flex gap-1 mt-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          updateElement(selectedId, {
+                            style: { ...selectedElement.style, rotation: 0 }
+                          })
+                        }
+                        className="text-xs px-2"
+                      >
+                        0°
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          updateElement(selectedId, {
+                            style: { ...selectedElement.style, rotation: 45 }
+                          })
+                        }
+                        className="text-xs px-2"
+                      >
+                        45°
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          updateElement(selectedId, {
+                            style: { ...selectedElement.style, rotation: 90 }
+                          })
+                        }
+                        className="text-xs px-2"
+                      >
+                        90°
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          updateElement(selectedId, {
+                            style: { ...selectedElement.style, rotation: 135 }
+                          })
+                        }
+                        className="text-xs px-2"
+                      >
+                        135°
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Shape-specific properties (rectangle and circle) */}
+              {(selectedElement.type === 'rectangle' || selectedElement.type === 'circle') && (
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-xs">Stroke Color</Label>
+                    <Input
+                      type="color"
+                      value={selectedElement.style?.strokeColor || '#000000'}
+                      onChange={(e) =>
+                        updateElement(selectedId, {
+                          style: { ...selectedElement.style, strokeColor: e.target.value }
+                        })
+                      }
+                      className="h-8"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">Stroke Width: {selectedElement.style?.strokeWidth || 1}px</Label>
+                    <Slider
+                      value={[selectedElement.style?.strokeWidth || 1]}
+                      onValueChange={([value]) =>
+                        updateElement(selectedId, {
+                          style: { ...selectedElement.style, strokeWidth: value }
+                        })
+                      }
+                      min={1}
+                      max={10}
+                      step={1}
+                      className="mt-2"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">Fill Color</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        type="color"
+                        value={selectedElement.style?.fillColor === 'transparent' ? '#ffffff' : selectedElement.style?.fillColor || '#ffffff'}
+                        onChange={(e) =>
+                          updateElement(selectedId, {
+                            style: { ...selectedElement.style, fillColor: e.target.value }
+                          })
+                        }
+                        className="h-8 flex-1"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          updateElement(selectedId, {
+                            style: { ...selectedElement.style, fillColor: 'transparent' }
+                          })
+                        }
+                      >
+                        None
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               )}
 
