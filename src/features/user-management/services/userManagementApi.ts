@@ -68,6 +68,47 @@ export interface OnboardedUser {
   lastLogin: string;
 }
 
+export interface AllUsersResponse {
+  hospitalId: string;
+  users: {
+    userId: string;
+    fullName: string;
+    mobileNumber: string;
+    email: string;
+    employeeID: string;
+    isPrimary: boolean;
+    isActive: boolean;
+  }[];
+}
+
+export interface DeactivateUserRequest {
+  hospitalId: string;
+  userId: string;
+  performedByUserId: string;
+}
+
+export interface DeactivateUserResponse {
+  success: boolean;
+  message: string;
+  userId: string;
+  hospitalId: string;
+}
+
+export interface UpdateInvitedUserRequest {
+  invitationId: string;
+  userId: string;
+}
+
+export interface UpdateInvitedUserResponse {
+  success: boolean;
+  message: string;
+  invitationId: string;
+  hospitalId: string;
+  userId: string;
+  createdHospitalUserLink: boolean;
+  invitationStatus: string;
+}
+
 // User Management API service
 export const userManagementApi = {
   // Get all roles from the system
@@ -132,5 +173,20 @@ export const userManagementApi = {
         lastLogin: '2024-01-15T08:15:00Z'
       }
     ]);
+  },
+
+  // Get all users associated with a hospital
+  getAllUsers: (hospitalId: string): Promise<AllUsersResponse> => {
+    return apiClient.get(`${API_ENDPOINTS.USER_MANAGEMENT.GET_ALL_USERS}?hospitalId=${hospitalId}`);
+  },
+
+  // Deactivate a user
+  deactivateUser: (data: DeactivateUserRequest): Promise<DeactivateUserResponse> => {
+    return apiClient.patch(API_ENDPOINTS.USER_MANAGEMENT.DEACTIVATE_USER, data);
+  },
+
+  // Update invited user after OTP verification
+  updateInvitedUser: (data: UpdateInvitedUserRequest): Promise<UpdateInvitedUserResponse> => {
+    return apiClient.post(API_ENDPOINTS.USER_MANAGEMENT.UPDATE_INVITED_USER, data);
   }
 };

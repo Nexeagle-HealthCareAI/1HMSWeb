@@ -61,7 +61,10 @@ export const API_ENDPOINTS = {
     INVITE_USER: '/admin/user-onboarding/invitations?scope=new',
     GET_INVITED_USERS: '/admin/user-onboarding/invitations',
     GET_ONBOARDED_USERS: '/admin/users/onboarded',
+    GET_ALL_USERS: '/admin/user-onboarding/allusers',
     MANAGE_INVITATION: '/admin/user-onboarding/invitations/manage',
+    DEACTIVATE_USER: '/admin/user-onboarding/deactivate-user',
+    UPDATE_INVITED_USER: '/admin/user-onboarding/invited/Update-user',
     VALIDATE_TOKEN: '/admin/user-onboarding/validate',
   },
   APPOINTMENTS: {

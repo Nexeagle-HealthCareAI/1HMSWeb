@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { useAuthApi } from '@/hooks/useApi';
+import { useUserManagementApi } from '@/features/user-management/hooks/useUserManagementApi';
 import { ValidationUtils } from '@/utils/validation';
 import { InvalidTokenPage } from '@/components/shared';
 
@@ -87,6 +88,7 @@ const UserOnboardingRegistration: React.FC = () => {
   const registerMutation = useAuthApi.register(); // Use regular register API first
   const setPasswordMutation = useAuthApi.setPassword(); // Use set-password API
   const validateTokenMutation = useAuthApi.validateToken();
+  const updateInvitedUserMutation = useUserManagementApi().updateInvitedUser;
 
   // Validate token on component mount
   useEffect(() => {
@@ -319,9 +321,25 @@ const UserOnboardingRegistration: React.FC = () => {
       });
 
       if (response.success) {
-        setIsMobileVerified(true);
         // Store userId from OTP verification response
-        setUserId(response.userId);
+        const verifiedUserId = response.userId;
+        setUserId(verifiedUserId);
+        
+        // Call the update invited user API after successful OTP verification
+        if (token && verifiedUserId) {
+          try {
+            await updateInvitedUserMutation.mutateAsync({
+              invitationId: token,
+              userId: verifiedUserId
+            });
+          } catch (updateError: any) {
+            console.error('Failed to update invited user:', updateError);
+            // Don't fail the OTP verification if this API call fails
+            // Just log the error and continue
+          }
+        }
+        
+        setIsMobileVerified(true);
         toast({
           title: "Mobile Verified",
           description: "Your mobile number has been successfully verified!",
