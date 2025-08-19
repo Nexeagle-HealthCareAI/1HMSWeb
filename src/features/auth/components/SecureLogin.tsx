@@ -682,7 +682,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
   // Main Login Screen
   return (
     <LoginLayout
-      title="NexEagle easyHMS"
+      title="NexEagle HMS"
       subtitle="Healthcare Management System"
       isLoading={loginMutation.isPending}
       loadingMessage="Signing you in..."

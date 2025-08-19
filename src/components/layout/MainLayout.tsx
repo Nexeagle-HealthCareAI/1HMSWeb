@@ -222,7 +222,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             </div>
             <div>
               <h1 className="font-bold text-healthcare-primary">NexEagle</h1>
-              <p className="text-xs text-muted-foreground">easyHMS</p>
+              <p className="text-xs text-muted-foreground">HMS</p>
             </div>
           </div>
           <Button

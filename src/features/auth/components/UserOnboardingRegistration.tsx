@@ -6,20 +6,31 @@ import {
   Mail, 
   Lock, 
   Shield, 
-  Send, 
+  Send,
   CheckCircle,
   Eye,
   EyeOff,
-  ArrowLeft
+  ArrowLeft,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { useAuthApi } from '@/hooks/useApi';
 import { ValidationUtils } from '@/utils/validation';
+import { InvalidTokenPage } from '@/components/shared';
 
 interface UserOnboardingData {
   fullName: string;
@@ -30,15 +41,7 @@ interface UserOnboardingData {
   confirmPassword: string;
 }
 
-const userRoles = [
-  { value: 'Admin', label: 'Administrator' },
-  { value: 'AdminDoctor', label: 'Admin Doctor' },
-  { value: 'Doctor', label: 'Doctor' },
-  { value: 'Receptionist', label: 'Receptionist' },
-  { value: 'Nurse', label: 'Nurse' },
-  { value: 'LabTechnician', label: 'Lab Technician' },
-  { value: 'Pharmacist', label: 'Pharmacist' }
-];
+
 
 const UserOnboardingRegistration: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -61,42 +64,113 @@ const UserOnboardingRegistration: React.FC = () => {
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
+  
+  // Token validation states
+  const [isValidatingToken, setIsValidatingToken] = useState(true);
+  const [isTokenValid, setIsTokenValid] = useState(false);
+  const [tokenValidationMessage, setTokenValidationMessage] = useState('');
+  
+  // Success popup state
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [userId, setUserId] = useState<string>('');
+  
+  // User already exists popup state
+  const [showUserExistsPopup, setShowUserExistsPopup] = useState(false);
 
   // API hooks
   const sendOTPMutation = useAuthApi.sendOTP();
   const verifyOTPMutation = useAuthApi.verifyOTP();
-  const registerMutation = useAuthApi.onboardingRegister();
+  const registerMutation = useAuthApi.register(); // Use regular register API first
+  const setPasswordMutation = useAuthApi.setPassword(); // Use set-password API
+  const validateTokenMutation = useAuthApi.validateToken();
 
-  // Fetch user data from token on component mount
+  // Validate token on component mount
   useEffect(() => {
-    // For now, disable token requirement
-    fetchUserDataFromToken();
-  }, []);
+    if (token) {
+      validateToken();
+    } else {
+      // No token provided
+      setIsValidatingToken(false);
+      setIsTokenValid(false);
+      setTokenValidationMessage("No invitation token provided.");
+    }
+  }, [token]);
 
-  const fetchUserDataFromToken = async () => {
+  const validateToken = async () => {
+    if (!token) {
+      setIsValidatingToken(false);
+      setIsTokenValid(false);
+      setTokenValidationMessage("No invitation token provided.");
+      return;
+    }
+
     try {
-      setIsLoading(true);
-      // For now, just set loading to false without pre-filling data
-      // Users can enter their own mobile number and role
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 500);
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load user data. Please try again.",
-        variant: "destructive"
+      setIsValidatingToken(true);
+      
+      const response = await validateTokenMutation.mutateAsync({
+        token: token
       });
-      setIsLoading(false);
+
+      if (response.success) {
+        setIsTokenValid(true);
+        setIsValidatingToken(false);
+        
+        // Pre-fill form data if available
+        if (response.name) {
+          setFormData(prev => ({ ...prev, fullName: response.name || '' }));
+        }
+        if (response.email) {
+          setFormData(prev => ({ ...prev, email: response.email || '' }));
+        }
+        if (response.mobile) {
+          setFormData(prev => ({ ...prev, mobileNumber: response.mobile || '' }));
+          // Don't auto-verify mobile - user needs to go through OTP process
+        }
+        if (response.roleName) {
+          setFormData(prev => ({ ...prev, userRole: response.roleName || '' }));
+        }
+        
+        toast({
+          title: "Welcome!",
+          description: "Your invitation is valid. Please complete your registration.",
+        });
+      } else {
+        setIsTokenValid(false);
+        setIsValidatingToken(false);
+        setTokenValidationMessage(response.message || "Invalid invitation token.");
+      }
+    } catch (error: any) {
+      console.error('Error validating token:', error);
+      setIsTokenValid(false);
+      setIsValidatingToken(false);
+      setTokenValidationMessage(error.message || "Failed to validate invitation token. Please try again.");
     }
   };
 
   const handleSendOTP = async () => {
+    // Validation
+    if (!formData.fullName.trim()) {
+      toast({
+        title: "Full Name Required",
+        description: "Please enter your full name before sending OTP.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!formData.mobileNumber) {
       toast({
         title: "Mobile Number Required",
-        description: "Please enter a mobile number first.",
+        description: "Mobile number is required.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!formData.userRole) {
+      toast({
+        title: "User Role Required",
+        description: "User role is required.",
         variant: "destructive"
       });
       return;
@@ -106,25 +180,64 @@ const UserOnboardingRegistration: React.FC = () => {
       setOtpLoading(true);
       const cleanMobile = ValidationUtils.cleanMobileNumber(formData.mobileNumber);
       
-      const response = await sendOTPMutation.mutateAsync({
-        mobileNumber: cleanMobile
+      // First call register API with fullName and role for onboarding scenario
+      const registerResponse = await registerMutation.mutateAsync({
+        mobileNumber: cleanMobile,
+        roles: formData.userRole // Pass the role from invitation
       });
 
-      if (response.success) {
-        setOtpSent(true);
-        toast({
-          title: "OTP Sent",
-          description: "Please check your mobile for the verification code"
+      if (registerResponse.success) {
+        // Then send OTP
+        const otpResponse = await sendOTPMutation.mutateAsync({
+          mobileNumber: cleanMobile
         });
+
+        if (otpResponse.success) {
+          setOtpSent(true);
+          toast({
+            title: "Registration Initiated",
+            description: "User registered successfully. Please check your mobile for the verification code."
+          });
+        } else {
+          throw new Error(otpResponse.message || 'Failed to send OTP');
+        }
       } else {
-        throw new Error(response.message || 'Failed to send OTP');
+        throw new Error(registerResponse.message || 'Failed to register user');
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send OTP. Please try again.",
-        variant: "destructive"
-      });
+      // Check if the error indicates mobile number already exists
+      console.log('Registration error:', error); // Debug log to see the actual error structure
+      
+      // Check the API response structure for the specific error
+      const apiResponse = error.response?.data;
+      const apiMessage = apiResponse?.message || '';
+      const apiSuccess = apiResponse?.success;
+      const httpStatus = error.response?.status;
+      
+      // Check if this is the specific "Mobile number already exists" error
+      const isMobileExistsError = apiMessage.toLowerCase().includes('mobile number already exists') ||
+                                 apiMessage.toLowerCase().includes('mobile already exists') ||
+                                 apiMessage.toLowerCase().includes('user already exists') ||
+                                 apiMessage.toLowerCase().includes('already registered');
+      
+      // Also check HTTP status codes that typically indicate duplicate/conflict
+      const isConflictStatus = httpStatus === 409 || httpStatus === 400;
+      
+      // Check if the API returned success: false with a user-related error message
+      const isApiError = apiSuccess === false && isMobileExistsError;
+      
+      if (isMobileExistsError || isConflictStatus || isApiError) {
+        console.log('Detected user exists error, showing popup'); // Debug log
+        // Show user exists popup instead of error toast
+        setShowUserExistsPopup(true);
+      } else {
+        console.log('Showing generic error toast'); // Debug log
+        toast({
+          title: "Error",
+          description: apiMessage || error.message || "Failed to initiate registration. Please try again.",
+          variant: "destructive"
+        });
+      }
     } finally {
       setOtpLoading(false);
     }
@@ -151,6 +264,8 @@ const UserOnboardingRegistration: React.FC = () => {
 
       if (response.success) {
         setIsMobileVerified(true);
+        // Store userId from OTP verification response
+        setUserId(response.userId);
         toast({
           title: "Mobile Verified",
           description: "Your mobile number has been successfully verified!",
@@ -200,6 +315,15 @@ const UserOnboardingRegistration: React.FC = () => {
       return;
     }
 
+    if (!userId) {
+      toast({
+        title: "User ID Required",
+        description: "Please complete mobile verification first.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!formData.password) {
       toast({
         title: "Password Required",
@@ -230,32 +354,23 @@ const UserOnboardingRegistration: React.FC = () => {
     try {
       setIsLoading(true);
       
-      const response = await registerMutation.mutateAsync({
-        fullName: formData.fullName,
-        userRole: formData.userRole,
-        mobileNumber: ValidationUtils.cleanMobileNumber(formData.mobileNumber),
-        email: formData.email || undefined,
-        password: formData.password,
-        onboardingToken: token || 'dummy-token' // For now, use dummy token if none provided
+      // Call set-password API with the user data
+      const response = await setPasswordMutation.mutateAsync({
+        userId: userId, // Use userId from OTP verification
+        email: formData.email || formData.mobileNumber, // Use email or mobile as fallback
+        password: formData.password
       });
 
       if (response.success) {
-        toast({
-          title: "Registration Successful",
-          description: "Your account has been created successfully!",
-        });
-        
-        // Redirect to login page
-        setTimeout(() => {
-          navigate('/');
-        }, 2000);
+        // Show success popup
+        setShowSuccessPopup(true);
       } else {
-        throw new Error(response.message || 'Registration failed');
+        throw new Error(response.message || 'Password setup failed');
       }
     } catch (error: any) {
       toast({
         title: "Registration Failed",
-        description: error.message || "Failed to create account. Please try again.",
+        description: error.message || "Failed to set password. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -267,13 +382,32 @@ const UserOnboardingRegistration: React.FC = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // Show loading while validating token
+  if (isValidatingToken) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+        <div className="text-center space-y-3 sm:space-y-4">
+          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-base sm:text-lg font-medium text-gray-700">Validating your invitation...</p>
+          <p className="text-xs sm:text-sm text-gray-500">Please wait while we verify your invitation link</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show invalid token page if token is not valid
+  if (!isTokenValid) {
+    return <InvalidTokenPage message={tokenValidationMessage} />;
+  }
+
+  // Show loading while submitting form
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
         <div className="text-center space-y-3 sm:space-y-4">
           <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-base sm:text-lg font-medium text-gray-700">Loading your onboarding form...</p>
-          <p className="text-xs sm:text-sm text-gray-500">Please wait while we prepare your registration details</p>
+          <p className="text-base sm:text-lg font-medium text-gray-700">Creating your account...</p>
+          <p className="text-xs sm:text-sm text-gray-500">Please wait while we set up your profile</p>
         </div>
       </div>
     );
@@ -332,21 +466,14 @@ const UserOnboardingRegistration: React.FC = () => {
                       <Shield className="h-4 w-4" />
                       User Role *
                     </Label>
-                    <Select
+                    <Input
+                      id="userRole"
                       value={formData.userRole}
-                      onValueChange={(value) => updateFormData('userRole', value)}
-                    >
-                      <SelectTrigger className="h-10 sm:h-11 text-sm sm:text-base">
-                        <SelectValue placeholder="Select your role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {userRoles.map((role) => (
-                          <SelectItem key={role.value} value={role.value}>
-                            {role.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      className="h-10 sm:h-11 text-sm sm:text-base bg-gray-50 text-gray-600 cursor-not-allowed"
+                      disabled
+                      readOnly
+                    />
+                    <p className="text-xs text-gray-500">Role assigned by administrator</p>
                   </div>
 
                   {/* Email */}
@@ -379,9 +506,9 @@ const UserOnboardingRegistration: React.FC = () => {
                       <Input
                         id="mobileNumber"
                         value={formData.mobileNumber}
-                        onChange={(e) => updateFormData('mobileNumber', e.target.value)}
-                        placeholder="Enter mobile number"
-                        className="h-10 sm:h-11 flex-1 text-sm sm:text-base"
+                        className="h-10 sm:h-11 flex-1 text-sm sm:text-base bg-gray-50 text-gray-600 cursor-not-allowed"
+                        disabled
+                        readOnly
                         required
                       />
                       <Button
@@ -405,18 +532,19 @@ const UserOnboardingRegistration: React.FC = () => {
                       </Button>
                     </div>
 
-                                         {!isMobileVerified && formData.mobileNumber && (
-                       <p className="text-xs text-blue-600 flex items-center gap-1">
-                         <Phone className="h-3 w-3" />
-                         Click "Send OTP" to verify your mobile number
-                       </p>
-                     )}
-                     {isMobileVerified && (
-                       <p className="text-xs text-green-600 flex items-center gap-1">
-                         <CheckCircle className="h-3 w-3" />
-                         Mobile number verified successfully
-                       </p>
-                     )}
+                    {!isMobileVerified && formData.mobileNumber && !otpSent && (
+                      <p className="text-xs text-blue-600 flex items-center gap-1">
+                        <Phone className="h-3 w-3" />
+                        Click "Send OTP" to register and verify your mobile number
+                      </p>
+                    )}
+                    {isMobileVerified && (
+                      <p className="text-xs text-green-600 flex items-center gap-1">
+                        <CheckCircle className="h-3 w-3" />
+                        Mobile number verified successfully
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-500">Mobile number from invitation</p>
                   </div>
 
                   {/* OTP Verification */}
@@ -440,6 +568,9 @@ const UserOnboardingRegistration: React.FC = () => {
                           disabled={otpLoading || otp.length !== 6}
                           className="h-10 sm:h-11 px-3 sm:px-4 text-sm sm:text-base"
                         >
+                          {otpLoading ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          ) : null}
                           Verify
                         </Button>
                       </div>
@@ -547,6 +678,91 @@ const UserOnboardingRegistration: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+             {/* Success Popup Dialog */}
+       <Dialog open={showSuccessPopup} onOpenChange={setShowSuccessPopup}>
+         <DialogContent className="sm:max-w-md">
+           <DialogHeader>
+             <DialogTitle className="flex items-center gap-2">
+               <div className="p-2 bg-green-100 rounded-full">
+                 <CheckCircle2 className="h-6 w-6 text-green-600" />
+               </div>
+               Registration Successful!
+             </DialogTitle>
+             <DialogDescription className="text-left space-y-4">
+               <p className="text-base">
+                 Congratulations! Your account has been created successfully.
+               </p>
+               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                 <h4 className="font-medium text-green-800 mb-2">What's Next?</h4>
+                 <ul className="text-sm text-green-700 space-y-1">
+                   <li>• Your account is now active in the system</li>
+                   <li>• You can log in using your mobile number and password</li>
+                   <li>• Contact your administrator if you need any assistance</li>
+                 </ul>
+               </div>
+             </DialogDescription>
+           </DialogHeader>
+           <DialogFooter className="flex flex-col sm:flex-row gap-2">
+             <Button
+               onClick={() => navigate('/')}
+               className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
+             >
+               <ArrowLeft className="h-4 w-4 mr-2" />
+               Go to Login Page
+             </Button>
+           </DialogFooter>
+         </DialogContent>
+       </Dialog>
+
+       {/* User Already Exists Popup Dialog */}
+       <Dialog open={showUserExistsPopup} onOpenChange={setShowUserExistsPopup}>
+         <DialogContent className="sm:max-w-md">
+           <DialogHeader>
+             <DialogTitle className="flex items-center gap-2">
+               <div className="p-2 bg-orange-100 rounded-full">
+                 <AlertCircle className="h-6 w-6 text-orange-600" />
+               </div>
+               User Already Registered
+             </DialogTitle>
+             <DialogDescription className="text-left space-y-4">
+               <p className="text-base">
+                 An account with this mobile number is already registered in our system. You cannot register again with the same mobile number.
+               </p>
+               <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                 <h4 className="font-medium text-orange-800 mb-2">What should you do?</h4>
+                 <ul className="text-sm text-orange-700 space-y-1">
+                   <li>• Try logging in with your existing mobile number and password</li>
+                   <li>• If you forgot your password, use the "Forgot Password" option on the login page</li>
+                   <li>• Contact your administrator if you need help accessing your account</li>
+                 </ul>
+               </div>
+               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                 <h4 className="font-medium text-blue-800 mb-2">Need Help?</h4>
+                 <p className="text-sm text-blue-700">
+                   If you believe this is an error or need assistance, please contact your system administrator.
+                 </p>
+               </div>
+             </DialogDescription>
+           </DialogHeader>
+           <DialogFooter className="flex flex-col sm:flex-row gap-2">
+             <Button
+               onClick={() => navigate('/')}
+               className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
+             >
+               <ArrowLeft className="h-4 w-4 mr-2" />
+               Go to Login Page
+             </Button>
+             <Button
+               variant="outline"
+               onClick={() => setShowUserExistsPopup(false)}
+               className="w-full sm:w-auto"
+             >
+               Stay on This Page
+             </Button>
+           </DialogFooter>
+         </DialogContent>
+       </Dialog>
     </div>
   );
 };

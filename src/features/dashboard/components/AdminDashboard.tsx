@@ -226,7 +226,7 @@ export const AdminDashboard = () => {
           <div className="text-center py-8">
             <h2 className="text-2xl font-bold mb-4">Setup Complete</h2>
             <p className="text-muted-foreground mb-6">
-              Welcome to NexEagle easyHMS! Your hospital management system is ready to use.
+              Welcome to NexEagle HMS! Your hospital management system is ready to use.
             </p>
             <Button onClick={() => setShowSetupDialog(false)}>
               Get Started

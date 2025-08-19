@@ -68,7 +68,7 @@ export const PrescriptionSettings = () => {
   };
 
   const loadSettings = (): PrescriptionSettingsData => {
-    const stored = localStorage.getItem('easyHMS_prescriptionSettings');
+    const stored = localStorage.getItem('prescriptionSettings');
     if (stored) {
       try {
         const parsed = JSON.parse(stored) as PrescriptionSettingsData;
@@ -95,7 +95,7 @@ export const PrescriptionSettings = () => {
   const [settings, setSettings] = useState<PrescriptionSettingsData>(loadSettings());
 
   useEffect(() => {
-    const adminTemplateData = localStorage.getItem('easyHMS_adminTemplate');
+    const adminTemplateData = localStorage.getItem('adminTemplate');
     if (adminTemplateData) {
       try {
         setAdminTemplate(JSON.parse(adminTemplateData));
@@ -124,7 +124,7 @@ export const PrescriptionSettings = () => {
   };
 
   const handleSave = () => {
-    localStorage.setItem('easyHMS_prescriptionSettings', JSON.stringify(settings));
+    localStorage.setItem('prescriptionSettings', JSON.stringify(settings));
     toast({
       title: "Settings Saved",
       description: "Prescription settings updated successfully."

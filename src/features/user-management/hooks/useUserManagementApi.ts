@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { userManagementApi, RolesResponse, InviteUserRequest, InviteUserResponse, InvitedUser, OnboardedUser } from '../services/userManagementApi';
+import { userManagementApi, RolesResponse, InviteUserRequest, InviteUserResponse, InvitedUser, OnboardedUser, ManageInvitationRequest, ManageInvitationResponse } from '../services/userManagementApi';
 import { useToast } from '@/hooks/use-toast';
 
 // Hook for user management API calls
@@ -17,13 +17,14 @@ export const useUserManagementApi = () => {
     });
   };
 
-  // Get invited users
-  const getInvitedUsers = () => {
-    return useQuery<InvitedUser[]>({
-      queryKey: ['user-management', 'invited-users'],
-      queryFn: userManagementApi.getInvitedUsers,
+  // Get invited users with scope filtering
+  const getInvitedUsers = (hospitalId: string, scope: 'Pending' | 'Accepted' | 'Revoked' | 'ALL' = 'ALL') => {
+    return useQuery<{ success: boolean; message: string; invitations: InvitedUser[] }>({
+      queryKey: ['user-management', 'invited-users', hospitalId, scope],
+      queryFn: () => userManagementApi.getInvitedUsers(hospitalId, scope),
       staleTime: 2 * 60 * 1000, // 2 minutes
       gcTime: 5 * 60 * 1000, // 5 minutes
+      enabled: !!hospitalId, // Only run query if hospitalId is available
     });
   };
 
@@ -57,10 +58,32 @@ export const useUserManagementApi = () => {
     },
   });
 
+  // Manage invitation (resend or revoke)
+  const manageInvitation = useMutation<ManageInvitationResponse, Error, ManageInvitationRequest>({
+    mutationFn: userManagementApi.manageInvitation,
+    onSuccess: (data, variables) => {
+      const action = variables.scope === 'resend' ? 'resent' : 'revoked';
+      toast({
+        title: `Invitation ${action.charAt(0).toUpperCase() + action.slice(1)} Successfully!`,
+        description: data.message || `The invitation has been ${action}.`,
+      });
+      // Invalidate and refetch invited users
+      queryClient.invalidateQueries({ queryKey: ['user-management', 'invited-users'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Manage Invitation",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   return {
     getAllRoles,
     getInvitedUsers,
     getOnboardedUsers,
     inviteUser,
+    manageInvitation,
   };
 };

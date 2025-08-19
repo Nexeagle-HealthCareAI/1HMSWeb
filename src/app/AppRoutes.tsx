@@ -113,11 +113,7 @@ export const AppRoutes: React.FC = () => {
           } 
         />
 
-        {/* Redirect root to easyHMS */}
-        <Route 
-          path="/" 
-          element={<Navigate to="/" replace />} 
-        />
+
 
         {/* Protected Routes - Require Authentication */}
         {isActuallyAuthenticated ? (

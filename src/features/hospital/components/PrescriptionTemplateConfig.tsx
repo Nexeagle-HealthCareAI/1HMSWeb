@@ -86,7 +86,7 @@ export const PrescriptionTemplateConfig: React.FC<PrescriptionTemplateConfigProp
   // Load admin template if user is doctor
   useEffect(() => {
     if (userRole === 'doctor') {
-      const adminTemplateData = localStorage.getItem('easyHMS_adminTemplate');
+      const adminTemplateData = localStorage.getItem('adminTemplate');
       if (adminTemplateData) {
         const adminTemplate = JSON.parse(adminTemplateData);
         setDoctorTemplate(adminTemplate);
@@ -109,15 +109,15 @@ export const PrescriptionTemplateConfig: React.FC<PrescriptionTemplateConfigProp
     try {
       // Save to localStorage for now
       if (userRole === 'admin') {
-        localStorage.setItem('easyHMS_adminTemplate', JSON.stringify(template));
-        localStorage.setItem('easyHMS_adminTemplatePayload', JSON.stringify({
+        localStorage.setItem('adminTemplate', JSON.stringify(template));
+        localStorage.setItem('adminTemplatePayload', JSON.stringify({
           headerHtml: generateAdminHeaderHTML(template),
           footerHtml: generateAdminFooterHTML(template),
           template: template
         }));
       } else {
-        localStorage.setItem('easyHMS_doctorTemplate', JSON.stringify(template));
-        localStorage.setItem('easyHMS_doctorTemplatePayload', JSON.stringify({
+        localStorage.setItem('doctorTemplate', JSON.stringify(template));
+        localStorage.setItem('doctorTemplatePayload', JSON.stringify({
           headerHtml: generateDoctorHeaderHTML(template, doctorTemplate),
           footerHtml: generateDoctorFooterHTML(template, doctorTemplate),
           template: template
@@ -764,7 +764,7 @@ export const PrescriptionTemplateConfig: React.FC<PrescriptionTemplateConfigProp
                          <TemplatePreview
                template={template}
                userRole={userRole}
-               doctorSettings={userRole === 'doctor' ? JSON.parse(localStorage.getItem('easyHMS_prescriptionSettings') || '{}') : undefined}
+               doctorSettings={userRole === 'doctor' ? JSON.parse(localStorage.getItem('prescriptionSettings') || '{}') : undefined}
              />
           </CardContent>
         </Card>

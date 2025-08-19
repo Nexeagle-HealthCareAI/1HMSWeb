@@ -5,8 +5,8 @@ console.log('Clearing authentication data...');
 
 // Clear all authentication-related items
 localStorage.removeItem('accessToken');
-localStorage.removeItem('easyHMS_loggedIn');
-localStorage.removeItem('easyHMS_userRole');
+localStorage.removeItem('loggedIn');
+localStorage.removeItem('userRole');
 
 // Clear session storage
 sessionStorage.clear();

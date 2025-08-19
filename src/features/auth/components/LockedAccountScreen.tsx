@@ -23,7 +23,7 @@ export const LockedAccountScreen: React.FC<LockedAccountScreenProps> = ({
             className="h-6 w-6"
             style={{ width: '24px', height: '24px' }}
           />
-          <span className="font-bold text-base">NexEagle easyHMS</span>
+          <span className="font-bold text-base">NexEagle HMS</span>
         </div>
       </div>
 

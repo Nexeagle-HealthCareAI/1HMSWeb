@@ -1,15 +1,5 @@
 {
   "navigationFallback": {
     "rewrite": "/index.html"
-  },
-  "routes": [
-    {
-      "route": "/easyHMS/*",
-      "serve": "/index.html"
-    },
-    {
-      "route": "/",
-      "redirect": "/easyHMS/"
-    }
-  ]
+  }
 }

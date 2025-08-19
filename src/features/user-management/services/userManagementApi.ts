@@ -27,16 +27,34 @@ export interface InviteUserResponse {
   message: string;
 }
 
+export interface ManageInvitationRequest {
+  invitationId: string;
+  scope: 'resend' | 'revoke';
+  performedByUserId: string;
+}
+
+export interface ManageInvitationResponse {
+  success: boolean;
+  invitationId: string;
+  newRegistrationUrl: string;
+  status: string;
+  expiresAt: string;
+  message: string;
+}
+
 export interface InvitedUser {
   invitationId: string;
-  name: string;
-  email: string;
-  mobile: string;
+  hospitalId: string;
+  roleId: string;
   roleName: string;
-  status: 'pending' | 'accepted' | 'expired';
-  invitedBy: string;
-  invitedAt: string;
+  recipientName: string;
+  recipientMobile: string;
+  recipientEmail: string;
+  status: string;
   expiresAt: string;
+  acceptedAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
 }
 
 export interface OnboardedUser {
@@ -62,36 +80,28 @@ export const userManagementApi = {
     return apiClient.post(API_ENDPOINTS.USER_MANAGEMENT.INVITE_USER, data);
   },
 
-  // Get invited users (mock data for now)
-  getInvitedUsers: (): Promise<InvitedUser[]> => {
-    // TODO: Replace with actual API call when endpoint is ready
-    // return apiClient.get(API_ENDPOINTS.USER_MANAGEMENT.GET_INVITED_USERS);
-    
-    // Mock data for development
-    return Promise.resolve([
-      {
-        invitationId: '1',
-        name: 'Dr. John Doe',
-        email: 'john.doe@hospital.com',
-        mobile: '+1-555-0101',
-        roleName: 'Doctor',
-        status: 'pending',
-        invitedBy: 'Admin User',
-        invitedAt: '2024-01-15T10:00:00Z',
-        expiresAt: '2024-01-22T10:00:00Z'
-      },
-      {
-        invitationId: '2',
-        name: 'Nurse Jane Smith',
-        email: 'jane.smith@hospital.com',
-        mobile: '+1-555-0102',
-        roleName: 'Nurse',
-        status: 'accepted',
-        invitedBy: 'Admin User',
-        invitedAt: '2024-01-14T09:00:00Z',
-        expiresAt: '2024-01-21T09:00:00Z'
-      }
-    ]);
+  // Get invited users with scope filtering
+  getInvitedUsers: (hospitalId: string, scope: 'Pending' | 'Accepted' | 'Revoked' | 'ALL' = 'ALL'): Promise<{ success: boolean; message: string; invitations: InvitedUser[] }> => {
+    // Convert scope to API expected values
+    let apiScope: string;
+    switch (scope) {
+      case 'Revoked':
+        apiScope = 'revoke';
+        break;
+      case 'ALL':
+        apiScope = 'all';
+        break;
+      default:
+        apiScope = scope.toLowerCase();
+    }
+    const url = `${API_ENDPOINTS.USER_MANAGEMENT.GET_INVITED_USERS}?hospitalId=${hospitalId}&scope=${apiScope}`;
+    return apiClient.get(url);
+  },
+
+  // Manage invitation (resend or revoke)
+  manageInvitation: (data: ManageInvitationRequest): Promise<ManageInvitationResponse> => {
+    const url = `${API_ENDPOINTS.USER_MANAGEMENT.MANAGE_INVITATION}?invitationId=${data.invitationId}&scope=${data.scope}&performedByUserId=${data.performedByUserId}`;
+    return apiClient.post(url);
   },
 
   // Get onboarded users (mock data for now)

@@ -98,6 +98,19 @@ export interface UserPermissionsResponse {
   permissionKeys: string[];
 }
 
+export interface ValidateTokenRequest {
+  token: string;
+}
+
+export interface ValidateTokenResponse {
+  success: boolean;
+  message: string;
+  name: string | null;
+  roleName: string | null;
+  email: string | null;
+  mobile: string;
+}
+
 // Auth API service
 export const authApi = {
   // Login
@@ -137,6 +150,11 @@ export const authApi = {
   // Get user permissions
   getUserPermissions: (data: UserPermissionsRequest): Promise<UserPermissionsResponse> => {
     return apiClient.get(`${API_ENDPOINTS.USER.PERMISSIONS}?userId=${data.userId}`);
+  },
+
+  // Validate onboarding token
+  validateToken: (data: ValidateTokenRequest): Promise<ValidateTokenResponse> => {
+    return apiClient.get(`${API_ENDPOINTS.USER_MANAGEMENT.VALIDATE_TOKEN}?token=${encodeURIComponent(data.token)}`);
   }
 };
 
