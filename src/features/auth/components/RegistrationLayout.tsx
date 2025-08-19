@@ -23,17 +23,8 @@ export const RegistrationLayout: React.FC<RegistrationLayoutProps> = ({
 
   // Determine if back button should be shown
   const shouldShowBackButton = () => {
-    if (currentStep === 1) {
-      return true; // Always show on step 1 (goes to login)
-    }
-    if (currentStep === 2) {
-      return true; // Always show on step 2 (goes back to step 1)
-    }
-    if (currentStep === 3) {
-      return true; // Always show back button on step 3
-    }
-
-    return true;
+    // Hide back button on all steps
+    return false;
   };
 
   return (
@@ -101,18 +92,8 @@ export const RegistrationLayout: React.FC<RegistrationLayoutProps> = ({
       <div className="flex-1 lg:w-1/3 flex items-center justify-center p-6 lg:p-8">
         <Card className="w-full max-w-md shadow-2xl border-0 bg-white/80 backdrop-blur-xl">
           <CardHeader className="text-center space-y-4 pb-6">
-            {/* Back Button */}
-            <div className="flex items-center justify-between">
-              {shouldShowBackButton() && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={currentStep === 1 ? onSwitchToLogin : onBack}
-                  className="p-2 hover:bg-gray-100 rounded-full"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-              )}
+            {/* Progress Indicator */}
+            <div className="flex items-center justify-end">
               <div className="text-right">
                 <div className="text-xs text-muted-foreground mb-1">Step {currentStep} of 3</div>
                 <Progress value={progressPercentage} className="w-20 h-2" />
@@ -141,7 +122,7 @@ export const RegistrationLayout: React.FC<RegistrationLayoutProps> = ({
             </div>
           </CardHeader>
           
-          <CardContent className="bg-white space-y-6">
+          <CardContent className="bg-white space-y-4">
             {children}
           </CardContent>
         </Card>

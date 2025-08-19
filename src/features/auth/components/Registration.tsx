@@ -422,11 +422,37 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
       return;
     }
 
+    // Validate email before proceeding
+    const trimmedEmail = email.trim();
+    const emailError = ValidationUtils.validateEmail(trimmedEmail);
+    if (emailError) {
+      toast({
+        title: "Invalid Email",
+        description: emailError,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate password strength
+    const trimmedPassword = password.trim();
+    if (trimmedPassword) {
+      const passwordValidation = ValidationUtils.validatePassword(trimmedPassword);
+      if (!passwordValidation.isValid) {
+        toast({
+          title: "Invalid Password",
+          description: passwordValidation.errors[0] || "Password does not meet requirements",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     try {
       const setPasswordData = {
         userId: userId,
-        email: email.trim(),
-        password: password.trim()
+        email: trimmedEmail,
+        password: trimmedPassword
       };
 
       const response = await setPasswordMutation.mutateAsync(setPasswordData);

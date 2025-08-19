@@ -283,55 +283,100 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             </div>
 
             <div className="flex items-center gap-4">
-              {/* Profile Completion Meter */}
+              {/* Enhanced Profile Completion Meter */}
               {profileScore < 100 ? (
-                <div className="hidden md:flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
-                  <div className="w-16 h-2 bg-background rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-primary transition-all duration-300"
-                      style={{ width: `${profileScore}%` }}
-                    />
+                <div className="hidden md:flex items-center gap-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 rounded-xl px-4 py-3 border border-amber-200/50 dark:border-amber-800/50 shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer"
+                     onClick={() => navigate(profileTarget)}>
+                  {/* Animated Progress Circle */}
+                  <div className="relative w-12 h-12">
+                    <svg className="w-12 h-12 transform -rotate-90" viewBox="0 0 48 48">
+                      {/* Background circle */}
+                      <circle
+                        cx="24"
+                        cy="24"
+                        r="18"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        fill="none"
+                        className="text-amber-200 dark:text-amber-800"
+                      />
+                      {/* Progress circle with animation */}
+                      <circle
+                        cx="24"
+                        cy="24"
+                        r="18"
+                        stroke="url(#profileGradient)"
+                        strokeWidth="3"
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeDasharray={`${(profileScore / 100) * 113.1} 113.1`}
+                        className="transition-all duration-1000 ease-out animate-pulse"
+                      />
+                      <defs>
+                        <linearGradient id="profileGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#f59e0b" />
+                          <stop offset="100%" stopColor="#ea580c" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    {/* Percentage text */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-xs font-bold text-amber-700 dark:text-amber-300">{profileScore}%</span>
+                    </div>
+                    {/* Pulsing dot */}
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-ping opacity-75"></div>
                   </div>
-                  <span className="text-xs font-medium">{profileScore}%</span>
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="p-0 h-auto text-xs text-healthcare-primary"
-                    onClick={() => navigate(profileTarget)}
-                  >
-                    Complete Profile
-                  </Button>
+                  
+                  {/* Text content */}
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold text-amber-800 dark:text-amber-200 group-hover:text-orange-700 dark:group-hover:text-orange-300 transition-colors">
+                      Complete Profile
+                    </span>
+                    <span className="text-xs text-amber-600 dark:text-amber-400">
+                      {100 - profileScore}% remaining
+                    </span>
+                  </div>
+                  
+                  {/* Animated arrow */}
+                  <div className="text-amber-600 dark:text-amber-400 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
+                    <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
                 </div>
               ) : (
-                <div className="hidden md:flex items-center gap-2 bg-green-100 dark:bg-green-900/20 rounded-lg px-3 py-2 border border-green-200 dark:border-green-800">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span className="text-xs font-medium text-green-700 dark:text-green-300">Profile Complete!</span>
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="p-0 h-auto text-xs text-green-600 hover:text-green-700"
-                    onClick={() => navigate(profileTarget)}
-                  >
-                    View Profile
-                  </Button>
+                <div className="hidden md:flex items-center gap-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-xl px-4 py-3 border border-green-200/50 dark:border-green-800/50 shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer"
+                     onClick={() => navigate(profileTarget)}>
+                  {/* Success circle with animation */}
+                  <div className="relative w-12 h-12">
+                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center animate-pulse">
+                      <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                    </div>
+                    {/* Success sparkles */}
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-ping"></div>
+                    <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-emerald-400 rounded-full animate-ping animation-delay-300"></div>
+                  </div>
+                  
+                  {/* Text content */}
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold text-green-800 dark:text-green-200 group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition-colors">
+                      Profile Complete!
+                    </span>
+                    <span className="text-xs text-green-600 dark:text-green-400">
+                      All set up
+                    </span>
+                  </div>
+                  
+                  {/* Animated arrow */}
+                  <div className="text-green-600 dark:text-green-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                    <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
                 </div>
               )}
 
-              {/* Doctor Profile Completion Badge */}
-              {(userRole === 'Doctor' || userRole === 'AdminDoctor') && doctorProfileCompletion >= 100 && (
-                <div className="hidden md:flex items-center gap-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg px-3 py-2 border border-blue-200 dark:border-blue-800">
-                  <Stethoscope className="h-4 w-4 text-blue-600" />
-                  <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Professional Profile Complete!</span>
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="p-0 h-auto text-xs text-blue-600 hover:text-blue-700"
-                    onClick={() => navigate('/profile?tab=professional')}
-                  >
-                    View
-                  </Button>
-                </div>
-              )}
+              
 
               {/* Notifications */}
               <Button variant="ghost" size="sm" className="relative">

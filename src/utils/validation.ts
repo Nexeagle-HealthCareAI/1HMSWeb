@@ -15,12 +15,18 @@ export const ValidationUtils = {
     return emailRegex.test(email);
   },
 
-  // Validate mobile number (basic)
+  // Validate mobile number (10 digits only)
   isValidMobile: (mobile: string): boolean => {
     // Remove all non-digit characters for validation
-    const cleanMobile = mobile.replace(/\D/g, '');
-    // Check if it's 10-15 digits
-    return cleanMobile.length >= 10 && cleanMobile.length <= 15;
+    let cleanMobile = mobile.replace(/\D/g, '');
+    
+    // If the number starts with 0, remove it for validation
+    if (cleanMobile.startsWith('0')) {
+      cleanMobile = cleanMobile.substring(1);
+    }
+    
+    // Check if it's exactly 10 digits
+    return cleanMobile.length === 10;
   },
 
   // Validate OTP format
@@ -125,10 +131,28 @@ export const ValidationUtils = {
     });
   },
 
-  // Clean mobile number for API
+  // Clean mobile number for API - ensure 10 digits without prefix
   cleanMobileNumber: (mobile: string): string => {
     // Remove all non-digit characters
-    return mobile.replace(/\D/g, '');
+    let cleaned = mobile.replace(/\D/g, '');
+    
+    // If the number starts with 0, remove it
+    if (cleaned.startsWith('0')) {
+      cleaned = cleaned.substring(1);
+    }
+    
+    // If the number is longer than 10 digits, take only the last 10
+    if (cleaned.length > 10) {
+      cleaned = cleaned.slice(-10);
+    }
+    
+    // Ensure it's exactly 10 digits
+    if (cleaned.length < 10) {
+      // Pad with zeros if less than 10 digits (though this shouldn't happen for valid mobile numbers)
+      cleaned = cleaned.padStart(10, '0');
+    }
+    
+    return cleaned;
   },
 
   // Validate full name
@@ -186,6 +210,31 @@ export const ValidationUtils = {
     if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
       return 'Password must contain at least one special character';
     }
+    return undefined;
+  },
+
+  // Validate mobile number with error message
+  validateMobileWithError: (mobile: string): string | undefined => {
+    if (!mobile.trim()) {
+      return 'Mobile number is required';
+    }
+    
+    let cleanMobile = mobile.replace(/\D/g, '');
+    
+    // If the number starts with 0, remove it for validation
+    if (cleanMobile.startsWith('0')) {
+      cleanMobile = cleanMobile.substring(1);
+    }
+    
+    if (cleanMobile.length !== 10) {
+      return 'Mobile number must be exactly 10 digits';
+    }
+    
+    // Check if it starts with a valid digit (6-9 for Indian mobile numbers)
+    if (!/^[6-9]/.test(cleanMobile)) {
+      return 'Mobile number must start with 6, 7, 8, or 9';
+    }
+    
     return undefined;
   }
 }; 

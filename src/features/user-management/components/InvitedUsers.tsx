@@ -44,13 +44,17 @@ import { useUserManagementApi } from '../hooks/useUserManagementApi';
 import { InvitedUser } from '../services/userManagementApi';
 import { useAuthStore } from '@/store/authStore';
 
-export const InvitedUsers: React.FC = () => {
+interface InvitedUsersProps {
+  initialScope?: 'Pending' | 'Accepted' | 'Revoked' | 'ALL';
+}
+
+export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL' }) => {
   const authStore = useAuthStore.getState();
   const hospitalId = authStore.getHospitalId();
   const currentUserId = authStore.getUserId();
   
   // Scope state for filtering
-  const [activeScope, setActiveScope] = useState<'Pending' | 'Accepted' | 'Revoked' | 'ALL'>('ALL');
+  const [activeScope, setActiveScope] = useState<'Pending' | 'Accepted' | 'Revoked' | 'ALL'>(initialScope);
   
   // Action states
   const [selectedInvitation, setSelectedInvitation] = useState<InvitedUser | null>(null);

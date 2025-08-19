@@ -36,9 +36,11 @@ import { InvitationSuccessModal } from './InvitationSuccessModal';
 import { useAuthStore } from '@/store/authStore';
 import { useMutation } from '@tanstack/react-query';
 import { InviteUserResponse } from '../services/userManagementApi';
+import { ValidationUtils } from '@/utils/validation';
 
 export const UserManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState('onboarded');
+  const [invitedUsersScope, setInvitedUsersScope] = useState<'Pending' | 'Accepted' | 'Revoked' | 'ALL'>('ALL');
   
   // API hooks
   const { getAllRoles, inviteUser } = useUserManagementApi();
@@ -79,7 +81,7 @@ export const UserManagement: React.FC = () => {
         hospitalId: hospitalId,
         roleId: newUser.selectedRole,
         name: newUser.name,
-        mobile: newUser.phone,
+        mobile: ValidationUtils.cleanMobileNumber(newUser.phone),
         email: newUser.email,
         invitedByUserId: currentUserId
       };
@@ -129,6 +131,13 @@ export const UserManagement: React.FC = () => {
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  // Handle view invited users navigation
+  const handleViewInvitedUsers = () => {
+    setActiveTab('invited');
+    setInvitedUsersScope('ALL');
+    setShowSuccessModal(false);
   };
 
   return (
@@ -229,7 +238,7 @@ export const UserManagement: React.FC = () => {
             </div>
           </div>
 
-          <InvitedUsers />
+          <InvitedUsers initialScope={invitedUsersScope} />
         </TabsContent>
       </Tabs>
 
@@ -336,6 +345,7 @@ export const UserManagement: React.FC = () => {
       <InvitationSuccessModal
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
+        onViewInvitedUsers={handleViewInvitedUsers}
         invitedUserName={invitedUserInfo.name}
         invitedUserEmail={invitedUserInfo.email}
         invitedUserRole={invitedUserInfo.role}

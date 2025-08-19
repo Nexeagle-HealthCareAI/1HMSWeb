@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
@@ -51,10 +51,8 @@ import {
 } from './index';
 // Removed ProfileCompletionBanner from Admin panel
 import { useHospitalApi } from '@/hooks/useApi';
-import { ProfilePage } from '@/features/profile/components/ProfilePage';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 
 
 
@@ -65,7 +63,6 @@ export const AdminDashboard = () => {
   const [currentView, setCurrentView] = useState('dashboard');
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
-  const [showProfilePage, setShowProfilePage] = useState(false);
 
   // Fetch hospital profile status and compute completion from API
   const authStoreRef = useAuthStore.getState();
@@ -77,10 +74,34 @@ export const AdminDashboard = () => {
   const isContactInfoComplete = hospitalData?.profileStatus?.isContactInfoComplete ?? false;
   const accessUnlocked = isBasicInfoComplete && isLocationInfoComplete; // allow admin access if both true
 
-  // Use the profile completion hook to get API-based completion percentage
-  const { completionPercentage: profileScore } = useProfileCompletion();
   const authStore = useAuthStore.getState();
   const userRole = authStore.getUserRole() || 'Admin';
+
+  // Auto-scroll to Hospital Branding section when navigating to hospital config
+  useEffect(() => {
+    if (currentView === 'system-config-hospital') {
+      // Use a timeout to ensure the component has rendered and tab has switched
+      const timer = setTimeout(() => {
+        // Try to find the Hospital Branding content first (since the tab should be active)
+        const hospitalBrandingContent = document.querySelector('[data-testid="hospital-branding-content"]');
+        const hospitalBrandingTab = document.querySelector('[data-testid="hospital-branding-tab"]');
+        const systemConfigModule = document.querySelector('[data-module="system-config-hospital"]');
+        
+        // Priority order: content section, then tab, then module
+        const targetElement = hospitalBrandingContent || hospitalBrandingTab || systemConfigModule;
+        
+        if (targetElement) {
+          targetElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start',
+            inline: 'nearest' 
+          });
+        }
+      }, 500); // Allow extra time for tab switching and rendering
+
+      return () => clearTimeout(timer);
+    }
+  }, [currentView]);
 
 
 
@@ -137,15 +158,7 @@ export const AdminDashboard = () => {
    // { id: 'audit-security', name: 'Audit & Security', icon: ShieldCheck, description: 'Logs & Security' }
   ];
 
-  // Show profile page if requested
-  if (showProfilePage) {
-    return (
-      <ProfilePage 
-        onBack={() => setShowProfilePage(false)} 
-        userType={userRole as any}
-      />
-    );
-  }
+
 
   return (
     <div className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle">
@@ -250,19 +263,6 @@ export const AdminDashboard = () => {
           <p className="text-muted-foreground">Hospital Management Overview</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {/* Profile Completion Indicator */}
-          {(userRole === 'AdminDoctor' || userRole === 'Doctor') && profileScore < 90 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowProfilePage(true)}
-              className="text-blue-600 border-blue-200 hover:bg-blue-50"
-            >
-              <User className="h-4 w-4 mr-2" />
-              Profile {profileScore}%
-            </Button>
-          )}
-          
           <Select defaultValue="today">
             <SelectTrigger className="w-[120px] sm:w-[150px]">
               <SelectValue />
@@ -364,7 +364,11 @@ export const AdminDashboard = () => {
       {currentView === 'system-config' && <SystemConfigModule />}
 
       {/* Hospital Registration Module */}
-      {currentView === 'system-config-hospital' && <SystemConfigModule focusTab="hospital" />}
+      {currentView === 'system-config-hospital' && (
+        <div data-module="system-config-hospital">
+          <SystemConfigModule focusTab="hospital" />
+        </div>
+      )}
 
       {/* Billing & Insurance Module */}
       {currentView === 'billing-insurance' && <BillingInsuranceModule />}

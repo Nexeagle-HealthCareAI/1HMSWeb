@@ -34,7 +34,8 @@ import {
   Search,
   FileText,
   Lock,
-  Download
+  Download,
+  ArrowRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -245,6 +246,133 @@ export const ClinicalDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle">
+      {/* Doctor Profile Completion Banner - show until 100% */}
+      {!isProfileComplete && (userRole === 'Doctor' || userRole === 'AdminDoctor') && (
+        <div className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-white to-emerald-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-emerald-950/20 border border-slate-200/60 dark:border-slate-700/50 rounded-2xl shadow-xl shadow-slate-200/20 dark:shadow-slate-900/30">
+          {/* Subtle background pattern */}
+          <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.05]">
+            <div className="absolute inset-0" style={{
+              backgroundImage: `radial-gradient(circle at 25% 25%, #10b981 2px, transparent 2px)`,
+              backgroundSize: '24px 24px'
+            }}></div>
+          </div>
+          
+          {/* Main content */}
+          <div className="relative p-8">
+            <div className="flex items-start justify-between mb-6">
+              <div className="flex items-start gap-5">
+                {/* Professional icon with gradient background */}
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-2xl blur-sm opacity-30"></div>
+                  <div className="relative p-4 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl shadow-lg">
+                    <Stethoscope className="h-8 w-8 text-white drop-shadow-sm" />
+                  </div>
+                </div>
+                
+                {/* Content */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+                      Professional Profile Setup
+                    </h2>
+                    <div className="px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-semibold rounded-full border border-amber-200 dark:border-amber-800">
+                      REQUIRED
+                    </div>
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-300 text-base leading-relaxed max-w-2xl">
+                    Complete your professional credentials and specialization details to access all clinical management features and ensure compliance with medical standards.
+                  </p>
+                </div>
+              </div>
+              
+              {/* Progress circle */}
+              <div className="flex flex-col items-center">
+                <div className="relative w-20 h-20">
+                  {/* Background circle */}
+                  <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 80 80">
+                    <circle
+                      cx="40"
+                      cy="40"
+                      r="30"
+                      stroke="currentColor"
+                      strokeWidth="8"
+                      fill="none"
+                      className="text-slate-200 dark:text-slate-700"
+                    />
+                    {/* Progress circle */}
+                    <circle
+                      cx="40"
+                      cy="40"
+                      r="30"
+                      stroke="url(#gradient)"
+                      strokeWidth="8"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeDasharray={`${(doctorProfileCompletion / 100) * 188.5} 188.5`}
+                      className="transition-all duration-700 ease-out"
+                    />
+                    <defs>
+                      <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#10b981" />
+                        <stop offset="100%" stopColor="#0d9488" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  {/* Percentage text */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-2xl font-bold text-slate-700 dark:text-slate-200">{doctorProfileCompletion}%</span>
+                  </div>
+                </div>
+                <span className="text-xs text-slate-500 dark:text-slate-400 mt-2 font-medium uppercase tracking-wider">Complete</span>
+              </div>
+            </div>
+            
+            {/* Progress bar section */}
+            <div className="mb-6">
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Setup Progress</span>
+                <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">{doctorProfileCompletion} of 100%</span>
+              </div>
+              <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3 overflow-hidden shadow-inner">
+                <div 
+                  className="bg-gradient-to-r from-emerald-500 to-teal-500 h-3 rounded-full transition-all duration-700 ease-out relative shadow-sm"
+                  style={{ width: `${doctorProfileCompletion}%` }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent rounded-full"></div>
+                  <div className="absolute right-0 top-0 bottom-0 w-1 bg-white/40 rounded-r-full"></div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Action section */}
+            <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-50 dark:bg-red-900/20 rounded-full">
+                  <Lock className="h-4 w-4 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    Clinical Features Restricted
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Complete setup to unlock patient management & prescriptions
+                  </p>
+                </div>
+              </div>
+              
+              <Button 
+                onClick={() => navigate('/profile?tab=professional')} 
+                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] border-0"
+              >
+                <UserCheck className="mr-2 h-5 w-5" />
+                Complete Setup
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top Navigation */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>

@@ -1,12 +1,10 @@
 import React from 'react';
 import { 
   Settings,
-  Building2,
   FileText,
   Palette
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DepartmentManagement } from './DepartmentManagement';
 import { HospitalBrandingConfig } from './HospitalBrandingConfig';
 import { useSystemConfiguration } from '../hooks';
 import PrescriptionCanvasEditor from '@/features/prescriptions/PrescriptionCanvasEditor';
@@ -19,9 +17,7 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
   const {
     activeTab,
     setActiveTab,
-    departments,
     hospitalBranding,
-    handleDepartmentChange,
     handleBrandingChange
   } = useSystemConfiguration(focusTab);
 
@@ -33,28 +29,16 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="departments" className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Departments</span>
-          </TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="prescription" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             <span className="hidden sm:inline">Prescription Templates</span>
           </TabsTrigger>
-          <TabsTrigger value="branding" className="flex items-center gap-2">
+          <TabsTrigger value="branding" className="flex items-center gap-2" data-testid="hospital-branding-tab">
             <Palette className="h-4 w-4" />
             <span className="hidden sm:inline">Hospital Branding</span>
           </TabsTrigger>
         </TabsList>
-
-        {/* Departments Tab */}
-        <TabsContent value="departments">
-          <DepartmentManagement
-            departments={departments}
-            onDepartmentsChange={handleDepartmentChange}
-          />
-        </TabsContent>
 
         {/* Prescription Template Tab */}
         <TabsContent value="prescription">
@@ -73,7 +57,7 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
         </TabsContent>
 
         {/* Hospital Branding Tab */}
-        <TabsContent value="branding">
+        <TabsContent value="branding" data-testid="hospital-branding-content">
           <HospitalBrandingConfig
             branding={hospitalBranding}
             onBrandingChange={handleBrandingChange}

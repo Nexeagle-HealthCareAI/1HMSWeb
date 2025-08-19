@@ -65,6 +65,10 @@ const UserOnboardingRegistration: React.FC = () => {
   const [otp, setOtp] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
   
+  // Resend OTP timer states
+  const [resendTimer, setResendTimer] = useState(0);
+  const [canResendOtp, setCanResendOtp] = useState(false);
+  
   // Token validation states
   const [isValidatingToken, setIsValidatingToken] = useState(true);
   const [isTokenValid, setIsTokenValid] = useState(false);
@@ -95,6 +99,23 @@ const UserOnboardingRegistration: React.FC = () => {
       setTokenValidationMessage("No invitation token provided.");
     }
   }, [token]);
+
+  // Handle resend timer countdown
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => {
+          if (prev <= 1) {
+            setCanResendOtp(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
 
   const validateToken = async () => {
     if (!token) {
@@ -194,6 +215,9 @@ const UserOnboardingRegistration: React.FC = () => {
 
         if (otpResponse.success) {
           setOtpSent(true);
+          // Start 30-second timer for resend
+          setResendTimer(30);
+          setCanResendOtp(false);
           toast({
             title: "Registration Initiated",
             description: "User registered successfully. Please check your mobile for the verification code."
@@ -238,6 +262,38 @@ const UserOnboardingRegistration: React.FC = () => {
           variant: "destructive"
         });
       }
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    try {
+      setOtpLoading(true);
+      const cleanMobile = ValidationUtils.cleanMobileNumber(formData.mobileNumber);
+      
+      const otpResponse = await sendOTPMutation.mutateAsync({
+        mobileNumber: cleanMobile
+      });
+
+      if (otpResponse.success) {
+        // Reset timer for another 30 seconds
+        setResendTimer(30);
+        setCanResendOtp(false);
+        setOtp(''); // Clear current OTP input
+        toast({
+          title: "OTP Resent",
+          description: "A new verification code has been sent to your mobile number."
+        });
+      } else {
+        throw new Error(otpResponse.message || 'Failed to resend OTP');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Resend Failed",
+        description: error.message || "Failed to resend OTP. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setOtpLoading(false);
     }
@@ -572,6 +628,30 @@ const UserOnboardingRegistration: React.FC = () => {
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                           ) : null}
                           Verify
+                        </Button>
+                      </div>
+                      
+                      {/* Resend OTP Section */}
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-blue-200">
+                        <div className="text-sm text-blue-700">
+                          {resendTimer > 0 ? (
+                            <span>Resend OTP in {resendTimer}s</span>
+                          ) : (
+                            <span>Didn't receive the code?</span>
+                          )}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleResendOTP}
+                          disabled={!canResendOtp || otpLoading}
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-100 text-sm p-2 h-auto"
+                        >
+                          {otpLoading ? (
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-1"></div>
+                          ) : null}
+                          Resend OTP
                         </Button>
                       </div>
                     </div>

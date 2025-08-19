@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
+import { ValidationUtils } from '@/utils/validation';
 
 // Gender options
 const genderOptions = [
@@ -387,7 +388,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
       const updateData: UserProfileUpdateRequest = {
         userId,
-        mobileNumber: profileData.personal.phone,
+        mobileNumber: ValidationUtils.cleanMobileNumber(profileData.personal.phone),
         isActive: true,
         fullName: profileData.personal.fullName,
         gender: profileData.personal.gender || '',
@@ -429,7 +430,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
       const updateData: UserProfileUpdateRequest = {
         userId,
-        mobileNumber: profileData.personal.phone,
+        mobileNumber: ValidationUtils.cleanMobileNumber(profileData.personal.phone),
         isActive: true,
         fullName: profileData.personal.fullName,
         gender: profileData.personal.gender || '',
