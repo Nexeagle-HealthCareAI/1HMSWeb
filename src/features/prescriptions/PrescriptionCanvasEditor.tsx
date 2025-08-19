@@ -372,15 +372,25 @@ const PrescriptionCanvasEditor: React.FC = () => {
 
   const handleCanvasClick = (e: React.MouseEvent) => {
     if (e.target === canvasRef.current) {
-      setSelectedId(null);
-      closeAllToolbars();
+      setSelectedId(null); // Unselect element
+      closeAllToolbars(); // Close all toolbars including element toolbar
     }
   };
 
   const handleElementClick = (elementId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setSelectedId(elementId);
-    setShowElementToolbar(true);
+    
+    // If clicking the same element that's already selected, toggle it off
+    if (selectedId === elementId) {
+      setSelectedId(null);
+      setShowElementToolbar(false);
+    } else {
+      // If clicking a different element or no element selected, select this one
+      setSelectedId(elementId);
+      setShowElementToolbar(true);
+    }
+    
+    // Always close background controls and templates when clicking elements
     setShowBackgroundControls(false);
     setShowTemplates(false);
   };
