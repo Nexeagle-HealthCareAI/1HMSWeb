@@ -15,17 +15,7 @@ export const useProfileCompletion = () => {
   // Fetch doctor profile data - only for doctor users
   const { data: doctorProfileResponse, error: doctorProfileError } = useDoctorApi.getDoctorProfile(userId || '');
   
-  // Debug logging
-  if (userRole === 'Doctor' || userRole === 'AdminDoctor') {
-    console.log('Doctor Profile Debug:', {
-      userId,
-      userRole,
-      doctorProfileResponse,
-      doctorProfileError,
-      errorStatus: doctorProfileError?.response?.status,
-      profileCompletionPercentage: (doctorProfileResponse as DoctorProfileResponse)?.profileCompletionPercentage
-    });
-  }
+
 
   const completionPercentage = useMemo(() => {
     // Check if userProfile has profileCompletionPercentage from API
@@ -34,7 +24,6 @@ export const useProfileCompletion = () => {
       
       // If profileCompletionPercentage is available from API, use it
       if (userProfile.profileCompletionPercentage !== undefined) {
-        console.log('Using profileCompletionPercentage from API:', userProfile.profileCompletionPercentage);
         return userProfile.profileCompletionPercentage;
       }
     }

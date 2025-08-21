@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -7,20 +7,23 @@ import { CalendarHeader } from './components/CalendarHeader';
 import { Legend } from './components/Legend';
 import { EditShiftModal } from './components/EditShiftModal';
 import { PersonalizedScheduleModal } from './components/PersonalizedScheduleModal';
-import { useCalendarEvents, useCreateOverride, useDeleteOverride, useCreateBlock, useDeleteBlock } from './hooks/useCalendar';
+import { DeleteTimeOffDialog } from './components/DeleteTimeOffDialog';
+import { CancelOverrideDialog } from './components/CancelOverrideDialog';
+import { useCalendarEvents, useCreateOverride, useDeleteOverride, useCreateBlock, useDeleteBlock, useTimeOff, useCreateTimeOff, useDeleteTimeOff, useDoctorCalendarConfig } from './hooks/useCalendar';
 import { CalendarEvent, CreateOverridePayload, CreateBlockPayload, ShiftName } from './api/types';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/store';
 import { useUserDetails } from '@/hooks/useUserProfileApi';
-import { Button } from '@/components/ui/button';
-import { X, Calendar, Clock, MousePointer } from 'lucide-react';
+import { useDoctorProfile } from '@/features/doctor/hooks/useDoctorProfile';
 
 export const DoctorCalendarPage: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState<'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'>('dayGridMonth');
-  const [showWelcomeBanner, setShowWelcomeBanner] = useState(true);
+  const [view, setView] = useState<'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'>('timeGridDay');
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const calendarRef = useRef<FullCalendar>(null);
   
   // Modal states
@@ -39,14 +42,62 @@ export const DoctorCalendarPage: React.FC = () => {
     initialStartDateTime: undefined as string | undefined,
     initialEndDateTime: undefined as string | undefined
   });
+
+  const [deleteTimeOffModal, setDeleteTimeOffModal] = useState({
+    open: false,
+    timeOffData: undefined as {
+      reason: string;
+      fromDate: string;
+      toDate: string;
+      timeOffId: string;
+    } | undefined
+  });
+
+  // Cancel override modal state
+  const [cancelOverrideModal, setCancelOverrideModal] = useState({
+    open: false,
+    overrideData: undefined as {
+      overrideId: string;
+      shiftName: string;
+      date: string;
+      startTime: string;
+      endTime: string;
+    } | undefined
+  });
+
+  // Success dialog state
+  const [successDialog, setSuccessDialog] = useState({
+    open: false,
+    title: '',
+    message: '',
+    details: [] as string[]
+  });
   
   const { toast } = useToast();
   const { getUserId } = useAuthStore();
-  const doctorId = getUserId() || '';
-  const { data: userDetailsResponse } = useUserDetails(doctorId);
+  const userId = getUserId() || '';
   
-  // Get doctor name
-  const doctorName = userDetailsResponse?.userProfile?.fullName || userDetailsResponse?.mobileNumber || 'Doctor';
+  // Direct doctor API call for lazy loading - independent of dashboard
+  const { data: doctorProfile, isLoading: doctorProfileLoading, error: doctorProfileError } = useDoctorProfile(userId);
+  
+  // Log detailed error information and auth state
+  React.useEffect(() => {
+    if (doctorProfileError) {
+      console.error('Doctor Profile Error Details:', {
+        error: doctorProfileError,
+        message: doctorProfileError.message,
+        stack: doctorProfileError.stack,
+        userId
+      });
+    }
+  }, [doctorProfileError, userId]);
+  const { data: userDetailsResponse } = useUserDetails(userId);
+  
+  // Use doctorId from doctor profile response - wait for it to load
+  const doctorId = doctorProfile?.doctorId;
+  
+  // Get doctor name - prioritize from doctor profile, fallback to user details
+  const doctorName = doctorProfile?.name || userDetailsResponse?.userProfile?.fullName || userDetailsResponse?.mobileNumber || 'Doctor';
   
   // Get date range for API calls
   const getDateRange = useCallback(() => {
@@ -76,14 +127,36 @@ export const DoctorCalendarPage: React.FC = () => {
   
   const { fromISO, toISO } = getDateRange();
   
+  // Calculate number of days based on view
+  const getDaysCount = useCallback(() => {
+    switch (view) {
+      case 'dayGridMonth':
+        return 30; // Approximate days in a month view
+      case 'timeGridWeek':
+        return 7; // 7 days in a week
+      case 'timeGridDay':
+        return 1; // 1 day
+      default:
+        return 30;
+    }
+  }, [view]);
+  
+  const daysCount = getDaysCount();
+  
   // Queries
-  const { data: events = [], isLoading: eventsLoading } = useCalendarEvents(doctorId, fromISO, toISO);
+  const { data: calendarConfig, isLoading: configLoading } = useDoctorCalendarConfig(doctorId, fromISO, daysCount);
+  const { data: events = [], isLoading: eventsLoading } = useCalendarEvents(doctorId, fromISO, toISO, calendarConfig);
+  const { data: timeOffData, isLoading: timeOffLoading } = useTimeOff(doctorId);
+  
+
   
   // Mutations
   const createOverrideMutation = useCreateOverride();
   const deleteOverrideMutation = useDeleteOverride();
   const createBlockMutation = useCreateBlock();
   const deleteBlockMutation = useDeleteBlock();
+  const createTimeOffMutation = useCreateTimeOff();
+  const deleteTimeOffMutation = useDeleteTimeOff();
   
   // Handle view changes
   React.useEffect(() => {
@@ -91,6 +164,13 @@ export const DoctorCalendarPage: React.FC = () => {
       const calendarApi = calendarRef.current.getApi();
       if (calendarApi) {
         calendarApi.changeView(view);
+        
+        // Scroll to 9 AM when switching to day view
+        if (view === 'timeGridDay') {
+          setTimeout(() => {
+            calendarApi.scrollToTime('09:00:00');
+          }, 100); // Small delay to ensure view is fully rendered
+        }
       }
     }
   }, [view]);
@@ -104,14 +184,82 @@ export const DoctorCalendarPage: React.FC = () => {
       }
     }
   }, [currentDate]);
+
+  // Initial loading delay to ensure all API calls complete
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitialLoading(false);
+      
+      // Scroll to 9 AM after loading is complete
+      if (calendarRef.current) {
+        const calendarApi = calendarRef.current.getApi();
+        if (calendarApi && view === 'timeGridDay') {
+          // Scroll to 9 AM
+          setTimeout(() => {
+            calendarApi.scrollToTime('09:00:00');
+          }, 100); // Small delay to ensure calendar is fully rendered
+        }
+      }
+    }, 2000); // 2 seconds delay
+
+    return () => clearTimeout(timer);
+  }, [view]);
+
+
   
   // Calendar event handlers
   const handleEventClick = useCallback((info: any) => {
     const event = info.event;
     const eventType = event.extendedProps?.type;
     
+    // Check if the click was on a cancel button
+    const target = info.jsEvent?.target;
+    if (target && target.classList?.contains('cancel-timeoff-btn')) {
+      const timeOffId = target.getAttribute('data-timeoff-id');
+      const reason = target.getAttribute('data-reason');
+      const fromDate = event.start?.toISOString();
+      const toDate = event.end?.toISOString();
+      
+      if (timeOffId && fromDate && toDate) {
+        setDeleteTimeOffModal({
+          open: true,
+          timeOffData: {
+            timeOffId,
+            reason: reason || event.title,
+            fromDate,
+            toDate
+          }
+        });
+      }
+      return; // Stop processing the regular event click
+    }
+    
     if (eventType === 'shift') {
-      // Open EditShiftModal for shift events
+      // Check if this is an override shift that can be canceled
+      const isOverride = event.extendedProps?.isOverride;
+      const sourceId = event.extendedProps?.sourceId;
+      
+      if (isOverride && sourceId) {
+        // Open cancel override dialog
+        const shiftDate = format(event.start, 'yyyy-MM-dd');
+        const shiftName = event.extendedProps?.shiftName;
+        const startTime = event.extendedProps?.startTime || '09:00';
+        const endTime = event.extendedProps?.endTime || '12:00';
+        
+        setCancelOverrideModal({
+          open: true,
+          overrideData: {
+            overrideId: sourceId,
+            shiftName,
+            date: shiftDate,
+            startTime,
+            endTime
+          }
+        });
+        return;
+      }
+      
+      // Open EditShiftModal for regular shift events
       if (!event.start) {
         toast({
           title: "Error",
@@ -143,15 +291,61 @@ export const DoctorCalendarPage: React.FC = () => {
         description: `Patient: ${event.extendedProps?.patientName}, Token: ${event.extendedProps?.tokenNumber}`,
       });
          } else if (eventType === 'block') {
-       // Show time off details
-       toast({
-         title: "Time Off Details",
-         description: `${event.title}`,
-       });
+       // Handle time-off blocks
+       const isTimeOff = event.extendedProps?.isTimeOff;
+       if (isTimeOff) {
+         // Open delete dialog for time-off events
+         const timeOffId = event.extendedProps?.timeOffId;
+         const reason = event.extendedProps?.reason || event.title;
+         const fromDate = event.start?.toISOString();
+         const toDate = event.end?.toISOString();
+         
+         if (timeOffId && fromDate && toDate) {
+           setDeleteTimeOffModal({
+             open: true,
+             timeOffData: {
+               timeOffId,
+               reason,
+               fromDate,
+               toDate
+             }
+           });
+         }
+       } else {
+         toast({
+           title: "Block Details",
+           description: `${event.title}`,
+         });
+       }
      }
   }, [toast]);
   
      const handleDateSelect = useCallback((selectInfo: any) => {
+     // Check if there's already a time-off in the selected area
+     const selectedStart = selectInfo.start;
+     const selectedEnd = selectInfo.end;
+     
+     // Check if any existing time-off overlaps with the selected range
+     const hasTimeOffConflict = events.some(event => {
+       if (event.extendedProps?.isTimeOff) {
+         const eventStart = new Date(event.start);
+         const eventEnd = new Date(event.end);
+         
+         // Check for overlap
+         return eventStart < selectedEnd && eventEnd > selectedStart;
+       }
+       return false;
+     });
+     
+     if (hasTimeOffConflict) {
+       toast({
+         title: "Time Off Conflict",
+         description: "This time period is already blocked. Please select a different time or cancel the existing time-off first.",
+         variant: "destructive",
+       });
+       return;
+     }
+     
      // Open PersonalizedScheduleModal with time off functionality for date selection
      setPersonalizedScheduleModal({
        open: true,
@@ -159,7 +353,7 @@ export const DoctorCalendarPage: React.FC = () => {
        initialStartDateTime: selectInfo.start.toISOString(),
        initialEndDateTime: selectInfo.end.toISOString()
      });
-   }, []);
+   }, [events, toast]);
   
   const handleEventDrop = useCallback((dropInfo: any) => {
     // Handle event drag and drop
@@ -190,25 +384,54 @@ export const DoctorCalendarPage: React.FC = () => {
      weekends: true,
      firstDay: 1, // Monday
      timezone: 'local',
-     slotDuration: '00:15:00',
-     selectOverlap: () => true,
-     eventOrder: 'blocks,appointments,shifts',
+         slotDuration: '00:15:00',
+    scrollTime: '09:00:00', // Initial scroll position to 9 AM
+    selectOverlap: () => true,
+           eventOrder: 'blocks,appointments,shifts',
+      eventDisplay: 'block', // Ensure events are displayed as blocks
+      eventBackgroundColor: '#3b82f6', // Default background for events
      events: events,
      eventClick: handleEventClick,
      select: handleDateSelect,
      eventDrop: handleEventDrop,
      eventResize: handleEventResize,
+     eventDidMount: (info: any) => {
+       // Add data-override attribute for override shifts
+       if (info.event.extendedProps?.isOverride) {
+         info.el.setAttribute('data-override', 'true');
+       }
+     },
     eventContent: (arg: any) => {
       const eventType = arg.event.extendedProps?.type;
       
       if (eventType === 'shift') {
-        return {
-          html: `
-            <div class="fc-event-main-content">
-              <div class="text-xs font-medium">${arg.event.title}</div>
-            </div>
-          `
-        };
+        const isOverride = arg.event.extendedProps?.isOverride;
+        
+        if (isOverride) {
+          // Override shifts with cancel icon
+          return {
+            html: `
+              <div class="fc-event-main-content override-event-content">
+                <div class="text-xs font-medium">${arg.event.title}</div>
+                <div class="cancel-override-icon" title="Click to cancel override">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </div>
+              </div>
+            `
+          };
+        } else {
+          // Regular shift events
+          return {
+            html: `
+              <div class="fc-event-main-content">
+                <div class="text-xs font-medium">${arg.event.title}</div>
+              </div>
+            `
+          };
+        }
       } else if (eventType === 'appointment') {
         return {
           html: `
@@ -219,13 +442,33 @@ export const DoctorCalendarPage: React.FC = () => {
           `
         };
       } else if (eventType === 'block') {
-        return {
-          html: `
-            <div class="fc-event-main-content">
-              <div class="text-xs font-medium">${arg.event.title}</div>
-            </div>
-          `
-        };
+        const isTimeOff = arg.event.extendedProps?.isTimeOff;
+        
+        if (isTimeOff) {
+          // Time-off events with cancel button
+          return {
+            html: `
+              <div class="fc-event-main-content timeoff-event-content">
+                <div class="text-xs font-medium">${arg.event.title}</div>
+                <button class="cancel-timeoff-btn" data-timeoff-id="${arg.event.extendedProps?.timeOffId}" data-reason="${arg.event.extendedProps?.reason || arg.event.title}">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+            `
+          };
+        } else {
+          // Regular block events
+          return {
+            html: `
+              <div class="fc-event-main-content">
+                <div class="text-xs font-medium">${arg.event.title}</div>
+              </div>
+            `
+          };
+        }
       }
       
       return {
@@ -236,26 +479,41 @@ export const DoctorCalendarPage: React.FC = () => {
         `
       };
     },
-    eventClassNames: (arg: any) => {
-      const eventType = arg.event.extendedProps?.type;
-      const shiftName = arg.event.extendedProps?.shiftName;
-      
-      const classes = [];
-      
-      if (eventType === 'shift') {
-        classes.push('shift-event');
-        if (shiftName === 'Morning') classes.push('shift-morning');
-        else if (shiftName === 'Afternoon') classes.push('shift-afternoon');
-        else if (shiftName === 'Evening') classes.push('shift-evening');
-        else if (shiftName === 'Night') classes.push('shift-night');
-             } else if (eventType === 'block') {
-         classes.push('block-event', 'timeoff-event');
-       } else if (eventType === 'appointment') {
-        classes.push('appointment-event');
+                   eventClassNames: (arg: any) => {
+        const eventType = arg.event.extendedProps?.type;
+        const shiftName = arg.event.extendedProps?.shiftName;
+        const isTimeOff = arg.event.extendedProps?.isTimeOff;
+        const isWorkingShift = arg.event.extendedProps?.isWorkingShift;
+        const isBackground = arg.event.display === 'background';
+        
+        const classes = [];
+        
+        if (eventType === 'shift') {
+          if (isBackground && isWorkingShift) {
+            // Background shift events
+            classes.push('shift-background');
+          } else {
+            // Regular shift events
+            classes.push('shift-event');
+            if (shiftName === 'Morning') classes.push('shift-morning');
+            else if (shiftName === 'Afternoon') classes.push('shift-afternoon');
+            else if (shiftName === 'Evening') classes.push('shift-evening');
+            else if (shiftName === 'Night') classes.push('shift-night');
+          }
+        } else if (eventType === 'block') {
+          if (isTimeOff) {
+            // Time-off events
+            classes.push('block-event', 'api-timeoff-event');
+          } else {
+            // Regular block events
+            classes.push('block-event', 'timeoff-event');
+          }
+        } else if (eventType === 'appointment') {
+          classes.push('appointment-event');
+        }
+        
+        return classes;
       }
-      
-      return classes;
-    }
   };
   
   // Action handlers
@@ -263,6 +521,32 @@ export const DoctorCalendarPage: React.FC = () => {
     // Open PersonalizedScheduleModal
     try {
       const today = format(new Date(), 'yyyy-MM-dd');
+      
+      // Check if there's already a time-off today
+      const todayStart = new Date(today);
+      const todayEnd = new Date(today);
+      todayEnd.setHours(23, 59, 59, 999);
+      
+      const hasTimeOffToday = events.some(event => {
+        if (event.extendedProps?.isTimeOff) {
+          const eventStart = new Date(event.start);
+          const eventEnd = new Date(event.end);
+          
+          // Check if event overlaps with today
+          return eventStart <= todayEnd && eventEnd >= todayStart;
+        }
+        return false;
+      });
+      
+      if (hasTimeOffToday) {
+        toast({
+          title: "Time Off Conflict",
+          description: "You already have time-off scheduled for today. Please cancel existing time-off first or select a different date.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       setPersonalizedScheduleModal({
         open: true,
         initialDate: today,
@@ -282,54 +566,89 @@ export const DoctorCalendarPage: React.FC = () => {
   
   // Modal handlers
   const handleSaveOverride = (payload: CreateOverridePayload) => {
-    createOverrideMutation.mutate(payload, {
-      onSuccess: () => {
-        toast({
-          title: "Success",
-          description: "Shift override saved successfully",
-        });
-        setEditShiftModal(prev => ({ ...prev, open: false }));
-      },
-      onError: (error) => {
-        toast({
-          title: "Error",
-          description: "Failed to save shift override",
-          variant: "destructive",
-        });
-      }
+    // TODO: Implement when override API is available
+    toast({
+      title: "Info",
+      description: "Shift override functionality not yet implemented",
     });
+    setEditShiftModal(prev => ({ ...prev, open: false }));
   };
 
   const handleSavePersonalizedSchedule = (payloads: CreateOverridePayload[]) => {
-    // Save multiple overrides for personalized schedule
-    Promise.all(payloads.map(payload => 
-      new Promise((resolve, reject) => {
-        createOverrideMutation.mutate(payload, {
-          onSuccess: () => resolve(payload),
-          onError: (error) => reject(error)
+    // Process each payload sequentially
+    const processPayloads = async () => {
+      let successCount = 0;
+      let errorCount = 0;
+      
+      for (const payload of payloads) {
+        try {
+          await createOverrideMutation.mutateAsync(payload);
+          successCount++;
+        } catch (error) {
+          console.error('Error creating override:', error);
+          errorCount++;
+        }
+      }
+      
+      // Show appropriate success dialog
+      if (successCount > 0 && errorCount === 0) {
+        setSuccessDialog({
+          open: true,
+          title: "Schedule Saved Successfully! 🎉",
+          message: `Your personalized schedule has been saved successfully. Your new working hours are now active.`,
+          details: [
+            `✅ ${successCount} schedule override${successCount > 1 ? 's' : ''} created`,
+            `📅 Changes will be reflected in your calendar immediately`,
+            `👥 Patients can now book appointments during your updated hours`
+          ]
         });
-      })
-    )).then(() => {
-      toast({
-        title: "Success",
-        description: `Personalized schedule saved successfully (${payloads.length} shifts)`,
-      });
+      } else if (successCount > 0 && errorCount > 0) {
+        setSuccessDialog({
+          open: true,
+          title: "Partially Saved ⚠️",
+          message: `Some of your schedule overrides were saved, but ${errorCount} failed to save.`,
+          details: [
+            `✅ ${successCount} override${successCount > 1 ? 's' : ''} saved successfully`,
+            `❌ ${errorCount} override${errorCount > 1 ? 's' : ''} failed to save`,
+            `🔄 You may want to try saving the failed overrides again`
+          ]
+        });
+      } else {
+        // Keep toast for error cases
+        toast({
+          title: "Error",
+          description: "Failed to create schedule overrides",
+          variant: "destructive",
+        });
+      }
+      
       setPersonalizedScheduleModal(prev => ({ ...prev, open: false }));
-    }).catch((error) => {
-      toast({
-        title: "Error",
-        description: "Failed to save personalized schedule",
-        variant: "destructive",
-      });
-    });
+    };
+    
+    processPayloads();
   };
 
      const handleSaveBlockFromPersonalized = (payload: CreateBlockPayload) => {
-     createBlockMutation.mutate(payload, {
-       onSuccess: () => {
-         toast({
-           title: "Success",
-           description: "Time off scheduled successfully",
+     // Convert CreateBlockPayload to CreateTimeOffRequest
+     const timeOffRequest = {
+       doctorId: payload.doctorId,
+       fromDate: payload.startDateTime,
+       toDate: payload.endDateTime,
+       reason: payload.title
+     };
+     
+     createTimeOffMutation.mutate(timeOffRequest, {
+       onSuccess: (data) => {
+         setSuccessDialog({
+           open: true,
+           title: "Time Off Scheduled Successfully! 🏖️",
+           message: "Your time off has been scheduled and you will be unavailable during the selected period.",
+           details: [
+             `✅ Time off period blocked in your calendar`,
+             `📅 Duration: ${format(new Date(timeOffRequest.fromDate), 'MMM dd, yyyy HH:mm')} - ${format(new Date(timeOffRequest.toDate), 'MMM dd, yyyy HH:mm')}`,
+             `🚫 No appointments can be booked during this time`,
+             `📱 You can cancel this time off anytime from the calendar`
+           ]
          });
          setPersonalizedScheduleModal(prev => ({ ...prev, open: false }));
        },
@@ -344,21 +663,50 @@ export const DoctorCalendarPage: React.FC = () => {
    };
   
   const handleDeleteOverride = () => {
-    // Find the override ID from the existing overrides
-    const overrideId = `o_${doctorId}_${editShiftModal.shiftDate}_${editShiftModal.shiftName}`;
+    // TODO: Implement when override API is available
+    toast({
+      title: "Info",
+      description: "Delete override functionality not yet implemented",
+    });
+    setEditShiftModal(prev => ({ ...prev, open: false }));
+  };
+
+  const handleDeleteTimeOff = () => {
+    if (!deleteTimeOffModal.timeOffData?.timeOffId) return;
     
-    deleteOverrideMutation.mutate(overrideId, {
-      onSuccess: () => {
+    deleteTimeOffMutation.mutate(deleteTimeOffModal.timeOffData.timeOffId, {
+      onSuccess: (data) => {
         toast({
           title: "Success",
-          description: "Shift override deleted successfully",
+          description: data.message || "Time off deleted successfully",
         });
-        setEditShiftModal(prev => ({ ...prev, open: false }));
+        setDeleteTimeOffModal({ open: false, timeOffData: undefined });
       },
       onError: (error) => {
         toast({
           title: "Error",
-          description: "Failed to delete shift override",
+          description: "Failed to delete time off",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+
+  const handleCancelOverride = () => {
+    if (!cancelOverrideModal.overrideData?.overrideId) return;
+    
+    deleteOverrideMutation.mutate(cancelOverrideModal.overrideData.overrideId, {
+      onSuccess: (data) => {
+        toast({
+          title: "Success",
+          description: data.message || "Shift override canceled successfully",
+        });
+        setCancelOverrideModal({ open: false, overrideData: undefined });
+      },
+      onError: (error) => {
+        toast({
+          title: "Error",
+          description: "Failed to cancel shift override",
           variant: "destructive",
         });
       }
@@ -367,12 +715,50 @@ export const DoctorCalendarPage: React.FC = () => {
   
 
   
-  if (!doctorId) {
+
+
+  if (!userId) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-gray-900">Authentication Required</h3>
-          <p className="text-gray-600">Please log in to view your calendar.</p>
+          <h3 className="text-lg font-semibold text-gray-900">
+            User ID Required
+          </h3>
+          <p className="text-gray-600">
+            Unable to get user ID. Please try logging in again.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!doctorId || doctorProfileLoading || isInitialLoading || configLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-gray-900">
+            {isInitialLoading ? 'Initializing Calendar...' : doctorProfileLoading ? 'Loading Doctor Profile...' : configLoading ? 'Loading Calendar Configuration...' : 'Doctor Profile Required'}
+          </h3>
+          <p className="text-gray-600">
+            {isInitialLoading ? 'Please wait while we prepare your calendar and load all data.' : doctorProfileLoading ? 'Please wait while we load your doctor profile.' : configLoading ? 'Please wait while we load your work schedule configuration.' : 'Unable to load doctor profile. Please try refreshing the page.'}
+          </p>
+          {doctorProfileError && (
+            <div className="text-red-600 text-sm mt-2">
+              <p className="font-medium">Error loading doctor profile:</p>
+              <p>{doctorProfileError.message || 'Failed to load doctor profile'}</p>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="mt-2 px-3 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+          {(isInitialLoading || doctorProfileLoading || configLoading) && (
+            <div className="mt-4">
+              <LoadingSpinner size="lg" />
+            </div>
+          )}
         </div>
       </div>
     );
@@ -390,56 +776,27 @@ export const DoctorCalendarPage: React.FC = () => {
             onAddOverride={handleAddOverride}
           />
          
-         {/* Welcome Banner */}
-         {showWelcomeBanner && (
-           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200 p-4">
-             <div className="flex items-start justify-between">
-               <div className="flex-1">
-                 <h2 className="text-lg font-semibold text-gray-900 mb-2">
-                   Welcome, Dr. {doctorName}! 👋
-                 </h2>
-                 <p className="text-sm text-gray-700 mb-3">
-                   Manage your schedule and appointments efficiently with your personalized calendar.
-                 </p>
-                 <div className="flex flex-wrap gap-4 text-xs text-gray-600">
-                   <div className="flex items-center gap-1">
-                     <MousePointer className="h-3 w-3" />
-                     <span>Click events to view details</span>
-                   </div>
-                   <div className="flex items-center gap-1">
-                     <Calendar className="h-3 w-3" />
-                     <span>Switch between Month/Week/Day views</span>
-                   </div>
-                   <div className="flex items-center gap-1">
-                     <Clock className="h-3 w-3" />
-                     <span>Add schedules and time off as needed</span>
-                   </div>
-                 </div>
-               </div>
-               <Button
-                 variant="ghost"
-                 size="sm"
-                 onClick={() => setShowWelcomeBanner(false)}
-                 className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700"
-               >
-                 <X className="h-4 w-4" />
-               </Button>
-             </div>
-           </div>
-         )}
+         
          
          {/* Legend */}
          <div className="px-4 py-2">
            <Legend />
          </div>
          
-         {/* Calendar */}
-         <div className="flex-1 p-4">
-           {eventsLoading ? (
-             <div className="flex items-center justify-center h-64">
-               <LoadingSpinner size="lg" />
-             </div>
-           ) : (
+                             {/* Calendar */}
+           <div className="flex-1 p-4">
+             {eventsLoading || doctorProfileLoading || isInitialLoading || configLoading ? (
+               <div className="flex items-center justify-center h-64">
+                 <div className="text-center">
+                   <LoadingSpinner size="lg" />
+                   {doctorProfileError && (
+                     <p className="text-red-600 text-sm mt-2">
+                       Error loading doctor profile
+                     </p>
+                   )}
+                 </div>
+               </div>
+             ) : (
                            <div className="bg-white rounded-lg shadow-sm border">
                 <FullCalendar
                   key={`${view}-${currentDate.toISOString()}`}
@@ -491,13 +848,98 @@ export const DoctorCalendarPage: React.FC = () => {
              font-weight: 600 !important;
            }
            
-           /* Time Off events styling */
-           .timeoff-event {
-             background-color: #ef4444 !important;
-             border-color: #dc2626 !important;
-             color: white !important;
-             font-weight: 600 !important;
-           }
+                       /* Time Off events styling */
+            .timeoff-event {
+              background-color: #f97316 !important; /* Amber/Orange color */
+              border-color: #ea580c !important;
+              color: white !important;
+              font-weight: 600 !important;
+            }
+            
+            /* API Time Off events styling - full width blocks */
+            .api-timeoff-event {
+              background-color: rgba(220, 38, 38, 0.8) !important; /* More opaque red */
+              border-color: #dc2626 !important;
+              color: white !important;
+              font-weight: 700 !important;
+              border-width: 2px !important;
+              width: 100% !important;
+              margin: 0 !important;
+              border-radius: 4px !important;
+            }
+
+            /* Shift background events styling - light blue */
+            .fc-bg-event.shift-background {
+              background-color: rgba(59, 130, 246, 0.3) !important; /* Light blue background */
+              border-left: 4px solid #3b82f6 !important;
+              opacity: 1 !important;
+              z-index: 1 !important;
+            }
+
+            /* Ensure background events are visible in all views */
+            .fc-timegrid-col-bg .fc-bg-event.shift-background {
+              background-color: rgba(59, 130, 246, 0.3) !important;
+              opacity: 1 !important;
+            }
+
+            .fc-daygrid-day-bg .fc-bg-event.shift-background {
+              background-color: rgba(59, 130, 246, 0.3) !important;
+              opacity: 1 !important;
+            }
+
+            /* Force background events to be visible */
+            .fc-bg-event {
+              opacity: 1 !important;
+              pointer-events: none !important;
+            }
+
+            /* Specific styling for shift background events */
+            .fc-bg-event[data-event-type="shift"] {
+              background-color: rgba(59, 130, 246, 0.3) !important;
+              border-left: 4px solid #3b82f6 !important;
+            }
+
+            /* Working shift events */
+            .shift-event {
+              background-color: rgba(59, 130, 246, 0.3) !important; /* Light blue */
+              border-color: #2563eb !important;
+              color: #1e40af !important;
+              font-weight: 600 !important;
+              border-width: 1px !important;
+            }
+            
+            
+          
+          /* Time-off event content styling */
+          .timeoff-event-content {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            width: 100% !important;
+          }
+          
+          /* Cancel button styling */
+          .cancel-timeoff-btn {
+            background: rgba(255, 255, 255, 0.9) !important;
+            border: 1px solid #dc2626 !important;
+            border-radius: 50% !important;
+            width: 16px !important;
+            height: 16px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            color: #dc2626 !important;
+            font-size: 8px !important;
+            transition: all 0.2s ease !important;
+            flex-shrink: 0 !important;
+          }
+          
+          .cancel-timeoff-btn:hover {
+            background: #dc2626 !important;
+            color: white !important;
+            transform: scale(1.1) !important;
+          }
           
           .appointment-event {
             background-color: #3b82f6 !important;
@@ -530,6 +972,68 @@ export const DoctorCalendarPage: React.FC = () => {
             font-size: 0.75rem !important;
             padding: 2px 4px !important;
           }
+          
+          /* Style for override shifts with cancel icon */
+          .fc-event[data-override="true"] {
+            position: relative !important;
+          }
+          
+          .fc-event[data-override="true"]::after {
+            content: "✕" !important;
+            position: absolute !important;
+            top: -8px !important;
+            right: -8px !important;
+            background: #dc2626 !important;
+            color: white !important;
+            border-radius: 50% !important;
+            width: 20px !important;
+            height: 20px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 12px !important;
+            font-weight: bold !important;
+            cursor: pointer !important;
+            z-index: 10 !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+          }
+          
+          .fc-event[data-override="true"]::after:hover {
+            background: #b91c1c !important;
+            transform: scale(1.1) !important;
+          }
+          
+          /* Style for override event content */
+          .override-event-content {
+            position: relative !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            width: 100% !important;
+          }
+          
+          .cancel-override-icon {
+            position: absolute !important;
+            top: -8px !important;
+            right: -8px !important;
+            background: #dc2626 !important;
+            color: white !important;
+            border-radius: 50% !important;
+            width: 20px !important;
+            height: 20px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            z-index: 10 !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+            transition: all 0.2s ease !important;
+          }
+          
+          .cancel-override-icon:hover {
+            background: #b91c1c !important;
+            transform: scale(1.1) !important;
+          }
         `}</style>
        
        {/* Modals */}
@@ -558,6 +1062,66 @@ export const DoctorCalendarPage: React.FC = () => {
           onSaveBlock={handleSaveBlockFromPersonalized}
           isLoading={createOverrideMutation.isPending || createBlockMutation.isPending}
         />
+
+        <DeleteTimeOffDialog
+          isOpen={deleteTimeOffModal.open}
+          onClose={() => setDeleteTimeOffModal({ open: false, timeOffData: undefined })}
+          onConfirm={handleDeleteTimeOff}
+          timeOffData={deleteTimeOffModal.timeOffData}
+          isPending={deleteTimeOffMutation.isPending}
+        />
+
+        <CancelOverrideDialog
+          isOpen={cancelOverrideModal.open}
+          onClose={() => setCancelOverrideModal({ open: false, overrideData: undefined })}
+          onConfirm={handleCancelOverride}
+          overrideData={cancelOverrideModal.overrideData}
+          isPending={deleteOverrideMutation.isPending}
+        />
+
+        {/* Success Dialog */}
+        <Dialog open={successDialog.open} onOpenChange={(open) => setSuccessDialog(prev => ({ ...prev, open }))}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3 text-lg">
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                {successDialog.title}
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="py-4">
+              <p className="text-gray-600 mb-4">
+                {successDialog.message}
+              </p>
+              
+              {successDialog.details.length > 0 && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="space-y-2">
+                    {successDialog.details.map((detail, index) => (
+                      <div key={index} className="text-sm text-green-800 flex items-start gap-2">
+                        <span className="text-green-600 mt-0.5">•</span>
+                        <span>{detail}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button
+                onClick={() => setSuccessDialog(prev => ({ ...prev, open: false }))}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                Great! Continue
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
      </div>
    );
  };

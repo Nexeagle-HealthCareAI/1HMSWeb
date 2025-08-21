@@ -48,13 +48,12 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
       refreshToken();
     }
 
-    // Detect system preferences
+    // Detect system preferences (only reduced motion, ignore dark mode)
     const detectSystemPreferences = () => {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
       updateSystemPreferences({
-        prefersDark,
+        prefersDark: false, // Always force light mode
         prefersReducedMotion,
       });
     };
@@ -62,25 +61,18 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
     // Initial detection
     detectSystemPreferences();
 
-    // Listen for system preference changes
-    const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    // Listen for system preference changes (only reduced motion)
     const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-    const handleDarkModeChange = (e: MediaQueryListEvent) => {
-      updateSystemPreferences({ prefersDark: e.matches });
-    };
 
     const handleReducedMotionChange = (e: MediaQueryListEvent) => {
       updateSystemPreferences({ prefersReducedMotion: e.matches });
     };
 
     // Add event listeners
-    darkModeQuery.addEventListener('change', handleDarkModeChange);
     reducedMotionQuery.addEventListener('change', handleReducedMotionChange);
 
     // Cleanup event listeners
     return () => {
-      darkModeQuery.removeEventListener('change', handleDarkModeChange);
       reducedMotionQuery.removeEventListener('change', handleReducedMotionChange);
     };
   }, [updateSystemPreferences]);
