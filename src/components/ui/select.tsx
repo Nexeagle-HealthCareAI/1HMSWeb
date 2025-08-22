@@ -30,40 +30,38 @@ const SelectTrigger = React.forwardRef<
 ))
 SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
 
-const SelectScrollUpButton = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.ScrollUpButton>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollUpButton>
->(({ className, ...props }, ref) => (
-  <SelectPrimitive.ScrollUpButton
-    ref={ref}
-    className={cn(
-      "flex cursor-default items-center justify-center py-1",
-      className
-    )}
-    {...props}
+// --- Custom slow scroll buttons ---
+const SlowScrollUpButton = () => (
+  <button
+    className="flex cursor-default items-center justify-center py-1 w-full"
+    onMouseDown={() => {
+      const viewport = document.querySelector(
+        "[data-radix-select-viewport]"
+      ) as HTMLElement
+      if (viewport) {
+        viewport.scrollBy({ top: -20, behavior: "smooth" }) // slower step
+      }
+    }}
   >
     <ChevronUp className="h-4 w-4" />
-  </SelectPrimitive.ScrollUpButton>
-))
-SelectScrollUpButton.displayName = SelectPrimitive.ScrollUpButton.displayName
+  </button>
+)
 
-const SelectScrollDownButton = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.ScrollDownButton>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollDownButton>
->(({ className, ...props }, ref) => (
-  <SelectPrimitive.ScrollDownButton
-    ref={ref}
-    className={cn(
-      "flex cursor-default items-center justify-center py-1",
-      className
-    )}
-    {...props}
+const SlowScrollDownButton = () => (
+  <button
+    className="flex cursor-default items-center justify-center py-1 w-full"
+    onMouseDown={() => {
+      const viewport = document.querySelector(
+        "[data-radix-select-viewport]"
+      ) as HTMLElement
+      if (viewport) {
+        viewport.scrollBy({ top: 20, behavior: "smooth" }) // slower step
+      }
+    }}
   >
     <ChevronDown className="h-4 w-4" />
-  </SelectPrimitive.ScrollDownButton>
-))
-SelectScrollDownButton.displayName =
-  SelectPrimitive.ScrollDownButton.displayName
+  </button>
+)
 
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
@@ -81,17 +79,19 @@ const SelectContent = React.forwardRef<
       position={position}
       {...props}
     >
-      <SelectScrollUpButton />
+      {/* custom slow scroll buttons */}
+      <SlowScrollUpButton />
       <SelectPrimitive.Viewport
         className={cn(
-          "p-1",
+          "p-1 scroll-smooth snap-y snap-mandatory", // 👈 smooth + snap
           position === "popper" &&
             "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
         )}
+        data-radix-select-viewport
       >
         {children}
       </SelectPrimitive.Viewport>
-      <SelectScrollDownButton />
+      <SlowScrollDownButton />
     </SelectPrimitive.Content>
   </SelectPrimitive.Portal>
 ))
@@ -116,7 +116,7 @@ const SelectItem = React.forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none snap-start focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className
     )}
     {...props}
@@ -126,7 +126,6 @@ const SelectItem = React.forwardRef<
         <Check className="h-4 w-4" />
       </SelectPrimitive.ItemIndicator>
     </span>
-
     <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
   </SelectPrimitive.Item>
 ))
@@ -153,6 +152,4 @@ export {
   SelectLabel,
   SelectItem,
   SelectSeparator,
-  SelectScrollUpButton,
-  SelectScrollDownButton,
 }

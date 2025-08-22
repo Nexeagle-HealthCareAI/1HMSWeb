@@ -62,15 +62,21 @@ interface Element {
   y: number;
   width: number;
   height: number;
+  x1?: number;  // for line start
+  y1?: number;
+  x2?: number;  // for line end
+  y2?: number;
   content?: string;
   src?: string;
   style?: ElementStyle;
 }
 
+
 interface Template {
   name: string;
   elements: Element[];
 }
+
 
 
 
@@ -149,6 +155,108 @@ const PrescriptionCanvasEditor: React.FC = () => {
       ]);
     }
   }, [elements.length]);
+// Save to DB
+const saveToDB = async () => {
+  const templateData = {
+    elements,
+    canvasBackground,
+    backgroundImage,
+    backgroundSize,
+    backgroundBlur,
+    timestamp: new Date().toISOString()
+  };
+
+  try {
+    const res = await fetch("/api/prescriptions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(templateData),
+    });
+
+    if (!res.ok) throw new Error("Failed to save");
+    alert("Prescription saved to DB!");
+  } catch (err) {
+    console.error(err);
+    alert("Error saving prescription");
+  }
+};
+ const saveToLocal = () => {
+    const templateData = {
+      elements,
+      canvasBackground,
+      backgroundImage,
+      backgroundSize,
+      backgroundBlur,
+      timestamp: new Date().toISOString(),
+    };
+
+    localStorage.setItem("prescriptionTemplate", JSON.stringify(templateData));
+    alert("Prescription saved locally!");
+  };
+
+  // ---- Load from localStorage ----
+const loadFromLocal = () => {
+  const saved = localStorage.getItem("prescriptionTemplate");
+  if (!saved) return; // nothing to load
+
+  try {
+    const data = JSON.parse(saved);
+
+    if (!data || typeof data !== "object") {
+      console.warn("⚠️ Invalid prescription data, clearing...");
+      localStorage.removeItem("prescriptionTemplate");
+      return;
+    }
+
+    // 🔧 migrate old line format
+    const migratedElements = (data.elements || []).map((el: any) => {
+      if (el.type === "line" && (el.x1 === undefined || el.y1 === undefined)) {
+        return {
+          ...el,
+          x1: el.x ?? 0,
+          y1: el.y ?? 0,
+          x2: (el.x ?? 0) + (el.width ?? 100),
+          y2: el.y ?? 0,
+        };
+      }
+      return el;
+    });
+
+    setElements(migratedElements || []);
+    setCanvasBackground(data.canvasBackground || "#ffffff");
+    setBackgroundImage(data.backgroundImage || null);
+    setBackgroundSize(data.backgroundSize || 100);
+    setBackgroundBlur(data.backgroundBlur || 0);
+
+  } catch (err) {
+    console.error("❌ Corrupted prescriptionTemplate in localStorage, clearing...", err);
+    localStorage.removeItem("prescriptionTemplate");
+  }
+};
+
+
+
+  useEffect(() => {
+    loadFromLocal();
+  }, []);
+// Load from DB on login
+const loadFromDB = async () => {
+  try {
+    const res = await fetch("/api/prescriptions/latest"); // or `/user/:id/prescriptions`
+    if (!res.ok) throw new Error("Failed to load");
+    const data = await res.json();
+
+    setElements(data.elements || []);
+    setCanvasBackground(data.canvasBackground || "#ffffff");
+    setBackgroundImage(data.backgroundImage || null);
+    setBackgroundSize(data.backgroundSize || 100);
+    setBackgroundBlur(data.backgroundBlur || 0);
+
+  } catch (err) {
+    console.error(err);
+    alert("Error loading prescription");
+  }
+};
 
   // Auto close toolbars function
   const closeAllToolbars = () => {
@@ -162,6 +270,34 @@ const PrescriptionCanvasEditor: React.FC = () => {
     setSelectedId(null);
     closeAllToolbars();
   };
+const startLineResize = (e: React.MouseEvent, id: string, point: "start" | "end") => {
+  e.preventDefault();
+  e.stopPropagation();
+
+  const onMouseMove = (ev: MouseEvent) => {
+    const newX = ev.clientX - canvasRef.current!.getBoundingClientRect().left;
+    const newY = ev.clientY - canvasRef.current!.getBoundingClientRect().top;
+
+    setElements(prev =>
+      prev.map(el => {
+        if (el.id !== id) return el;
+        if (point === "start") {
+          return { ...el, x1: newX, y1: newY };
+        } else {
+          return { ...el, x2: newX, y2: newY };
+        }
+      })
+    );
+  };
+
+  const onMouseUp = () => {
+    window.removeEventListener("mousemove", onMouseMove);
+    window.removeEventListener("mouseup", onMouseUp);
+  };
+
+  window.addEventListener("mousemove", onMouseMove);
+  window.addEventListener("mouseup", onMouseUp);
+};
 
   const addElement = (type: Element['type']) => {
     const newElement: Element = {
@@ -176,8 +312,12 @@ const PrescriptionCanvasEditor: React.FC = () => {
         style: { fontFamily: 'Inter', fontSize: 16, color: '#000000' }
       }),
       ...(type === 'line' && {
-        style: { strokeColor: '#000000', strokeWidth: 2, rotation: 0 }
-      }),
+  x1: 100,
+  y1: 100,
+  x2: 300,  // default length
+  y2: 100,
+  style: { strokeColor: '#000000', strokeWidth: 2 }
+}),
       ...(type === 'rectangle' && {
         style: { fillColor: 'transparent', strokeColor: '#000000', strokeWidth: 1 }
       }),
@@ -291,85 +431,110 @@ const PrescriptionCanvasEditor: React.FC = () => {
   };
 
   // Global resize move handler
-  useEffect(() => {
-    const handleResizeMove = (e: MouseEvent) => {
-      if (!isResizing || !selectedId || !resizeHandle) return;
-      
-      const deltaX = e.clientX - resizeStartPos.x;
-      const deltaY = e.clientY - resizeStartPos.y;
-      
-      let newWidth = resizeStartSize.width;
-      let newHeight = resizeStartSize.height;
-      let newX = resizeStartElementPos.x;
-      let newY = resizeStartElementPos.y;
-      
-      // Calculate new dimensions based on resize handle
+useEffect(() => {
+  const handleResizeMove = (e: MouseEvent) => {
+    if (!isResizing || !selectedId || !resizeHandle) return;
+
+    const element = elements.find(el => el.id === selectedId);
+    if (!element) return;
+
+    const deltaX = e.clientX - resizeStartPos.x;
+    const deltaY = e.clientY - resizeStartPos.y;
+
+    let newWidth = resizeStartSize.width;
+    let newHeight = resizeStartSize.height;
+    let newX = resizeStartElementPos.x;
+    let newY = resizeStartElementPos.y;
+
+    if (element.type === "line") {
+      // Special case: line resizing behaves like Canva
       switch (resizeHandle) {
-        case 'se': // Southeast
+        case "e": // extend from right
+          newWidth = Math.max(20, resizeStartSize.width + deltaX);
+          break;
+        case "w": // extend from left
+          newWidth = Math.max(20, resizeStartSize.width - deltaX);
+          newX = resizeStartElementPos.x + (resizeStartSize.width - newWidth);
+          break;
+        default:
+          // Ignore vertical handles (n, s, ne, nw, se, sw)
+          break;
+      }
+      // Keep line height fixed (just stroke thickness handles it)
+      newHeight = resizeStartSize.height;
+    } else {
+      // Default box behavior for other elements
+      switch (resizeHandle) {
+        case "se":
           newWidth = Math.max(20, resizeStartSize.width + deltaX);
           newHeight = Math.max(20, resizeStartSize.height + deltaY);
           break;
-        case 'sw': // Southwest
+        case "sw":
           newWidth = Math.max(20, resizeStartSize.width - deltaX);
           newHeight = Math.max(20, resizeStartSize.height + deltaY);
           newX = resizeStartElementPos.x + (resizeStartSize.width - newWidth);
           break;
-        case 'ne': // Northeast
+        case "ne":
           newWidth = Math.max(20, resizeStartSize.width + deltaX);
           newHeight = Math.max(20, resizeStartSize.height - deltaY);
           newY = resizeStartElementPos.y + (resizeStartSize.height - newHeight);
           break;
-        case 'nw': // Northwest
+        case "nw":
           newWidth = Math.max(20, resizeStartSize.width - deltaX);
           newHeight = Math.max(20, resizeStartSize.height - deltaY);
           newX = resizeStartElementPos.x + (resizeStartSize.width - newWidth);
           newY = resizeStartElementPos.y + (resizeStartSize.height - newHeight);
           break;
-        case 'n': // North
+        case "n":
           newHeight = Math.max(20, resizeStartSize.height - deltaY);
           newY = resizeStartElementPos.y + (resizeStartSize.height - newHeight);
           break;
-        case 's': // South
+        case "s":
           newHeight = Math.max(20, resizeStartSize.height + deltaY);
           break;
-        case 'e': // East
+        case "e":
           newWidth = Math.max(20, resizeStartSize.width + deltaX);
           break;
-        case 'w': // West
+        case "w":
           newWidth = Math.max(20, resizeStartSize.width - deltaX);
           newX = resizeStartElementPos.x + (resizeStartSize.width - newWidth);
           break;
       }
-      
-      // Ensure element stays within canvas bounds
-      newX = Math.max(0, Math.min(newX, CANVAS_WIDTH - newWidth));
-      newY = Math.max(0, Math.min(newY, CANVAS_HEIGHT - newHeight));
-      
-      // Update element with new dimensions and position
-      updateElement(selectedId, { 
-        width: newWidth, 
-        height: newHeight, 
-        x: newX, 
-        y: newY 
-      });
-    };
-
-    const handleResizeEnd = () => {
-      setIsResizing(false);
-      setResizeHandle(null);
-    };
-
-    if (isResizing) {
-      document.addEventListener('mousemove', handleResizeMove);
-      document.addEventListener('mouseup', handleResizeEnd);
-      
-      return () => {
-        document.removeEventListener('mousemove', handleResizeMove);
-        document.removeEventListener('mouseup', handleResizeEnd);
-      };
     }
-  }, [isResizing, selectedId, resizeHandle, resizeStartPos, resizeStartSize, resizeStartElementPos]);
 
+    // Keep inside canvas
+    newX = Math.max(0, Math.min(newX, CANVAS_WIDTH - newWidth));
+    newY = Math.max(0, Math.min(newY, CANVAS_HEIGHT - newHeight));
+
+    // Update element
+    updateElement(selectedId, {
+      width: newWidth,
+      height: newHeight,
+      x: newX,
+      y: newY,
+    });
+  };
+
+  const handleResizeEnd = () => {
+    setIsResizing(false);
+    setResizeHandle(null);
+  };
+
+  if (isResizing) {
+    document.addEventListener("mousemove", handleResizeMove);
+    document.addEventListener("mouseup", handleResizeEnd);
+
+    return () => {
+      document.removeEventListener("mousemove", handleResizeMove);
+      document.removeEventListener("mouseup", handleResizeEnd);
+    };
+  }
+
+
+}, [isResizing, selectedId, resizeHandle, resizeStartPos, resizeStartSize, resizeStartElementPos, elements]);
+useEffect(() => {
+  loadFromDB();
+}, []);
   const handleCanvasClick = (e: React.MouseEvent) => {
     if (e.target === canvasRef.current) {
       setSelectedId(null); // Unselect element
@@ -701,10 +866,11 @@ const PrescriptionCanvasEditor: React.FC = () => {
               <Download className="h-4 w-4 mr-2" />
               Print/PDF
             </Button>
-            <Button size="sm" onClick={saveTemplate}>
-              <Save className="h-4 w-4 mr-2" />
-              Save
-            </Button>
+         <Button size="sm" onClick={saveToLocal}>
+  <Save className="h-4 w-4 mr-2" />
+  Save
+</Button>
+
           </div>
         </div>
       </div>
@@ -939,154 +1105,217 @@ const PrescriptionCanvasEditor: React.FC = () => {
             )}
             
             {/* Elements Layer - Never blurred */}
-            <div style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%' }}>
-              {elements.map((element) => (
-                <Draggable
-                  key={element.id}
-                  position={{ x: element.x, y: element.y }}
-                  onStop={(e, d) => {
-                    updateElement(element.id, { x: d.x, y: d.y });
-                  }}
-                  bounds="parent"
-                >
-                  <div
-                    className={`cursor-move ${
-                      selectedId === element.id
-                        ? 'ring-2 ring-blue-500'
-                        : 'hover:ring-2 hover:ring-blue-300'
-                    }`}
-                    style={{
-                      width: element.width,
-                      height: element.height,
-                      position: 'absolute',
-                    }}
-                    onClick={(e) => handleElementClick(element.id, e)}
-                  >
-                    {/* Element Content */}
-                    {element.type === 'text' && (
-                      <div
-                        contentEditable
-                        suppressContentEditableWarning
-                        onBlur={(e) =>
-                          updateElement(element.id, { content: e.currentTarget.textContent })
-                        }
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          fontFamily: element.style?.fontFamily || 'Inter',
-                          fontSize: `${element.style?.fontSize || 16}px`,
-                          color: element.style?.color || '#000000',
-                          fontWeight: element.style?.fontWeight || 'normal',
-                          outline: 'none',
-                          cursor: 'text',
-                          display: 'flex',
-                          alignItems: 'center',
-                        }}
-                      >
-                        {element.content}
-                      </div>
-                    )}
-                    
-                    {element.type === 'line' && (
-                      <div
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          borderTop: `${element.style?.strokeWidth || 2}px solid ${element.style?.strokeColor || '#000000'}`,
-                          transform: `rotate(${element.style?.rotation || 0}deg)`,
-                          transformOrigin: 'center',
-                        }}
-                      />
-                    )}
-                    
-                    {element.type === 'rectangle' && (
-                      <div
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          backgroundColor: element.style?.fillColor || 'transparent',
-                          border: `${element.style?.strokeWidth || 1}px solid ${element.style?.strokeColor || '#000000'}`,
-                          borderRadius: `${element.style?.borderRadius || 0}px`,
-                        }}
-                      />
-                    )}
-                    
-                    {element.type === 'circle' && (
-                      <div
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          backgroundColor: element.style?.fillColor || 'transparent',
-                          border: `${element.style?.strokeWidth || 1}px solid ${element.style?.strokeColor || '#000000'}`,
-                          borderRadius: '50%',
-                        }}
-                      />
-                    )}
-                    
-                    {element.type === 'image' && element.src && (
-                      <img
-                        src={element.src}
-                        alt="Uploaded"
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                        }}
-                      />
-                    )}
+          {/* Elements Layer - Never blurred */}
+<div style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%' }}>
+  {elements.map((element) => {
+    // Handle line rendering separately (Canva-style)
+if (element.type === "line") {
+  const minX = Math.min(element.x1 ?? 0, element.x2 ?? 0);
+  const minY = Math.min(element.y1 ?? 0, element.y2 ?? 0);
+  const width = Math.abs((element.x2 ?? 0) - (element.x1 ?? 0));
+  const height = Math.abs((element.y2 ?? 0) - (element.y1 ?? 0));
 
-                    {/* Resize Handles - Only show for selected element */}
-                    {selectedId === element.id && (
-                      <>
-                        {/* Corner resize handles */}
-                        <div
-                          className="absolute w-3 h-3 bg-blue-500 border border-white cursor-nw-resize"
-                          style={{ top: -6, left: -6 }}
-                          onMouseDown={(e) => handleResizeStart(e, element.id, 'nw')}
-                        />
-                        <div
-                          className="absolute w-3 h-3 bg-blue-500 border border-white cursor-ne-resize"
-                          style={{ top: -6, right: -6 }}
-                          onMouseDown={(e) => handleResizeStart(e, element.id, 'ne')}
-                        />
-                        <div
-                          className="absolute w-3 h-3 bg-blue-500 border border-white cursor-sw-resize"
-                          style={{ bottom: -6, left: -6 }}
-                          onMouseDown={(e) => handleResizeStart(e, element.id, 'sw')}
-                        />
-                        <div
-                          className="absolute w-3 h-3 bg-blue-500 border border-white cursor-se-resize"
-                          style={{ bottom: -6, right: -6 }}
-                          onMouseDown={(e) => handleResizeStart(e, element.id, 'se')}
-                        />
-                        
-                        {/* Edge resize handles */}
-                        <div
-                          className="absolute w-3 h-3 bg-blue-500 border border-white cursor-n-resize"
-                          style={{ top: -6, left: '50%', transform: 'translateX(-50%)' }}
-                          onMouseDown={(e) => handleResizeStart(e, element.id, 'n')}
-                        />
-                        <div
-                          className="absolute w-3 h-3 bg-blue-500 border border-white cursor-s-resize"
-                          style={{ bottom: -6, left: '50%', transform: 'translateX(-50%)' }}
-                          onMouseDown={(e) => handleResizeStart(e, element.id, 's')}
-                        />
-                        <div
-                          className="absolute w-3 h-3 bg-blue-500 border border-white cursor-w-resize"
-                          style={{ left: -6, top: '50%', transform: 'translateY(-50%)' }}
-                          onMouseDown={(e) => handleResizeStart(e, element.id, 'w')}
-                        />
-                        <div
-                          className="absolute w-3 h-3 bg-blue-500 border border-white cursor-e-resize"
-                          style={{ right: -6, top: '50%', transform: 'translateY(-50%)' }}
-                          onMouseDown={(e) => handleResizeStart(e, element.id, 'e')}
-                        />
-                      </>
-                    )}
-                  </div>
-                </Draggable>
-              ))}
+  return (
+    <div
+      key={element.id}
+      onClick={(e) => handleElementClick(element.id, e)}
+      style={{
+        position: "absolute",
+        left: minX,
+        top: minY,
+        width: width || 2,   // fallback small hitbox if perfectly vertical
+        height: height || 2, // fallback small hitbox if perfectly horizontal
+      }}
+    >
+      <svg width="100%" height="100%">
+        <line
+          x1={element.x1! - minX}
+          y1={element.y1! - minY}
+          x2={element.x2! - minX}
+          y2={element.y2! - minY}
+          stroke={element.style?.strokeColor || "#000"}
+          strokeWidth={element.style?.strokeWidth || 2}
+        />
+      </svg>
+
+      {/* endpoint handles when selected */}
+      {selectedId === element.id && (
+        <>
+          <div
+            style={{
+              position: "absolute",
+              left: (element.x1 ?? 0) - minX - 5,
+              top: (element.y1 ?? 0) - minY - 5,
+              width: 10,
+              height: 10,
+              background: "blue",
+              borderRadius: "50%",
+              cursor: "move",
+            }}
+            onMouseDown={(e) => startLineResize(e, element.id, "start")}
+          />
+          <div
+            style={{
+              position: "absolute",
+              left: (element.x2 ?? 0) - minX - 5,
+              top: (element.y2 ?? 0) - minY - 5,
+              width: 10,
+              height: 10,
+              background: "blue",
+              borderRadius: "50%",
+              cursor: "move",
+            }}
+            onMouseDown={(e) => startLineResize(e, element.id, "end")}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+
+    // Handle other elements (text, rect, circle, image) using your Draggable wrapper
+    return (
+      <Draggable
+        key={element.id}
+        position={{ x: element.x, y: element.y }}
+        onStop={(e, d) => {
+          updateElement(element.id, { x: d.x, y: d.y });
+        }}
+        bounds="parent"
+      >
+        <div
+          className={`cursor-move ${
+            selectedId === element.id
+              ? "ring-2 ring-blue-500"
+              : "hover:ring-2 hover:ring-blue-300"
+          }`}
+          style={{
+            width: element.width,
+            height: element.height,
+            position: "absolute",
+          }}
+          onClick={(e) => handleElementClick(element.id, e)}
+        >
+          {/* Text */}
+          {element.type === "text" && (
+            <div
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={(e) =>
+                updateElement(element.id, { content: e.currentTarget.textContent })
+              }
+              style={{
+                width: "100%",
+                height: "100%",
+                fontFamily: element.style?.fontFamily || "Inter",
+                fontSize: `${element.style?.fontSize || 16}px`,
+                color: element.style?.color || "#000000",
+                fontWeight: element.style?.fontWeight || "normal",
+                outline: "none",
+                cursor: "text",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              {element.content}
             </div>
+          )}
+
+          {/* Rectangle */}
+          {element.type === "rectangle" && (
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                backgroundColor: element.style?.fillColor || "transparent",
+                border: `${element.style?.strokeWidth || 1}px solid ${
+                  element.style?.strokeColor || "#000000"
+                }`,
+                borderRadius: `${element.style?.borderRadius || 0}px`,
+              }}
+            />
+          )}
+
+          {/* Circle */}
+          {element.type === "circle" && (
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                backgroundColor: element.style?.fillColor || "transparent",
+                border: `${element.style?.strokeWidth || 1}px solid ${
+                  element.style?.strokeColor || "#000000"
+                }`,
+                borderRadius: "50%",
+              }}
+            />
+          )}
+
+          {/* Image */}
+          {element.type === "image" && element.src && (
+            <img
+              src={element.src}
+              alt="Uploaded"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+              }}
+            />
+          )}
+
+          {/* Resize handles for other shapes (same as before) */}
+{selectedId === element.id && element.type !== ("line" as Element["type"]) && (
+            <>
+              <div
+                className="absolute w-3 h-3 bg-blue-500 border border-white cursor-nw-resize"
+                style={{ top: -6, left: -6 }}
+                onMouseDown={(e) => handleResizeStart(e, element.id, "nw")}
+              />
+              <div
+                className="absolute w-3 h-3 bg-blue-500 border border-white cursor-ne-resize"
+                style={{ top: -6, right: -6 }}
+                onMouseDown={(e) => handleResizeStart(e, element.id, "ne")}
+              />
+              <div
+                className="absolute w-3 h-3 bg-blue-500 border border-white cursor-sw-resize"
+                style={{ bottom: -6, left: -6 }}
+                onMouseDown={(e) => handleResizeStart(e, element.id, "sw")}
+              />
+              <div
+                className="absolute w-3 h-3 bg-blue-500 border border-white cursor-se-resize"
+                style={{ bottom: -6, right: -6 }}
+                onMouseDown={(e) => handleResizeStart(e, element.id, "se")}
+              />
+              <div
+                className="absolute w-3 h-3 bg-blue-500 border border-white cursor-n-resize"
+                style={{ top: -6, left: "50%", transform: "translateX(-50%)" }}
+                onMouseDown={(e) => handleResizeStart(e, element.id, "n")}
+              />
+              <div
+                className="absolute w-3 h-3 bg-blue-500 border border-white cursor-s-resize"
+                style={{ bottom: -6, left: "50%", transform: "translateX(-50%)" }}
+                onMouseDown={(e) => handleResizeStart(e, element.id, "s")}
+              />
+              <div
+                className="absolute w-3 h-3 bg-blue-500 border border-white cursor-w-resize"
+                style={{ left: -6, top: "50%", transform: "translateY(-50%)" }}
+                onMouseDown={(e) => handleResizeStart(e, element.id, "w")}
+              />
+              <div
+                className="absolute w-3 h-3 bg-blue-500 border border-white cursor-e-resize"
+                style={{ right: -6, top: "50%", transform: "translateY(-50%)" }}
+                onMouseDown={(e) => handleResizeStart(e, element.id, "e")}
+              />
+            </>
+          )}
+        </div>
+      </Draggable>
+    );
+  })}
+</div>
+
           </div>
 
           {/* Element Properties Toolbar - Overlay */}
