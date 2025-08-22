@@ -3,12 +3,34 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
     <link rel="icon" href="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" type="image/png" />
-    <title>NexEagle easyHMS</title>
-    <meta name="description" content="NexEagle easyHMS - Healthcare Management System" />
+    <script>
+      // Force light mode - prevent dark mode from being applied
+      document.documentElement.classList.remove('dark');
+      document.documentElement.style.colorScheme = 'light';
+      
+      // Store original matchMedia function
+      const originalMatchMedia = window.matchMedia;
+      
+      // Override matchMedia to always return false for dark mode queries
+      window.matchMedia = function(query) {
+        if (query.includes('prefers-color-scheme: dark')) {
+          return {
+            matches: false,
+            addEventListener: () => {},
+            removeEventListener: () => {},
+            dispatchEvent: () => true
+          };
+        }
+        return originalMatchMedia.call(this, query);
+      };
+    </script>
+    <title>NexEagle HMS</title>
+    <meta name="description" content="NexEagle HMS - Healthcare Management System" />
     <meta name="author" content="NexEagle" />
-    <meta property="og:title" content="NexEagle easyHMS" />
-    <meta property="og:description" content="NexEagle easyHMS - Healthcare Management System" />
+    <meta property="og:title" content="NexEagle HMS" />
+    <meta property="og:description" content="NexEagle HMS - Healthcare Management System" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" />
     <meta property="og:url" content="https://nexeagle.com" />

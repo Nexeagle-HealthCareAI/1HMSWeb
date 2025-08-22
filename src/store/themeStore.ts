@@ -176,7 +176,7 @@ const getDarkColors = (colors: ThemeColors): ThemeColors => ({
 
 // Initial state
 const initialState: ThemeState = {
-  mode: 'auto',
+  mode: 'light', // Force light mode instead of 'auto'
   colorScheme: 'blue',
   colors: colorSchemes.blue,
   settings: {
@@ -276,21 +276,13 @@ export const useThemeStore = create<ThemeStore>()(
 
         // Utility actions
         getEffectiveMode: () => {
-          const { mode, systemPreferences } = get();
-          if (mode === 'auto') {
-            return systemPreferences.prefersDark ? 'dark' : 'light';
-          }
-          return mode;
+          // Always return light mode regardless of system preferences
+          return 'light';
         },
 
         getComputedColors: () => {
-          const { colors, getEffectiveMode } = get();
-          const effectiveMode = getEffectiveMode();
-          
-          if (effectiveMode === 'dark') {
-            return getDarkColors(colors);
-          }
-          
+          const { colors } = get();
+          // Always return light colors regardless of system preferences
           return colors;
         },
       }),

@@ -30,7 +30,7 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
           className="h-12 w-12" 
           style={{ width: '48px', height: '48px' }} 
         />
-        <h1 className="text-3xl font-bold">NexEagle easyHMS</h1>
+        <h1 className="text-3xl font-bold">NexEagle HMS</h1>
       </div>
       
       <h2 className="text-xl font-semibold mb-4">
@@ -76,7 +76,7 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
             className="h-6 w-6"
             style={{ width: '24px', height: '24px' }}
           />
-          <span className="font-bold text-base">NexEagle easyHMS</span>
+          <span className="font-bold text-base">NexEagle HMS</span>
         </div>
       </div>
 

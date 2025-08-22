@@ -61,6 +61,11 @@ export const API_ENDPOINTS = {
     INVITE_USER: '/admin/user-onboarding/invitations?scope=new',
     GET_INVITED_USERS: '/admin/user-onboarding/invitations',
     GET_ONBOARDED_USERS: '/admin/users/onboarded',
+    GET_ALL_USERS: '/admin/user-onboarding/allusers',
+    MANAGE_INVITATION: '/admin/user-onboarding/invitations/manage',
+    DEACTIVATE_USER: '/admin/user-onboarding/deactivate-user',
+    UPDATE_INVITED_USER: '/admin/user-onboarding/invited/Update-user',
+    VALIDATE_TOKEN: '/admin/user-onboarding/validate',
   },
   APPOINTMENTS: {
     GET_ALL: '/appointments',
@@ -153,6 +158,14 @@ export const API_ENDPOINTS = {
     GET_DIAGNOSIS_SUGGESTIONS: '/ai/diagnosis-suggestions',
     CHECK_MEDICATION_INTERACTIONS: '/ai/medication-interactions',
   },
+              CALENDAR: {
+              GET_DOCTOR_TIMEOFF: (doctorId: string) => `/calendar/doctor/timeoff?doctorId=${doctorId}`,
+              CREATE_DOCTOR_TIMEOFF: '/calendar/doctor/timeoff',
+              DELETE_DOCTOR_TIMEOFF: (timeOffId: string) => `/calendar/doctor/timeoff/${timeOffId}`,
+                  GET_DOCTOR_CONFIG: (doctorId: string, startDate: string, days: number) => `/calendar/doctor/config?doctorId=${doctorId}&start=${encodeURIComponent(startDate)}&days=${days}`,
+    CREATE_DOCTOR_OVERRIDE: '/calendar/doctor/override',
+    DELETE_DOCTOR_OVERRIDE: (overrideId: string) => `/calendar/doctor/override/${overrideId}`,
+            },
   MEDIA: {
     PREPARE_UPLOAD: '/media/upload-assigned-url/prepare',
     FINALIZE_UPLOAD: '/media/upload-assigned-url/finalize',

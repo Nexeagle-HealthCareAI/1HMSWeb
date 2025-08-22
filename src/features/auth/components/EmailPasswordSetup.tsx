@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -59,8 +59,16 @@ export const EmailPasswordSetup: React.FC<EmailPasswordSetupProps> = ({
     const sanitizedEmail = ValidationUtils.sanitizeInput(value);
     onEmailChange(sanitizedEmail);
     
-    // Clear email error when user starts typing
-    if (errors.email) {
+    // Real-time email validation
+    if (sanitizedEmail.trim()) {
+      const emailError = ValidationUtils.validateEmail(sanitizedEmail);
+      if (emailError) {
+        setErrors(prev => ({ ...prev, email: emailError }));
+      } else {
+        setErrors(prev => ({ ...prev, email: undefined }));
+      }
+    } else {
+      // Clear error when field is empty (email is optional)
       setErrors(prev => ({ ...prev, email: undefined }));
     }
   };
@@ -88,11 +96,10 @@ export const EmailPasswordSetup: React.FC<EmailPasswordSetupProps> = ({
   const validateForm = () => {
     const newErrors: { email?: string; password?: string; confirmPassword?: string } = {};
 
-    // Validate email
-    if (!email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!ValidationUtils.isValidEmail(email.trim())) {
-      newErrors.email = 'Please enter a valid email address';
+    // Validate email (email is optional but if provided, it must be valid)
+    const emailError = ValidationUtils.validateEmail(email);
+    if (emailError) {
+      newErrors.email = emailError;
     }
 
     // Validate password
@@ -138,19 +145,19 @@ export const EmailPasswordSetup: React.FC<EmailPasswordSetupProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="text-center">
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">
+        <h2 className="text-lg font-semibold text-gray-900 mb-1">
           Set Up Your Account
         </h2>
-        <p className="text-sm text-gray-600">
+        <p className="text-xs text-gray-600">
           Add your email and create a password to complete your registration
         </p>
       </div>
 
       {/* Email Input */}
-      <div className="space-y-2">
-        <Label htmlFor="email" className="text-sm font-medium">
+      <div className="space-y-1">
+        <Label htmlFor="email" className="text-xs font-medium">
           Email Address
         </Label>
         <div className="relative">
@@ -161,20 +168,34 @@ export const EmailPasswordSetup: React.FC<EmailPasswordSetupProps> = ({
             value={email}
             onChange={(e) => handleEmailChange(e.target.value)}
             placeholder="Enter your email address"
-            className={`h-12 pl-10 text-base ${errors.email ? 'border-red-500' : ''}`}
+            className={`h-10 pl-10 pr-10 text-sm ${
+              errors.email 
+                ? 'border-red-500' 
+                : email.trim() && !errors.email 
+                  ? 'border-green-500' 
+                  : ''
+            }`}
             disabled={isLoading}
           />
+          {email.trim() && !errors.email && (
+            <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-500" />
+          )}
         </div>
         {errors.email && (
           <div className="text-xs text-red-600 mt-1">
             {errors.email}
           </div>
         )}
+        {email.trim() && !errors.email && (
+          <div className="text-xs text-green-600 mt-1">
+            ✓ Valid email address
+          </div>
+        )}
       </div>
 
       {/* Password Input */}
-      <div className="space-y-2">
-        <Label htmlFor="password" className="text-sm font-medium">
+      <div className="space-y-1">
+        <Label htmlFor="password" className="text-xs font-medium">
           Password
         </Label>
         <div className="relative">
@@ -185,7 +206,7 @@ export const EmailPasswordSetup: React.FC<EmailPasswordSetupProps> = ({
             value={password}
             onChange={(e) => handlePasswordChange(e.target.value)}
             placeholder="Create a strong password"
-            className={`h-12 pl-10 pr-12 text-base ${errors.password ? 'border-red-500' : ''}`}
+            className={`h-10 pl-10 pr-12 text-sm ${errors.password ? 'border-red-500' : ''}`}
             disabled={isLoading}
           />
           <Button
@@ -208,9 +229,12 @@ export const EmailPasswordSetup: React.FC<EmailPasswordSetupProps> = ({
             </div>
             {passwordStrength.errors.length > 0 && (
               <div className="text-xs text-red-600">
-                {passwordStrength.errors.map((error, index) => (
+                {passwordStrength.errors.slice(0, 2).map((error, index) => (
                   <div key={index}>• {error}</div>
                 ))}
+                {passwordStrength.errors.length > 2 && (
+                  <div className="text-xs text-gray-500">... and {passwordStrength.errors.length - 2} more</div>
+                )}
               </div>
             )}
           </div>
@@ -223,8 +247,8 @@ export const EmailPasswordSetup: React.FC<EmailPasswordSetupProps> = ({
       </div>
 
       {/* Confirm Password Input */}
-      <div className="space-y-2">
-        <Label htmlFor="confirmPassword" className="text-sm font-medium">
+      <div className="space-y-1">
+        <Label htmlFor="confirmPassword" className="text-xs font-medium">
           Confirm Password
         </Label>
         <div className="relative">
@@ -235,7 +259,7 @@ export const EmailPasswordSetup: React.FC<EmailPasswordSetupProps> = ({
             value={confirmPassword}
             onChange={(e) => handleConfirmPasswordChange(e.target.value)}
             placeholder="Confirm your password"
-            className={`h-12 pl-10 pr-12 text-base ${
+            className={`h-10 pl-10 pr-12 text-sm ${
               errors.confirmPassword 
                 ? 'border-red-500' 
                 : passwordMatchStatus === 'matching' 
@@ -285,23 +309,13 @@ export const EmailPasswordSetup: React.FC<EmailPasswordSetupProps> = ({
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-3 pt-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onBack}
-          disabled={isLoading}
-          className="flex-1 h-12"
-        >
-          Back
-        </Button>
-        
+      <div className="flex gap-2 pt-2">
         <Button
           type="button"
           variant="outline"
           onClick={onSkip}
           disabled={isLoading}
-          className="flex-1 h-12"
+          className="flex-1 h-10 text-sm"
         >
           Skip
         </Button>
@@ -310,11 +324,11 @@ export const EmailPasswordSetup: React.FC<EmailPasswordSetupProps> = ({
           type="button"
           onClick={handleComplete}
           disabled={isLoading || !passwordStrength.isValid || passwordMatchStatus !== 'matching' || !email.trim()}
-          className="flex-1 h-12 bg-primary text-white"
+          className="flex-1 h-10 text-sm bg-primary text-white"
         >
           {isLoading ? (
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               Setting up...
             </div>
           ) : (

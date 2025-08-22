@@ -10,5 +10,9 @@ export {
   useDeleteOverride,
   useCreateBlock,
   useDeleteBlock,
+  useTimeOff,
+  useCreateTimeOff,
+  useDeleteTimeOff,
+  useDoctorCalendarConfig,
   calendarKeys 
 } from './useCalendar';

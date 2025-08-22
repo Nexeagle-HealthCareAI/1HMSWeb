@@ -6,6 +6,7 @@ import { CheckCircle, Mail, Users } from 'lucide-react';
 interface InvitationSuccessModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onViewInvitedUsers: () => void;
   invitedUserName: string;
   invitedUserEmail: string;
   invitedUserRole: string;
@@ -14,6 +15,7 @@ interface InvitationSuccessModalProps {
 export const InvitationSuccessModal: React.FC<InvitationSuccessModalProps> = ({
   isOpen,
   onClose,
+  onViewInvitedUsers,
   invitedUserName,
   invitedUserEmail,
   invitedUserRole,
@@ -62,7 +64,7 @@ export const InvitationSuccessModal: React.FC<InvitationSuccessModalProps> = ({
             <Button variant="outline" onClick={onClose}>
               Close
             </Button>
-            <Button onClick={onClose}>
+            <Button onClick={onViewInvitedUsers}>
               View Invited Users
             </Button>
           </div>

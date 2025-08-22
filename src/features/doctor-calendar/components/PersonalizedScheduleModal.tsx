@@ -12,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ShiftName, CreateOverridePayload, BlockType, CreateBlockPayload } from '../api/types';
 import { format, parseISO, addDays, addWeeks, addMonths } from 'date-fns';
 import { Clock, Calendar, Repeat, Sun, Moon, Sunrise, Sunset } from 'lucide-react';
+import { CalendarService, CalendarViewType, DateRange } from '../services/calendarService';
+import { DateRangeSelectionPopup } from './DateRangeSelectionPopup';
 
 interface PersonalizedScheduleModalProps {
   open: boolean;
@@ -20,6 +22,8 @@ interface PersonalizedScheduleModalProps {
   initialDate?: string;
   initialStartDateTime?: string;
   initialEndDateTime?: string;
+  viewType?: CalendarViewType;
+  selectedDate?: Date;
   onSave: (payloads: CreateOverridePayload[]) => void;
   onSaveBlock?: (payload: CreateBlockPayload) => void;
   isLoading?: boolean;
@@ -76,64 +80,106 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
   initialDate,
   initialStartDateTime,
   initialEndDateTime,
+  viewType = 'month',
+  selectedDate = new Date(),
   onSave,
   onSaveBlock,
   isLoading = false
 }) => {
   const [selectedShifts, setSelectedShifts] = useState<Set<ShiftName>>(new Set());
-     const [shiftConfigs, setShiftConfigs] = useState<Record<ShiftName, {
-     startTime: string;
-     endTime: string;
-     slotMinutes: number;
-     maxPatients: string;
-     enabled: boolean;
-   }>>({
-     Morning: { startTime: '09:00', endTime: '12:00', slotMinutes: 10, maxPatients: '', enabled: false },
-     Afternoon: { startTime: '14:00', endTime: '17:00', slotMinutes: 10, maxPatients: '', enabled: false },
-     Evening: { startTime: '18:00', endTime: '21:00', slotMinutes: 10, maxPatients: '', enabled: false },
-     Night: { startTime: '22:00', endTime: '06:00', slotMinutes: 10, maxPatients: '', enabled: false }
-   });
+       const [shiftConfigs, setShiftConfigs] = useState<Record<ShiftName, {
+    startTime: string;
+    endTime: string;
+    slotDuration: number;
+    maxPatients: string;
+    enabled: boolean;
+  }>>({
+    Morning: { startTime: '09:00', endTime: '12:00', slotDuration: 15, maxPatients: '', enabled: false },
+    Afternoon: { startTime: '14:00', endTime: '17:00', slotDuration: 15, maxPatients: '', enabled: false },
+    Evening: { startTime: '18:00', endTime: '21:00', slotDuration: 15, maxPatients: '', enabled: false },
+    Night: { startTime: '22:00', endTime: '06:00', slotDuration: 15, maxPatients: '', enabled: false }
+  });
 
-               const [scheduleType, setScheduleType] = useState<'schedule' | 'block'>(
-     initialStartDateTime && initialEndDateTime ? 'block' : 'schedule'
-   );
-  const [startDate, setStartDate] = useState(initialDate || format(addDays(new Date(), 1), 'yyyy-MM-dd'));
-  const [endDate, setEndDate] = useState(initialDate || format(addDays(new Date(), 1), 'yyyy-MM-dd'));
+                 const [scheduleType, setScheduleType] = useState<'schedule' | 'block'>(
+    initialStartDateTime && initialEndDateTime ? 'block' : 'schedule'
+  );
+  const [startDate, setStartDate] = useState(initialDate || '');
+  const [endDate, setEndDate] = useState(initialDate || '');
+  
+  // Date range selection state
+  const [showDateRangePopup, setShowDateRangePopup] = useState(false);
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | null>(null);
      const [scheduleMode, setScheduleMode] = useState<'single' | 'recurring'>('single');
    const [recurringDays, setRecurringDays] = useState<Set<number>>(new Set([1, 2, 3, 4, 5])); // Mon-Fri
-   const [recurringEndDate, setRecurringEndDate] = useState(format(addWeeks(new Date(), 4), 'yyyy-MM-dd'));
+   const [recurringEndDate, setRecurringEndDate] = useState('');
 
      // Block form state
-   const [blockFormData, setBlockFormData] = useState({
-     title: '',
-     blockType: 'Personal' as BlockType,
-     startDateTime: '',
-     endDateTime: ''
-   });
+     const [blockFormData, setBlockFormData] = useState({
+    blockType: 'Personal' as BlockType,
+    startDateTime: '',
+    endDateTime: ''
+  });
 
-  // Initialize block form data
+  // Confirmation dialog state
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [pendingPayloads, setPendingPayloads] = useState<CreateOverridePayload[]>([]);
+  const [pendingBlockPayload, setPendingBlockPayload] = useState<CreateBlockPayload | null>(null);
+
+  // Initialize dates and block form data
   useEffect(() => {
+    // Only initialize when modal is open
+    if (!open) return;
+    
+    // Initialize start and end dates if not set
+    if (!startDate) {
+      const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd');
+      setStartDate(initialDate || tomorrow);
+    }
+    
+    if (!endDate) {
+      const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd');
+      setEndDate(initialDate || tomorrow);
+    }
+    
+    if (!recurringEndDate) {
+      const fourWeeksLater = format(addWeeks(new Date(), 4), 'yyyy-MM-dd');
+      setRecurringEndDate(fourWeeksLater);
+    }
+    
+    // Initialize block form data
+    const now = new Date();
+    const today = format(now, 'yyyy-MM-dd');
+    
     if (initialStartDateTime && initialEndDateTime) {
-      setBlockFormData(prev => ({
-        ...prev,
-        startDateTime: format(new Date(initialStartDateTime), "yyyy-MM-dd'T'HH:mm"),
-        endDateTime: format(new Date(initialEndDateTime), "yyyy-MM-dd'T'HH:mm")
-      }));
+      try {
+        const startDateTime = format(new Date(initialStartDateTime), "yyyy-MM-dd'T'HH:mm");
+        const endDateTime = format(new Date(initialEndDateTime), "yyyy-MM-dd'T'HH:mm");
+        
+        setBlockFormData(prev => ({
+          ...prev,
+          startDateTime,
+          endDateTime
+        }));
+      } catch (error) {
+        // Fallback to defaults if parsing fails
+        setBlockFormData(prev => ({
+          ...prev,
+          startDateTime: `${today}T09:00`,
+          endDateTime: `${today}T17:00`
+        }));
+      }
     } else {
-      // Default to tomorrow with reasonable times
-      const tomorrow = addDays(new Date(), 1);
-      const startTime = new Date(tomorrow);
-      startTime.setHours(9, 0, 0, 0);
-      const endTime = new Date(tomorrow);
-      endTime.setHours(17, 0, 0, 0);
+      // Use more user-friendly defaults (10:30 AM - 11:00 AM as shown in the image)
+      const startDateTime = `${today}T10:30`;
+      const endDateTime = `${today}T11:00`;
       
       setBlockFormData(prev => ({
         ...prev,
-        startDateTime: format(startTime, "yyyy-MM-dd'T'HH:mm"),
-        endDateTime: format(endTime, "yyyy-MM-dd'T'HH:mm")
+        startDateTime,
+        endDateTime
       }));
     }
-  }, [initialStartDateTime, initialEndDateTime]);
+  }, [open, initialDate, initialStartDateTime, initialEndDateTime]);
 
   const handleShiftToggle = (shiftName: ShiftName) => {
     const newSelected = new Set(selectedShifts);
@@ -174,55 +220,97 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
     setRecurringDays(newDays);
   };
 
-                       const generatePayloads = (): CreateOverridePayload[] => {
+  // Handle date range selection
+  const handleDateRangeSelect = () => {
+    setShowDateRangePopup(true);
+  };
+
+  const handleDateRangeConfirm = (dateRange: DateRange) => {
+    setSelectedDateRange(dateRange);
+    setStartDate(format(dateRange.startDate, 'yyyy-MM-dd'));
+    setEndDate(format(dateRange.endDate, 'yyyy-MM-dd'));
+    setShowDateRangePopup(false);
+  };
+
+    const handleDateRangeCancel = () => {
+    setShowDateRangePopup(false);
+  };
+
+  // Confirmation handlers
+  const handleConfirmSave = () => {
+    setShowConfirmation(false);
+    
+    if (pendingPayloads.length > 0) {
+      onSave(pendingPayloads);
+      setPendingPayloads([]);
+    } else if (pendingBlockPayload) {
+      if (onSaveBlock) {
+        onSaveBlock(pendingBlockPayload);
+      }
+      setPendingBlockPayload(null);
+    }
+  };
+
+  const handleCancelSave = () => {
+    setShowConfirmation(false);
+    setPendingPayloads([]);
+    setPendingBlockPayload(null);
+  };
+
+
+
+  const generatePayloads = (): CreateOverridePayload[] => {
        const payloads: CreateOverridePayload[] = [];
        
+       // Convert recurring days to abbreviated day names for database
+       const getDayAbbreviation = (dayNumber: number): string => {
+         const dayAbbreviations = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+         return dayAbbreviations[dayNumber === 0 ? 0 : dayNumber - 1];
+       };
+       
+       const recurringDayAbbreviations = Array.from(recurringDays).map(day => getDayAbbreviation(day));
+       const recurringDaysString = recurringDayAbbreviations.length > 0 ? recurringDayAbbreviations.join(',') : null;
+       
        if (scheduleMode === 'single') {
-         // Single day schedule
+         // Single day schedule - one payload per shift
          selectedShifts.forEach(shiftName => {
            const config = shiftConfigs[shiftName];
            if (config.enabled) {
              payloads.push({
                doctorId,
-               shiftDate: startDate,
                shiftName,
-               startTime: config.startTime,
-               endTime: config.endTime,
-               slotMinutes: config.slotMinutes,
+               startTime: `${config.startTime}:00`, // Convert to TIME format
+               endTime: `${config.endTime}:00`,     // Convert to TIME format
+               slotDurationInMinutes: config.slotDuration,
+               recurringDays: null,
+               overrideDate: startDate, // DATE format "YYYY-MM-DD"
+               startDate: null,
+               endDate: null,
                maxPatients: config.maxPatients ? parseInt(config.maxPatients) : null,
                reason: `Personalized ${shiftName} Schedule`
              });
            }
          });
        } else {
-         // Recurring schedule
-         const start = parseISO(startDate);
-         const end = parseISO(recurringEndDate);
-         let current = start;
-
-         while (current <= end) {
-           const dayOfWeek = current.getDay();
-           const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek; // Convert Sunday=0 to Sunday=7
-
-           if (recurringDays.has(adjustedDay)) {
-             selectedShifts.forEach(shiftName => {
-               const config = shiftConfigs[shiftName];
-               if (config.enabled) {
-                 payloads.push({
-                   doctorId,
-                   shiftDate: format(current, 'yyyy-MM-dd'),
-                   shiftName,
-                   startTime: config.startTime,
-                   endTime: config.endTime,
-                   slotMinutes: config.slotMinutes,
-                   maxPatients: config.maxPatients ? parseInt(config.maxPatients) : null,
-                   reason: `Recurring ${shiftName} Schedule`
-                 });
-               }
+         // Recurring schedule - one payload per shift with recurring days
+         selectedShifts.forEach(shiftName => {
+           const config = shiftConfigs[shiftName];
+           if (config.enabled) {
+             payloads.push({
+               doctorId,
+               shiftName,
+               startTime: `${config.startTime}:00`, // Convert to TIME format
+               endTime: `${config.endTime}:00`,     // Convert to TIME format
+               slotDurationInMinutes: config.slotDuration,
+               recurringDays: recurringDaysString, // "Mon,Wed,Fri"
+               overrideDate: null,
+               startDate: startDate,        // DATE format "YYYY-MM-DD"
+               endDate: recurringEndDate,   // DATE format "YYYY-MM-DD"
+               maxPatients: config.maxPatients ? parseInt(config.maxPatients) : null,
+               reason: `Recurring ${shiftName} Schedule`
              });
            }
-           current = addDays(current, 1);
-         }
+         });
        }
 
        return payloads;
@@ -271,10 +359,11 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
        return; // Invalid shift configurations
      }
 
-     const payloads = generatePayloads();
-     if (payloads.length > 0) {
-       onSave(payloads);
-     }
+         const payloads = generatePayloads();
+    if (payloads.length > 0) {
+      setPendingPayloads(payloads);
+      setShowConfirmation(true);
+    }
    };
 
   const handleBlockSubmit = (e: React.FormEvent) => {
@@ -282,25 +371,63 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
     
     if (!onSaveBlock) return;
     
-    const payload: CreateBlockPayload = {
-      doctorId,
-      title: blockFormData.title,
-      blockType: blockFormData.blockType,
-      startDateTime: new Date(blockFormData.startDateTime).toISOString(),
-      endDateTime: new Date(blockFormData.endDateTime).toISOString()
-    };
-    
-    onSaveBlock(payload);
+    try {
+      // Generate a title based on block type and date
+      const startDate = new Date(blockFormData.startDateTime);
+      const endDate = new Date(blockFormData.endDateTime);
+      
+      // Check if dates are valid
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        console.error('Invalid dates provided:', blockFormData);
+        return;
+      }
+      
+      const generatedTitle = `${blockFormData.blockType} - ${format(startDate, 'MMM dd, yyyy')}`;
+      
+      const payload: CreateBlockPayload = {
+        doctorId,
+        title: generatedTitle,
+        blockType: blockFormData.blockType,
+        startDateTime: startDate.toISOString(),
+        endDateTime: endDate.toISOString()
+      };
+      
+      setPendingBlockPayload(payload);
+      setShowConfirmation(true);
+    } catch (error) {
+      console.error('Error creating time-off payload:', error);
+    }
   };
 
-     const isBlockFormValid = () => {
-     if (!blockFormData.title.trim()) return false;
-     
-     const start = new Date(blockFormData.startDateTime);
-     const end = new Date(blockFormData.endDateTime);
-     
-     return start < end && !isNaN(start.getTime()) && !isNaN(end.getTime());
-   };
+         const isBlockFormValid = () => {
+    // Check if required fields are filled
+    if (!blockFormData.startDateTime || !blockFormData.endDateTime) {
+      return false;
+    }
+    
+    const start = new Date(blockFormData.startDateTime);
+    const end = new Date(blockFormData.endDateTime);
+    const now = new Date();
+    
+    // Ensure valid dates
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return false;
+    }
+    
+    // Allow same-day bookings (start <= end)
+    if (start > end) {
+      return false;
+    }
+    
+    // Prevent booking in the past (start time should be at least current time)
+    // Allow a 10-minute buffer to account for form interaction time and timezone issues
+    const bufferTime = new Date(now.getTime() - 10 * 60 * 1000);
+    if (start < bufferTime) {
+      return false;
+    }
+    
+    return true;
+  };
 
    const isScheduleFormValid = () => {
      if (selectedShifts.size === 0) return false;
@@ -354,10 +481,10 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
      }
    };
 
-   // Get minimum allowed date (tomorrow)
-   const getMinDate = () => {
-     return format(addDays(new Date(), 1), 'yyyy-MM-dd');
-   };
+     // Get minimum allowed date (today)
+  const getMinDate = () => {
+    return format(new Date(), 'yyyy-MM-dd');
+  };
 
    
 
@@ -372,7 +499,8 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
   ];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -493,18 +621,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
               
                              
 
-                               <TabsContent value="block" className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="blockTitle">Title</Label>
-                                         <Input
-                       id="blockTitle"
-                       value={blockFormData.title}
-                       onChange={(e) => setBlockFormData(prev => ({ ...prev, title: e.target.value }))}
-                       placeholder="e.g., Family vacation, Medical conference, Emergency call"
-                       required
-                     />
-                  </div>
-                  
+                                               <TabsContent value="block" className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="blockType">Type of Time Off</Label>
                    <Select
@@ -543,45 +660,302 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                    </Select>
                  </div>
                  
-                 <div className="grid grid-cols-2 gap-4">
-                   <div className="space-y-2">
-                     <Label htmlFor="blockStartDateTime">Start Date & Time</Label>
-                     <Input
-                       id="blockStartDateTime"
-                       type="datetime-local"
-                       value={blockFormData.startDateTime}
-                       min={getMinDate() + 'T00:00'}
-                       onChange={(e) => setBlockFormData(prev => ({ ...prev, startDateTime: e.target.value }))}
-                       required
-                     />
-                   </div>
-                   
-                   <div className="space-y-2">
-                     <Label htmlFor="blockEndDateTime">End Date & Time</Label>
-                     <Input
-                       id="blockEndDateTime"
-                       type="datetime-local"
-                       value={blockFormData.endDateTime}
-                       min={blockFormData.startDateTime}
-                       onChange={(e) => setBlockFormData(prev => ({ ...prev, endDateTime: e.target.value }))}
-                       required
-                     />
-                   </div>
-                 </div>
-                 
-                                   {blockFormData.startDateTime && blockFormData.endDateTime && (
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div className="text-sm text-blue-800">
-                        <div className="font-medium">Time Off Period:</div>
+                                   <div className="space-y-4">
+                    {/* Start Date & Time */}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">Start Date & Time</Label>
+                      <div className="grid grid-cols-2 gap-3">
                         <div>
-                          {format(new Date(blockFormData.startDateTime), 'MMM dd, yyyy HH:mm')} - {format(new Date(blockFormData.endDateTime), 'MMM dd, yyyy HH:mm')}
+                          <Label htmlFor="blockStartDate" className="text-xs text-muted-foreground">Date</Label>
+                          <Input
+                            id="blockStartDate"
+                            type="date"
+                            value={blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[0] : ''}
+                            min={format(new Date(), 'yyyy-MM-dd')}
+                            onChange={(e) => {
+                              const date = e.target.value;
+                              const time = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[1] : '09:00';
+                              setBlockFormData(prev => ({ 
+                                ...prev, 
+                                startDateTime: `${date}T${time}` 
+                              }));
+                            }}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="blockStartTime" className="text-xs text-muted-foreground">Time</Label>
+                          <div className="flex gap-1">
+                            <Select
+                              value={blockFormData.startDateTime ? 
+                                (() => {
+                                  const time = blockFormData.startDateTime.split('T')[1];
+                                  const [hours, minutes] = time.split(':');
+                                  const hour12 = parseInt(hours) % 12 || 12;
+                                  return `${hour12.toString().padStart(2, '0')}:${minutes}`;
+                                })() : '10:30'
+                              }
+                              onValueChange={(value) => {
+                                const date = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
+                                const currentTime = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[1] : '10:30';
+                                const [, minutes] = currentTime.split(':');
+                                const currentHour = parseInt(currentTime.split(':')[0]);
+                                const isCurrentlyPM = currentHour >= 12;
+                                
+                                const [hour12, newMinutes] = value.split(':');
+                                let hour24 = parseInt(hour12);
+                                if (isCurrentlyPM && hour24 !== 12) hour24 += 12;
+                                if (!isCurrentlyPM && hour24 === 12) hour24 = 0;
+                                
+                                const time24 = `${hour24.toString().padStart(2, '0')}:${newMinutes}`;
+                                setBlockFormData(prev => ({ 
+                                  ...prev, 
+                                  startDateTime: `${date}T${time24}` 
+                                }));
+                              }}
+                            >
+                              <SelectTrigger className="w-20 h-8 text-sm">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 48 }, (_, i) => {
+                                  const totalMinutes = i * 30;
+                                  const hours = Math.floor(totalMinutes / 60);
+                                  const minutes = totalMinutes % 60;
+                                  const hour12 = hours % 12 || 12;
+                                  return (
+                                    <SelectItem key={i} value={`${hour12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`}>
+                                      {hour12}:{minutes.toString().padStart(2, '0')}
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                            <Select
+                              value={blockFormData.startDateTime ? 
+                                (parseInt(blockFormData.startDateTime.split('T')[1].split(':')[0]) >= 12 ? 'PM' : 'AM') : 'AM'
+                              }
+                              onValueChange={(value) => {
+                                const date = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
+                                const currentTime = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[1] : '10:30';
+                                const [hours, minutes] = currentTime.split(':');
+                                let hour24 = parseInt(hours);
+                                
+                                if (value === 'PM' && hour24 < 12) {
+                                  hour24 += 12;
+                                } else if (value === 'AM' && hour24 >= 12) {
+                                  hour24 -= 12;
+                                }
+                                
+                                const time24 = `${hour24.toString().padStart(2, '0')}:${minutes}`;
+                                setBlockFormData(prev => ({ 
+                                  ...prev, 
+                                  startDateTime: `${date}T${time24}` 
+                                }));
+                              }}
+                            >
+                              <SelectTrigger className="w-16 h-8 text-sm">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="AM">AM</SelectItem>
+                                <SelectItem value="PM">PM</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  )}
+
+                    {/* End Date & Time */}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">End Date & Time</Label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label htmlFor="blockEndDate" className="text-xs text-muted-foreground">Date</Label>
+                          <Input
+                            id="blockEndDate"
+                            type="date"
+                            value={blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[0] : ''}
+                            min={blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd')}
+                            onChange={(e) => {
+                              const date = e.target.value;
+                              const time = blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[1] : '17:00';
+                              setBlockFormData(prev => ({ 
+                                ...prev, 
+                                endDateTime: `${date}T${time}` 
+                              }));
+                            }}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="blockEndTime" className="text-xs text-muted-foreground">Time</Label>
+                          <div className="flex gap-1">
+                            <Select
+                              value={blockFormData.endDateTime ? 
+                                (() => {
+                                  const time = blockFormData.endDateTime.split('T')[1];
+                                  const [hours, minutes] = time.split(':');
+                                  const hour12 = parseInt(hours) % 12 || 12;
+                                  return `${hour12.toString().padStart(2, '0')}:${minutes}`;
+                                })() : '11:00'
+                              }
+                              onValueChange={(value) => {
+                                const date = blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
+                                const currentTime = blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[1] : '17:00';
+                                const [, minutes] = currentTime.split(':');
+                                const currentHour = parseInt(currentTime.split(':')[0]);
+                                const isCurrentlyPM = currentHour >= 12;
+                                
+                                const [hour12, newMinutes] = value.split(':');
+                                let hour24 = parseInt(hour12);
+                                if (isCurrentlyPM && hour24 !== 12) hour24 += 12;
+                                if (!isCurrentlyPM && hour24 === 12) hour24 = 0;
+                                
+                                const time24 = `${hour24.toString().padStart(2, '0')}:${newMinutes}`;
+                                setBlockFormData(prev => ({ 
+                                  ...prev, 
+                                  endDateTime: `${date}T${time24}` 
+                                }));
+                              }}
+                            >
+                              <SelectTrigger className="w-20 h-8 text-sm">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 48 }, (_, i) => {
+                                  const totalMinutes = i * 30;
+                                  const hours = Math.floor(totalMinutes / 60);
+                                  const minutes = totalMinutes % 60;
+                                  const hour12 = hours % 12 || 12;
+                                  return (
+                                    <SelectItem key={i} value={`${hour12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`}>
+                                      {hour12}:{minutes.toString().padStart(2, '0')}
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                            <Select
+                              value={blockFormData.endDateTime ? 
+                                (parseInt(blockFormData.endDateTime.split('T')[1].split(':')[0]) >= 12 ? 'PM' : 'AM') : 'AM'
+                              }
+                              onValueChange={(value) => {
+                                const date = blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
+                                const currentTime = blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[1] : '17:00';
+                                const [hours, minutes] = currentTime.split(':');
+                                let hour24 = parseInt(hours);
+                                
+                                if (value === 'PM' && hour24 < 12) {
+                                  hour24 += 12;
+                                } else if (value === 'AM' && hour24 >= 12) {
+                                  hour24 -= 12;
+                                }
+                                
+                                const time24 = `${hour24.toString().padStart(2, '0')}:${minutes}`;
+                                setBlockFormData(prev => ({ 
+                                  ...prev, 
+                                  endDateTime: `${date}T${time24}` 
+                                }));
+                              }}
+                            >
+                              <SelectTrigger className="w-16 h-8 text-sm">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="AM">AM</SelectItem>
+                                <SelectItem value="PM">PM</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick Time Presets */}
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Quick Time Presets</Label>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const date = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
+                            setBlockFormData(prev => ({ 
+                              ...prev, 
+                              startDateTime: `${date}T09:00`,
+                              endDateTime: `${date}T17:00`
+                            }));
+                          }}
+                          className="text-xs"
+                        >
+                          Full Day (9 AM - 5 PM)
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const date = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
+                            setBlockFormData(prev => ({ 
+                              ...prev, 
+                              startDateTime: `${date}T09:00`,
+                              endDateTime: `${date}T12:00`
+                            }));
+                          }}
+                          className="text-xs"
+                        >
+                          Morning (9 AM - 12 PM)
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const date = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
+                            setBlockFormData(prev => ({ 
+                              ...prev, 
+                              startDateTime: `${date}T14:00`,
+                              endDateTime: `${date}T17:00`
+                            }));
+                          }}
+                          className="text-xs"
+                        >
+                          Afternoon (2 PM - 5 PM)
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                  
-                 <p className="text-xs text-amber-600">
-                   ⚠️ Only future dates are allowed (tomorrow and onwards)
+                                                                     {blockFormData.startDateTime && blockFormData.endDateTime && (
+                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                     <div className="text-sm text-blue-800">
+                       <div className="font-medium">Time Off Period:</div>
+                       <div>
+                         {(() => {
+                           try {
+                             const startDate = new Date(blockFormData.startDateTime);
+                             const endDate = new Date(blockFormData.endDateTime);
+                             
+                             // Check if dates are valid
+                             if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                               return 'Invalid date range';
+                             }
+                             
+                             return `${format(startDate, 'MMM dd, yyyy HH:mm')} - ${format(endDate, 'MMM dd, yyyy HH:mm')}`;
+                           } catch (error) {
+                             return 'Invalid date range';
+                           }
+                         })()}
+                       </div>
+                     </div>
+                   </div>
+                 )}
+                 
+                 <p className="text-xs text-blue-600">
+                   ℹ️ You can book time-off for today or future dates. Same-day bookings are allowed.
                  </p>
                </TabsContent>
              </Tabs>
@@ -654,22 +1028,21 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                       
                       <div className="grid grid-cols-2 gap-3">
                                                                           <div>
-                           <Label htmlFor={`${template.name}-slot`}>Slot Duration (minutes)</Label>
-                           <Input
-                             id={`${template.name}-slot`}
-                             type="number"
-                             min="5"
-                             max="120"
-                             step="5"
-                             value={shiftConfigs[template.name].slotMinutes}
-                             onChange={(e) => {
-                               e.stopPropagation();
-                               handleShiftConfigChange(template.name, 'slotMinutes', parseInt(e.target.value) || 10);
-                             }}
-                             onMouseDown={(e) => e.stopPropagation()}
-                             onClick={(e) => e.stopPropagation()}
-                             placeholder="10"
-                           />
+                                                                                   <Label htmlFor={`${template.name}-slot`}>Slot Duration (minutes)</Label>
+                            <Input
+                              id={`${template.name}-slot`}
+                              type="number"
+                              min="1"
+                              step="1"
+                              value={shiftConfigs[template.name].slotDuration}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                handleShiftConfigChange(template.name, 'slotDuration', parseInt(e.target.value) || 15);
+                              }}
+                              onMouseDown={(e) => e.stopPropagation()}
+                              onClick={(e) => e.stopPropagation()}
+                              placeholder="15"
+                            />
                          </div>
                          <div>
                            <Label htmlFor={`${template.name}-max`}>Max Patients</Label>
@@ -723,7 +1096,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
               Cancel
             </Button>
             
-                         <Button
+                                                                           <Button
                type="submit"
                disabled={
                  (scheduleType === 'block' ? !isBlockFormValid() : !isScheduleFormValid()) || 
@@ -741,5 +1114,69 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
         </form>
       </DialogContent>
     </Dialog>
+
+    {/* Confirmation Dialog */}
+    <Dialog open={showConfirmation} onOpenChange={setShowConfirmation}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+              <Calendar className="h-4 w-4 text-blue-600" />
+            </div>
+            Confirm Schedule Save
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="py-4">
+          <p className="text-gray-600 mb-4">
+            {pendingPayloads.length > 0 
+              ? `Are you sure you want to save ${pendingPayloads.length} personalized schedule override(s)? This will update your working hours for the selected dates.`
+              : `Are you sure you want to schedule this time off? You will be unavailable during the selected time period.`
+            }
+          </p>
+          
+          {pendingPayloads.length > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+              <div className="font-medium text-blue-800 mb-1">Schedule Summary:</div>
+              <div className="text-blue-700 space-y-1">
+                <div>• {pendingPayloads.length} override{pendingPayloads.length > 1 ? 's' : ''} will be created</div>
+                <div>• {scheduleMode === 'single' ? 'Single day' : 'Recurring'} schedule</div>
+                {scheduleMode === 'recurring' && (
+                  <div>• {recurringDays.size} day{recurringDays.size > 1 ? 's' : ''} per week</div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {pendingBlockPayload && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm">
+              <div className="font-medium text-orange-800 mb-1">Time Off Details:</div>
+              <div className="text-orange-700 space-y-1">
+                <div>• Type: {pendingBlockPayload.blockType}</div>
+                <div>• Duration: {format(new Date(pendingBlockPayload.startDateTime), 'MMM dd, yyyy HH:mm')} - {format(new Date(pendingBlockPayload.endDateTime), 'MMM dd, yyyy HH:mm')}</div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleCancelSave}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={handleConfirmSave}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            Yes, Save Schedule
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };

@@ -1,8 +1,8 @@
 import { useAuthStore } from '@/store/authStore';
 
 export class RoleService {
-  private static ROLE_KEY = 'easyHMS_userRole';
-  private static USER_PERMISSIONS_KEY = 'easyHMS_userPermissions';
+  private static ROLE_KEY = 'userRole';
+  private static USER_PERMISSIONS_KEY = 'userPermissions';
 
   // Role definitions
   private static ROLES = {

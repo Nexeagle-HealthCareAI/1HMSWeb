@@ -1,19 +1,50 @@
 import { apiClient, ApiResponse, PaginatedResponse } from '@/services/axiosClient';
 
 // Types
+export interface DoctorDepartment {
+  doctorDepartmentId: string;
+  departmentId: string;
+  departmentName: string;
+  departmentDescription: string;
+  assignedAt: string;
+}
+
+export interface DoctorSpecialization {
+  doctorSpecializationId: string;
+  specializationId: string;
+  specializationName: string;
+  specializationDescription: string;
+  assignedAt: string;
+}
+
 export interface Doctor {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  specialization: string;
-  department: string;
-  license_number: string;
-  experience_years: number;
-  education: string[];
-  certifications: string[];
-  is_available: boolean;
-  working_hours: {
+  doctorId: string;
+  userId: string;
+  licenseNumber: string;
+  qualifications: string[];
+  experienceYears: number;
+  medicalCouncil: string;
+  registrationYear: number;
+  bio: string;
+  primaryDepartmentID: string;
+  primaryDepartmentName: string;
+  profileCompletionPercentage: number;
+  createdAt: string;
+  doctorDepartments: DoctorDepartment[];
+  doctorSpecializations: DoctorSpecialization[];
+  // Legacy fields for backward compatibility
+  id?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  specialization?: string;
+  department?: string;
+  license_number?: string;
+  experience_years?: number;
+  education?: string[];
+  certifications?: string[];
+  is_available?: boolean;
+  working_hours?: {
     monday: { start: string; end: string; available: boolean };
     tuesday: { start: string; end: string; available: boolean };
     wednesday: { start: string; end: string; available: boolean };
@@ -22,11 +53,10 @@ export interface Doctor {
     saturday: { start: string; end: string; available: boolean };
     sunday: { start: string; end: string; available: boolean };
   };
-  consultation_fee: number;
+  consultation_fee?: number;
   avatar?: string;
-  bio?: string;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface CreateDoctorRequest {
@@ -167,6 +197,7 @@ export const doctorApi = {
 
   // Get doctor by ID
   getById: (id: string): Promise<ApiResponse<Doctor>> => {
+    console.log(`🌐 Making API call to /doctors/${id}`);
     return apiClient.get(`/doctors/${id}`);
   },
 
@@ -185,10 +216,7 @@ export const doctorApi = {
     return apiClient.delete(`/doctors/${id}`);
   },
 
-  // Get doctor profile
-  getProfile: (): Promise<ApiResponse<Doctor>> => {
-    return apiClient.get('/doctors/profile');
-  },
+
 
   // Update doctor profile
   updateProfile: (data: UpdateDoctorRequest): Promise<ApiResponse<Doctor>> => {

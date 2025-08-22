@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { userManagementApi, RolesResponse, InviteUserRequest, InviteUserResponse, InvitedUser, OnboardedUser } from '../services/userManagementApi';
+import { userManagementApi, RolesResponse, InviteUserRequest, InviteUserResponse, InvitedUser, OnboardedUser, ManageInvitationRequest, ManageInvitationResponse, AllUsersResponse, DeactivateUserRequest, DeactivateUserResponse, UpdateInvitedUserRequest, UpdateInvitedUserResponse } from '../services/userManagementApi';
 import { useToast } from '@/hooks/use-toast';
 
 // Hook for user management API calls
@@ -17,13 +17,14 @@ export const useUserManagementApi = () => {
     });
   };
 
-  // Get invited users
-  const getInvitedUsers = () => {
-    return useQuery<InvitedUser[]>({
-      queryKey: ['user-management', 'invited-users'],
-      queryFn: userManagementApi.getInvitedUsers,
+  // Get invited users with scope filtering
+  const getInvitedUsers = (hospitalId: string, scope: 'Pending' | 'Accepted' | 'Revoked' | 'ALL' = 'ALL') => {
+    return useQuery<{ success: boolean; message: string; invitations: InvitedUser[] }>({
+      queryKey: ['user-management', 'invited-users', hospitalId, scope],
+      queryFn: () => userManagementApi.getInvitedUsers(hospitalId, scope),
       staleTime: 2 * 60 * 1000, // 2 minutes
       gcTime: 5 * 60 * 1000, // 5 minutes
+      enabled: !!hospitalId, // Only run query if hospitalId is available
     });
   };
 
@@ -34,6 +35,17 @@ export const useUserManagementApi = () => {
       queryFn: userManagementApi.getOnboardedUsers,
       staleTime: 2 * 60 * 1000, // 2 minutes
       gcTime: 5 * 60 * 1000, // 5 minutes
+    });
+  };
+
+  // Get all users associated with a hospital
+  const getAllUsers = (hospitalId: string) => {
+    return useQuery<AllUsersResponse>({
+      queryKey: ['user-management', 'all-users', hospitalId],
+      queryFn: () => userManagementApi.getAllUsers(hospitalId),
+      staleTime: 2 * 60 * 1000, // 2 minutes
+      gcTime: 5 * 60 * 1000, // 5 minutes
+      enabled: !!hospitalId, // Only run query if hospitalId is available
     });
   };
 
@@ -57,10 +69,75 @@ export const useUserManagementApi = () => {
     },
   });
 
+  // Manage invitation (resend or revoke)
+  const manageInvitation = useMutation<ManageInvitationResponse, Error, ManageInvitationRequest>({
+    mutationFn: userManagementApi.manageInvitation,
+    onSuccess: (data, variables) => {
+      const action = variables.scope === 'resend' ? 'resent' : 'revoked';
+      toast({
+        title: `Invitation ${action.charAt(0).toUpperCase() + action.slice(1)} Successfully!`,
+        description: data.message || `The invitation has been ${action}.`,
+      });
+      // Invalidate and refetch invited users
+      queryClient.invalidateQueries({ queryKey: ['user-management', 'invited-users'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Manage Invitation",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Deactivate a user
+  const deactivateUser = useMutation<DeactivateUserResponse, Error, DeactivateUserRequest>({
+    mutationFn: userManagementApi.deactivateUser,
+    onSuccess: (data) => {
+      toast({
+        title: "User Deactivated Successfully!",
+        description: data.message || "The user has been deactivated and can no longer access the application.",
+      });
+      // Invalidate and refetch all users
+      queryClient.invalidateQueries({ queryKey: ['user-management', 'all-users'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Deactivate User",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update invited user after OTP verification
+  const updateInvitedUser = useMutation<UpdateInvitedUserResponse, Error, UpdateInvitedUserRequest>({
+    mutationFn: userManagementApi.updateInvitedUser,
+    onSuccess: (data) => {
+      toast({
+        title: "User Updated Successfully!",
+        description: data.message || "User invitation status has been updated successfully.",
+      });
+      // Invalidate and refetch invited users
+      queryClient.invalidateQueries({ queryKey: ['user-management', 'invited-users'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Update User",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   return {
     getAllRoles,
     getInvitedUsers,
     getOnboardedUsers,
+    getAllUsers,
     inviteUser,
+    manageInvitation,
+    deactivateUser,
+    updateInvitedUser,
   };
 };

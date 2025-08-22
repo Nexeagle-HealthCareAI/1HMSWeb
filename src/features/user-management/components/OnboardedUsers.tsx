@@ -10,29 +10,45 @@ import {
   Trash2, 
   Search,
   Eye,
-  MoreHorizontal
+  MoreHorizontal,
+  UserX
 } from 'lucide-react';
 import { useUserManagementApi } from '../hooks/useUserManagementApi';
-import { OnboardedUser } from '../services/userManagementApi';
+import { OnboardedUser, AllUsersResponse } from '../services/userManagementApi';
+import { useAuthStore } from '@/store/authStore';
+import { DeactivateUserDialog } from './DeactivateUserDialog';
 
 export const OnboardedUsers: React.FC = () => {
-  const { getOnboardedUsers } = useUserManagementApi();
-  const { data: users = [], isLoading, error } = getOnboardedUsers();
+  const { getAllUsers, deactivateUser } = useUserManagementApi();
+  const authStore = useAuthStore.getState();
+  const hospitalId = authStore.getHospitalId();
+  const currentUserId = authStore.getUserId();
+  
+  const { data: allUsersResponse, isLoading, error } = getAllUsers(hospitalId || '');
+  const users = allUsersResponse?.users || [];
   
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   
-  // Get unique roles for filter
-  const uniqueRoles = Array.from(new Set(users.map(user => user.roleName)));
+  // Deactivate user states
+  const [showDeactivateDialog, setShowDeactivateDialog] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<{
+    userId: string;
+    fullName: string;
+    email: string;
+  } | null>(null);
+  
+  // Get unique roles for filter (using employeeID as role for now since roleName is not in the new API)
+  const uniqueRoles = Array.from(new Set(users.map(user => user.employeeID || 'Unknown')));
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.mobile.includes(searchTerm);
-    const matchesRole = roleFilter === 'all' || user.roleName === roleFilter;
-    const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
+                         user.mobileNumber.includes(searchTerm);
+    const matchesRole = roleFilter === 'all' || (user.employeeID || 'Unknown') === roleFilter;
+    const matchesStatus = statusFilter === 'all' || (user.isActive ? 'active' : 'inactive') === statusFilter;
     
     return matchesSearch && matchesRole && matchesStatus;
   });
@@ -65,15 +81,30 @@ export const OnboardedUsers: React.FC = () => {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  // Handle deactivate user
+  const handleDeactivateUser = (user: { userId: string; fullName: string; email: string }) => {
+    setSelectedUser(user);
+    setShowDeactivateDialog(true);
   };
+
+  const confirmDeactivateUser = async () => {
+    if (!selectedUser || !hospitalId || !currentUserId) return;
+
+    try {
+      await deactivateUser.mutateAsync({
+        hospitalId,
+        userId: selectedUser.userId,
+        performedByUserId: currentUserId,
+      });
+      
+      setShowDeactivateDialog(false);
+      setSelectedUser(null);
+    } catch (error) {
+      // Error is handled by the mutation
+    }
+  };
+
+
 
   if (isLoading) {
     return (
@@ -133,70 +164,148 @@ export const OnboardedUsers: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Users List */}
-      <div className="grid gap-4">
+            {/* Users Grid */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredUsers.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No users found</h3>
-              <p className="text-muted-foreground">
-                {searchTerm || roleFilter !== 'all' || statusFilter !== 'all' 
-                  ? 'Try adjusting your search or filters'
-                  : 'No onboarded users yet'
-                }
-              </p>
-            </CardContent>
-          </Card>
+          <div className="col-span-full">
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No users found</h3>
+                <p className="text-muted-foreground">
+                  {searchTerm || roleFilter !== 'all' || statusFilter !== 'all' 
+                    ? 'Try adjusting your search or filters'
+                    : 'No onboarded users yet'
+                  }
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         ) : (
           filteredUsers.map(user => (
-            <Card key={user.userId}>
+            <Card key={user.userId} className="hover:shadow-md transition-shadow duration-200">
               <CardContent className="p-4">
-                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                      <Users className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold">{user.name}</h3>
-                      <p className="text-sm text-muted-foreground">{user.email}</p>
-                      <p className="text-sm text-muted-foreground">{user.mobile}</p>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        <Badge className={getRoleColor(user.roleName)}>{user.roleName}</Badge>
-                        <Badge className={getStatusColor(user.status)}>{user.status}</Badge>
+                <div className="space-y-3">
+                  {/* Header with Avatar and Status */}
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        user.isActive 
+                          ? 'bg-green-100 text-green-600' 
+                          : 'bg-gray-100 text-gray-400'
+                      }`}>
+                        <Users className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-sm truncate">{user.fullName}</h3>
+                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                       </div>
                     </div>
+                    
+                    {/* Status Indicator */}
+                    <div className={`w-3 h-3 rounded-full ${
+                      user.isActive ? 'bg-green-500' : 'bg-gray-400'
+                    }`} />
                   </div>
-                  
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full lg:w-auto">
-                    <div className="text-left sm:text-right">
-                      <p className="text-xs text-muted-foreground">
-                        Onboarded: {formatDate(user.onboardedAt)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Last login: {formatDate(user.lastLogin)}
-                      </p>
+
+                  {/* Contact Info */}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="font-medium">Phone:</span>
+                      <span>{user.mobileNumber}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="font-medium">ID:</span>
+                      <span>{user.employeeID || 'N/A'}</span>
+                    </div>
+                  </div>
+
+                  {/* Badges */}
+                  <div className="flex flex-wrap gap-1">
+                    <Badge 
+                      variant="secondary" 
+                      className={`text-xs ${getRoleColor(user.employeeID || 'Unknown')}`}
+                    >
+                      {user.employeeID || 'Unknown'}
+                    </Badge>
+                    <Badge 
+                      variant={user.isActive ? 'default' : 'secondary'}
+                      className={`text-xs ${getStatusColor(user.isActive ? 'active' : 'inactive')}`}
+                    >
+                      {user.isActive ? 'Active' : 'Inactive'}
+                    </Badge>
+                    {user.isPrimary && (
+                      <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+                        Primary
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <div className="flex gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-7 w-7 p-0 hover:bg-blue-50 hover:text-blue-600"
+                        title="View Details"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-7 w-7 p-0 hover:bg-orange-50 hover:text-orange-600"
+                        title="Edit User"
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                      </Button>
+                      {user.isActive && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleDeactivateUser({
+                            userId: user.userId,
+                            fullName: user.fullName,
+                            email: user.email
+                          })}
+                          className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
+                          title="Deactivate User"
+                        >
+                          <UserX className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </div>
                     
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-7 w-7 p-0 hover:bg-gray-50"
+                      title="More Options"
+                    >
+                      <MoreHorizontal className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 </div>
               </CardContent>
             </Card>
           ))
         )}
-      </div>
-    </div>
-  );
-};
+       </div>
+
+       {/* Deactivate User Dialog */}
+       <DeactivateUserDialog
+         isOpen={showDeactivateDialog}
+         onClose={() => {
+           setShowDeactivateDialog(false);
+           setSelectedUser(null);
+         }}
+         onConfirm={confirmDeactivateUser}
+         userName={selectedUser?.fullName || ''}
+         userEmail={selectedUser?.email || ''}
+         isPending={deactivateUser.isPending}
+       />
+     </div>
+   );
+ };
 
