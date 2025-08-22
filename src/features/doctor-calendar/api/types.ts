@@ -65,16 +65,27 @@ export interface CalendarEvent {
 
 export interface CreateOverridePayload {
   doctorId: string;
-  shiftName: ShiftName;
-  startTime: string; // TIME format "HH:MM:SS"
-  endTime: string;   // TIME format "HH:MM:SS"
-  slotDurationInMinutes: number;
-  recurringDays?: string | null; // Comma-separated string "Mon,Wed,Fri" or null
-  overrideDate?: string | null;  // DATE format "YYYY-MM-DD" for specific day
-  startDate?: string | null;     // DATE format "YYYY-MM-DD" for recurring start
-  endDate?: string | null;       // DATE format "YYYY-MM-DD" for recurring end
-  maxPatients?: number | null;   // Additional field (not in table but useful)
-  reason?: string | null;        // Additional field (not in table but useful)
+  shiftName: string;
+  startTime: string;
+  endTime: string;
+  slotDuration: number;
+  overrideDate: string;
+  recurringDays: string[];
+  startDate: string;
+  endDate: string;
+  items: CreateOverrideItem[];
+}
+
+export interface CreateOverrideItem {
+  doctorId: string;
+  shiftName: string;
+  startTime: string;
+  endTime: string;
+  slotDuration: number;
+  overrideDate: string;
+  recurringDays: string[];
+  startDate: string;
+  endDate: string;
 }
 
 export interface CreateBlockPayload {

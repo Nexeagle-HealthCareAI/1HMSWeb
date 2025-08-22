@@ -25,7 +25,17 @@ export const CancelOverrideDialog: React.FC<CancelOverrideDialogProps> = ({
   overrideData,
   isPending
 }) => {
-  if (!overrideData) return null;
+  // Debug logging
+  React.useEffect(() => {
+    if (isOpen && overrideData) {
+      console.log('CancelOverrideDialog opened with data:', overrideData);
+    }
+  }, [isOpen, overrideData]);
+  
+  if (!overrideData) {
+    console.warn('CancelOverrideDialog: No override data provided');
+    return null;
+  }
 
   const formatTime = (time: string) => {
     const [hours, minutes] = time.split(':');

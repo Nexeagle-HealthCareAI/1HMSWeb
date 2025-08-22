@@ -65,15 +65,32 @@ export const EditShiftModal: React.FC<EditShiftModalProps> = ({
       return;
     }
     
+    // Convert shiftDate to ISO format
+    const overrideDate = new Date(shiftDate + 'T00:00:00').toISOString();
+    const startDate = overrideDate;
+    const endDate = overrideDate;
+    
     const payload: CreateOverridePayload = {
       doctorId,
-      shiftDate,
       shiftName,
       startTime: formData.startTime,
       endTime: formData.endTime,
-      slotMinutes: formData.slotMinutes,
-      maxPatients: formData.maxPatients ? parseInt(formData.maxPatients) : null,
-      reason: formData.reason || null
+      slotDuration: formData.slotMinutes,
+      overrideDate,
+      recurringDays: [],
+      startDate,
+      endDate,
+      items: [{
+        doctorId,
+        shiftName,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+        slotDuration: formData.slotMinutes,
+        overrideDate,
+        recurringDays: [],
+        startDate,
+        endDate
+      }]
     };
     
     onSave(payload);

@@ -269,25 +269,37 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
        };
        
        const recurringDayAbbreviations = Array.from(recurringDays).map(day => getDayAbbreviation(day));
-       const recurringDaysString = recurringDayAbbreviations.length > 0 ? recurringDayAbbreviations.join(',') : null;
        
        if (scheduleMode === 'single') {
          // Single day schedule - one payload per shift
          selectedShifts.forEach(shiftName => {
            const config = shiftConfigs[shiftName];
            if (config.enabled) {
+             const overrideDate = new Date(startDate + 'T00:00:00').toISOString();
+             const startDateISO = overrideDate;
+             const endDateISO = overrideDate;
+             
              payloads.push({
                doctorId,
                shiftName,
-               startTime: `${config.startTime}:00`, // Convert to TIME format
-               endTime: `${config.endTime}:00`,     // Convert to TIME format
-               slotDurationInMinutes: config.slotDuration,
-               recurringDays: null,
-               overrideDate: startDate, // DATE format "YYYY-MM-DD"
-               startDate: null,
-               endDate: null,
-               maxPatients: config.maxPatients ? parseInt(config.maxPatients) : null,
-               reason: `Personalized ${shiftName} Schedule`
+               startTime: config.startTime,
+               endTime: config.endTime,
+               slotDuration: config.slotDuration,
+               overrideDate,
+               recurringDays: [],
+               startDate: startDateISO,
+               endDate: endDateISO,
+               items: [{
+                 doctorId,
+                 shiftName,
+                 startTime: config.startTime,
+                 endTime: config.endTime,
+                 slotDuration: config.slotDuration,
+                 overrideDate,
+                 recurringDays: [],
+                 startDate: startDateISO,
+                 endDate: endDateISO
+               }]
              });
            }
          });
@@ -296,18 +308,30 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
          selectedShifts.forEach(shiftName => {
            const config = shiftConfigs[shiftName];
            if (config.enabled) {
+             const startDateISO = new Date(startDate + 'T00:00:00').toISOString();
+             const endDateISO = new Date(recurringEndDate + 'T00:00:00').toISOString();
+             
              payloads.push({
                doctorId,
                shiftName,
-               startTime: `${config.startTime}:00`, // Convert to TIME format
-               endTime: `${config.endTime}:00`,     // Convert to TIME format
-               slotDurationInMinutes: config.slotDuration,
-               recurringDays: recurringDaysString, // "Mon,Wed,Fri"
-               overrideDate: null,
-               startDate: startDate,        // DATE format "YYYY-MM-DD"
-               endDate: recurringEndDate,   // DATE format "YYYY-MM-DD"
-               maxPatients: config.maxPatients ? parseInt(config.maxPatients) : null,
-               reason: `Recurring ${shiftName} Schedule`
+               startTime: config.startTime,
+               endTime: config.endTime,
+               slotDuration: config.slotDuration,
+               overrideDate: startDateISO,
+               recurringDays: recurringDayAbbreviations,
+               startDate: startDateISO,
+               endDate: endDateISO,
+               items: [{
+                 doctorId,
+                 shiftName,
+                 startTime: config.startTime,
+                 endTime: config.endTime,
+                 slotDuration: config.slotDuration,
+                 overrideDate: startDateISO,
+                 recurringDays: recurringDayAbbreviations,
+                 startDate: startDateISO,
+                 endDate: endDateISO
+               }]
              });
            }
          });

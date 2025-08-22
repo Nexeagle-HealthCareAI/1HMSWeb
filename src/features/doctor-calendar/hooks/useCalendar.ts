@@ -80,6 +80,16 @@ export function useCalendarEvents(doctorId: string, fromISO: string, toISO: stri
                   }
                 };
                 
+                // Debug logging for override events
+                if (shift.sourceType === 'override') {
+                  console.log('Created override event:', {
+                    id: shiftEvent.id,
+                    sourceId: shift.sourceId,
+                    shiftName: shift.shiftName,
+                    isOverride: shiftEvent.extendedProps.isOverride
+                  });
+                }
+                
                 allEvents.push(shiftEvent);
               }
             });
@@ -98,21 +108,24 @@ export function useCalendarEvents(doctorId: string, fromISO: string, toISO: stri
           const startISO = startDate.includes('T') ? startDate : `${startDate}T00:00:00`;
           const endISO = endDate.includes('T') ? endDate : `${endDate}T23:59:59`;
           
-          allEvents.push({
+          const timeOffEvent = {
             id: timeOff.timeOffId,
-            type: 'block',
+            type: 'block' as const,
             title: timeOff.reason || 'Time Off',
             start: startISO,
             end: endISO,
             backgroundColor: '#dc2626', // Red background
             borderColor: '#b91c1c',
             extendedProps: {
-              type: 'block',
+              type: 'block' as const,
               timeOffId: timeOff.timeOffId,
               reason: timeOff.reason,
               isTimeOff: true
             }
-          });
+          };
+          
+          console.log('Created time-off event:', timeOffEvent);
+          allEvents.push(timeOffEvent);
         });
       }
       

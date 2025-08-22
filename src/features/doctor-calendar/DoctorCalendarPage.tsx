@@ -9,6 +9,7 @@ import { EditShiftModal } from './components/EditShiftModal';
 import { PersonalizedScheduleModal } from './components/PersonalizedScheduleModal';
 import { DeleteTimeOffDialog } from './components/DeleteTimeOffDialog';
 import { CancelOverrideDialog } from './components/CancelOverrideDialog';
+import { OverrideActionDialog } from './components/OverrideActionDialog';
 import { useCalendarEvents, useCreateOverride, useDeleteOverride, useCreateBlock, useDeleteBlock, useTimeOff, useCreateTimeOff, useDeleteTimeOff, useDoctorCalendarConfig } from './hooks/useCalendar';
 import { CalendarEvent, CreateOverridePayload, CreateBlockPayload, ShiftName } from './api/types';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
@@ -64,6 +65,21 @@ export const DoctorCalendarPage: React.FC = () => {
       endTime: string;
     } | undefined
   });
+  
+  const [overrideActionModal, setOverrideActionModal] = useState({
+    open: false,
+    overrideData: undefined as {
+      overrideId: string;
+      shiftName: string;
+      date: string;
+      startTime: string;
+      endTime: string;
+    } | undefined
+  });
+
+  // Ref to store the setCancelOverrideModal function for event listeners
+  const setCancelOverrideModalRef = useRef(setCancelOverrideModal);
+  setCancelOverrideModalRef.current = setCancelOverrideModal;
 
   // Success dialog state
   const [successDialog, setSuccessDialog] = useState({
@@ -212,8 +228,46 @@ export const DoctorCalendarPage: React.FC = () => {
     const event = info.event;
     const eventType = event.extendedProps?.type;
     
+    // OVERRIDE EVENT HANDLING: Show action dialog for any click on override events
+    if (eventType === 'shift' && event.extendedProps?.isOverride) {
+      const target = info.jsEvent?.target;
+      const isCancelButtonClick = target && (
+        target.classList?.contains('cancel-override-btn') || 
+        target.closest('.cancel-override-btn') ||
+        target.closest('button[data-override-id]')
+      );
+      
+      // Get override data from the event
+      const overrideId = event.extendedProps?.sourceId;
+      const shiftName = event.extendedProps?.shiftName;
+      const shiftDate = event.start ? format(event.start, 'yyyy-MM-dd') : '';
+      const startTime = event.extendedProps?.startTime || '09:00';
+      const endTime = event.extendedProps?.endTime || '12:00';
+      
+      console.log('Override event clicked:', { overrideId, shiftName, shiftDate, isCancelButtonClick });
+      
+      if (overrideId && shiftName && shiftDate) {
+        // Show the action dialog with both cancel and update options
+        setOverrideActionModal({
+          open: true,
+          overrideData: {
+            overrideId,
+            shiftName,
+            date: shiftDate,
+            startTime,
+            endTime
+          }
+        });
+      } else {
+        console.warn('Missing data for override action:', { overrideId, shiftName, shiftDate });
+      }
+      return; // Always return for override events
+    }
+    
     // Check if the click was on a cancel button
     const target = info.jsEvent?.target;
+    
+    // Check for cancel time-off button click
     if (target && target.classList?.contains('cancel-timeoff-btn')) {
       const timeOffId = target.getAttribute('data-timeoff-id');
       const reason = target.getAttribute('data-reason');
@@ -235,31 +289,8 @@ export const DoctorCalendarPage: React.FC = () => {
     }
     
     if (eventType === 'shift') {
-      // Check if this is an override shift that can be canceled
-      const isOverride = event.extendedProps?.isOverride;
-      const sourceId = event.extendedProps?.sourceId;
-      
-      if (isOverride && sourceId) {
-        // Open cancel override dialog
-        const shiftDate = format(event.start, 'yyyy-MM-dd');
-        const shiftName = event.extendedProps?.shiftName;
-        const startTime = event.extendedProps?.startTime || '09:00';
-        const endTime = event.extendedProps?.endTime || '12:00';
-        
-        setCancelOverrideModal({
-          open: true,
-          overrideData: {
-            overrideId: sourceId,
-            shiftName,
-            date: shiftDate,
-            startTime,
-            endTime
-          }
-        });
-        return;
-      }
-      
-      // Open EditShiftModal for regular shift events
+      // Open EditShiftModal for regular shift events only
+      // Note: Override events are already handled at the beginning of this function
       if (!event.start) {
         toast({
           title: "Error",
@@ -321,11 +352,28 @@ export const DoctorCalendarPage: React.FC = () => {
   }, [toast]);
   
      const handleDateSelect = useCallback((selectInfo: any) => {
-     // Check if there's already a time-off in the selected area
+     // Check if the selection is on an override event
      const selectedStart = selectInfo.start;
      const selectedEnd = selectInfo.end;
      
-     // Check if any existing time-off overlaps with the selected range
+     // Check if there are any override events in the selected range
+     const hasOverrideInRange = events.some(event => {
+       if (event.extendedProps?.isOverride) {
+         const eventStart = new Date(event.start);
+         const eventEnd = new Date(event.end);
+         
+         // Check for overlap with override events
+         return eventStart < selectedEnd && eventEnd > selectedStart;
+       }
+       return false;
+     });
+     
+     if (hasOverrideInRange) {
+       console.log('Date selection blocked - override event in range');
+       return; // Don't open any modal if override events are in the selection
+     }
+     
+     // Check if there's already a time-off in the selected area
      const hasTimeOffConflict = events.some(event => {
        if (event.extendedProps?.isTimeOff) {
          const eventStart = new Date(event.start);
@@ -347,7 +395,7 @@ export const DoctorCalendarPage: React.FC = () => {
      }
      
      // Open PersonalizedScheduleModal with time off functionality for date selection
-     setPersonalizedScheduleModal({
+     safeSetPersonalizedScheduleModal({
        open: true,
        initialDate: undefined,
        initialStartDateTime: selectInfo.start.toISOString(),
@@ -371,8 +419,11 @@ export const DoctorCalendarPage: React.FC = () => {
     });
   }, [toast]);
   
-     // Calendar configuration
-   const calendarOptions = {
+       // Override events are now clickable and handled by the main eventClick handler
+  // No global event prevention needed
+
+  // Calendar configuration
+  const calendarOptions = {
      plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
      initialView: view,
      initialDate: currentDate,
@@ -384,22 +435,52 @@ export const DoctorCalendarPage: React.FC = () => {
      weekends: true,
      firstDay: 1, // Monday
      timezone: 'local',
-         slotDuration: '00:15:00',
-    scrollTime: '09:00:00', // Initial scroll position to 9 AM
-    selectOverlap: () => true,
+     slotDuration: '00:15:00',
+     scrollTime: '09:00:00', // Initial scroll position to 9 AM
+     selectOverlap: (event: any) => {
+       // Don't allow selection to overlap with override events
+       if (event && event.extendedProps?.isOverride) {
+         return false;
+       }
+       return true;
+     },
            eventOrder: 'blocks,appointments,shifts',
       eventDisplay: 'block', // Ensure events are displayed as blocks
       eventBackgroundColor: '#3b82f6', // Default background for events
+      eventOverlap: false, // Prevent events from overlapping
      events: events,
      eventClick: handleEventClick,
      select: handleDateSelect,
      eventDrop: handleEventDrop,
      eventResize: handleEventResize,
      eventDidMount: (info: any) => {
+       // Debug logging for event mounting
+       const eventType = info.event.extendedProps?.type;
+       const isTimeOff = info.event.extendedProps?.isTimeOff;
+       
+       if (eventType === 'block' || isTimeOff) {
+         console.log('Block/TimeOff event mounted:', {
+           id: info.event.id,
+           title: info.event.title,
+           type: eventType,
+           isTimeOff,
+           start: info.event.start,
+           end: info.event.end
+         });
+       }
+       
        // Add data-override attribute for override shifts
        if (info.event.extendedProps?.isOverride) {
          info.el.setAttribute('data-override', 'true');
        }
+       
+       // Add data-event-type attribute for better CSS targeting
+       if (eventType) {
+         info.el.setAttribute('data-event-type', eventType);
+       }
+       
+                         // Override events are now handled by the main eventClick handler
+         // No additional event listeners needed
      },
     eventContent: (arg: any) => {
       const eventType = arg.event.extendedProps?.type;
@@ -408,17 +489,23 @@ export const DoctorCalendarPage: React.FC = () => {
         const isOverride = arg.event.extendedProps?.isOverride;
         
         if (isOverride) {
-          // Override shifts with cancel icon
+          // Override shifts - clickable for action dialog
+          const sourceId = arg.event.extendedProps?.sourceId;
+          const shiftName = arg.event.extendedProps?.shiftName;
+          const startTime = arg.event.extendedProps?.startTime || '09:00';
+          const endTime = arg.event.extendedProps?.endTime || '12:00';
+          const shiftDate = arg.event.start ? format(arg.event.start, 'yyyy-MM-dd') : '';
+          
+          // Validate required data
+          if (!sourceId || !shiftName || !shiftDate) {
+            console.warn('Missing required data for override event:', { sourceId, shiftName, shiftDate });
+          }
+          
           return {
             html: `
               <div class="fc-event-main-content override-event-content">
                 <div class="text-xs font-medium">${arg.event.title}</div>
-                <div class="cancel-override-icon" title="Click to cancel override">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </div>
+                <div class="text-xs text-gray-600">Click to manage</div>
               </div>
             `
           };
@@ -508,6 +595,9 @@ export const DoctorCalendarPage: React.FC = () => {
             // Regular block events
             classes.push('block-event', 'timeoff-event');
           }
+          
+          // Ensure block events are always visible
+          classes.push('block-event-visible');
         } else if (eventType === 'appointment') {
           classes.push('appointment-event');
         }
@@ -562,16 +652,44 @@ export const DoctorCalendarPage: React.FC = () => {
     }
   };
   
+  // Override the setPersonalizedScheduleModal to prevent opening when override events are clicked
+  const safeSetPersonalizedScheduleModal = React.useCallback((modalState: any) => {
+    // Check if this is being called from an override event click
+    const activeElement = document.activeElement;
+    const overrideEvent = activeElement?.closest('.fc-event[data-override="true"]');
+    
+    if (overrideEvent) {
+      console.log('Preventing PersonalizedScheduleModal from opening - override event clicked');
+      return; // Don't open the modal
+    }
+    
+    setPersonalizedScheduleModal(modalState);
+  }, []);
+  
 
   
   // Modal handlers
   const handleSaveOverride = (payload: CreateOverridePayload) => {
-    // TODO: Implement when override API is available
-    toast({
-      title: "Info",
-      description: "Shift override functionality not yet implemented",
+    createOverrideMutation.mutate(payload, {
+      onSuccess: (data) => {
+        toast({
+          title: "Success",
+          description: data.message || "Shift override created successfully",
+        });
+        setEditShiftModal(prev => ({ ...prev, open: false }));
+        // Reload page after successful override creation
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      },
+      onError: (error) => {
+        toast({
+          title: "Error",
+          description: "Failed to create shift override",
+          variant: "destructive",
+        });
+      }
     });
-    setEditShiftModal(prev => ({ ...prev, open: false }));
   };
 
   const handleSavePersonalizedSchedule = (payloads: CreateOverridePayload[]) => {
@@ -623,6 +741,11 @@ export const DoctorCalendarPage: React.FC = () => {
       }
       
       setPersonalizedScheduleModal(prev => ({ ...prev, open: false }));
+      
+      // Reload page after successful personalized schedule creation
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     };
     
     processPayloads();
@@ -651,6 +774,11 @@ export const DoctorCalendarPage: React.FC = () => {
            ]
          });
          setPersonalizedScheduleModal(prev => ({ ...prev, open: false }));
+         
+         // Reload page after successful time off creation
+         setTimeout(() => {
+           window.location.reload();
+         }, 1000);
        },
        onError: (error) => {
          toast({
@@ -681,6 +809,11 @@ export const DoctorCalendarPage: React.FC = () => {
           description: data.message || "Time off deleted successfully",
         });
         setDeleteTimeOffModal({ open: false, timeOffData: undefined });
+        
+        // Reload page after successful time off deletion
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       },
       onError: (error) => {
         toast({
@@ -693,22 +826,114 @@ export const DoctorCalendarPage: React.FC = () => {
   };
 
   const handleCancelOverride = () => {
-    if (!cancelOverrideModal.overrideData?.overrideId) return;
+    const overrideData = cancelOverrideModal.overrideData;
     
-    deleteOverrideMutation.mutate(cancelOverrideModal.overrideData.overrideId, {
+    if (!overrideData?.overrideId) {
+      console.error('No override data available for cancellation');
+      toast({
+        title: "Error",
+        description: "No override data found for cancellation",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    console.log('Canceling override with data:', overrideData);
+    
+    deleteOverrideMutation.mutate(overrideData.overrideId, {
       onSuccess: (data) => {
+        console.log('Override canceled successfully:', data);
         toast({
           title: "Success",
           description: data.message || "Shift override canceled successfully",
         });
         setCancelOverrideModal({ open: false, overrideData: undefined });
+        
+        // Reload page after successful override cancellation
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       },
       onError: (error) => {
+        console.error('Failed to cancel override:', error);
         toast({
           title: "Error",
-          description: "Failed to cancel shift override",
+          description: "Failed to cancel shift override. Please try again.",
           variant: "destructive",
         });
+      }
+    });
+  };
+  
+  const handleOverrideActionCancel = () => {
+    const overrideData = overrideActionModal.overrideData;
+    
+    if (!overrideData?.overrideId) {
+      console.error('No override data available for cancellation');
+      toast({
+        title: "Error",
+        description: "No override data found for cancellation",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    console.log('Canceling override from action dialog:', overrideData);
+    
+    deleteOverrideMutation.mutate(overrideData.overrideId, {
+      onSuccess: (data) => {
+        console.log('Override canceled successfully:', data);
+        toast({
+          title: "Success",
+          description: data.message || "Shift override canceled successfully",
+        });
+        setOverrideActionModal({ open: false, overrideData: undefined });
+        
+        // Reload page after successful override cancellation
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      },
+      onError: (error) => {
+        console.error('Failed to cancel override:', error);
+        toast({
+          title: "Error",
+          description: "Failed to cancel shift override. Please try again.",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+  
+  const handleOverrideActionUpdate = () => {
+    const overrideData = overrideActionModal.overrideData;
+    
+    if (!overrideData) {
+      console.error('No override data available for update');
+      toast({
+        title: "Error",
+        description: "No override data found for update",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    console.log('Opening edit modal for override:', overrideData);
+    
+    // Close the action dialog
+    setOverrideActionModal({ open: false, overrideData: undefined });
+    
+    // Open the edit shift modal with the override data
+    setEditShiftModal({
+      open: true,
+      shiftDate: overrideData.date,
+      shiftName: overrideData.shiftName as ShiftName,
+      initialData: {
+        startTime: overrideData.startTime,
+        endTime: overrideData.endTime,
+        slotMinutes: 15, // Default value
+        maxPatients: null,
+        reason: null
       }
     });
   };
@@ -973,34 +1198,75 @@ export const DoctorCalendarPage: React.FC = () => {
             padding: 2px 4px !important;
           }
           
-          /* Style for override shifts with cancel icon */
+          /* Style for override shifts - now clickable for action dialog */
           .fc-event[data-override="true"] {
+            position: relative !important;
+            cursor: pointer !important;
+            border: 2px solid #dc2626 !important;
+            z-index: 10 !important;
+            pointer-events: auto !important; /* Enable clicks on the event */
+          }
+          
+          .fc-event[data-override="true"]:hover {
+            cursor: pointer !important;
+            transform: translateY(-1px) !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+            opacity: 0.9 !important;
+          }
+          
+          .fc-event[data-override="true"]:hover {
+            cursor: default !important;
+            transform: none !important;
+            box-shadow: none !important;
+            opacity: 0.8 !important;
+          }
+          
+          /* Ensure block events are visible above override events */
+          .fc-event.block-event,
+          .fc-event.timeoff-event,
+          .fc-event.api-timeoff-event {
+            z-index: 20 !important;
             position: relative !important;
           }
           
-          .fc-event[data-override="true"]::after {
-            content: "✕" !important;
-            position: absolute !important;
-            top: -8px !important;
-            right: -8px !important;
-            background: #dc2626 !important;
-            color: white !important;
-            border-radius: 50% !important;
-            width: 20px !important;
-            height: 20px !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            font-size: 12px !important;
-            font-weight: bold !important;
-            cursor: pointer !important;
-            z-index: 10 !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+          /* Override events should not interfere with block events */
+          .fc-event[data-override="true"] .cancel-override-btn {
+            z-index: 30 !important;
           }
           
-          .fc-event[data-override="true"]::after:hover {
-            background: #b91c1c !important;
-            transform: scale(1.1) !important;
+          /* Ensure block events are always visible and properly styled */
+          .block-event-visible {
+            z-index: 20 !important;
+            position: relative !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+          }
+          
+          /* Force block events to be visible even when override events are present */
+          .fc-event.block-event,
+          .fc-event.timeoff-event,
+          .fc-event.api-timeoff-event {
+            z-index: 20 !important;
+            position: relative !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            pointer-events: auto !important;
+            display: block !important;
+            width: 100% !important;
+            margin: 1px 0 !important;
+          }
+          
+          /* Ensure block events are not hidden by other events */
+          .fc-event[data-event-type="block"] {
+            z-index: 20 !important;
+            position: relative !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+          }
+          
+          /* Override events should not hide block events */
+          .fc-event[data-override="true"] {
+            z-index: 10 !important;
           }
           
           /* Style for override event content */
@@ -1012,7 +1278,7 @@ export const DoctorCalendarPage: React.FC = () => {
             width: 100% !important;
           }
           
-          .cancel-override-icon {
+          .cancel-override-btn {
             position: absolute !important;
             top: -8px !important;
             right: -8px !important;
@@ -1025,14 +1291,23 @@ export const DoctorCalendarPage: React.FC = () => {
             align-items: center !important;
             justify-content: center !important;
             cursor: pointer !important;
-            z-index: 10 !important;
+            z-index: 1000 !important;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
             transition: all 0.2s ease !important;
+            border: none !important;
+            padding: 0 !important;
+            outline: none !important;
+            pointer-events: auto !important;
           }
           
-          .cancel-override-icon:hover {
+          .cancel-override-btn:hover {
             background: #b91c1c !important;
             transform: scale(1.1) !important;
+          }
+          
+          .cancel-override-btn:focus {
+            outline: 2px solid #dc2626 !important;
+            outline-offset: 2px !important;
           }
         `}</style>
        
@@ -1053,7 +1328,15 @@ export const DoctorCalendarPage: React.FC = () => {
 
         <PersonalizedScheduleModal
           open={personalizedScheduleModal.open}
-          onOpenChange={(open) => setPersonalizedScheduleModal(prev => ({ ...prev, open }))}
+          onOpenChange={(open) => {
+            // Prevent opening if an override event was recently clicked
+            const overrideEvent = document.querySelector('.fc-event[data-override="true"]:focus, .fc-event[data-override="true"]:active');
+            if (overrideEvent && open) {
+              console.log('Preventing PersonalizedScheduleModal from opening - override event active');
+              return;
+            }
+            setPersonalizedScheduleModal(prev => ({ ...prev, open }));
+          }}
           doctorId={doctorId}
           initialDate={personalizedScheduleModal.initialDate}
           initialStartDateTime={personalizedScheduleModal.initialStartDateTime}
@@ -1076,6 +1359,15 @@ export const DoctorCalendarPage: React.FC = () => {
           onClose={() => setCancelOverrideModal({ open: false, overrideData: undefined })}
           onConfirm={handleCancelOverride}
           overrideData={cancelOverrideModal.overrideData}
+          isPending={deleteOverrideMutation.isPending}
+        />
+
+        <OverrideActionDialog
+          isOpen={overrideActionModal.open}
+          onClose={() => setOverrideActionModal({ open: false, overrideData: undefined })}
+          onCancel={handleOverrideActionCancel}
+          onUpdate={handleOverrideActionUpdate}
+          overrideData={overrideActionModal.overrideData}
           isPending={deleteOverrideMutation.isPending}
         />
 
@@ -1114,7 +1406,13 @@ export const DoctorCalendarPage: React.FC = () => {
 
             <DialogFooter>
               <Button
-                onClick={() => setSuccessDialog(prev => ({ ...prev, open: false }))}
+                onClick={() => {
+                  setSuccessDialog(prev => ({ ...prev, open: false }));
+                  // Reload page after success dialog is closed
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 500);
+                }}
                 className="bg-green-600 hover:bg-green-700 text-white"
               >
                 Great! Continue
