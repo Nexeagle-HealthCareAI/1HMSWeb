@@ -174,6 +174,18 @@ export const DoctorCalendarPage: React.FC = () => {
   const createTimeOffMutation = useCreateTimeOff();
   const deleteTimeOffMutation = useDeleteTimeOff();
   
+  // Function to scroll to morning slot
+  const scrollToMorningSlot = useCallback(() => {
+    if (calendarRef.current) {
+      const calendarApi = calendarRef.current.getApi();
+      if (calendarApi) {
+        // Scroll to 9 AM (morning slot)
+        calendarApi.scrollToTime('09:00:00');
+        console.log('📅 Scrolled to morning slot (9:00 AM)');
+      }
+    }
+  }, []);
+  
   // Handle view changes
   React.useEffect(() => {
     if (calendarRef.current) {
@@ -181,15 +193,15 @@ export const DoctorCalendarPage: React.FC = () => {
       if (calendarApi) {
         calendarApi.changeView(view);
         
-        // Scroll to 9 AM when switching to day view
-        if (view === 'timeGridDay') {
+        // Scroll to 9 AM when switching to any time-based view
+        if (view === 'timeGridDay' || view === 'timeGridWeek') {
           setTimeout(() => {
-            calendarApi.scrollToTime('09:00:00');
+            scrollToMorningSlot();
           }, 100); // Small delay to ensure view is fully rendered
         }
       }
     }
-  }, [view]);
+  }, [view, scrollToMorningSlot]);
 
   // Handle date changes
   React.useEffect(() => {
@@ -207,29 +219,30 @@ export const DoctorCalendarPage: React.FC = () => {
       setIsInitialLoading(false);
       
       // Scroll to 9 AM after loading is complete
-      if (calendarRef.current) {
-        const calendarApi = calendarRef.current.getApi();
-        if (calendarApi && view === 'timeGridDay') {
-          // Scroll to 9 AM
+      if (view === 'timeGridDay' || view === 'timeGridWeek') {
           setTimeout(() => {
-            calendarApi.scrollToTime('09:00:00');
+          scrollToMorningSlot();
           }, 100); // Small delay to ensure calendar is fully rendered
-        }
       }
     }, 2000); // 2 seconds delay
 
     return () => clearTimeout(timer);
-  }, [view]);
+  }, [view, scrollToMorningSlot]);
 
 
   
   // Calendar event handlers
   const handleEventClick = useCallback((info: any) => {
+    // Scroll to morning slot when any event is clicked
+    setTimeout(() => {
+      scrollToMorningSlot();
+    }, 100);
+    
     const event = info.event;
     const eventType = event.extendedProps?.type;
     
     // OVERRIDE EVENT HANDLING: Show action dialog for any click on override events
-    if (eventType === 'shift' && event.extendedProps?.isOverride) {
+    if ((eventType === 'shift' || eventType === 'block') && event.extendedProps?.isOverride) {
       const target = info.jsEvent?.target;
       const isCancelButtonClick = target && (
         target.classList?.contains('cancel-override-btn') || 
@@ -288,8 +301,8 @@ export const DoctorCalendarPage: React.FC = () => {
       return; // Stop processing the regular event click
     }
     
-    if (eventType === 'shift') {
-      // Open EditShiftModal for regular shift events only
+    if (eventType === 'shift' || (eventType === 'block' && event.extendedProps?.isShiftBlock)) {
+      // Open EditShiftModal for regular shift events and shift blocks
       // Note: Override events are already handled at the beginning of this function
       if (!event.start) {
         toast({
@@ -352,6 +365,11 @@ export const DoctorCalendarPage: React.FC = () => {
   }, [toast]);
   
      const handleDateSelect = useCallback((selectInfo: any) => {
+     // Scroll to morning slot when date is selected
+     setTimeout(() => {
+       scrollToMorningSlot();
+     }, 50);
+     
      // Check if the selection is on an override event
      const selectedStart = selectInfo.start;
      const selectedEnd = selectInfo.end;
@@ -368,9 +386,31 @@ export const DoctorCalendarPage: React.FC = () => {
        return false;
      });
      
+     // Check if there are any shift blocks in the selected range
+     const hasShiftBlockInRange = events.some(event => {
+       if (event.extendedProps?.isShiftBlock) {
+         const eventStart = new Date(event.start);
+         const eventEnd = new Date(event.end);
+         
+         // Check for overlap with shift blocks
+         return eventStart < selectedEnd && eventEnd > selectedStart;
+       }
+       return false;
+     });
+     
      if (hasOverrideInRange) {
        console.log('Date selection blocked - override event in range');
        return; // Don't open any modal if override events are in the selection
+     }
+     
+     if (hasShiftBlockInRange) {
+       console.log('Date selection blocked - shift block in range');
+       toast({
+         title: "Shift Block",
+         description: "This time period is covered by a shift. Please select a different time or modify the existing shift.",
+         variant: "destructive",
+       });
+       return; // Don't open any modal if shift blocks are in the selection
      }
      
      // Check if there's already a time-off in the selected area
@@ -404,42 +444,64 @@ export const DoctorCalendarPage: React.FC = () => {
    }, [events, toast]);
   
   const handleEventDrop = useCallback((dropInfo: any) => {
+    // Scroll to morning slot when event is dropped
+    setTimeout(() => {
+      scrollToMorningSlot();
+    }, 100);
+    
     // Handle event drag and drop
     toast({
       title: "Event Moved",
       description: `${dropInfo.event.title} moved to ${format(dropInfo.event.start!, 'MMM dd, yyyy')}`,
     });
-  }, [toast]);
+  }, [toast, scrollToMorningSlot]);
   
   const handleEventResize = useCallback((resizeInfo: any) => {
+    // Scroll to morning slot when event is resized
+    setTimeout(() => {
+      scrollToMorningSlot();
+    }, 100);
+    
     // Handle event resize
     toast({
       title: "Event Resized",
       description: `${resizeInfo.event.title} resized`,
     });
-  }, [toast]);
+  }, [toast, scrollToMorningSlot]);
   
        // Override events are now clickable and handled by the main eventClick handler
   // No global event prevention needed
-
-  // Calendar configuration
-  const calendarOptions = {
+  
+     // Calendar configuration
+   const calendarOptions = {
      plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
      initialView: view,
      initialDate: currentDate,
      headerToolbar: false as const, // We're using our custom header
-     height: 'auto',
+     height: 'auto', // Let content determine height
+     contentHeight: 'auto', // Disable internal height constraints
      selectable: true,
      selectMirror: true,
      dayMaxEvents: true,
      weekends: true,
      firstDay: 1, // Monday
      timezone: 'local',
-     slotDuration: '00:15:00',
-     scrollTime: '09:00:00', // Initial scroll position to 9 AM
+         slotDuration: '00:15:00',
+    scrollTime: '09:00:00', // Initial scroll position to 9 AM
+     // Add calendar click handler to scroll to morning slot
+     datesSet: (dateInfo: any) => {
+       // Scroll to morning slot when calendar dates are set/loaded
+       setTimeout(() => {
+         scrollToMorningSlot();
+       }, 100);
+     },
      selectOverlap: (event: any) => {
        // Don't allow selection to overlap with override events
        if (event && event.extendedProps?.isOverride) {
+         return false;
+       }
+       // Don't allow selection to overlap with shift blocks
+       if (event && event.extendedProps?.isShiftBlock) {
          return false;
        }
        return true;
@@ -546,6 +608,22 @@ export const DoctorCalendarPage: React.FC = () => {
               </div>
             `
           };
+        } else if (arg.event.extendedProps?.isShiftBlock) {
+          // Shift block events - show with time range
+          const startTime = arg.event.extendedProps?.startTime || '00:00';
+          const endTime = arg.event.extendedProps?.endTime || '00:00';
+          const shiftName = arg.event.extendedProps?.shiftName || 'Shift';
+          const isOverride = arg.event.extendedProps?.isOverride;
+          
+          return {
+            html: `
+              <div class="fc-event-main-content">
+                <div class="text-xs font-bold">${shiftName}</div>
+                <div class="text-xs">${startTime} - ${endTime}</div>
+                ${isOverride ? '<div class="text-xs text-green-200 font-semibold">Personalized</div>' : ''}
+              </div>
+            `
+          };
         } else {
           // Regular block events
           return {
@@ -591,6 +669,9 @@ export const DoctorCalendarPage: React.FC = () => {
           if (isTimeOff) {
             // Time-off events
             classes.push('block-event', 'api-timeoff-event');
+          } else if (arg.event.extendedProps?.isShiftBlock) {
+            // Shift block events
+            classes.push('block-event', 'shift-block-event');
           } else {
             // Regular block events
             classes.push('block-event', 'timeoff-event');
@@ -672,11 +753,11 @@ export const DoctorCalendarPage: React.FC = () => {
   const handleSaveOverride = (payload: CreateOverridePayload) => {
     createOverrideMutation.mutate(payload, {
       onSuccess: (data) => {
-        toast({
+    toast({
           title: "Success",
           description: data.message || "Shift override created successfully",
-        });
-        setEditShiftModal(prev => ({ ...prev, open: false }));
+    });
+    setEditShiftModal(prev => ({ ...prev, open: false }));
         // Reload page after successful override creation
         setTimeout(() => {
           window.location.reload();
@@ -990,51 +1071,181 @@ export const DoctorCalendarPage: React.FC = () => {
   }
   
            return (
-      <div className="h-full bg-gray-50">
-        <div className="flex flex-col">
-         {/* Header */}
-                   <CalendarHeader
+      <div className="h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 -m-6">
+                {/* Sticky Header within Main Layout */}
+        <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-200/60 shadow-sm">
+          <CalendarHeader
             currentDate={currentDate}
             onDateChange={setCurrentDate}
             view={view}
             onViewChange={setView}
             onAddOverride={handleAddOverride}
           />
+        </div>
          
+        {/* Sticky Legend within Main Layout */}
+        <div className="sticky top-[120px] z-30 bg-white/90 backdrop-blur-sm border-b border-gray-100/60 shadow-sm">
+          <div className="px-6 py-4">
+            <Legend />
+          </div>
+        </div>
          
-         
-         {/* Legend */}
-         <div className="px-4 py-2">
-           <Legend />
-         </div>
-         
-                             {/* Calendar */}
-           <div className="flex-1 p-4">
+        {/* Scrollable Calendar Container */}
+        <div className="flex-1 overflow-y-auto px-6 py-6">
              {eventsLoading || doctorProfileLoading || isInitialLoading || configLoading ? (
-               <div className="flex items-center justify-center h-64">
-                 <div className="text-center">
+            <div className="flex items-center justify-center min-h-[600px]">
+              <div className="text-center bg-white rounded-xl shadow-lg p-8">
                    <LoadingSpinner size="lg" />
-                   {doctorProfileError && (
-                     <p className="text-red-600 text-sm mt-2">
-                       Error loading doctor profile
-                     </p>
+                <h3 className="mt-4 text-lg font-semibold text-gray-900">
+                  {isInitialLoading ? 'Preparing your calendar...' : 
+                   doctorProfileLoading ? 'Loading your profile...' : 
+                   configLoading ? 'Loading schedule configuration...' : 'Loading...'}
+                </h3>
+                <p className="mt-2 text-gray-600">
+                  {isInitialLoading ? 'Setting up your personalized calendar experience' : 
+                   doctorProfileLoading ? 'Fetching your doctor profile details' : 
+                   configLoading ? 'Loading your work schedule settings' : 'Please wait...'}
+                </p>
+                {doctorProfileError && (
+                  <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-700 font-medium">Error loading doctor profile</p>
+                    <p className="text-red-600 text-sm mt-1">{doctorProfileError.message}</p>
+                  </div>
                    )}
                  </div>
                </div>
              ) : (
-                           <div className="bg-white rounded-lg shadow-sm border">
+            <div 
+              className="calendar-container"
+              onClick={() => {
+                // Scroll to morning slot when calendar container is clicked
+                setTimeout(() => {
+                  scrollToMorningSlot();
+                }, 50);
+              }}
+            >
+              <div className="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
                 <FullCalendar
                   key={`${view}-${currentDate.toISOString()}`}
                   ref={calendarRef}
                   {...calendarOptions}
                 />
               </div>
+              </div>
            )}
-         </div>
                </div>
       
-                    {/* Custom CSS for event styling */}
+        {/* Enhanced CSS for modern calendar styling */}
                 <style>{`
+          /* Smooth scrolling for the calendar content */
+          .calendar-container {
+            scroll-behavior: smooth;
+          }
+          
+          /* Calendar Container Enhancements */
+          .calendar-container {
+            transition: all 0.3s ease;
+            margin-top: 20px;
+          }
+          
+          .calendar-container:hover {
+            transform: translateY(-2px);
+          }
+          
+          /* Single scrollable container - disable FullCalendar's internal scrolling */
+          .fc {
+            height: auto !important;
+            overflow: visible !important;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+          }
+          
+          .fc-view-harness {
+            height: auto !important;
+            overflow: visible !important;
+          }
+          
+          /* Disable FullCalendar's internal scrolling */
+          .fc-timegrid-body {
+            overflow: visible !important;
+            max-height: none !important;
+          }
+          
+          .fc-daygrid-body {
+            overflow: visible !important;
+          }
+          
+          .fc-scroller {
+            overflow: visible !important;
+          }
+          
+          .fc-scroller-liquid {
+            overflow: visible !important;
+          }
+          
+          /* Enhanced calendar view styling */
+          .fc-view {
+            min-height: 700px;
+            padding: 16px;
+          }
+          
+          /* Modern day headers */
+          .fc-col-header {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+            border-bottom: 2px solid #e2e8f0 !important;
+          }
+          
+          .fc-col-header-cell {
+            padding: 12px 8px !important;
+            font-weight: 600 !important;
+            color: #475569 !important;
+            text-transform: uppercase !important;
+            font-size: 0.75rem !important;
+            letter-spacing: 0.05em !important;
+          }
+          
+          /* Enhanced time axis styling */
+          .fc-timegrid-axis {
+            background: #fafafa !important;
+            border-right: 2px solid #e2e8f0 !important;
+          }
+          
+          .fc-timegrid-slot-label {
+            font-size: 0.75rem !important;
+            color: #64748b !important;
+            font-weight: 500 !important;
+          }
+          
+          /* Grid lines enhancement */
+          .fc-timegrid-slot {
+            border-top: 1px solid #f1f5f9 !important;
+          }
+          
+          .fc-timegrid-slot:nth-child(4n) {
+            border-top: 1px solid #e2e8f0 !important;
+          }
+          
+          /* Current time indicator */
+          .fc-timegrid-now-indicator-line {
+            border-color: #ef4444 !important;
+            border-width: 2px !important;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.3) !important;
+          }
+          
+          .fc-timegrid-now-indicator-arrow {
+            border-left-color: #ef4444 !important;
+            border-width: 8px !important;
+          }
+          
+          /* Today's date highlighting */
+          .fc-day-today {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(59, 130, 246, 0.1) 100%) !important;
+          }
+          
+          .fc-col-header-cell.fc-day-today {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+            color: #1d4ed8 !important;
+          }
+          
           .shift-event {
             background-color: transparent !important;
             border: 2px solid #e5e7eb !important;
@@ -1133,6 +1344,39 @@ export const DoctorCalendarPage: React.FC = () => {
               border-width: 1px !important;
             }
             
+                     /* Enhanced Shift block events */
+           .shift-block-event {
+             background: linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(29, 78, 216, 0.95) 100%) !important;
+             border: 2px solid #2563eb !important;
+             color: white !important;
+             font-weight: 700 !important;
+             z-index: 15 !important;
+             position: relative !important;
+             opacity: 1 !important;
+             visibility: visible !important;
+             display: block !important;
+             width: 100% !important;
+             border-radius: 8px !important;
+             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3) !important;
+             backdrop-filter: blur(8px) !important;
+           }
+           
+           .shift-block-event:hover {
+             transform: translateY(-1px) !important;
+             box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4) !important;
+           }
+           
+           /* Enhanced Override shift blocks - Light Green */
+           .shift-block-event[data-override="true"] {
+             background: linear-gradient(135deg, rgba(34, 197, 94, 0.95) 0%, rgba(22, 163, 74, 0.95) 100%) !important;
+             border: 3px solid #16a34a !important;
+             box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3) !important;
+           }
+           
+           .shift-block-event[data-override="true"]:hover {
+             box-shadow: 0 8px 20px rgba(34, 197, 94, 0.4) !important;
+           }
+            
             
           
           /* Time-off event content styling */
@@ -1173,17 +1417,32 @@ export const DoctorCalendarPage: React.FC = () => {
             font-weight: 600 !important;
           }
           
+          /* Enhanced Event Styling */
           .fc-event {
             cursor: pointer;
-            border-radius: 4px !important;
-            margin: 1px 0 !important;
+            border-radius: 8px !important;
+            margin: 2px 1px !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            backdrop-filter: blur(8px) !important;
           }
           
           .fc-event:hover {
-            opacity: 0.9 !important;
-            transform: translateY(-1px) !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-            transition: all 0.2s ease !important;
+            opacity: 0.95 !important;
+            transform: translateY(-2px) scale(1.02) !important;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+            z-index: 100 !important;
+          }
+          
+          /* Modern event text styling */
+          .fc-event-main {
+            padding: 4px 8px !important;
+          }
+          
+          .fc-event-title {
+            font-weight: 600 !important;
+            font-size: 0.8rem !important;
+            line-height: 1.2 !important;
           }
           
           /* Make shift events more prominent in month view */

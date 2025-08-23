@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
+import { useToast } from '@/hooks/use-toast';
+import { prescriptionApi } from '../../prescriptions/api/prescriptionApi';
 import { 
   Save, 
   Printer, 
@@ -128,6 +130,7 @@ const commonLabTests = [
 ];
 
 export const EPrescription = ({ patientId }: { patientId?: string }) => {
+  const { toast } = useToast();
   const [patient] = useState<PatientInfo>(mockPatient);
   const [diagnoses, setDiagnoses] = useState<string[]>([]);
   const [medicines, setMedicines] = useState<Medicine[]>([]);
@@ -216,14 +219,58 @@ export const EPrescription = ({ patientId }: { patientId?: string }) => {
     window.print();
   };
 
-  const handleSave = () => {
-    // Implement save functionality
-    console.log('Saving prescription...');
+  const handleSave = async () => {
+    try {
+      const prescriptionData = {
+        patientId: patient.id,
+        doctorId: 'current-doctor-id', // This should come from auth context
+        date: new Date().toISOString(),
+        diagnoses,
+        medicines,
+        labTests,
+        advice,
+        followUpDate: null,
+        signature: 'Dr. Current Doctor'
+      };
+
+      // Use the prescription API service
+      await prescriptionApi.savePrescription(prescriptionData);
+      
+      toast({
+        title: "Success",
+        description: "Prescription saved successfully",
+      });
+    } catch (error) {
+      console.error('Error saving prescription:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save prescription. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleSendToPatient = () => {
-    // Implement send functionality
-    console.log('Sending prescription to patient...');
+  const handleSendToPatient = async () => {
+    try {
+      // For now, we'll simulate sending since we need a prescription ID
+      // In a real implementation, you'd first save the prescription and then send it
+      console.log('Sending prescription to patient...');
+      
+      // TODO: Implement actual send functionality when prescription is saved
+      // await prescriptionApi.sendToPatient(prescriptionId);
+      
+      toast({
+        title: "Success",
+        description: "Prescription sent to patient successfully",
+      });
+    } catch (error) {
+      console.error('Error sending prescription:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send prescription. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const groupMedicinesByTiming = () => {

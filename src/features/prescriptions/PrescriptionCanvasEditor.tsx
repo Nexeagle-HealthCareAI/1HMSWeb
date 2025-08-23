@@ -41,6 +41,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
 import PrescriptionTemplates from '@/components/ui/PrescriptionTemplates';
+import { useToast } from '@/hooks/use-toast';
+import { apiClient } from '@/services/axiosClient';
+import { prescriptionApi } from './api/prescriptionApi';
 
 // Types
 interface ElementStyle {
@@ -82,6 +85,7 @@ interface Template {
 
 // Main Editor Component
 const PrescriptionCanvasEditor: React.FC = () => {
+  const { toast } = useToast();
   const [elements, setElements] = useState<Element[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(true);
@@ -167,17 +171,20 @@ const saveToDB = async () => {
   };
 
   try {
-    const res = await fetch("/api/prescriptions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(templateData),
+    // Use the prescription API service
+    await prescriptionApi.saveTemplate(templateData);
+    
+    toast({
+      title: "Success",
+      description: "Prescription template saved successfully",
     });
-
-    if (!res.ok) throw new Error("Failed to save");
-    alert("Prescription saved to DB!");
   } catch (err) {
-    console.error(err);
-    alert("Error saving prescription");
+    console.error("Error saving prescription:", err);
+    toast({
+      title: "Error",
+      description: "Failed to save prescription template. Please try again.",
+      variant: "destructive",
+    });
   }
 };
  const saveToLocal = () => {
@@ -190,8 +197,20 @@ const saveToDB = async () => {
       timestamp: new Date().toISOString(),
     };
 
-    localStorage.setItem("prescriptionTemplate", JSON.stringify(templateData));
-    alert("Prescription saved locally!");
+    try {
+      localStorage.setItem("prescriptionTemplate", JSON.stringify(templateData));
+      toast({
+        title: "Success",
+        description: "Prescription template saved locally",
+      });
+    } catch (err) {
+      console.error("Error saving to localStorage:", err);
+      toast({
+        title: "Error",
+        description: "Failed to save prescription template locally",
+        variant: "destructive",
+      });
+    }
   };
 
   // ---- Load from localStorage ----
@@ -231,6 +250,11 @@ const loadFromLocal = () => {
   } catch (err) {
     console.error("❌ Corrupted prescriptionTemplate in localStorage, clearing...", err);
     localStorage.removeItem("prescriptionTemplate");
+    toast({
+      title: "Warning",
+      description: "Corrupted prescription data cleared. Starting with fresh template.",
+      variant: "destructive",
+    });
   }
 };
 
@@ -242,9 +266,8 @@ const loadFromLocal = () => {
 // Load from DB on login
 const loadFromDB = async () => {
   try {
-    const res = await fetch("/api/prescriptions/latest"); // or `/user/:id/prescriptions`
-    if (!res.ok) throw new Error("Failed to load");
-    const data = await res.json();
+    const response = await prescriptionApi.getLatestTemplate();
+    const data = response.data;
 
     setElements(data.elements || []);
     setCanvasBackground(data.canvasBackground || "#ffffff");
@@ -252,9 +275,20 @@ const loadFromDB = async () => {
     setBackgroundSize(data.backgroundSize || 100);
     setBackgroundBlur(data.backgroundBlur || 0);
 
+    toast({
+      title: "Success",
+      description: "Prescription template loaded from database",
+    });
+
   } catch (err) {
-    console.error(err);
-    alert("Error loading prescription");
+    console.error("Error loading prescription from DB:", err);
+    toast({
+      title: "Warning",
+      description: "Could not load prescription from database. Using local template.",
+      variant: "destructive",
+    });
+    // Fallback to local storage
+    loadFromLocal();
   }
 };
 

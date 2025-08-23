@@ -48,54 +48,99 @@ export function useCalendarEvents(doctorId: string, fromISO: string, toISO: stri
     queryFn: async () => {
       const allEvents: CalendarEvent[] = [];
       
-      // Create shift events from calendar config
+      // Create individual shift blocks from calendar config
       if (calendarConfig?.days) {
-        calendarConfig.days.forEach(day => {
-          if (day.isWorkingDay && day.effectiveShifts) {
-            day.effectiveShifts.forEach(shift => {
-              if (shift.isActive) {
-                // Create shift event
-                const shiftStartTime = `${day.date}T${shift.startTime}:00`;
-                const shiftEndTime = `${day.date}T${shift.endTime}:00`;
+        console.log('Processing calendar config days:', calendarConfig.days.length);
+        
+        calendarConfig.days.forEach((day, dayIndex) => {
+          console.log(`Processing day ${dayIndex + 1}:`, {
+            date: day.date,
+            isWorkingDay: day.isWorkingDay,
+            shiftsCount: day.effectiveShifts?.length || 0
+          });
+          
+          if (day.isWorkingDay && day.effectiveShifts && day.effectiveShifts.length > 0) {
+            day.effectiveShifts.forEach((shift, shiftIndex) => {
+              console.log(`Processing shift ${shiftIndex + 1} for ${day.date}:`, {
+                shiftName: shift.shiftName,
+                startTime: shift.startTime,
+                endTime: shift.endTime,
+                isActive: shift.isActive,
+                sourceType: shift.sourceType,
+                sourceId: shift.sourceId
+              });
+              
+              if (shift.isActive && shift.startTime && shift.endTime) {
+                // Create individual block for each shift with its specific time range
+                const shiftStartDateTime = `${day.date}T${shift.startTime}:00`;
+                const shiftEndDateTime = `${day.date}T${shift.endTime}:00`;
                 
-                const shiftEvent: CalendarEvent = {
-                  id: `shift-${day.date}-${shift.shiftName}`,
-                  type: 'shift',
-                  title: `${shift.shiftName} Shift`,
-                  start: shiftStartTime,
-                  end: shiftEndTime,
-                  backgroundColor: '#3b82f6', // Light blue background
-                  borderColor: '#2563eb',
-                  display: 'background', // Show as background event
+                // Create unique ID for each shift block
+                const uniqueBlockId = `shift-block-${day.date}-${shift.shiftName}-${shift.startTime}-${shift.endTime}-${shift.sourceId}`;
+                
+                const shiftBlockEvent: CalendarEvent = {
+                  id: uniqueBlockId,
+                  type: 'block',
+                  title: `${shift.shiftName} Shift (${shift.startTime}-${shift.endTime})`,
+                  start: shiftStartDateTime,
+                  end: shiftEndDateTime,
+                                      backgroundColor: shift.sourceType === 'override' ? '#22c55e' : '#3b82f6',
+                    borderColor: shift.sourceType === 'override' ? '#16a34a' : '#2563eb',
+                  textColor: 'white',
+                  display: 'auto',
                   extendedProps: {
-                    type: 'shift',
+                    type: 'block',
                     shiftName: shift.shiftName,
+                    startTime: shift.startTime,
+                    endTime: shift.endTime,
                     slotDurationMinutes: shift.slotDurationMinutes,
                     totalSlots: day.slotSummary?.totalSlots || 0,
                     isWorkingShift: true,
-                    eventType: 'shift', // Add this for CSS targeting
+                    eventType: 'block',
                     sourceType: shift.sourceType,
                     sourceId: shift.sourceId,
-                    isOverride: shift.sourceType === 'override'
+                    isOverride: shift.sourceType === 'override',
+                    isShiftBlock: true,
+                    date: day.date
                   }
                 };
                 
-                // Debug logging for override events
-                if (shift.sourceType === 'override') {
-                  console.log('Created override event:', {
-                    id: shiftEvent.id,
-                    sourceId: shift.sourceId,
-                    shiftName: shift.shiftName,
-                    isOverride: shiftEvent.extendedProps.isOverride
-                  });
-                }
+                console.log(`✅ Created shift block event:`, {
+                  id: shiftBlockEvent.id,
+                  title: shiftBlockEvent.title,
+                  start: shiftStartDateTime,
+                  end: shiftEndDateTime,
+                  shiftName: shift.shiftName,
+                  timeRange: `${shift.startTime}-${shift.endTime}`,
+                  date: day.date,
+                  isOverride: shift.sourceType === 'override',
+                  backgroundColor: shiftBlockEvent.backgroundColor
+                });
                 
-                allEvents.push(shiftEvent);
+                allEvents.push(shiftBlockEvent);
+              } else {
+                console.warn(`❌ Skipping inactive or incomplete shift:`, {
+                  shiftName: shift.shiftName,
+                  isActive: shift.isActive,
+                  startTime: shift.startTime,
+                  endTime: shift.endTime,
+                  date: day.date
+                });
               }
+            });
+          } else {
+            console.log(`ℹ️  Skipping day ${day.date}:`, {
+              isWorkingDay: day.isWorkingDay,
+              hasShifts: !!day.effectiveShifts,
+              shiftsCount: day.effectiveShifts?.length || 0
             });
           }
         });
+      } else {
+        console.warn('❌ No calendar config or days found');
       }
+      
+      console.log(`📊 Total shift blocks created: ${allEvents.length}`);
       
       // Create time-off events (these will appear on top of shift events)
       if (timeOffData?.timeOffs) {
@@ -128,6 +173,24 @@ export function useCalendarEvents(doctorId: string, fromISO: string, toISO: stri
           allEvents.push(timeOffEvent);
         });
       }
+      
+      // Final summary
+      const shiftBlocks = allEvents.filter(event => event.extendedProps?.isShiftBlock);
+      const timeOffBlocks = allEvents.filter(event => event.extendedProps?.isTimeOff);
+      
+      console.log(`🎯 FINAL SUMMARY:`, {
+        totalEvents: allEvents.length,
+        shiftBlocks: shiftBlocks.length,
+        timeOffBlocks: timeOffBlocks.length,
+        shiftBlockDetails: shiftBlocks.map(block => ({
+          id: block.id,
+          title: block.title,
+          start: block.start,
+          end: block.end,
+          shiftName: block.extendedProps?.shiftName,
+          isOverride: block.extendedProps?.isOverride
+        }))
+      });
       
       return allEvents;
     },
