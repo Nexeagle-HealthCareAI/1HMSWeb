@@ -15,7 +15,9 @@ import {
   Stethoscope,
   ArrowLeft,
   List,
-  CalendarDays
+  CalendarDays,
+  History,
+  CalendarIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +27,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AppointmentBooking } from './AppointmentBooking';
 import { VitalsForm } from './VitalsForm';
+import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 
 interface Appointment {
   id: string;
@@ -32,6 +35,7 @@ interface Appointment {
   patientName: string;
   doctorName: string;
   appointmentTime: string;
+  appointmentDate: string;
   tokenNo: number;
   vitalsUpdated: boolean;
   status: 'vitals-required' | 'ready-consultation' | 'under-consultation' | 'lab-test-required' | 'awaiting-reconsultation' | 'completed';
@@ -45,6 +49,7 @@ const mockAppointments: Appointment[] = [
     patientName: 'John Smith',
     doctorName: 'Dr. Sarah Wilson',
     appointmentTime: '09:00 AM',
+    appointmentDate: format(new Date(), 'yyyy-MM-dd'),
     tokenNo: 1,
     vitalsUpdated: false,
     status: 'vitals-required',
@@ -56,6 +61,7 @@ const mockAppointments: Appointment[] = [
     patientName: 'Emily Johnson',
     doctorName: 'Dr. Michael Brown',
     appointmentTime: '10:30 AM',
+    appointmentDate: format(new Date(), 'yyyy-MM-dd'),
     tokenNo: 2,
     vitalsUpdated: true,
     status: 'ready-consultation',
@@ -67,6 +73,7 @@ const mockAppointments: Appointment[] = [
     patientName: 'Robert Davis',
     doctorName: 'Dr. Sarah Wilson',
     appointmentTime: '11:15 AM',
+    appointmentDate: format(new Date(), 'yyyy-MM-dd'),
     tokenNo: 3,
     vitalsUpdated: true,
     status: 'under-consultation',
@@ -78,6 +85,7 @@ const mockAppointments: Appointment[] = [
     patientName: 'Maria Garcia',
     doctorName: 'Dr. James Lee',
     appointmentTime: '02:00 PM',
+    appointmentDate: format(new Date(), 'yyyy-MM-dd'),
     tokenNo: 4,
     vitalsUpdated: true,
     status: 'lab-test-required',
@@ -89,6 +97,7 @@ const mockAppointments: Appointment[] = [
     patientName: 'David Wilson',
     doctorName: 'Dr. Sarah Wilson',
     appointmentTime: '03:30 PM',
+    appointmentDate: format(new Date(), 'yyyy-MM-dd'),
     tokenNo: 5,
     vitalsUpdated: true,
     status: 'awaiting-reconsultation',
@@ -100,10 +109,75 @@ const mockAppointments: Appointment[] = [
     patientName: 'Lisa Chen',
     doctorName: 'Dr. Michael Brown',
     appointmentTime: '01:00 PM',
+    appointmentDate: format(new Date(), 'yyyy-MM-dd'),
     tokenNo: 6,
     vitalsUpdated: true,
     status: 'completed',
     phone: '+1234567895'
+  }
+];
+
+// Past appointments data
+const mockPastAppointments: Appointment[] = [
+  {
+    id: 'APT007',
+    patientId: 'P007',
+    patientName: 'Alice Johnson',
+    doctorName: 'Dr. Sarah Wilson',
+    appointmentTime: '09:00 AM',
+    appointmentDate: format(subDays(new Date(), 1), 'yyyy-MM-dd'),
+    tokenNo: 1,
+    vitalsUpdated: true,
+    status: 'completed',
+    phone: '+1234567896'
+  },
+  {
+    id: 'APT008',
+    patientId: 'P008',
+    patientName: 'Bob Smith',
+    doctorName: 'Dr. Michael Brown',
+    appointmentTime: '10:30 AM',
+    appointmentDate: format(subDays(new Date(), 1), 'yyyy-MM-dd'),
+    tokenNo: 2,
+    vitalsUpdated: true,
+    status: 'completed',
+    phone: '+1234567897'
+  },
+  {
+    id: 'APT009',
+    patientId: 'P009',
+    patientName: 'Carol Davis',
+    doctorName: 'Dr. James Lee',
+    appointmentTime: '02:00 PM',
+    appointmentDate: format(subDays(new Date(), 2), 'yyyy-MM-dd'),
+    tokenNo: 1,
+    vitalsUpdated: true,
+    status: 'completed',
+    phone: '+1234567898'
+  },
+  {
+    id: 'APT010',
+    patientId: 'P010',
+    patientName: 'David Wilson',
+    doctorName: 'Dr. Sarah Wilson',
+    appointmentTime: '11:15 AM',
+    appointmentDate: format(subDays(new Date(), 3), 'yyyy-MM-dd'),
+    tokenNo: 1,
+    vitalsUpdated: true,
+    status: 'completed',
+    phone: '+1234567899'
+  },
+  {
+    id: 'APT011',
+    patientId: 'P011',
+    patientName: 'Eva Garcia',
+    doctorName: 'Dr. Michael Brown',
+    appointmentTime: '03:30 PM',
+    appointmentDate: format(subDays(new Date(), 4), 'yyyy-MM-dd'),
+    tokenNo: 1,
+    vitalsUpdated: true,
+    status: 'completed',
+    phone: '+1234567900'
   }
 ];
 
@@ -115,8 +189,10 @@ export const AppointmentDashboard = () => {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [showVitalsForm, setShowVitalsForm] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Appointment | null>(null);
+  const [activeTab, setActiveTab] = useState<'current' | 'past'>('current');
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
-  // Calculate KPIs
+  // Calculate KPIs (only for current appointments)
   const kpis = useMemo(() => {
     const totalToday = mockAppointments.length;
     const vitalsRequired = mockAppointments.filter(apt => apt.status === 'vitals-required').length;
@@ -133,9 +209,24 @@ export const AppointmentDashboard = () => {
     };
   }, []);
 
-  // Filter appointments
+  // Calculate past history stats
+  const pastStats = useMemo(() => {
+    const totalPast = mockPastAppointments.length;
+    const completedPast = mockPastAppointments.filter(apt => apt.status === 'completed').length;
+    const uniqueDates = [...new Set(mockPastAppointments.map(apt => apt.appointmentDate))].length;
+
+    return {
+      totalPast,
+      completedPast,
+      uniqueDates
+    };
+  }, []);
+
+  // Filter appointments based on active tab
   const filteredAppointments = useMemo(() => {
-    return mockAppointments.filter(appointment => {
+    const appointments = activeTab === 'current' ? mockAppointments : mockPastAppointments;
+    
+    return appointments.filter(appointment => {
       const matchesSearch = 
         appointment.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         appointment.patientId.toLowerCase().includes(searchTerm.toLowerCase());
@@ -144,9 +235,12 @@ export const AppointmentDashboard = () => {
       const matchesDoctor = doctorFilter === 'all' || appointment.doctorName === doctorFilter;
       const matchesSelectedStatus = selectedStatus === 'all' || appointment.status === selectedStatus;
       
-      return matchesSearch && matchesStatus && matchesDoctor && matchesSelectedStatus;
+      // Filter by selected date for past appointments
+      const matchesDate = !selectedDate || appointment.appointmentDate === format(selectedDate, 'yyyy-MM-dd');
+      
+      return matchesSearch && matchesStatus && matchesDoctor && matchesSelectedStatus && matchesDate;
     });
-  }, [searchTerm, statusFilter, doctorFilter, selectedStatus]);
+  }, [searchTerm, statusFilter, doctorFilter, selectedStatus, activeTab, selectedDate]);
 
   const getStatusBadge = (status: Appointment['status'], appointment?: Appointment) => {
     switch (status) {
@@ -240,60 +334,125 @@ export const AppointmentDashboard = () => {
 
         {/* KPI Cards */}
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 md:gap-6 flex-shrink-0">
-          <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Today's Appointments</CardTitle>
-              <Calendar className="h-5 w-5 text-healthcare-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-healthcare-primary">📅 {kpis.totalToday}</div>
-              <p className="text-xs text-muted-foreground mt-1">Total booked for today</p>
-            </CardContent>
-          </Card>
+          {activeTab === 'current' ? (
+            <>
+              <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Today's Appointments</CardTitle>
+                  <Calendar className="h-5 w-5 text-healthcare-primary" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-healthcare-primary">📅 {kpis.totalToday}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Total booked for today</p>
+                </CardContent>
+              </Card>
 
-          <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Vitals Update Required</CardTitle>
-              <Heart className="h-5 w-5 text-healthcare-error" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-healthcare-error">❤️‍🩹 {kpis.vitalsRequired}</div>
-              <p className="text-xs text-muted-foreground mt-1">Vitals not yet filled</p>
-            </CardContent>
-          </Card>
+              <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Vitals Update Required</CardTitle>
+                  <Heart className="h-5 w-5 text-healthcare-error" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-healthcare-error">❤️‍🩹 {kpis.vitalsRequired}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Vitals not yet filled</p>
+                </CardContent>
+              </Card>
 
-          <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Doctor Follow-Ups</CardTitle>
-              <UserCheck className="h-5 w-5 text-healthcare-success" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-healthcare-success">👨‍⚕️ {kpis.doctorFollowUps}</div>
-              <p className="text-xs text-muted-foreground mt-1">Follow-up visits today</p>
-            </CardContent>
-          </Card>
+              <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Doctor Follow-Ups</CardTitle>
+                  <UserCheck className="h-5 w-5 text-healthcare-success" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-healthcare-success">👨‍⚕️ {kpis.doctorFollowUps}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Follow-up visits today</p>
+                </CardContent>
+              </Card>
 
-          <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Lab Follow-Ups</CardTitle>
-              <FlaskConical className="h-5 w-5 text-healthcare-secondary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-healthcare-secondary">🧬 {kpis.labFollowUps}</div>
-              <p className="text-xs text-muted-foreground mt-1">Pending follow-up</p>
-            </CardContent>
-          </Card>
+              <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Lab Follow-Ups</CardTitle>
+                  <FlaskConical className="h-5 w-5 text-healthcare-secondary" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-healthcare-secondary">🧬 {kpis.labFollowUps}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Pending follow-up</p>
+                </CardContent>
+              </Card>
 
-          <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Completed Today</CardTitle>
-              <CheckCircle className="h-5 w-5 text-healthcare-success" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-healthcare-success">✅ {kpis.completed}</div>
-              <p className="text-xs text-muted-foreground mt-1">Finished consultations</p>
-            </CardContent>
-          </Card>
+              <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Completed Today</CardTitle>
+                  <CheckCircle className="h-5 w-5 text-healthcare-success" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-healthcare-success">✅ {kpis.completed}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Finished consultations</p>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <>
+              <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Past Appointments</CardTitle>
+                  <History className="h-5 w-5 text-gray-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-gray-600">📋 {pastStats.totalPast}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Historical records</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Completed Appointments</CardTitle>
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-green-600">✅ {pastStats.completedPast}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Successfully completed</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Unique Dates</CardTitle>
+                  <Calendar className="h-5 w-5 text-blue-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-blue-600">📅 {pastStats.uniqueDates}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Different appointment days</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Filtered Results</CardTitle>
+                  <Filter className="h-5 w-5 text-purple-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-purple-600">🔍 {filteredAppointments.length}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Current filter results</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Selected Date</CardTitle>
+                  <CalendarIcon className="h-5 w-5 text-orange-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-orange-600">
+                    {selectedDate ? format(selectedDate, 'MM/dd') : 'All'}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {selectedDate ? format(selectedDate, 'yyyy') : 'Past dates'}
+                  </p>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </div>
 
         {/* Filters & Search */}
@@ -333,20 +492,54 @@ export const AppointmentDashboard = () => {
           </CardContent>
         </Card>
 
+        {/* Tab Navigation */}
+        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-6">
+          <button
+            onClick={() => setActiveTab('current')}
+            className={`flex-1 py-2 px-4 rounded-md font-medium transition-all duration-200 ${
+              activeTab === 'current'
+                ? 'bg-white text-healthcare-primary shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Clock className="h-4 w-4" />
+              Current Appointments
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('past')}
+            className={`flex-1 py-2 px-4 rounded-md font-medium transition-all duration-200 ${
+              activeTab === 'past'
+                ? 'bg-white text-healthcare-primary shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <History className="h-4 w-4" />
+              Past History
+            </div>
+          </button>
+        </div>
+
         {/* Enhanced Appointments Table with Status Navigation - Full Screen */}
         <div className="w-full">
           <div className="mb-6">
             <div className="flex items-center gap-2 text-foreground text-lg md:text-xl mb-2">
               <Clock className="h-4 w-4 md:h-5 md:w-5 text-healthcare-primary" />
-              📊 Patient Journey Dashboard
+              {activeTab === 'current' ? '📊 Patient Journey Dashboard' : '📋 Past Appointments History'}
             </div>
             <p className="text-sm text-muted-foreground">
-              Track patient progress through appointment stages
+              {activeTab === 'current' 
+                ? 'Track patient progress through appointment stages'
+                : 'View and filter past appointment records'
+              }
             </p>
           </div>
 
           {/* Enhanced Patient Journey Navigation Header - Full Screen */}
-          <div className="bg-gradient-to-r from-healthcare-primary/10 to-healthcare-secondary/10 rounded-xl p-6 border border-healthcare-primary/20 mb-6 w-full">
+          {activeTab === 'current' && (
+            <div className="bg-gradient-to-r from-healthcare-primary/10 to-healthcare-secondary/10 rounded-xl p-6 border border-healthcare-primary/20 mb-6 w-full">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 bg-healthcare-primary rounded-full animate-pulse"></div>
@@ -488,6 +681,53 @@ export const AppointmentDashboard = () => {
                 </button>
               </div>
             </div>
+          )}
+
+          {/* Past History Date Filter */}
+          {activeTab === 'past' && (
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200 mb-6 w-full">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <CalendarIcon className="h-5 w-5 text-gray-600" />
+                  <h3 className="text-lg font-semibold text-gray-700">Filter by Date</h3>
+                </div>
+                <Badge className="bg-gray-200 text-gray-700 border-gray-300">
+                  Past Records
+                </Badge>
+              </div>
+              
+              <div className="flex flex-wrap gap-4 items-center">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">Select Date:</label>
+                  <Input
+                    type="date"
+                    value={selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''}
+                    onChange={(e) => setSelectedDate(e.target.value ? new Date(e.target.value) : undefined)}
+                    className="w-48"
+                    max={format(new Date(), 'yyyy-MM-dd')}
+                  />
+                </div>
+                
+                {selectedDate && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setSelectedDate(undefined)}
+                    className="text-gray-600 hover:text-gray-800"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Clear Filter
+                  </Button>
+                )}
+                
+                <div className="text-sm text-gray-600">
+                  {selectedDate 
+                    ? `Showing appointments for ${format(selectedDate, 'MMMM dd, yyyy')}`
+                    : 'Showing all past appointments'
+                  }
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Appointments Table */}
           <Card className="bg-card shadow-card rounded-xl border-0">
@@ -502,6 +742,7 @@ export const AppointmentDashboard = () => {
                       <TableHead>Patient ID</TableHead>
                       <TableHead>Patient Name</TableHead>
                       <TableHead>Doctor</TableHead>
+                      {activeTab === 'past' && <TableHead>Date</TableHead>}
                       <TableHead>Time</TableHead>
                       <TableHead>Token</TableHead>
                       <TableHead>Status</TableHead>
@@ -516,6 +757,11 @@ export const AppointmentDashboard = () => {
                         </TableCell>
                         <TableCell>{appointment.patientName}</TableCell>
                         <TableCell>{appointment.doctorName}</TableCell>
+                        {activeTab === 'past' && (
+                          <TableCell className="text-gray-600">
+                            {format(new Date(appointment.appointmentDate), 'MMM dd, yyyy')}
+                          </TableCell>
+                        )}
                         <TableCell>{appointment.appointmentTime}</TableCell>
                         <TableCell>
                           <Badge variant="outline">#{appointment.tokenNo}</Badge>
@@ -546,6 +792,9 @@ export const AppointmentDashboard = () => {
                     </div>
                     <div className="space-y-1 text-sm text-gray-600 mb-3">
                       <p>Doctor: {appointment.doctorName}</p>
+                      {activeTab === 'past' && (
+                        <p>Date: {format(new Date(appointment.appointmentDate), 'MMM dd, yyyy')}</p>
+                      )}
                       <p>Time: {appointment.appointmentTime}</p>
                     </div>
                     <div className="flex justify-between items-center">
