@@ -171,20 +171,17 @@ const saveToDB = async () => {
   };
 
   try {
-    // Use the prescription API service
-    await prescriptionApi.saveTemplate(templateData);
-    
-    toast({
-      title: "Success",
-      description: "Prescription template saved successfully",
+    const res = await fetch("/api/prescriptions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(templateData),
     });
+
+    if (!res.ok) throw new Error("Failed to save");
+    alert("Prescription saved to DB!");
   } catch (err) {
-    console.error("Error saving prescription:", err);
-    toast({
-      title: "Error",
-      description: "Failed to save prescription template. Please try again.",
-      variant: "destructive",
-    });
+    console.error(err);
+    alert("Error saving prescription");
   }
 };
  const saveToLocal = () => {
@@ -266,29 +263,19 @@ const loadFromLocal = () => {
 // Load from DB on login
 const loadFromDB = async () => {
   try {
-    const response = await prescriptionApi.getLatestTemplate();
-    const data = response.data;
+    const res = await fetch("/api/prescriptions/latest"); // or `/user/:id/prescriptions`
+    if (!res.ok) throw new Error("Failed to load");
+    const data = await res.json();
 
-    setElements(data.elements || []);
-    setCanvasBackground(data.canvasBackground || "#ffffff");
-    setBackgroundImage(data.backgroundImage || null);
-    setBackgroundSize(data.backgroundSize || 100);
-    setBackgroundBlur(data.backgroundBlur || 0);
-
-    toast({
-      title: "Success",
-      description: "Prescription template loaded from database",
-    });
+//     setElements(data.elements || []);
+//     setCanvasBackground(data.canvasBackground || "#ffffff");
+//     setBackgroundImage(data.backgroundImage || null);
+//     setBackgroundSize(data.backgroundSize || 100);
+//     setBackgroundBlur(data.backgroundBlur || 0);
 
   } catch (err) {
-    console.error("Error loading prescription from DB:", err);
-    toast({
-      title: "Warning",
-      description: "Could not load prescription from database. Using local template.",
-      variant: "destructive",
-    });
-    // Fallback to local storage
-    loadFromLocal();
+    console.error(err);
+    alert("Error loading prescription");
   }
 };
 
@@ -566,9 +553,7 @@ useEffect(() => {
 
 
 }, [isResizing, selectedId, resizeHandle, resizeStartPos, resizeStartSize, resizeStartElementPos, elements]);
-useEffect(() => {
-  loadFromDB();
-}, []);
+
   const handleCanvasClick = (e: React.MouseEvent) => {
     if (e.target === canvasRef.current) {
       setSelectedId(null); // Unselect element
@@ -622,10 +607,23 @@ useEffect(() => {
           let elementHtml = '';
           if (el.type === 'text') {
             elementHtml = `<div class="element" style="left: ${el.x}px; top: ${el.y}px; width: ${el.width}px; height: ${el.height}px; font-family: ${el.style?.fontFamily || 'Inter'}; font-size: ${el.style?.fontSize || 16}px; color: ${el.style?.color || '#000'}; font-weight: ${el.style?.fontWeight || 'normal'}; display: flex; align-items: center;">${el.content}</div>`;
-          } else if (el.type === 'line') {
-            const rotation = el.style?.rotation || 0;
-            elementHtml = `<div class="element" style="left: ${el.x}px; top: ${el.y}px; width: ${el.width}px; height: ${el.height}px; border-top: ${el.style?.strokeWidth || 2}px solid ${el.style?.strokeColor || '#000'}; transform: rotate(${rotation}deg); transform-origin: center;"></div>`;
-          } else if (el.type === 'rectangle') {
+          }  else if (el.type === 'line') {
+  const x1 = el.x1 ?? el.x;
+  const y1 = el.y1 ?? el.y;
+  const x2 = el.x2 ?? (el.x + el.width);
+  const y2 = el.y2 ?? el.y;
+
+  elementHtml = `
+    <svg class="element" style="position:absolute; left:0; top:0;" 
+         width="${CANVAS_WIDTH}" height="${CANVAS_HEIGHT}">
+      <line 
+        x1="${x1}" y1="${y1}" 
+        x2="${x2}" y2="${y2}" 
+        stroke="${el.style?.strokeColor || '#000'}" 
+        stroke-width="${el.style?.strokeWidth || 2}" />
+    </svg>`;
+}
+ else if (el.type === 'rectangle') {
             elementHtml = `<div class="element" style="left: ${el.x}px; top: ${el.y}px; width: ${el.width}px; height: ${el.height}px; background-color: ${el.style?.fillColor || 'transparent'}; border: ${el.style?.strokeWidth || 1}px solid ${el.style?.strokeColor || '#000'};"></div>`;
           } else if (el.type === 'circle') {
             elementHtml = `<div class="element" style="left: ${el.x}px; top: ${el.y}px; width: ${el.width}px; height: ${el.height}px; background-color: ${el.style?.fillColor || 'transparent'}; border: ${el.style?.strokeWidth || 1}px solid ${el.style?.strokeColor || '#000'}; border-radius: 50%;"></div>`;
@@ -779,19 +777,23 @@ useEffect(() => {
                     color: ${el.style?.color || '#000'}; 
                     font-weight: ${el.style?.fontWeight || 'normal'};
                   ">${el.content || ''}</div>`;
-              } else if (el.type === 'line') {
-                const rotation = el.style?.rotation || 0;
-                elementHtml = `
-                  <div class="element line-element" style="
-                    left: ${el.x}px; 
-                    top: ${el.y}px; 
-                    width: ${el.width}px; 
-                    height: ${el.height}px; 
-                    border-top-width: ${el.style?.strokeWidth || 2}px;
-                    border-top-color: ${el.style?.strokeColor || '#000'};
-                    transform: rotate(${rotation}deg);
-                  "></div>`;
-              } else if (el.type === 'rectangle') {
+              }  else if (el.type === 'line') {
+  const x1 = el.x1 ?? el.x;
+  const y1 = el.y1 ?? el.y;
+  const x2 = el.x2 ?? (el.x + el.width);
+  const y2 = el.y2 ?? el.y;
+
+  elementHtml = `
+    <svg class="element" style="position:absolute; left:0; top:0;" 
+         width="${CANVAS_WIDTH}" height="${CANVAS_HEIGHT}">
+      <line 
+        x1="${x1}" y1="${y1}" 
+        x2="${x2}" y2="${y2}" 
+        stroke="${el.style?.strokeColor || '#000'}" 
+        stroke-width="${el.style?.strokeWidth || 2}" />
+    </svg>`;
+}
+ else if (el.type === 'rectangle') {
                 elementHtml = `
                   <div class="element rectangle-element" style="
                     left: ${el.x}px; 
