@@ -86,7 +86,6 @@ export function useCalendarEvents(doctorId: string, fromISO: string, toISO: stri
                   end: shiftEndDateTime,
                                       backgroundColor: shift.sourceType === 'override' ? '#22c55e' : '#3b82f6',
                     borderColor: shift.sourceType === 'override' ? '#16a34a' : '#2563eb',
-                  textColor: 'white',
                   display: 'auto',
                   extendedProps: {
                     type: 'block',
