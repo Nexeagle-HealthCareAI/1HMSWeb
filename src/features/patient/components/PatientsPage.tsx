@@ -49,67 +49,63 @@ export const PatientsPage: React.FC = () => {
         limit: 10,
         search: searchTerm || undefined,
         gender: genderFilter !== 'all' ? genderFilter : undefined,
-        bloodType: bloodTypeFilter !== 'all' ? bloodTypeFilter : undefined,
+        blood_type: bloodTypeFilter !== 'all' ? bloodTypeFilter : undefined,
       };
       
       const response = await patientApi.getAll(filters);
       setPatients(response.data || []);
-      setTotalPatients(response.total || 0);
+      setTotalPatients(response.pagination?.total || 0);
     } catch (error) {
       console.error('Error fetching patients:', error);
       // Fallback to mock data for demonstration
       setPatients([
         {
           id: 'P001',
-          firstName: 'John',
-          lastName: 'Doe',
+          name: 'John Doe',
           email: 'john.doe@email.com',
           phone: '+1234567890',
-          dateOfBirth: '1990-05-15',
-          gender: 'Male',
-          bloodType: 'O+',
+          date_of_birth: '1990-05-15',
+          gender: 'male',
+          blood_type: 'O+',
           address: '123 Main St, City, State',
-          emergencyContact: {
+          emergency_contact: {
             name: 'Jane Doe',
             relationship: 'Spouse',
             phone: '+1234567891'
           },
-          insurance: {
+          insurance_info: {
             provider: 'Blue Cross',
-            policyNumber: 'BC123456789',
-            groupNumber: 'GRP001'
+            policy_number: 'BC123456789',
+            group_number: 'GRP001'
           },
-          medicalHistory: ['Hypertension', 'Diabetes'],
+          medical_history: 'Hypertension, Diabetes',
           allergies: ['Penicillin'],
-          currentMedications: ['Metformin', 'Lisinopril'],
-          createdAt: '2024-01-15T10:00:00Z',
-          updatedAt: '2024-01-15T10:00:00Z'
+          created_at: '2024-01-15T10:00:00Z',
+          updated_at: '2024-01-15T10:00:00Z'
         },
         {
           id: 'P002',
-          firstName: 'Sarah',
-          lastName: 'Johnson',
+          name: 'Sarah Johnson',
           email: 'sarah.johnson@email.com',
           phone: '+1234567892',
-          dateOfBirth: '1985-08-22',
-          gender: 'Female',
-          bloodType: 'A+',
+          date_of_birth: '1985-08-22',
+          gender: 'female',
+          blood_type: 'A+',
           address: '456 Oak Ave, City, State',
-          emergencyContact: {
+          emergency_contact: {
             name: 'Mike Johnson',
             relationship: 'Husband',
             phone: '+1234567893'
           },
-          insurance: {
+          insurance_info: {
             provider: 'Aetna',
-            policyNumber: 'AE987654321',
-            groupNumber: 'GRP002'
+            policy_number: 'AE987654321',
+            group_number: 'GRP002'
           },
-          medicalHistory: ['Asthma'],
+          medical_history: 'Asthma',
           allergies: ['Dairy'],
-          currentMedications: ['Albuterol'],
-          createdAt: '2024-01-10T14:30:00Z',
-          updatedAt: '2024-01-10T14:30:00Z'
+          created_at: '2024-01-10T14:30:00Z',
+          updated_at: '2024-01-10T14:30:00Z'
         }
       ]);
       setTotalPatients(2);
@@ -270,13 +266,13 @@ export const PatientsPage: React.FC = () => {
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-healthcare-primary/10 rounded-full flex items-center justify-center">
                         <span className="text-healthcare-primary font-semibold">
-                          {patient.firstName[0]}{patient.lastName[0]}
+                          {patient.name.split(' ').map(n => n[0]).join('')}
                         </span>
                       </div>
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="font-semibold text-lg">
-                            {patient.firstName} {patient.lastName}
+                            {patient.name}
                           </h3>
                           <Badge variant="outline" className="text-xs">
                             ID: {patient.id}
@@ -293,7 +289,7 @@ export const PatientsPage: React.FC = () => {
                           </div>
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {getAge(patient.dateOfBirth)} years
+                            {getAge(patient.date_of_birth)} years
                           </div>
                         </div>
                       </div>
@@ -302,8 +298,8 @@ export const PatientsPage: React.FC = () => {
                       <Badge className={getGenderColor(patient.gender)}>
                         {patient.gender}
                       </Badge>
-                      <Badge className={getBloodTypeColor(patient.bloodType)}>
-                        {patient.bloodType}
+                      <Badge className={getBloodTypeColor(patient.blood_type || '')}>
+                        {patient.blood_type}
                       </Badge>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
