@@ -48,7 +48,7 @@ export const BookingSuccess: React.FC<BookingSuccessProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[95vh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[95vh] overflow-y-auto dark:bg-gray-900">
         <DialogHeader className="relative pb-2">
           <Button
             onClick={onClose}
@@ -58,7 +58,7 @@ export const BookingSuccess: React.FC<BookingSuccessProps> = ({
           >
             <X className="h-4 w-4" />
           </Button>
-          <DialogTitle className="text-center text-2xl font-bold text-healthcare-success">
+          <DialogTitle className="text-center text-2xl font-bold text-healthcare-success dark:text-green-400">
             Appointment Booked Successfully!
           </DialogTitle>
         </DialogHeader>
@@ -67,7 +67,7 @@ export const BookingSuccess: React.FC<BookingSuccessProps> = ({
           {/* Success Icon */}
           <div className="mb-4">
             <CheckCircle className="h-12 w-12 text-healthcare-success mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground dark:text-gray-400">
               Your appointment has been confirmed
             </p>
           </div>

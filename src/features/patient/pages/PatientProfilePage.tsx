@@ -373,30 +373,30 @@ export const PatientProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-all duration-300">
       {/* Main Content with Side Navigation */}
       <div className="flex">
         {/* Fixed Side Navigation - Professional Design */}
-        <div className={`${sidebarCollapsed ? 'w-16' : 'w-64'} bg-white border-r border-gray-200 fixed h-screen overflow-y-auto transition-all duration-300 ease-in-out`}>
+        <div className={`${sidebarCollapsed ? 'w-16' : 'w-64'} bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 fixed h-screen overflow-y-auto transition-all duration-300 ease-in-out shadow-sm`}>
           {/* Patient Profile Header in Side Nav */}
-          <div className={`${sidebarCollapsed ? 'p-3' : 'p-6'} border-b border-gray-100 bg-white`}>
+          <div className={`${sidebarCollapsed ? 'p-3' : 'p-6'} border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 transition-all duration-200`}>
             <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} mb-4`}>
               {!sidebarCollapsed && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate(-1)}
-                  className="flex items-center gap-1 bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 transition-colors text-xs"
-                >
-                  <ArrowLeft className="h-3 w-3" />
-                  Back
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(-1)}
+                  className="flex items-center gap-1 bg-muted/50 border-border text-muted-foreground hover:bg-muted transition-all duration-200 text-xs"
+              >
+                <ArrowLeft className="h-3 w-3" />
+                Back
                 </Button>
               )}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="flex items-center gap-1 bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 transition-colors text-xs"
+                className="flex items-center gap-1 bg-muted/50 border-border text-muted-foreground hover:bg-muted transition-all duration-200 text-xs"
               >
                 {sidebarCollapsed ? <Menu className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
               </Button>
@@ -407,54 +407,54 @@ export const PatientProfilePage: React.FC = () => {
                   <User className={`${sidebarCollapsed ? 'h-4 w-4' : 'h-5 w-5'} text-blue-600`} />
                 </div>
                 {!sidebarCollapsed && (
-                  <div>
-                    <h1 className="text-base font-semibold text-gray-900 mb-1">Patient Profile</h1>
-                    <p className="text-sm text-gray-500">ID: {patientId}</p>
-                  </div>
+                <div>
+                    <h1 className="text-base font-semibold text-foreground mb-1 transition-colors duration-200">Patient Profile</h1>
+                    <p className="text-sm text-muted-foreground transition-colors duration-200">ID: {patientId}</p>
+                </div>
                 )}
               </div>
             </div>
           </div>
           
           {/* Navigation */}
-          <nav className={`${sidebarCollapsed ? 'p-2' : 'p-4'} space-y-1 mt-2`}>
-            {navigationItems.map((item) => {
-              const IconComponent = item.icon;
+          <nav className={`${sidebarCollapsed ? 'p-2' : 'p-4'} space-y-1 mt-2 transition-all duration-200`}>
+              {navigationItems.map((item) => {
+                const IconComponent = item.icon;
               const isActive = activeTab === item.id;
-              return (
+                return (
                 <Button
                   key={item.id}
                   variant="ghost"
                   className={`
-                    w-full group relative transition-all duration-200 flex items-center
+                    w-full group relative transition-all duration-200 flex items-center hover-lift
                     ${sidebarCollapsed ? 'justify-center px-2 h-11 w-11 mx-auto rounded-lg' : 'justify-start gap-3 h-11 px-3 rounded-lg'}
                     ${isActive 
-                      ? 'bg-blue-50 text-blue-700 border border-blue-200' 
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      ? 'ring-2 ring-primary bg-primary/5 text-primary border border-primary/20 shadow-sm' 
+                      : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                     }
                   `}
-                  onClick={() => setActiveTab(item.id)}
+                      onClick={() => setActiveTab(item.id)}
                   title={sidebarCollapsed ? item.label : undefined}
                 >
                   <IconComponent className={`${sidebarCollapsed ? 'h-5 w-5' : 'h-4 w-4'} transition-colors ${
-                    isActive ? 'text-blue-600' : 'text-gray-500 group-hover:text-gray-700'
+                    isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
                   }`} />
                   
                   {!sidebarCollapsed && (
                     <span className={`font-medium text-sm transition-colors ${
-                      isActive ? 'text-blue-700' : 'text-gray-700 group-hover:text-gray-900'
+                      isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
                     }`}>
                       {item.label}
                     </span>
                   )}
                 </Button>
-              );
-            })}
+                );
+              })}
           </nav>
         </div>
 
         {/* Scrollable Content Area */}
-        <div className={`flex-1 ${sidebarCollapsed ? 'ml-16' : 'ml-64'} p-6 overflow-y-auto h-screen transition-all duration-300 ease-in-out`}>
+        <div className={`flex-1 ${sidebarCollapsed ? 'ml-16' : 'ml-64'} p-6 overflow-y-auto h-screen transition-all duration-300 ease-in-out bg-gray-50 dark:bg-gray-950`}>
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <PatientOverview
@@ -491,37 +491,37 @@ export const PatientProfilePage: React.FC = () => {
             <div className="space-y-6">
               {/* Header */}
               <div className="flex items-center gap-4 mb-6">
-                <div className="p-3 bg-blue-600 rounded-lg shadow-sm">
-                  <Settings className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">Customize ePrescription</h2>
-                  <p className="text-gray-600">Configure prescription templates and settings for better workflow efficiency</p>
-                </div>
+                                 <div className="p-3 bg-primary rounded-lg shadow-sm">
+                   <Settings className="h-6 w-6 text-white" />
+                 </div>
+                 <div>
+                   <h2 className="text-2xl font-semibold text-foreground mb-2">Customize ePrescription</h2>
+                   <p className="text-muted-foreground">Configure prescription templates and settings for better workflow efficiency</p>
+                 </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Template Settings */}
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Template Settings</h3>
-                  <p className="text-gray-600 text-sm mb-4">
-                    Configure default prescription templates and formatting options.
-                  </p>
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                    Configure Templates
-                  </Button>
-                </div>
+                                 {/* Template Settings */}
+                 <div className="bg-card rounded-lg border border-border p-6">
+                   <h3 className="text-lg font-semibold text-foreground mb-4">Template Settings</h3>
+                   <p className="text-muted-foreground text-sm mb-4">
+                     Configure default prescription templates and formatting options.
+                   </p>
+                   <Button className="bg-primary hover:bg-primary/90 text-white">
+                     Configure Templates
+                   </Button>
+                 </div>
 
-                {/* Prescription Settings */}
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Prescription Settings</h3>
-                  <p className="text-gray-600 text-sm mb-4">
-                    Set default medications, dosages, and prescription preferences.
-                  </p>
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                    Manage Settings
-                  </Button>
-                </div>
+                 {/* Prescription Settings */}
+                 <div className="bg-card rounded-lg border border-border p-6">
+                   <h3 className="text-lg font-semibold text-foreground mb-4">Prescription Settings</h3>
+                   <p className="text-muted-foreground text-sm mb-4">
+                     Set default medications, dosages, and prescription preferences.
+                   </p>
+                   <Button className="bg-primary hover:bg-primary/90 text-white">
+                     Manage Settings
+                   </Button>
+                   </div>
               </div>
             </div>
           )}

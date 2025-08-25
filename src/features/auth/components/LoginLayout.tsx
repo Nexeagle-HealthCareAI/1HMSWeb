@@ -64,11 +64,11 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
   );
 
   return (
-    <div className="h-screen bg-gradient-subtle flex flex-col lg:flex-row overflow-hidden relative">
+    <div className="h-screen bg-gradient-subtle dark:bg-gray-950 flex flex-col lg:flex-row overflow-hidden relative transition-all duration-300">
       {/* Loading Overlay */}
       <LoadingOverlay isLoading={isLoading} message={loadingMessage} />
       {/* Mobile Header */}
-      <div className="lg:hidden bg-white shadow-sm border-b px-4 py-2 flex-shrink-0">
+      <div className="lg:hidden bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex-shrink-0">
         <div className="flex items-center justify-center gap-2">
           <img 
             src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
@@ -76,7 +76,7 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
             className="h-6 w-6"
             style={{ width: '24px', height: '24px' }}
           />
-          <span className="font-bold text-base">NexEagle HMS</span>
+          <span className="font-bold text-base text-gray-900 dark:text-white">NexEagle HMS</span>
         </div>
       </div>
 

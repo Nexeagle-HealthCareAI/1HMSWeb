@@ -6,25 +6,18 @@
     <meta name="color-scheme" content="light" />
     <link rel="icon" href="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" type="image/png" />
     <script>
-      // Force light mode - prevent dark mode from being applied
-      document.documentElement.classList.remove('dark');
-      document.documentElement.style.colorScheme = 'light';
+      // Initialize theme system
+      const theme = localStorage.getItem('theme-storage') ? 
+        JSON.parse(localStorage.getItem('theme-storage')).state.mode : 'light';
       
-      // Store original matchMedia function
-      const originalMatchMedia = window.matchMedia;
-      
-      // Override matchMedia to always return false for dark mode queries
-      window.matchMedia = function(query) {
-        if (query.includes('prefers-color-scheme: dark')) {
-          return {
-            matches: false,
-            addEventListener: () => {},
-            removeEventListener: () => {},
-            dispatchEvent: () => true
-          };
-        }
-        return originalMatchMedia.call(this, query);
-      };
+      // Apply theme immediately to prevent flash
+      if (theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+        document.documentElement.style.colorScheme = 'dark';
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.documentElement.style.colorScheme = 'light';
+      }
     </script>
     <title>NexEagle HMS</title>
     <meta name="description" content="NexEagle HMS - Healthcare Management System" />

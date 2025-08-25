@@ -122,27 +122,27 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
 
   return (
     <Dialog open={true} onOpenChange={onCancel}>
-      <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto dark:bg-gray-900">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-healthcare-primary flex items-center gap-2">
+          <DialogTitle className="text-xl font-bold text-healthcare-primary dark:text-blue-400 flex items-center gap-2">
             <Activity className="h-5 w-5" />
             Update Vitals - {patientName}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="dark:text-gray-300">
             Recording vital signs is optional but helps provide better care. You can skip this step if needed.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Blood Pressure & Heart Rate */}
-          <Card className="p-3">
-            <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+          <Card className="p-3 dark:bg-gray-800">
+            <h3 className="font-semibold text-foreground dark:text-white mb-3 flex items-center gap-2">
               <Heart className="h-4 w-4 text-red-500" />
               Cardiovascular Vitals
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-                <Label htmlFor="systolic" className="text-sm font-medium">
+                <Label htmlFor="systolic" className="text-sm font-medium dark:text-gray-300">
                   Systolic BP (mmHg)
                 </Label>
                 <Input
@@ -195,8 +195,8 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
           </Card>
 
           {/* Respiratory & Temperature */}
-          <Card className="p-3">
-            <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+          <Card className="p-3 dark:bg-gray-800">
+            <h3 className="font-semibold text-foreground dark:text-white mb-3 flex items-center gap-2">
               <Thermometer className="h-4 w-4 text-orange-500" />
               Respiratory & Temperature
             </h3>

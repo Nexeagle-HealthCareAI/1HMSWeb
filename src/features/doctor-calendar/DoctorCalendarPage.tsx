@@ -1070,10 +1070,10 @@ export const DoctorCalendarPage: React.FC = () => {
     );
   }
   
-           return (
-      <div className="h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 -m-6">
+             return (
+    <div className="h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 -m-6 transition-all duration-300">
                 {/* Sticky Header within Main Layout */}
-        <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-200/60 shadow-sm">
+        <div className="sticky top-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-200/60 dark:border-gray-700/60 shadow-sm">
           <CalendarHeader
             currentDate={currentDate}
             onDateChange={setCurrentDate}
@@ -1092,22 +1092,22 @@ export const DoctorCalendarPage: React.FC = () => {
             <div className="lg:col-span-3 overflow-y-auto">
               {eventsLoading || doctorProfileLoading || isInitialLoading || configLoading ? (
                 <div className="flex items-center justify-center min-h-[400px]">
-                  <div className="text-center bg-white rounded-lg shadow-md p-6">
+                  <div className="text-center bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
                     <LoadingSpinner size="lg" />
-                    <h3 className="mt-4 text-lg font-semibold text-gray-900">
+                    <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">
                       {isInitialLoading ? 'Preparing your calendar...' : 
                        doctorProfileLoading ? 'Loading your profile...' : 
                        configLoading ? 'Loading schedule configuration...' : 'Loading...'}
                     </h3>
-                    <p className="mt-2 text-gray-600">
+                    <p className="mt-2 text-gray-600 dark:text-gray-400">
                       {isInitialLoading ? 'Setting up your personalized calendar experience' : 
                        doctorProfileLoading ? 'Fetching your doctor profile details' : 
                        configLoading ? 'Loading your work schedule settings' : 'Please wait...'}
                     </p>
                     {doctorProfileError && (
-                      <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                        <p className="text-red-700 font-medium">Error loading doctor profile</p>
-                        <p className="text-red-600 text-sm mt-1">{doctorProfileError.message}</p>
+                      <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                        <p className="text-red-700 dark:text-red-400 font-medium">Error loading doctor profile</p>
+                        <p className="text-red-600 dark:text-red-300 text-sm mt-1">{doctorProfileError.message}</p>
                       </div>
                     )}
                   </div>
@@ -1122,7 +1122,7 @@ export const DoctorCalendarPage: React.FC = () => {
                     }, 50);
                   }}
                 >
-                  <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
                     <FullCalendar
                       key={`${view}-${currentDate.toISOString()}`}
                       ref={calendarRef}

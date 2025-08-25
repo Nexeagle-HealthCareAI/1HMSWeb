@@ -510,7 +510,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-subtle p-4 lg:p-6">
+    <div className="min-h-screen bg-gradient-subtle p-4 lg:p-6 transition-all duration-300">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between">

@@ -2,41 +2,211 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Force light mode - override browser dark mode preferences */
+/* Eye-friendly theme transitions - smoother and less jarring */
+* {
+  transition: background-color 0.4s ease-out, border-color 0.4s ease-out, color 0.4s ease-out;
+}
+
+/* Eye-friendly text rendering */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "kern" 1;
+}
+
+/* Reduce eye strain with better line height and spacing */
+p, div, span {
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+}
+
+/* Softer focus indicators for better eye comfort */
+*:focus {
+  outline: 2px solid hsl(var(--primary) / 0.6);
+  outline-offset: 2px;
+  transition: outline 0.2s ease;
+}
+
+/* Eye-friendly selection colors */
+::selection {
+  background-color: hsl(var(--primary) / 0.2);
+  color: hsl(var(--foreground));
+}
+
+::-moz-selection {
+  background-color: hsl(var(--primary) / 0.2);
+  color: hsl(var(--foreground));
+}
+
+/* Eye-friendly contrast adjustments */
+[data-contrast="low"] {
+  filter: contrast(0.8) brightness(1.1);
+}
+
+[data-contrast="high"] {
+  filter: contrast(1.3) brightness(0.95);
+}
+
+/* Eye-friendly brightness adjustments */
+[data-brightness="dim"] {
+  filter: brightness(0.8) saturate(0.9);
+}
+
+[data-brightness="bright"] {
+  filter: brightness(1.2) saturate(1.1);
+}
+
+/* Color blindness support filters */
+[data-colorblindness="protanopia"] {
+  filter: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg"><filter id="protanopia"><feColorMatrix type="matrix" values="0.567 0.433 0 0 0 0.558 0.442 0 0 0 0 0.242 0.758 0 0 0 0 0 1 0"/></filter></svg>#protanopia');
+}
+
+[data-colorblindness="deuteranopia"] {
+  filter: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg"><filter id="deuteranopia"><feColorMatrix type="matrix" values="0.625 0.375 0 0 0 0.7 0.3 0 0 0 0 0.3 0.7 0 0 0 0 0 1 0"/></filter></svg>#deuteranopia');
+}
+
+[data-colorblindness="tritanopia"] {
+  filter: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg"><filter id="tritanopia"><feColorMatrix type="matrix" values="0.95 0.05 0 0 0 0 0.433 0.567 0 0 0 0.475 0.525 0 0 0 0 0 1 0"/></filter></svg>#tritanopia');
+}
+
+/* Reduced motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --border: 0 0% 0%;
+    --input: 0 0% 0%;
+  }
+  
+  .dark {
+    --border: 0 0% 100%;
+    --input: 0 0% 100%;
+  }
+}
+
+/* Eye-friendly hover effects */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Eye-friendly loading states */
+.loading-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Eye-friendly focus states */
+.focus-ring {
+  transition: box-shadow 0.2s ease;
+}
+
+.focus-ring:focus {
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.3);
+}
+
+/* Eye-friendly card interactions */
+.card-interactive {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.card-interactive:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Eye-friendly button states */
+.btn-eye-friendly {
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-eye-friendly::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn-eye-friendly:hover::before {
+  left: 100%;
+}
+
+/* Eye-friendly form elements */
+.form-eye-friendly {
+  transition: all 0.2s ease;
+}
+
+.form-eye-friendly:focus {
+  transform: scale(1.02);
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.2);
+}
+
+/* Prevent flash of unstyled content */
 html {
-  color-scheme: light !important;
+  color-scheme: light;
 }
 
 html.dark {
-  color-scheme: light !important;
+  color-scheme: dark;
 }
 
-/* Ensure all elements use light theme regardless of system preference */
-* {
-  color-scheme: light !important;
+/* Custom scrollbar for better dark mode experience */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-/* Override any dark mode styles that might be applied */
-.dark {
-  --background: 210 40% 98% !important;
-  --foreground: 222.2 84% 4.9% !important;
-  --card: 0 0% 100% !important;
-  --card-foreground: 222.2 84% 4.9% !important;
-  --popover: 0 0% 100% !important;
-  --popover-foreground: 222.2 84% 4.9% !important;
-  --primary: 197 100% 45% !important;
-  --primary-foreground: 0 0% 100% !important;
-  --secondary: 210 40% 96.1% !important;
-  --secondary-foreground: 222.2 47.4% 11.2% !important;
-  --muted: 210 40% 96.1% !important;
-  --muted-foreground: 215.4 16.3% 46.9% !important;
-  --accent: 153 75% 50% !important;
-  --accent-foreground: 0 0% 100% !important;
-  --destructive: 0 84.2% 60.2% !important;
-  --destructive-foreground: 210 40% 98% !important;
-  --border: 214.3 31.8% 91.4% !important;
-  --input: 214.3 31.8% 91.4% !important;
-  --ring: 197 100% 45% !important;
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.4);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.6);
 }
 
 /* Custom animation delay utilities */
@@ -61,63 +231,64 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 222.2 84% 4.9%;
+    /* Eye-friendly light mode colors - softer, warmer tones */
+    --background: 220 14% 96%; /* Soft warm white */
+    --foreground: 220 9% 46%; /* Softer dark text */
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 220 9% 46%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 220 9% 46%;
 
-    --primary: 197 100% 45%;
+    --primary: 200 98% 39%; /* Softer blue, less harsh */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 220 14% 96%; /* Matching background */
+    --secondary-foreground: 220 9% 46%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 220 14% 96%; /* Softer muted */
+    --muted-foreground: 220 8% 46%; /* Softer text */
 
-    --accent: 153 75% 50%;
+    --accent: 142 76% 36%; /* Softer green */
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 197 100% 45%;
+    --border: 220 13% 91%; /* Softer borders */
+    --input: 220 13% 91%;
+    --ring: 200 98% 39%;
 
     --radius: 0.75rem;
 
-    /* Healthcare specific colors */
-    --healthcare-primary: 197 100% 45%;
-    --healthcare-secondary: 153 75% 50%;
-    --healthcare-success: 120 100% 40%;
-    --healthcare-warning: 38 100% 50%;
-    --healthcare-error: 0 84% 60%;
-    --healthcare-info: 210 100% 70%;
+    /* Eye-friendly healthcare specific colors */
+    --healthcare-primary: 200 98% 39%; /* Softer blue */
+    --healthcare-secondary: 142 76% 36%; /* Softer green */
+    --healthcare-success: 142 76% 36%; /* Softer success */
+    --healthcare-warning: 38 95% 45%; /* Softer warning */
+    --healthcare-error: 0 84% 60%; /* Keep error prominent */
+    --healthcare-info: 200 98% 39%; /* Softer info */
     
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(197 100% 45%), hsl(153 75% 50%));
-    --gradient-secondary: linear-gradient(135deg, hsl(153 75% 50%), hsl(197 100% 45%));
-    --gradient-subtle: linear-gradient(180deg, hsl(210 40% 98%), hsl(210 30% 95%));
+    /* Eye-friendly gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(200 98% 39%), hsl(142 76% 36%));
+    --gradient-secondary: linear-gradient(135deg, hsl(142 76% 36%), hsl(200 98% 39%));
+    --gradient-subtle: linear-gradient(180deg, hsl(220 14% 96%), hsl(220 10% 94%));
     
-    /* Slot states */
-    --slot-available: 120 100% 95%;
-    --slot-available-border: 120 100% 85%;
-    --slot-available-hover: 120 100% 90%;
-    --slot-booked: 0 100% 95%;
-    --slot-booked-border: 0 100% 85%;
-    --slot-booked-hover: 0 100% 90%;
-    --slot-selected: 197 100% 95%;
-    --slot-selected-border: 197 100% 75%;
+    /* Eye-friendly slot states */
+    --slot-available: 142 76% 95%; /* Softer green */
+    --slot-available-border: 142 76% 85%;
+    --slot-available-hover: 142 76% 90%;
+    --slot-booked: 0 84% 95%; /* Softer red */
+    --slot-booked-border: 0 84% 85%;
+    --slot-booked-hover: 0 84% 90%;
+    --slot-selected: 200 98% 95%; /* Softer blue */
+    --slot-selected-border: 200 98% 75%;
     
-    /* Shadows */
-    --shadow-elegant: 0 10px 30px -10px hsl(197 100% 45% / 0.2);
-    --shadow-card: 0 4px 20px -2px hsl(197 100% 45% / 0.1);
-    --shadow-hover: 0 8px 30px -8px hsl(197 100% 45% / 0.25);
+    /* Eye-friendly shadows - softer and less harsh */
+    --shadow-elegant: 0 10px 30px -10px hsl(200 98% 39% / 0.15);
+    --shadow-card: 0 4px 20px -2px hsl(200 98% 39% / 0.08);
+    --shadow-hover: 0 8px 30px -8px hsl(200 98% 39% / 0.2);
 
     /* Animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -146,41 +317,71 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* Eye-friendly dark mode colors - warmer, less harsh */
+    --background: 220 13% 18%; /* Warmer dark background */
+    --foreground: 220 9% 90%; /* Softer white text */
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 220 13% 18%; /* Matching background */
+    --card-foreground: 220 9% 90%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 220 13% 18%;
+    --popover-foreground: 220 9% 90%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 200 98% 39%; /* Softer blue */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 220 13% 22%; /* Slightly lighter than background */
+    --secondary-foreground: 220 9% 90%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 220 13% 22%;
+    --muted-foreground: 220 8% 70%; /* Softer muted text */
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 142 76% 36%; /* Softer green */
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: 220 13% 25%; /* Softer borders */
+    --input: 220 13% 25%;
+    --ring: 200 98% 39%;
+
+    /* Eye-friendly healthcare specific colors for dark mode */
+    --healthcare-primary: 200 98% 39%; /* Softer blue */
+    --healthcare-secondary: 142 76% 36%; /* Softer green */
+    --healthcare-success: 142 76% 36%; /* Softer success */
+    --healthcare-warning: 38 95% 45%; /* Softer warning */
+    --healthcare-error: 0 84% 60%; /* Keep error prominent */
+    --healthcare-info: 200 98% 39%; /* Softer info */
+    
+    /* Eye-friendly gradients for dark mode */
+    --gradient-primary: linear-gradient(135deg, hsl(200 98% 39%), hsl(142 76% 36%));
+    --gradient-secondary: linear-gradient(135deg, hsl(142 76% 36%), hsl(200 98% 39%));
+    --gradient-subtle: linear-gradient(180deg, hsl(220 13% 18%), hsl(220 13% 22%));
+    
+    /* Eye-friendly slot states for dark mode */
+    --slot-available: 142 76% 20%; /* Softer green */
+    --slot-available-border: 142 76% 30%;
+    --slot-available-hover: 142 76% 25%;
+    --slot-booked: 0 84% 20%; /* Softer red */
+    --slot-booked-border: 0 84% 30%;
+    --slot-booked-hover: 0 84% 25%;
+    --slot-selected: 200 98% 20%; /* Softer blue */
+    --slot-selected-border: 200 98% 30%;
+    
+    /* Eye-friendly shadows for dark mode - softer and less harsh */
+    --shadow-elegant: 0 10px 30px -10px hsl(200 98% 39% / 0.25);
+    --shadow-card: 0 4px 20px -2px hsl(200 98% 39% / 0.15);
+    --shadow-hover: 0 8px 30px -8px hsl(200 98% 39% / 0.3);
+
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary: 197 100% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 3.7% 15.9%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 197 100% 45%;
   }
 }
 

@@ -50,6 +50,8 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { EyeFriendlyNotification } from '@/components/ui/eye-friendly-notification';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -165,7 +167,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-all duration-300">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div 
@@ -176,29 +178,29 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
       {/* Sidebar */}
       <div className={`
-        fixed top-0 left-0 z-50 h-full bg-white border-r border-gray-200 transform transition-all duration-300 ease-in-out
+        fixed top-0 left-0 z-50 h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transform transition-all duration-300 ease-in-out shadow-sm
         ${sidebarCollapsed ? 'w-16' : 'w-64'} 
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         {/* Header with Logo */}
-        <div className={`flex items-center justify-between ${sidebarCollapsed ? 'p-3' : 'p-6'} border-b border-gray-100 bg-white`}>
-          <div className={`flex items-center ${sidebarCollapsed ? 'justify-center w-full' : 'gap-3'}`}>
-            <div className="flex-shrink-0">
-              <img src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" alt="Company Logo" className={`${sidebarCollapsed ? 'h-8 w-8' : 'h-9 w-9'}`} />
-            </div>
-            {!sidebarCollapsed && (
-              <div className="min-w-0">
-                <h1 className="font-semibold text-gray-900 text-base">NexEagle</h1>
-                <p className="text-sm text-gray-500">easyHMS</p>
+        <div className={`flex items-center justify-between ${sidebarCollapsed ? 'p-3' : 'p-6'} border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 transition-all duration-200`}>
+                      <div className={`flex items-center ${sidebarCollapsed ? 'justify-center w-full' : 'gap-3'}`}>
+              <div className="flex-shrink-0">
+                <img src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" alt="Company Logo" className={`${sidebarCollapsed ? 'h-8 w-8' : 'h-9 w-9'} transition-all duration-200`} />
               </div>
-            )}
-          </div>
+              {!sidebarCollapsed && (
+                <div className="min-w-0">
+                  <h1 className="font-semibold text-gray-900 dark:text-white text-base transition-colors duration-200">NexEagle</h1>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-200">easyHMS</p>
+                </div>
+              )}
+            </div>
           {!sidebarCollapsed && (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="hidden lg:flex h-8 w-8 p-0 hover:bg-gray-100 rounded-md transition-colors"
+              className="hidden lg:flex h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
               title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               <ChevronLeft className="h-4 w-4 text-gray-500" />
@@ -207,7 +209,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         </div>
 
         {/* Navigation */}
-        <nav className={`${sidebarCollapsed ? 'p-2' : 'p-4'} space-y-1 mt-2`}>
+        <nav className={`${sidebarCollapsed ? 'p-2' : 'p-4'} space-y-1 mt-2 transition-all duration-200`}>
           {navigation.map((item) => {
             const isActive = currentPage === item.id;
             return (
@@ -215,23 +217,23 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 key={item.id}
                 variant="ghost"
                 className={`
-                  w-full group relative transition-all duration-200 flex items-center
+                  w-full group relative transition-all duration-300 flex items-center hover-lift
                   ${sidebarCollapsed ? 'justify-center px-2 h-11 w-11 mx-auto rounded-lg' : 'justify-start gap-3 h-11 px-3 rounded-lg'}
                   ${isActive 
-                    ? 'bg-blue-50 text-blue-700 border border-blue-200' 
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'ring-2 ring-primary bg-primary/5 text-primary border border-primary/20 shadow-sm' 
+                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                   }
                 `}
                 onClick={() => handleNavigation(item)}
                 title={sidebarCollapsed ? item.name : undefined}
               >
                 <item.icon className={`${sidebarCollapsed ? 'h-5 w-5' : 'h-4 w-4'} transition-colors ${
-                  isActive ? 'text-blue-600' : 'text-gray-500 group-hover:text-gray-700'
+                  isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
                 }`} />
                 
                 {!sidebarCollapsed && (
                   <span className={`font-medium text-sm transition-colors ${
-                    isActive ? 'text-blue-700' : 'text-gray-700 group-hover:text-gray-900'
+                    isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
                   }`}>
                     {item.name}
                   </span>
@@ -248,7 +250,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               variant="ghost"
               size="sm"
               onClick={() => setSidebarCollapsed(false)}
-              className="h-8 w-8 p-0 hover:bg-gray-100 rounded-md transition-colors bg-white shadow-sm border border-gray-200"
+              className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-600"
               title="Expand sidebar"
             >
               <ChevronRight className="h-4 w-4 text-gray-500" />
@@ -263,7 +265,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             className={`
               w-full group transition-all duration-200
               ${sidebarCollapsed ? 'justify-center px-2 h-11 w-11 mx-auto rounded-lg' : 'justify-start gap-3 h-11 px-3 rounded-lg'}
-              text-gray-600 hover:text-red-600 hover:bg-red-50 border border-gray-200 hover:border-red-200
+              text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 border border-border hover:border-red-200
             `}
             onClick={handleLogout}
             title={sidebarCollapsed ? "Logout" : undefined}
@@ -280,51 +282,58 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       {/* Main Content */}
       <div className={`${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'} flex flex-col h-screen transition-all duration-300 ease-in-out`}>
         {/* Top Bar */}
-        <header className="sticky top-0 z-30 bg-white border-b border-gray-200 px-6 py-4 flex-shrink-0">
+        <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex-shrink-0 shadow-sm transition-all duration-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
-              >
-                <Menu className="h-5 w-5 text-gray-600" />
-              </Button>
-              <div>
-                <h1 className="text-xl font-semibold text-gray-900 capitalize">
-                  {currentPage === 'dashboard' ? 'Clinical Dashboard' : navigation.find(n => n.id === currentPage)?.name}
-                </h1>
-                <p className="text-sm text-gray-500 mt-0.5">
-                  Welcome back, {getUserDisplayName()}
-                </p>
-              </div>
+                              <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSidebarOpen(true)}
+                  className="lg:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                >
+                  <Menu className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                </Button>
+                              <div>
+                  <h1 className="text-xl font-semibold text-gray-900 dark:text-white capitalize transition-colors duration-200">
+                    {currentPage === 'dashboard' ? 'Clinical Dashboard' : navigation.find(n => n.id === currentPage)?.name}
+                  </h1>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 transition-colors duration-200">
+                    Welcome back, {getUserDisplayName()}
+                  </p>
+                </div>
             </div>
 
             <div className="flex items-center gap-4">
               {/* Profile Completion Indicator */}
               {profileScore < 100 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate(profileTarget)}
-                  className="hidden md:flex items-center gap-2 border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:border-amber-300"
-                >
+                              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(profileTarget)}
+                className="hidden md:flex items-center gap-2 border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:border-amber-300 dark:hover:border-amber-600 transition-all duration-200"
+              >
                   <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
                   <span className="text-sm font-medium">Complete Profile ({profileScore}%)</span>
                 </Button>
               )}
 
+              {/* Theme Toggle */}
+              <ThemeToggle 
+                variant="ghost" 
+                size="sm" 
+                className="p-2 hover:bg-muted/50 rounded-lg transition-all duration-200"
+              />
+
               {/* Notifications */}
-              <Button variant="ghost" size="sm" className="relative p-2 hover:bg-gray-100 rounded-lg">
-                <Bell className="h-5 w-5 text-gray-600" />
+              <Button variant="ghost" size="sm" className="relative p-2 hover:bg-muted/50 rounded-lg">
+                <Bell className="h-5 w-5 text-muted-foreground" />
                 <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full"></span>
               </Button>
 
               {/* User Profile */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 hover:bg-gray-100">
+                  <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 hover:bg-muted/50">
                     <Avatar className="h-9 w-9">
                       <AvatarImage src="/avatars/01.png" alt="User" />
                       <AvatarFallback className="bg-blue-600 text-white text-sm font-medium">
@@ -349,6 +358,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/settings')}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Logout</span>
@@ -360,10 +374,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-6 bg-gray-50 dark:bg-gray-950 transition-all duration-300">
           {children}
         </main>
       </div>
+      
+      {/* Eye-Friendly Notification */}
+      <EyeFriendlyNotification />
     </div>
   );
 }; 

@@ -282,7 +282,7 @@ export const AdminDashboard = () => {
       </div>
 
       {/* Admin Navigation Modules */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 lg:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 lg:gap-4 transition-all duration-300">
         {adminModules.map((module) => {
           const isLocked = !accessUnlocked && module.id !== 'dashboard' && module.id !== 'system-config';
           

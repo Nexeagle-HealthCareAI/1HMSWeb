@@ -13,7 +13,7 @@ export const LockedAccountScreen: React.FC<LockedAccountScreenProps> = ({
   isLocked
 }) => {
   return (
-    <div className="h-screen bg-gradient-subtle flex flex-col lg:flex-row overflow-hidden">
+    <div className="h-screen bg-gradient-subtle flex flex-col lg:flex-row overflow-hidden transition-all duration-300">
       {/* Mobile Header */}
       <div className="lg:hidden bg-white shadow-sm border-b px-4 py-2 flex-shrink-0">
         <div className="flex items-center justify-center gap-2">

@@ -3,7 +3,7 @@ import { useAuthStore } from './authStore';
 import { useAppStore } from './appStore';
 import { useUserStore } from './userStore';
 import { useNotificationStore } from './notificationStore';
-import { useThemeStore } from './themeStore';
+import { ThemeProvider } from '@/components/providers/ThemeProvider';
 
 interface StoreProviderProps {
   children: ReactNode;
@@ -22,7 +22,6 @@ interface StoreProviderProps {
 export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
   // Get store actions
   const { isTokenValid } = useAuthStore();
-  const { updateSystemPreferences } = useThemeStore();
   const { updateLastActivity } = useUserStore();
 
   // Initialize stores on mount
@@ -47,35 +46,7 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
       // Extend the token expiry by 24 hours when the app loads
       refreshToken();
     }
-
-    // Detect system preferences (only reduced motion, ignore dark mode)
-    const detectSystemPreferences = () => {
-      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-      updateSystemPreferences({
-        prefersDark: false, // Always force light mode
-        prefersReducedMotion,
-      });
-    };
-
-    // Initial detection
-    detectSystemPreferences();
-
-    // Listen for system preference changes (only reduced motion)
-    const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-    const handleReducedMotionChange = (e: MediaQueryListEvent) => {
-      updateSystemPreferences({ prefersReducedMotion: e.matches });
-    };
-
-    // Add event listeners
-    reducedMotionQuery.addEventListener('change', handleReducedMotionChange);
-
-    // Cleanup event listeners
-    return () => {
-      reducedMotionQuery.removeEventListener('change', handleReducedMotionChange);
-    };
-  }, [updateSystemPreferences]);
+  }, []);
 
   // Removed hospital mapping fetch here to prevent duplicate calls.
 
@@ -113,31 +84,13 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
     };
   }, [updateLastActivity]);
 
-  // Apply theme to document
-  useEffect(() => {
-    const { getEffectiveMode, getComputedColors } = useThemeStore.getState();
-    const effectiveMode = getEffectiveMode();
-    const colors = getComputedColors();
 
-    // Apply theme classes to document
-    document.documentElement.classList.remove('light', 'dark');
-    document.documentElement.classList.add(effectiveMode);
 
-    // Apply CSS custom properties for colors
-    Object.entries(colors).forEach(([key, value]) => {
-      document.documentElement.style.setProperty(`--color-${key}`, value);
-    });
-
-    // Apply reduced motion if enabled
-    const { settings } = useThemeStore.getState();
-    if (settings.reducedMotion) {
-      document.documentElement.classList.add('reduce-motion');
-    } else {
-      document.documentElement.classList.remove('reduce-motion');
-    }
-  }, []);
-
-  return <>{children}</>;
+  return (
+    <ThemeProvider>
+      {children}
+    </ThemeProvider>
+  );
 };
 
 /**
@@ -149,14 +102,12 @@ export const useStores = () => {
   const app = useAppStore();
   const user = useUserStore();
   const notifications = useNotificationStore();
-  const theme = useThemeStore();
 
   return {
     auth,
     app,
     user,
     notifications,
-    theme,
   };
 };
 

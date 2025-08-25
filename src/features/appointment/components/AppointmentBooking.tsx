@@ -246,15 +246,15 @@ export const AppointmentBooking: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 transition-all duration-300">
       {/* Mobile-First Layout */}
       <div className="min-h-screen">
         {/* Mobile Header - Fixed Position */}
-        <div className="lg:hidden sticky top-0 z-40 bg-white shadow-sm border-b">
+        <div className="lg:hidden sticky top-0 z-40 bg-white dark:bg-gray-900 shadow-sm border-b dark:border-gray-700">
           <div className="px-4 py-3">
             <div className="flex items-center justify-between mb-3">
-              <h1 className="text-xl font-bold text-primary">Book Appointment</h1>
-              <div className="text-xs text-muted-foreground">
+              <h1 className="text-xl font-bold text-primary dark:text-primary">Book Appointment</h1>
+              <div className="text-xs text-muted-foreground dark:text-gray-400">
                 {format(selectedDate, 'MMM dd')}
               </div>
             </div>
@@ -263,7 +263,7 @@ export const AppointmentBooking: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               {/* Department Dropdown */}
               <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Department</label>
+                <label className="text-xs font-medium text-muted-foreground dark:text-gray-400 mb-1 block">Department</label>
                 <Select value={selectedDepartment} onValueChange={handleDepartmentSelect}>
                   <SelectTrigger className="h-8 text-xs bg-background">
                     <SelectValue placeholder="Department" />
@@ -283,7 +283,7 @@ export const AppointmentBooking: React.FC = () => {
               
               {/* Doctor Selection */}
               <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Doctor</label>
+                <label className="text-xs font-medium text-muted-foreground dark:text-gray-400 mb-1 block">Doctor</label>
                 <Select value={selectedDoctor.id} onValueChange={(value) => {
                   const doctor = selectedDepartmentData?.doctors.find(d => d.id === value);
                   if (doctor) setSelectedDoctor(doctor);
@@ -309,7 +309,7 @@ export const AppointmentBooking: React.FC = () => {
 
         <div className="flex flex-col lg:flex-row min-h-screen lg:h-screen">
           {/* Desktop Sidebar */}
-          <div className="hidden lg:block w-80 bg-white/95 backdrop-blur-sm border-r border-gray-200/50 shadow-sm">
+          <div className="hidden lg:block w-80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-r border-gray-200/50 dark:border-gray-700/50 shadow-sm">
             <div className="p-4">
               <h3 className="text-sm font-semibold mb-3 text-gray-700 flex items-center gap-2">
                 🏥 Department Selection
@@ -339,7 +339,7 @@ export const AppointmentBooking: React.FC = () => {
                   <SelectTrigger className="h-9 text-xs">
                     <SelectValue placeholder="More Departments..." />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border shadow-lg z-50">
+                  <SelectContent className="bg-white dark:bg-gray-800 border dark:border-gray-700 shadow-lg z-50">
                     {departments.slice(4).map((dept) => (
                       <SelectItem key={dept.id} value={dept.id} className="text-xs">
                         <div className="flex items-center gap-2">
@@ -354,7 +354,7 @@ export const AppointmentBooking: React.FC = () => {
 
               {/* Doctor Selection - Desktop */}
               <div className="border-t pt-4">
-                <h3 className="text-sm font-semibold mb-3 text-gray-700 flex items-center gap-2">
+                <h3 className="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300 flex items-center gap-2">
                   👩‍⚕️ Available Doctors
                 </h3>
                 <div className="space-y-2">
@@ -364,8 +364,8 @@ export const AppointmentBooking: React.FC = () => {
                       onClick={() => setSelectedDoctor(doctor)}
                       className={`w-full p-3 rounded-lg border text-left transition-all text-xs ${
                         selectedDoctor.id === doctor.id
-                          ? 'border-blue-300 bg-gradient-to-r from-blue-50 to-blue-100 shadow-sm'
-                          : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
+                          ? 'border-blue-300 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 shadow-sm'
+                          : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
                       }`}
                     >
                       <div className="font-medium text-blue-600 text-sm">{doctor.name}</div>
@@ -380,11 +380,11 @@ export const AppointmentBooking: React.FC = () => {
                 <div className="flex gap-4 text-xs">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-gradient-to-r from-teal-400 to-emerald-500 rounded-full"></div>
-                    <span className="text-gray-600">Available</span>
+                    <span className="text-gray-600 dark:text-gray-400">Available</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-gradient-to-r from-rose-400 to-red-500 rounded-full"></div>
-                    <span className="text-gray-600">Booked</span>
+                    <span className="text-gray-600 dark:text-gray-400">Booked</span>
                   </div>
                 </div>
               </div>
@@ -397,8 +397,8 @@ export const AppointmentBooking: React.FC = () => {
               <div className="max-w-4xl mx-auto">
                 {/* Desktop Header */}
                 <div className="hidden lg:block mb-6">
-                  <h1 className="text-2xl font-bold text-foreground mb-2">Schedule Appointment</h1>
-                  <p className="text-sm text-muted-foreground">
+                  <h1 className="text-2xl font-bold text-foreground dark:text-white mb-2">Schedule Appointment</h1>
+                  <p className="text-sm text-muted-foreground dark:text-gray-400">
                     Selected: <span className="font-semibold text-primary">{selectedDoctor.name}</span>
                     <span className="text-muted-foreground/50"> • </span>
                     <span>{selectedDoctor.specialization}</span>
@@ -407,7 +407,7 @@ export const AppointmentBooking: React.FC = () => {
 
                 {/* Date Selection with Calendar */}
                 <div className="mb-4">
-                  <h2 className="text-sm lg:text-base font-semibold mb-3 flex items-center gap-2 text-foreground">
+                  <h2 className="text-sm lg:text-base font-semibold mb-3 flex items-center gap-2 text-foreground dark:text-white">
                     📅 Select Date
                   </h2>
                   <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -554,7 +554,7 @@ export const AppointmentBooking: React.FC = () => {
                   </div>
                   
                   {/* Quick Info */}
-                  <div className="mt-3 text-xs text-gray-600 bg-white/50 p-3 rounded-lg border border-gray-200">
+                  <div className="mt-3 text-xs text-gray-600 dark:text-gray-400 bg-white/50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
                     💡 <strong>Tip:</strong> Tap any green slot to book an appointment. Slots are 30 minutes each.
                   </div>
                 </div>

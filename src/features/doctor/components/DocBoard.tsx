@@ -440,7 +440,7 @@ export const ClinicalDashboard: React.FC = () => {
       </div>
 
       {/* Clinical Navigation Modules */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 lg:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 lg:gap-4 transition-all duration-300">
         {clinicalModules.map((module) => {
           const isLocked = !isProfileComplete && module.id !== 'dashboard';
           

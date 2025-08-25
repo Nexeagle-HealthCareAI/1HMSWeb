@@ -17,7 +17,11 @@ import {
   List,
   CalendarDays,
   History,
-  CalendarIcon
+  CalendarIcon,
+  TrendingUp,
+  AlertCircle,
+  Phone,
+  MapPin
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +29,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AppointmentBooking } from './AppointmentBooking';
 import { VitalsForm } from './VitalsForm';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
@@ -42,6 +47,7 @@ interface Appointment {
   phone: string;
 }
 
+// Mock data remains the same
 const mockAppointments: Appointment[] = [
   {
     id: 'APT001',
@@ -181,6 +187,82 @@ const mockPastAppointments: Appointment[] = [
   }
 ];
 
+// Future appointments data
+const mockFutureAppointments: Appointment[] = [
+  {
+    id: 'APT012',
+    patientId: 'P012',
+    patientName: 'Frank Miller',
+    doctorName: 'Dr. Sarah Wilson',
+    appointmentTime: '09:00 AM',
+    appointmentDate: format(new Date(Date.now() + 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    tokenNo: 1,
+    vitalsUpdated: false,
+    status: 'ready-consultation',
+    phone: '+1234567901'
+  },
+  {
+    id: 'APT013',
+    patientId: 'P013',
+    patientName: 'Grace Taylor',
+    doctorName: 'Dr. Michael Brown',
+    appointmentTime: '10:30 AM',
+    appointmentDate: format(new Date(Date.now() + 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    tokenNo: 2,
+    vitalsUpdated: false,
+    status: 'ready-consultation',
+    phone: '+1234567902'
+  },
+  {
+    id: 'APT014',
+    patientId: 'P014',
+    patientName: 'Henry Anderson',
+    doctorName: 'Dr. James Lee',
+    appointmentTime: '02:00 PM',
+    appointmentDate: format(new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    tokenNo: 1,
+    vitalsUpdated: false,
+    status: 'ready-consultation',
+    phone: '+1234567903'
+  },
+  {
+    id: 'APT015',
+    patientId: 'P015',
+    patientName: 'Ivy Chen',
+    doctorName: 'Dr. Sarah Wilson',
+    appointmentTime: '11:15 AM',
+    appointmentDate: format(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    tokenNo: 1,
+    vitalsUpdated: false,
+    status: 'ready-consultation',
+    phone: '+1234567904'
+  },
+  {
+    id: 'APT016',
+    patientId: 'P016',
+    patientName: 'Jack Wilson',
+    doctorName: 'Dr. Michael Brown',
+    appointmentTime: '03:30 PM',
+    appointmentDate: format(new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    tokenNo: 1,
+    vitalsUpdated: false,
+    status: 'ready-consultation',
+    phone: '+1234567905'
+  },
+  {
+    id: 'APT017',
+    patientId: 'P017',
+    patientName: 'Kate Rodriguez',
+    doctorName: 'Dr. James Lee',
+    appointmentTime: '09:00 AM',
+    appointmentDate: format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    tokenNo: 1,
+    vitalsUpdated: false,
+    status: 'ready-consultation',
+    phone: '+1234567906'
+  }
+];
+
 export const AppointmentDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -189,23 +271,27 @@ export const AppointmentDashboard = () => {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [showVitalsForm, setShowVitalsForm] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Appointment | null>(null);
-  const [activeTab, setActiveTab] = useState<'current' | 'past'>('current');
+  const [activeTab, setActiveTab] = useState<'current' | 'past' | 'future'>('current');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
-  // Calculate KPIs (only for current appointments)
+  // Calculate KPIs
   const kpis = useMemo(() => {
     const totalToday = mockAppointments.length;
     const vitalsRequired = mockAppointments.filter(apt => apt.status === 'vitals-required').length;
     const doctorFollowUps = mockAppointments.filter(apt => apt.status === 'awaiting-reconsultation').length;
     const labFollowUps = mockAppointments.filter(apt => apt.status === 'lab-test-required').length;
     const completed = mockAppointments.filter(apt => apt.status === 'completed').length;
+    const readyConsultation = mockAppointments.filter(apt => apt.status === 'ready-consultation').length;
+    const underConsultation = mockAppointments.filter(apt => apt.status === 'under-consultation').length;
 
     return {
       totalToday,
       vitalsRequired,
       doctorFollowUps,
       labFollowUps,
-      completed
+      completed,
+      readyConsultation,
+      underConsultation
     };
   }, []);
 
@@ -222,11 +308,24 @@ export const AppointmentDashboard = () => {
     };
   }, []);
 
+  // Calculate future appointments stats
+  const futureStats = useMemo(() => {
+    const totalFuture = mockFutureAppointments.length;
+    const readyFuture = mockFutureAppointments.filter(apt => apt.status === 'ready-consultation').length;
+    const uniqueFutureDates = [...new Set(mockFutureAppointments.map(apt => apt.appointmentDate))].length;
+
+    return {
+      totalFuture,
+      readyFuture,
+      uniqueFutureDates
+    };
+  }, []);
+
   // Filter appointments based on active tab
   const filteredAppointments = useMemo(() => {
-    const appointments = activeTab === 'current' ? mockAppointments : mockPastAppointments;
+    let appointments = activeTab === 'current' ? mockAppointments : activeTab === 'past' ? mockPastAppointments : mockFutureAppointments;
     
-    return appointments.filter(appointment => {
+    appointments = appointments.filter(appointment => {
       const matchesSearch = 
         appointment.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         appointment.patientId.toLowerCase().includes(searchTerm.toLowerCase());
@@ -235,11 +334,12 @@ export const AppointmentDashboard = () => {
       const matchesDoctor = doctorFilter === 'all' || appointment.doctorName === doctorFilter;
       const matchesSelectedStatus = selectedStatus === 'all' || appointment.status === selectedStatus;
       
-      // Filter by selected date for past appointments
       const matchesDate = !selectedDate || appointment.appointmentDate === format(selectedDate, 'yyyy-MM-dd');
       
       return matchesSearch && matchesStatus && matchesDoctor && matchesSelectedStatus && matchesDate;
     });
+
+    return appointments;
   }, [searchTerm, statusFilter, doctorFilter, selectedStatus, activeTab, selectedDate]);
 
   const getStatusBadge = (status: Appointment['status'], appointment?: Appointment) => {
@@ -247,22 +347,22 @@ export const AppointmentDashboard = () => {
       case 'vitals-required':
         return (
           <Badge 
-            className="bg-red-100 text-red-800 border-red-300 cursor-pointer hover:bg-red-200 transition-colors"
+            className="bg-red-100 text-red-800 border-red-300 cursor-pointer hover:bg-red-200 transition-colors text-xs"
             onClick={() => appointment && handleVitalsClick(appointment)}
           >
-            ❤️ Vitals Required
+            ❤️ Vitals
           </Badge>
         );
       case 'ready-consultation':
-        return <Badge className="bg-green-100 text-green-800 border-green-300">✅ Ready For Consultation</Badge>;
+        return <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">✅ Ready</Badge>;
       case 'under-consultation':
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-300">👨‍⚕️ Under Consultation</Badge>;
+        return <Badge className="bg-blue-100 text-blue-800 border-blue-300 text-xs">👨‍⚕️ Consulting</Badge>;
       case 'lab-test-required':
-        return <Badge className="bg-purple-100 text-purple-800 border-purple-300">🧪 Lab Test Required</Badge>;
+        return <Badge className="bg-purple-100 text-purple-800 border-purple-300 text-xs">🧪 Lab Test</Badge>;
       case 'awaiting-reconsultation':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">⏳ Awaiting Reconsultation</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 text-xs">⏳ Follow-up</Badge>;
       case 'completed':
-        return <Badge className="bg-green-100 text-green-800 border-green-300">🏁 Completed</Badge>;
+        return <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">🏁 Done</Badge>;
       default:
         return null;
     }
@@ -275,7 +375,6 @@ export const AppointmentDashboard = () => {
 
   const handleVitalsSubmit = (vitalsData: any) => {
     console.log('Vitals submitted for patient:', selectedPatient?.patientName, vitalsData);
-    // Here you would typically update the appointment status and save the vitals data
     setShowVitalsForm(false);
     setSelectedPatient(null);
   };
@@ -290,526 +389,1058 @@ export const AppointmentDashboard = () => {
   // If booking view is active, show the booking component
   if (showBooking) {
     return (
-      <div className="min-h-screen bg-gradient-subtle">
-        {/* Header with Back Button */}
-        <div className="bg-card border-b border-border px-6 py-4 shadow-card">
-          <div className="max-w-7xl mx-auto flex items-center gap-4">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3 shadow-sm">
+          <div className="max-w-7xl mx-auto flex items-center gap-3">
             <Button
               variant="outline"
               onClick={() => setShowBooking(false)}
-              className="group flex items-center gap-2 border-healthcare-primary/20 hover:border-healthcare-primary hover:bg-healthcare-primary/5 transition-all duration-200"
+              className="group flex items-center gap-2 border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
             >
-              <ArrowLeft className="h-4 w-4 text-healthcare-primary transition-transform group-hover:-translate-x-1" />
-              <span className="text-healthcare-primary font-medium">Back to Dashboard</span>
+              <ArrowLeft className="h-4 w-4 text-gray-600 dark:text-gray-300 transition-transform group-hover:-translate-x-1" />
+              <span className="text-gray-700 dark:text-gray-200 font-medium">Back</span>
             </Button>
-            <div className="h-6 w-px bg-border" />
-            <h1 className="text-xl font-semibold text-foreground">📋 Book New Appointment</h1>
+            <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />
+            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">📋 Book New Appointment</h1>
           </div>
         </div>
-        
-        {/* Booking Component */}
         <AppointmentBooking />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-subtle">
-      <div className="flex flex-col p-2 md:p-6 space-y-4 md:space-y-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
         
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 md:gap-4">
-          <div className="flex items-center gap-2 md:gap-3">
-            <Calendar className="h-6 w-6 md:h-8 md:w-8 text-healthcare-primary" />
-            <h1 className="text-xl md:text-3xl font-bold text-foreground">📅 Appointment Dashboard</h1>
+        {/* Header Section */}
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-100 rounded-lg">
+                <Calendar className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Appointment Dashboard</h1>
+                <p className="text-gray-600 dark:text-gray-400">Manage patient appointments efficiently</p>
+              </div>
           </div>
           <Button 
             onClick={() => setShowBooking(true)} 
-            className="bg-healthcare-primary hover:bg-healthcare-primary/90 text-white px-6 py-3 rounded-lg shadow-card hover:shadow-hover transition-all duration-300 transform hover:scale-105"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
           >
             <Plus className="h-5 w-5 mr-2" />
-            📋 Book New Appointment
+              Book Appointment
           </Button>
+          </div>
         </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 md:gap-6 flex-shrink-0">
+                  {/* KPI Overview Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 transition-all duration-300">
           {activeTab === 'current' ? (
             <>
-              <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Today's Appointments</CardTitle>
-                  <Calendar className="h-5 w-5 text-healthcare-primary" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-healthcare-primary">📅 {kpis.totalToday}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Total booked for today</p>
+                  <Card className="bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Total</p>
+                          <p className="text-lg font-bold text-gray-900 dark:text-white">{kpis.totalToday}</p>
+                        </div>
+                        <div className="p-1.5 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                          <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        </div>
+                      </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Vitals Update Required</CardTitle>
-                  <Heart className="h-5 w-5 text-healthcare-error" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-healthcare-error">❤️‍🩹 {kpis.vitalsRequired}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Vitals not yet filled</p>
+                  <Card className="bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Vitals</p>
+                          <p className="text-lg font-bold text-red-600 dark:text-red-400">{kpis.vitalsRequired}</p>
+                        </div>
+                        <div className="p-1.5 bg-red-100 dark:bg-red-900/20 rounded-lg">
+                          <Heart className="h-4 w-4 text-red-600 dark:text-red-400" />
+                        </div>
+                      </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Doctor Follow-Ups</CardTitle>
-                  <UserCheck className="h-5 w-5 text-healthcare-success" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-healthcare-success">👨‍⚕️ {kpis.doctorFollowUps}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Follow-up visits today</p>
+                  <Card className="bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Ready</p>
+                          <p className="text-lg font-bold text-green-600 dark:text-green-400">{kpis.readyConsultation}</p>
+                        </div>
+                        <div className="p-1.5 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                          <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        </div>
+                      </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Lab Follow-Ups</CardTitle>
-                  <FlaskConical className="h-5 w-5 text-healthcare-secondary" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-healthcare-secondary">🧬 {kpis.labFollowUps}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Pending follow-up</p>
+                  <Card className="bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Consulting</p>
+                          <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{kpis.underConsultation}</p>
+                        </div>
+                        <div className="p-1.5 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                          <Stethoscope className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        </div>
+                      </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Completed Today</CardTitle>
-                  <CheckCircle className="h-5 w-5 text-healthcare-success" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-healthcare-success">✅ {kpis.completed}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Finished consultations</p>
+                  <Card className="bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Lab Tests</p>
+                          <p className="text-lg font-bold text-purple-600 dark:text-purple-400">{kpis.labFollowUps}</p>
+                        </div>
+                        <div className="p-1.5 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                          <FlaskConical className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Follow-ups</p>
+                          <p className="text-lg font-bold text-yellow-600 dark:text-yellow-400">{kpis.doctorFollowUps}</p>
+                        </div>
+                        <div className="p-1.5 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
+                          <Clock className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Completed</p>
+                          <p className="text-lg font-bold text-green-600 dark:text-green-400">{kpis.completed}</p>
+                        </div>
+                        <div className="p-1.5 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                          <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        </div>
+                      </div>
                 </CardContent>
               </Card>
             </>
-          ) : (
-            <>
-              <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Past Appointments</CardTitle>
-                  <History className="h-5 w-5 text-gray-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-gray-600">📋 {pastStats.totalPast}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Historical records</p>
+              ) : activeTab === 'past' ? (
+                <>
+                  <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-gray-600">Total Past</p>
+                          <p className="text-lg font-bold text-gray-900">{pastStats.totalPast}</p>
+                        </div>
+                        <div className="p-1.5 bg-gray-100 rounded-lg">
+                          <History className="h-4 w-4 text-gray-600" />
+                        </div>
+                      </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Completed Appointments</CardTitle>
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-green-600">✅ {pastStats.completedPast}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Successfully completed</p>
+                  <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-gray-600">Completed</p>
+                          <p className="text-lg font-bold text-green-600">{pastStats.completedPast}</p>
+                        </div>
+                        <div className="p-1.5 bg-green-100 rounded-lg">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        </div>
+                      </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Unique Dates</CardTitle>
-                  <Calendar className="h-5 w-5 text-blue-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-blue-600">📅 {pastStats.uniqueDates}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Different appointment days</p>
+                  <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-gray-600">Unique Dates</p>
+                          <p className="text-lg font-bold text-blue-600">{pastStats.uniqueDates}</p>
+                        </div>
+                        <div className="p-1.5 bg-blue-100 rounded-lg">
+                          <Calendar className="h-4 w-4 text-blue-600" />
+                        </div>
+                      </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Filtered Results</CardTitle>
-                  <Filter className="h-5 w-5 text-purple-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-purple-600">🔍 {filteredAppointments.length}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Current filter results</p>
+                  <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-gray-600">Filtered</p>
+                          <p className="text-lg font-bold text-purple-600">{filteredAppointments.length}</p>
+                        </div>
+                        <div className="p-1.5 bg-purple-100 rounded-lg">
+                          <Filter className="h-4 w-4 text-purple-600" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              ) : (
+                <>
+                  <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-gray-600">Total Future</p>
+                          <p className="text-lg font-bold text-blue-900">{futureStats.totalFuture}</p>
+                        </div>
+                        <div className="p-1.5 bg-blue-100 rounded-lg">
+                          <CalendarDays className="h-4 w-4 text-blue-600" />
+                        </div>
+                      </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-card shadow-card rounded-xl border-0 hover:shadow-hover transition-all duration-300">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Selected Date</CardTitle>
-                  <CalendarIcon className="h-5 w-5 text-orange-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-orange-600">
-                    {selectedDate ? format(selectedDate, 'MM/dd') : 'All'}
+                  <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-gray-600">Ready</p>
+                          <p className="text-lg font-bold text-green-600">{futureStats.readyFuture}</p>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {selectedDate ? format(selectedDate, 'yyyy') : 'Past dates'}
-                  </p>
+                        <div className="p-1.5 bg-green-100 rounded-lg">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-gray-600">Unique Dates</p>
+                          <p className="text-lg font-bold text-purple-600">{futureStats.uniqueFutureDates}</p>
+                        </div>
+                        <div className="p-1.5 bg-purple-100 rounded-lg">
+                          <Calendar className="h-4 w-4 text-purple-600" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Filtered</p>
+                          <p className="text-xl font-bold text-orange-600">{filteredAppointments.length}</p>
+                        </div>
+                        <div className="p-2 bg-orange-100 rounded-lg">
+                          <Filter className="h-5 w-5 text-orange-600" />
+                        </div>
+                      </div>
                 </CardContent>
               </Card>
             </>
           )}
         </div>
 
-        {/* Filters & Search */}
-        <Card className="bg-card shadow-card rounded-xl border-0">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-foreground">
-              <Filter className="h-5 w-5 text-healthcare-primary" />
-              🔍 Filters & Search
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by Patient ID or Name..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 border-input focus:border-healthcare-primary focus:ring-healthcare-primary/20"
-                  />
+                 {/* Main Content Area */}
+         <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'current' | 'past' | 'future')} className="w-full">
+                         <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="current" className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Current Appointments
+                </TabsTrigger>
+                <TabsTrigger value="past" className="flex items-center gap-2">
+                  <History className="h-4 w-4" />
+                  Past History
+                </TabsTrigger>
+                <TabsTrigger value="future" className="flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4" />
+                  Future Appointments
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            <TabsContent value="current" className="p-6">
+              {/* Current Appointments Header */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                                     <div>
+                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Current Appointments</h2>
+                     <p className="text-gray-600 dark:text-gray-400">Manage today's patient flow and track progress</p>
+                   </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium text-green-700">Live Updates</span>
+                    </div>
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                      {kpis.totalToday} Total Today
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Quick Actions Bar */}
+                <div className="flex flex-wrap gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-orange-600" />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Priority Actions:</span>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="bg-red-50 text-red-700 border-red-300 hover:bg-red-100"
+                  >
+                    <Heart className="h-4 w-4 mr-2" />
+                    Vitals ({kpis.vitalsRequired})
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="bg-green-50 text-green-700 border-green-300 hover:bg-green-100"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Ready ({kpis.readyConsultation})
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100"
+                  >
+                    <Stethoscope className="h-4 w-4 mr-2" />
+                    Consulting ({kpis.underConsultation})
+                  </Button>
                 </div>
               </div>
 
+              {/* Search and Filters */}
+              <div className="mb-6">
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                  <div className="flex flex-col lg:flex-row gap-4">
+              <div className="flex-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Patients</label>
+                <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                          placeholder="Search by patient name, ID, or phone..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10"
+                  />
+                </div>
+              </div>
+                    <div className="lg:w-64">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Filter by Doctor</label>
               <Select value={doctorFilter} onValueChange={setDoctorFilter}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="Filter by Doctor" />
+                        <SelectTrigger>
+                          <SelectValue placeholder="All Doctors" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Doctors</SelectItem>
+                          <SelectItem value="all">👥 All Doctors</SelectItem>
                   {uniqueDoctors.map(doctor => (
-                    <SelectItem key={doctor} value={doctor}>🧑‍⚕️ {doctor}</SelectItem>
+                            <SelectItem key={doctor} value={doctor}>👨‍⚕️ {doctor}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Tab Navigation */}
-        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-6">
-          <button
-            onClick={() => setActiveTab('current')}
-            className={`flex-1 py-2 px-4 rounded-md font-medium transition-all duration-200 ${
-              activeTab === 'current'
-                ? 'bg-white text-healthcare-primary shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <div className="flex items-center justify-center gap-2">
-              <Clock className="h-4 w-4" />
-              Current Appointments
             </div>
-          </button>
-          <button
-            onClick={() => setActiveTab('past')}
-            className={`flex-1 py-2 px-4 rounded-md font-medium transition-all duration-200 ${
-              activeTab === 'past'
-                ? 'bg-white text-healthcare-primary shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <div className="flex items-center justify-center gap-2">
-              <History className="h-4 w-4" />
-              Past History
             </div>
-          </button>
         </div>
 
-        {/* Enhanced Appointments Table with Status Navigation - Full Screen */}
-        <div className="w-full">
+              {/* Status Navigation */}
           <div className="mb-6">
-            <div className="flex items-center gap-2 text-foreground text-lg md:text-xl mb-2">
-              <Clock className="h-4 w-4 md:h-5 md:w-5 text-healthcare-primary" />
-              {activeTab === 'current' ? '📊 Patient Journey Dashboard' : '📋 Past Appointments History'}
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {activeTab === 'current' 
-                ? 'Track patient progress through appointment stages'
-                : 'View and filter past appointment records'
-              }
-            </p>
-          </div>
-
-          {/* Enhanced Patient Journey Navigation Header - Full Screen */}
-          {activeTab === 'current' && (
-            <div className="bg-gradient-to-r from-healthcare-primary/10 to-healthcare-secondary/10 rounded-xl p-6 border border-healthcare-primary/20 mb-6 w-full">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-healthcare-primary rounded-full animate-pulse"></div>
-                  <h3 className="text-lg font-semibold text-healthcare-primary">Patient Journey Flow</h3>
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Patient Journey Status</h3>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    Click any status to filter appointments
                 </div>
-                <Badge className="bg-healthcare-primary/20 text-healthcare-primary border-healthcare-primary/30">
-                  Live Tracking
-                </Badge>
               </div>
-              
-              {/* Single Row Navigation with ALL and Future Appointments */}
-              <div className="flex flex-wrap gap-2 justify-start">
-                {/* ALL Tab - First Position */}
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
                 <button
                   onClick={() => setSelectedStatus('all')}
-                  className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
+                    className={`group relative p-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${
                     selectedStatus === 'all'
-                      ? 'bg-healthcare-primary text-white border-healthcare-primary shadow-lg shadow-healthcare-primary/25'
-                      : 'bg-healthcare-primary/5 text-healthcare-primary border-healthcare-primary/20 hover:bg-healthcare-primary/10 hover:border-healthcare-primary/30'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-lg'
+                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                   }`}
                 >
-                  <List className="h-5 w-5" />
                   <div className="text-center">
-                    <div className="font-semibold text-xs">ALL</div>
-                    <div className="text-xs opacity-80">{kpis.totalToday} patients</div>
+                      <div className="text-lg font-bold mb-1">{kpis.totalToday}</div>
+                      <div className="text-xs font-medium">All Patients</div>
+                      <div className="text-xs opacity-75 mt-1">Total Today</div>
                   </div>
+                    {selectedStatus === 'all' && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-600 rounded-full"></div>
+                    )}
                 </button>
 
-                {/* Vitals Required */}
                 <button
                   onClick={() => setSelectedStatus('vitals-required')}
-                  className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
+                    className={`group relative p-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${
                     selectedStatus === 'vitals-required'
-                      ? 'bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/25'
-                      : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300'
+                        ? 'bg-red-600 text-white border-red-600 shadow-lg'
+                        : 'bg-white dark:bg-gray-800 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800 hover:border-red-300 dark:hover:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
                   }`}
                 >
-                  <Heart className="h-5 w-5" />
                   <div className="text-center">
-                    <div className="font-semibold text-xs">Vitals</div>
-                    <div className="text-xs opacity-80">{kpis.vitalsRequired} patient</div>
+                      <Heart className="h-5 w-5 mx-auto mb-1" />
+                      <div className="text-lg font-bold mb-1">{kpis.vitalsRequired}</div>
+                      <div className="text-xs font-medium">Vitals</div>
+                      <div className="text-xs opacity-75 mt-1">Needs Update</div>
                   </div>
+                    {selectedStatus === 'vitals-required' && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-600 rounded-full"></div>
+                    )}
                 </button>
 
-                {/* Ready for Consultation */}
                 <button
                   onClick={() => setSelectedStatus('ready-consultation')}
-                  className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
+                    className={`group relative p-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${
                     selectedStatus === 'ready-consultation'
-                      ? 'bg-green-500 text-white border-green-500 shadow-lg shadow-green-500/25'
-                      : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300'
+                        ? 'bg-green-600 text-white border-green-600 shadow-lg'
+                        : 'bg-white dark:bg-gray-800 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800 hover:border-green-300 dark:hover:border-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
                   }`}
                 >
-                  <CheckCircle className="h-5 w-5" />
                   <div className="text-center">
-                    <div className="font-semibold text-xs">Ready</div>
-                    <div className="text-xs opacity-80">1 patient</div>
+                      <CheckCircle className="h-5 w-5 mx-auto mb-1" />
+                      <div className="text-lg font-bold mb-1">{kpis.readyConsultation}</div>
+                      <div className="text-xs font-medium">Ready</div>
+                      <div className="text-xs opacity-75 mt-1">For Consultation</div>
                   </div>
+                    {selectedStatus === 'ready-consultation' && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-600 rounded-full"></div>
+                    )}
                 </button>
 
-                {/* Under Consultation */}
                 <button
                   onClick={() => setSelectedStatus('under-consultation')}
-                  className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
+                    className={`group relative p-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${
                     selectedStatus === 'under-consultation'
-                      ? 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-500/25'
-                      : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-lg'
+                        : 'bg-white dark:bg-gray-800 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                   }`}
                 >
-                  <Stethoscope className="h-5 w-5" />
                   <div className="text-center">
-                    <div className="font-semibold text-xs">Consulting</div>
-                    <div className="text-xs opacity-80">1 patient</div>
+                      <Stethoscope className="h-5 w-5 mx-auto mb-1" />
+                      <div className="text-lg font-bold mb-1">{kpis.underConsultation}</div>
+                      <div className="text-xs font-medium">Consulting</div>
+                      <div className="text-xs opacity-75 mt-1">In Progress</div>
                   </div>
+                    {selectedStatus === 'under-consultation' && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-600 rounded-full"></div>
+                    )}
                 </button>
 
-                {/* Lab Test Required */}
                 <button
                   onClick={() => setSelectedStatus('lab-test-required')}
-                  className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
+                    className={`group relative p-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${
                     selectedStatus === 'lab-test-required'
-                      ? 'bg-purple-500 text-white border-purple-500 shadow-lg shadow-purple-500/25'
-                      : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 hover:border-purple-300'
+                        ? 'bg-purple-600 text-white border-purple-600 shadow-lg'
+                        : 'bg-white dark:bg-gray-800 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800 hover:border-purple-300 dark:hover:border-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20'
                   }`}
                 >
-                  <FlaskConical className="h-5 w-5" />
                   <div className="text-center">
-                    <div className="font-semibold text-xs">Lab Test</div>
-                    <div className="text-xs opacity-80">{kpis.labFollowUps} patient</div>
+                      <FlaskConical className="h-5 w-5 mx-auto mb-1" />
+                      <div className="text-lg font-bold mb-1">{kpis.labFollowUps}</div>
+                      <div className="text-xs font-medium">Lab Tests</div>
+                      <div className="text-xs opacity-75 mt-1">Required</div>
                   </div>
+                    {selectedStatus === 'lab-test-required' && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-purple-600 rounded-full"></div>
+                    )}
                 </button>
 
-                {/* Awaiting Reconsultation */}
                 <button
                   onClick={() => setSelectedStatus('awaiting-reconsultation')}
-                  className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
+                    className={`group relative p-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${
                     selectedStatus === 'awaiting-reconsultation'
-                      ? 'bg-yellow-500 text-white border-yellow-500 shadow-lg shadow-yellow-500/25'
-                      : 'bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100 hover:border-yellow-300'
+                        ? 'bg-yellow-600 text-white border-yellow-600 shadow-lg'
+                        : 'bg-white dark:bg-gray-800 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800 hover:border-yellow-300 dark:hover:border-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
                   }`}
                 >
-                  <Clock className="h-5 w-5" />
                   <div className="text-center">
-                    <div className="font-semibold text-xs">Re-consult</div>
-                    <div className="text-xs opacity-80">{kpis.doctorFollowUps} patient</div>
+                      <Clock className="h-5 w-5 mx-auto mb-1" />
+                      <div className="text-lg font-bold mb-1">{kpis.doctorFollowUps}</div>
+                      <div className="text-xs font-medium">Follow-ups</div>
+                      <div className="text-xs opacity-75 mt-1">Awaiting</div>
                   </div>
+                    {selectedStatus === 'awaiting-reconsultation' && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-600 rounded-full"></div>
+                    )}
                 </button>
 
-                {/* Completed */}
                 <button
                   onClick={() => setSelectedStatus('completed')}
-                  className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
+                    className={`group relative p-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${
                     selectedStatus === 'completed'
-                      ? 'bg-green-600 text-white border-green-600 shadow-lg shadow-green-600/25'
-                      : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300'
+                        ? 'bg-green-600 text-white border-green-600 shadow-lg'
+                        : 'bg-white dark:bg-gray-800 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800 hover:border-green-300 dark:hover:border-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
                   }`}
                 >
-                  <CheckCircle className="h-5 w-5" />
                   <div className="text-center">
-                    <div className="font-semibold text-xs">Completed</div>
-                    <div className="text-xs opacity-80">{kpis.completed} patient</div>
+                      <CheckCircle className="h-5 w-5 mx-auto mb-1" />
+                      <div className="text-lg font-bold mb-1">{kpis.completed}</div>
+                      <div className="text-xs font-medium">Completed</div>
+                      <div className="text-xs opacity-75 mt-1">Finished</div>
                   </div>
+                    {selectedStatus === 'completed' && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-600 rounded-full"></div>
+                    )}
                 </button>
-
-                {/* Future Appointments Tab - Last Position */}
-                <button
-                  onClick={() => setSelectedStatus('future')}
-                  className={`group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 min-w-[100px] ${
-                    selectedStatus === 'future'
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/25'
-                      : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300'
-                  }`}
-                >
-                  <CalendarDays className="h-5 w-5" />
-                  <div className="text-center">
-                    <div className="font-semibold text-xs">Future</div>
-                    <div className="text-xs opacity-80">3 upcoming</div>
-                  </div>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Past History Date Filter */}
-          {activeTab === 'past' && (
-            <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200 mb-6 w-full">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <CalendarIcon className="h-5 w-5 text-gray-600" />
-                  <h3 className="text-lg font-semibold text-gray-700">Filter by Date</h3>
                 </div>
-                <Badge className="bg-gray-200 text-gray-700 border-gray-300">
-                  Past Records
+              </div>
+
+                             {/* Compact Appointments Table */}
+               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                 <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
+                  <div className="flex items-center justify-between">
+                                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                       {selectedStatus === 'all' ? 'All Appointments' : `${selectedStatus.replace('-', ' ').toUpperCase()} Appointments`}
+                     </h3>
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                      {filteredAppointments.length} results
+                    </Badge>
+                  </div>
+              </div>
+                
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                                           <TableRow className="bg-gray-50 dark:bg-gray-700">
+                       <TableHead className="font-semibold text-gray-900 dark:text-white">Token</TableHead>
+                       <TableHead className="font-semibold text-gray-900 dark:text-white">Patient Details</TableHead>
+                       <TableHead className="font-semibold text-gray-900 dark:text-white">Doctor</TableHead>
+                       <TableHead className="font-semibold text-gray-900 dark:text-white">Time</TableHead>
+                       <TableHead className="font-semibold text-gray-900 dark:text-white">Status</TableHead>
+                       <TableHead className="font-semibold text-gray-900 dark:text-white">Actions</TableHead>
+                     </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredAppointments.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-6">
+                            <div className="flex flex-col items-center gap-2">
+                              <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                <Search className="h-5 w-5 text-gray-400" />
+            </div>
+                              <div>
+                                <p className="text-gray-900 font-medium">No appointments found</p>
+                                <p className="text-gray-500 text-xs">Try adjusting your filters or search terms</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredAppointments.map((appointment) => (
+                          <TableRow key={appointment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <Badge variant="outline" className="font-mono bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-700">
+                                  #{appointment.tokenNo}
+                                </Badge>
+                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-0.5">
+                                <div className="font-medium text-gray-900">{appointment.patientName}</div>
+                                <div className="flex items-center gap-1 text-xs text-gray-500">
+                                  <span className="font-mono">{appointment.patientId}</span>
+                                  <span>•</span>
+                                  <div className="flex items-center gap-0.5">
+                                    <Phone className="h-3 w-3" />
+                                    {appointment.phone}
+                                  </div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center">
+                                  <User className="h-4 w-4 text-blue-600" />
+                                </div>
+                                <span className="text-gray-700">{appointment.doctorName}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-3 w-3 text-gray-400" />
+                                <span className="font-medium text-gray-900">{appointment.appointmentTime}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {getStatusBadge(appointment.status, appointment)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button variant="outline" size="sm" className="hover:bg-blue-50">
+                                  <Eye className="h-3 w-3 mr-1" />
+                                  View
+                                </Button>
+                                {appointment.status === 'vitals-required' && (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => handleVitalsClick(appointment)}
+                                    className="text-red-600 border-red-300 hover:bg-red-50"
+                                  >
+                                    <Heart className="h-3 w-3 mr-1" />
+                                    Vitals
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="past" className="p-6">
+              {/* Past History Header */}
+              <div className="mb-6">
+              <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Past Appointments History</h2>
+                    <p className="text-gray-600 dark:text-gray-400">View and analyze historical appointment data</p>
+                </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <History className="h-4 w-4 text-gray-600" />
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Historical Data</span>
+                    </div>
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      {pastStats.completedPast} Completed
                 </Badge>
+                  </div>
               </div>
               
-              <div className="flex flex-wrap gap-4 items-center">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">Select Date:</label>
+                {/* Statistics Overview */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-blue-700 dark:text-blue-400">Total Past Appointments</p>
+                        <p className="text-lg font-bold text-blue-900 dark:text-blue-300">{pastStats.totalPast}</p>
+                      </div>
+                                              <div className="p-1.5 bg-blue-200 dark:bg-blue-800 rounded-lg">
+                          <History className="h-5 w-5 text-blue-700 dark:text-blue-400" />
+                        </div>
+                    </div>
+                  </div>
+                  <div className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-green-700 dark:text-green-400">Successfully Completed</p>
+                        <p className="text-lg font-bold text-green-900 dark:text-green-300">{pastStats.completedPast}</p>
+                      </div>
+                      <div className="p-1.5 bg-green-200 dark:bg-green-800 rounded-lg">
+                        <CheckCircle className="h-5 w-5 text-green-700 dark:text-green-400" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 p-3 rounded-lg border border-purple-200 dark:border-purple-800">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-purple-700 dark:text-purple-400">Unique Appointment Days</p>
+                        <p className="text-lg font-bold text-purple-900 dark:text-purple-300">{pastStats.uniqueDates}</p>
+                      </div>
+                      <div className="p-1.5 bg-purple-200 dark:bg-purple-800 rounded-lg">
+                        <Calendar className="h-5 w-5 text-purple-700 dark:text-purple-400" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Past Appointments Filters */}
+              <div className="mb-6">
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                                      <div className="flex flex-col lg:flex-row gap-4">
+                      <div className="flex-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Past Appointments</label>
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                          <Input
+                            placeholder="Search by patient name, ID, or doctor..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10"
+                          />
+                        </div>
+                      </div>
+                      <div className="lg:w-64">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Filter by Date</label>
+                      <div className="flex gap-2">
                   <Input
                     type="date"
                     value={selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''}
                     onChange={(e) => setSelectedDate(e.target.value ? new Date(e.target.value) : undefined)}
-                    className="w-48"
                     max={format(new Date(), 'yyyy-MM-dd')}
+                          className="flex-1"
                   />
-                </div>
-                
                 {selectedDate && (
                   <Button
                     variant="outline"
                     onClick={() => setSelectedDate(undefined)}
-                    className="text-gray-600 hover:text-gray-800"
+                            size="sm"
+                            className="px-3"
                   >
-                    <X className="h-4 w-4 mr-1" />
-                    Clear Filter
+                            <X className="h-4 w-4" />
                   </Button>
                 )}
-                
-                <div className="text-sm text-gray-600">
-                  {selectedDate 
-                    ? `Showing appointments for ${format(selectedDate, 'MMMM dd, yyyy')}`
-                    : 'Showing all past appointments'
-                  }
                 </div>
+                    </div>
+                  </div>
+                  {selectedDate && (
+                                         <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                       <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-400">
+                         <CalendarIcon className="h-4 w-4" />
+                         Showing appointments for <span className="font-medium">{format(selectedDate, 'MMMM dd, yyyy')}</span>
               </div>
             </div>
           )}
+                </div>
+              </div>
 
-          {/* Appointments Table */}
-          <Card className="bg-card shadow-card rounded-xl border-0">
-            <CardContent className="p-6">
-            {/* Always Show Table */}
-            <div className="w-full">
-              {/* Desktop Table */}
-              <div className="hidden md:block w-full overflow-x-auto">
-                <Table className="w-full">
+                             {/* Compact Past Appointments Table */}
+               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                 <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
+                  <div className="flex items-center justify-between">
+                                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                       {selectedDate ? `Appointments on ${format(selectedDate, 'MMMM dd, yyyy')}` : 'All Past Appointments'}
+                     </h3>
+                    <Badge variant="outline" className="bg-purple-50 text-purple-700">
+                      {filteredAppointments.length} records
+                    </Badge>
+                  </div>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50">
-                      <TableHead>Patient ID</TableHead>
-                      <TableHead>Patient Name</TableHead>
-                      <TableHead>Doctor</TableHead>
-                      {activeTab === 'past' && <TableHead>Date</TableHead>}
-                      <TableHead>Time</TableHead>
-                      <TableHead>Token</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
+                        <TableHead className="font-semibold text-gray-900">Date</TableHead>
+                        <TableHead className="font-semibold text-gray-900">Patient Details</TableHead>
+                        <TableHead className="font-semibold text-gray-900">Doctor</TableHead>
+                        <TableHead className="font-semibold text-gray-900">Time</TableHead>
+                        <TableHead className="font-semibold text-gray-900">Status</TableHead>
+                        <TableHead className="font-semibold text-gray-900">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredAppointments.map((appointment) => (
-                      <TableRow key={appointment.id}>
-                        <TableCell className="font-mono text-blue-600">
-                          {appointment.patientId}
+                      {filteredAppointments.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-6">
+                            <div className="flex flex-col items-center gap-2">
+                              <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                <History className="h-5 w-5 text-gray-400" />
+                              </div>
+                              <div>
+                                <p className="text-gray-900 font-medium">No past appointments found</p>
+                                <p className="text-gray-500 text-xs">Try adjusting your date filter or search terms</p>
+                              </div>
+                            </div>
                         </TableCell>
-                        <TableCell>{appointment.patientName}</TableCell>
-                        <TableCell>{appointment.doctorName}</TableCell>
-                        {activeTab === 'past' && (
-                          <TableCell className="text-gray-600">
-                            {format(new Date(appointment.appointmentDate), 'MMM dd, yyyy')}
+                        </TableRow>
+                      ) : (
+                        filteredAppointments.map((appointment) => (
+                          <TableRow key={appointment.id} className="hover:bg-gray-50 transition-colors">
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <div className="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center">
+                                  <Calendar className="h-4 w-4 text-gray-600" />
+                                </div>
+                                <div>
+                                  <div className="font-medium text-gray-900">
+                                    {format(new Date(appointment.appointmentDate), 'MMM dd')}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {format(new Date(appointment.appointmentDate), 'yyyy')}
+                                  </div>
+                                </div>
+                              </div>
                           </TableCell>
-                        )}
-                        <TableCell>{appointment.appointmentTime}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">#{appointment.tokenNo}</Badge>
+                              <div className="space-y-0.5">
+                                <div className="font-medium text-gray-900">{appointment.patientName}</div>
+                                <div className="flex items-center gap-1 text-xs text-gray-500">
+                                  <span className="font-mono">{appointment.patientId}</span>
+                                  <span>•</span>
+                                  <div className="flex items-center gap-0.5">
+                                    <Phone className="h-3 w-3" />
+                                    {appointment.phone}
+                                  </div>
+                                </div>
+                              </div>
                         </TableCell>
-                        <TableCell>{getStatusBadge(appointment.status, appointment)}</TableCell>
                         <TableCell>
-                          <Button variant="outline" size="sm">
+                              <div className="flex items-center gap-1">
+                                <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center">
+                                  <User className="h-4 w-4 text-blue-600" />
+                                </div>
+                                <span className="text-gray-700">{appointment.doctorName}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-3 w-3 text-gray-400" />
+                                <span className="font-medium text-gray-900">{appointment.appointmentTime}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {getStatusBadge(appointment.status)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button variant="outline" size="sm" className="hover:bg-blue-50">
                             <Eye className="h-3 w-3 mr-1" />
-                            View
+                                  View Details
                           </Button>
+                                <Button variant="outline" size="sm" className="hover:bg-green-50">
+                                  <TrendingUp className="h-3 w-3 mr-1" />
+                                  Analytics
+                                </Button>
+                              </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                        ))
+                      )}
                   </TableBody>
                 </Table>
               </div>
+              </div>
+            </TabsContent>
 
-              {/* Mobile Cards */}
-              <div className="md:hidden space-y-3">
-                {filteredAppointments.map((appointment) => (
-                  <Card key={appointment.id} className="p-4">
-                    <div className="flex justify-between items-start mb-2">
+            <TabsContent value="future" className="p-6">
+              {/* Future Appointments Header */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
                       <div>
-                        <p className="font-mono text-blue-600 text-sm">{appointment.patientId}</p>
-                        <p className="font-semibold">{appointment.patientName}</p>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Future Appointments</h2>
+                    <p className="text-gray-600 dark:text-gray-400">View and manage upcoming patient appointments</p>
                       </div>
-                      <Badge variant="outline">#{appointment.tokenNo}</Badge>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                      <CalendarDays className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-700 dark:text-blue-400">Upcoming</span>
                     </div>
-                    <div className="space-y-1 text-sm text-gray-600 mb-3">
-                      <p>Doctor: {appointment.doctorName}</p>
-                      {activeTab === 'past' && (
-                        <p>Date: {format(new Date(appointment.appointmentDate), 'MMM dd, yyyy')}</p>
-                      )}
-                      <p>Time: {appointment.appointmentTime}</p>
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                      {mockFutureAppointments.length} Total Future
+                    </Badge>
+                  </div>
+                </div>
+
+                                 {/* Quick Actions Bar for Future Appointments */}
+                 <div className="flex flex-wrap gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg border border-blue-200 dark:border-blue-800 mb-6">
+                                     <div className="flex items-center gap-2">
+                     <AlertCircle className="h-4 w-4 text-orange-600" />
+                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Priority Actions:</span>
+                   </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="bg-green-50 text-green-700 border-green-300 hover:bg-green-100"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Ready ({mockFutureAppointments.filter(apt => apt.status === 'ready-consultation').length})
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100"
+                  >
+                    <Stethoscope className="h-4 w-4 mr-2" />
+                    Consulting ({mockFutureAppointments.filter(apt => apt.status === 'under-consultation').length})
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100"
+                  >
+                    <FlaskConical className="h-4 w-4 mr-2" />
+                    Lab Tests ({mockFutureAppointments.filter(apt => apt.status === 'lab-test-required').length})
+                  </Button>
+                </div>
+              </div>
+
+                             {/* Search and Filters for Future Appointments */}
+               <div className="mb-6">
+                 <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                  <div className="flex flex-col lg:flex-row gap-4">
+                    <div className="flex-1">
+                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Future Patients</label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          placeholder="Search by patient name, ID, or doctor..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center">
-                      {getStatusBadge(appointment.status, appointment)}
-                      <Button variant="outline" size="sm">
+                    <div className="lg:w-64">
+                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Filter by Date</label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="date"
+                          value={selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''}
+                          onChange={(e) => setSelectedDate(e.target.value ? new Date(e.target.value) : undefined)}
+                          max={format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd')}
+                          className="flex-1"
+                        />
+                        {selectedDate && (
+                          <Button
+                            variant="outline"
+                            onClick={() => setSelectedDate(undefined)}
+                            size="sm"
+                            className="px-3"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                    </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+                             {/* Compact Future Appointments Table */}
+               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                 <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
+                  <div className="flex items-center justify-between">
+                                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                       {selectedDate ? `Appointments on ${format(selectedDate, 'MMMM dd, yyyy')}` : 'All Future Appointments'}
+                     </h3>
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                      {filteredAppointments.length} records
+                    </Badge>
+                  </div>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50">
+                        <TableHead className="font-semibold text-gray-900">Date</TableHead>
+                        <TableHead className="font-semibold text-gray-900">Patient Details</TableHead>
+                        <TableHead className="font-semibold text-gray-900">Doctor</TableHead>
+                        <TableHead className="font-semibold text-gray-900">Time</TableHead>
+                        <TableHead className="font-semibold text-gray-900">Status</TableHead>
+                        <TableHead className="font-semibold text-gray-900">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredAppointments.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-6">
+                            <div className="flex flex-col items-center gap-2">
+                              <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                <CalendarDays className="h-5 w-5 text-gray-400" />
+                              </div>
+                              <div>
+                                <p className="text-gray-900 font-medium">No future appointments found</p>
+                                <p className="text-gray-500 text-xs">Try adjusting your date filter or search terms</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredAppointments.map((appointment) => (
+                          <TableRow key={appointment.id} className="hover:bg-gray-50 transition-colors">
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center">
+                                  <Calendar className="h-4 w-4 text-blue-600" />
+                                </div>
+                                <div>
+                                  <div className="font-medium text-gray-900">
+                                    {format(new Date(appointment.appointmentDate), 'MMM dd')}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {format(new Date(appointment.appointmentDate), 'yyyy')}
+                                  </div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-0.5">
+                                <div className="font-medium text-gray-900">{appointment.patientName}</div>
+                                <div className="flex items-center gap-1 text-xs text-gray-500">
+                                  <span className="font-mono">{appointment.patientId}</span>
+                                  <span>•</span>
+                                  <div className="flex items-center gap-0.5">
+                                    <Phone className="h-3 w-3" />
+                                    {appointment.phone}
+                                  </div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center">
+                                  <User className="h-4 w-4 text-blue-600" />
+                                </div>
+                                <span className="text-gray-700">{appointment.doctorName}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-3 w-3 text-gray-400" />
+                                <span className="font-medium text-gray-900">{appointment.appointmentTime}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {getStatusBadge(appointment.status)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button variant="outline" size="sm" className="hover:bg-blue-50">
                         <Eye className="h-3 w-3 mr-1" />
                         View
                       </Button>
+                                {appointment.status === 'vitals-required' && (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => handleVitalsClick(appointment)}
+                                    className="text-red-600 border-red-300 hover:bg-red-50"
+                                  >
+                                    <Heart className="h-3 w-3 mr-1" />
+                                    Vitals
+                                  </Button>
+                                )}
                     </div>
-                  </Card>
-                ))}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
               </div>
             </div>
-            </CardContent>
-          </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
         </div>
 
       {/* Vitals Form Modal */}
@@ -821,7 +1452,6 @@ export const AppointmentDashboard = () => {
           hideSkipButton={true}
         />
       )}
-      </div>
     </div>
   );
 };

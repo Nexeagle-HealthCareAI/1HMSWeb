@@ -131,12 +131,12 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
   return (
     <Dialog open={true} onOpenChange={onCancel}>
-      <DialogContent className="max-w-7xl max-h-[95vh] overflow-y-auto">
+      <DialogContent className="max-w-7xl max-h-[95vh] overflow-y-auto dark:bg-gray-900">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-healthcare-primary">
+          <DialogTitle className="text-xl font-bold text-healthcare-primary dark:text-blue-400">
             Book Appointment
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="dark:text-gray-300">
             Please fill in the patient information to schedule your appointment.
           </DialogDescription>
         </DialogHeader>
@@ -144,8 +144,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
           {/* Appointment Details - Compact */}
           <div className="xl:col-span-1">
-            <Card className="p-3 bg-gradient-subtle border-healthcare-primary/20 h-fit">
-              <h3 className="font-semibold text-foreground mb-2 text-sm">Appointment Details</h3>
+            <Card className="p-3 bg-gradient-subtle dark:bg-gray-800 border-healthcare-primary/20 dark:border-blue-400/20 h-fit">
+              <h3 className="font-semibold text-foreground dark:text-white mb-2 text-sm">Appointment Details</h3>
               <div className="space-y-2 text-xs">
                 <div className="flex items-center gap-2">
                   <User className="h-3 w-3 text-healthcare-primary" />
@@ -166,8 +166,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({
               </div>
               
               {/* Patient Search - Enhanced */}
-              <div className="mt-4 pt-3 border-t border-healthcare-primary/20">
-                <h4 className="font-medium text-foreground mb-2 text-sm flex items-center gap-1">
+              <div className="mt-4 pt-3 border-t border-healthcare-primary/20 dark:border-blue-400/20">
+                <h4 className="font-medium text-foreground dark:text-white mb-2 text-sm flex items-center gap-1">
                   <Search className="h-3 w-3 text-blue-600" />
                   Search Existing Patient
                 </h4>
@@ -178,7 +178,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     placeholder="P001 or John Doe or +91 9876543210"
                     className="text-xs h-8"
                   />
-                  <div className="text-xs text-muted-foreground space-y-1">
+                  <div className="text-xs text-muted-foreground dark:text-gray-400 space-y-1">
                     <p>💡 <strong>Search by:</strong></p>
                     <p>• Patient ID: P001, PAT123</p>
                     <p>• Name: John Doe, Sarah</p>
@@ -205,14 +205,14 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           <div className="xl:col-span-3">
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Personal & Contact Information - Single Row */}
-              <Card className="p-4">
-                <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+              <Card className="p-4 dark:bg-gray-800">
+                <h3 className="font-semibold text-foreground dark:text-white mb-3 flex items-center gap-2">
                   <User className="h-4 w-4 text-healthcare-primary" />
                   Personal Information
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                   <div>
-                    <Label htmlFor="name" className="text-sm font-medium">
+                    <Label htmlFor="name" className="text-sm font-medium dark:text-gray-300">
                       Patient Name <span className="text-red-500">*</span>
                     </Label>
                     <Input

@@ -76,107 +76,107 @@ export interface ThemeActions {
 
 export type ThemeStore = ThemeState & ThemeActions;
 
-// Default color schemes
+// Eye-friendly color schemes
 const colorSchemes: Record<ColorScheme, ThemeColors> = {
   blue: {
-    primary: '#3b82f6',
-    secondary: '#1e40af',
-    accent: '#60a5fa',
-    background: '#ffffff',
-    surface: '#f8fafc',
-    text: '#1e293b',
+    primary: '#2563eb', // Softer blue
+    secondary: '#1d4ed8',
+    accent: '#3b82f6',
+    background: '#f8fafc', // Softer background
+    surface: '#f1f5f9',
+    text: '#475569', // Softer text
     textSecondary: '#64748b',
     border: '#e2e8f0',
     error: '#ef4444',
     warning: '#f59e0b',
-    success: '#10b981',
-    info: '#3b82f6',
+    success: '#059669', // Softer green
+    info: '#2563eb',
   },
   green: {
-    primary: '#10b981',
-    secondary: '#059669',
-    accent: '#34d399',
-    background: '#ffffff',
-    surface: '#f0fdf4',
-    text: '#1e293b',
-    textSecondary: '#64748b',
-    border: '#e2e8f0',
+    primary: '#059669', // Softer green
+    secondary: '#047857',
+    accent: '#10b981',
+    background: '#f0fdf4', // Softer background
+    surface: '#ecfdf5',
+    text: '#374151', // Softer text
+    textSecondary: '#6b7280',
+    border: '#d1fae5',
     error: '#ef4444',
     warning: '#f59e0b',
-    success: '#10b981',
-    info: '#3b82f6',
+    success: '#059669',
+    info: '#2563eb',
   },
   purple: {
-    primary: '#8b5cf6',
-    secondary: '#7c3aed',
-    accent: '#a78bfa',
-    background: '#ffffff',
-    surface: '#faf5ff',
-    text: '#1e293b',
-    textSecondary: '#64748b',
-    border: '#e2e8f0',
+    primary: '#7c3aed', // Softer purple
+    secondary: '#6d28d9',
+    accent: '#8b5cf6',
+    background: '#faf5ff', // Softer background
+    surface: '#f3e8ff',
+    text: '#4338ca', // Softer text
+    textSecondary: '#6b7280',
+    border: '#e9d5ff',
     error: '#ef4444',
     warning: '#f59e0b',
-    success: '#10b981',
-    info: '#3b82f6',
+    success: '#059669',
+    info: '#2563eb',
   },
   orange: {
-    primary: '#f97316',
-    secondary: '#ea580c',
-    accent: '#fb923c',
-    background: '#ffffff',
-    surface: '#fff7ed',
-    text: '#1e293b',
-    textSecondary: '#64748b',
-    border: '#e2e8f0',
+    primary: '#ea580c', // Softer orange
+    secondary: '#dc2626',
+    accent: '#f97316',
+    background: '#fff7ed', // Softer background
+    surface: '#fed7aa',
+    text: '#92400e', // Softer text
+    textSecondary: '#6b7280',
+    border: '#fed7aa',
     error: '#ef4444',
     warning: '#f59e0b',
-    success: '#10b981',
-    info: '#3b82f6',
+    success: '#059669',
+    info: '#2563eb',
   },
   red: {
-    primary: '#ef4444',
-    secondary: '#dc2626',
-    accent: '#f87171',
-    background: '#ffffff',
-    surface: '#fef2f2',
-    text: '#1e293b',
-    textSecondary: '#64748b',
-    border: '#e2e8f0',
-    error: '#ef4444',
+    primary: '#dc2626', // Softer red
+    secondary: '#b91c1c',
+    accent: '#ef4444',
+    background: '#fef2f2', // Softer background
+    surface: '#fee2e2',
+    text: '#991b1b', // Softer text
+    textSecondary: '#6b7280',
+    border: '#fecaca',
+    error: '#dc2626',
     warning: '#f59e0b',
-    success: '#10b981',
-    info: '#3b82f6',
+    success: '#059669',
+    info: '#2563eb',
   },
   gray: {
-    primary: '#6b7280',
+    primary: '#6b7280', // Neutral gray
     secondary: '#4b5563',
     accent: '#9ca3af',
-    background: '#ffffff',
-    surface: '#f9fafb',
-    text: '#1e293b',
-    textSecondary: '#64748b',
-    border: '#e2e8f0',
-    error: '#ef4444',
+    background: '#f9fafb', // Softer background
+    surface: '#f3f4f6',
+    text: '#374151', // Softer text
+    textSecondary: '#6b7280',
+    border: '#e5e7eb',
+    error: '#dc2626',
     warning: '#f59e0b',
-    success: '#10b981',
-    info: '#3b82f6',
+    success: '#059669',
+    info: '#2563eb',
   },
 };
 
-// Dark mode color variants
+// Eye-friendly dark mode color variants
 const getDarkColors = (colors: ThemeColors): ThemeColors => ({
   ...colors,
-  background: '#0f172a',
-  surface: '#1e293b',
-  text: '#f1f5f9',
-  textSecondary: '#94a3b8',
-  border: '#334155',
+  background: '#1e293b', // Warmer dark background
+  surface: '#334155', // Softer surface
+  text: '#f8fafc', // Softer white text
+  textSecondary: '#cbd5e1', // Softer secondary text
+  border: '#475569', // Softer borders
 });
 
 // Initial state
 const initialState: ThemeState = {
-  mode: 'light', // Force light mode instead of 'auto'
+  mode: 'light', // Default to light mode
   colorScheme: 'blue',
   colors: colorSchemes.blue,
   settings: {
@@ -185,6 +185,10 @@ const initialState: ThemeState = {
     spacing: 'comfortable',
     animations: true,
     reducedMotion: false,
+    // Eye-friendly settings
+    contrast: 'normal', // 'low', 'normal', 'high'
+    brightness: 'normal', // 'dim', 'normal', 'bright'
+    colorBlindness: 'none', // 'protanopia', 'deuteranopia', 'tritanopia'
   },
   systemPreferences: {
     prefersDark: false,
@@ -276,13 +280,20 @@ export const useThemeStore = create<ThemeStore>()(
 
         // Utility actions
         getEffectiveMode: () => {
-          // Always return light mode regardless of system preferences
-          return 'light';
+          const { mode, systemPreferences } = get();
+          if (mode === 'auto') {
+            return systemPreferences.prefersDark ? 'dark' : 'light';
+          }
+          return mode;
         },
 
         getComputedColors: () => {
-          const { colors } = get();
-          // Always return light colors regardless of system preferences
+          const { colors, getEffectiveMode } = get();
+          const effectiveMode = getEffectiveMode();
+          
+          if (effectiveMode === 'dark') {
+            return getDarkColors(colors);
+          }
           return colors;
         },
       }),
