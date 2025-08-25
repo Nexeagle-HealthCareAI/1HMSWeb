@@ -24,42 +24,56 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
+        manualChunks: (id) => {
           // Vendor chunks
-          'react-vendor': ['react', 'react-dom'],
-          'router-vendor': ['react-router-dom'],
-          'ui-vendor': ['lucide-react', '@radix-ui/react-slot', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-tabs', '@radix-ui/react-accordion', '@radix-ui/react-scroll-area', '@radix-ui/react-tooltip'],
-          'query-vendor': ['@tanstack/react-query'],
-          'zustand-vendor': ['zustand'],
-          'axios-vendor': ['axios'],
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'react-vendor';
+            }
+            if (id.includes('react-router-dom')) {
+              return 'router-vendor';
+            }
+            if (id.includes('lucide-react') || id.includes('@radix-ui')) {
+              return 'ui-vendor';
+            }
+            if (id.includes('@tanstack/react-query')) {
+              return 'query-vendor';
+            }
+            if (id.includes('zustand')) {
+              return 'zustand-vendor';
+            }
+            if (id.includes('axios')) {
+              return 'axios-vendor';
+            }
+            // Default vendor chunk
+            return 'vendor';
+          }
           
           // Feature chunks
-          'auth-feature': [
-            './src/features/auth/components/SecureLogin.tsx',
-            './src/features/auth/components/Registration.tsx',
-            './src/features/auth/pages/LoginPage.tsx'
-          ],
-          'dashboard-feature': [
-            './src/features/dashboard/components/AdminDashboard.tsx',
-            './src/features/doctor/components/DocBoard.tsx'
-          ],
-          'appointment-feature': [
-            './src/features/appointment/components/AppointmentDashboard.tsx',
-            './src/features/appointment/components/AppointmentBooking.tsx',
-            './src/features/appointment/components/AppointmentOversight.tsx'
-          ],
-          'ai-feature': [
-            './src/features/ai/components/DocAI.tsx'
-          ],
-          'profile-feature': [
-            './src/features/profile/components/ProfilePage.tsx'
-          ],
-          'hospital-feature': [
-            './src/features/hospital/components/SystemConfiguration.tsx'
-          ],
-          'billing-feature': [
-            './src/features/billing/components/Billing.tsx'
-          ]
+          if (id.includes('/features/auth/')) {
+            return 'auth-feature';
+          }
+          if (id.includes('/features/dashboard/') || id.includes('/features/doctor/')) {
+            return 'dashboard-feature';
+          }
+          if (id.includes('/features/appointment/')) {
+            return 'appointment-feature';
+          }
+          if (id.includes('/features/ai/')) {
+            return 'ai-feature';
+          }
+          if (id.includes('/features/profile/')) {
+            return 'profile-feature';
+          }
+          if (id.includes('/features/hospital/')) {
+            return 'hospital-feature';
+          }
+          if (id.includes('/features/billing/')) {
+            return 'billing-feature';
+          }
+          if (id.includes('/features/patient/')) {
+            return 'patient-feature';
+          }
         }
       }
     },
@@ -69,7 +83,11 @@ export default defineConfig(({ mode }) => ({
     terserOptions: mode === 'production' ? {
       compress: {
         drop_console: true,
-        drop_debugger: true
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn']
+      },
+      mangle: {
+        safari10: true
       }
     } : undefined
   },
@@ -82,6 +100,10 @@ export default defineConfig(({ mode }) => ({
       'zustand',
       'axios',
       'lucide-react'
-    ]
+    ],
+    exclude: []
+  },
+  define: {
+    __DEV__: mode === 'development'
   }
 }));
