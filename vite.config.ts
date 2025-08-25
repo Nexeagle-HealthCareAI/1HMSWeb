@@ -19,17 +19,21 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "react": path.resolve(__dirname, "node_modules/react"),
+      "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
     },
   },
   build: {
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Vendor chunks
+          // Ensure React and React-DOM are always bundled together
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'react-vendor';
+          }
+          
+          // Other vendor chunks
           if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'react-vendor';
-            }
             if (id.includes('react-router-dom')) {
               return 'router-vendor';
             }
@@ -45,7 +49,7 @@ export default defineConfig(({ mode }) => ({
             if (id.includes('axios')) {
               return 'axios-vendor';
             }
-            // Default vendor chunk
+            // Default vendor chunk for other node_modules
             return 'vendor';
           }
           
