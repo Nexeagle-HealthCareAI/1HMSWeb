@@ -1086,13 +1086,13 @@ export const DoctorCalendarPage: React.FC = () => {
 
          
         {/* Main Content Area with Calendar and Shift Details */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Calendar Column */}
-            <div className="lg:col-span-3">
+        <div className="flex-1 px-4 py-4">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-full">
+            {/* Calendar Column with Scroll */}
+            <div className="lg:col-span-3 overflow-y-auto">
               {eventsLoading || doctorProfileLoading || isInitialLoading || configLoading ? (
-                <div className="flex items-center justify-center min-h-[600px]">
-                  <div className="text-center bg-white rounded-xl shadow-lg p-8">
+                <div className="flex items-center justify-center min-h-[400px]">
+                  <div className="text-center bg-white rounded-lg shadow-md p-6">
                     <LoadingSpinner size="lg" />
                     <h3 className="mt-4 text-lg font-semibold text-gray-900">
                       {isInitialLoading ? 'Preparing your calendar...' : 
@@ -1122,7 +1122,7 @@ export const DoctorCalendarPage: React.FC = () => {
                     }, 50);
                   }}
                 >
-                  <div className="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                  <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
                     <FullCalendar
                       key={`${view}-${currentDate.toISOString()}`}
                       ref={calendarRef}
@@ -1133,9 +1133,9 @@ export const DoctorCalendarPage: React.FC = () => {
               )}
             </div>
 
-            {/* Shift Details Card Column */}
+            {/* Shift Details Card Column - Fixed Height */}
             <div className="lg:col-span-1">
-              <div className="sticky top-6">
+              <div className="h-fit">
                 <ShiftDetailsCard />
               </div>
             </div>
@@ -1152,7 +1152,6 @@ export const DoctorCalendarPage: React.FC = () => {
           /* Calendar Container Enhancements */
           .calendar-container {
             transition: all 0.3s ease;
-            margin-top: 20px;
           }
           
           /* Responsive grid adjustments */
@@ -1166,6 +1165,12 @@ export const DoctorCalendarPage: React.FC = () => {
             .lg\\:col-span-1 {
               grid-column: span 1;
             }
+          }
+          
+          /* Calendar column height and scroll */
+          .lg\\:col-span-3 {
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
           }
           
           .calendar-container:hover {
@@ -1204,8 +1209,8 @@ export const DoctorCalendarPage: React.FC = () => {
           
           /* Enhanced calendar view styling */
           .fc-view {
-            min-height: 700px;
-            padding: 16px;
+            min-height: 500px;
+            padding: 12px;
           }
           
           /* Modern day headers */
@@ -1215,11 +1220,11 @@ export const DoctorCalendarPage: React.FC = () => {
           }
           
           .fc-col-header-cell {
-            padding: 12px 8px !important;
+            padding: 8px 6px !important;
             font-weight: 600 !important;
             color: #475569 !important;
             text-transform: uppercase !important;
-            font-size: 0.75rem !important;
+            font-size: 0.7rem !important;
             letter-spacing: 0.05em !important;
           }
           
@@ -1230,7 +1235,7 @@ export const DoctorCalendarPage: React.FC = () => {
           }
           
           .fc-timegrid-slot-label {
-            font-size: 0.75rem !important;
+            font-size: 0.7rem !important;
             color: #64748b !important;
             font-weight: 500 !important;
           }
@@ -1456,25 +1461,25 @@ export const DoctorCalendarPage: React.FC = () => {
           
           /* Modern event text styling */
           .fc-event-main {
-            padding: 4px 8px !important;
+            padding: 2px 6px !important;
           }
           
           .fc-event-title {
             font-weight: 600 !important;
-            font-size: 0.8rem !important;
+            font-size: 0.7rem !important;
             line-height: 1.2 !important;
           }
           
           /* Make shift events more prominent in month view */
           .fc-daygrid-event {
-            font-size: 0.75rem !important;
-            padding: 2px 4px !important;
+            font-size: 0.65rem !important;
+            padding: 1px 3px !important;
           }
           
           /* Style for time grid events (week/day view) */
           .fc-timegrid-event {
-            font-size: 0.75rem !important;
-            padding: 2px 4px !important;
+            font-size: 0.65rem !important;
+            padding: 1px 3px !important;
           }
           
           /* Style for override shifts - now clickable for action dialog */
