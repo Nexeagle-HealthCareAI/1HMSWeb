@@ -38,6 +38,10 @@ const UserOnboardingRegistration = lazy(() => import('@/features/auth/components
 const CanvasPage = lazy(() => import('@/pages/admin/prescriptions/canvas').then(module => ({ default: module.default })));
 const NotFoundPage = lazy(() => import('@/components/shared/NotFoundPage').then(module => ({ default: module.default })));
 
+// Patient routes
+const PatientsPage = lazy(() => import('@/features/patient/components/PatientsPage').then(module => ({ default: module.PatientsPage })));
+const PatientProfilePage = lazy(() => import('@/features/patient/pages/PatientProfilePage').then(module => ({ default: module.PatientProfilePage })));
+
 
 // Loading component for lazy routes
 const RouteLoadingSpinner = () => (
@@ -238,6 +242,28 @@ export const AppRoutes: React.FC = () => {
                   </MainLayout>
                 </RouteGuard>
               } 
+            />
+
+            {/* Patient Routes - Restricted to Admin and AdminDoctor roles */}
+            <Route
+              path="/patients"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                  <MainLayout>
+                    <PatientsPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/patient/:patientId"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                  <MainLayout>
+                    <PatientProfilePage />
+                  </MainLayout>
+                </RouteGuard>
+              }
             />
           </>
         ) : null}

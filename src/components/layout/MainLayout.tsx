@@ -37,7 +37,9 @@ import {
   Eye,
   Filter,
   Search,
-  FileText
+  FileText,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -72,6 +74,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const { resetColors } = useThemeStore();
   const queryClient = useQueryClient();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [currentPage, setCurrentPage] = useState('dashboard');
 
   // Profile completion hook
@@ -212,63 +215,160 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
       {/* Sidebar */}
       <div className={`
-        fixed top-0 left-0 z-50 h-full w-64 bg-card border-r transform transition-transform lg:translate-x-0
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        fixed top-0 left-0 z-50 h-full bg-white border-r border-gray-200 transform transition-all duration-300 ease-in-out shadow-lg
+        ${sidebarCollapsed ? 'w-16' : 'w-56'} 
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        <div className="flex items-center justify-between p-6 border-b">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white rounded-lg">
-              <img src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" alt="Company Logo" className="h-12 w-12" />
+        {/* Header with Logo */}
+        <div className={`flex items-center justify-between ${sidebarCollapsed ? 'p-2' : 'p-4'} border-b border-gray-200 bg-slate-50`}>
+          <div className={`flex items-center ${sidebarCollapsed ? 'justify-center w-full' : 'gap-4'}`}>
+            <div className="flex-shrink-0">
+              <img src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" alt="Company Logo" className={`${sidebarCollapsed ? 'h-8 w-8' : 'h-10 w-10'}`} />
             </div>
-            <div>
-              <h1 className="font-bold text-healthcare-primary">NexEagle</h1>
-              <p className="text-xs text-muted-foreground">HMS</p>
-            </div>
+            {!sidebarCollapsed && (
+              <div className="min-w-0">
+                <h1 className="font-bold text-slate-900 text-lg">NexEagle</h1>
+                <p className="text-sm text-slate-600 font-medium">easyHMS</p>
+              </div>
+            )}
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSidebarOpen(false)}
-            className="lg:hidden"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          {!sidebarCollapsed && (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="hidden lg:flex h-8 w-8 p-0 hover:bg-gray-100/80 rounded-lg transition-all duration-200"
+                title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                <ChevronLeft className="h-4 w-4 text-gray-600" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSidebarOpen(false)}
+                className="lg:hidden hover:bg-gray-100/80 rounded-lg"
+              >
+                <X className="h-4 w-4 text-gray-600" />
+              </Button>
+            </div>
+          )}
         </div>
 
-        <nav className="p-4 space-y-2">
-          <div className="space-y-2">
-            {navigation.map((item) => (
-              <Button
-                key={item.id}
-                variant={currentPage === item.id ? "default" : "ghost"}
-                className="w-full justify-start gap-3"
-                onClick={() => handleNavigation(item)}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.name}
-              </Button>
-            ))}
+        <nav className={`${sidebarCollapsed ? 'p-2' : 'p-4'} space-y-1`}>
+          <div className="space-y-1">
+            {navigation.map((item) => {
+              const isActive = currentPage === item.id;
+              return (
+                <Button
+                  key={item.id}
+                  variant="ghost"
+                  className={`
+                    w-full group relative overflow-hidden transition-all duration-300 ease-in-out flex items-center
+                    ${sidebarCollapsed ? 'justify-center px-1 h-12 w-12 mx-auto' : 'justify-start gap-3 h-12 px-4'}
+                    ${isActive 
+                      ? 'bg-slate-100 text-slate-900 shadow-sm border-l-4 border-slate-600' 
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 hover:shadow-sm'
+                    }
+                  `}
+                  onClick={() => handleNavigation(item)}
+                  title={sidebarCollapsed ? item.name : undefined}
+                >
+                  {/* Active indicator */}
+                  {isActive && (
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-slate-600 rounded-r-full"></div>
+                  )}
+                  
+                  {/* Icon with enhanced styling */}
+                  <div className={`
+                    ${sidebarCollapsed ? 'p-1.5' : 'p-2'} rounded-md transition-all duration-300 flex-shrink-0
+                    ${isActive 
+                      ? 'bg-slate-200 shadow-sm' 
+                      : 'bg-slate-100 group-hover:bg-slate-200 group-hover:shadow-sm'
+                    }
+                  `}>
+                    <item.icon className={`${sidebarCollapsed ? 'h-5 w-5' : 'h-4 w-4'} transition-all duration-300 ${
+                      isActive ? 'text-slate-700' : 'text-slate-500 group-hover:text-slate-700'
+                    }`} />
+                  </div>
+                  
+                  {/* Text with enhanced styling */}
+                  {!sidebarCollapsed && (
+                    <div className="flex-1 min-w-0 text-left">
+                      <span className={`font-medium text-sm transition-all duration-300 ${
+                        isActive ? 'text-slate-900' : 'text-slate-700 group-hover:text-slate-900'
+                      }`}>
+                        {item.name}
+                      </span>
+                      <div className="text-xs text-slate-500 mt-0.5 line-clamp-1">
+                        {getNavDescription(item.id)}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Active indicator dot */}
+                  {isActive && !sidebarCollapsed && (
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-slate-600 rounded-full"></div>
+                    </div>
+                  )}
+                </Button>
+              );
+            })}
           </div>
         </nav>
 
-        <div className="absolute bottom-4 left-4 right-4">
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-3 text-healthcare-error hover:text-healthcare-error hover:bg-healthcare-error/10"
-            onClick={handleLogout}
-          >
-            <LogOut className="h-4 w-4" />
-            Logout
-          </Button>
+        {/* Collapse/Expand Button for Collapsed State */}
+        {sidebarCollapsed && (
+          <div className="absolute top-4 right-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSidebarCollapsed(false)}
+              className="h-8 w-8 p-0 hover:bg-gray-100/80 rounded-lg transition-all duration-200 bg-white/80 shadow-sm"
+              title="Expand sidebar"
+            >
+              <ChevronRight className="h-4 w-4 text-gray-600" />
+            </Button>
+          </div>
+        )}
+
+        {/* Logout Section */}
+        <div className={`absolute bottom-4 ${sidebarCollapsed ? 'left-2 right-2' : 'left-4 right-4'}`}>
+          <div className="bg-slate-50 rounded-lg p-2 border border-slate-200">
+            <Button
+              variant="ghost"
+              className={`
+                w-full group relative overflow-hidden transition-all duration-300 ease-in-out
+                ${sidebarCollapsed ? 'justify-center px-2 h-12' : 'justify-start gap-3 h-12 px-3'}
+                text-slate-600 hover:text-slate-700 hover:bg-slate-100
+              `}
+              onClick={handleLogout}
+              title={sidebarCollapsed ? "Logout" : undefined}
+            >
+              {/* Icon with enhanced styling */}
+              <div className={`${sidebarCollapsed ? 'p-1.5' : 'p-2'} rounded-md transition-all duration-300 flex-shrink-0 bg-slate-100 group-hover:bg-slate-200`}>
+                <LogOut className={`${sidebarCollapsed ? 'h-5 w-5' : 'h-4 w-4'}`} />
+              </div>
+              
+              {/* Text */}
+              {!sidebarCollapsed && (
+                <div className="flex-1 min-w-0 text-left">
+                  <span className="font-medium text-sm">Logout</span>
+                  <div className="text-xs text-slate-500 mt-0.5">Sign out of your account</div>
+                </div>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="lg:ml-64 flex flex-col h-screen">
+      <div className={`${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-56'} flex flex-col h-screen transition-all duration-300 ease-in-out`}>
         {/* Top Bar */}
-        <header className="sticky top-0 z-30 bg-card border-b px-6 py-4 flex-shrink-0">
+        <header className="sticky top-0 z-30 bg-card border-b px-4 py-3 flex-shrink-0">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
                 size="sm"
@@ -277,39 +377,39 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               >
                 <Menu className="h-4 w-4" />
               </Button>
-              <h2 className="text-xl font-semibold capitalize">
+              <h2 className="text-lg font-semibold capitalize">
                 {currentPage === 'dashboard' ? 'Clinical Dashboard' : navigation.find(n => n.id === currentPage)?.name}
               </h2>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               {/* Enhanced Profile Completion Meter */}
               {profileScore < 100 ? (
-                <div className="hidden md:flex items-center gap-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 rounded-xl px-4 py-3 border border-amber-200/50 dark:border-amber-800/50 shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer"
+                <div className="hidden md:flex items-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 rounded-lg px-3 py-2 border border-amber-200/50 dark:border-amber-800/50 shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer"
                      onClick={() => navigate(profileTarget)}>
                   {/* Animated Progress Circle */}
-                  <div className="relative w-12 h-12">
-                    <svg className="w-12 h-12 transform -rotate-90" viewBox="0 0 48 48">
+                  <div className="relative w-8 h-8">
+                    <svg className="w-8 h-8 transform -rotate-90" viewBox="0 0 32 32">
                       {/* Background circle */}
                       <circle
-                        cx="24"
-                        cy="24"
-                        r="18"
+                        cx="16"
+                        cy="16"
+                        r="12"
                         stroke="currentColor"
-                        strokeWidth="3"
+                        strokeWidth="2"
                         fill="none"
                         className="text-amber-200 dark:text-amber-800"
                       />
                       {/* Progress circle with animation */}
                       <circle
-                        cx="24"
-                        cy="24"
-                        r="18"
+                        cx="16"
+                        cy="16"
+                        r="12"
                         stroke="url(#profileGradient)"
-                        strokeWidth="3"
+                        strokeWidth="2"
                         fill="none"
                         strokeLinecap="round"
-                        strokeDasharray={`${(profileScore / 100) * 113.1} 113.1`}
+                        strokeDasharray={`${(profileScore / 100) * 75.4} 75.4`}
                         className="transition-all duration-1000 ease-out animate-pulse"
                       />
                       <defs>
@@ -324,12 +424,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                       <span className="text-xs font-bold text-amber-700 dark:text-amber-300">{profileScore}%</span>
                     </div>
                     {/* Pulsing dot */}
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-ping opacity-75"></div>
+                    <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-orange-500 rounded-full animate-ping opacity-75"></div>
                   </div>
                   
                   {/* Text content */}
                   <div className="flex flex-col">
-                    <span className="text-sm font-semibold text-amber-800 dark:text-amber-200 group-hover:text-orange-700 dark:group-hover:text-orange-300 transition-colors">
+                    <span className="text-xs font-semibold text-amber-800 dark:text-amber-200 group-hover:text-orange-700 dark:group-hover:text-orange-300 transition-colors">
                       Complete Profile
                     </span>
                     <span className="text-xs text-amber-600 dark:text-amber-400">
@@ -339,27 +439,27 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   
                   {/* Animated arrow */}
                   <div className="text-amber-600 dark:text-amber-400 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
-                    <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3 h-3 transform group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
                 </div>
               ) : (
-                <div className="hidden md:flex items-center gap-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-xl px-4 py-3 border border-green-200/50 dark:border-green-800/50 shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer"
+                <div className="hidden md:flex items-center gap-2 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-lg px-3 py-2 border border-green-200/50 dark:border-green-800/50 shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer"
                      onClick={() => navigate(profileTarget)}>
                   {/* Success circle with animation */}
-                  <div className="relative w-12 h-12">
-                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center animate-pulse">
-                      <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                  <div className="relative w-8 h-8">
+                    <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center animate-pulse">
+                      <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
                     </div>
                     {/* Success sparkles */}
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-ping"></div>
-                    <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-emerald-400 rounded-full animate-ping animation-delay-300"></div>
+                    <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-400 rounded-full animate-ping"></div>
+                    <div className="absolute -bottom-0.5 -left-0.5 w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping animation-delay-300"></div>
                   </div>
                   
                   {/* Text content */}
                   <div className="flex flex-col">
-                    <span className="text-sm font-semibold text-green-800 dark:text-green-200 group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition-colors">
+                    <span className="text-xs font-semibold text-green-800 dark:text-green-200 group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition-colors">
                       Profile Complete!
                     </span>
                     <span className="text-xs text-green-600 dark:text-green-400">
@@ -369,7 +469,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   
                   {/* Animated arrow */}
                   <div className="text-green-600 dark:text-green-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                    <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3 h-3 transform group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>

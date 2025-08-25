@@ -4,12 +4,12 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { CalendarHeader } from './components/CalendarHeader';
-import { Legend } from './components/Legend';
 import { EditShiftModal } from './components/EditShiftModal';
 import { PersonalizedScheduleModal } from './components/PersonalizedScheduleModal';
 import { DeleteTimeOffDialog } from './components/DeleteTimeOffDialog';
 import { CancelOverrideDialog } from './components/CancelOverrideDialog';
 import { OverrideActionDialog } from './components/OverrideActionDialog';
+import { ShiftDetailsCard } from './components/ShiftDetailsCard';
 import { useCalendarEvents, useCreateOverride, useDeleteOverride, useCreateBlock, useDeleteBlock, useTimeOff, useCreateTimeOff, useDeleteTimeOff, useDoctorCalendarConfig } from './hooks/useCalendar';
 import { CalendarEvent, CreateOverridePayload, CreateBlockPayload, ShiftName } from './api/types';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
@@ -1083,57 +1083,64 @@ export const DoctorCalendarPage: React.FC = () => {
           />
         </div>
          
-        {/* Sticky Legend within Main Layout */}
-        <div className="sticky top-[120px] z-30 bg-white/90 backdrop-blur-sm border-b border-gray-100/60 shadow-sm">
-          <div className="px-6 py-4">
-            <Legend />
+
+         
+        {/* Main Content Area with Calendar and Shift Details */}
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Calendar Column */}
+            <div className="lg:col-span-3">
+              {eventsLoading || doctorProfileLoading || isInitialLoading || configLoading ? (
+                <div className="flex items-center justify-center min-h-[600px]">
+                  <div className="text-center bg-white rounded-xl shadow-lg p-8">
+                    <LoadingSpinner size="lg" />
+                    <h3 className="mt-4 text-lg font-semibold text-gray-900">
+                      {isInitialLoading ? 'Preparing your calendar...' : 
+                       doctorProfileLoading ? 'Loading your profile...' : 
+                       configLoading ? 'Loading schedule configuration...' : 'Loading...'}
+                    </h3>
+                    <p className="mt-2 text-gray-600">
+                      {isInitialLoading ? 'Setting up your personalized calendar experience' : 
+                       doctorProfileLoading ? 'Fetching your doctor profile details' : 
+                       configLoading ? 'Loading your work schedule settings' : 'Please wait...'}
+                    </p>
+                    {doctorProfileError && (
+                      <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-red-700 font-medium">Error loading doctor profile</p>
+                        <p className="text-red-600 text-sm mt-1">{doctorProfileError.message}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div 
+                  className="calendar-container"
+                  onClick={() => {
+                    // Scroll to morning slot when calendar container is clicked
+                    setTimeout(() => {
+                      scrollToMorningSlot();
+                    }, 50);
+                  }}
+                >
+                  <div className="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                    <FullCalendar
+                      key={`${view}-${currentDate.toISOString()}`}
+                      ref={calendarRef}
+                      {...calendarOptions}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Shift Details Card Column */}
+            <div className="lg:col-span-1">
+              <div className="sticky top-6">
+                <ShiftDetailsCard />
+              </div>
+            </div>
           </div>
         </div>
-         
-        {/* Scrollable Calendar Container */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
-             {eventsLoading || doctorProfileLoading || isInitialLoading || configLoading ? (
-            <div className="flex items-center justify-center min-h-[600px]">
-              <div className="text-center bg-white rounded-xl shadow-lg p-8">
-                   <LoadingSpinner size="lg" />
-                <h3 className="mt-4 text-lg font-semibold text-gray-900">
-                  {isInitialLoading ? 'Preparing your calendar...' : 
-                   doctorProfileLoading ? 'Loading your profile...' : 
-                   configLoading ? 'Loading schedule configuration...' : 'Loading...'}
-                </h3>
-                <p className="mt-2 text-gray-600">
-                  {isInitialLoading ? 'Setting up your personalized calendar experience' : 
-                   doctorProfileLoading ? 'Fetching your doctor profile details' : 
-                   configLoading ? 'Loading your work schedule settings' : 'Please wait...'}
-                </p>
-                {doctorProfileError && (
-                  <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-red-700 font-medium">Error loading doctor profile</p>
-                    <p className="text-red-600 text-sm mt-1">{doctorProfileError.message}</p>
-                  </div>
-                   )}
-                 </div>
-               </div>
-             ) : (
-            <div 
-              className="calendar-container"
-              onClick={() => {
-                // Scroll to morning slot when calendar container is clicked
-                setTimeout(() => {
-                  scrollToMorningSlot();
-                }, 50);
-              }}
-            >
-              <div className="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
-                <FullCalendar
-                  key={`${view}-${currentDate.toISOString()}`}
-                  ref={calendarRef}
-                  {...calendarOptions}
-                />
-              </div>
-              </div>
-           )}
-               </div>
       
         {/* Enhanced CSS for modern calendar styling */}
                 <style>{`
@@ -1146,6 +1153,19 @@ export const DoctorCalendarPage: React.FC = () => {
           .calendar-container {
             transition: all 0.3s ease;
             margin-top: 20px;
+          }
+          
+          /* Responsive grid adjustments */
+          @media (max-width: 1024px) {
+            .lg\\:grid-cols-4 {
+              grid-template-columns: 1fr;
+            }
+            .lg\\:col-span-3 {
+              grid-column: span 1;
+            }
+            .lg\\:col-span-1 {
+              grid-column: span 1;
+            }
           }
           
           .calendar-container:hover {

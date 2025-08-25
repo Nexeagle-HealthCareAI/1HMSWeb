@@ -51,7 +51,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 // import { ContextualGuide } from './guide/ContextualGuide';
 // import { DASHBOARD_GUIDES } from './guide/GuideData';
-import { PrescriptionSettings } from './PrescriptionSettings';
+
 import { format, subDays } from 'date-fns';
 
 interface KPIData {
@@ -105,7 +105,6 @@ export const ClinicalDashboard: React.FC = () => {
   // Clinical Dashboard Modules
   const clinicalModules = [
     { id: 'dashboard', name: 'Clinical Dashboard', icon: Activity, description: 'Overview & Analytics' },
-    { id: 'prescription-settings', name: 'Prescription Settings', icon: FileText, description: 'Prescription Templates' },
   ];
 
   // Mock data
@@ -1026,10 +1025,7 @@ export const ClinicalDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Prescription Settings Content */}
-      {currentView === 'prescription-settings' && (
-        <PrescriptionSettings />
-      )}
+
     </div>
   );
 }; 
