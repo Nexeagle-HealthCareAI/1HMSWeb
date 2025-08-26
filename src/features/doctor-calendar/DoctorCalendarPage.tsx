@@ -1153,14 +1153,20 @@ export const DoctorCalendarPage: React.FC = () => {
     processPayloads();
   };
 
-     const handleSaveBlockFromPersonalized = (payload: CreateBlockPayload) => {
-     // Convert CreateBlockPayload to CreateTimeOffRequest
-     const timeOffRequest = {
+       const handleSaveBlockFromPersonalized = (payload: CreateBlockPayload) => {
+    // Convert CreateBlockPayload to CreateTimeOffRequest
+    // Format dates to YYYY-MM-DD format for the API
+    const fromDate = new Date(payload.startDateTime);
+    const toDate = new Date(payload.endDateTime);
+    
+         const timeOffRequest = {
        doctorId: payload.doctorId,
-       fromDate: payload.startDateTime,
-       toDate: payload.endDateTime,
+       fromDate: format(fromDate, 'yyyy-MM-dd'),
+       toDate: format(toDate, 'yyyy-MM-dd'),
        reason: payload.title
      };
+     
+     console.log('🕒 Time-off request payload:', timeOffRequest);
      
      createTimeOffMutation.mutate(timeOffRequest, {
        onSuccess: (data) => {
@@ -1170,7 +1176,7 @@ export const DoctorCalendarPage: React.FC = () => {
            message: "Your time off has been scheduled and you will be unavailable during the selected period.",
            details: [
              `✅ Time off period blocked in your calendar`,
-             `📅 Duration: ${format(new Date(timeOffRequest.fromDate), 'MMM dd, yyyy HH:mm')} - ${format(new Date(timeOffRequest.toDate), 'MMM dd, yyyy HH:mm')}`,
+             `📅 Duration: ${format(fromDate, 'MMM dd, yyyy HH:mm')} - ${format(toDate, 'MMM dd, yyyy HH:mm')}`,
              `🚫 No appointments can be booked during this time`,
              `📱 You can cancel this time off anytime from the calendar`
            ]

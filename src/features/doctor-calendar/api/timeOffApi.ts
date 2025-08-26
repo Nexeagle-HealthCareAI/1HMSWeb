@@ -16,6 +16,10 @@ export const timeOffApi = {
 
   // Create a new time-off entry
   createDoctorTimeOff: (data: CreateTimeOffRequest): Promise<CreateTimeOffResponse> => {
+    console.log('🕒 Time-off API call:', {
+      url: API_ENDPOINTS.CALENDAR.CREATE_DOCTOR_TIMEOFF,
+      data: data
+    });
     return apiClient.post(API_ENDPOINTS.CALENDAR.CREATE_DOCTOR_TIMEOFF, data);
   },
 

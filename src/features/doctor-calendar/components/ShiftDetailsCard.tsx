@@ -50,6 +50,36 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
     }));
   }, [events]);
 
+  // Check for time-off events
+  const timeOffEvents = React.useMemo(() => {
+    return events.filter(event => 
+      event.type === 'timeoff' || 
+      event.id?.startsWith('timeoff-') ||
+      event.extendedProps?.type === 'timeoff'
+    );
+  }, [events]);
+
+  // Check if there are time-off conflicts with shifts
+  const hasTimeOffConflicts = React.useMemo(() => {
+    if (timeOffEvents.length === 0) return false;
+    
+    // Check if any time-off events overlap with shift events
+    return events.some(event => {
+      if (event.type !== 'shift') return false;
+      
+      const shiftStart = new Date(event.start);
+      const shiftEnd = new Date(event.end);
+      
+      return timeOffEvents.some(timeOffEvent => {
+        const timeOffStart = new Date(timeOffEvent.start);
+        const timeOffEnd = new Date(timeOffEvent.end);
+        
+        // Check for overlap
+        return shiftStart < timeOffEnd && shiftEnd > timeOffStart;
+      });
+    });
+  }, [events, timeOffEvents]);
+
   // Get data source information
   const dataSource = calendarConfig?.dataSource || 'Default';
   const totalShifts = uniqueShifts.length;
@@ -80,6 +110,64 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
           </div>
         </div>
 
+        {/* Time-Off Warning */}
+        {timeOffEvents.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-medium text-red-600 dark:text-red-400 flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                Time-Off Status
+              </h4>
+              <Badge variant="destructive" className="text-xs">
+                {timeOffEvents.length} active
+              </Badge>
+            </div>
+            
+            {hasTimeOffConflicts ? (
+              <div className="p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                <div className="text-xs text-red-800 dark:text-red-200 font-medium mb-1">
+                  ⚠️ Working Shifts Not Applicable
+                </div>
+                <div className="text-xs text-red-700 dark:text-red-300">
+                  Time-off periods overlap with scheduled shifts. No appointments can be booked during these times.
+                </div>
+              </div>
+            ) : (
+              <div className="p-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-md">
+                <div className="text-xs text-orange-800 dark:text-orange-200 font-medium mb-1">
+                  📅 Time-Off Periods Active
+                </div>
+                <div className="text-xs text-orange-700 dark:text-orange-300">
+                  You have scheduled time-off periods. Regular shifts may be affected.
+                </div>
+              </div>
+            )}
+            
+            <div className="space-y-1">
+              {timeOffEvents.map((timeOffEvent, index) => (
+                <div 
+                  key={index}
+                  className="flex items-center gap-1.5 p-1.5 rounded-md border border-red-200 dark:border-red-800"
+                  style={{
+                    backgroundColor: '#fef2f2'
+                  }}
+                >
+                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                  <span className="text-xs font-medium text-red-700 dark:text-red-300 flex-1">
+                    {timeOffEvent.title || 'Time Off'}
+                  </span>
+                  <Badge 
+                    variant="outline" 
+                    className="text-xs px-1 py-0 border-red-300 text-red-600"
+                  >
+                    {timeOffEvent.allDay ? 'All Day' : 'Partial'}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Current Shifts */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -93,35 +181,65 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
             <div className="text-xs text-gray-500 dark:text-gray-400">Loading shifts...</div>
           ) : uniqueShifts.length > 0 ? (
             <div className="space-y-1">
-              {uniqueShifts.map((shift, index) => (
-                <div 
-                  key={index}
-                  className="flex items-center gap-1.5 p-1.5 rounded-md border"
-                  style={{
-                    backgroundColor: `${shift.color}15`,
-                    borderColor: `${shift.color}30`
-                  }}
-                >
+              {uniqueShifts.map((shift, index) => {
+                // Check if this shift has time-off conflicts
+                const shiftHasTimeOffConflict = hasTimeOffConflicts && events.some(event => {
+                  if (event.type !== 'shift') return false;
+                  const eventShiftName = event.extendedProps?.shiftName;
+                  if (eventShiftName !== shift.name) return false;
+                  
+                  const shiftStart = new Date(event.start);
+                  const shiftEnd = new Date(event.end);
+                  
+                  return timeOffEvents.some(timeOffEvent => {
+                    const timeOffStart = new Date(timeOffEvent.start);
+                    const timeOffEnd = new Date(timeOffEvent.end);
+                    return shiftStart < timeOffEnd && shiftEnd > timeOffStart;
+                  });
+                });
+
+                return (
                   <div 
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: shift.color }}
-                  ></div>
-                  <span className="text-xs font-medium flex-1" style={{ color: shift.color }}>
-                    {shift.name}
-                  </span>
-                  <Badge 
-                    variant="outline" 
-                    className="text-xs px-1 py-0"
+                    key={index}
+                    className={`flex items-center gap-1.5 p-1.5 rounded-md border ${
+                      shiftHasTimeOffConflict ? 'border-red-300 bg-red-50 dark:bg-red-900/20' : ''
+                    }`}
                     style={{
-                      backgroundColor: `${shift.color}20`,
-                      borderColor: `${shift.color}40`,
-                      color: shift.color
+                      backgroundColor: shiftHasTimeOffConflict ? '#fef2f2' : `${shift.color}15`,
+                      borderColor: shiftHasTimeOffConflict ? '#fecaca' : `${shift.color}30`
                     }}
                   >
-                    {shift.times[0] || 'Custom'}
-                  </Badge>
-                </div>
-              ))}
+                    <div 
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: shiftHasTimeOffConflict ? '#ef4444' : shift.color }}
+                    ></div>
+                    <span 
+                      className={`text-xs font-medium flex-1 ${
+                        shiftHasTimeOffConflict ? 'text-red-700 dark:text-red-300' : ''
+                      }`}
+                      style={!shiftHasTimeOffConflict ? { color: shift.color } : {}}
+                    >
+                      {shift.name}
+                      {shiftHasTimeOffConflict && (
+                        <span className="ml-1 text-red-500">(Time-off)</span>
+                      )}
+                    </span>
+                    <Badge 
+                      variant="outline" 
+                      className={`text-xs px-1 py-0 ${
+                        shiftHasTimeOffConflict ? 'border-red-300 text-red-600' : ''
+                      }`}
+                      style={!shiftHasTimeOffConflict ? {
+                        backgroundColor: `${shift.color}20`,
+                        borderColor: `${shift.color}40`,
+                        color: shift.color
+                      } : {}}
+                    >
+                      {shift.times[0] || 'Custom'}
+                    </Badge>
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div className="text-xs text-gray-500 dark:text-gray-400">No shifts scheduled</div>
@@ -147,6 +265,12 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
               <div className="w-1 h-1 bg-purple-500 rounded-full mt-1.5 flex-shrink-0"></div>
               <span>Use header buttons to navigate dates</span>
             </div>
+            {timeOffEvents.length > 0 && (
+              <div className="flex items-start gap-1.5">
+                <div className="w-1 h-1 bg-red-500 rounded-full mt-1.5 flex-shrink-0"></div>
+                <span>Click time-off events to cancel them</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -162,6 +286,12 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
               <span className="text-gray-600 dark:text-gray-400">Shift Types:</span>
               <span className="font-medium">{totalShifts}</span>
             </div>
+            {timeOffEvents.length > 0 && (
+              <div className="flex justify-between">
+                <span className="text-red-600 dark:text-red-400">Time-Off Periods:</span>
+                <span className="font-medium text-red-600 dark:text-red-400">{timeOffEvents.length}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-400">Schedule Type:</span>
               <span className="font-medium">{dataSource}</span>
@@ -192,6 +322,12 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
               <div className="w-3 h-3 bg-indigo-500 rounded"></div>
               <span className="text-gray-700 dark:text-gray-300">Night shifts</span>
             </div>
+            {timeOffEvents.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 bg-red-500 rounded"></div>
+                <span className="text-gray-700 dark:text-gray-300">Time-off periods</span>
+              </div>
+            )}
           </div>
         </div>
       </CardContent>
