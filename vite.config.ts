@@ -22,21 +22,6 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    rollupOptions: {
-      output: {
-        manualChunks: (id: string) => {
-          // React and React-DOM must be bundled together and loaded first
-          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
-            return 'react-vendor';
-          }
-          
-          // Group all other node_modules into a single vendor chunk
-          if (id.includes('node_modules')) {
-            return 'vendor';
-          }
-        }
-      }
-    },
     chunkSizeWarningLimit: 1000,
     sourcemap: mode === 'development',
     minify: mode === 'production' ? 'terser' : false,
