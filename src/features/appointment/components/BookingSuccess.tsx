@@ -1,6 +1,6 @@
 import React from 'react';
-import { CheckCircle, Calendar, Clock, User, Phone, Copy, ArrowLeft, X } from 'lucide-react';
-import { TimeSlot, Doctor } from '../AppointmentBooking';
+import { CheckCircle, Calendar, Clock, User, Phone, Copy, Check } from 'lucide-react';
+import { TimeSlot, Doctor } from './AppointmentBooking';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -46,87 +46,94 @@ export const BookingSuccess: React.FC<BookingSuccessProps> = ({
     });
   };
 
+  const handleDone = () => {
+    onClose();
+    navigate('/appointment-dashboard');
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[95vh] overflow-y-auto dark:bg-gray-900">
-        <DialogHeader className="relative pb-2">
-          <Button
-            onClick={onClose}
-            variant="ghost"
-            size="sm"
-            className="absolute -top-2 -right-2 h-8 w-8 p-0 hover:bg-muted"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-          <DialogTitle className="text-center text-2xl font-bold text-healthcare-success dark:text-green-400">
+      <DialogContent className="max-w-lg dark:bg-gray-900">
+        <DialogHeader className="relative pb-4">
+          <DialogTitle className="text-center text-2xl font-bold text-green-600 dark:text-green-400">
             Appointment Booked Successfully!
           </DialogTitle>
         </DialogHeader>
 
         <div className="text-center">
           {/* Success Icon */}
-          <div className="mb-4">
-            <CheckCircle className="h-12 w-12 text-healthcare-success mx-auto mb-3" />
+          <div className="mb-6">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full mb-4">
+              <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+            </div>
             <p className="text-sm text-muted-foreground dark:text-gray-400">
-              Your appointment has been confirmed
+              Your appointment has been confirmed and scheduled
             </p>
           </div>
 
           {/* Appointment Details */}
-          <Card className="p-4 bg-gradient-primary text-white mb-4">
-            <div className="space-y-3">
-              <div className="flex items-center justify-center gap-2 mb-3">
-                <span className="text-xs opacity-75">ID:</span>
-                <div className="flex items-center gap-1 bg-white/20 rounded px-2 py-1">
-                  <span className="font-mono font-bold text-sm">{appointmentId}</span>
+          <Card className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800 mb-5">
+            <div className="space-y-4">
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <span className="text-xs font-medium text-blue-600 dark:text-blue-400">Appointment ID:</span>
+                <div className="flex items-center gap-2 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 border border-blue-200 dark:border-blue-700">
+                  <span className="font-mono font-bold text-sm text-blue-700 dark:text-blue-300">{appointmentId}</span>
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-6 w-6 p-0 hover:bg-white/20"
+                    className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/30"
                     onClick={copyAppointmentId}
                   >
-                    <Copy className="h-3 w-3" />
+                    <Copy className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                   </Button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-2 text-left">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
+              <div className="grid grid-cols-1 gap-3 text-left">
+                <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                    <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </div>
                   <div>
-                    <p className="text-xs opacity-75">Doctor</p>
-                    <p className="font-semibold text-sm">{doctor.name}</p>
-                    <p className="text-xs opacity-75">{doctor.specialization}</p>
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Doctor</p>
+                    <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">{doctor.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{doctor.specialization}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
+                <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                    <Calendar className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  </div>
                   <div>
-                    <p className="text-xs opacity-75">Date</p>
-                    <p className="font-semibold text-sm">
-                      {format(date, 'MMM dd, yyyy')}
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Date</p>
+                    <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">
+                      {format(date, 'EEEE, MMMM dd, yyyy')}
                     </p>
                   </div>
                 </div>
 
                 {timeSlot && (
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
+                  <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                      <Clock className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    </div>
                     <div>
-                      <p className="text-xs opacity-75">Time</p>
-                      <p className="font-semibold text-sm">{formatTime(timeSlot.time)}</p>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Time</p>
+                      <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">{formatTime(timeSlot.time)}</p>
                     </div>
                   </div>
                 )}
 
                 {timeSlot?.patientInfo && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4" />
+                  <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                      <Phone className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                    </div>
                     <div>
-                      <p className="text-xs opacity-75">Patient</p>
-                      <p className="font-semibold text-sm">{timeSlot.patientInfo.name}</p>
-                      <p className="text-xs opacity-75">{timeSlot.patientInfo.phone}</p>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Patient</p>
+                      <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">{timeSlot.patientInfo.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{timeSlot.patientInfo.phone}</p>
                     </div>
                   </div>
                 )}
@@ -134,45 +141,17 @@ export const BookingSuccess: React.FC<BookingSuccessProps> = ({
             </div>
           </Card>
 
-          {/* Instructions */}
-          <Card className="p-3 bg-muted mb-4 text-left">
-            <h3 className="font-semibold text-sm text-foreground mb-2">Important Notes:</h3>
-            <ul className="text-xs text-muted-foreground space-y-1">
-              <li>• Arrive 15 minutes early</li>
-              <li>• Bring ID and insurance card</li>
-              <li>• Save your appointment ID</li>
-            </ul>
-          </Card>
+
 
           {/* Actions */}
-          <div className="space-y-2">            
-            <div className="grid grid-cols-3 gap-2">
-              <Button
-                onClick={() => {/* Edit appointment */}}
-                variant="outline"
-                className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-                size="sm"
-              >
-                Edit
-              </Button>
+          <div className="space-y-3 mt-4">            
             <Button
-                onClick={() => {/* Reschedule appointment */}}
-                variant="outline"
-                className="bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100"
-                size="sm"
-              >
-                Reschedule
-              </Button>
-              
-              <Button
-                onClick={() => {/* Cancel appointment */}}
-                variant="outline"
-                className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
-                size="sm"
-              >
-                Cancel
-              </Button>
-            </div>
+              onClick={handleDone}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
+            >
+              <Check className="h-4 w-4 mr-2" />
+              Done
+            </Button>
             
             <Button
               onClick={() => {
@@ -180,14 +159,14 @@ export const BookingSuccess: React.FC<BookingSuccessProps> = ({
                 onBookAnother();
               }}
               variant="outline"
-              className="w-full"
+              className="w-full border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
               Book Another Appointment
             </Button>
             
             <Button
               variant="outline"
-              className="w-full"
+              className="w-full border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
               onClick={() => window.print()}
             >
               Print Confirmation

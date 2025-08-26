@@ -166,6 +166,50 @@ export const DoctorCalendarPage: React.FC = () => {
   const { data: events = [], isLoading: eventsLoading } = useCalendarEvents(doctorId, fromISO, toISO, calendarConfig);
   const { data: timeOffData, isLoading: timeOffLoading } = useTimeOff(doctorId);
   
+  // Create a test time-off event for debugging
+  const testTimeOffEvent = React.useMemo(() => {
+    if (currentDate.toDateString() === new Date('2025-08-26').toDateString()) {
+      return {
+        id: 'test-timeoff-event',
+        type: 'timeoff' as const,
+        title: 'Test Time-off (Manual)',
+        start: '2025-08-26T00:00:00.000Z',
+        end: '2025-08-26T23:59:59.000Z',
+        backgroundColor: '#ef4444',
+        borderColor: '#dc2626',
+        allDay: true,
+        extendedProps: {
+          type: 'timeoff',
+          timeOffId: 'test-timeoff-id',
+          reason: 'Test Time-off (Manual)',
+          isUpcoming: true,
+          createdAt: new Date().toISOString(),
+          source: 'timeoff'
+        }
+      };
+    }
+    return null;
+  }, [currentDate]);
+  
+  // Combine real events with test event
+  const allEvents = React.useMemo(() => {
+    const combined = [...events];
+    if (testTimeOffEvent) {
+      combined.push(testTimeOffEvent);
+      console.log('🧪 Added test time-off event to calendar');
+    }
+    return combined;
+  }, [events, testTimeOffEvent]);
+  
+  // Debug time-off data
+  React.useEffect(() => {
+    console.log('🔍 Time-off data from API:', {
+      timeOffData,
+      timeOffLoading,
+      doctorId
+    });
+  }, [timeOffData, timeOffLoading, doctorId]);
+  
   // Debug logging
   console.log('🔍 DoctorCalendarPage - Data:', {
     doctorId,
@@ -200,6 +244,21 @@ export const DoctorCalendarPage: React.FC = () => {
       extendedProps: event.extendedProps
     }))
   });
+  
+  // Show time-off events in the UI for debugging
+  if (timeOffEvents.length > 0) {
+    console.log('🎯 Found time-off events! Click on the red blocks to cancel them.');
+    console.log('🎯 Time-off event IDs:', timeOffEvents.map(e => e.id));
+  } else {
+    console.log('📅 No time-off events found in current view. Use the test button to navigate to Aug 26, 2025.');
+    console.log('📅 Current date range:', { fromISO, toISO });
+    console.log('📅 All events:', events.map(e => ({ id: e.id, type: e.type, title: e.title })));
+  }
+  
+  // Monitor modal state changes
+  React.useEffect(() => {
+    console.log('🔍 DeleteTimeOffModal state changed:', deleteTimeOffModal);
+  }, [deleteTimeOffModal]);
 
 
   
@@ -348,10 +407,18 @@ export const DoctorCalendarPage: React.FC = () => {
       const fromDate = event.start?.toISOString();
       const toDate = event.end?.toISOString();
       
-      console.log('Time-off event clicked:', { timeOffId, reason, fromDate, toDate });
+      console.log('🎯 Time-off event clicked:', { 
+        timeOffId, 
+        reason, 
+        fromDate, 
+        toDate,
+        eventId: event.id,
+        eventType: eventType,
+        extendedProps: event.extendedProps
+      });
       
       if (timeOffId && fromDate && toDate) {
-        console.log('Opening delete time-off modal with data:', {
+        console.log('✅ Opening delete time-off modal with data:', {
           timeOffId,
           reason,
           fromDate,
@@ -367,8 +434,9 @@ export const DoctorCalendarPage: React.FC = () => {
           }
         });
         console.log('✅ Delete time-off modal state set to open');
+        console.log('✅ Modal state after setting:', deleteTimeOffModal);
       } else {
-        console.warn('Missing data for time-off deletion:', { timeOffId, fromDate, toDate });
+        console.warn('❌ Missing data for time-off deletion:', { timeOffId, fromDate, toDate });
       }
       return; // Stop processing for time-off events
     }
@@ -679,13 +747,15 @@ export const DoctorCalendarPage: React.FC = () => {
        });
        
        if (eventType === 'timeoff' || eventType === 'block' || isTimeOff) {
-         console.log('TimeOff/Block event mounted:', {
+         console.log('🎯 TimeOff/Block event mounted:', {
            id: info.event.id,
            title: info.event.title,
            type: eventType,
            isTimeOff,
            start: info.event.start,
-           end: info.event.end
+           end: info.event.end,
+           element: info.el,
+           elementClasses: info.el.className
          });
        }
        
@@ -751,6 +821,11 @@ export const DoctorCalendarPage: React.FC = () => {
         };
       } else if (eventType === 'timeoff') {
         // Time-off events with cancel button
+        console.log('🎯 Rendering time-off event:', {
+          id: arg.event.id,
+          title: arg.event.title,
+          type: arg.event.extendedProps?.type
+        });
         return {
           html: `
             <div class="fc-event-main-content timeoff-event-content">
@@ -1242,7 +1317,7 @@ export const DoctorCalendarPage: React.FC = () => {
              return (
     <div className="h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 -m-6 transition-all duration-300">
                 {/* Sticky Header within Main Layout */}
-        <div className="sticky top-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-200/60 dark:border-gray-700/60 shadow-sm">
+                <div className="sticky top-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-200/60 dark:border-gray-700/60 shadow-sm">
           <CalendarHeader
             currentDate={currentDate}
             onDateChange={setCurrentDate}
@@ -1251,7 +1326,67 @@ export const DoctorCalendarPage: React.FC = () => {
             onAddOverride={handleAddOverride}
           />
           
-
+          {/* Temporary test button for time-off events */}
+          <div className="px-4 py-2 bg-yellow-100 border-b border-yellow-300">
+            <button
+              onClick={() => {
+                const testDate = new Date('2025-08-26');
+                setCurrentDate(testDate);
+                console.log('🧪 Navigated to test date:', testDate.toISOString());
+                
+                // Force a refresh of the calendar data
+                setTimeout(() => {
+                  console.log('🧪 Checking for time-off events after navigation...');
+                  console.log('🧪 Current events:', allEvents);
+                  const timeOffEvents = allEvents.filter(event => event.type === 'timeoff' || event.id?.startsWith('timeoff-'));
+                  console.log('🧪 Time-off events found:', timeOffEvents.length);
+                  timeOffEvents.forEach((event, index) => {
+                    console.log(`🧪 Time-off event ${index + 1}:`, {
+                      id: event.id,
+                      title: event.title,
+                      type: event.type,
+                      start: event.start,
+                      end: event.end
+                    });
+                  });
+                }, 2000);
+              }}
+              className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600"
+            >
+              🧪 Go to Aug 26, 2025 (Time-off Test)
+            </button>
+            <button
+              onClick={() => {
+                console.log('🧪 Manually opening delete time-off modal');
+                setDeleteTimeOffModal({
+                  open: true,
+                  timeOffData: {
+                    timeOffId: 'test-id',
+                    reason: 'Test Time-off',
+                    fromDate: '2025-08-26T00:00:00',
+                    toDate: '2025-08-26T23:59:59'
+                  }
+                });
+              }}
+              className="ml-2 px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+            >
+              🧪 Test Modal
+            </button>
+            <button
+              onClick={() => {
+                console.log('🧪 Checking current events and time-off data');
+                console.log('🧪 All events:', allEvents);
+                console.log('🧪 Original events:', events);
+                console.log('🧪 Test time-off event:', testTimeOffEvent);
+                console.log('🧪 Time-off data:', timeOffData);
+                console.log('🧪 Calendar config:', calendarConfig);
+                console.log('🧪 Date range:', { fromISO, toISO });
+              }}
+              className="ml-2 px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+            >
+              🧪 Debug Data
+            </button>
+          </div>
         </div>
          
 
@@ -1308,7 +1443,7 @@ export const DoctorCalendarPage: React.FC = () => {
             <div className="lg:col-span-1">
               <div className="h-fit">
                 <ShiftDetailsCard 
-              events={events}
+              events={allEvents}
               calendarConfig={calendarConfig}
               isLoading={eventsLoading || configLoading}
             />
@@ -1735,12 +1870,45 @@ export const DoctorCalendarPage: React.FC = () => {
             color: white !important;
             cursor: pointer !important;
             z-index: 15 !important;
+            border-width: 2px !important;
+            font-weight: 600 !important;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3) !important;
           }
           
           .fc-event[data-event-type="timeoff"]:hover {
             background-color: #dc2626 !important;
-            transform: scale(1.02) !important;
+            transform: scale(1.05) !important;
             transition: all 0.2s ease !important;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4) !important;
+            z-index: 25 !important;
+          }
+          
+          /* Test time-off event styling */
+          .fc-event[data-event-id="test-timeoff-event"] {
+            background-color: #dc2626 !important;
+            border-color: #b91c1c !important;
+            color: white !important;
+            font-weight: bold !important;
+            cursor: pointer !important;
+            border-width: 3px !important;
+            box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3) !important;
+            animation: pulse 2s infinite !important;
+            z-index: 30 !important;
+          }
+          
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+          }
+          
+          /* Time-off event content styling */
+          .timeoff-event-content {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-align: center !important;
+            padding: 4px !important;
           }
           
           /* Style for override event content */

@@ -36,6 +36,14 @@ export const DeleteTimeOffDialog: React.FC<DeleteTimeOffDialogProps> = ({
     timeOffData,
     isPending
   });
+  
+  // Add more detailed logging
+  React.useEffect(() => {
+    console.log('🔍 DeleteTimeOffDialog useEffect - isOpen changed:', isOpen);
+    if (isOpen) {
+      console.log('🔍 DeleteTimeOffDialog is now OPEN with data:', timeOffData);
+    }
+  }, [isOpen, timeOffData]);
   const formatDateTime = (dateStr: string) => {
     try {
       return format(new Date(dateStr), 'MMM dd, yyyy HH:mm');
