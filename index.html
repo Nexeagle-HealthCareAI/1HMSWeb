@@ -18,6 +18,20 @@
         document.documentElement.classList.remove('dark');
         document.documentElement.style.colorScheme = 'light';
       }
+      
+      // Ensure React is loaded before any other modules
+      window.addEventListener('DOMContentLoaded', function() {
+        // Wait for React to be available
+        const checkReact = () => {
+          if (typeof React === 'undefined') {
+            console.log('Waiting for React to load...');
+            setTimeout(checkReact, 100);
+          } else {
+            console.log('React loaded successfully');
+          }
+        };
+        checkReact();
+      });
     </script>
     <title>NexEagle HMS</title>
     <meta name="description" content="NexEagle HMS - Healthcare Management System" />

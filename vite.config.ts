@@ -30,27 +30,8 @@ export default defineConfig(({ mode }) => ({
             return 'react-vendor';
           }
           
-          // Other vendor chunks
+          // Group all other node_modules into a single vendor chunk
           if (id.includes('node_modules')) {
-            if (id.includes('react-router-dom')) {
-              return 'router-vendor';
-            }
-            if (id.includes('@tanstack/react-query')) {
-              return 'query-vendor';
-            }
-            if (id.includes('lucide-react')) {
-              return 'ui-vendor';
-            }
-            if (id.includes('@fullcalendar')) {
-              return 'calendar-vendor';
-            }
-            if (id.includes('react-hook-form') || id.includes('@hookform') || id.includes('zod')) {
-              return 'form-vendor';
-            }
-            if (id.includes('axios') || id.includes('zustand') || id.includes('date-fns') || id.includes('clsx') || id.includes('tailwind-merge')) {
-              return 'utils-vendor';
-            }
-            // Group remaining node_modules into a single vendor chunk
             return 'vendor';
           }
         }
