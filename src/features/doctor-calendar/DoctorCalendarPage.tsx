@@ -190,40 +190,8 @@ export const DoctorCalendarPage: React.FC = () => {
   const { data: events = [], isLoading: eventsLoading } = useCalendarEvents(doctorId, fromISO, toISO, calendarConfig);
   const { data: timeOffData, isLoading: timeOffLoading } = useTimeOff(doctorId);
   
-  // Create a test time-off event for debugging
-  const testTimeOffEvent = React.useMemo(() => {
-    if (currentDate.toDateString() === new Date('2025-08-26').toDateString()) {
-      return {
-        id: 'test-timeoff-event',
-        type: 'timeoff' as const,
-        title: 'Test Time-off (Manual)',
-        start: '2025-08-26T00:00:00.000Z',
-        end: '2025-08-26T23:59:59.000Z',
-        backgroundColor: '#ef4444',
-        borderColor: '#dc2626',
-        allDay: true,
-        extendedProps: {
-          type: 'timeoff',
-          timeOffId: 'test-timeoff-id',
-          reason: 'Test Time-off (Manual)',
-          isUpcoming: true,
-          createdAt: new Date().toISOString(),
-          source: 'timeoff'
-        }
-      };
-    }
-    return null;
-  }, [currentDate]);
-  
-  // Combine real events with test event
-  const allEvents = React.useMemo(() => {
-    const combined = [...events];
-    if (testTimeOffEvent) {
-      combined.push(testTimeOffEvent);
-      console.log('🧪 Added test time-off event to calendar');
-    }
-    return combined;
-  }, [events, testTimeOffEvent]);
+  // Use real events directly
+  const allEvents = events;
   
   // Debug time-off data
   React.useEffect(() => {
@@ -285,28 +253,9 @@ export const DoctorCalendarPage: React.FC = () => {
     }))
   });
   
-  // Show time-off events in the UI for debugging
-  if (timeOffEvents.length > 0) {
-    console.log('🎯 Found time-off events! Click on the red blocks to cancel them.');
-    console.log('🎯 Time-off event IDs:', timeOffEvents.map(e => e.id));
-  } else {
-    console.log('📅 No time-off events found in current view. Use the test button to navigate to Aug 26, 2025.');
-    console.log('📅 Current date range:', { fromISO, toISO });
-    console.log('📅 All events:', events.map(e => ({ id: e.id, type: e.type, title: e.title })));
-  }
-  
-  // Monitor modal state changes
-  React.useEffect(() => {
-    console.log('🔍 DeleteTimeOffModal state changed:', deleteTimeOffModal);
-  }, [deleteTimeOffModal]);
 
-  // Add debugging for time-off event clicks
-  const debugTimeOffClick = useCallback((eventId: string) => {
-    console.log('🧪 Debug: Time-off event clicked:', eventId);
-    console.log('🧪 Debug: Current deleteTimeOffModal state:', deleteTimeOffModal);
-    console.log('🧪 Debug: All events:', allEvents);
-    console.log('🧪 Debug: Time-off events:', allEvents.filter(e => e.type === 'timeoff' || e.id?.startsWith('timeoff-')));
-  }, [deleteTimeOffModal, allEvents]);
+
+
 
 
   
@@ -451,31 +400,12 @@ export const DoctorCalendarPage: React.FC = () => {
     
     // Handle time-off events
     if (eventType === 'timeoff' || event.id?.startsWith('timeoff-')) {
-      console.log('🎯 TIME-OFF EVENT DETECTED!');
-      debugTimeOffClick(event.id);
-      
       const timeOffId = event.extendedProps?.timeOffId || event.id?.replace('timeoff-', '');
       const reason = event.extendedProps?.reason || event.title;
       const fromDate = event.start?.toISOString();
       const toDate = event.end?.toISOString();
       
-      console.log('🎯 Time-off event clicked:', { 
-        timeOffId, 
-        reason, 
-        fromDate, 
-        toDate,
-        eventId: event.id,
-        eventType: eventType,
-        extendedProps: event.extendedProps
-      });
-      
       if (timeOffId && fromDate && toDate) {
-        console.log('✅ Opening delete time-off modal with data:', {
-          timeOffId,
-          reason,
-          fromDate,
-          toDate
-        });
         setDeleteTimeOffModal({
           open: true,
           timeOffData: {
@@ -485,10 +415,8 @@ export const DoctorCalendarPage: React.FC = () => {
             toDate
           }
         });
-        console.log('✅ Delete time-off modal state set to open');
-        console.log('✅ Modal state after setting:', deleteTimeOffModal);
       } else {
-        console.warn('❌ Missing data for time-off deletion:', { timeOffId, fromDate, toDate });
+        console.warn('Missing data for time-off deletion:', { timeOffId, fromDate, toDate });
       }
       return; // Stop processing for time-off events
     }
@@ -1166,8 +1094,6 @@ export const DoctorCalendarPage: React.FC = () => {
        reason: payload.title
      };
      
-     console.log('🕒 Time-off request payload:', timeOffRequest);
-     
      createTimeOffMutation.mutate(timeOffRequest, {
        onSuccess: (data) => {
          setSuccessDialog({
@@ -1427,84 +1353,7 @@ export const DoctorCalendarPage: React.FC = () => {
             onAddOverride={handleAddOverride}
           />
           
-          {/* Temporary test button for time-off events */}
-          <div className="px-4 py-2 bg-yellow-100 border-b border-yellow-300">
-            <button
-              onClick={() => {
-                const testDate = new Date('2025-08-26');
-                setCurrentDate(testDate);
-                console.log('🧪 Navigated to test date:', testDate.toISOString());
-                
-                // Force a refresh of the calendar data
-                setTimeout(() => {
-                  console.log('🧪 Checking for time-off events after navigation...');
-                  console.log('🧪 Current events:', allEvents);
-                  const timeOffEvents = allEvents.filter(event => event.type === 'timeoff' || event.id?.startsWith('timeoff-'));
-                  console.log('🧪 Time-off events found:', timeOffEvents.length);
-                  timeOffEvents.forEach((event, index) => {
-                    console.log(`🧪 Time-off event ${index + 1}:`, {
-                      id: event.id,
-                      title: event.title,
-                      type: event.type,
-                      start: event.start,
-                      end: event.end
-                    });
-                  });
-                }, 2000);
-              }}
-              className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600"
-            >
-              🧪 Go to Aug 26, 2025 (Time-off Test)
-            </button>
-            <button
-              onClick={() => {
-                console.log('🧪 Manually opening delete time-off modal');
-                setDeleteTimeOffModal({
-                  open: true,
-                  timeOffData: {
-                    timeOffId: 'test-id',
-                    reason: 'Test Time-off',
-                    fromDate: '2025-08-26T00:00:00',
-                    toDate: '2025-08-26T23:59:59'
-                  }
-                });
-              }}
-              className="ml-2 px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
-            >
-              🧪 Test Modal
-            </button>
-            <button
-              onClick={() => {
-                console.log('🧪 Checking current events and time-off data');
-                console.log('🧪 All events:', allEvents);
-                console.log('🧪 Original events:', events);
-                console.log('🧪 Test time-off event:', testTimeOffEvent);
-                console.log('🧪 Time-off data:', timeOffData);
-                console.log('🧪 Calendar config:', calendarConfig);
-                console.log('🧪 Date range:', { fromISO, toISO });
-              }}
-              className="ml-2 px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
-            >
-              🧪 Debug Data
-            </button>
-            <button
-              onClick={() => {
-                console.log('🧪 Manually triggering delete time-off modal');
-                setDeleteTimeOffModal({
-                  open: true,
-                  timeOffData: {
-                    timeOffId: 'test-timeoff-id',
-                    reason: 'Test Time-off (Manual Trigger)',
-                    fromDate: '2025-08-26T00:00:00.000Z',
-                    toDate: '2025-08-26T23:59:59.000Z'
-                  }
-                });
-              }}
-              className="ml-2 px-3 py-1 bg-purple-500 text-white rounded text-sm hover:bg-purple-600"
-            >
-              🧪 Test Modal
-            </button>
-          </div>
+
         </div>
          
 
