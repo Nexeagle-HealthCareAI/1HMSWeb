@@ -34,5 +34,17 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/app/main.tsx"></script>
+    <script>
+      // Ensure React is loaded before any other modules
+      window.addEventListener('load', function() {
+        if (typeof React === 'undefined') {
+          console.error('React is not loaded properly');
+          // Reload the page if React is not available
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+        }
+      });
+    </script>
   </body>
 </html>

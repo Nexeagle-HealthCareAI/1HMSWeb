@@ -38,7 +38,7 @@ export default defineConfig(({ mode }) => ({
             if (id.includes('@tanstack/react-query')) {
               return 'query-vendor';
             }
-            if (id.includes('lucide-react') || id.includes('@radix-ui')) {
+            if (id.includes('lucide-react')) {
               return 'ui-vendor';
             }
             if (id.includes('@fullcalendar')) {
@@ -52,32 +52,6 @@ export default defineConfig(({ mode }) => ({
             }
             // Group remaining node_modules into a single vendor chunk
             return 'vendor';
-          }
-          
-          // Feature chunks
-          if (id.includes('/features/auth/')) {
-            return 'auth-feature';
-          }
-          if (id.includes('/features/dashboard/') || id.includes('/features/doctor/')) {
-            return 'dashboard-feature';
-          }
-          if (id.includes('/features/appointment/')) {
-            return 'appointment-feature';
-          }
-          if (id.includes('/features/ai/')) {
-            return 'ai-feature';
-          }
-          if (id.includes('/features/profile/')) {
-            return 'profile-feature';
-          }
-          if (id.includes('/features/hospital/')) {
-            return 'hospital-feature';
-          }
-          if (id.includes('/features/billing/')) {
-            return 'billing-feature';
-          }
-          if (id.includes('/features/patient/')) {
-            return 'patient-feature';
           }
         }
       }
@@ -109,12 +83,6 @@ export default defineConfig(({ mode }) => ({
       '@fullcalendar/daygrid',
       '@fullcalendar/timegrid',
       '@fullcalendar/interaction',
-      '@radix-ui/react-dialog',
-      '@radix-ui/react-dropdown-menu',
-      '@radix-ui/react-select',
-      '@radix-ui/react-tabs',
-      '@radix-ui/react-toast',
-      '@radix-ui/react-tooltip',
       'react-hook-form',
       '@hookform/resolvers',
       'zod',
