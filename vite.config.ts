@@ -25,23 +25,59 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     rollupOptions: {
-      external: [],
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
-          'router-vendor': ['react-router-dom'],
-          'ui-vendor': ['lucide-react', '@radix-ui/react-tooltip', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-tabs', '@radix-ui/react-select', '@radix-ui/react-checkbox', '@radix-ui/react-radio-group', '@radix-ui/react-slider', '@radix-ui/react-switch', '@radix-ui/react-toast', '@radix-ui/react-accordion', '@radix-ui/react-alert-dialog', '@radix-ui/react-aspect-ratio', '@radix-ui/react-avatar', '@radix-ui/react-badge', '@radix-ui/react-breadcrumb', '@radix-ui/react-button', '@radix-ui/react-calendar', '@radix-ui/react-card', '@radix-ui/react-carousel', '@radix-ui/react-chart', '@radix-ui/react-collapsible', '@radix-ui/react-command', '@radix-ui/react-context-menu', '@radix-ui/react-drawer', '@radix-ui/react-form', '@radix-ui/react-hover-card', '@radix-ui/react-input-otp', '@radix-ui/react-label', '@radix-ui/react-menubar', '@radix-ui/react-navigation-menu', '@radix-ui/react-pagination', '@radix-ui/react-popover', '@radix-ui/react-progress', '@radix-ui/react-resizable', '@radix-ui/react-scroll-area', '@radix-ui/react-separator', '@radix-ui/react-sheet', '@radix-ui/react-sidebar', '@radix-ui/react-skeleton', '@radix-ui/react-sonner', '@radix-ui/react-table', '@radix-ui/react-textarea', '@radix-ui/react-toggle', '@radix-ui/react-toggle-group', '@radix-ui/react-tooltip'],
-          'query-vendor': ['@tanstack/react-query'],
-          'zustand-vendor': ['zustand'],
-          'axios-vendor': ['axios'],
-          'auth-feature': ['./src/features/auth'],
-          'dashboard-feature': ['./src/features/dashboard', './src/features/doctor'],
-          'appointment-feature': ['./src/features/appointment'],
-          'ai-feature': ['./src/features/ai'],
-          'profile-feature': ['./src/features/profile'],
-          'hospital-feature': ['./src/features/hospital'],
-          'billing-feature': ['./src/features/billing'],
-          'patient-feature': ['./src/features/patient'],
+        manualChunks: (id) => {
+          // React and React-DOM must be bundled together and loaded first
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'react-vendor';
+          }
+          
+          // Other vendor chunks
+          if (id.includes('node_modules')) {
+            if (id.includes('react-router-dom')) {
+              return 'router-vendor';
+            }
+            if (id.includes('lucide-react')) {
+              return 'ui-vendor';
+            }
+            if (id.includes('@tanstack/react-query')) {
+              return 'query-vendor';
+            }
+            if (id.includes('zustand')) {
+              return 'zustand-vendor';
+            }
+            if (id.includes('axios')) {
+              return 'axios-vendor';
+            }
+            // Group remaining node_modules into a single vendor chunk
+            return 'vendor';
+          }
+          
+          // Feature chunks
+          if (id.includes('/features/auth/')) {
+            return 'auth-feature';
+          }
+          if (id.includes('/features/dashboard/') || id.includes('/features/doctor/')) {
+            return 'dashboard-feature';
+          }
+          if (id.includes('/features/appointment/')) {
+            return 'appointment-feature';
+          }
+          if (id.includes('/features/ai/')) {
+            return 'ai-feature';
+          }
+          if (id.includes('/features/profile/')) {
+            return 'profile-feature';
+          }
+          if (id.includes('/features/hospital/')) {
+            return 'hospital-feature';
+          }
+          if (id.includes('/features/billing/')) {
+            return 'billing-feature';
+          }
+          if (id.includes('/features/patient/')) {
+            return 'patient-feature';
+          }
         }
       }
     },
