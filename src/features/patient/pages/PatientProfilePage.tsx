@@ -493,15 +493,15 @@ export const PatientProfilePage: React.FC = () => {
               <div className="flex items-center gap-4 mb-6">
                                  <div className="p-3 bg-primary rounded-lg shadow-sm">
                    <Settings className="h-6 w-6 text-white" />
-                 </div>
-                 <div>
+                </div>
+                <div>
                    <h2 className="text-2xl font-semibold text-foreground mb-2">Customize ePrescription</h2>
                    <p className="text-muted-foreground">Configure prescription templates and settings for better workflow efficiency</p>
-                 </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                 {/* Template Settings */}
+                {/* Template Settings */}
                  <div className="bg-card rounded-lg border border-border p-6">
                    <h3 className="text-lg font-semibold text-foreground mb-4">Template Settings</h3>
                    <p className="text-muted-foreground text-sm mb-4">
@@ -510,7 +510,7 @@ export const PatientProfilePage: React.FC = () => {
                    <Button className="bg-primary hover:bg-primary/90 text-white">
                      Configure Templates
                    </Button>
-                 </div>
+                </div>
 
                  {/* Prescription Settings */}
                  <div className="bg-card rounded-lg border border-border p-6">
@@ -521,7 +521,7 @@ export const PatientProfilePage: React.FC = () => {
                    <Button className="bg-primary hover:bg-primary/90 text-white">
                      Manage Settings
                    </Button>
-                   </div>
+                  </div>
               </div>
             </div>
           )}
