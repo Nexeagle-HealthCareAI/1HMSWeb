@@ -15,13 +15,10 @@ interface RescheduleDialogProps {
   onCancel: () => void;
 }
 
-// Mock available slots for demo
+// TODO: Replace with actual API call
 const generateAvailableSlots = (date: Date) => {
-  const times = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
-  return times.map(time => ({
-    time,
-    isAvailable: Math.random() > 0.3
-  }));
+  // This should call the actual API to get available slots
+  return [];
 };
 
 export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({

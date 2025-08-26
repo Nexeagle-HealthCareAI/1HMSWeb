@@ -29,75 +29,31 @@ import {
   Eye
 } from 'lucide-react';
 
-// Mock data
+// TODO: Replace with actual API data
 const kpiData = {
-  todayAppointments: { value: 42, change: +12, trend: 'up' },
-  weeklyOPD: { value: 284, change: +8, trend: 'up' },
-  monthlyRevenue: { value: 125400, change: -3, trend: 'down' },
-  satisfaction: { value: 4.8, change: +0.2, trend: 'up' }
+  todayAppointments: { value: 0, change: 0, trend: 'up' },
+  weeklyOPD: { value: 0, change: 0, trend: 'up' },
+  monthlyRevenue: { value: 0, change: 0, trend: 'down' },
+  satisfaction: { value: 0, change: 0, trend: 'up' }
 };
 
-const appointmentTrend = [
-  { date: '01', appointments: 35 },
-  { date: '02', appointments: 42 },
-  { date: '03', appointments: 38 },
-  { date: '04', appointments: 51 },
-  { date: '05', appointments: 49 },
-  { date: '06', appointments: 46 },
-  { date: '07', appointments: 52 },
-  { date: '08', appointments: 48 },
-  { date: '09', appointments: 55 },
-  { date: '10', appointments: 42 },
-  { date: '11', appointments: 47 },
-  { date: '12', appointments: 53 },
-  { date: '13', appointments: 49 },
-  { date: '14', appointments: 58 },
-  { date: '15', appointments: 61 }
-];
+// TODO: Replace with actual API data
+const appointmentTrend: Array<{ date: string; appointments: number }> = [];
 
-const departmentLoad = [
-  { name: 'Cardiology', value: 25, color: '#8884d8' },
-  { name: 'Neurology', value: 20, color: '#82ca9d' },
-  { name: 'Orthopedics', value: 18, color: '#ffc658' },
-  { name: 'Pediatrics', value: 15, color: '#ff7c7c' },
-  { name: 'General', value: 12, color: '#8dd1e1' },
-  { name: 'Emergency', value: 10, color: '#d084d0' }
-];
+// TODO: Replace with actual API data
+const departmentLoad: Array<{ name: string; value: number; color: string }> = [];
 
-const revenueByDoctor = [
-  { doctor: 'Dr. Smith', revenue: 45000 },
-  { doctor: 'Dr. Johnson', revenue: 38000 },
-  { doctor: 'Dr. Williams', revenue: 42000 },
-  { doctor: 'Dr. Brown', revenue: 35000 },
-  { doctor: 'Dr. Davis', revenue: 40000 }
-];
+// TODO: Replace with actual API data
+const revenueByDoctor: Array<{ doctor: string; revenue: number }> = [];
 
-const hourlyActivity = [
-  { hour: '8AM', appointments: 12 },
-  { hour: '9AM', appointments: 18 },
-  { hour: '10AM', appointments: 25 },
-  { hour: '11AM', appointments: 22 },
-  { hour: '12PM', appointments: 15 },
-  { hour: '1PM', appointments: 20 },
-  { hour: '2PM', appointments: 28 },
-  { hour: '3PM', appointments: 24 },
-  { hour: '4PM', appointments: 19 },
-  { hour: '5PM', appointments: 14 }
-];
+// TODO: Replace with actual API data
+const hourlyActivity: Array<{ hour: string; appointments: number }> = [];
 
-const recentAppointments = [
-  { id: 1, patient: 'John Doe', doctor: 'Dr. Smith', time: '9:00 AM', type: 'Consultation', status: 'completed' },
-  { id: 2, patient: 'Jane Smith', doctor: 'Dr. Johnson', time: '10:30 AM', type: 'Follow-up', status: 'in-progress' },
-  { id: 3, patient: 'Mike Wilson', doctor: 'Dr. Williams', time: '2:00 PM', type: 'Emergency', status: 'scheduled' },
-  { id: 4, patient: 'Sarah Brown', doctor: 'Dr. Brown', time: '3:30 PM', type: 'Consultation', status: 'cancelled' }
-];
+// TODO: Replace with actual API data
+const recentAppointments: Array<{ id: number; patient: string; doctor: string; time: string; type: string; status: string }> = [];
 
-const doctorPerformance = [
-  { name: 'Dr. Smith', patients: 45, satisfaction: 4.8, revenue: 45000 },
-  { name: 'Dr. Johnson', patients: 38, satisfaction: 4.6, revenue: 38000 },
-  { name: 'Dr. Williams', patients: 42, satisfaction: 4.9, revenue: 42000 },
-  { name: 'Dr. Brown', patients: 35, satisfaction: 4.5, revenue: 35000 }
-];
+// TODO: Replace with actual API data
+const doctorPerformance: Array<{ name: string; patients: number; satisfaction: number; revenue: number }> = [];
 
 interface DashboardOverviewProps {
   renderKPICard: (title: string, icon: React.ReactNode, data: any, isCurrency?: boolean) => React.ReactNode;

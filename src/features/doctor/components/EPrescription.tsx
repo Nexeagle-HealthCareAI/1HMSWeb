@@ -75,21 +75,22 @@ interface Prescription {
   signature: string;
 }
 
+// TODO: Replace with actual patient data from API
 const mockPatient: PatientInfo = {
-  id: 'P001',
-  name: 'John Doe',
-  age: 45,
-  gender: 'Male',
-  contact: '+1 234-567-8900',
-  address: '123 Main St, City, State',
-  allergies: ['Penicillin', 'Shellfish'],
+  id: '',
+  name: '',
+  age: 0,
+  gender: '',
+  contact: '',
+  address: '',
+  allergies: [],
   vitals: {
-    bp: '120/80',
-    hr: '72',
-    temp: '98.6°F',
-    weight: '75kg'
+    bp: '',
+    hr: '',
+    temp: '',
+    weight: ''
   },
-  ongoingMedications: ['Metformin 500mg', 'Lisinopril 10mg']
+  ongoingMedications: []
 };
 
 const frequencyOptions = [

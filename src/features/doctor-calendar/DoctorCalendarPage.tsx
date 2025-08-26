@@ -185,6 +185,8 @@ export const DoctorCalendarPage: React.FC = () => {
       expectedUrl: `/calendar/doctor/config?doctorId=${doctorId}&startDate=${encodeURIComponent(fromISO)}&daysCount=${daysCount}`
     }
   });
+
+
   
   // Mutations
   const createOverrideMutation = useCreateOverride();
@@ -315,9 +317,18 @@ export const DoctorCalendarPage: React.FC = () => {
     const eventType = event.extendedProps?.type;
     const shiftName = event.extendedProps?.shiftName;
     
+    console.log('🔍 Event clicked:', {
+      eventId: event.id,
+      eventType,
+      title: event.title,
+      extendedProps: event.extendedProps,
+      start: event.start,
+      end: event.end
+    });
+    
     // Handle time-off events
-    if (eventType === 'timeoff') {
-      const timeOffId = event.extendedProps?.timeOffId;
+    if (eventType === 'timeoff' || event.id?.startsWith('timeoff-')) {
+      const timeOffId = event.extendedProps?.timeOffId || event.id?.replace('timeoff-', '');
       const reason = event.extendedProps?.reason || event.title;
       const fromDate = event.start?.toISOString();
       const toDate = event.end?.toISOString();
@@ -325,6 +336,12 @@ export const DoctorCalendarPage: React.FC = () => {
       console.log('Time-off event clicked:', { timeOffId, reason, fromDate, toDate });
       
       if (timeOffId && fromDate && toDate) {
+        console.log('Opening delete time-off modal with data:', {
+          timeOffId,
+          reason,
+          fromDate,
+          toDate
+        });
         setDeleteTimeOffModal({
           open: true,
           timeOffData: {
@@ -334,6 +351,7 @@ export const DoctorCalendarPage: React.FC = () => {
             toDate
           }
         });
+        console.log('✅ Delete time-off modal state set to open');
       } else {
         console.warn('Missing data for time-off deletion:', { timeOffId, fromDate, toDate });
       }
@@ -1207,6 +1225,8 @@ export const DoctorCalendarPage: React.FC = () => {
             onViewChange={setView}
             onAddOverride={handleAddOverride}
           />
+          
+
         </div>
          
 

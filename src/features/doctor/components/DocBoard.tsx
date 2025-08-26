@@ -107,69 +107,20 @@ export const ClinicalDashboard: React.FC = () => {
     { id: 'dashboard', name: 'Clinical Dashboard', icon: Activity, description: 'Overview & Analytics' },
   ];
 
-  // Mock data
-  const kpiData: KPIData[] = [
-    {
-      title: "Today's Appointments",
-      value: "24",
-      change: "+12%",
-      icon: Calendar,
-      color: "healthcare-primary"
-    },
-    {
-      title: "Active Patients",
-      value: "156",
-      change: "+8%",
-      icon: Users,
-      color: "healthcare-success"
-    },
-    {
-      title: "Pending Reports",
-      value: "8",
-      change: "-3%",
-      icon: FileText,
-      color: "healthcare-warning"
-    },
-    {
-      title: "Revenue Today",
-      value: "₹45,200",
-      change: "+15%",
-      icon: DollarSign,
-      color: "healthcare-info"
-    }
-  ];
+  // TODO: Replace with actual API data
+  const kpiData: KPIData[] = [];
 
-  const mockPatients: Patient[] = [
-    { id: "P001", name: "Rahul Sharma", contact: "+91-98765-43210", token: "T001", doctor: "Dr. Patel", time: "09:00 AM", status: "confirmed" },
-    { id: "P002", name: "Priya Singh", contact: "+91-98765-43211", token: "T002", doctor: "Dr. Kumar", time: "09:30 AM", status: "confirmed" },
-    { id: "P003", name: "Amit Kumar", contact: "+91-98765-43212", token: "T003", doctor: "Dr. Patel", time: "10:00 AM", status: "cancelled" },
-    { id: "P004", name: "Neha Gupta", contact: "+91-98765-43213", token: "T004", doctor: "Dr. Sharma", time: "10:30 AM", status: "no-show" },
-    { id: "P005", name: "Vikram Singh", contact: "+91-98765-43214", token: "T005", doctor: "Dr. Kumar", time: "11:00 AM", status: "confirmed" }
-  ];
+  // TODO: Replace with actual API data
+  const mockPatients: Patient[] = [];
 
-  const mockAppointments: Appointment[] = [
-    { id: "A001", patientId: "P001", patientName: "Rahul Sharma", doctorName: "Dr. Patel", appointmentTime: "09:00 AM", appointmentDate: format(new Date(), 'yyyy-MM-dd'), tokenNo: 1, vitalsUpdated: true, status: "ready-consultation", phone: "+91-98765-43210" },
-    { id: "A002", patientId: "P002", patientName: "Priya Singh", doctorName: "Dr. Kumar", appointmentTime: "09:30 AM", appointmentDate: format(new Date(), 'yyyy-MM-dd'), tokenNo: 2, vitalsUpdated: false, status: "vitals-required", phone: "+91-98765-43211" },
-    { id: "A003", patientId: "P003", patientName: "Amit Kumar", doctorName: "Dr. Patel", appointmentTime: "10:00 AM", appointmentDate: format(new Date(), 'yyyy-MM-dd'), tokenNo: 3, vitalsUpdated: true, status: "under-consultation", phone: "+91-98765-43212" },
-    { id: "A004", patientId: "P004", patientName: "Neha Gupta", doctorName: "Dr. Sharma", appointmentTime: "10:30 AM", appointmentDate: format(new Date(), 'yyyy-MM-dd'), tokenNo: 4, vitalsUpdated: true, status: "lab-test-required", phone: "+91-98765-43213" },
-    { id: "A005", patientId: "P005", patientName: "Vikram Singh", doctorName: "Dr. Kumar", appointmentTime: "11:00 AM", appointmentDate: format(new Date(), 'yyyy-MM-dd'), tokenNo: 5, vitalsUpdated: false, status: "awaiting-reconsultation", phone: "+91-98765-43214" }
-  ];
+  // TODO: Replace with actual API data
+  const mockAppointments: Appointment[] = [];
 
-  // Mock future appointments for the "Future" tab
-  const mockFutureAppointments: Appointment[] = [
-    { id: "F001", patientId: "P006", patientName: "Sita Devi", doctorName: "Dr. Patel", appointmentTime: "02:00 PM", appointmentDate: format(new Date(), 'yyyy-MM-dd'), tokenNo: 6, vitalsUpdated: false, status: "vitals-required", phone: "+91-98765-43215" },
-    { id: "F002", patientId: "P007", patientName: "Rajesh Kumar", doctorName: "Dr. Sharma", appointmentTime: "03:00 PM", appointmentDate: format(new Date(), 'yyyy-MM-dd'), tokenNo: 7, vitalsUpdated: false, status: "vitals-required", phone: "+91-98765-43216" },
-    { id: "F003", patientId: "P008", patientName: "Meera Singh", doctorName: "Dr. Kumar", appointmentTime: "04:00 PM", appointmentDate: format(new Date(), 'yyyy-MM-dd'), tokenNo: 8, vitalsUpdated: false, status: "vitals-required", phone: "+91-98765-43217" }
-  ];
+  // TODO: Replace with actual API data
+  const mockFutureAppointments: Appointment[] = [];
 
-  // Past appointments data
-  const mockPastAppointments: Appointment[] = [
-    { id: "P001", patientId: "P009", patientName: "Alice Johnson", doctorName: "Dr. Patel", appointmentTime: "09:00 AM", appointmentDate: format(subDays(new Date(), 1), 'yyyy-MM-dd'), tokenNo: 1, vitalsUpdated: true, status: "completed", phone: "+91-98765-43218" },
-    { id: "P002", patientId: "P010", patientName: "Bob Smith", doctorName: "Dr. Kumar", appointmentTime: "10:30 AM", appointmentDate: format(subDays(new Date(), 1), 'yyyy-MM-dd'), tokenNo: 2, vitalsUpdated: true, status: "completed", phone: "+91-98765-43219" },
-    { id: "P003", patientId: "P011", patientName: "Carol Davis", doctorName: "Dr. Sharma", appointmentTime: "02:00 PM", appointmentDate: format(subDays(new Date(), 2), 'yyyy-MM-dd'), tokenNo: 1, vitalsUpdated: true, status: "completed", phone: "+91-98765-43220" },
-    { id: "P004", patientId: "P012", patientName: "David Wilson", doctorName: "Dr. Patel", appointmentTime: "11:15 AM", appointmentDate: format(subDays(new Date(), 3), 'yyyy-MM-dd'), tokenNo: 1, vitalsUpdated: true, status: "completed", phone: "+91-98765-43221" },
-    { id: "P005", patientId: "P013", patientName: "Eva Garcia", doctorName: "Dr. Kumar", appointmentTime: "03:30 PM", appointmentDate: format(subDays(new Date(), 4), 'yyyy-MM-dd'), tokenNo: 1, vitalsUpdated: true, status: "completed", phone: "+91-98765-43222" }
-  ];
+  // TODO: Replace with actual API data
+  const mockPastAppointments: Appointment[] = [];
 
   const getStatusBadge = (status: Patient['status']) => {
     const statusConfig = {

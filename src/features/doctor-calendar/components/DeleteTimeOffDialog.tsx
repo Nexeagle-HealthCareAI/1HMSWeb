@@ -31,6 +31,11 @@ export const DeleteTimeOffDialog: React.FC<DeleteTimeOffDialogProps> = ({
   timeOffData,
   isPending,
 }) => {
+  console.log('🔍 DeleteTimeOffDialog props:', {
+    isOpen,
+    timeOffData,
+    isPending
+  });
   const formatDateTime = (dateStr: string) => {
     try {
       return format(new Date(dateStr), 'MMM dd, yyyy HH:mm');

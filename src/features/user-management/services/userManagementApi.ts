@@ -145,34 +145,10 @@ export const userManagementApi = {
     return apiClient.post(url);
   },
 
-  // Get onboarded users (mock data for now)
+  // Get onboarded users
   getOnboardedUsers: (): Promise<OnboardedUser[]> => {
     // TODO: Replace with actual API call when endpoint is ready
-    // return apiClient.get(API_ENDPOINTS.USER_MANAGEMENT.GET_ONBOARDED_USERS);
-    
-    // Mock data for development
-    return Promise.resolve([
-      {
-        userId: '1',
-        name: 'Dr. Sarah Johnson',
-        email: 'sarah.johnson@hospital.com',
-        mobile: '+1-555-0103',
-        roleName: 'Doctor',
-        status: 'active',
-        onboardedAt: '2024-01-10T08:00:00Z',
-        lastLogin: '2024-01-15T09:30:00Z'
-      },
-      {
-        userId: '2',
-        name: 'Nurse Maria Garcia',
-        email: 'maria.garcia@hospital.com',
-        mobile: '+1-555-0104',
-        roleName: 'Nurse',
-        status: 'active',
-        onboardedAt: '2024-01-08T10:00:00Z',
-        lastLogin: '2024-01-15T08:15:00Z'
-      }
-    ]);
+    return apiClient.get(API_ENDPOINTS.USER_MANAGEMENT.GET_ONBOARDED_USERS);
   },
 
   // Get all users associated with a hospital

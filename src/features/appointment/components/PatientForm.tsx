@@ -189,7 +189,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     size="sm"
                     className="w-full h-7 text-xs"
                     onClick={() => {
-                      // Mock search functionality - replace with actual API call
+                      // TODO: Replace with actual API call
                       console.log('Searching for:', searchQuery);
                     }}
                   >

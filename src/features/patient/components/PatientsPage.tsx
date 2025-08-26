@@ -57,58 +57,8 @@ export const PatientsPage: React.FC = () => {
       setTotalPatients(response.pagination?.total || 0);
     } catch (error) {
       console.error('Error fetching patients:', error);
-      // Fallback to mock data for demonstration
-      setPatients([
-        {
-          id: 'P001',
-          name: 'John Doe',
-          email: 'john.doe@email.com',
-          phone: '+1234567890',
-          date_of_birth: '1990-05-15',
-          gender: 'male',
-          blood_type: 'O+',
-          address: '123 Main St, City, State',
-          emergency_contact: {
-            name: 'Jane Doe',
-            relationship: 'Spouse',
-            phone: '+1234567891'
-          },
-          insurance_info: {
-            provider: 'Blue Cross',
-            policy_number: 'BC123456789',
-            group_number: 'GRP001'
-          },
-          medical_history: 'Hypertension, Diabetes',
-          allergies: ['Penicillin'],
-          created_at: '2024-01-15T10:00:00Z',
-          updated_at: '2024-01-15T10:00:00Z'
-        },
-        {
-          id: 'P002',
-          name: 'Sarah Johnson',
-          email: 'sarah.johnson@email.com',
-          phone: '+1234567892',
-          date_of_birth: '1985-08-22',
-          gender: 'female',
-          blood_type: 'A+',
-          address: '456 Oak Ave, City, State',
-          emergency_contact: {
-            name: 'Mike Johnson',
-            relationship: 'Husband',
-            phone: '+1234567893'
-          },
-          insurance_info: {
-            provider: 'Aetna',
-            policy_number: 'AE987654321',
-            group_number: 'GRP002'
-          },
-          medical_history: 'Asthma',
-          allergies: ['Dairy'],
-          created_at: '2024-01-10T14:30:00Z',
-          updated_at: '2024-01-10T14:30:00Z'
-        }
-      ]);
-      setTotalPatients(2);
+      setPatients([]);
+      setTotalPatients(0);
     } finally {
       setLoading(false);
     }

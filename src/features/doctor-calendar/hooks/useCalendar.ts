@@ -68,7 +68,11 @@ export function useCalendarEvents(doctorId: string, fromISO: string, toISO: stri
         fromISO,
         toISO,
         calendarConfig: calendarConfig ? 'present' : 'undefined',
-        shiftInfoCount: calendarConfig?.shiftInfo?.length || 0
+        shiftInfoCount: calendarConfig?.shiftInfo?.length || 0,
+        dateRange: {
+          from: new Date(fromISO).toISOString(),
+          to: new Date(toISO).toISOString()
+        }
       });
 
       // Log the entire calendarConfig structure for debugging
@@ -249,6 +253,7 @@ export function useCalendarEvents(doctorId: string, fromISO: string, toISO: stri
             borderColor: '#dc2626',
             allDay: true, // Time-off events are typically all-day
             extendedProps: {
+              type: 'timeoff', // Add type to extendedProps as backup
               timeOffId: timeOff.timeOffId,
               reason: timeOff.reason,
               isUpcoming: timeOff.isUpcoming,
@@ -288,7 +293,8 @@ export function useCalendarEvents(doctorId: string, fromISO: string, toISO: stri
             eventStart: eventStart.toISOString(),
             eventEnd: eventEnd.toISOString(),
             rangeStart: rangeStart.toISOString(),
-            rangeEnd: rangeEnd.toISOString()
+            rangeEnd: rangeEnd.toISOString(),
+            isTimeOff: event.type === 'timeoff' || event.id?.startsWith('timeoff-')
           });
         }
         
@@ -296,6 +302,21 @@ export function useCalendarEvents(doctorId: string, fromISO: string, toISO: stri
       });
 
       console.log('📅 Final generated events:', filteredEvents.length, 'out of', allEvents.length, 'total events');
+      
+      // Log time-off events specifically
+      const timeOffEvents = filteredEvents.filter(event => event.type === 'timeoff' || event.id?.startsWith('timeoff-'));
+      console.log('📅 Time-off events in final result:', timeOffEvents.length);
+      timeOffEvents.forEach((event, index) => {
+        console.log(`📅 Time-off event ${index + 1}:`, {
+          id: event.id,
+          type: event.type,
+          title: event.title,
+          start: event.start,
+          end: event.end,
+          extendedProps: event.extendedProps
+        });
+      });
+      
       return filteredEvents;
     },
     enabled: !!doctorId && !!fromISO && !!toISO && (calendarConfig !== undefined),
