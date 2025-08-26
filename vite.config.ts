@@ -25,13 +25,13 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     rollupOptions: {
+      external: ['react', 'react-dom'],
       output: {
+        globals: {
+          'react': 'React',
+          'react-dom': 'ReactDOM'
+        },
         manualChunks: (id) => {
-          // React and React-DOM must be bundled together and loaded first
-          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
-            return 'react-vendor';
-          }
-          
           // Other vendor chunks
           if (id.includes('node_modules')) {
             if (id.includes('react-router-dom')) {
