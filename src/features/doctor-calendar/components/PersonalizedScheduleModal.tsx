@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ShiftName, CreateOverridePayload, BlockType, CreateBlockPayload } from '../api/types';
 import { format, parseISO, addDays, addWeeks, addMonths } from 'date-fns';
-import { Clock, Calendar, Repeat, Sun, Moon, Sunrise, Sunset } from 'lucide-react';
+import { Clock, Calendar, Repeat, Sun, Moon, Sunrise, Sunset, Info, AlertCircle, CheckCircle } from 'lucide-react';
 import { CalendarService, CalendarViewType, DateRange } from '../services/calendarService';
 import { DateRangeSelectionPopup } from './DateRangeSelectionPopup';
 
@@ -87,7 +87,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
   isLoading = false
 }) => {
   const [selectedShifts, setSelectedShifts] = useState<Set<ShiftName>>(new Set());
-       const [shiftConfigs, setShiftConfigs] = useState<Record<ShiftName, {
+  const [shiftConfigs, setShiftConfigs] = useState<Record<ShiftName, {
     startTime: string;
     endTime: string;
     slotDuration: number;
@@ -100,7 +100,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
     Night: { startTime: '22:00', endTime: '06:00', slotDuration: 15, maxPatients: '', enabled: false }
   });
 
-                 const [scheduleType, setScheduleType] = useState<'schedule' | 'block'>(
+  const [scheduleType, setScheduleType] = useState<'schedule' | 'block'>(
     initialStartDateTime && initialEndDateTime ? 'block' : 'schedule'
   );
   const [startDate, setStartDate] = useState(initialDate || '');
@@ -109,21 +109,18 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
   // Date range selection state
   const [showDateRangePopup, setShowDateRangePopup] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | null>(null);
-     const [scheduleMode, setScheduleMode] = useState<'single' | 'recurring'>('single');
-   const [recurringDays, setRecurringDays] = useState<Set<number>>(new Set([1, 2, 3, 4, 5])); // Mon-Fri
-   const [recurringEndDate, setRecurringEndDate] = useState('');
+  const [scheduleMode, setScheduleMode] = useState<'single' | 'recurring'>('single');
+  const [recurringDays, setRecurringDays] = useState<Set<number>>(new Set([1, 2, 3, 4, 5])); // Mon-Fri
+  const [recurringEndDate, setRecurringEndDate] = useState('');
 
-     // Block form state
-     const [blockFormData, setBlockFormData] = useState({
+  // Block form state
+  const [blockFormData, setBlockFormData] = useState({
     blockType: 'Personal' as BlockType,
     startDateTime: '',
     endDateTime: ''
   });
 
-  // Confirmation dialog state
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [pendingPayloads, setPendingPayloads] = useState<CreateOverridePayload[]>([]);
-  const [pendingBlockPayload, setPendingBlockPayload] = useState<CreateBlockPayload | null>(null);
+
 
   // Initialize dates and block form data
   useEffect(() => {
@@ -211,13 +208,83 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
   };
 
   const handleDayToggle = (dayIndex: number) => {
-    const newDays = new Set(recurringDays);
-    if (newDays.has(dayIndex)) {
-      newDays.delete(dayIndex);
+    const newRecurringDays = new Set(recurringDays);
+    if (newRecurringDays.has(dayIndex)) {
+      newRecurringDays.delete(dayIndex);
     } else {
-      newDays.add(dayIndex);
+      newRecurringDays.add(dayIndex);
     }
-    setRecurringDays(newDays);
+    setRecurringDays(newRecurringDays);
+  };
+
+  const generatePayloads = (): CreateOverridePayload[] => {
+    const payloads: CreateOverridePayload[] = [];
+    
+    if (scheduleMode === 'single') {
+      // Single day schedule
+      const payload: CreateOverridePayload = {
+        doctorId,
+        overrideDate: startDate,
+        startDate,
+        endDate,
+        shiftDetails: Array.from(selectedShifts).map(shiftName => {
+          const config = shiftConfigs[shiftName];
+          return {
+            shiftName,
+            startTime: config.startTime,
+            endTime: config.endTime,
+            slotDurationInMinutes: config.slotDuration,
+            recurringDays: []
+          };
+        })
+      };
+      payloads.push(payload);
+    } else {
+      // Recurring schedule
+      const start = parseISO(startDate);
+      const end = parseISO(recurringEndDate);
+      const days = Array.from(recurringDays);
+      
+      let currentDate = start;
+      while (currentDate <= end) {
+        const dayOfWeek = currentDate.getDay();
+        const adjustedDayOfWeek = dayOfWeek === 0 ? 7 : dayOfWeek; // Convert Sunday from 0 to 7
+        
+        if (days.includes(adjustedDayOfWeek)) {
+          const dateStr = format(currentDate, 'yyyy-MM-dd');
+          const payload: CreateOverridePayload = {
+            doctorId,
+            overrideDate: dateStr,
+            startDate: dateStr,
+            endDate: dateStr,
+            shiftDetails: Array.from(selectedShifts).map(shiftName => {
+              const config = shiftConfigs[shiftName];
+              return {
+                shiftName,
+                startTime: config.startTime,
+                endTime: config.endTime,
+                slotDurationInMinutes: config.slotDuration,
+                recurringDays: days.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d - 1])
+              };
+            })
+          };
+          payloads.push(payload);
+        }
+        currentDate = addDays(currentDate, 1);
+      }
+    }
+    
+    return payloads;
+  };
+
+  const generateTimeOffPayload = (): CreateBlockPayload => {
+    return {
+      doctorId,
+      title: `${blockFormData.blockType} - Time Off`,
+      blockType: blockFormData.blockType,
+      startDateTime: blockFormData.startDateTime,
+      endDateTime: blockFormData.endDateTime
+    };
   };
 
   // Handle date range selection
@@ -236,91 +303,11 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
     setShowDateRangePopup(false);
   };
 
-  // Confirmation handlers
-  const handleConfirmSave = () => {
-    setShowConfirmation(false);
-    
-    if (pendingPayloads.length > 0) {
-      onSave(pendingPayloads);
-      setPendingPayloads([]);
-    } else if (pendingBlockPayload) {
-      if (onSaveBlock) {
-        onSaveBlock(pendingBlockPayload);
-      }
-      setPendingBlockPayload(null);
-    }
-  };
-
-  const handleCancelSave = () => {
-    setShowConfirmation(false);
-    setPendingPayloads([]);
-    setPendingBlockPayload(null);
-  };
 
 
 
-  const generatePayloads = (): CreateOverridePayload[] => {
-       const payloads: CreateOverridePayload[] = [];
-       
-       // Convert recurring days to abbreviated day names for database
-       const getDayAbbreviation = (dayNumber: number): string => {
-         const dayAbbreviations = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-         return dayAbbreviations[dayNumber === 0 ? 0 : dayNumber - 1];
-       };
-       
-       const recurringDayAbbreviations = Array.from(recurringDays).map(day => getDayAbbreviation(day));
-       
-       if (scheduleMode === 'single') {
-         // Single day schedule - one payload per shift
-         selectedShifts.forEach(shiftName => {
-           const config = shiftConfigs[shiftName];
-           if (config.enabled) {
-             const overrideDate = new Date(startDate + 'T00:00:00').toISOString();
-             const startDateISO = overrideDate;
-             const endDateISO = overrideDate;
-             
-             payloads.push({
-               doctorId,
-               overrideDate,
-               startDate: startDateISO,
-               endDate: endDateISO,
-               shiftDetails: [{
-                 shiftName,
-                 startTime: config.startTime,
-                 endTime: config.endTime,
-                 slotDurationInMinutes: config.slotDuration,
-                 recurringDays: []
-               }]
-             });
-           }
-         });
-       } else {
-         // Recurring schedule - one payload per shift with recurring days
-         selectedShifts.forEach(shiftName => {
-           const config = shiftConfigs[shiftName];
-           if (config.enabled) {
-             const startDateISO = new Date(startDate + 'T00:00:00').toISOString();
-             const endDateISO = new Date(recurringEndDate + 'T00:00:00').toISOString();
-             
-             payloads.push({
-               doctorId,
-               overrideDate: startDateISO,
-               startDate: startDateISO,
-               endDate: endDateISO,
-               shiftDetails: [{
-                 shiftName,
-                 startTime: config.startTime,
-                 endTime: config.endTime,
-                 slotDurationInMinutes: config.slotDuration,
-                 recurringDays: recurringDayAbbreviations
-               }]
-             });
-           }
-         });
-       }
 
-       return payloads;
-     };
+
 
      const handleSubmit = (e: React.FormEvent) => {
      e.preventDefault();
@@ -367,8 +354,8 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
 
          const payloads = generatePayloads();
     if (payloads.length > 0) {
-      setPendingPayloads(payloads);
-      setShowConfirmation(true);
+      onSave(payloads);
+      onOpenChange(false);
     }
    };
 
@@ -398,8 +385,10 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
         endDateTime: endDate.toISOString()
       };
       
-      setPendingBlockPayload(payload);
-      setShowConfirmation(true);
+      if (onSaveBlock) {
+        onSaveBlock(payload);
+        onOpenChange(false);
+      }
     } catch (error) {
       console.error('Error creating time-off payload:', error);
     }
@@ -507,80 +496,68 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Personalized Schedule Configuration
-          </DialogTitle>
-        </DialogHeader>
-        
-                 <form onSubmit={scheduleType === 'block' ? handleBlockSubmit : handleSubmit} className="space-y-6">
-           {/* Schedule Type Selection */}
-           <div className="space-y-3">
-             <Label className="text-base font-semibold">Configuration Type</Label>
-                           <Tabs value={scheduleType} onValueChange={(value) => setScheduleType(value as 'schedule' | 'block')}>
+        <DialogContent className="sm:max-w-[900px] max-h-[85vh] overflow-hidden">
+          <DialogHeader className="pb-4">
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <Calendar className="h-5 w-5" />
+              Schedule & Time Off Management
+            </DialogTitle>
+          </DialogHeader>
+          
+          <form onSubmit={scheduleType === 'block' ? handleBlockSubmit : handleSubmit} className="h-full flex flex-col">
+            {/* Schedule Type Selection */}
+            <div className="mb-4">
+              <Tabs value={scheduleType} onValueChange={(value) => setScheduleType(value as 'schedule' | 'block')}>
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="schedule">Schedule Management</TabsTrigger>
-                  <TabsTrigger value="block">Time Off</TabsTrigger>
+                  <TabsTrigger value="schedule" className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Schedule
+                  </TabsTrigger>
+                  <TabsTrigger value="block" className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    Time Off
+                  </TabsTrigger>
                 </TabsList>
-              
-                                             <TabsContent value="schedule" className="space-y-4">
-                  {/* Schedule Mode Selection */}
-                  <div className="space-y-3">
-                    <Label className="text-base font-semibold">Schedule Type</Label>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant={scheduleMode === 'single' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setScheduleMode('single')}
-                        className="flex-1"
-                      >
-                        <Calendar className="h-4 w-4 mr-2" />
-                        Single Day
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={scheduleMode === 'recurring' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setScheduleMode('recurring')}
-                        className="flex-1"
-                      >
-                        <Repeat className="h-4 w-4 mr-2" />
-                        Recurring
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Date Configuration */}
-                  {scheduleMode === 'single' ? (
+                
+                <div className="mt-4 h-[calc(85vh-200px)] overflow-y-auto">
+                  <TabsContent value="schedule" className="space-y-4 h-full">
+                    {/* Schedule Mode Selection */}
                     <div className="space-y-3">
-                      <div>
-                        <Label htmlFor="startDate">Schedule Date</Label>
-                        <Input
-                          id="startDate"
-                          type="date"
-                          value={startDate}
-                          min={getMinDate()}
-                          onChange={(e) => setStartDate(e.target.value)}
-                          required
-                        />
+                      <Label className="text-sm font-semibold flex items-center gap-2">
+                        <Info className="h-4 w-4" />
+                        Schedule Type
+                      </Label>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant={scheduleMode === 'single' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setScheduleMode('single')}
+                          className="flex-1"
+                        >
+                          <Calendar className="h-4 w-4 mr-2" />
+                          Single Day
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={scheduleMode === 'recurring' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setScheduleMode('recurring')}
+                          className="flex-1"
+                        >
+                          <Repeat className="h-4 w-4 mr-2" />
+                          Recurring
+                        </Button>
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        Schedule for: {formatDate(startDate)}
-                      </p>
-                      <p className="text-xs text-amber-600">
-                        ⚠️ Only future dates are allowed (tomorrow and onwards)
-                      </p>
                     </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
+
+                    {/* Date Configuration */}
+                    {scheduleMode === 'single' ? (
+                      <div className="space-y-3">
                         <div>
-                          <Label htmlFor="recurringStartDate">Start Date</Label>
+                          <Label htmlFor="startDate">Schedule Date</Label>
                           <Input
-                            id="recurringStartDate"
+                            id="startDate"
                             type="date"
                             value={startDate}
                             min={getMinDate()}
@@ -588,601 +565,312 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                             required
                           />
                         </div>
-                        <div>
-                          <Label htmlFor="recurringEndDate">End Date</Label>
-                          <Input
-                            id="recurringEndDate"
-                            type="date"
-                            value={recurringEndDate}
-                            min={startDate}
-                            onChange={(e) => setRecurringEndDate(e.target.value)}
-                            required
-                          />
+                        <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-md">
+                          <Calendar className="h-4 w-4 text-blue-600" />
+                          <span className="text-sm text-blue-800">{formatDate(startDate)}</span>
                         </div>
                       </div>
-                      <p className="text-xs text-amber-600">
-                        ⚠️ Start date must be tomorrow or later. End date must be after start date.
-                      </p>
-                      
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label htmlFor="recurringStartDate">Start Date</Label>
+                            <Input
+                              id="recurringStartDate"
+                              type="date"
+                              value={startDate}
+                              min={getMinDate()}
+                              onChange={(e) => setStartDate(e.target.value)}
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="recurringEndDate">End Date</Label>
+                            <Input
+                              id="recurringEndDate"
+                              type="date"
+                              value={recurringEndDate}
+                              min={startDate}
+                              onChange={(e) => setRecurringEndDate(e.target.value)}
+                              required
+                            />
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <Label className="text-sm font-medium">Recurring Days</Label>
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {DAYS.map(day => (
+                              <Button
+                                key={day.index}
+                                type="button"
+                                variant={recurringDays.has(day.index) ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handleDayToggle(day.index)}
+                                className="h-7 px-2 text-xs"
+                              >
+                                {day.short}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Shift Selection */}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-semibold">Select Shifts</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {SHIFT_TEMPLATES.map((template) => (
+                          <Card
+                            key={template.name}
+                            className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
+                              selectedShifts.has(template.name)
+                                ? 'ring-2 ring-blue-500 bg-blue-50'
+                                : 'hover:bg-gray-50'
+                            }`}
+                            onClick={() => handleShiftToggle(template.name)}
+                          >
+                            <CardContent className="p-3">
+                              <div className="flex items-center gap-2">
+                                <div className={`p-1 rounded ${template.color}`}>
+                                  {template.icon}
+                                </div>
+                                <div className="flex-1">
+                                  <h4 className="font-medium text-sm">{template.name}</h4>
+                                  <p className="text-xs text-gray-600">{template.description}</p>
+                                </div>
+                                <Switch
+                                  checked={selectedShifts.has(template.name)}
+                                  onCheckedChange={() => handleShiftToggle(template.name)}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Shift Configuration */}
+                    {selectedShifts.size > 0 && (
+                      <div className="space-y-3">
+                        <Label className="text-sm font-semibold">Shift Configuration</Label>
+                        <div className="space-y-2">
+                          {Array.from(selectedShifts).map((shiftName) => {
+                            const config = shiftConfigs[shiftName];
+                            const template = SHIFT_TEMPLATES.find(t => t.name === shiftName);
+                            
+                            return (
+                              <Card key={shiftName} className="p-3">
+                                <div className="flex items-center gap-3">
+                                  <div className={`p-2 rounded ${template?.color}`}>
+                                    {template?.icon}
+                                  </div>
+                                  <div className="flex-1">
+                                    <h4 className="font-medium text-sm">{shiftName}</h4>
+                                    <div className="grid grid-cols-3 gap-2 mt-2">
+                                      <div>
+                                        <Label className="text-xs">Start Time</Label>
+                                        <Input
+                                          type="time"
+                                          value={config.startTime}
+                                          onChange={(e) => setShiftConfigs(prev => ({
+                                            ...prev,
+                                            [shiftName]: { ...prev[shiftName], startTime: e.target.value }
+                                          }))}
+                                          className="h-8 text-xs"
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label className="text-xs">End Time</Label>
+                                        <Input
+                                          type="time"
+                                          value={config.endTime}
+                                          onChange={(e) => setShiftConfigs(prev => ({
+                                            ...prev,
+                                            [shiftName]: { ...prev[shiftName], endTime: e.target.value }
+                                          }))}
+                                          className="h-8 text-xs"
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label className="text-xs">Duration (min)</Label>
+                                        <Input
+                                          type="number"
+                                          value={config.slotDuration}
+                                          onChange={(e) => setShiftConfigs(prev => ({
+                                            ...prev,
+                                            [shiftName]: { ...prev[shiftName], slotDuration: parseInt(e.target.value) || 15 }
+                                          }))}
+                                          className="h-8 text-xs"
+                                          min="5"
+                                          max="60"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="block" className="space-y-4 h-full">
+                    <div className="space-y-4">
+                      {/* Block Type Selection */}
                       <div>
-                        <Label className="text-sm font-medium">Recurring Days</Label>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {DAYS.map(day => (
-                            <Button
-                              key={day.index}
-                              type="button"
-                              variant={recurringDays.has(day.index) ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => handleDayToggle(day.index)}
-                              className="h-8 px-3"
-                            >
-                              {day.short}
-                            </Button>
-                          ))}
-                        </div>
+                        <Label htmlFor="blockType" className="text-sm font-semibold">Type of Time Off</Label>
+                        <Select
+                          value={blockFormData.blockType}
+                          onValueChange={(value: BlockType) => setBlockFormData(prev => ({ ...prev, blockType: value }))}
+                        >
+                          <SelectTrigger className="mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Annual Leave" className={getBlockTypeColor('Annual Leave')}>
+                              Annual Leave
+                            </SelectItem>
+                            <SelectItem value="Sick Leave" className={getBlockTypeColor('Sick Leave')}>
+                              Sick Leave
+                            </SelectItem>
+                            <SelectItem value="Personal" className={getBlockTypeColor('Personal')}>
+                              Personal
+                            </SelectItem>
+                            <SelectItem value="Conference" className={getBlockTypeColor('Conference')}>
+                              Conference
+                            </SelectItem>
+                            <SelectItem value="Training" className={getBlockTypeColor('Training')}>
+                              Training
+                            </SelectItem>
+                            <SelectItem value="Meeting" className={getBlockTypeColor('Meeting')}>
+                              Meeting
+                            </SelectItem>
+                            <SelectItem value="Emergency" className={getBlockTypeColor('Emergency')}>
+                              Emergency
+                            </SelectItem>
+                            <SelectItem value="Other" className={getBlockTypeColor('Other')}>
+                              Other
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                    </div>
-                  )}
-                </TabsContent>
-              
-                             
-
-                                               <TabsContent value="block" className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="blockType">Type of Time Off</Label>
-                   <Select
-                     value={blockFormData.blockType}
-                     onValueChange={(value: BlockType) => setBlockFormData(prev => ({ ...prev, blockType: value }))}
-                   >
-                     <SelectTrigger>
-                       <SelectValue />
-                     </SelectTrigger>
-                                           <SelectContent>
-                        <SelectItem value="Annual Leave" className={getBlockTypeColor('Annual Leave')}>
-                          Annual Leave
-                        </SelectItem>
-                        <SelectItem value="Sick Leave" className={getBlockTypeColor('Sick Leave')}>
-                          Sick Leave
-                        </SelectItem>
-                        <SelectItem value="Personal" className={getBlockTypeColor('Personal')}>
-                          Personal
-                        </SelectItem>
-                        <SelectItem value="Conference" className={getBlockTypeColor('Conference')}>
-                          Conference
-                        </SelectItem>
-                        <SelectItem value="Training" className={getBlockTypeColor('Training')}>
-                          Training
-                        </SelectItem>
-                        <SelectItem value="Meeting" className={getBlockTypeColor('Meeting')}>
-                          Meeting
-                        </SelectItem>
-                        <SelectItem value="Emergency" className={getBlockTypeColor('Emergency')}>
-                          Emergency
-                        </SelectItem>
-                        <SelectItem value="Other" className={getBlockTypeColor('Other')}>
-                          Other
-                        </SelectItem>
-                      </SelectContent>
-                   </Select>
-                 </div>
-                 
-                                   <div className="space-y-4">
-                    {/* Start Date & Time */}
-                    <div className="space-y-3">
-                      <Label className="text-sm font-medium">Start Date & Time</Label>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label htmlFor="blockStartDate" className="text-xs text-muted-foreground">Date</Label>
-                          <Input
-                            id="blockStartDate"
-                            type="date"
-                            value={blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[0] : ''}
-                            min={format(new Date(), 'yyyy-MM-dd')}
-                            onChange={(e) => {
-                              const date = e.target.value;
-                              const time = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[1] : '09:00';
-                              setBlockFormData(prev => ({ 
-                                ...prev, 
-                                startDateTime: `${date}T${time}` 
-                              }));
-                            }}
-                            required
-                          />
+                      
+                      {/* Date & Time Selection */}
+                      <div className="grid grid-cols-2 gap-4">
+                        {/* Start Date & Time */}
+                        <div className="space-y-2">
+                          <Label className="text-sm font-semibold">Start Date & Time</Label>
+                          <div className="space-y-2">
+                            <Input
+                              type="date"
+                              value={blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[0] : ''}
+                              min={format(new Date(), 'yyyy-MM-dd')}
+                              onChange={(e) => {
+                                const date = e.target.value;
+                                const time = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[1] : '09:00';
+                                setBlockFormData(prev => ({ 
+                                  ...prev, 
+                                  startDateTime: `${date}T${time}` 
+                                }));
+                              }}
+                              required
+                            />
+                            <Input
+                              type="time"
+                              value={blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[1] : '09:00'}
+                              onChange={(e) => {
+                                const date = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
+                                setBlockFormData(prev => ({ 
+                                  ...prev, 
+                                  startDateTime: `${date}T${e.target.value}` 
+                                }));
+                              }}
+                              required
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <Label htmlFor="blockStartTime" className="text-xs text-muted-foreground">Time</Label>
-                          <div className="flex gap-1">
-                            <Select
-                              value={blockFormData.startDateTime ? 
-                                (() => {
-                                  const time = blockFormData.startDateTime.split('T')[1];
-                                  const [hours, minutes] = time.split(':');
-                                  const hour12 = parseInt(hours) % 12 || 12;
-                                  return `${hour12.toString().padStart(2, '0')}:${minutes}`;
-                                })() : '10:30'
-                              }
-                              onValueChange={(value) => {
-                                const date = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
-                                const currentTime = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[1] : '10:30';
-                                const [, minutes] = currentTime.split(':');
-                                const currentHour = parseInt(currentTime.split(':')[0]);
-                                const isCurrentlyPM = currentHour >= 12;
-                                
-                                const [hour12, newMinutes] = value.split(':');
-                                let hour24 = parseInt(hour12);
-                                if (isCurrentlyPM && hour24 !== 12) hour24 += 12;
-                                if (!isCurrentlyPM && hour24 === 12) hour24 = 0;
-                                
-                                const time24 = `${hour24.toString().padStart(2, '0')}:${newMinutes}`;
+
+                        {/* End Date & Time */}
+                        <div className="space-y-2">
+                          <Label className="text-sm font-semibold">End Date & Time</Label>
+                          <div className="space-y-2">
+                            <Input
+                              type="date"
+                              value={blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[0] : ''}
+                              min={blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd')}
+                              onChange={(e) => {
+                                const date = e.target.value;
+                                const time = blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[1] : '17:00';
                                 setBlockFormData(prev => ({ 
                                   ...prev, 
-                                  startDateTime: `${date}T${time24}` 
+                                  endDateTime: `${date}T${time}` 
                                 }));
                               }}
-                            >
-                              <SelectTrigger className="w-20 h-8 text-sm">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Array.from({ length: 48 }, (_, i) => {
-                                  const totalMinutes = i * 30;
-                                  const hours = Math.floor(totalMinutes / 60);
-                                  const minutes = totalMinutes % 60;
-                                  const hour12 = hours % 12 || 12;
-                                  return (
-                                    <SelectItem key={i} value={`${hour12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`}>
-                                      {hour12}:{minutes.toString().padStart(2, '0')}
-                                    </SelectItem>
-                                  );
-                                })}
-                              </SelectContent>
-                            </Select>
-                            <Select
-                              value={blockFormData.startDateTime ? 
-                                (parseInt(blockFormData.startDateTime.split('T')[1].split(':')[0]) >= 12 ? 'PM' : 'AM') : 'AM'
-                              }
-                              onValueChange={(value) => {
-                                const date = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
-                                const currentTime = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[1] : '10:30';
-                                const [hours, minutes] = currentTime.split(':');
-                                let hour24 = parseInt(hours);
-                                
-                                if (value === 'PM' && hour24 < 12) {
-                                  hour24 += 12;
-                                } else if (value === 'AM' && hour24 >= 12) {
-                                  hour24 -= 12;
-                                }
-                                
-                                const time24 = `${hour24.toString().padStart(2, '0')}:${minutes}`;
+                              required
+                            />
+                            <Input
+                              type="time"
+                              value={blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[1] : '17:00'}
+                              onChange={(e) => {
+                                const date = blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
                                 setBlockFormData(prev => ({ 
                                   ...prev, 
-                                  startDateTime: `${date}T${time24}` 
+                                  endDateTime: `${date}T${e.target.value}` 
                                 }));
                               }}
-                            >
-                              <SelectTrigger className="w-16 h-8 text-sm">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="AM">AM</SelectItem>
-                                <SelectItem value="PM">PM</SelectItem>
-                              </SelectContent>
-                            </Select>
+                              required
+                            />
                           </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* End Date & Time */}
-                    <div className="space-y-3">
-                      <Label className="text-sm font-medium">End Date & Time</Label>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label htmlFor="blockEndDate" className="text-xs text-muted-foreground">Date</Label>
-                          <Input
-                            id="blockEndDate"
-                            type="date"
-                            value={blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[0] : ''}
-                            min={blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd')}
-                            onChange={(e) => {
-                              const date = e.target.value;
-                              const time = blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[1] : '17:00';
-                              setBlockFormData(prev => ({ 
-                                ...prev, 
-                                endDateTime: `${date}T${time}` 
-                              }));
-                            }}
-                            required
-                          />
+                      {/* Summary */}
+                      <Card className="p-3 bg-gray-50">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span className="text-sm font-medium">Time Off Summary</span>
                         </div>
-                        <div>
-                          <Label htmlFor="blockEndTime" className="text-xs text-muted-foreground">Time</Label>
-                          <div className="flex gap-1">
-                            <Select
-                              value={blockFormData.endDateTime ? 
-                                (() => {
-                                  const time = blockFormData.endDateTime.split('T')[1];
-                                  const [hours, minutes] = time.split(':');
-                                  const hour12 = parseInt(hours) % 12 || 12;
-                                  return `${hour12.toString().padStart(2, '0')}:${minutes}`;
-                                })() : '11:00'
-                              }
-                              onValueChange={(value) => {
-                                const date = blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
-                                const currentTime = blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[1] : '17:00';
-                                const [, minutes] = currentTime.split(':');
-                                const currentHour = parseInt(currentTime.split(':')[0]);
-                                const isCurrentlyPM = currentHour >= 12;
-                                
-                                const [hour12, newMinutes] = value.split(':');
-                                let hour24 = parseInt(hour12);
-                                if (isCurrentlyPM && hour24 !== 12) hour24 += 12;
-                                if (!isCurrentlyPM && hour24 === 12) hour24 = 0;
-                                
-                                const time24 = `${hour24.toString().padStart(2, '0')}:${newMinutes}`;
-                                setBlockFormData(prev => ({ 
-                                  ...prev, 
-                                  endDateTime: `${date}T${time24}` 
-                                }));
-                              }}
-                            >
-                              <SelectTrigger className="w-20 h-8 text-sm">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Array.from({ length: 48 }, (_, i) => {
-                                  const totalMinutes = i * 30;
-                                  const hours = Math.floor(totalMinutes / 60);
-                                  const minutes = totalMinutes % 60;
-                                  const hour12 = hours % 12 || 12;
-                                  return (
-                                    <SelectItem key={i} value={`${hour12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`}>
-                                      {hour12}:{minutes.toString().padStart(2, '0')}
-                                    </SelectItem>
-                                  );
-                                })}
-                              </SelectContent>
-                            </Select>
-                            <Select
-                              value={blockFormData.endDateTime ? 
-                                (parseInt(blockFormData.endDateTime.split('T')[1].split(':')[0]) >= 12 ? 'PM' : 'AM') : 'AM'
-                              }
-                              onValueChange={(value) => {
-                                const date = blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
-                                const currentTime = blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[1] : '17:00';
-                                const [hours, minutes] = currentTime.split(':');
-                                let hour24 = parseInt(hours);
-                                
-                                if (value === 'PM' && hour24 < 12) {
-                                  hour24 += 12;
-                                } else if (value === 'AM' && hour24 >= 12) {
-                                  hour24 -= 12;
-                                }
-                                
-                                const time24 = `${hour24.toString().padStart(2, '0')}:${minutes}`;
-                                setBlockFormData(prev => ({ 
-                                  ...prev, 
-                                  endDateTime: `${date}T${time24}` 
-                                }));
-                              }}
-                            >
-                              <SelectTrigger className="w-16 h-8 text-sm">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="AM">AM</SelectItem>
-                                <SelectItem value="PM">PM</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
+                        <div className="text-xs text-gray-600 space-y-1">
+                          <p><strong>Type:</strong> {blockFormData.blockType}</p>
+                          <p><strong>Start:</strong> {blockFormData.startDateTime ? format(new Date(blockFormData.startDateTime), 'MMM dd, yyyy HH:mm') : 'Not set'}</p>
+                          <p><strong>End:</strong> {blockFormData.endDateTime ? format(new Date(blockFormData.endDateTime), 'MMM dd, yyyy HH:mm') : 'Not set'}</p>
                         </div>
-                      </div>
+                      </Card>
                     </div>
+                  </TabsContent>
+                </div>
+              </Tabs>
+            </div>
 
-                    {/* Quick Time Presets */}
-                    <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">Quick Time Presets</Label>
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const date = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
-                            setBlockFormData(prev => ({ 
-                              ...prev, 
-                              startDateTime: `${date}T09:00`,
-                              endDateTime: `${date}T17:00`
-                            }));
-                          }}
-                          className="text-xs"
-                        >
-                          Full Day (9 AM - 5 PM)
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const date = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
-                            setBlockFormData(prev => ({ 
-                              ...prev, 
-                              startDateTime: `${date}T09:00`,
-                              endDateTime: `${date}T12:00`
-                            }));
-                          }}
-                          className="text-xs"
-                        >
-                          Morning (9 AM - 12 PM)
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const date = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
-                            setBlockFormData(prev => ({ 
-                              ...prev, 
-                              startDateTime: `${date}T14:00`,
-                              endDateTime: `${date}T17:00`
-                            }));
-                          }}
-                          className="text-xs"
-                        >
-                          Afternoon (2 PM - 5 PM)
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                 
-                                                                     {blockFormData.startDateTime && blockFormData.endDateTime && (
-                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                     <div className="text-sm text-blue-800">
-                       <div className="font-medium">Time Off Period:</div>
-                       <div>
-                         {(() => {
-                           try {
-                             const startDate = new Date(blockFormData.startDateTime);
-                             const endDate = new Date(blockFormData.endDateTime);
-                             
-                             // Check if dates are valid
-                             if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-                               return 'Invalid date range';
-                             }
-                             
-                             return `${format(startDate, 'MMM dd, yyyy HH:mm')} - ${format(endDate, 'MMM dd, yyyy HH:mm')}`;
-                           } catch (error) {
-                             return 'Invalid date range';
-                           }
-                         })()}
-                       </div>
-                     </div>
-                   </div>
-                 )}
-                 
-                 <p className="text-xs text-blue-600">
-                   ℹ️ You can book time-off for today or future dates. Same-day bookings are allowed.
-                 </p>
-               </TabsContent>
-             </Tabs>
-           </div>
+            {/* Footer */}
+            <DialogFooter className="pt-4 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isLoading || (scheduleType === 'schedule' ? !isScheduleFormValid() : !isBlockFormValid())}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {isLoading ? 'Saving...' : scheduleType === 'schedule' ? 'Save Schedule' : 'Save Time Off'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-                                 {/* Shift Selection - Only show for schedule tabs */}
-            {scheduleType !== 'block' && (
-              <div className="space-y-4">
-                <Label className="text-base font-semibold">Select Shifts to Schedule</Label>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                 {SHIFT_TEMPLATES.map((template) => (
-                                 <Card 
-                   key={template.name}
-                   className={`cursor-pointer transition-all ${
-                     selectedShifts.has(template.name) 
-                       ? 'ring-2 ring-blue-500 border-blue-300 bg-blue-50' 
-                       : 'hover:shadow-md hover:bg-gray-50'
-                   }`}
-                   onClick={() => handleShiftToggle(template.name)}
-                 >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {template.icon}
-                        <CardTitle className="text-sm">{template.name} Shift</CardTitle>
-                      </div>
-                      <Switch
-                        checked={selectedShifts.has(template.name)}
-                        onCheckedChange={() => handleShiftToggle(template.name)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </div>
-                    <Badge variant="secondary" className={`w-fit ${template.color}`}>
-                      {template.description}
-                    </Badge>
-                  </CardHeader>
-                  
-                  {selectedShifts.has(template.name) && (
-                    <CardContent className="pt-0 space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
-                                                 <div>
-                           <Label htmlFor={`${template.name}-start`}>Start Time</Label>
-                           <Input
-                             id={`${template.name}-start`}
-                             type="time"
-                             value={shiftConfigs[template.name].startTime}
-                             onChange={(e) => {
-                               e.stopPropagation();
-                               handleShiftConfigChange(template.name, 'startTime', e.target.value);
-                             }}
-                             onMouseDown={(e) => e.stopPropagation()}
-                             onClick={(e) => e.stopPropagation()}
-                           />
-                         </div>
-                         <div>
-                           <Label htmlFor={`${template.name}-end`}>End Time</Label>
-                           <Input
-                             id={`${template.name}-end`}
-                             type="time"
-                             value={shiftConfigs[template.name].endTime}
-                             onChange={(e) => {
-                               e.stopPropagation();
-                               handleShiftConfigChange(template.name, 'endTime', e.target.value);
-                             }}
-                             onMouseDown={(e) => e.stopPropagation()}
-                             onClick={(e) => e.stopPropagation()}
-                           />
-                         </div>
-                       </div>
-                       
-                       <div className="grid grid-cols-2 gap-3">
-                         <div>
-                           <Label htmlFor={`${template.name}-slot`}>Slot Duration (minutes)</Label>
-                           <Input
-                             id={`${template.name}-slot`}
-                             type="number"
-                             min="1"
-                             step="1"
-                             value={shiftConfigs[template.name].slotDuration}
-                             onChange={(e) => {
-                               e.stopPropagation();
-                               handleShiftConfigChange(template.name, 'slotDuration', parseInt(e.target.value) || 15);
-                             }}
-                             onMouseDown={(e) => e.stopPropagation()}
-                             onClick={(e) => e.stopPropagation()}
-                             placeholder="15"
-                           />
-                         </div>
-                         <div>
-                           <Label htmlFor={`${template.name}-max`}>Max Patients</Label>
-                           <Input
-                             id={`${template.name}-max`}
-                             type="number"
-                             min="1"
-                             placeholder="Unlimited"
-                             value={shiftConfigs[template.name].maxPatients}
-                             onChange={(e) => {
-                               e.stopPropagation();
-                               handleShiftConfigChange(template.name, 'maxPatients', e.target.value);
-                             }}
-                             onMouseDown={(e) => e.stopPropagation()}
-                             onClick={(e) => e.stopPropagation()}
-                           />
-                         </div>
-                       </div>
-                     </CardContent>
-                   )}
-                 </Card>
-               ))}
-             </div>
+      
 
-             {/* Schedule Summary */}
-             {selectedShifts.size > 0 && (
-               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                 <div className="text-sm text-blue-800">
-                   <div className="font-medium mb-2">Schedule Summary:</div>
-                   <div className="space-y-1">
-                     <div>• {selectedShifts.size} shift{selectedShifts.size > 1 ? 's' : ''} selected</div>
-                     <div>• {scheduleMode === 'single' ? 'Single day' : 'Recurring'} schedule</div>
-                     {scheduleMode === 'recurring' && (
-                       <div>• {recurringDays.size} day{recurringDays.size > 1 ? 's' : ''} per week</div>
-                     )}
-                     <div>• Total schedules: {generatePayloads().length}</div>
-                   </div>
-                 </div>
-               </div>
-             )}
-           </div>
-           )}
 
-         <DialogFooter className="gap-2">
-           <Button
-             type="button"
-             variant="outline"
-             onClick={() => onOpenChange(false)}
-             disabled={isLoading}
-           >
-             Cancel
-           </Button>
-           
-           <Button
-             type="submit"
-             disabled={
-               (scheduleType === 'block' ? !isBlockFormValid() : !isScheduleFormValid()) || 
-               isLoading
-             }
-           >
-             {isLoading 
-               ? 'Saving...' 
-               : scheduleType === 'block' 
-                 ? 'Schedule Time Off' 
-                 : `Save ${scheduleMode === 'recurring' ? 'Recurring' : 'Personalized'} Schedule`
-             }
-           </Button>
-         </DialogFooter>
-       </form>
-     </DialogContent>
-   </Dialog>
-
-   {/* Confirmation Dialog */}
-   <Dialog open={showConfirmation} onOpenChange={setShowConfirmation}>
-     <DialogContent className="sm:max-w-md">
-       <DialogHeader>
-         <DialogTitle className="flex items-center gap-2">
-           <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-             <Calendar className="h-4 w-4 text-blue-600" />
-           </div>
-           Confirm Schedule Save
-         </DialogTitle>
-       </DialogHeader>
-       
-       <div className="py-4">
-         <p className="text-gray-600 mb-4">
-           {pendingPayloads.length > 0 
-             ? `Are you sure you want to save ${pendingPayloads.length} personalized schedule override(s)? This will update your working hours for the selected dates.`
-             : `Are you sure you want to schedule this time off? You will be unavailable during the selected time period.`
-           }
-         </p>
-         
-         {pendingPayloads.length > 0 && (
-           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
-             <div className="font-medium text-blue-800 mb-1">Schedule Summary:</div>
-             <div className="text-blue-700 space-y-1">
-               <div>• {pendingPayloads.length} override{pendingPayloads.length > 1 ? 's' : ''} will be created</div>
-               <div>• {scheduleMode === 'single' ? 'Single day' : 'Recurring'} schedule</div>
-               {scheduleMode === 'recurring' && (
-                 <div>• {recurringDays.size} day{recurringDays.size > 1 ? 's' : ''} per week</div>
-               )}
-             </div>
-           </div>
-         )}
-         
-         {pendingBlockPayload && (
-           <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm">
-             <div className="font-medium text-orange-800 mb-1">Time Off Details:</div>
-             <div className="text-orange-700 space-y-1">
-               <div>• Type: {pendingBlockPayload.blockType}</div>
-               <div>• Duration: {format(new Date(pendingBlockPayload.startDateTime), 'MMM dd, yyyy HH:mm')} - {format(new Date(pendingBlockPayload.endDateTime), 'MMM dd, yyyy HH:mm')}</div>
-             </div>
-           </div>
-         )}
-       </div>
-
-       <DialogFooter className="gap-2">
-         <Button
-           type="button"
-           variant="outline"
-           onClick={handleCancelSave}
-         >
-           Cancel
-         </Button>
-         <Button
-           type="button"
-           onClick={handleConfirmSave}
-           className="bg-blue-600 hover:bg-blue-700"
-         >
-           Yes, Save Schedule
-         </Button>
-       </DialogFooter>
-     </DialogContent>
-   </Dialog>
-   </>
- );
+    </>
+  );
 };

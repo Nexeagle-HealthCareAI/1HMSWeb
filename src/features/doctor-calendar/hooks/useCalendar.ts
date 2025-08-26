@@ -40,46 +40,9 @@ export function useDoctorCalendarConfig(doctorId: string, startDate: string, day
         days
       });
       
-      try {
-        const result = await timeOffApi.getDoctorCalendarConfig(doctorId, startDate, days);
-        console.log('🔍 useDoctorCalendarConfig - API response:', result);
-        return result;
-      } catch (error) {
-        console.log('🔍 useDoctorCalendarConfig - API error, using mock data:', error);
-        
-        // Parse the startDate to get current date info
-        const currentDate = new Date(startDate);
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth() + 1; // getMonth() returns 0-11
-        const day = currentDate.getDate();
-        const dayOfWeek = currentDate.getDay();
-        
-        // Return mock data for testing - use current date
-        const mockResponse: DoctorCalendarConfigResponse = {
-          doctorId,
-          startDate: { year, month, day, dayOfWeek, dayOfYear: Math.floor((currentDate.getTime() - new Date(year, 0, 1).getTime()) / (1000 * 60 * 60 * 24)) + 1, dayNumber: day },
-          endDate: { year, month, day, dayOfWeek, dayOfYear: Math.floor((currentDate.getTime() - new Date(year, 0, 1).getTime()) / (1000 * 60 * 60 * 24)) + 1, dayNumber: day },
-          dataSource: 'mock',
-          shiftInfo: [
-            {
-              shiftDate: { year, month, day, dayOfWeek, dayOfYear: Math.floor((currentDate.getTime() - new Date(year, 0, 1).getTime()) / (1000 * 60 * 60 * 24)) + 1, dayNumber: day },
-              shiftDayDetails: [
-                {
-                  overrideId: 'mock-override-1',
-                  shiftName: 'Morning',
-                  startTime: { ticks: 324000000000, days: 0, hours: 9, minutes: 0, seconds: 0, totalHours: 9, totalMinutes: 540, totalSeconds: 32400, totalDays: 0, totalMilliseconds: 32400000, totalMicroseconds: 32400000000, totalNanoseconds: 32400000000000, milliseconds: 0, microseconds: 0, nanoseconds: 0 },
-                  endTime: { ticks: 432000000000, days: 0, hours: 12, minutes: 0, seconds: 0, totalHours: 12, totalMinutes: 720, totalSeconds: 43200, totalDays: 0, totalMilliseconds: 43200000, totalMicroseconds: 43200000000, totalNanoseconds: 43200000000000, milliseconds: 0, microseconds: 0, nanoseconds: 0 },
-                  slotDurationInMinutes: 15,
-                  recurringDays: '["Monday","Tuesday","Wednesday","Thursday","Friday"]'
-                }
-              ]
-            }
-          ]
-        };
-        
-        console.log('🔍 useDoctorCalendarConfig - Using mock data for date:', currentDate.toISOString(), mockResponse);
-        return mockResponse;
-      }
+      const result = await timeOffApi.getDoctorCalendarConfig(doctorId, startDate, days);
+      console.log('🔍 useDoctorCalendarConfig - API response:', result);
+      return result;
     },
     enabled: !!doctorId && !!startDate && days > 0,
   });
@@ -88,8 +51,17 @@ export function useDoctorCalendarConfig(doctorId: string, startDate: string, day
 export function useCalendarEvents(doctorId: string, fromISO: string, toISO: string, calendarConfig?: DoctorCalendarConfigResponse) {
   return useQuery<CalendarEvent[]>({
     queryKey: calendarKeys.events(doctorId, fromISO, toISO),
-    queryFn: () => {
+    queryFn: async () => {
       const allEvents: CalendarEvent[] = [];
+
+      // Fetch time-off data
+      let timeOffData: GetTimeOffResponse | null = null;
+      try {
+        timeOffData = await timeOffApi.getDoctorTimeOff(doctorId);
+        console.log('📅 Time-off data fetched:', timeOffData);
+      } catch (error) {
+        console.error('❌ Error fetching time-off data:', error);
+      }
 
       console.log('🔍 useCalendarEvents - Input data:', {
         doctorId,
@@ -122,40 +94,27 @@ export function useCalendarEvents(doctorId: string, fromISO: string, toISO: stri
               slotDurationInMinutes: shiftDetail.slotDurationInMinutes
             });
 
-            // Convert TimeSpan to ISO string for start and end times
-            const startTime = new Date();
-            startTime.setHours(
-              Math.floor(shiftDetail.startTime.totalHours),
-              shiftDetail.startTime.minutes,
-              shiftDetail.startTime.seconds
-            );
+            // Parse date from string format "2025-08-26"
+            const shiftDate = new Date(shiftInfo.shiftDate);
             
-            const endTime = new Date();
-            endTime.setHours(
-              Math.floor(shiftDetail.endTime.totalHours),
-              shiftDetail.endTime.minutes,
-              shiftDetail.endTime.seconds
-            );
+            // Parse time strings (format: "14:00:00")
+            const startTimeStr = shiftDetail.startTime;
+            const endTimeStr = shiftDetail.endTime;
+            
+            const [startHour, startMinute, startSecond = 0] = startTimeStr.split(':').map(Number);
+            const [endHour, endMinute, endSecond = 0] = endTimeStr.split(':').map(Number);
 
-            // Create date from shiftInfo.shiftDate
-            const shiftDate = new Date(
-              shiftInfo.shiftDate.year,
-              shiftInfo.shiftDate.month - 1, // Month is 0-indexed in JavaScript
-              shiftInfo.shiftDate.day
-            );
-
-            // Combine date with time
+            // Create event start and end times
             const eventStart = new Date(shiftDate);
-            eventStart.setHours(startTime.getHours(), startTime.getMinutes(), startTime.getSeconds());
+            eventStart.setHours(startHour, startMinute, startSecond);
             
             const eventEnd = new Date(shiftDate);
-            eventEnd.setHours(endTime.getHours(), endTime.getMinutes(), endTime.getSeconds());
+            eventEnd.setHours(endHour, endMinute, endSecond);
 
             console.log(`📅 Date calculation for event:`, {
-              shiftInfoDate: shiftInfo.shiftDate,
-              shiftDate: shiftDate.toISOString(),
-              startTime: startTime.toTimeString(),
-              endTime: endTime.toTimeString(),
+              shiftDate: shiftInfo.shiftDate,
+              startTimeStr,
+              endTimeStr,
               eventStart: eventStart.toISOString(),
               eventEnd: eventEnd.toISOString()
             });
@@ -175,7 +134,9 @@ export function useCalendarEvents(doctorId: string, fromISO: string, toISO: stri
                 recurringDays: shiftDetail.recurringDays,
                 source: 'override',
                 isOverride: true,
-                sourceId: shiftDetail.overrideId
+                sourceId: shiftDetail.overrideId,
+                startTime: shiftDetail.startTime,
+                endTime: shiftDetail.endTime
               }
             };
 
@@ -261,8 +222,54 @@ export function useCalendarEvents(doctorId: string, fromISO: string, toISO: stri
       }
 
       // Add time-off blocks
-      // Note: This would need to be implemented based on the time-off API response
-      // For now, we'll leave this as a placeholder
+      if (timeOffData?.timeOffs) {
+        console.log('📅 Processing time-off data:', timeOffData.timeOffs.length, 'entries');
+        
+        timeOffData.timeOffs.forEach((timeOff, index) => {
+          console.log(`📅 Processing timeOff[${index}]:`, {
+            timeOffId: timeOff.timeOffId,
+            fromDate: timeOff.fromDate,
+            toDate: timeOff.toDate,
+            reason: timeOff.reason,
+            isUpcoming: timeOff.isUpcoming
+          });
+
+          // Parse dates
+          const fromDate = new Date(timeOff.fromDate);
+          const toDate = new Date(timeOff.toDate);
+          
+          // Create time-off event
+          const timeOffEvent: CalendarEvent = {
+            id: `timeoff-${timeOff.timeOffId}`,
+            type: 'timeoff',
+            title: timeOff.reason,
+            start: fromDate.toISOString(),
+            end: toDate.toISOString(),
+            backgroundColor: '#ef4444', // Red color for time-off
+            borderColor: '#dc2626',
+            allDay: true, // Time-off events are typically all-day
+            extendedProps: {
+              timeOffId: timeOff.timeOffId,
+              reason: timeOff.reason,
+              isUpcoming: timeOff.isUpcoming,
+              createdAt: timeOff.createdAt,
+              source: 'timeoff'
+            }
+          };
+
+          console.log(`📅 Created time-off event:`, {
+            id: timeOffEvent.id,
+            title: timeOffEvent.title,
+            start: timeOffEvent.start,
+            end: timeOffEvent.end,
+            allDay: timeOffEvent.allDay
+          });
+
+          allEvents.push(timeOffEvent);
+        });
+      } else {
+        console.log('📅 No time-off data available');
+      }
 
       // Filter events to only include those within the visible date range
       const filteredEvents = allEvents.filter(event => {

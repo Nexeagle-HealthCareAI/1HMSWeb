@@ -52,7 +52,7 @@ export interface AppointmentEvent {
 
 export interface CalendarEvent {
   id: string;
-  type: 'shift'|'block'|'appointment';
+  type: 'shift'|'block'|'appointment'|'timeoff';
   title: string;
   start: string; 
   end: string;
@@ -60,6 +60,7 @@ export interface CalendarEvent {
   display?: 'background' | 'list-item' | 'auto';
   backgroundColor?: string;
   borderColor?: string;
+  allDay?: boolean;
   extendedProps?: Record<string, any>;
 }
 
@@ -189,14 +190,14 @@ export interface TimeSpan {
 export interface ShiftDayDetail {
   overrideId: string;
   shiftName: string;
-  startTime: TimeSpan;
-  endTime: TimeSpan;
+  startTime: string; // Changed from TimeSpan to string (e.g., "14:00:00")
+  endTime: string;   // Changed from TimeSpan to string (e.g., "17:00:00")
   slotDurationInMinutes: number;
   recurringDays: string;
 }
 
 export interface ShiftInfo {
-  shiftDate: DateInfo;
+  shiftDate: string; // Changed from DateInfo to string (e.g., "2025-08-26")
   shiftDayDetails: ShiftDayDetail[];
 }
 

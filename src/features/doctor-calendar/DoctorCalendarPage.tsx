@@ -205,6 +205,39 @@ export const DoctorCalendarPage: React.FC = () => {
       }
     }
   }, []);
+
+  // Function to scroll to specific shift time
+  const scrollToShiftTime = useCallback((shiftName: string, startTime: string) => {
+    if (calendarRef.current) {
+      const calendarApi = calendarRef.current.getApi();
+      if (calendarApi) {
+        // Scroll to the start time of the shift
+        calendarApi.scrollToTime(startTime);
+        console.log(`📅 Scrolled to ${shiftName} shift (${startTime})`);
+        
+        // Add visual highlight for morning shift
+        if (shiftName.toLowerCase() === 'morning') {
+          // Find and highlight morning shift events
+          const morningEvents = document.querySelectorAll('.fc-event[data-event-id*="shift"]');
+          morningEvents.forEach((eventElement: any) => {
+            const eventId = eventElement.getAttribute('data-event-id');
+            if (eventId && eventId.includes('shift')) {
+              // Add a subtle highlight effect
+              eventElement.style.boxShadow = '0 0 10px rgba(74, 222, 128, 0.6)';
+              eventElement.style.transform = 'scale(1.02)';
+              eventElement.style.transition = 'all 0.3s ease';
+              
+              // Remove highlight after 3 seconds
+              setTimeout(() => {
+                eventElement.style.boxShadow = '';
+                eventElement.style.transform = '';
+              }, 3000);
+            }
+          });
+        }
+      }
+    }
+  }, []);
   
   // Handle view changes
   React.useEffect(() => {
@@ -238,28 +271,87 @@ export const DoctorCalendarPage: React.FC = () => {
     const timer = setTimeout(() => {
       setIsInitialLoading(false);
       
-      // Scroll to 9 AM after loading is complete
+      // Scroll to morning shift (9 AM) after loading is complete
       if (view === 'timeGridDay' || view === 'timeGridWeek') {
-          setTimeout(() => {
+        setTimeout(() => {
           scrollToMorningSlot();
-          }, 100); // Small delay to ensure calendar is fully rendered
+        }, 100); // Small delay to ensure calendar is fully rendered
       }
-    }, 2000); // 2 seconds delay
+    }, 1000); // Reduced to 1 second for better UX
 
     return () => clearTimeout(timer);
   }, [view, scrollToMorningSlot]);
+
+  // Auto-scroll to morning shift when events are loaded
+  React.useEffect(() => {
+    if (!isInitialLoading && events.length > 0 && (view === 'timeGridDay' || view === 'timeGridWeek')) {
+      // Find morning shift events
+      const morningShifts = events.filter(event => 
+        event.extendedProps?.shiftName?.toLowerCase() === 'morning'
+      );
+      
+      if (morningShifts.length > 0) {
+        // Scroll to the first morning shift
+        const morningShift = morningShifts[0];
+        const startTime = morningShift.extendedProps?.startTime || '09:00:00';
+        
+        setTimeout(() => {
+          scrollToShiftTime('Morning', startTime);
+        }, 200);
+      } else {
+        // Fallback to default morning slot
+        setTimeout(() => {
+          scrollToMorningSlot();
+        }, 200);
+      }
+    }
+  }, [events, isInitialLoading, view, scrollToShiftTime, scrollToMorningSlot]);
 
 
   
   // Calendar event handlers
   const handleEventClick = useCallback((info: any) => {
-    // Scroll to morning slot when any event is clicked
-    setTimeout(() => {
-      scrollToMorningSlot();
-    }, 100);
-    
     const event = info.event;
     const eventType = event.extendedProps?.type;
+    const shiftName = event.extendedProps?.shiftName;
+    
+    // Handle time-off events
+    if (eventType === 'timeoff') {
+      const timeOffId = event.extendedProps?.timeOffId;
+      const reason = event.extendedProps?.reason || event.title;
+      const fromDate = event.start?.toISOString();
+      const toDate = event.end?.toISOString();
+      
+      console.log('Time-off event clicked:', { timeOffId, reason, fromDate, toDate });
+      
+      if (timeOffId && fromDate && toDate) {
+        setDeleteTimeOffModal({
+          open: true,
+          timeOffData: {
+            timeOffId,
+            reason,
+            fromDate,
+            toDate
+          }
+        });
+      } else {
+        console.warn('Missing data for time-off deletion:', { timeOffId, fromDate, toDate });
+      }
+      return; // Stop processing for time-off events
+    }
+    
+    // Scroll to specific shift time when event is clicked
+    if (eventType === 'shift' && shiftName) {
+      const startTime = event.extendedProps?.startTime || '09:00:00';
+      setTimeout(() => {
+        scrollToShiftTime(shiftName, startTime);
+      }, 100);
+    } else {
+      // Default scroll to morning slot for other events
+      setTimeout(() => {
+        scrollToMorningSlot();
+      }, 100);
+    }
     
     // OVERRIDE EVENT HANDLING: Show action dialog for any click on override events
     if ((eventType === 'shift' || eventType === 'block') && event.extendedProps?.source === 'override') {
@@ -1170,7 +1262,11 @@ export const DoctorCalendarPage: React.FC = () => {
             {/* Shift Details Card Column - Fixed Height */}
             <div className="lg:col-span-1">
               <div className="h-fit">
-                <ShiftDetailsCard />
+                <ShiftDetailsCard 
+              events={events}
+              calendarConfig={calendarConfig}
+              isLoading={eventsLoading || configLoading}
+            />
               </div>
             </div>
           </div>
