@@ -425,3 +425,6 @@ export const useOverrides = () => ({ data: [], isLoading: false });
 export const useBlocks = () => ({ data: [], isLoading: false });
 export const useAppointments = () => ({ data: [], isLoading: false });
 export const useDoctors = () => ({ data: [], isLoading: false });
+
+// Export the appointment cancellation hook
+export { useAppointmentCancel } from './useAppointmentCancel';

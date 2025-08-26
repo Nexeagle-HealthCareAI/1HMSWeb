@@ -9,3 +9,4 @@ export { CancelOverrideDialog } from './CancelOverrideDialog';
 export { OverrideActionDialog } from './OverrideActionDialog';
 export { ShiftDetailsCard } from './ShiftDetailsCard';
 export { DateRangeSelectionPopup } from './DateRangeSelectionPopup';
+export { AppointmentCancelDialog } from './AppointmentCancelDialog';

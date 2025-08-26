@@ -10,9 +10,10 @@ import {
   DeleteTimeOffDialog,
   CancelOverrideDialog,
   OverrideActionDialog,
-  ShiftDetailsCard
+  ShiftDetailsCard,
+  AppointmentCancelDialog
 } from './components';
-import { useCalendarEvents, useCreateOverride, useDeleteOverride, useCreateBlock, useDeleteBlock, useTimeOff, useCreateTimeOff, useDeleteTimeOff, useDoctorCalendarConfig } from './hooks/useCalendar';
+import { useCalendarEvents, useCreateOverride, useDeleteOverride, useCreateBlock, useDeleteBlock, useTimeOff, useCreateTimeOff, useDeleteTimeOff, useDoctorCalendarConfig, useAppointmentCancel } from './hooks/useCalendar';
 import { CalendarEvent, CreateOverridePayload, CreateBlockPayload, ShiftName } from './api/types';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -76,6 +77,21 @@ export const DoctorCalendarPage: React.FC = () => {
       date: string;
       startTime: string;
       endTime: string;
+    } | undefined
+  });
+
+  // Appointment cancellation modal state
+  const [appointmentCancelModal, setAppointmentCancelModal] = useState({
+    open: false,
+    appointmentData: undefined as {
+      appointmentId: string;
+      patientName: string;
+      patientPhone?: string;
+      patientAge?: number;
+      patientGender?: string;
+      date: string;
+      time: string;
+      tokenNumber?: string;
     } | undefined
   });
 
@@ -301,6 +317,7 @@ export const DoctorCalendarPage: React.FC = () => {
   const deleteBlockMutation = useDeleteBlock();
   const createTimeOffMutation = useCreateTimeOff();
   const deleteTimeOffMutation = useDeleteTimeOff();
+  const { cancelAppointment, isPending: isCancelPending } = useAppointmentCancel();
   
   // Function to scroll to morning slot
   const scrollToMorningSlot = useCallback(() => {
@@ -577,11 +594,36 @@ export const DoctorCalendarPage: React.FC = () => {
         }
       });
     } else if (eventType === 'appointment') {
-      // Show appointment details
-      toast({
-        title: "Appointment Details",
-        description: `Patient: ${event.extendedProps?.patientName}, Token: ${event.extendedProps?.tokenNumber}`,
-      });
+      // Show appointment cancellation dialog
+      const appointmentId = event.extendedProps?.appointmentId || event.id;
+      const patientName = event.extendedProps?.patientName || event.title;
+      const patientPhone = event.extendedProps?.patientPhone;
+      const patientAge = event.extendedProps?.patientAge;
+      const patientGender = event.extendedProps?.patientGender;
+      const tokenNumber = event.extendedProps?.tokenNumber;
+      const appointmentDate = event.start ? format(event.start, 'yyyy-MM-dd') : '';
+      const appointmentTime = event.extendedProps?.time || event.start ? format(event.start, 'HH:mm') : '';
+      
+      if (appointmentId && patientName && appointmentDate && appointmentTime) {
+        setAppointmentCancelModal({
+          open: true,
+          appointmentData: {
+            appointmentId,
+            patientName,
+            patientPhone,
+            patientAge,
+            patientGender,
+            date: appointmentDate,
+            time: appointmentTime,
+            tokenNumber
+          }
+        });
+      } else {
+        toast({
+          title: "Appointment Details",
+          description: `Patient: ${patientName}, Token: ${tokenNumber}`,
+        });
+      }
          } else if (eventType === 'block') {
        // Handle time-off blocks
        const isTimeOff = event.extendedProps?.isTimeOff;
@@ -1298,8 +1340,26 @@ export const DoctorCalendarPage: React.FC = () => {
     });
   };
   
-
-  
+  const handleCancelAppointment = async () => {
+    if (!appointmentCancelModal.appointmentData?.appointmentId) {
+      toast({
+        title: "Error",
+        description: "No appointment data found for cancellation",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const success = await cancelAppointment(appointmentCancelModal.appointmentData.appointmentId);
+    
+    if (success) {
+      setAppointmentCancelModal({ open: false, appointmentData: undefined });
+      // Reload page after successful appointment cancellation
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    }
+  };
 
 
   if (!userId) {
@@ -2063,6 +2123,14 @@ export const DoctorCalendarPage: React.FC = () => {
           onUpdate={handleOverrideActionUpdate}
           overrideData={overrideActionModal.overrideData}
           isPending={deleteOverrideMutation.isPending}
+        />
+
+        <AppointmentCancelDialog
+          isOpen={appointmentCancelModal.open}
+          onClose={() => setAppointmentCancelModal({ open: false, appointmentData: undefined })}
+          onConfirm={handleCancelAppointment}
+          appointmentData={appointmentCancelModal.appointmentData}
+          isPending={isCancelPending}
         />
 
         {/* Success Dialog */}
