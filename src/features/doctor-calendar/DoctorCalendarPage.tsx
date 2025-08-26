@@ -186,6 +186,21 @@ export const DoctorCalendarPage: React.FC = () => {
     }
   });
 
+  // Debug time-off events specifically
+  const timeOffEvents = events.filter(event => event.type === 'timeoff' || event.id?.startsWith('timeoff-'));
+  console.log('🔍 Time-off events in current view:', {
+    totalEvents: events.length,
+    timeOffEvents: timeOffEvents.length,
+    timeOffEventDetails: timeOffEvents.map(event => ({
+      id: event.id,
+      title: event.title,
+      start: event.start,
+      end: event.end,
+      type: event.type,
+      extendedProps: event.extendedProps
+    }))
+  });
+
 
   
   // Mutations
@@ -663,8 +678,8 @@ export const DoctorCalendarPage: React.FC = () => {
          element: info.el
        });
        
-       if (eventType === 'block' || isTimeOff) {
-         console.log('Block/TimeOff event mounted:', {
+       if (eventType === 'timeoff' || eventType === 'block' || isTimeOff) {
+         console.log('TimeOff/Block event mounted:', {
            id: info.event.id,
            title: info.event.title,
            type: eventType,
@@ -731,6 +746,16 @@ export const DoctorCalendarPage: React.FC = () => {
             <div class="fc-event-main-content">
               <div class="text-xs font-bold">${arg.event.extendedProps?.tokenNumber}</div>
               <div class="text-xs">${arg.event.extendedProps?.patientName}</div>
+            </div>
+          `
+        };
+      } else if (eventType === 'timeoff') {
+        // Time-off events with cancel button
+        return {
+          html: `
+            <div class="fc-event-main-content timeoff-event-content">
+              <div class="text-xs font-medium">${arg.event.title}</div>
+              <div class="text-xs text-red-200">Click to cancel</div>
             </div>
           `
         };
@@ -1701,6 +1726,21 @@ export const DoctorCalendarPage: React.FC = () => {
           /* Override events should not hide block events */
           .fc-event[data-override="true"] {
             z-index: 10 !important;
+          }
+          
+          /* Time-off events styling */
+          .fc-event[data-event-type="timeoff"] {
+            background-color: #ef4444 !important;
+            border-color: #dc2626 !important;
+            color: white !important;
+            cursor: pointer !important;
+            z-index: 15 !important;
+          }
+          
+          .fc-event[data-event-type="timeoff"]:hover {
+            background-color: #dc2626 !important;
+            transform: scale(1.02) !important;
+            transition: all 0.2s ease !important;
           }
           
           /* Style for override event content */

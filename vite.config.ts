@@ -19,14 +19,12 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "react": path.resolve(__dirname, "node_modules/react"),
-      "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
     },
   },
   build: {
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
+        manualChunks: (id: string) => {
           // React and React-DOM must be bundled together and loaded first
           if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
             return 'react-vendor';
@@ -37,17 +35,20 @@ export default defineConfig(({ mode }) => ({
             if (id.includes('react-router-dom')) {
               return 'router-vendor';
             }
-            if (id.includes('lucide-react')) {
-              return 'ui-vendor';
-            }
             if (id.includes('@tanstack/react-query')) {
               return 'query-vendor';
             }
-            if (id.includes('zustand')) {
-              return 'zustand-vendor';
+            if (id.includes('lucide-react') || id.includes('@radix-ui')) {
+              return 'ui-vendor';
             }
-            if (id.includes('axios')) {
-              return 'axios-vendor';
+            if (id.includes('@fullcalendar')) {
+              return 'calendar-vendor';
+            }
+            if (id.includes('react-hook-form') || id.includes('@hookform') || id.includes('zod')) {
+              return 'form-vendor';
+            }
+            if (id.includes('axios') || id.includes('zustand') || id.includes('date-fns') || id.includes('clsx') || id.includes('tailwind-merge')) {
+              return 'utils-vendor';
             }
             // Group remaining node_modules into a single vendor chunk
             return 'vendor';
@@ -103,7 +104,23 @@ export default defineConfig(({ mode }) => ({
       '@tanstack/react-query',
       'zustand',
       'axios',
-      'lucide-react'
+      'lucide-react',
+      '@fullcalendar/react',
+      '@fullcalendar/daygrid',
+      '@fullcalendar/timegrid',
+      '@fullcalendar/interaction',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-select',
+      '@radix-ui/react-tabs',
+      '@radix-ui/react-toast',
+      '@radix-ui/react-tooltip',
+      'react-hook-form',
+      '@hookform/resolvers',
+      'zod',
+      'date-fns',
+      'clsx',
+      'tailwind-merge'
     ],
     exclude: []
   },
