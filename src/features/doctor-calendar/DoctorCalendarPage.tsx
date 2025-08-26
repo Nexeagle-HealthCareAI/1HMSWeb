@@ -149,15 +149,23 @@ export const DoctorCalendarPage: React.FC = () => {
   const getDaysCount = useCallback(() => {
     switch (view) {
       case 'dayGridMonth':
-        return 30; // Approximate days in a month view
+        // Calculate exact days in the current month
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        return daysInMonth;
       case 'timeGridWeek':
         return 7; // 7 days in a week
       case 'timeGridDay':
         return 1; // 1 day
       default:
-        return 30;
+        // Calculate exact days in the current month for default case
+        const defaultYear = currentDate.getFullYear();
+        const defaultMonth = currentDate.getMonth();
+        const defaultDaysInMonth = new Date(defaultYear, defaultMonth + 1, 0).getDate();
+        return defaultDaysInMonth;
     }
-  }, [view]);
+  }, [view, currentDate]);
   
   const daysCount = getDaysCount();
   
@@ -230,6 +238,22 @@ export const DoctorCalendarPage: React.FC = () => {
     }
   });
 
+  // Debug date range calculation for different views
+  console.log('📅 Date Range Calculation:', {
+    view,
+    currentDate: currentDate.toISOString(),
+    calculatedRange: {
+      fromISO,
+      toISO,
+      daysCount,
+      fromDate: new Date(fromISO).toLocaleDateString(),
+      toDate: new Date(toISO).toLocaleDateString(),
+      isMonday: new Date(fromISO).getDay() === 1, // Monday = 1
+      isFirstOfMonth: new Date(fromISO).getDate() === 1,
+      totalDays: Math.ceil((new Date(toISO).getTime() - new Date(fromISO).getTime()) / (1000 * 60 * 60 * 24)) + 1
+    }
+  });
+
   // Debug time-off events specifically
   const timeOffEvents = events.filter(event => event.type === 'timeoff' || event.id?.startsWith('timeoff-'));
   console.log('🔍 Time-off events in current view:', {
@@ -259,6 +283,14 @@ export const DoctorCalendarPage: React.FC = () => {
   React.useEffect(() => {
     console.log('🔍 DeleteTimeOffModal state changed:', deleteTimeOffModal);
   }, [deleteTimeOffModal]);
+
+  // Add debugging for time-off event clicks
+  const debugTimeOffClick = useCallback((eventId: string) => {
+    console.log('🧪 Debug: Time-off event clicked:', eventId);
+    console.log('🧪 Debug: Current deleteTimeOffModal state:', deleteTimeOffModal);
+    console.log('🧪 Debug: All events:', allEvents);
+    console.log('🧪 Debug: Time-off events:', allEvents.filter(e => e.type === 'timeoff' || e.id?.startsWith('timeoff-')));
+  }, [deleteTimeOffModal, allEvents]);
 
 
   
@@ -402,6 +434,9 @@ export const DoctorCalendarPage: React.FC = () => {
     
     // Handle time-off events
     if (eventType === 'timeoff' || event.id?.startsWith('timeoff-')) {
+      console.log('🎯 TIME-OFF EVENT DETECTED!');
+      debugTimeOffClick(event.id);
+      
       const timeOffId = event.extendedProps?.timeOffId || event.id?.replace('timeoff-', '');
       const reason = event.extendedProps?.reason || event.title;
       const fromDate = event.start?.toISOString();
@@ -1385,6 +1420,23 @@ export const DoctorCalendarPage: React.FC = () => {
               className="ml-2 px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
             >
               🧪 Debug Data
+            </button>
+            <button
+              onClick={() => {
+                console.log('🧪 Manually triggering delete time-off modal');
+                setDeleteTimeOffModal({
+                  open: true,
+                  timeOffData: {
+                    timeOffId: 'test-timeoff-id',
+                    reason: 'Test Time-off (Manual Trigger)',
+                    fromDate: '2025-08-26T00:00:00.000Z',
+                    toDate: '2025-08-26T23:59:59.000Z'
+                  }
+                });
+              }}
+              className="ml-2 px-3 py-1 bg-purple-500 text-white rounded text-sm hover:bg-purple-600"
+            >
+              🧪 Test Modal
             </button>
           </div>
         </div>
