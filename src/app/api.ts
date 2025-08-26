@@ -162,7 +162,7 @@ export const API_ENDPOINTS = {
               GET_DOCTOR_TIMEOFF: (doctorId: string) => `/calendar/doctor/timeoff?doctorId=${doctorId}`,
               CREATE_DOCTOR_TIMEOFF: '/calendar/doctor/timeoff',
               DELETE_DOCTOR_TIMEOFF: (timeOffId: string) => `/calendar/doctor/timeoff/${timeOffId}`,
-                  GET_DOCTOR_CONFIG: (doctorId: string, startDate: string, days: number) => `/calendar/doctor/config?doctorId=${doctorId}&start=${encodeURIComponent(startDate)}&days=${days}`,
+                  GET_DOCTOR_CONFIG: (doctorId: string, startDate: string, days: number) => `/calendar/doctor/config?doctorId=${doctorId}&startDate=${encodeURIComponent(startDate)}&daysCount=${days}`,
     CREATE_DOCTOR_OVERRIDE: '/calendar/doctor/override',
     DELETE_DOCTOR_OVERRIDE: (overrideId: string) => `/calendar/doctor/override/${overrideId}`,
             },

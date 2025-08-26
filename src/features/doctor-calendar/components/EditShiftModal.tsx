@@ -72,24 +72,15 @@ export const EditShiftModal: React.FC<EditShiftModalProps> = ({
     
     const payload: CreateOverridePayload = {
       doctorId,
-      shiftName,
-      startTime: formData.startTime,
-      endTime: formData.endTime,
-      slotDuration: formData.slotMinutes,
       overrideDate,
-      recurringDays: [],
       startDate,
       endDate,
-      items: [{
-        doctorId,
+      shiftDetails: [{
         shiftName,
         startTime: formData.startTime,
         endTime: formData.endTime,
-        slotDuration: formData.slotMinutes,
-        overrideDate,
-        recurringDays: [],
-        startDate,
-        endDate
+        slotDurationInMinutes: formData.slotMinutes,
+        recurringDays: []
       }]
     };
     

@@ -3,13 +3,15 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import { CalendarHeader } from './components/CalendarHeader';
-import { EditShiftModal } from './components/EditShiftModal';
-import { PersonalizedScheduleModal } from './components/PersonalizedScheduleModal';
-import { DeleteTimeOffDialog } from './components/DeleteTimeOffDialog';
-import { CancelOverrideDialog } from './components/CancelOverrideDialog';
-import { OverrideActionDialog } from './components/OverrideActionDialog';
-import { ShiftDetailsCard } from './components/ShiftDetailsCard';
+import { 
+  CalendarHeader, 
+  EditShiftModal, 
+  PersonalizedScheduleModal,
+  DeleteTimeOffDialog,
+  CancelOverrideDialog,
+  OverrideActionDialog,
+  ShiftDetailsCard
+} from './components';
 import { useCalendarEvents, useCreateOverride, useDeleteOverride, useCreateBlock, useDeleteBlock, useTimeOff, useCreateTimeOff, useDeleteTimeOff, useDoctorCalendarConfig } from './hooks/useCalendar';
 import { CalendarEvent, CreateOverridePayload, CreateBlockPayload, ShiftName } from './api/types';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
@@ -159,12 +161,30 @@ export const DoctorCalendarPage: React.FC = () => {
   
   const daysCount = getDaysCount();
   
-  // Queries
+  // Queries - Use the same startDate for both hooks to ensure consistency
   const { data: calendarConfig, isLoading: configLoading } = useDoctorCalendarConfig(doctorId, fromISO, daysCount);
   const { data: events = [], isLoading: eventsLoading } = useCalendarEvents(doctorId, fromISO, toISO, calendarConfig);
   const { data: timeOffData, isLoading: timeOffLoading } = useTimeOff(doctorId);
   
-
+  // Debug logging
+  console.log('🔍 DoctorCalendarPage - Data:', {
+    doctorId,
+    fromISO,
+    toISO,
+    daysCount,
+    calendarConfig: calendarConfig ? 'present' : 'undefined',
+    eventsCount: events.length,
+    eventsLoading,
+    configLoading,
+    currentDate: currentDate.toISOString(),
+    view,
+    dateRange: getDateRange(),
+    apiCallInfo: {
+      startDate: fromISO,
+      daysCount: daysCount,
+      expectedUrl: `/calendar/doctor/config?doctorId=${doctorId}&startDate=${encodeURIComponent(fromISO)}&daysCount=${daysCount}`
+    }
+  });
   
   // Mutations
   const createOverrideMutation = useCreateOverride();
@@ -242,7 +262,7 @@ export const DoctorCalendarPage: React.FC = () => {
     const eventType = event.extendedProps?.type;
     
     // OVERRIDE EVENT HANDLING: Show action dialog for any click on override events
-    if ((eventType === 'shift' || eventType === 'block') && event.extendedProps?.isOverride) {
+    if ((eventType === 'shift' || eventType === 'block') && event.extendedProps?.source === 'override') {
       const target = info.jsEvent?.target;
       const isCancelButtonClick = target && (
         target.classList?.contains('cancel-override-btn') || 
@@ -250,8 +270,8 @@ export const DoctorCalendarPage: React.FC = () => {
         target.closest('button[data-override-id]')
       );
       
-      // Get override data from the event
-      const overrideId = event.extendedProps?.sourceId;
+      // Get override data from the event - updated for new API response format
+      const overrideId = event.extendedProps?.overrideId;
       const shiftName = event.extendedProps?.shiftName;
       const shiftDate = event.start ? format(event.start, 'yyyy-MM-dd') : '';
       const startTime = event.extendedProps?.startTime || '09:00';
@@ -519,6 +539,19 @@ export const DoctorCalendarPage: React.FC = () => {
        // Debug logging for event mounting
        const eventType = info.event.extendedProps?.type;
        const isTimeOff = info.event.extendedProps?.isTimeOff;
+       const isOverride = info.event.extendedProps?.isOverride;
+       
+       console.log('📅 Event mounted:', {
+         id: info.event.id,
+         title: info.event.title,
+         type: eventType,
+         isTimeOff,
+         isOverride,
+         start: info.event.start,
+         end: info.event.end,
+         backgroundColor: info.event.backgroundColor,
+         element: info.el
+       });
        
        if (eventType === 'block' || isTimeOff) {
          console.log('Block/TimeOff event mounted:', {
@@ -534,6 +567,7 @@ export const DoctorCalendarPage: React.FC = () => {
        // Add data-override attribute for override shifts
        if (info.event.extendedProps?.isOverride) {
          info.el.setAttribute('data-override', 'true');
+         console.log('📅 Set data-override attribute for event:', info.event.id);
        }
        
        // Add data-event-type attribute for better CSS targeting

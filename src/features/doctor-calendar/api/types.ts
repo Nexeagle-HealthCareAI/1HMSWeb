@@ -63,17 +63,21 @@ export interface CalendarEvent {
   extendedProps?: Record<string, any>;
 }
 
+// Updated CreateOverridePayload to match new API request model
 export interface CreateOverridePayload {
   doctorId: string;
+  overrideDate: string; // ISO date string
+  startDate: string; // ISO date string
+  endDate: string; // ISO date string
+  shiftDetails: ShiftDetail[];
+}
+
+export interface ShiftDetail {
   shiftName: string;
   startTime: string;
   endTime: string;
-  slotDuration: number;
-  overrideDate: string;
+  slotDurationInMinutes: number;
   recurringDays: string[];
-  startDate: string;
-  endDate: string;
-  items: CreateOverrideItem[];
 }
 
 export interface CreateOverrideItem {
@@ -154,7 +158,57 @@ export interface DeleteOverrideResponse {
   errors: string[];
 }
 
-// Doctor Calendar Configuration Types
+// Updated Doctor Calendar Configuration Types to match new API response model
+export interface DateInfo {
+  year: number;
+  month: number;
+  day: number;
+  dayOfWeek: number;
+  dayOfYear: number;
+  dayNumber: number;
+}
+
+export interface TimeSpan {
+  ticks: number;
+  days: number;
+  hours: number;
+  milliseconds: number;
+  microseconds: number;
+  nanoseconds: number;
+  minutes: number;
+  seconds: number;
+  totalDays: number;
+  totalHours: number;
+  totalMilliseconds: number;
+  totalMicroseconds: number;
+  totalNanoseconds: number;
+  totalMinutes: number;
+  totalSeconds: number;
+}
+
+export interface ShiftDayDetail {
+  overrideId: string;
+  shiftName: string;
+  startTime: TimeSpan;
+  endTime: TimeSpan;
+  slotDurationInMinutes: number;
+  recurringDays: string;
+}
+
+export interface ShiftInfo {
+  shiftDate: DateInfo;
+  shiftDayDetails: ShiftDayDetail[];
+}
+
+export interface DoctorCalendarConfigResponse {
+  doctorId: string;
+  startDate: DateInfo;
+  endDate: DateInfo;
+  dataSource: string;
+  shiftInfo: ShiftInfo[];
+}
+
+// Legacy types for backward compatibility
 export interface DoctorCalendarConfigRange {
   startDate: string;
   endDate: string;
@@ -189,7 +243,7 @@ export interface DoctorCalendarConfigDay {
   slotSummary: DoctorCalendarConfigSlotSummary;
 }
 
-export interface DoctorCalendarConfigResponse {
+export interface LegacyDoctorCalendarConfigResponse {
   doctorId: string;
   date: string;
   source: string | null;

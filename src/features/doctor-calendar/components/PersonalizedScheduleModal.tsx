@@ -281,24 +281,15 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
              
              payloads.push({
                doctorId,
-               shiftName,
-               startTime: config.startTime,
-               endTime: config.endTime,
-               slotDuration: config.slotDuration,
                overrideDate,
-               recurringDays: [],
                startDate: startDateISO,
                endDate: endDateISO,
-               items: [{
-                 doctorId,
+               shiftDetails: [{
                  shiftName,
                  startTime: config.startTime,
                  endTime: config.endTime,
-                 slotDuration: config.slotDuration,
-                 overrideDate,
-                 recurringDays: [],
-                 startDate: startDateISO,
-                 endDate: endDateISO
+                 slotDurationInMinutes: config.slotDuration,
+                 recurringDays: []
                }]
              });
            }
@@ -313,24 +304,15 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
              
              payloads.push({
                doctorId,
-               shiftName,
-               startTime: config.startTime,
-               endTime: config.endTime,
-               slotDuration: config.slotDuration,
                overrideDate: startDateISO,
-               recurringDays: recurringDayAbbreviations,
                startDate: startDateISO,
                endDate: endDateISO,
-               items: [{
-                 doctorId,
+               shiftDetails: [{
                  shiftName,
                  startTime: config.startTime,
                  endTime: config.endTime,
-                 slotDuration: config.slotDuration,
-                 overrideDate: startDateISO,
-                 recurringDays: recurringDayAbbreviations,
-                 startDate: startDateISO,
-                 endDate: endDateISO
+                 slotDurationInMinutes: config.slotDuration,
+                 recurringDays: recurringDayAbbreviations
                }]
              });
            }
@@ -1048,25 +1030,25 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                              onClick={(e) => e.stopPropagation()}
                            />
                          </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-3">
-                                                                          <div>
-                                                                                   <Label htmlFor={`${template.name}-slot`}>Slot Duration (minutes)</Label>
-                            <Input
-                              id={`${template.name}-slot`}
-                              type="number"
-                              min="1"
-                              step="1"
-                              value={shiftConfigs[template.name].slotDuration}
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                handleShiftConfigChange(template.name, 'slotDuration', parseInt(e.target.value) || 15);
-                              }}
-                              onMouseDown={(e) => e.stopPropagation()}
-                              onClick={(e) => e.stopPropagation()}
-                              placeholder="15"
-                            />
+                       </div>
+                       
+                       <div className="grid grid-cols-2 gap-3">
+                         <div>
+                           <Label htmlFor={`${template.name}-slot`}>Slot Duration (minutes)</Label>
+                           <Input
+                             id={`${template.name}-slot`}
+                             type="number"
+                             min="1"
+                             step="1"
+                             value={shiftConfigs[template.name].slotDuration}
+                             onChange={(e) => {
+                               e.stopPropagation();
+                               handleShiftConfigChange(template.name, 'slotDuration', parseInt(e.target.value) || 15);
+                             }}
+                             onMouseDown={(e) => e.stopPropagation()}
+                             onClick={(e) => e.stopPropagation()}
+                             placeholder="15"
+                           />
                          </div>
                          <div>
                            <Label htmlFor={`${template.name}-max`}>Max Patients</Label>
@@ -1084,123 +1066,123 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                              onClick={(e) => e.stopPropagation()}
                            />
                          </div>
-                      </div>
-                                         </CardContent>
+                       </div>
+                     </CardContent>
                    )}
-                                  </Card>
-                ))}
-              </div>
+                 </Card>
+               ))}
+             </div>
 
-              {/* Schedule Summary */}
-              {selectedShifts.size > 0 && (
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="text-sm text-blue-800">
-                    <div className="font-medium mb-2">Schedule Summary:</div>
-                    <div className="space-y-1">
-                      <div>• {selectedShifts.size} shift{selectedShifts.size > 1 ? 's' : ''} selected</div>
-                      <div>• {scheduleMode === 'single' ? 'Single day' : 'Recurring'} schedule</div>
-                      {scheduleMode === 'recurring' && (
-                        <div>• {recurringDays.size} day{recurringDays.size > 1 ? 's' : ''} per week</div>
-                      )}
-                      <div>• Total schedules: {generatePayloads().length}</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-            )}
+             {/* Schedule Summary */}
+             {selectedShifts.size > 0 && (
+               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                 <div className="text-sm text-blue-800">
+                   <div className="font-medium mb-2">Schedule Summary:</div>
+                   <div className="space-y-1">
+                     <div>• {selectedShifts.size} shift{selectedShifts.size > 1 ? 's' : ''} selected</div>
+                     <div>• {scheduleMode === 'single' ? 'Single day' : 'Recurring'} schedule</div>
+                     {scheduleMode === 'recurring' && (
+                       <div>• {recurringDays.size} day{recurringDays.size > 1 ? 's' : ''} per week</div>
+                     )}
+                     <div>• Total schedules: {generatePayloads().length}</div>
+                   </div>
+                 </div>
+               </div>
+             )}
+           </div>
+           )}
 
-          <DialogFooter className="gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-            
-                                                                           <Button
-               type="submit"
-               disabled={
-                 (scheduleType === 'block' ? !isBlockFormValid() : !isScheduleFormValid()) || 
-                 isLoading
-               }
-             >
-                               {isLoading 
-                  ? 'Saving...' 
-                  : scheduleType === 'block' 
-                    ? 'Schedule Time Off' 
-                    : `Save ${scheduleMode === 'recurring' ? 'Recurring' : 'Personalized'} Schedule`
-                }
-             </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+         <DialogFooter className="gap-2">
+           <Button
+             type="button"
+             variant="outline"
+             onClick={() => onOpenChange(false)}
+             disabled={isLoading}
+           >
+             Cancel
+           </Button>
+           
+           <Button
+             type="submit"
+             disabled={
+               (scheduleType === 'block' ? !isBlockFormValid() : !isScheduleFormValid()) || 
+               isLoading
+             }
+           >
+             {isLoading 
+               ? 'Saving...' 
+               : scheduleType === 'block' 
+                 ? 'Schedule Time Off' 
+                 : `Save ${scheduleMode === 'recurring' ? 'Recurring' : 'Personalized'} Schedule`
+             }
+           </Button>
+         </DialogFooter>
+       </form>
+     </DialogContent>
+   </Dialog>
 
-    {/* Confirmation Dialog */}
-    <Dialog open={showConfirmation} onOpenChange={setShowConfirmation}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <Calendar className="h-4 w-4 text-blue-600" />
-            </div>
-            Confirm Schedule Save
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="py-4">
-          <p className="text-gray-600 mb-4">
-            {pendingPayloads.length > 0 
-              ? `Are you sure you want to save ${pendingPayloads.length} personalized schedule override(s)? This will update your working hours for the selected dates.`
-              : `Are you sure you want to schedule this time off? You will be unavailable during the selected time period.`
-            }
-          </p>
-          
-          {pendingPayloads.length > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
-              <div className="font-medium text-blue-800 mb-1">Schedule Summary:</div>
-              <div className="text-blue-700 space-y-1">
-                <div>• {pendingPayloads.length} override{pendingPayloads.length > 1 ? 's' : ''} will be created</div>
-                <div>• {scheduleMode === 'single' ? 'Single day' : 'Recurring'} schedule</div>
-                {scheduleMode === 'recurring' && (
-                  <div>• {recurringDays.size} day{recurringDays.size > 1 ? 's' : ''} per week</div>
-                )}
-              </div>
-            </div>
-          )}
-          
-          {pendingBlockPayload && (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm">
-              <div className="font-medium text-orange-800 mb-1">Time Off Details:</div>
-              <div className="text-orange-700 space-y-1">
-                <div>• Type: {pendingBlockPayload.blockType}</div>
-                <div>• Duration: {format(new Date(pendingBlockPayload.startDateTime), 'MMM dd, yyyy HH:mm')} - {format(new Date(pendingBlockPayload.endDateTime), 'MMM dd, yyyy HH:mm')}</div>
-              </div>
-            </div>
-          )}
-        </div>
+   {/* Confirmation Dialog */}
+   <Dialog open={showConfirmation} onOpenChange={setShowConfirmation}>
+     <DialogContent className="sm:max-w-md">
+       <DialogHeader>
+         <DialogTitle className="flex items-center gap-2">
+           <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+             <Calendar className="h-4 w-4 text-blue-600" />
+           </div>
+           Confirm Schedule Save
+         </DialogTitle>
+       </DialogHeader>
+       
+       <div className="py-4">
+         <p className="text-gray-600 mb-4">
+           {pendingPayloads.length > 0 
+             ? `Are you sure you want to save ${pendingPayloads.length} personalized schedule override(s)? This will update your working hours for the selected dates.`
+             : `Are you sure you want to schedule this time off? You will be unavailable during the selected time period.`
+           }
+         </p>
+         
+         {pendingPayloads.length > 0 && (
+           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+             <div className="font-medium text-blue-800 mb-1">Schedule Summary:</div>
+             <div className="text-blue-700 space-y-1">
+               <div>• {pendingPayloads.length} override{pendingPayloads.length > 1 ? 's' : ''} will be created</div>
+               <div>• {scheduleMode === 'single' ? 'Single day' : 'Recurring'} schedule</div>
+               {scheduleMode === 'recurring' && (
+                 <div>• {recurringDays.size} day{recurringDays.size > 1 ? 's' : ''} per week</div>
+               )}
+             </div>
+           </div>
+         )}
+         
+         {pendingBlockPayload && (
+           <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm">
+             <div className="font-medium text-orange-800 mb-1">Time Off Details:</div>
+             <div className="text-orange-700 space-y-1">
+               <div>• Type: {pendingBlockPayload.blockType}</div>
+               <div>• Duration: {format(new Date(pendingBlockPayload.startDateTime), 'MMM dd, yyyy HH:mm')} - {format(new Date(pendingBlockPayload.endDateTime), 'MMM dd, yyyy HH:mm')}</div>
+             </div>
+           </div>
+         )}
+       </div>
 
-        <DialogFooter className="gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleCancelSave}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            onClick={handleConfirmSave}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            Yes, Save Schedule
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-    </>
-  );
+       <DialogFooter className="gap-2">
+         <Button
+           type="button"
+           variant="outline"
+           onClick={handleCancelSave}
+         >
+           Cancel
+         </Button>
+         <Button
+           type="button"
+           onClick={handleConfirmSave}
+           className="bg-blue-600 hover:bg-blue-700"
+         >
+           Yes, Save Schedule
+         </Button>
+       </DialogFooter>
+     </DialogContent>
+   </Dialog>
+   </>
+ );
 };

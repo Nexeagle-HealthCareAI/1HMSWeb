@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { CalendarService, CalendarViewType, DateRange } from '../services/calendarService';
 import { format, isSameDay } from 'date-fns';
-import { Calendar as CalendarIcon, Clock, CalendarDays, Range } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, CalendarDays } from 'lucide-react';
 
 interface DateRangeSelectionPopupProps {
   open: boolean;
@@ -76,7 +76,7 @@ export const DateRangeSelectionPopup: React.FC<DateRangeSelectionPopupProps> = (
       case 'day':
         return <Clock className="h-5 w-5" />;
       case 'block':
-        return <Range className="h-5 w-5" />;
+        return <CalendarIcon className="h-5 w-5" />;
       default:
         return <CalendarIcon className="h-5 w-5" />;
     }
