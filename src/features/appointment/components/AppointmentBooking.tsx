@@ -176,13 +176,6 @@ export const AppointmentBooking: React.FC = () => {
     }));
   }, [departmentsResponse]);
 
-  // Set initial department when data loads
-  useEffect(() => {
-    if (departments.length > 0 && !selectedDepartment) {
-      setSelectedDepartment(departments[0].id);
-    }
-  }, [departments, selectedDepartment]);
-
   // Generate shifts from API response
   const availableShifts = React.useMemo(() => {
     if (!doctorSlotsResponse?.shiftInfo?.[0]?.shiftDayDetails) return [];
@@ -200,12 +193,12 @@ export const AppointmentBooking: React.FC = () => {
     }));
   }, [doctorSlotsResponse]);
 
-  // Set initial shift when shifts are loaded
+  // Set initial department when data loads
   useEffect(() => {
-    if (availableShifts.length > 0 && !selectedShift) {
-      setSelectedShift(availableShifts[0].id);
+    if (departments.length > 0 && !selectedDepartment) {
+      setSelectedDepartment(departments[0].id);
     }
-  }, [availableShifts, selectedShift]);
+  }, [departments]);
 
   // Set initial doctor when doctors are loaded
   useEffect(() => {
@@ -219,7 +212,14 @@ export const AppointmentBooking: React.FC = () => {
         is_available: true
       });
     }
-  }, [doctorsResponse, selectedDoctor, selectedDepartment]);
+  }, [doctorsResponse, selectedDepartment]);
+
+  // Set initial shift when shifts are loaded
+  useEffect(() => {
+    if (availableShifts.length > 0 && !selectedShift) {
+      setSelectedShift(availableShifts[0].id);
+    }
+  }, [availableShifts]);
 
   // Show authentication required message if user is not authenticated
   if (!isAuthenticated || !userId) {
