@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, User, Phone, Users, Stethoscope, ChevronDown, CalendarIcon } from 'lucide-react';
 import { DepartmentSidebar } from './DepartmentSidebar';
 import { DateSelector } from './DateSelector';
@@ -16,12 +16,20 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useDepartments } from '../hooks/useDepartments';
+import { useHospitalUser } from '../hooks/useHospitalUser';
+import { useDoctorsByDepartment } from '../hooks/useDoctorsByDepartment';
+import { useDoctorSlots } from '../hooks/useDoctorSlots';
+import { Department as ApiDepartment, ApiDoctor } from '../services/appointmentApi';
+import { generateTimeSlotsFromShiftInfo } from '../utils/slotGenerator';
+import { useAuthStore } from '@/store/authStore';
 
 export interface Doctor {
   id: string;
   name: string;
   department: string;
   specialization: string;
+  is_available?: boolean;
 }
 
 export interface TimeSlot {
@@ -45,62 +53,51 @@ export interface Department {
   doctors: Doctor[];
 }
 
-const departments: Department[] = [
-  {
-    id: 'cardiology',
-    name: 'Cardiology',
-    icon: Calendar,
-    doctors: [
-      { id: '1', name: 'Dr. Sarah Johnson', department: 'Cardiology', specialization: 'Heart Surgery' },
-      { id: '2', name: 'Dr. Michael Chen', department: 'Cardiology', specialization: 'Cardiac Care' }
-    ]
-  },
-  {
-    id: 'neurology',
-    name: 'Neurology',
-    icon: Users,
-    doctors: [
-      { id: '3', name: 'Dr. Emily Davis', department: 'Neurology', specialization: 'Brain Surgery' },
-      { id: '4', name: 'Dr. Robert Wilson', department: 'Neurology', specialization: 'Neurological Care' }
-    ]
-  },
-  {
-    id: 'urology',
-    name: 'Urology',
-    icon: Phone,
-    doctors: [
-      { id: '7', name: 'Dr. William Thompson', department: 'Urology', specialization: 'Urological Surgery' },
-      { id: '8', name: 'Dr. Jennifer Clark', department: 'Urology', specialization: 'Kidney Specialist' }
-    ]
-  },
-  {
-    id: 'general',
-    name: 'General Medicine',
-    icon: Stethoscope,
-    doctors: [
-      { id: '5', name: 'Dr. Lisa Anderson', department: 'General Medicine', specialization: 'Family Medicine' },
-      { id: '6', name: 'Dr. James Brown', department: 'General Medicine', specialization: 'Internal Medicine' }
-    ]
-  },
-  {
-    id: 'dermatology',
-    name: 'Dermatology',
-    icon: User,
-    doctors: [
-      { id: '9', name: 'Dr. Maria Garcia', department: 'Dermatology', specialization: 'Skin Specialist' },
-      { id: '10', name: 'Dr. David Kim', department: 'Dermatology', specialization: 'Cosmetic Dermatology' }
-    ]
-  },
-  {
-    id: 'orthopedics',
-    name: 'Orthopedics',
-    icon: Clock,
-    doctors: [
-      { id: '11', name: 'Dr. John Miller', department: 'Orthopedics', specialization: 'Bone & Joint Surgery' },
-      { id: '12', name: 'Dr. Susan Taylor', department: 'Orthopedics', specialization: 'Sports Medicine' }
-    ]
-  }
-];
+// Default icons for departments
+const getDepartmentIcon = (departmentName: string) => {
+  const name = departmentName.toLowerCase();
+  if (name.includes('cardio')) return Calendar;
+  if (name.includes('neuro')) return Users;
+  if (name.includes('urology')) return Phone;
+  if (name.includes('general') || name.includes('medicine')) return Stethoscope;
+  if (name.includes('dermatology') || name.includes('skin')) return User;
+  if (name.includes('ortho') || name.includes('bone')) return Clock;
+  return Stethoscope; // default icon
+};
+
+// Helper functions for shifts
+const getShiftIcon = (shiftName: string): string => {
+  const icons: { [key: string]: string } = {
+    'Morning': '🌅',
+    'Afternoon': '☀️',
+    'Evening': '🌇',
+    'Night': '🌙',
+    'default': '⏰'
+  };
+  return icons[shiftName] || icons.default;
+};
+
+const getShiftGradient = (shiftName: string): string => {
+  const gradients: { [key: string]: string } = {
+    'Morning': 'from-teal-400 to-cyan-500',
+    'Afternoon': 'from-amber-400 to-orange-400',
+    'Evening': 'from-blue-400 to-indigo-500',
+    'Night': 'from-slate-500 to-gray-600',
+    'default': 'from-gray-400 to-gray-500'
+  };
+  return gradients[shiftName] || gradients.default;
+};
+
+const getShiftMedicalType = (shiftName: string): string => {
+  const types: { [key: string]: string } = {
+    'Morning': 'General Consultation',
+    'Afternoon': 'Specialist Care',
+    'Evening': 'Follow-up',
+    'Night': 'Emergency',
+    'default': 'General Care'
+  };
+  return types[shiftName] || types.default;
+};
 
 const generateTimeSlots = (doctorId: string, date: string): TimeSlot[] => {
   const shifts = {
@@ -115,21 +112,35 @@ const generateTimeSlots = (doctorId: string, date: string): TimeSlot[] => {
   return allTimes.map((time, index) => ({
     id: `${doctorId}-${date}-${time}`,
     time,
-    isBooked: Math.random() > 0.7, // Random booking for demo
-    patientInfo: Math.random() > 0.7 ? {
-      name: 'John Doe',
-      phone: '+1-555-0123',
-      age: 35,
-      gender: 'Male'
-    } : undefined,
+    isBooked: false, // All slots are available by default
     doctorId,
     date
   }));
 };
 
 export const AppointmentBooking: React.FC = () => {
-  const [selectedDepartment, setSelectedDepartment] = useState<string>(departments[0].id);
-  const [selectedDoctor, setSelectedDoctor] = useState<Doctor>(departments[0].doctors[0]);
+  // Get userId and authentication status from Zustand auth store
+  const userId = useAuthStore((state) => state.userId);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  
+  // Fetch hospital user information using the userId from auth store
+  const { 
+    data: hospitalUserResponse, 
+    isLoading: hospitalUserLoading, 
+    error: hospitalUserError 
+  } = useHospitalUser(userId || '');
+  
+  // Get hospital ID from the response
+  const hospitalId = hospitalUserResponse?.hospitalId; 
+  
+  // Finally, fetch departments using the hospital ID
+  const { data: departmentsResponse, 
+    isLoading: departmentsLoading, 
+    error: departmentsError } = useDepartments(hospitalId || '');
+  
+  // State declarations
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('');
+  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedShift, setSelectedShift] = useState('morning');
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
@@ -139,6 +150,127 @@ export const AppointmentBooking: React.FC = () => {
   const [appointmentId, setAppointmentId] = useState('');
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [patientData, setPatientData] = useState<any>(null);
+  
+  // Fetch doctors for the selected department
+  const { data: doctorsResponse, 
+    isLoading: doctorsLoading, 
+    error: doctorsError } = useDoctorsByDepartment(selectedDepartment);
+  
+  // Format selected date for API
+  const formattedDate = selectedDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+  
+  // Fetch doctor slots for the selected doctor and date
+  const { data: doctorSlotsResponse, 
+    isLoading: doctorSlotsLoading, 
+    error: doctorSlotsError } = useDoctorSlots(selectedDoctor?.id || '', formattedDate);
+  
+  // Transform API departments to match the component interface
+  const departments: Department[] = React.useMemo(() => {
+    if (!departmentsResponse?.departments) return [];
+    
+    return departmentsResponse.departments.map((dept: ApiDepartment) => ({
+      id: dept.departmentId,
+      name: dept.departmentName,
+      icon: getDepartmentIcon(dept.departmentName),
+      doctors: [] // We'll need to fetch doctors separately or add them to the API response
+    }));
+  }, [departmentsResponse]);
+
+  // Set initial department when data loads
+  useEffect(() => {
+    if (departments.length > 0 && !selectedDepartment) {
+      setSelectedDepartment(departments[0].id);
+    }
+  }, [departments, selectedDepartment]);
+
+  // Generate shifts from API response
+  const availableShifts = React.useMemo(() => {
+    if (!doctorSlotsResponse?.shiftInfo?.[0]?.shiftDayDetails) return [];
+    
+    return doctorSlotsResponse.shiftInfo[0].shiftDayDetails.map((shift, index) => ({
+      id: shift.shiftName.toLowerCase(),
+      label: shift.shiftName,
+      time: `${shift.startTime.slice(0, 5)}-${shift.endTime.slice(0, 5)}`,
+      icon: getShiftIcon(shift.shiftName),
+      gradient: getShiftGradient(shift.shiftName),
+      medical: getShiftMedicalType(shift.shiftName),
+      startTime: shift.startTime,
+      endTime: shift.endTime,
+      slotDuration: shift.slotDurationInMinutes
+    }));
+  }, [doctorSlotsResponse]);
+
+  // Set initial shift when shifts are loaded
+  useEffect(() => {
+    if (availableShifts.length > 0 && !selectedShift) {
+      setSelectedShift(availableShifts[0].id);
+    }
+  }, [availableShifts, selectedShift]);
+
+  // Set initial doctor when doctors are loaded
+  useEffect(() => {
+    if (doctorsResponse?.doctors && doctorsResponse.doctors.length > 0 && !selectedDoctor) {
+      const firstDoctor = doctorsResponse.doctors[0];
+      setSelectedDoctor({
+        id: firstDoctor.doctorId,
+        name: firstDoctor.doctorName,       
+        specialization: '',
+        department: selectedDepartment,
+        is_available: true
+      });
+    }
+  }, [doctorsResponse, selectedDoctor, selectedDepartment]);
+
+  // Show authentication required message if user is not authenticated
+  if (!isAuthenticated || !userId) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-4xl mb-4">🔒</div>
+          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Authentication Required</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Please log in to access the appointment booking system.
+          </p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Show error if hospital user data is not available
+  if (hospitalUserError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-4xl mb-4">⚠️</div>
+          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Failed to Load Hospital Information</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            {hospitalUserError instanceof Error ? hospitalUserError.message : 'An error occurred while loading hospital information'}
+          </p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  // Show loading if hospital user data is loading
+  if (hospitalUserLoading || !hospitalId) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Loading Hospital Information...</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Please wait while we fetch your hospital information
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const selectedDepartmentData = departments.find(d => d.id === selectedDepartment);
   const next7Days = Array.from({ length: 7 }, (_, i) => {
@@ -147,20 +279,29 @@ export const AppointmentBooking: React.FC = () => {
     return date;
   });
 
+  // Generate time slots from API response
+  React.useEffect(() => {
+    if (selectedDoctor && doctorSlotsResponse?.shiftInfo?.[0]?.shiftDayDetails) {
+      const shiftDayDetails = doctorSlotsResponse.shiftInfo[0].shiftDayDetails;
+      const generatedSlots = generateTimeSlotsFromShiftInfo(shiftDayDetails, selectedDoctor.id, formattedDate);
+      setTimeSlots(generatedSlots);
+    } else if (selectedDoctor) {
+      // Fallback to old generation method if no API data
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      setTimeSlots(generateTimeSlots(selectedDoctor.id, dateStr));
+    }
+  }, [selectedDoctor, selectedDate, doctorSlotsResponse, formattedDate]);
+
   const isSameDay = (date1: Date, date2: Date) => {
     return date1.toDateString() === date2.toDateString();
   };
-
-  React.useEffect(() => {
-    const dateStr = selectedDate.toISOString().split('T')[0];
-    setTimeSlots(generateTimeSlots(selectedDoctor.id, dateStr));
-  }, [selectedDoctor, selectedDate]);
 
   const handleDepartmentSelect = (departmentId: string) => {
     const department = departments.find(d => d.id === departmentId);
     if (department) {
       setSelectedDepartment(departmentId);
-      setSelectedDoctor(department.doctors[0]);
+      // Clear selected doctor when department changes
+      setSelectedDoctor(null);
     }
   };
 
@@ -225,11 +366,76 @@ export const AppointmentBooking: React.FC = () => {
     ));
   };
 
+  // Loading state
+  if (hospitalUserLoading || departmentsLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+            {hospitalUserLoading 
+              ? 'Loading Hospital Information...' 
+              : 'Loading Departments...'
+            }
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {hospitalUserLoading 
+              ? 'Please wait while we fetch your hospital information' 
+              : 'Please wait while we fetch available departments'
+            }
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+
+
+  if (hospitalUserError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-4xl mb-4">⚠️</div>
+          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Failed to Load Hospital Information</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            {hospitalUserError instanceof Error ? hospitalUserError.message : 'An error occurred while loading hospital information'}
+          </p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (departmentsError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-4xl mb-4">⚠️</div>
+          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Failed to Load Departments</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            {departmentsError instanceof Error ? departmentsError.message : 'An error occurred while loading departments'}
+          </p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (showSuccess) {
     return (
       <BookingSuccess 
         appointmentId={appointmentId}
-        doctor={selectedDoctor}
+        doctor={selectedDoctor!}
         date={selectedDate}
         timeSlot={selectedSlot}
         onBookAnother={() => {
@@ -281,25 +487,48 @@ export const AppointmentBooking: React.FC = () => {
                 </Select>
               </div>
               
-              {/* Doctor Selection */}
+                            {/* Doctor Selection */}
               <div>
                 <label className="text-xs font-medium text-muted-foreground dark:text-gray-400 mb-1 block">Doctor</label>
-                <Select value={selectedDoctor.id} onValueChange={(value) => {
-                  const doctor = selectedDepartmentData?.doctors.find(d => d.id === value);
-                  if (doctor) setSelectedDoctor(doctor);
+                <Select value={selectedDoctor?.id || ''} onValueChange={(value) => {
+                  if (doctorsResponse?.doctors) {
+                    const selectedApiDoctor = doctorsResponse.doctors.find(doc => doc.doctorId === value);
+                    if (selectedApiDoctor && selectedDepartmentData) {
+                      setSelectedDoctor({
+                        id: selectedApiDoctor.doctorId,
+                        name: selectedApiDoctor.doctorName,
+                        department: selectedDepartmentData.name,
+                        specialization: 'General'
+                      });
+                    }
+                  }
                 }}>
                   <SelectTrigger className="h-8 text-xs bg-background">
-                    <SelectValue placeholder="Doctor" />
+                    <SelectValue placeholder={doctorsLoading ? "Loading doctors..." : "Select Doctor"} />
                   </SelectTrigger>
                   <SelectContent className="z-50">
-                    {selectedDepartmentData?.doctors.map((doctor) => (
-                      <SelectItem key={doctor.id} value={doctor.id} className="text-xs">
-                        <div>
-                          <div className="font-medium">{doctor.name.split(' ')[1]}</div>
-                          <div className="text-xs text-muted-foreground truncate">{doctor.specialization}</div>
-                        </div>
+                    {doctorsLoading ? (
+                      <SelectItem value="loading" disabled className="text-xs">
+                        Loading doctors...
                       </SelectItem>
-                    ))}
+                    ) : doctorsError ? (
+                      <SelectItem value="error" disabled className="text-xs">
+                        Error loading doctors
+                      </SelectItem>
+                    ) : doctorsResponse?.doctors && doctorsResponse.doctors.length > 0 ? (
+                      doctorsResponse.doctors.map((doctor) => (
+                        <SelectItem key={doctor.doctorId} value={doctor.doctorId} className="text-xs">
+                          <div>
+                            <div className="font-medium">{doctor.doctorName}</div>
+                            <div className="text-xs text-muted-foreground truncate">Available</div>
+                          </div>
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-doctors" disabled className="text-xs">
+                        No doctors available
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -358,20 +587,39 @@ export const AppointmentBooking: React.FC = () => {
                   👩‍⚕️ Available Doctors
                 </h3>
                 <div className="space-y-2">
-                  {selectedDepartmentData?.doctors.map((doctor) => (
-                    <button
-                      key={doctor.id}
-                      onClick={() => setSelectedDoctor(doctor)}
-                      className={`w-full p-3 rounded-lg border text-left transition-all text-xs ${
-                        selectedDoctor.id === doctor.id
-                          ? 'border-blue-300 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 shadow-sm'
-                          : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      <div className="font-medium text-blue-600 text-sm">{doctor.name}</div>
-                      <div className="text-xs text-gray-500">{doctor.specialization}</div>
-                    </button>
-                  ))}
+                  {doctorsLoading ? (
+                    <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 text-center text-xs text-gray-500">
+                      Loading doctors...
+                    </div>
+                  ) : doctorsError ? (
+                    <div className="p-3 rounded-lg border border-red-200 bg-red-50 text-center text-xs text-red-500">
+                      Error loading doctors
+                    </div>
+                  ) : doctorsResponse?.doctors && doctorsResponse.doctors.length > 0 ? (
+                    doctorsResponse.doctors.map((doctor) => (
+                      <button
+                        key={doctor.doctorId}
+                        onClick={() => setSelectedDoctor({
+                          id: doctor.doctorId,
+                          name: doctor.doctorName,
+                          department: selectedDepartmentData?.name || '',
+                          specialization: 'General'
+                        })}
+                        className={`w-full p-3 rounded-lg border text-left transition-all text-xs ${
+                          selectedDoctor?.id === doctor.doctorId
+                            ? 'border-blue-300 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 shadow-sm'
+                            : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        <div className="font-medium text-blue-600 text-sm">{doctor.doctorName}</div>
+                        <div className="text-xs text-gray-500">Available</div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 text-center text-xs text-gray-500">
+                      No doctors available
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -399,9 +647,9 @@ export const AppointmentBooking: React.FC = () => {
                 <div className="hidden lg:block mb-6">
                   <h1 className="text-2xl font-bold text-foreground dark:text-white mb-2">Schedule Appointment</h1>
                   <p className="text-sm text-muted-foreground dark:text-gray-400">
-                    Selected: <span className="font-semibold text-primary">{selectedDoctor.name}</span>
+                    Selected: <span className="font-semibold text-primary">{selectedDoctor?.name || 'No doctor selected'}</span>
                     <span className="text-muted-foreground/50"> • </span>
-                    <span>{selectedDoctor.specialization}</span>
+                    <span>{selectedDoctor?.specialization || 'Select a department first'}</span>
                   </p>
                 </div>
 
@@ -465,30 +713,31 @@ export const AppointmentBooking: React.FC = () => {
                     ⏰ Select Time Shift
                   </h2>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {[
-                      { id: 'morning', label: 'Morning', time: '8AM-12PM', icon: '🌅', gradient: 'from-teal-400 to-cyan-500', medical: 'General Consultation' },
-                      { id: 'afternoon', label: 'Afternoon', time: '12PM-4PM', icon: '☀️', gradient: 'from-amber-400 to-orange-400', medical: 'Specialist Care' },
-                      { id: 'evening', label: 'Evening', time: '4PM-8PM', icon: '🌇', gradient: 'from-blue-400 to-indigo-500', medical: 'Follow-up' },
-                      { id: 'night', label: 'Night', time: '8PM-11PM', icon: '🌙', gradient: 'from-slate-500 to-gray-600', medical: 'Emergency' }
-                    ].map((shift) => (
-                      <button
-                        key={shift.id}
-                        onClick={() => setSelectedShift(shift.id)}
-                        className={`p-3 rounded-lg border text-center transition-all text-xs shadow-sm animate-scale-in ${
-                          selectedShift === shift.id
-                            ? `bg-gradient-to-r ${shift.gradient} text-white border-transparent shadow-md scale-105`
-                            : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md hover-scale'
-                        }`}
-                      >
-                        <div className="text-lg mb-1">{shift.icon}</div>
-                        <div className="font-medium">{shift.label}</div>
-                        <div className={`text-xs mt-1 ${
-                          selectedShift === shift.id ? 'text-white/90' : 'text-gray-600'
-                        }`}>
-                          {shift.time}
-                        </div>
-                      </button>
-                    ))}
+                                        {availableShifts.length > 0 ? (
+                      availableShifts.map((shift) => (
+                        <button
+                          key={shift.id}
+                          onClick={() => setSelectedShift(shift.id)}
+                          className={`p-3 rounded-lg border text-center transition-all text-xs shadow-sm animate-scale-in ${
+                            selectedShift === shift.id
+                              ? `bg-gradient-to-r ${shift.gradient} text-white border-transparent shadow-md scale-105`
+                              : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md hover-scale'
+                          }`}
+                        >
+                          <div className="text-lg mb-1">{shift.icon}</div>
+                          <div className="font-medium">{shift.label}</div>
+                          <div className={`text-xs mt-1 ${
+                            selectedShift === shift.id ? 'text-white/90' : 'text-gray-600'
+                          }`}>
+                            {shift.time}
+                          </div>
+                        </button>
+                      ))
+                                         ) : (
+                       <div className="col-span-full text-center py-4 text-gray-500">
+                         No shifts available for this doctor
+                       </div>
+                     )}
                   </div>
                 </div>
 
@@ -498,11 +747,14 @@ export const AppointmentBooking: React.FC = () => {
                     🕐 Available Time Slots
                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                       {timeSlots.filter(slot => {
-                        if (selectedShift === 'morning') return parseInt(slot.time) < 12;
-                        if (selectedShift === 'afternoon') return parseInt(slot.time) >= 12 && parseInt(slot.time) < 16;
-                        if (selectedShift === 'evening') return parseInt(slot.time) >= 16 && parseInt(slot.time) < 20;
-                        if (selectedShift === 'night') return parseInt(slot.time) >= 20;
-                        return true;
+                        const selectedShiftData = availableShifts.find(s => s.id === selectedShift);
+                        if (!selectedShiftData) return true;
+                        
+                        const slotHour = parseInt(slot.time.split(':')[0]);
+                        const startHour = parseInt(selectedShiftData.startTime.split(':')[0]);
+                        const endHour = parseInt(selectedShiftData.endTime.split(':')[0]);
+                        
+                        return slotHour >= startHour && slotHour < endHour;
                       }).filter(slot => !slot.isBooked).length} Available
                     </span>
                   </h2>
@@ -510,11 +762,14 @@ export const AppointmentBooking: React.FC = () => {
                   <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2">
                     {timeSlots
                       .filter(slot => {
-                        if (selectedShift === 'morning') return parseInt(slot.time) < 12;
-                        if (selectedShift === 'afternoon') return parseInt(slot.time) >= 12 && parseInt(slot.time) < 16;
-                        if (selectedShift === 'evening') return parseInt(slot.time) >= 16 && parseInt(slot.time) < 20;
-                        if (selectedShift === 'night') return parseInt(slot.time) >= 20;
-                        return true;
+                        const selectedShiftData = availableShifts.find(s => s.id === selectedShift);
+                        if (!selectedShiftData) return true;
+                        
+                        const slotHour = parseInt(slot.time.split(':')[0]);
+                        const startHour = parseInt(selectedShiftData.startTime.split(':')[0]);
+                        const endHour = parseInt(selectedShiftData.endTime.split(':')[0]);
+                        
+                        return slotHour >= startHour && slotHour < endHour;
                       })
                       .map((slot) => (
                       <button
