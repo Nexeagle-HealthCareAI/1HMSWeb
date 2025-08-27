@@ -1,11 +1,12 @@
 import React from 'react';
-import { Settings, Palette, Monitor, Smartphone, Sun, Moon, Zap, Eye, Monitor as MonitorIcon } from 'lucide-react';
+import { Settings, Palette, Monitor, Smartphone, Sun, Moon, Zap, Eye, Monitor as MonitorIcon, Plus, Minus, Sliders, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
 import { useThemeStore } from '@/store/themeStore';
 
 interface ThemeSettingsProps {
@@ -150,67 +151,282 @@ export const ThemeSettings: React.FC<ThemeSettingsProps> = ({ className = '' }) 
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Font Size Settings */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Font Size</Label>
+              <Badge variant="outline" className="text-xs">
+                {settings.fontSize}
+              </Badge>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const current = settings.fontSize;
+                  const sizes = ['small', 'medium', 'large'];
+                  const currentIndex = sizes.indexOf(current);
+                  const newIndex = Math.max(0, currentIndex - 1);
+                  updateSettings({ fontSize: sizes[newIndex] as 'small' | 'medium' | 'large' });
+                }}
+                disabled={settings.fontSize === 'small'}
+                className="h-8 w-8 p-0"
+              >
+                <Minus className="h-3 w-3" />
+              </Button>
+              
+              <div className="flex-1">
+                <Slider
+                  value={[
+                    settings.fontSize === 'small' ? 0 : 
+                    settings.fontSize === 'medium' ? 50 : 100
+                  ]}
+                  onValueChange={(value) => {
+                    const size = value[0] <= 25 ? 'small' : value[0] <= 75 ? 'medium' : 'large';
+                    updateSettings({ fontSize: size as 'small' | 'medium' | 'large' });
+                  }}
+                  max={100}
+                  step={50}
+                  className="w-full"
+                />
+              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const current = settings.fontSize;
+                  const sizes = ['small', 'medium', 'large'];
+                  const currentIndex = sizes.indexOf(current);
+                  const newIndex = Math.min(2, currentIndex + 1);
+                  updateSettings({ fontSize: sizes[newIndex] as 'small' | 'medium' | 'large' });
+                }}
+                disabled={settings.fontSize === 'large'}
+                className="h-8 w-8 p-0"
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+              </div>
+            
+            <div className="flex justify-between text-xs text-gray-500">
+              <span>Small</span>
+              <span>Medium</span>
+              <span>Large</span>
+              </div>
+              </div>
+
           {/* Contrast Settings */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Contrast Level</Label>
-            <RadioGroup 
-              value={settings.contrast || 'normal'} 
-              onValueChange={(value) => updateSettings({ contrast: value as 'low' | 'normal' | 'high' })}
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="low" id="contrast-low" />
-                <Label htmlFor="contrast-low" className="text-sm">Low (Softer)</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="normal" id="contrast-normal" />
-                <Label htmlFor="contrast-normal" className="text-sm">Normal (Default)</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="high" id="contrast-high" />
-                <Label htmlFor="contrast-high" className="text-sm">High (Enhanced)</Label>
-              </div>
-            </RadioGroup>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Contrast Level</Label>
+              <Badge variant="outline" className="text-xs">
+                {settings.contrast || 'normal'}
+              </Badge>
           </div>
 
-          {/* Brightness Settings */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Brightness Level</Label>
-            <RadioGroup 
-              value={settings.brightness || 'normal'} 
-              onValueChange={(value) => updateSettings({ brightness: value as 'dim' | 'normal' | 'bright' })}
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="dim" id="brightness-dim" />
-                <Label htmlFor="brightness-dim" className="text-sm">Dim (Reduced)</Label>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const current = settings.contrast || 'normal';
+                  const levels = ['low', 'normal', 'high'];
+                  const currentIndex = levels.indexOf(current);
+                  const newIndex = Math.max(0, currentIndex - 1);
+                  updateSettings({ contrast: levels[newIndex] as 'low' | 'normal' | 'high' });
+                }}
+                disabled={(settings.contrast || 'normal') === 'low'}
+                className="h-8 w-8 p-0"
+              >
+                <Minus className="h-3 w-3" />
+              </Button>
+              
+              <div className="flex-1">
+                <Slider
+                  value={[
+                    (settings.contrast || 'normal') === 'low' ? 0 : 
+                    (settings.contrast || 'normal') === 'normal' ? 50 : 100
+                  ]}
+                  onValueChange={(value) => {
+                    const level = value[0] <= 25 ? 'low' : value[0] <= 75 ? 'normal' : 'high';
+                    updateSettings({ contrast: level as 'low' | 'normal' | 'high' });
+                  }}
+                  max={100}
+                  step={50}
+                  className="w-full"
+                />
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="normal" id="brightness-normal" />
-                <Label htmlFor="brightness-normal" className="text-sm">Normal (Default)</Label>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const current = settings.contrast || 'normal';
+                  const levels = ['low', 'normal', 'high'];
+                  const currentIndex = levels.indexOf(current);
+                  const newIndex = Math.min(2, currentIndex + 1);
+                  updateSettings({ contrast: levels[newIndex] as 'low' | 'normal' | 'high' });
+                }}
+                disabled={(settings.contrast || 'normal') === 'high'}
+                className="h-8 w-8 p-0"
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="bright" id="brightness-bright" />
-                <Label htmlFor="brightness-bright" className="text-sm">Bright (Enhanced)</Label>
+            
+            <div className="flex justify-between text-xs text-gray-500">
+              <span>Low</span>
+              <span>Normal</span>
+              <span>High</span>
               </div>
-            </RadioGroup>
           </div>
 
           {/* Color Blindness Support */}
-          <div className="space-y-3">
+          <div className="space-y-4">
+            <div className="space-y-0.5">
             <Label className="text-sm font-medium">Color Blindness Support</Label>
-            <Select 
-              value={settings.colorBlindness || 'none'} 
-              onValueChange={(value) => updateSettings({ colorBlindness: value as any })}
+              <p className="text-xs text-gray-500">Enhance visibility for different types of color vision</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div 
+                className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+                  (settings.colorBlindness || 'none') === 'none' 
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                }`}
+                onClick={() => updateSettings({ colorBlindness: 'none' })}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">N</span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">None (Default)</div>
+                    <div className="text-xs text-gray-500">Standard color vision</div>
+                  </div>
+                  {(settings.colorBlindness || 'none') === 'none' && (
+                    <CheckCircle className="h-4 w-4 text-blue-600" />
+                  )}
+                </div>
+              </div>
+
+              <div 
+                className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+                  (settings.colorBlindness || 'none') === 'protanopia' 
+                    ? 'border-red-500 bg-red-50 dark:bg-red-900/20' 
+                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                }`}
+                onClick={() => updateSettings({ colorBlindness: 'protanopia' })}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">P</span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">Protanopia</div>
+                    <div className="text-xs text-gray-500">Red-Blind (Red-Green)</div>
+                  </div>
+                  {(settings.colorBlindness || 'none') === 'protanopia' && (
+                    <CheckCircle className="h-4 w-4 text-red-600" />
+                  )}
+                </div>
+              </div>
+
+              <div 
+                className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+                  (settings.colorBlindness || 'none') === 'deuteranopia' 
+                    ? 'border-green-500 bg-green-50 dark:bg-green-900/20' 
+                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                }`}
+                onClick={() => updateSettings({ colorBlindness: 'deuteranopia' })}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">D</span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">Deuteranopia</div>
+                    <div className="text-xs text-gray-500">Green-Blind (Red-Green)</div>
+                  </div>
+                  {(settings.colorBlindness || 'none') === 'deuteranopia' && (
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  )}
+                </div>
+              </div>
+
+              <div 
+                className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+                  (settings.colorBlindness || 'none') === 'tritanopia' 
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                }`}
+                onClick={() => updateSettings({ colorBlindness: 'tritanopia' })}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">T</span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">Tritanopia</div>
+                    <div className="text-xs text-gray-500">Blue-Blind (Blue-Yellow)</div>
+                  </div>
+                  {(settings.colorBlindness || 'none') === 'tritanopia' && (
+                    <CheckCircle className="h-4 w-4 text-blue-600" />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Color Vision Preview */}
+            <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <Eye className="h-4 w-4 text-gray-500" />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Color Vision Preview</span>
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                <div className="text-center">
+                  <div className="w-6 h-6 rounded bg-red-500 mx-auto mb-1"></div>
+                  <span className="text-xs text-gray-500">Red</span>
+                </div>
+                <div className="text-center">
+                  <div className="w-6 h-6 rounded bg-green-500 mx-auto mb-1"></div>
+                  <span className="text-xs text-gray-500">Green</span>
+                </div>
+                <div className="text-center">
+                  <div className="w-6 h-6 rounded bg-blue-500 mx-auto mb-1"></div>
+                  <span className="text-xs text-gray-500">Blue</span>
+                </div>
+                <div className="text-center">
+                  <div className="w-6 h-6 rounded bg-yellow-500 mx-auto mb-1"></div>
+                  <span className="text-xs text-gray-500">Yellow</span>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                {settings.colorBlindness === 'none' && "Standard color vision - all colors appear normal"}
+                {settings.colorBlindness === 'protanopia' && "Red-blind vision - reds appear darker and greens may be confused"}
+                {settings.colorBlindness === 'deuteranopia' && "Green-blind vision - greens appear lighter and reds may be confused"}
+                {settings.colorBlindness === 'tritanopia' && "Blue-blind vision - blues appear darker and yellows may be confused"}
+              </p>
+            </div>
+          </div>
+
+          {/* Reduced Motion */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label className="text-sm font-medium">Reduced Motion</Label>
+              <p className="text-xs text-gray-500">Disable animations for better accessibility</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => updateSettings({ reducedMotion: !settings.reducedMotion })}
+              className="h-8 px-3"
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select color blindness type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None (Default)</SelectItem>
-                <SelectItem value="protanopia">Protanopia (Red-Blind)</SelectItem>
-                <SelectItem value="deuteranopia">Deuteranopia (Green-Blind)</SelectItem>
-                <SelectItem value="tritanopia">Tritanopia (Blue-Blind)</SelectItem>
-              </SelectContent>
-            </Select>
+              {settings.reducedMotion ? 'Enabled' : 'Disabled'}
+            </Button>
           </div>
         </CardContent>
       </Card>

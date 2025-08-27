@@ -221,6 +221,19 @@ export const AppointmentBooking: React.FC = () => {
     }
   }, [availableShifts]);
 
+  // Generate time slots from API response
+  React.useEffect(() => {
+    if (selectedDoctor && doctorSlotsResponse?.shiftInfo?.[0]?.shiftDayDetails) {
+      const shiftDayDetails = doctorSlotsResponse.shiftInfo[0].shiftDayDetails;
+      const generatedSlots = generateTimeSlotsFromShiftInfo(shiftDayDetails, selectedDoctor.id, formattedDate);
+      setTimeSlots(generatedSlots);
+    } else if (selectedDoctor) {
+      // Fallback to old generation method if no API data
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      setTimeSlots(generateTimeSlots(selectedDoctor.id, dateStr));
+    }
+  }, [selectedDoctor, selectedDate, doctorSlotsResponse, formattedDate]);
+
   // Show authentication required message if user is not authenticated
   if (!isAuthenticated || !userId) {
     return (
@@ -278,19 +291,6 @@ export const AppointmentBooking: React.FC = () => {
     date.setDate(date.getDate() + i);
     return date;
   });
-
-  // Generate time slots from API response
-  React.useEffect(() => {
-    if (selectedDoctor && doctorSlotsResponse?.shiftInfo?.[0]?.shiftDayDetails) {
-      const shiftDayDetails = doctorSlotsResponse.shiftInfo[0].shiftDayDetails;
-      const generatedSlots = generateTimeSlotsFromShiftInfo(shiftDayDetails, selectedDoctor.id, formattedDate);
-      setTimeSlots(generatedSlots);
-    } else if (selectedDoctor) {
-      // Fallback to old generation method if no API data
-      const dateStr = selectedDate.toISOString().split('T')[0];
-      setTimeSlots(generateTimeSlots(selectedDoctor.id, dateStr));
-    }
-  }, [selectedDoctor, selectedDate, doctorSlotsResponse, formattedDate]);
 
   const isSameDay = (date1: Date, date2: Date) => {
     return date1.toDateString() === date2.toDateString();
@@ -487,7 +487,7 @@ export const AppointmentBooking: React.FC = () => {
                 </Select>
               </div>
               
-                            {/* Doctor Selection */}
+              {/* Doctor Selection */}
               <div>
                 <label className="text-xs font-medium text-muted-foreground dark:text-gray-400 mb-1 block">Doctor</label>
                 <Select value={selectedDoctor?.id || ''} onValueChange={(value) => {
@@ -518,10 +518,10 @@ export const AppointmentBooking: React.FC = () => {
                     ) : doctorsResponse?.doctors && doctorsResponse.doctors.length > 0 ? (
                       doctorsResponse.doctors.map((doctor) => (
                         <SelectItem key={doctor.doctorId} value={doctor.doctorId} className="text-xs">
-                          <div>
+                        <div>
                             <div className="font-medium">{doctor.doctorName}</div>
                             <div className="text-xs text-muted-foreground truncate">Available</div>
-                          </div>
+                        </div>
                         </SelectItem>
                       ))
                     ) : (
@@ -597,7 +597,7 @@ export const AppointmentBooking: React.FC = () => {
                     </div>
                   ) : doctorsResponse?.doctors && doctorsResponse.doctors.length > 0 ? (
                     doctorsResponse.doctors.map((doctor) => (
-                      <button
+                    <button
                         key={doctor.doctorId}
                         onClick={() => setSelectedDoctor({
                           id: doctor.doctorId,
@@ -605,15 +605,15 @@ export const AppointmentBooking: React.FC = () => {
                           department: selectedDepartmentData?.name || '',
                           specialization: 'General'
                         })}
-                        className={`w-full p-3 rounded-lg border text-left transition-all text-xs ${
+                      className={`w-full p-3 rounded-lg border text-left transition-all text-xs ${
                           selectedDoctor?.id === doctor.doctorId
-                            ? 'border-blue-300 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 shadow-sm'
-                            : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
-                        }`}
-                      >
+                          ? 'border-blue-300 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 shadow-sm'
+                          : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                    >
                         <div className="font-medium text-blue-600 text-sm">{doctor.doctorName}</div>
                         <div className="text-xs text-gray-500">Available</div>
-                      </button>
+                    </button>
                     ))
                   ) : (
                     <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 text-center text-xs text-gray-500">
@@ -715,23 +715,23 @@ export const AppointmentBooking: React.FC = () => {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                         {availableShifts.length > 0 ? (
                       availableShifts.map((shift) => (
-                        <button
-                          key={shift.id}
-                          onClick={() => setSelectedShift(shift.id)}
-                          className={`p-3 rounded-lg border text-center transition-all text-xs shadow-sm animate-scale-in ${
-                            selectedShift === shift.id
-                              ? `bg-gradient-to-r ${shift.gradient} text-white border-transparent shadow-md scale-105`
-                              : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md hover-scale'
-                          }`}
-                        >
-                          <div className="text-lg mb-1">{shift.icon}</div>
-                          <div className="font-medium">{shift.label}</div>
-                          <div className={`text-xs mt-1 ${
-                            selectedShift === shift.id ? 'text-white/90' : 'text-gray-600'
-                          }`}>
-                            {shift.time}
-                          </div>
-                        </button>
+                      <button
+                        key={shift.id}
+                        onClick={() => setSelectedShift(shift.id)}
+                        className={`p-3 rounded-lg border text-center transition-all text-xs shadow-sm animate-scale-in ${
+                          selectedShift === shift.id
+                            ? `bg-gradient-to-r ${shift.gradient} text-white border-transparent shadow-md scale-105`
+                            : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md hover-scale'
+                        }`}
+                      >
+                        <div className="text-lg mb-1">{shift.icon}</div>
+                        <div className="font-medium">{shift.label}</div>
+                        <div className={`text-xs mt-1 ${
+                          selectedShift === shift.id ? 'text-white/90' : 'text-gray-600'
+                        }`}>
+                          {shift.time}
+                        </div>
+                      </button>
                       ))
                                          ) : (
                        <div className="col-span-full text-center py-4 text-gray-500">

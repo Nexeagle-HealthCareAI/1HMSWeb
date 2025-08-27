@@ -53,6 +53,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 // import { DASHBOARD_GUIDES } from './guide/GuideData';
 
 import { format, subDays } from 'date-fns';
+import { PatientFlow } from './PatientFlow';
+import { PatientDetailsModal } from './PatientDetailsModal';
 
 interface KPIData {
   title: string;
@@ -64,12 +66,25 @@ interface KPIData {
 
 interface Patient {
   id: string;
-  name: string;
-  contact: string;
-  token: string;
-  doctor: string;
-  time: string;
-  status: 'confirmed' | 'cancelled' | 'no-show';
+  patientId: string;
+  patientName: string;
+  doctorName: string;
+  appointmentTime: string;
+  appointmentDate: string;
+  tokenNo: number;
+  vitalsUpdated: boolean;
+  status: 'vitals-required' | 'ready-consultation' | 'under-consultation' | 'lab-test-required' | 'awaiting-reconsultation' | 'completed';
+  phone: string;
+  age?: number;
+  gender?: string;
+  bloodPressure?: string;
+  temperature?: string;
+  pulse?: string;
+  weight?: string;
+  symptoms?: string;
+  diagnosis?: string;
+  prescription?: string;
+  notes?: string;
 }
 
 interface Appointment {
@@ -83,6 +98,25 @@ interface Appointment {
   vitalsUpdated: boolean;
   status: 'vitals-required' | 'ready-consultation' | 'under-consultation' | 'lab-test-required' | 'awaiting-reconsultation' | 'completed';
   phone: string;
+}
+
+interface Patient {
+  id: string;
+  patientId: string;
+  patientName: string;
+  doctorName: string;
+  appointmentTime: string;
+  appointmentDate: string;
+  tokenNo: number;
+  vitalsUpdated: boolean;
+  status: 'vitals-required' | 'ready-consultation' | 'under-consultation' | 'lab-test-required' | 'awaiting-reconsultation' | 'completed';
+  phone: string;
+  age?: number;
+  gender?: string;
+  bloodPressure?: string;
+  temperature?: string;
+  pulse?: string;
+  weight?: string;
 }
 
 export const ClinicalDashboard: React.FC = () => {
@@ -101,6 +135,8 @@ export const ClinicalDashboard: React.FC = () => {
   const [currentView, setCurrentView] = useState('dashboard');
   const [activeTab, setActiveTab] = useState<'current' | 'past'>('current');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [showPatientModal, setShowPatientModal] = useState(false);
 
   // Clinical Dashboard Modules
   const clinicalModules = [
@@ -114,7 +150,7 @@ export const ClinicalDashboard: React.FC = () => {
   const mockPatients: Patient[] = [];
 
   // TODO: Replace with actual API data
-  const mockAppointments: Appointment[] = [];
+  const mockAppointments: Appointment[] = mockPatients;
 
   // TODO: Replace with actual API data
   const mockFutureAppointments: Appointment[] = [];
@@ -173,6 +209,8 @@ export const ClinicalDashboard: React.FC = () => {
     return mockAppointments;
   };
 
+
+
   // Handle patient ID click
   const handlePatientIdClick = (patientId: string) => {
     if (!isProfileComplete) {
@@ -180,6 +218,30 @@ export const ClinicalDashboard: React.FC = () => {
     }
     // Navigate to patient details page
     navigate(`/patient/${patientId}`);
+  };
+
+  // Handle patient selection
+  const handlePatientSelect = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setShowPatientModal(true);
+  };
+
+  // Handle status update
+  const handleStatusUpdate = (patientId: string, status: Patient['status']) => {
+    // Update patient status logic here
+    console.log(`Updating patient ${patientId} status to ${status}`);
+  };
+
+  // Handle vitals update
+  const handleVitalsUpdate = (patientId: string, vitals: any) => {
+    // Update patient vitals logic here
+    console.log(`Updating patient ${patientId} vitals:`, vitals);
+  };
+
+  // Handle patient update
+  const handlePatientUpdate = (patient: Patient) => {
+    // Update patient data logic here
+    console.log('Updating patient:', patient);
   };
 
   // Filter appointments based on active tab
@@ -976,6 +1038,19 @@ export const ClinicalDashboard: React.FC = () => {
         </div>
       )}
 
+      {/* Patient Flow Section - Only show when profile is complete */}
+      {isProfileComplete && (
+        <PatientFlow />
+      )}
+
+      {/* Patient Details Modal */}
+      <PatientDetailsModal
+        patient={selectedPatient}
+        isOpen={showPatientModal}
+        onClose={() => setShowPatientModal(false)}
+        onStatusUpdate={handleStatusUpdate}
+        onVitalsUpdate={handleVitalsUpdate}
+      />
 
     </div>
   );
