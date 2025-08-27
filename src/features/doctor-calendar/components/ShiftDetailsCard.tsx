@@ -318,10 +318,7 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
               <div className="w-3 h-3 bg-orange-500 rounded"></div>
               <span className="text-gray-700 dark:text-gray-300">Evening shifts</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 bg-indigo-500 rounded"></div>
-              <span className="text-gray-700 dark:text-gray-300">Night shifts</span>
-            </div>
+
             {timeOffEvents.length > 0 && (
               <div className="flex items-center gap-1.5">
                 <div className="w-3 h-3 bg-red-500 rounded"></div>

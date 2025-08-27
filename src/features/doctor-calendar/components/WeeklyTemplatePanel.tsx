@@ -29,7 +29,7 @@ interface WeeklyTemplatePanelProps {
 }
 
 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const shiftNames: ShiftName[] = ['Morning', 'Afternoon', 'Evening', 'Night'];
+const shiftNames: ShiftName[] = ['Morning', 'Afternoon', 'Evening'];
 
 // Preset templates for common schedules
 const presetTemplates = {
@@ -51,7 +51,6 @@ const presetTemplates = {
   'Emergency Schedule': {
     description: '24/7 emergency department schedule',
     templates: [
-      { dayOfWeek: 0, shiftName: 'Night' as ShiftName, startTime: '20:00', endTime: '08:00', slotMinutes: 30, maxPatients: null, isActive: true },
       { dayOfWeek: 1, shiftName: 'Morning' as ShiftName, startTime: '08:00', endTime: '16:00', slotMinutes: 20, maxPatients: null, isActive: true },
       { dayOfWeek: 1, shiftName: 'Evening' as ShiftName, startTime: '16:00', endTime: '00:00', slotMinutes: 20, maxPatients: null, isActive: true },
       { dayOfWeek: 2, shiftName: 'Morning' as ShiftName, startTime: '08:00', endTime: '16:00', slotMinutes: 20, maxPatients: null, isActive: true },
@@ -62,7 +61,6 @@ const presetTemplates = {
       { dayOfWeek: 4, shiftName: 'Evening' as ShiftName, startTime: '16:00', endTime: '00:00', slotMinutes: 20, maxPatients: null, isActive: true },
       { dayOfWeek: 5, shiftName: 'Morning' as ShiftName, startTime: '08:00', endTime: '16:00', slotMinutes: 20, maxPatients: null, isActive: true },
       { dayOfWeek: 5, shiftName: 'Evening' as ShiftName, startTime: '16:00', endTime: '00:00', slotMinutes: 20, maxPatients: null, isActive: true },
-      { dayOfWeek: 6, shiftName: 'Night' as ShiftName, startTime: '20:00', endTime: '08:00', slotMinutes: 30, maxPatients: null, isActive: true },
     ]
   },
   'Part-time Schedule': {
@@ -250,7 +248,6 @@ export const WeeklyTemplatePanel: React.FC<WeeklyTemplatePanelProps> = ({
       case 'Morning': return 'bg-teal-100 text-teal-800 border-teal-200';
       case 'Afternoon': return 'bg-amber-100 text-amber-800 border-amber-200';
       case 'Evening': return 'bg-violet-100 text-violet-800 border-violet-200';
-      case 'Night': return 'bg-slate-100 text-slate-800 border-slate-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };

@@ -912,7 +912,7 @@ export const DoctorCalendarPage: React.FC = () => {
             if (shiftName === 'Morning') classes.push('shift-morning');
             else if (shiftName === 'Afternoon') classes.push('shift-afternoon');
             else if (shiftName === 'Evening') classes.push('shift-evening');
-            else if (shiftName === 'Night') classes.push('shift-night');
+        
           }
         } else if (eventType === 'block') {
           if (isTimeOff) {
@@ -1573,11 +1573,7 @@ export const DoctorCalendarPage: React.FC = () => {
             color: #581c87 !important;
           }
           
-          .shift-night {
-            background-color: #e2e8f0 !important;
-            border-color: #94a3b8 !important;
-            color: #334155 !important;
-          }
+
           
                      .block-event {
              background-color: #ef4444 !important;

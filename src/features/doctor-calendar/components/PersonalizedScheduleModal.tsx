@@ -62,14 +62,6 @@ const SHIFT_TEMPLATES: ShiftTemplate[] = [
     defaultEndTime: '21:00',
     color: 'bg-violet-50 border-violet-200 text-violet-800',
     description: 'Evening OPD Hours'
-  },
-  {
-    name: 'Night',
-    icon: <Moon className="h-4 w-4" />,
-    defaultStartTime: '22:00',
-    defaultEndTime: '06:00',
-    color: 'bg-slate-50 border-slate-200 text-slate-800',
-    description: 'Night Emergency Hours'
   }
 ];
 
@@ -96,8 +88,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
   }>>({
     Morning: { startTime: '09:00', endTime: '12:00', slotDuration: 15, maxPatients: '', enabled: false },
     Afternoon: { startTime: '14:00', endTime: '17:00', slotDuration: 15, maxPatients: '', enabled: false },
-    Evening: { startTime: '18:00', endTime: '21:00', slotDuration: 15, maxPatients: '', enabled: false },
-    Night: { startTime: '22:00', endTime: '06:00', slotDuration: 15, maxPatients: '', enabled: false }
+    Evening: { startTime: '18:00', endTime: '21:00', slotDuration: 15, maxPatients: '', enabled: false }
   });
 
   const [scheduleType, setScheduleType] = useState<'schedule' | 'block'>(

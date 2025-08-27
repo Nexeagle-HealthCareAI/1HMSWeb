@@ -1,4 +1,4 @@
-export type ShiftName = 'Morning' | 'Afternoon' | 'Evening' | 'Night';
+export type ShiftName = 'Morning' | 'Afternoon' | 'Evening';
 
 export interface Doctor {
   doctorId: string;
