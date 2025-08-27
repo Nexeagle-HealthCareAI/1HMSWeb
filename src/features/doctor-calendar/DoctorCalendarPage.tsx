@@ -3,6 +3,7 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
+import { useTranslation } from 'react-i18next';
 import { 
   CalendarHeader, 
   EditShiftModal, 
@@ -25,6 +26,7 @@ import { useUserDetails } from '@/hooks/useUserProfileApi';
 import { useDoctorProfile } from '@/features/doctor/hooks/useDoctorProfile';
 
 export const DoctorCalendarPage: React.FC = () => {
+  const { t } = useTranslation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'>('timeGridDay');
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -1321,7 +1323,7 @@ export const DoctorCalendarPage: React.FC = () => {
           </p>
           {doctorProfileError && (
             <div className="text-red-600 text-sm mt-2">
-              <p className="font-medium">Error loading doctor profile:</p>
+                              <p className="font-medium">{t('errors.doctorProfileError')}:</p>
               <p>{doctorProfileError.message || 'Failed to load doctor profile'}</p>
               <button 
                 onClick={() => window.location.reload()} 
@@ -1379,7 +1381,7 @@ export const DoctorCalendarPage: React.FC = () => {
                     </p>
                     {doctorProfileError && (
                       <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                        <p className="text-red-700 dark:text-red-400 font-medium">Error loading doctor profile</p>
+                        <p className="text-red-700 dark:text-red-400 font-medium">{t('errors.doctorProfileError')}</p>
                         <p className="text-red-600 dark:text-red-300 text-sm mt-1">{doctorProfileError.message}</p>
                       </div>
                     )}

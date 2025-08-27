@@ -4,6 +4,8 @@ import { useAuthStore, useAppStore, useUserStore, useNotificationStore, useTheme
 import { useQueryClient } from '@tanstack/react-query';
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { useUserDetails } from '@/hooks/useUserProfileApi';
+import { useLanguage } from '@/hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 import { 
   Calendar, 
   Users, 
@@ -52,6 +54,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { EyeFriendlyNotification } from '@/components/ui/eye-friendly-notification';
+import { HeaderLanguageSelector } from '@/components/shared/HeaderLanguageSelector';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -76,6 +79,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const { currentLanguage, isRTL } = useLanguage();
+  const { t } = useTranslation();
 
   // Profile completion hook
   const { completionPercentage, doctorProfileCompletion } = useProfileCompletion();
@@ -99,11 +104,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   // Navigation items with role-based filtering
   const allNavigationItems: NavigationItem[] = [
-    { id: 'admin', name: 'Admin Panel', icon: Settings, path: '/admin' },
-    { id: 'dashboard', name: 'Clinical Dashboard', icon: Home, path: '/dashboard' },    
-    { id: 'calendar', name: 'Doctor Calendar', icon: Calendar, path: '/calendar' },
-    { id: 'appointments', name: 'Appointment Scheduler', icon: Calendar, path: '/appointment-dashboard' },
-    { id: 'doc-ai', name: 'DocAI', icon: Bot, path: '/doc-ai' },
+    { id: 'admin', name: t('header.adminPanel'), icon: Settings, path: '/admin' },
+    { id: 'dashboard', name: t('header.clinicalDashboard'), icon: Home, path: '/dashboard' },    
+    { id: 'calendar', name: t('header.doctorCalendar'), icon: Calendar, path: '/calendar' },
+    { id: 'appointments', name: t('header.appointmentScheduler'), icon: Calendar, path: '/appointment-dashboard' },
+    { id: 'doc-ai', name: t('header.docAI'), icon: Bot, path: '/doc-ai' },
   ];
 
   // Filter navigation items based on user role
@@ -295,10 +300,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 </Button>
                               <div>
                   <h1 className="text-xl font-semibold text-gray-900 dark:text-white capitalize transition-colors duration-200">
-                    {currentPage === 'dashboard' ? 'Clinical Dashboard' : navigation.find(n => n.id === currentPage)?.name}
+                    {currentPage === 'dashboard' ? t('header.clinicalDashboard') : navigation.find(n => n.id === currentPage)?.name}
                   </h1>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 transition-colors duration-200">
-                    Welcome back, {getUserDisplayName()}
+                    {t('header.welcomeBack')}, {getUserDisplayName()}
                   </p>
                 </div>
             </div>
@@ -313,7 +318,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 className="hidden md:flex items-center gap-2 border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:border-amber-300 dark:hover:border-amber-600 transition-all duration-200"
               >
                   <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-medium">Complete Profile ({profileScore}%)</span>
+                  <span className="text-sm font-medium">{t('header.completeProfile')} ({profileScore}%)</span>
                 </Button>
               )}
 
@@ -323,6 +328,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 size="sm" 
                 className="p-2 hover:bg-muted/50 rounded-lg transition-all duration-200"
               />
+
+              {/* Enhanced Language Selector */}
+              <HeaderLanguageSelector />
 
               {/* Notifications */}
               <Button variant="ghost" size="sm" className="relative p-2 hover:bg-muted/50 rounded-lg">
@@ -356,11 +364,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate(profileTarget)}>
                     <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
+                    <span>{t('header.profile')}</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate('/settings')}>
                     <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
+                    <span>{t('header.settings')}</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>

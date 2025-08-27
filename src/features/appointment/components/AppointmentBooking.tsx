@@ -207,12 +207,20 @@ export const AppointmentBooking: React.FC = () => {
       setSelectedDoctor({
         id: firstDoctor.doctorId,
         name: firstDoctor.doctorName,       
-        specialization: '',
+        specialization: firstDoctor.specializations?.length > 0 ? firstDoctor.specializations.join(', ') : 'General',
         department: selectedDepartment,
         is_available: true
       });
     }
   }, [doctorsResponse, selectedDepartment]);
+
+  // Function to check if a doctor is on time-off for the selected date
+  const isDoctorOnTimeOff = (doctorId: string): boolean => {
+    if (!doctorSlotsResponse || doctorSlotsResponse.doctorId !== doctorId) {
+      return false;
+    }
+    return doctorSlotsResponse.isTimeOff;
+  };
 
   // Set initial shift when shifts are loaded
   useEffect(() => {
@@ -223,14 +231,24 @@ export const AppointmentBooking: React.FC = () => {
 
   // Generate time slots from API response
   React.useEffect(() => {
-    if (selectedDoctor && doctorSlotsResponse?.shiftInfo?.[0]?.shiftDayDetails) {
-      const shiftDayDetails = doctorSlotsResponse.shiftInfo[0].shiftDayDetails;
-      const generatedSlots = generateTimeSlotsFromShiftInfo(shiftDayDetails, selectedDoctor.id, formattedDate);
-      setTimeSlots(generatedSlots);
-    } else if (selectedDoctor) {
-      // Fallback to old generation method if no API data
-      const dateStr = selectedDate.toISOString().split('T')[0];
-      setTimeSlots(generateTimeSlots(selectedDoctor.id, dateStr));
+    if (selectedDoctor && doctorSlotsResponse) {
+      // Check if doctor is on time-off
+      if (doctorSlotsResponse.isTimeOff) {
+        // Clear time slots when doctor is on time-off
+        setTimeSlots([]);
+        return;
+      }
+      
+      // Generate slots if doctor is available and has shift info
+      if (doctorSlotsResponse.shiftInfo?.[0]?.shiftDayDetails) {
+        const shiftDayDetails = doctorSlotsResponse.shiftInfo[0].shiftDayDetails;
+        const generatedSlots = generateTimeSlotsFromShiftInfo(shiftDayDetails, selectedDoctor.id, formattedDate);
+        setTimeSlots(generatedSlots);
+      } else {
+        // Fallback to old generation method if no API data
+        const dateStr = selectedDate.toISOString().split('T')[0];
+        setTimeSlots(generateTimeSlots(selectedDoctor.id, dateStr));
+      }
     }
   }, [selectedDoctor, selectedDate, doctorSlotsResponse, formattedDate]);
 
@@ -498,7 +516,7 @@ export const AppointmentBooking: React.FC = () => {
                         id: selectedApiDoctor.doctorId,
                         name: selectedApiDoctor.doctorName,
                         department: selectedDepartmentData.name,
-                        specialization: 'General'
+                        specialization: selectedApiDoctor.specializations?.length > 0 ? selectedApiDoctor.specializations.join(', ') : 'General'
                       });
                     }
                   }
@@ -518,9 +536,22 @@ export const AppointmentBooking: React.FC = () => {
                     ) : doctorsResponse?.doctors && doctorsResponse.doctors.length > 0 ? (
                       doctorsResponse.doctors.map((doctor) => (
                         <SelectItem key={doctor.doctorId} value={doctor.doctorId} className="text-xs">
-                        <div>
-                            <div className="font-medium">{doctor.doctorName}</div>
-                            <div className="text-xs text-muted-foreground truncate">Available</div>
+                        <div className="flex items-center justify-between w-full">
+                            <div className="flex-1 min-w-0">
+                                <div className="font-medium truncate">{doctor.doctorName}</div>
+                                <div className="text-xs text-muted-foreground truncate">
+                                  {doctor.qualifications?.length > 0 ? doctor.qualifications.join(', ') : 'MBBS'}
+                                </div>
+                                <div className="text-xs text-blue-600 truncate">
+                                  {doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : 'General'}
+                                </div>
+                                <div className="text-xs text-gray-500 truncate">
+                                  {isDoctorOnTimeOff(doctor.doctorId) ? 'Time Off' : 'Available'}
+                                </div>
+                            </div>
+                            {isDoctorOnTimeOff(doctor.doctorId) && (
+                              <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 ml-2"></div>
+                            )}
                         </div>
                         </SelectItem>
                       ))
@@ -603,16 +634,27 @@ export const AppointmentBooking: React.FC = () => {
                           id: doctor.doctorId,
                           name: doctor.doctorName,
                           department: selectedDepartmentData?.name || '',
-                          specialization: 'General'
+                          specialization: doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : 'General'
                         })}
-                      className={`w-full p-3 rounded-lg border text-left transition-all text-xs ${
+                      className={`w-full p-3 rounded-lg border text-left transition-all text-xs relative ${
                           selectedDoctor?.id === doctor.doctorId
                           ? 'border-blue-300 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 shadow-sm'
                           : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
                       }`}
                     >
                         <div className="font-medium text-blue-600 text-sm">{doctor.doctorName}</div>
-                        <div className="text-xs text-gray-500">Available</div>
+                        <div className="text-xs text-gray-600 mb-1">
+                          {doctor.qualifications?.length > 0 ? doctor.qualifications.join(', ') : 'MBBS'}
+                        </div>
+                        <div className="text-xs text-blue-600 mb-1">
+                          {doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : 'General'}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {isDoctorOnTimeOff(doctor.doctorId) ? 'Time Off' : 'Available'}
+                        </div>
+                        {isDoctorOnTimeOff(doctor.doctorId) && (
+                          <div className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full"></div>
+                        )}
                     </button>
                     ))
                   ) : (
@@ -625,7 +667,7 @@ export const AppointmentBooking: React.FC = () => {
 
               {/* Legend */}
               <div className="border-t pt-4 mt-4">
-                <div className="flex gap-4 text-xs">
+                <div className="flex flex-col gap-2 text-xs">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-gradient-to-r from-teal-400 to-emerald-500 rounded-full"></div>
                     <span className="text-gray-600 dark:text-gray-400">Available</span>
@@ -633,6 +675,10 @@ export const AppointmentBooking: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-gradient-to-r from-rose-400 to-red-500 rounded-full"></div>
                     <span className="text-gray-600 dark:text-gray-400">Booked</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                    <span className="text-gray-600 dark:text-gray-400">Time Off</span>
                   </div>
                 </div>
               </div>
@@ -760,7 +806,17 @@ export const AppointmentBooking: React.FC = () => {
                   </h2>
                   
                   <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2">
-                    {timeSlots
+                    {timeSlots.length === 0 && doctorSlotsResponse?.isTimeOff ? (
+                      <div className="col-span-full text-center py-8">
+                        <div className="text-red-500 text-4xl mb-3">🚫</div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          No time slots available - Doctor is on time off
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500">
+                          Please select a different date or doctor
+                        </p>
+                      </div>
+                    ) : timeSlots
                       .filter(slot => {
                         const selectedShiftData = availableShifts.find(s => s.id === selectedShift);
                         if (!selectedShiftData) return true;
@@ -808,6 +864,35 @@ export const AppointmentBooking: React.FC = () => {
                     ))}
                   </div>
                   
+                  {/* Time-Off Message */}
+                  {doctorSlotsResponse?.isTimeOff && (
+                    <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0">
+                          <div className="w-8 h-8 bg-red-100 dark:bg-red-800 rounded-full flex items-center justify-center">
+                            <span className="text-red-600 dark:text-red-400 text-lg">🚫</span>
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-sm font-semibold text-red-800 dark:text-red-200 mb-1">
+                            Doctor Unavailable - Time Off
+                          </h3>
+                          <p className="text-sm text-red-700 dark:text-red-300 mb-2">
+                            {doctorSlotsResponse.timeOffReason || "The doctor is not available on this date."}
+                          </p>
+                          <div className="text-xs text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-800/30 p-2 rounded border border-red-200 dark:border-red-700">
+                            <strong>What you can do:</strong>
+                            <ul className="mt-1 space-y-1">
+                              <li>• Select a different date</li>
+                              <li>• Choose another doctor from the same department</li>
+                              <li>• Contact the hospital for emergency appointments</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Quick Info */}
                   <div className="mt-3 text-xs text-gray-600 dark:text-gray-400 bg-white/50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
                     💡 <strong>Tip:</strong> Tap any green slot to book an appointment. Slots are 30 minutes each.

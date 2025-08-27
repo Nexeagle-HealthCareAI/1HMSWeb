@@ -115,6 +115,9 @@ export interface UserDetails {
 export interface ApiDoctor {
   doctorId: string;
   doctorName: string;
+  licenseNumber: string;
+  qualifications: string[];
+  specializations: string[];
 }
 
 export interface ShiftDayDetail {
@@ -164,7 +167,7 @@ export const appointmentApi = {
 
   // Get doctor slots
   getDoctorSlots: (doctorId: string, date: string): Promise<DoctorSlotsResponse> => {
-    const url = `/calendar/doctor/slots?doctorId=${doctorId}&date=${date}`;
+    const url = `/calendar/doctor/slots?doctorId=${doctorId}&slotDate=${date}`;
     return apiClient.get(url);
   }
 };

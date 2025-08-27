@@ -13,7 +13,8 @@ import {
   Trash2, 
   CheckCircle,
   AlertCircle,
-  Info
+  Info,
+  Globe
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -25,6 +26,9 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ThemeSettings } from '@/components/ui/theme-settings';
+import { LanguageSelector } from '@/components/shared/LanguageSelector';
+import { LanguageGuide } from '@/components/shared/LanguageGuide';
+import { LanguageDemo } from '@/components/shared/LanguageDemo';
 
 export const SettingsPage: React.FC = () => {
   const [notificationSettings, setNotificationSettings] = useState({
@@ -110,6 +114,52 @@ export const SettingsPage: React.FC = () => {
         {/* Theme Tab */}
         <TabsContent value="theme" className="space-y-6">
           <ThemeSettings />
+          
+                     {/* Language Settings */}
+           <Card>
+             <CardHeader>
+               <CardTitle className="flex items-center gap-2">
+                 <Globe className="h-5 w-5" />
+                 Language Settings
+               </CardTitle>
+               <CardDescription>
+                 Choose your preferred language for the application interface. Changes apply immediately.
+               </CardDescription>
+             </CardHeader>
+             <CardContent className="space-y-6">
+               <LanguageSelector 
+                 variant="enhanced" 
+                 showFlags={true} 
+                 showNativeNames={true}
+                 showDescriptions={true}
+                 label="Application Language"
+               />
+               
+               {/* Language Information */}
+               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                 <div className="flex items-start gap-3">
+                   <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-lg">
+                     <Globe className="h-4 w-4 text-blue-600" />
+                   </div>
+                   <div className="space-y-2">
+                     <h4 className="font-medium text-blue-900 dark:text-blue-100">Language Features</h4>
+                     <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+                       <li>• <strong>Immediate Application:</strong> Language changes take effect instantly</li>
+                       <li>• <strong>RTL Support:</strong> Arabic language includes Right-to-Left layout</li>
+                       <li>• <strong>Persistent Settings:</strong> Your preference is saved for future sessions</li>
+                       <li>• <strong>Complete Translation:</strong> All interface elements are translated</li>
+                     </ul>
+                   </div>
+                 </div>
+               </div>
+             </CardContent>
+           </Card>
+
+           {/* Language Guide */}
+           <LanguageGuide />
+
+           {/* Language Demo */}
+           <LanguageDemo />
         </TabsContent>
 
         {/* Notifications Tab */}

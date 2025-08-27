@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { useTranslation } from 'react-i18next';
 import {
   Users,
   Search,
@@ -33,6 +34,7 @@ import { patientApi, Patient, PatientFilters } from '../services/patientApi';
 
 export const PatientsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -127,14 +129,14 @@ export const PatientsPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Users className="h-6 w-6 text-healthcare-primary" />
-          <h1 className="text-2xl font-bold">Patients Management</h1>
+          <h1 className="text-2xl font-bold">{t('patients.title')}</h1>
         </div>
         <Button 
           onClick={() => navigate('/patient/new')}
           className="bg-healthcare-primary hover:bg-healthcare-primary/90"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Add Patient
+          {t('patients.addNewPatient')}
         </Button>
       </div>
 
@@ -143,14 +145,14 @@ export const PatientsPage: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Search className="h-5 w-5" />
-            Search & Filter Patients
+            {t('patients.searchPatients')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="md:col-span-2">
               <Input
-                placeholder="Search by name, email, or phone..."
+                placeholder={t('patients.searchPatients')}
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
                 className="w-full"
@@ -158,21 +160,21 @@ export const PatientsPage: React.FC = () => {
             </div>
             <Select value={genderFilter} onValueChange={(value) => handleFilterChange('gender', value)}>
               <SelectTrigger>
-                <SelectValue placeholder="Filter by gender" />
+                <SelectValue placeholder={t('patients.gender')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Genders</SelectItem>
-                <SelectItem value="Male">Male</SelectItem>
-                <SelectItem value="Female">Female</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
+                <SelectItem value="all">{t('common.all')}</SelectItem>
+                <SelectItem value="Male">{t('patients.male')}</SelectItem>
+                <SelectItem value="Female">{t('patients.female')}</SelectItem>
+                <SelectItem value="Other">{t('patients.other')}</SelectItem>
               </SelectContent>
             </Select>
             <Select value={bloodTypeFilter} onValueChange={(value) => handleFilterChange('bloodType', value)}>
               <SelectTrigger>
-                <SelectValue placeholder="Filter by blood type" />
+                <SelectValue placeholder={t('patients.bloodType')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Blood Types</SelectItem>
+                <SelectItem value="all">{t('common.all')}</SelectItem>
                 <SelectItem value="O+">O+</SelectItem>
                 <SelectItem value="O-">O-</SelectItem>
                 <SelectItem value="A+">A+</SelectItem>
@@ -191,7 +193,7 @@ export const PatientsPage: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle>
-            Patients ({totalPatients})
+            {t('patients.title')} ({totalPatients})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -202,7 +204,7 @@ export const PatientsPage: React.FC = () => {
           ) : patients.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No patients found</p>
+              <p>{t('patients.noPatientsFound')}</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -225,7 +227,7 @@ export const PatientsPage: React.FC = () => {
                             {patient.name}
                           </h3>
                           <Badge variant="outline" className="text-xs">
-                            ID: {patient.id}
+                            {t('patients.patientId')}: {patient.id}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -239,7 +241,7 @@ export const PatientsPage: React.FC = () => {
                           </div>
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {getAge(patient.date_of_birth)} years
+                            {getAge(patient.date_of_birth)} {t('common.years')}
                           </div>
                         </div>
                       </div>
@@ -260,11 +262,11 @@ export const PatientsPage: React.FC = () => {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handlePatientClick(patient.id)}>
                             <Eye className="h-4 w-4 mr-2" />
-                            View Profile
+                            {t('patients.viewDetails')}
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => navigate(`/patient/${patient.id}/edit`)}>
                             <Edit className="h-4 w-4 mr-2" />
-                            Edit
+                            {t('common.edit')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

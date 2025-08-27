@@ -6,6 +6,7 @@ import { ValidationUtils } from '@/utils/validation';
 import { useAuthApi, useInvalidateQueries } from '@/hooks/useApi';
 import { fetchAndStoreUserPermissions } from '@/features/auth/services/authApi';
 import { useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import {
   PasswordLoginForm,
   OTPLoginForm,
@@ -24,6 +25,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
   const { setUser, setToken } = useAuthStore();
   const { invalidateAuth } = useInvalidateQueries();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   
   // Using useAuthApi for all auth operations
   const loginMutation = useAuthApi.login();
@@ -60,39 +62,39 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
           if (data?.message) {
             return data.message;
           }
-          return 'Invalid request. Please check your input and try again.';
+          return t('auth.login.genericError');
         case 401:
-          return 'Invalid credentials. Please check your mobile number/email and password.';
+          return t('auth.login.invalidCredentials');
         case 403:
-          return 'Access denied. You don\'t have permission for this action.';
+          return t('errors.unauthorized');
         case 404:
-          return 'User not found. Please check your mobile number/email.';
+          return t('auth.login.userNotFound');
         case 422:
           if (data?.message) {
             return data.message;
           }
-          return 'Validation failed. Please check your input.';
+          return t('errors.validation');
         case 429:
-          return 'Too many login attempts. Please wait a moment before trying again.';
+          return t('auth.login.tooManyAttempts');
         case 500:
-          return 'Server error. Please try again later.';
+          return t('auth.login.serverError');
         case 502:
         case 503:
         case 504:
-          return 'Service temporarily unavailable. Please try again later.';
+          return t('errors.serverError');
         default:
-          return 'Something went wrong. Please try again.';
+          return t('auth.login.genericError');
       }
     }
 
     // Handle network errors
     if (error?.request) {
-      return 'Network error. Please check your internet connection and try again.';
+      return t('auth.login.networkError');
     }
 
     // Handle timeout errors
     if (error?.code === 'ECONNABORTED' || error?.message?.includes('timeout')) {
-      return 'Request timed out. Please try again.';
+      return t('auth.login.timeoutError');
     }
 
     // Handle generic error messages
@@ -647,7 +649,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
             className="h-12 w-12" 
             style={{ width: '48px', height: '48px' }} 
           />
-          <h1 className="text-3xl font-bold">Secure Recovery</h1>
+                      <h1 className="text-3xl font-bold">{t('auth.lockedAccount.title')}</h1>
         </div>
         
         <h2 className="text-xl font-semibold mb-4">
