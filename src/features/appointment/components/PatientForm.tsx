@@ -40,6 +40,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchField, setSearchField] = useState('patientId'); // Default search field
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
   const formatTime = (time: string) => {
     const [hour, minute] = time.split(':');
@@ -47,6 +50,169 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     const ampm = hourNum >= 12 ? 'PM' : 'AM';
     const hour12 = hourNum % 12 || 12;
     return `${hour12}:${minute} ${ampm}`;
+  };
+
+  // Helper functions for search functionality
+  const getSearchPlaceholder = (field: string) => {
+    switch (field) {
+      case 'patientId':
+        return 'Enter Patient ID (e.g., P001, PAT123)';
+      case 'patientName':
+        return 'Enter Patient Name (e.g., John Doe, Sarah)';
+      case 'appointmentId':
+        return 'Enter Appointment ID (e.g., APT001, APT123)';
+      case 'contact':
+        return 'Enter Contact Number (e.g., +91 9876543210)';
+      default:
+        return 'Enter search term';
+    }
+  };
+
+  const getSearchFieldLabel = (field: string) => {
+    switch (field) {
+      case 'patientId':
+        return 'Patient ID';
+      case 'patientName':
+        return 'Patient Name';
+      case 'appointmentId':
+        return 'Appointment ID';
+      case 'contact':
+        return 'Contact Number';
+      default:
+        return 'Search Field';
+    }
+  };
+
+  const getSearchHelpText = (field: string) => {
+    switch (field) {
+      case 'patientId':
+        return (
+          <>
+            <p>• Patient ID: P001, PAT123, P2024001</p>
+            <p>• Unique identifier for each patient</p>
+          </>
+        );
+      case 'patientName':
+        return (
+          <>
+            <p>• Full name: John Doe, Sarah Smith</p>
+            <p>• Partial name: John, Sarah</p>
+          </>
+        );
+      case 'appointmentId':
+        return (
+          <>
+            <p>• Appointment ID: APT001, APT123</p>
+            <p>• Token number: TKN001, TKN123</p>
+          </>
+        );
+      case 'contact':
+        return (
+          <>
+            <p>• Phone: +91 9876543210</p>
+            <p>• Mobile: +91 8074906808</p>
+          </>
+        );
+      default:
+        return <p>• Enter the search term</p>;
+    }
+  };
+
+  // Search function
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      return;
+    }
+
+    setIsSearching(true);
+    
+    try {
+      // TODO: Replace with actual API call
+      // Mock data for demonstration
+      const mockResults = [
+        {
+          id: 'P001',
+          name: 'John Doe',
+          phone: '+91 9876543210',
+          age: 35,
+          gender: 'Male',
+          address: '123 Main St, City',
+          lastVisit: '2024-01-15',
+          appointmentId: 'APT001'
+        },
+        {
+          id: 'P002',
+          name: 'John Smith',
+          phone: '+91 9876543211',
+          age: 28,
+          gender: 'Male',
+          address: '456 Oak Ave, Town',
+          lastVisit: '2024-01-10',
+          appointmentId: 'APT002'
+        },
+        {
+          id: 'P003',
+          name: 'Jane Doe',
+          phone: '+91 9876543212',
+          age: 42,
+          gender: 'Female',
+          address: '789 Pine Rd, Village',
+          lastVisit: '2024-01-20',
+          appointmentId: 'APT003'
+        }
+      ];
+
+      // Filter results based on search field and query
+      const filteredResults = mockResults.filter(patient => {
+        const query = searchQuery.toLowerCase();
+        switch (searchField) {
+          case 'patientId':
+            return patient.id.toLowerCase().includes(query);
+          case 'patientName':
+            return patient.name.toLowerCase().includes(query);
+          case 'appointmentId':
+            return patient.appointmentId.toLowerCase().includes(query);
+          case 'contact':
+            return patient.phone.includes(query);
+          default:
+            return true;
+        }
+      });
+
+      setSearchResults(filteredResults);
+      
+      if (filteredResults.length > 0) {
+        setShowSearchResults(true);
+      } else {
+        // Show no results message
+        setSearchResults([]);
+        setShowSearchResults(true);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Handle patient selection from search results
+  const handlePatientSelect = (patient: any) => {
+    setFormData({
+      name: patient.name,
+      phone: patient.phone,
+      age: patient.age.toString(),
+      gender: patient.gender,
+      address: patient.address,
+      city: '',
+      pincode: '',
+      isPaid: false,
+      paymentMode: '',
+      hasInsurance: false,
+      insuranceId: '',
+      insuranceType: ''
+    });
+    setShowSearchResults(false);
+    setSearchQuery('');
   };
 
   const formatPhoneNumber = (value: string) => {
@@ -172,29 +338,44 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                   Search Existing Patient
                 </h4>
                 <div className="space-y-2">
+                  {/* Search Field Dropdown */}
+                  <div className="flex gap-2">
+                    <Select value={searchField} onValueChange={setSearchField}>
+                      <SelectTrigger className="text-xs h-8 flex-1">
+                        <SelectValue placeholder="Select search field" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="patientId">Patient ID</SelectItem>
+                        <SelectItem value="patientName">Patient Name</SelectItem>
+                        <SelectItem value="appointmentId">Appointment ID</SelectItem>
+                        <SelectItem value="contact">Contact</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Search Input */}
                   <Input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="P001 or John Doe or +91 9876543210"
+                    placeholder={getSearchPlaceholder(searchField)}
                     className="text-xs h-8"
                   />
+                  
+                  {/* Search Help Text */}
                   <div className="text-xs text-muted-foreground dark:text-gray-400 space-y-1">
-                    <p>💡 <strong>Search by:</strong></p>
-                    <p>• Patient ID: P001, PAT123</p>
-                    <p>• Name: John Doe, Sarah</p>
-                    <p>• Phone: +91 9876543210</p>
+                    <p>💡 <strong>Search by {getSearchFieldLabel(searchField)}:</strong></p>
+                    {getSearchHelpText(searchField)}
                   </div>
+                  
                   <Button 
                     type="button" 
                     size="sm"
                     className="w-full h-7 text-xs"
-                    onClick={() => {
-                      // TODO: Replace with actual API call
-                      console.log('Searching for:', searchQuery);
-                    }}
+                    onClick={handleSearch}
+                    disabled={isSearching || !searchQuery.trim()}
                   >
                     <Search className="h-3 w-3 mr-1" />
-                    Search Patient
+                    {isSearching ? 'Searching...' : 'Search Patient'}
                   </Button>
                 </div>
               </div>
@@ -444,6 +625,114 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           </div>
         </div>
       </DialogContent>
+
+      {/* Search Results Popup */}
+      <Dialog open={showSearchResults} onOpenChange={setShowSearchResults}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Search className="h-5 w-5 text-blue-600" />
+              Search Results
+            </DialogTitle>
+            <DialogDescription>
+              Found {searchResults.length} patient(s) matching your search criteria. Select the correct patient to fill the form.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {searchResults.length > 0 ? (
+              <div className="grid gap-3">
+                {searchResults.map((patient, index) => (
+                  <Card 
+                    key={patient.id} 
+                    className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors border-2 hover:border-blue-300"
+                    onClick={() => handlePatientSelect(patient)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                            <User className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-foreground">{patient.name}</h4>
+                            <p className="text-sm text-muted-foreground">ID: {patient.id}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Phone:</span>
+                            <p className="font-medium">{patient.phone}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Age:</span>
+                            <p className="font-medium">{patient.age} years</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Gender:</span>
+                            <p className="font-medium">{patient.gender}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Last Visit:</span>
+                            <p className="font-medium">{patient.lastVisit}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-2">
+                          <span className="text-muted-foreground text-sm">Address:</span>
+                          <p className="text-sm">{patient.address}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePatientSelect(patient);
+                          }}
+                        >
+                          Select Patient
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No patients found</h3>
+                <p className="text-gray-500 dark:text-gray-400">
+                  No patients match your search criteria. Try a different search term or create a new patient.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowSearchResults(false)}
+            >
+              Close
+            </Button>
+            {searchResults.length === 0 && (
+              <Button 
+                onClick={() => {
+                  setShowSearchResults(false);
+                  // Optionally clear search and focus on form
+                  setSearchQuery('');
+                }}
+              >
+                Create New Patient
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };

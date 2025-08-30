@@ -25,36 +25,12 @@ const languages: Language[] = [
     region: 'Global'
   },
   { 
-    code: 'es', 
-    name: 'Spanish', 
-    nativeName: 'Español', 
-    flag: '🇪🇸',
-    description: 'Spanish (Spain)',
-    region: 'Spain'
-  },
-  { 
-    code: 'fr', 
-    name: 'French', 
-    nativeName: 'Français', 
-    flag: '🇫🇷',
-    description: 'French (France)',
-    region: 'France'
-  },
-  { 
     code: 'hi', 
     name: 'Hindi', 
     nativeName: 'हिंदी', 
     flag: '🇮🇳',
     description: 'Hindi (India)',
     region: 'India'
-  },
-  { 
-    code: 'ar', 
-    name: 'Arabic', 
-    nativeName: 'العربية', 
-    flag: '🇸🇦',
-    description: 'Arabic (Saudi Arabia)',
-    region: 'Saudi Arabia'
   },
 ];
 

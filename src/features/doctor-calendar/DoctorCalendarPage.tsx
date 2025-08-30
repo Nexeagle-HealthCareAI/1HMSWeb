@@ -501,8 +501,8 @@ export const DoctorCalendarPage: React.FC = () => {
       // Note: Override events are already handled at the beginning of this function
       if (!event.start) {
         toast({
-          title: "Error",
-          description: "Invalid event date",
+          title: t('doctorCalendar.error'),
+          description: t('doctorCalendar.invalidEventDate'),
           variant: "destructive",
         });
         return;
@@ -626,8 +626,8 @@ export const DoctorCalendarPage: React.FC = () => {
      if (hasShiftBlockInRange) {
        console.log('Date selection blocked - shift block in range');
        toast({
-         title: "Shift Block",
-         description: "This time period is covered by a shift. Please select a different time or modify the existing shift.",
+         title: t('doctorCalendar.shiftBlock'),
+         description: t('doctorCalendar.shiftBlockMessage'),
          variant: "destructive",
        });
        return; // Don't open any modal if shift blocks are in the selection
@@ -647,8 +647,8 @@ export const DoctorCalendarPage: React.FC = () => {
      
      if (hasTimeOffConflict) {
        toast({
-         title: "Time Off Conflict",
-         description: "This time period is already blocked. Please select a different time or cancel the existing time-off first.",
+         title: t('doctorCalendar.timeOffConflict'),
+         description: t('doctorCalendar.timeOffConflictMessage'),
          variant: "destructive",
        });
        return;
@@ -671,7 +671,7 @@ export const DoctorCalendarPage: React.FC = () => {
     
     // Handle event drag and drop
     toast({
-      title: "Event Moved",
+      title: t('doctorCalendar.eventMoved'),
       description: `${dropInfo.event.title} moved to ${format(dropInfo.event.start!, 'MMM dd, yyyy')}`,
     });
   }, [toast, scrollToMorningSlot]);
@@ -684,7 +684,7 @@ export const DoctorCalendarPage: React.FC = () => {
     
     // Handle event resize
     toast({
-      title: "Event Resized",
+      title: t('doctorCalendar.eventResized'),
       description: `${resizeInfo.event.title} resized`,
     });
   }, [toast, scrollToMorningSlot]);
@@ -803,7 +803,7 @@ export const DoctorCalendarPage: React.FC = () => {
             html: `
               <div class="fc-event-main-content override-event-content">
                 <div class="text-xs font-medium">${arg.event.title}</div>
-                <div class="text-xs text-gray-600">Click to manage</div>
+                <div class="text-xs text-gray-600">${t('doctorCalendar.clickToManage')}</div>
               </div>
             `
           };
@@ -837,7 +837,7 @@ export const DoctorCalendarPage: React.FC = () => {
           html: `
             <div class="fc-event-main-content timeoff-event-content">
               <div class="text-xs font-medium">${arg.event.title}</div>
-              <div class="text-xs text-red-200">Click to cancel</div>
+              <div class="text-xs text-red-200">${t('doctorCalendar.clickToCancel')}</div>
             </div>
           `
         };
@@ -871,7 +871,7 @@ export const DoctorCalendarPage: React.FC = () => {
               <div class="fc-event-main-content">
                 <div class="text-xs font-bold">${shiftName}</div>
                 <div class="text-xs">${startTime} - ${endTime}</div>
-                ${isOverride ? '<div class="text-xs text-green-200 font-semibold">Personalized</div>' : ''}
+                ${isOverride ? `<div class="text-xs text-green-200 font-semibold">${t('doctorCalendar.personalized')}</div>` : ''}
               </div>
             `
           };
@@ -1044,30 +1044,30 @@ export const DoctorCalendarPage: React.FC = () => {
       if (successCount > 0 && errorCount === 0) {
         setSuccessDialog({
           open: true,
-          title: "Schedule Saved Successfully! 🎉",
-          message: `Your personalized schedule has been saved successfully. Your new working hours are now active.`,
+          title: t('doctorCalendar.scheduleSaved'),
+          message: t('doctorCalendar.scheduleSavedMessage'),
           details: [
-            `✅ ${successCount} schedule override${successCount > 1 ? 's' : ''} created`,
-            `📅 Changes will be reflected in your calendar immediately`,
-            `👥 Patients can now book appointments during your updated hours`
+            `✅ ${successCount} ${t('doctorCalendar.overridesCreated')}${successCount > 1 ? 's' : ''}`,
+            `📅 ${t('doctorCalendar.changesReflected')}`,
+            `👥 ${t('doctorCalendar.patientsCanBook')}`
           ]
         });
       } else if (successCount > 0 && errorCount > 0) {
         setSuccessDialog({
           open: true,
-          title: "Partially Saved ⚠️",
-          message: `Some of your schedule overrides were saved, but ${errorCount} failed to save.`,
+          title: t('doctorCalendar.partiallySaved'),
+          message: t('doctorCalendar.partiallySavedMessage'),
           details: [
-            `✅ ${successCount} override${successCount > 1 ? 's' : ''} saved successfully`,
-            `❌ ${errorCount} override${errorCount > 1 ? 's' : ''} failed to save`,
-            `🔄 You may want to try saving the failed overrides again`
+            `✅ ${successCount} ${t('doctorCalendar.overridesSaved')}`,
+            `❌ ${errorCount} ${t('doctorCalendar.overridesFailed')}`,
+            `🔄 ${t('doctorCalendar.tryAgainFailed')}`
           ]
         });
       } else {
         // Keep toast for error cases
         toast({
-          title: "Error",
-          description: "Failed to create schedule overrides",
+          title: t('doctorCalendar.error'),
+          description: t('doctorCalendar.failedToCreateOverrides'),
           variant: "destructive",
         });
       }
@@ -1100,13 +1100,13 @@ export const DoctorCalendarPage: React.FC = () => {
        onSuccess: (data) => {
          setSuccessDialog({
            open: true,
-           title: "Time Off Scheduled Successfully! 🏖️",
-           message: "Your time off has been scheduled and you will be unavailable during the selected period.",
+           title: t('doctorCalendar.timeOffScheduled'),
+           message: t('doctorCalendar.timeOffScheduledMessage'),
            details: [
-             `✅ Time off period blocked in your calendar`,
-             `📅 Duration: ${format(fromDate, 'MMM dd, yyyy HH:mm')} - ${format(toDate, 'MMM dd, yyyy HH:mm')}`,
-             `🚫 No appointments can be booked during this time`,
-             `📱 You can cancel this time off anytime from the calendar`
+             `✅ ${t('doctorCalendar.timeOffBlocked')}`,
+             `📅 ${t('doctorCalendar.duration')}: ${format(fromDate, 'MMM dd, yyyy HH:mm')} - ${format(toDate, 'MMM dd, yyyy HH:mm')}`,
+             `🚫 ${t('doctorCalendar.noAppointmentsBooked')}`,
+             `📱 ${t('doctorCalendar.cancelTimeOffAnytime')}`
            ]
          });
          setPersonalizedScheduleModal(prev => ({ ...prev, open: false }));
@@ -1117,11 +1117,11 @@ export const DoctorCalendarPage: React.FC = () => {
          }, 1000);
        },
        onError: (error) => {
-         toast({
-           title: "Error",
-           description: "Failed to schedule time off",
-           variant: "destructive",
-         });
+                toast({
+         title: t('doctorCalendar.error'),
+         description: t('doctorCalendar.failedToScheduleTimeOff'),
+         variant: "destructive",
+       });
        }
      });
    };
@@ -1129,8 +1129,8 @@ export const DoctorCalendarPage: React.FC = () => {
   const handleDeleteOverride = () => {
     // TODO: Implement when override API is available
     toast({
-      title: "Info",
-      description: "Delete override functionality not yet implemented",
+      title: t('doctorCalendar.info'),
+      description: t('doctorCalendar.deleteOverrideNotImplemented'),
     });
     setEditShiftModal(prev => ({ ...prev, open: false }));
   };
@@ -1141,8 +1141,8 @@ export const DoctorCalendarPage: React.FC = () => {
     deleteTimeOffMutation.mutate(deleteTimeOffModal.timeOffData.timeOffId, {
       onSuccess: (data) => {
         toast({
-          title: "Success",
-          description: data.message || "Time off deleted successfully",
+          title: t('doctorCalendar.success'),
+          description: data.message || t('doctorCalendar.timeOffDeleted'),
         });
         setDeleteTimeOffModal({ open: false, timeOffData: undefined });
         
@@ -1153,8 +1153,8 @@ export const DoctorCalendarPage: React.FC = () => {
       },
       onError: (error) => {
         toast({
-          title: "Error",
-          description: "Failed to delete time off",
+          title: t('doctorCalendar.error'),
+          description: t('doctorCalendar.failedToDeleteTimeOff'),
           variant: "destructive",
         });
       }
@@ -1167,8 +1167,8 @@ export const DoctorCalendarPage: React.FC = () => {
     if (!overrideData?.overrideId) {
       console.error('No override data available for cancellation');
       toast({
-        title: "Error",
-        description: "No override data found for cancellation",
+        title: t('doctorCalendar.error'),
+        description: t('doctorCalendar.noOverrideData'),
         variant: "destructive",
       });
       return;
@@ -1180,8 +1180,8 @@ export const DoctorCalendarPage: React.FC = () => {
       onSuccess: (data) => {
         console.log('Override canceled successfully:', data);
         toast({
-          title: "Success",
-          description: data.message || "Shift override canceled successfully",
+          title: t('doctorCalendar.success'),
+          description: data.message || t('doctorCalendar.shiftOverrideCanceled'),
         });
         setCancelOverrideModal({ open: false, overrideData: undefined });
         
@@ -1193,8 +1193,8 @@ export const DoctorCalendarPage: React.FC = () => {
       onError: (error) => {
         console.error('Failed to cancel override:', error);
         toast({
-          title: "Error",
-          description: "Failed to cancel shift override. Please try again.",
+          title: t('doctorCalendar.error'),
+          description: t('doctorCalendar.failedToCancelOverride'),
           variant: "destructive",
         });
       }
@@ -1207,8 +1207,8 @@ export const DoctorCalendarPage: React.FC = () => {
     if (!overrideData?.overrideId) {
       console.error('No override data available for cancellation');
       toast({
-        title: "Error",
-        description: "No override data found for cancellation",
+        title: t('doctorCalendar.error'),
+        description: t('doctorCalendar.noOverrideData'),
         variant: "destructive",
       });
       return;
@@ -1220,8 +1220,8 @@ export const DoctorCalendarPage: React.FC = () => {
       onSuccess: (data) => {
         console.log('Override canceled successfully:', data);
         toast({
-          title: "Success",
-          description: data.message || "Shift override canceled successfully",
+          title: t('doctorCalendar.success'),
+          description: data.message || t('doctorCalendar.shiftOverrideCanceled'),
         });
         setOverrideActionModal({ open: false, overrideData: undefined });
         
@@ -1233,8 +1233,8 @@ export const DoctorCalendarPage: React.FC = () => {
       onError: (error) => {
         console.error('Failed to cancel override:', error);
         toast({
-          title: "Error",
-          description: "Failed to cancel shift override. Please try again.",
+          title: t('doctorCalendar.error'),
+          description: t('doctorCalendar.failedToCancelOverride'),
           variant: "destructive",
         });
       }
@@ -1247,8 +1247,8 @@ export const DoctorCalendarPage: React.FC = () => {
     if (!overrideData) {
       console.error('No override data available for update');
       toast({
-        title: "Error",
-        description: "No override data found for update",
+        title: t('doctorCalendar.error'),
+        description: t('doctorCalendar.noOverrideData'),
         variant: "destructive",
       });
       return;
@@ -1277,8 +1277,8 @@ export const DoctorCalendarPage: React.FC = () => {
   const handleCancelAppointment = async () => {
     if (!appointmentCancelModal.appointmentData?.appointmentId) {
       toast({
-        title: "Error",
-        description: "No appointment data found for cancellation",
+        title: t('doctorCalendar.error'),
+        description: t('doctorCalendar.noAppointmentData'),
         variant: "destructive",
       });
       return;
@@ -1301,10 +1301,10 @@ export const DoctorCalendarPage: React.FC = () => {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <h3 className="text-lg font-semibold text-gray-900">
-            User ID Required
+            {t('doctorCalendar.userIdRequired')}
           </h3>
           <p className="text-gray-600">
-            Unable to get user ID. Please try logging in again.
+            {t('doctorCalendar.userIdRequiredMessage')}
           </p>
         </div>
       </div>
@@ -1316,10 +1316,10 @@ export const DoctorCalendarPage: React.FC = () => {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <h3 className="text-lg font-semibold text-gray-900">
-            {isInitialLoading ? 'Initializing Calendar...' : doctorProfileLoading ? 'Loading Doctor Profile...' : configLoading ? 'Loading Calendar Configuration...' : 'Doctor Profile Required'}
+            {isInitialLoading ? t('doctorCalendar.initializingCalendar') : doctorProfileLoading ? t('doctorCalendar.loadingDoctorProfile') : configLoading ? t('doctorCalendar.loadingCalendarConfig') : t('doctorCalendar.doctorProfileRequired')}
           </h3>
           <p className="text-gray-600">
-            {isInitialLoading ? 'Please wait while we prepare your calendar and load all data.' : doctorProfileLoading ? 'Please wait while we load your doctor profile.' : configLoading ? 'Please wait while we load your work schedule configuration.' : 'Unable to load doctor profile. Please try refreshing the page.'}
+            {isInitialLoading ? t('doctorCalendar.initializingMessage') : doctorProfileLoading ? t('doctorCalendar.loadingProfileMessage') : configLoading ? t('doctorCalendar.loadingConfigMessage') : t('doctorCalendar.profileLoadError')}
           </p>
           {doctorProfileError && (
             <div className="text-red-600 text-sm mt-2">
@@ -1329,7 +1329,7 @@ export const DoctorCalendarPage: React.FC = () => {
                 onClick={() => window.location.reload()} 
                 className="mt-2 px-3 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
               >
-                Retry
+                {t('doctorCalendar.retry')}
               </button>
             </div>
           )}
@@ -1370,14 +1370,14 @@ export const DoctorCalendarPage: React.FC = () => {
                   <div className="text-center bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
                     <LoadingSpinner size="lg" />
                     <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">
-                      {isInitialLoading ? 'Preparing your calendar...' : 
-                       doctorProfileLoading ? 'Loading your profile...' : 
-                       configLoading ? 'Loading schedule configuration...' : 'Loading...'}
+                      {isInitialLoading ? t('doctorCalendar.preparingCalendar') : 
+                       doctorProfileLoading ? t('doctorCalendar.loadingProfile') : 
+                       configLoading ? t('doctorCalendar.loadingScheduleConfig') : t('doctorCalendar.loading')}
                     </h3>
                     <p className="mt-2 text-gray-600 dark:text-gray-400">
-                      {isInitialLoading ? 'Setting up your personalized calendar experience' : 
-                       doctorProfileLoading ? 'Fetching your doctor profile details' : 
-                       configLoading ? 'Loading your work schedule settings' : 'Please wait...'}
+                      {isInitialLoading ? t('doctorCalendar.preparingMessage') : 
+                       doctorProfileLoading ? t('doctorCalendar.fetchingProfileMessage') : 
+                       configLoading ? t('doctorCalendar.loadingScheduleMessage') : t('doctorCalendar.pleaseWait')}
                     </p>
                     {doctorProfileError && (
                       <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
