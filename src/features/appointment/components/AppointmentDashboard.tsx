@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   Calendar, 
   Plus, 
@@ -57,6 +58,7 @@ const mockPastAppointments: Appointment[] = [];
 const mockFutureAppointments: Appointment[] = [];
 
 export const AppointmentDashboard = () => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [doctorFilter, setDoctorFilter] = useState('all');
@@ -143,19 +145,19 @@ export const AppointmentDashboard = () => {
             className="bg-red-100 text-red-800 border-red-300 cursor-pointer hover:bg-red-200 transition-colors text-xs"
             onClick={() => appointment && handleVitalsClick(appointment)}
           >
-            ❤️ Vitals
+            {t('appointmentDashboard.status.vitalsRequired')}
           </Badge>
         );
       case 'ready-consultation':
-        return <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">✅ Ready</Badge>;
+        return <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">{t('appointmentDashboard.status.readyConsultation')}</Badge>;
       case 'under-consultation':
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-300 text-xs">👨‍⚕️ Consulting</Badge>;
+        return <Badge className="bg-blue-100 text-blue-800 border-blue-300 text-xs">{t('appointmentDashboard.status.underConsultation')}</Badge>;
       case 'lab-test-required':
-        return <Badge className="bg-purple-100 text-purple-800 border-purple-300 text-xs">🧪 Lab Test</Badge>;
+        return <Badge className="bg-purple-100 text-purple-800 border-purple-300 text-xs">{t('appointmentDashboard.status.labTestRequired')}</Badge>;
       case 'awaiting-reconsultation':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 text-xs">⏳ Follow-up</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 text-xs">{t('appointmentDashboard.status.awaitingReconsultation')}</Badge>;
       case 'completed':
-        return <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">🏁 Done</Badge>;
+        return <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">{t('appointmentDashboard.status.completed')}</Badge>;
       default:
         return null;
     }
@@ -191,10 +193,10 @@ export const AppointmentDashboard = () => {
               className="group flex items-center gap-2 border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
             >
               <ArrowLeft className="h-4 w-4 text-gray-600 dark:text-gray-300 transition-transform group-hover:-translate-x-1" />
-              <span className="text-gray-700 dark:text-gray-200 font-medium">Back</span>
+              <span className="text-gray-700 dark:text-gray-200 font-medium">{t('appointmentDashboard.back')}</span>
             </Button>
             <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />
-            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">📋 Book New Appointment</h1>
+            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">{t('appointmentDashboard.bookNewAppointment')}</h1>
           </div>
         </div>
         <AppointmentBooking />
@@ -213,17 +215,17 @@ export const AppointmentDashboard = () => {
               <div className="p-3 bg-blue-100 rounded-lg">
                 <Calendar className="h-6 w-6 text-blue-600" />
               </div>
-              <div>
-                <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Appointment Dashboard</h1>
-                <p className="text-gray-600 dark:text-gray-400">Manage patient appointments efficiently</p>
-              </div>
+                          <div>
+              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">{t('appointmentDashboard.title')}</h1>
+              <p className="text-gray-600 dark:text-gray-400">{t('appointmentDashboard.subtitle')}</p>
+            </div>
           </div>
           <Button 
             onClick={() => setShowBooking(true)} 
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
           >
             <Plus className="h-5 w-5 mr-2" />
-              Book Appointment
+              {t('appointmentDashboard.bookAppointment')}
           </Button>
           </div>
         </div>
@@ -236,7 +238,7 @@ export const AppointmentDashboard = () => {
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Total</p>
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">{t('appointmentDashboard.kpis.total')}</p>
                           <p className="text-lg font-bold text-gray-900 dark:text-white">{kpis.totalToday}</p>
                         </div>
                         <div className="p-1.5 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
@@ -250,7 +252,7 @@ export const AppointmentDashboard = () => {
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Vitals</p>
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">{t('appointmentDashboard.kpis.vitals')}</p>
                           <p className="text-lg font-bold text-red-600 dark:text-red-400">{kpis.vitalsRequired}</p>
                         </div>
                         <div className="p-1.5 bg-red-100 dark:bg-red-900/20 rounded-lg">
@@ -264,7 +266,7 @@ export const AppointmentDashboard = () => {
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Ready</p>
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">{t('appointmentDashboard.kpis.ready')}</p>
                           <p className="text-lg font-bold text-green-600 dark:text-green-400">{kpis.readyConsultation}</p>
                         </div>
                         <div className="p-1.5 bg-green-100 dark:bg-green-900/20 rounded-lg">
@@ -278,7 +280,7 @@ export const AppointmentDashboard = () => {
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Consulting</p>
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">{t('appointmentDashboard.kpis.consulting')}</p>
                           <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{kpis.underConsultation}</p>
                         </div>
                         <div className="p-1.5 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
@@ -292,7 +294,7 @@ export const AppointmentDashboard = () => {
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Lab Tests</p>
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">{t('appointmentDashboard.kpis.labTests')}</p>
                           <p className="text-lg font-bold text-purple-600 dark:text-purple-400">{kpis.labFollowUps}</p>
                         </div>
                         <div className="p-1.5 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
@@ -306,7 +308,7 @@ export const AppointmentDashboard = () => {
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Follow-ups</p>
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">{t('appointmentDashboard.kpis.followUps')}</p>
                           <p className="text-lg font-bold text-yellow-600 dark:text-yellow-400">{kpis.doctorFollowUps}</p>
                         </div>
                         <div className="p-1.5 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
@@ -320,7 +322,7 @@ export const AppointmentDashboard = () => {
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Completed</p>
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">{t('appointmentDashboard.kpis.completed')}</p>
                           <p className="text-lg font-bold text-green-600 dark:text-green-400">{kpis.completed}</p>
                         </div>
                         <div className="p-1.5 bg-green-100 dark:bg-green-900/20 rounded-lg">
@@ -456,15 +458,15 @@ export const AppointmentDashboard = () => {
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="current" className="flex items-center gap-2">
                   <Clock className="h-4 w-4" />
-                  Current Appointments
+                  {t('appointmentDashboard.currentAppointments')}
                 </TabsTrigger>
                 <TabsTrigger value="past" className="flex items-center gap-2">
                   <History className="h-4 w-4" />
-                  Past History
+                  {t('appointmentDashboard.pastHistory')}
                 </TabsTrigger>
                 <TabsTrigger value="future" className="flex items-center gap-2">
                   <CalendarDays className="h-4 w-4" />
-                  Future Appointments
+                  {t('appointmentDashboard.futureAppointments')}
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -474,16 +476,16 @@ export const AppointmentDashboard = () => {
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                                      <div>
-                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Current Appointments</h2>
-                     <p className="text-gray-600 dark:text-gray-400">Manage today's patient flow and track progress</p>
+                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('appointmentDashboard.currentAppointments')}</h2>
+                     <p className="text-gray-600 dark:text-gray-400">{t('appointmentDashboard.managePatientFlow')}</p>
                    </div>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
                       <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-sm font-medium text-green-700">Live Updates</span>
+                      <span className="text-sm font-medium text-green-700">{t('appointmentDashboard.liveUpdates')}</span>
                     </div>
                     <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                      {kpis.totalToday} Total Today
+                      {kpis.totalToday} {t('appointmentDashboard.totalToday')}
                     </Badge>
                   </div>
                 </div>
@@ -492,7 +494,7 @@ export const AppointmentDashboard = () => {
                 <div className="flex flex-wrap gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
                   <div className="flex items-center gap-2">
                     <AlertCircle className="h-4 w-4 text-orange-600" />
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Priority Actions:</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('appointmentDashboard.priorityActions')}</span>
                   </div>
                   <Button 
                     variant="outline" 

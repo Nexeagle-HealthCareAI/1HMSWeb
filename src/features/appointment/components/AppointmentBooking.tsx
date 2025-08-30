@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Calendar, Clock, User, Phone, Users, Stethoscope, ChevronDown, CalendarIcon } from 'lucide-react';
 import { DepartmentSidebar } from './DepartmentSidebar';
 import { DateSelector } from './DateSelector';
@@ -119,6 +120,7 @@ const generateTimeSlots = (doctorId: string, date: string): TimeSlot[] => {
 };
 
 export const AppointmentBooking: React.FC = () => {
+  const { t } = useTranslation();
   // Get userId and authentication status from Zustand auth store
   const userId = useAuthStore((state) => state.userId);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -258,9 +260,9 @@ export const AppointmentBooking: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-500 text-4xl mb-4">🔒</div>
-          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Authentication Required</h2>
+          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('appointmentBooking.authenticationRequired')}</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            Please log in to access the appointment booking system.
+            {t('appointmentBooking.authenticationMessage')}
           </p>
         </div>
       </div>
@@ -273,15 +275,15 @@ export const AppointmentBooking: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-500 text-4xl mb-4">⚠️</div>
-          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Failed to Load Hospital Information</h2>
+          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('appointmentBooking.failedToLoadHospital')}</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            {hospitalUserError instanceof Error ? hospitalUserError.message : 'An error occurred while loading hospital information'}
+            {hospitalUserError instanceof Error ? hospitalUserError.message : t('appointmentBooking.errorOccurred')}
           </p>
           <button 
             onClick={() => window.location.reload()} 
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Try Again
+            {t('appointmentBooking.tryAgain')}
           </button>
         </div>
       </div>
@@ -294,9 +296,9 @@ export const AppointmentBooking: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Loading Hospital Information...</h2>
+          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">{t('appointmentBooking.loadingHospitalInfo')}</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Please wait while we fetch your hospital information
+            {t('appointmentBooking.loadingHospitalMessage')}
           </p>
         </div>
       </div>
@@ -392,14 +394,14 @@ export const AppointmentBooking: React.FC = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
             {hospitalUserLoading 
-              ? 'Loading Hospital Information...' 
-              : 'Loading Departments...'
+              ? t('appointmentBooking.loadingHospitalInfo')
+              : t('appointmentBooking.loadingDepartments')
             }
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             {hospitalUserLoading 
-              ? 'Please wait while we fetch your hospital information' 
-              : 'Please wait while we fetch available departments'
+              ? t('appointmentBooking.loadingHospitalMessage')
+              : t('appointmentBooking.loadingDepartmentsMessage')
             }
           </p>
         </div>
@@ -434,15 +436,15 @@ export const AppointmentBooking: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-500 text-4xl mb-4">⚠️</div>
-          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Failed to Load Departments</h2>
+          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('appointmentBooking.failedToLoadDepartments')}</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            {departmentsError instanceof Error ? departmentsError.message : 'An error occurred while loading departments'}
+            {departmentsError instanceof Error ? departmentsError.message : t('appointmentBooking.errorOccurredDepartments')}
           </p>
           <button 
             onClick={() => window.location.reload()} 
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Try Again
+            {t('appointmentBooking.tryAgain')}
           </button>
         </div>
       </div>
@@ -477,7 +479,7 @@ export const AppointmentBooking: React.FC = () => {
         <div className="lg:hidden sticky top-0 z-40 bg-white dark:bg-gray-900 shadow-sm border-b dark:border-gray-700">
           <div className="px-4 py-3">
             <div className="flex items-center justify-between mb-3">
-              <h1 className="text-xl font-bold text-primary dark:text-primary">Book Appointment</h1>
+              <h1 className="text-xl font-bold text-primary dark:text-primary">{t('appointmentBooking.title')}</h1>
               <div className="text-xs text-muted-foreground dark:text-gray-400">
                 {format(selectedDate, 'MMM dd')}
               </div>
@@ -487,10 +489,10 @@ export const AppointmentBooking: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               {/* Department Dropdown */}
               <div>
-                <label className="text-xs font-medium text-muted-foreground dark:text-gray-400 mb-1 block">Department</label>
+                <label className="text-xs font-medium text-muted-foreground dark:text-gray-400 mb-1 block">{t('appointmentBooking.department')}</label>
                 <Select value={selectedDepartment} onValueChange={handleDepartmentSelect}>
                   <SelectTrigger className="h-8 text-xs bg-background">
-                    <SelectValue placeholder="Department" />
+                    <SelectValue placeholder={t('appointmentBooking.department')} />
                   </SelectTrigger>
                   <SelectContent className="z-50">
                     {departments.map((dept) => (
@@ -507,7 +509,7 @@ export const AppointmentBooking: React.FC = () => {
               
               {/* Doctor Selection */}
               <div>
-                <label className="text-xs font-medium text-muted-foreground dark:text-gray-400 mb-1 block">Doctor</label>
+                <label className="text-xs font-medium text-muted-foreground dark:text-gray-400 mb-1 block">{t('appointmentBooking.doctor')}</label>
                 <Select value={selectedDoctor?.id || ''} onValueChange={(value) => {
                   if (doctorsResponse?.doctors) {
                     const selectedApiDoctor = doctorsResponse.doctors.find(doc => doc.doctorId === value);
@@ -522,16 +524,16 @@ export const AppointmentBooking: React.FC = () => {
                   }
                 }}>
                   <SelectTrigger className="h-8 text-xs bg-background">
-                    <SelectValue placeholder={doctorsLoading ? "Loading doctors..." : "Select Doctor"} />
+                    <SelectValue placeholder={doctorsLoading ? t('appointmentBooking.loadingDoctors') : t('appointmentBooking.selectDoctor')} />
                   </SelectTrigger>
                   <SelectContent className="z-50">
                     {doctorsLoading ? (
                       <SelectItem value="loading" disabled className="text-xs">
-                        Loading doctors...
+                        {t('appointmentBooking.loadingDoctors')}
                       </SelectItem>
                     ) : doctorsError ? (
                       <SelectItem value="error" disabled className="text-xs">
-                        Error loading doctors
+                        {t('appointmentBooking.errorLoadingDoctors')}
                       </SelectItem>
                     ) : doctorsResponse?.doctors && doctorsResponse.doctors.length > 0 ? (
                       doctorsResponse.doctors.map((doctor) => (
@@ -546,7 +548,7 @@ export const AppointmentBooking: React.FC = () => {
                                   {doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : 'General'}
                                 </div>
                                 <div className="text-xs text-gray-500 truncate">
-                                  {isDoctorOnTimeOff(doctor.doctorId) ? 'Time Off' : 'Available'}
+                                  {isDoctorOnTimeOff(doctor.doctorId) ? t('appointmentBooking.timeOff') : t('appointmentBooking.available')}
                                 </div>
                             </div>
                             {isDoctorOnTimeOff(doctor.doctorId) && (
@@ -557,7 +559,7 @@ export const AppointmentBooking: React.FC = () => {
                       ))
                     ) : (
                       <SelectItem value="no-doctors" disabled className="text-xs">
-                        No doctors available
+                        {t('appointmentBooking.noDoctorsAvailable')}
                       </SelectItem>
                     )}
                   </SelectContent>
@@ -572,7 +574,7 @@ export const AppointmentBooking: React.FC = () => {
           <div className="hidden lg:block w-80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-r border-gray-200/50 dark:border-gray-700/50 shadow-sm">
             <div className="p-4">
               <h3 className="text-sm font-semibold mb-3 text-gray-700 flex items-center gap-2">
-                🏥 Department Selection
+                {t('appointmentBooking.departmentSelection')}
               </h3>
               
               {/* Department Grid - Desktop */}
@@ -597,7 +599,7 @@ export const AppointmentBooking: React.FC = () => {
               <div className="mb-4">
               <Select value={selectedDepartment} onValueChange={handleDepartmentSelect}>
                   <SelectTrigger className="h-9 text-xs">
-                    <SelectValue placeholder="More Departments..." />
+                    <SelectValue placeholder={t('appointmentBooking.moreDepartments')} />
                   </SelectTrigger>
                   <SelectContent className="bg-white dark:bg-gray-800 border dark:border-gray-700 shadow-lg z-50">
                     {departments.slice(4).map((dept) => (

@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { useTranslation } from 'react-i18next';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
@@ -39,6 +40,7 @@ import { InviteUserResponse } from '../services/userManagementApi';
 import { ValidationUtils } from '@/utils/validation';
 
 export const UserManagement: React.FC = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('onboarded');
   const [invitedUsersScope, setInvitedUsersScope] = useState<'Pending' | 'Accepted' | 'Revoked' | 'ALL'>('ALL');
   
@@ -144,8 +146,8 @@ export const UserManagement: React.FC = () => {
     <div className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-foreground">User Management</h2>
-          <p className="text-muted-foreground mt-1">Manage users, roles, permissions and track activities</p>
+          <h2 className="text-3xl font-bold text-foreground">{t('userManagement.title')}</h2>
+          <p className="text-muted-foreground mt-1">{t('userManagement.subtitle')}</p>
         </div>
       </div>
 
@@ -158,12 +160,12 @@ export const UserManagement: React.FC = () => {
             </div>
             <div>
               <h3 className="text-lg font-semibold">
-                {activeTab === 'onboarded' ? 'Onboarded Users' : 'Invited Users'}
+                {activeTab === 'onboarded' ? t('userManagement.onboardedUsers') : t('userManagement.invitedUsers')}
               </h3>
               <p className="text-sm text-muted-foreground">
                 {activeTab === 'onboarded' 
-                  ? 'Manage active users in the system' 
-                  : 'Track and manage user invitations'
+                  ? t('userManagement.onboardedUsersSubtitle')
+                  : t('userManagement.invitedUsersSubtitle')
                 }
               </p>
             </div>
@@ -179,8 +181,8 @@ export const UserManagement: React.FC = () => {
               <Users className="h-5 w-5" />
             </div>
             <div className="text-left">
-              <div className="font-semibold">Onboarded Users</div>
-              <div className="text-xs text-muted-foreground">Active users</div>
+              <div className="font-semibold">{t('userManagement.onboardedUsers')}</div>
+              <div className="text-xs text-muted-foreground">{t('userManagement.activeUsers')}</div>
             </div>
           </TabsTrigger>
           <TabsTrigger 
@@ -191,8 +193,8 @@ export const UserManagement: React.FC = () => {
               <Mail className="h-5 w-5" />
             </div>
             <div className="text-left">
-              <div className="font-semibold">Invited Users</div>
-              <div className="text-xs text-muted-foreground">Pending invitations</div>
+              <div className="font-semibold">{t('userManagement.invitedUsers')}</div>
+              <div className="text-xs text-muted-foreground">{t('userManagement.pendingInvitations')}</div>
             </div>
           </TabsTrigger>
         </TabsList>
@@ -201,15 +203,15 @@ export const UserManagement: React.FC = () => {
           {/* Header Actions */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h3 className="text-xl font-semibold">Onboarded Users</h3>
-              <p className="text-sm text-muted-foreground mt-1">Users who have completed registration and are active in the system</p>
+              <h3 className="text-xl font-semibold">{t('userManagement.onboardedUsers')}</h3>
+              <p className="text-sm text-muted-foreground mt-1">{t('userManagement.onboardedUsersSubtitle')}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
                 <DialogTrigger asChild>
                   <Button className="gap-2">
                     <Mail className="h-4 w-4" />
-                    Invite User
+                    {t('userManagement.inviteUser')}
                   </Button>
                 </DialogTrigger>
               </Dialog>
@@ -223,15 +225,15 @@ export const UserManagement: React.FC = () => {
           {/* Header Actions */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h3 className="text-xl font-semibold">Invited Users</h3>
-              <p className="text-sm text-muted-foreground mt-1">Users who have been invited but haven't completed registration yet</p>
+              <h3 className="text-xl font-semibold">{t('userManagement.invitedUsers')}</h3>
+              <p className="text-sm text-muted-foreground mt-1">{t('userManagement.invitedUsersSubtitle')}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
                 <DialogTrigger asChild>
                   <Button className="gap-2">
                     <Mail className="h-4 w-4" />
-                    Invite User
+                    {t('userManagement.inviteUser')}
                   </Button>
                 </DialogTrigger>
               </Dialog>
@@ -248,53 +250,53 @@ export const UserManagement: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="h-5 w-5" />
-              Invite New User
+              {t('userManagement.inviteNewUser')}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name *</Label>
+                <Label htmlFor="name">{t('userManagement.fullName')} *</Label>
                 <Input
                   id="name"
                   value={newUser.name}
                   onChange={(e) => setNewUser({...newUser, name: e.target.value})}
-                  placeholder="Enter full name"
+                  placeholder={t('userManagement.enterFullName')}
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone *</Label>
+                <Label htmlFor="phone">{t('userManagement.phone')} *</Label>
                 <Input
                   id="phone"
                   value={newUser.phone}
                   onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
-                  placeholder="Enter phone number"
+                  placeholder={t('userManagement.enterPhoneNumber')}
                   required
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('userManagement.email')}</Label>
               <Input
                 id="email"
                 type="email"
                 value={newUser.email}
                 onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                placeholder="Enter email address"
+                placeholder={t('userManagement.enterEmailAddress')}
               />
             </div>
             <div className="space-y-3">
-              <Label>Select Role *</Label>
+              <Label>{t('userManagement.selectRole')} *</Label>
               {rolesLoading ? (
                 <div className="p-6 text-center text-muted-foreground border rounded-lg">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
-                  Loading roles...
+                  {t('userManagement.loadingRoles')}
                 </div>
               ) : rolesError ? (
                 <div className="p-6 text-center text-red-600 border border-red-200 rounded-lg">
                   <AlertCircle className="h-6 w-6 mx-auto mb-2" />
-                  Error loading roles
+                  {t('userManagement.errorLoadingRoles')}
                 </div>
               ) : (
                 <RadioGroup
@@ -317,7 +319,7 @@ export const UserManagement: React.FC = () => {
             </div>
             <div className="flex justify-end gap-3 pt-4">
               <Button variant="outline" onClick={() => setShowAddUser(false)}>
-                Cancel
+                {t('userManagement.cancel')}
               </Button>
               <Button 
                 onClick={handleAddUser}
@@ -327,12 +329,12 @@ export const UserManagement: React.FC = () => {
                 {inviteUser.isPending ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Sending Invitation...
+                    {t('userManagement.sendingInvitation')}
                   </>
                 ) : (
                   <>
                     <Mail className="h-4 w-4" />
-                    Send Invitation
+                    {t('userManagement.sendInvitation')}
                   </>
                 )}
               </Button>

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useTranslation } from 'react-i18next';
 
 import { 
   Users,
@@ -58,6 +59,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export const AdminDashboard = () => {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [dateFilter, setDateFilter] = useState('today');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentView, setCurrentView] = useState('dashboard');
@@ -108,11 +110,11 @@ export const AdminDashboard = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'confirmed':
-        return <Badge className="bg-green-100 text-green-800">Confirmed</Badge>;
+        return <Badge className="bg-green-100 text-green-800">{t('admin.confirmed')}</Badge>;
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800">{t('admin.pending')}</Badge>;
       case 'cancelled':
-        return <Badge className="bg-red-100 text-red-800">Cancelled</Badge>;
+        return <Badge className="bg-red-100 text-red-800">{t('admin.cancelled')}</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -141,21 +143,21 @@ export const AdminDashboard = () => {
           <span className={`text-xs lg:text-sm font-medium ${data.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
             {data.change > 0 ? '+' : ''}{data.change}%
           </span>
-          <span className="text-xs lg:text-sm text-muted-foreground ml-1 hidden sm:inline">vs last period</span>
+          <span className="text-xs lg:text-sm text-muted-foreground ml-1 hidden sm:inline">{t('admin.vsLastPeriod')}</span>
         </div>
       </CardContent>
     </Card>
   );
 
   const adminModules = [
-    { id: 'dashboard', name: 'DashBoard', icon: Activity, description: 'Overview & Analytics' },
-    { id: 'user-management', name: 'User Management', icon: Shield, description: 'Users, Roles & Permissions' },
-    { id: 'patient-management', name: 'Patient Management', icon: Users, description: 'Patient Records & Data' },
-//{ id: 'appointment-oversight', name: 'Appointment Oversight', icon: Calendar, description: 'Appointment Management' },
-    //{ id: 'billing-insurance', name: 'Billing & Insurance', icon: CreditCard, description: 'Financial Management' },
-//{ id: 'bulk-messaging', name: 'Bulk Messaging', icon: MessageSquare, description: 'Communication Management' },
-    { id: 'system-config', name: 'System Configuration', icon: Cog, description: 'Hospital Settings' },
-   // { id: 'audit-security', name: 'Audit & Security', icon: ShieldCheck, description: 'Logs & Security' }
+    { id: 'dashboard', name: t('admin.dashboard'), icon: Activity, description: t('admin.overviewAnalytics') },
+    { id: 'user-management', name: t('admin.userManagement'), icon: Shield, description: t('admin.usersRolesPermissions') },
+    { id: 'patient-management', name: t('admin.patientManagement'), icon: Users, description: t('admin.patientRecordsData') },
+//{ id: 'appointment-oversight', name: t('admin.appointmentOversight'), icon: Calendar, description: t('admin.appointmentManagement') },
+    //{ id: 'billing-insurance', name: t('admin.billingInsurance'), icon: CreditCard, description: t('admin.financialManagement') },
+//{ id: 'bulk-messaging', name: t('admin.bulkMessaging'), icon: MessageSquare, description: t('admin.communicationManagement') },
+    { id: 'system-config', name: t('admin.systemConfiguration'), icon: Cog, description: t('admin.hospitalSettings') },
+   // { id: 'audit-security', name: t('admin.auditSecurity'), icon: ShieldCheck, description: t('admin.logsSecurity') }
   ];
 
 
@@ -172,22 +174,22 @@ export const AdminDashboard = () => {
               </div>
               <div>
                 <h2 className="text-xl font-bold text-blue-900 dark:text-blue-100">
-                  🏥 Hospital Registration Progress
+                  {t('admin.hospitalRegistrationProgress')}
                 </h2>
                 <p className="text-blue-700 dark:text-blue-300">
-                  Complete hospital details to unlock all admin features
+                  {t('admin.completeHospitalDetails')}
                 </p>
               </div>
             </div>
             <div className="text-center">
               <div className="text-4xl font-bold text-blue-600 mb-1">{hospitalScore}%</div>
-              <div className="text-sm text-blue-500 uppercase tracking-wide">Complete</div>
+              <div className="text-sm text-blue-500 uppercase tracking-wide">{t('admin.complete')}</div>
             </div>
           </div>
           
           <div className="mb-4">
             <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Progress</span>
+              <span className="text-sm font-medium text-blue-800 dark:text-blue-200">{t('admin.progress')}</span>
               <span className="text-sm text-blue-600">{hospitalScore}/100%</span>
             </div>
             <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-4 overflow-hidden">
@@ -206,14 +208,14 @@ export const AdminDashboard = () => {
                 <>
                   <X className="h-4 w-4 text-red-500" />
                   <span className="text-red-700 dark:text-red-300 font-medium">
-                    Admin features locked - Complete required fields
+                    {t('admin.adminFeaturesLocked')}
                   </span>
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span className="text-green-700 dark:text-green-300 font-medium">
-                    Basic features unlocked - Complete for full access
+                    {t('admin.basicFeaturesUnlocked')}
                   </span>
                 </>
               )}
@@ -223,7 +225,7 @@ export const AdminDashboard = () => {
               onClick={() => setCurrentView('system-config-hospital')} 
               className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2"
             >
-              {!accessUnlocked ? 'Complete Hospital Info' : 'Update Hospital Details'}
+              {!accessUnlocked ? t('admin.completeHospitalInfo') : t('admin.updateHospitalDetails')}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
@@ -237,12 +239,12 @@ export const AdminDashboard = () => {
       <Dialog open={showSetupDialog} onOpenChange={setShowSetupDialog}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
           <div className="text-center py-8">
-            <h2 className="text-2xl font-bold mb-4">Setup Complete</h2>
+            <h2 className="text-2xl font-bold mb-4">{t('admin.setupComplete')}</h2>
             <p className="text-muted-foreground mb-6">
-              Welcome to NexEagle HMS! Your hospital management system is ready to use.
+              {t('admin.welcomeToNexEagle')}
             </p>
             <Button onClick={() => setShowSetupDialog(false)}>
-              Get Started
+              {t('admin.getStarted')}
             </Button>
           </div>
         </DialogContent>
@@ -252,15 +254,15 @@ export const AdminDashboard = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-foreground">Admin Board</h1>
+            <h1 className="text-2xl font-bold text-foreground">{t('admin.adminBoard')}</h1>
             {hospitalScore === 100 && (
               <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 px-2.5 py-0.5 shadow-sm text-[11px] font-medium">
                 <CheckCircle2 className="h-3.5 w-3.5" />
-                Hospital setup 100%
+                {t('admin.hospitalSetup100')}
               </span>
             )}
           </div>
-          <p className="text-muted-foreground">Hospital Management Overview</p>
+          <p className="text-muted-foreground">{t('admin.hospitalManagementOverview')}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Select defaultValue="today">
@@ -268,15 +270,15 @@ export const AdminDashboard = () => {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="week">This Week</SelectItem>
-              <SelectItem value="month">This Month</SelectItem>
-              <SelectItem value="year">This Year</SelectItem>
+              <SelectItem value="today">{t('admin.today')}</SelectItem>
+              <SelectItem value="week">{t('admin.thisWeek')}</SelectItem>
+              <SelectItem value="month">{t('admin.thisMonth')}</SelectItem>
+              <SelectItem value="year">{t('admin.thisYear')}</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />
-            <span className="hidden sm:inline">Export</span>
+            <span className="hidden sm:inline">{t('admin.export')}</span>
           </Button>
         </div>
       </div>
@@ -301,8 +303,8 @@ export const AdminDashboard = () => {
                   setCurrentView(module.id);
                 } else {
                   toast({
-                    title: "Feature Locked",
-                    description: "Complete hospital registration to unlock this feature.",
+                    title: t('admin.featureLocked'),
+                    description: t('admin.completeHospitalRegistration'),
                     variant: "destructive"
                   });
                 }
@@ -335,7 +337,7 @@ export const AdminDashboard = () => {
                 <p className={`text-xs hidden sm:block ${
                   isLocked ? 'text-gray-400' : 'text-muted-foreground'
                 }`}>
-                  {isLocked ? 'Locked' : module.description}
+                  {isLocked ? t('admin.locked') : module.description}
                 </p>
               </CardContent>
             </Card>
