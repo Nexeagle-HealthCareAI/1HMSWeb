@@ -1,7 +1,29 @@
 import React, { useState } from 'react';
 import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Shield, Search } from 'lucide-react';
-import { TimeSlot, Doctor } from '../AppointmentBooking';
 import { Button } from '@/components/ui/button';
+
+// Define types locally to avoid import issues
+interface Doctor {
+  id: string;
+  name: string;
+  department: string;
+  specialization: string;
+  is_available?: boolean;
+}
+
+interface TimeSlot {
+  id: string;
+  time: string;
+  isBooked: boolean;
+  patientInfo?: {
+    name: string;
+    phone: string;
+    age: number;
+    gender: string;
+  };
+  doctorId: string;
+  date: string;
+}
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -102,15 +124,15 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       case 'appointmentId':
         return (
           <>
-            <p>• Appointment ID: APT001, APT123</p>
-            <p>• Token number: TKN001, TKN123</p>
+            <p>• Appointment ID: APT000001, APT0000123</p>
+            <p>• PatientId: PT0000012, PT0000011</p>
           </>
         );
       case 'contact':
         return (
           <>
-            <p>• Phone: +91 9876543210</p>
-            <p>• Mobile: +91 8074906808</p>
+            <p>• Phone: +91 9876XXXXXX</p>
+            <p>• Mobile: +91 8074XXXXXX</p>
           </>
         );
       default:
@@ -127,69 +149,23 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     setIsSearching(true);
     
     try {
-      // TODO: Replace with actual API call
-      // Mock data for demonstration
-      const mockResults = [
-        {
-          id: 'P001',
-          name: 'John Doe',
-          phone: '+91 9876543210',
-          age: 35,
-          gender: 'Male',
-          address: '123 Main St, City',
-          lastVisit: '2024-01-15',
-          appointmentId: 'APT001'
-        },
-        {
-          id: 'P002',
-          name: 'John Smith',
-          phone: '+91 9876543211',
-          age: 28,
-          gender: 'Male',
-          address: '456 Oak Ave, Town',
-          lastVisit: '2024-01-10',
-          appointmentId: 'APT002'
-        },
-        {
-          id: 'P003',
-          name: 'Jane Doe',
-          phone: '+91 9876543212',
-          age: 42,
-          gender: 'Female',
-          address: '789 Pine Rd, Village',
-          lastVisit: '2024-01-20',
-          appointmentId: 'APT003'
-        }
-      ];
-
-      // Filter results based on search field and query
-      const filteredResults = mockResults.filter(patient => {
-        const query = searchQuery.toLowerCase();
-        switch (searchField) {
-          case 'patientId':
-            return patient.id.toLowerCase().includes(query);
-          case 'patientName':
-            return patient.name.toLowerCase().includes(query);
-          case 'appointmentId':
-            return patient.appointmentId.toLowerCase().includes(query);
-          case 'contact':
-            return patient.phone.includes(query);
-          default:
-            return true;
-        }
-      });
-
-      setSearchResults(filteredResults);
+      // TODO: Implement actual API call to search patients
+      // Example API call structure:
+      // const response = await searchPatientsAPI({
+      //   searchField,
+      //   searchQuery: searchQuery.trim()
+      // });
+      // setSearchResults(response.data);
       
-      if (filteredResults.length > 0) {
-        setShowSearchResults(true);
-      } else {
-        // Show no results message
-        setSearchResults([]);
-        setShowSearchResults(true);
-      }
+      // For now, show no results to indicate API integration needed
+      setSearchResults([]);
+      setShowSearchResults(true);
+      
+      console.log('Search requested:', { searchField, searchQuery });
     } catch (error) {
       console.error('Search error:', error);
+      setSearchResults([]);
+      setShowSearchResults(true);
     } finally {
       setIsSearching(false);
     }

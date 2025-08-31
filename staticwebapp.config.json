@@ -1,5 +1,17 @@
 {
   "navigationFallback": {
     "rewrite": "/index.html"
-  }
+  },
+  "platformErrorOverrides": [
+    {
+      "errorType": "NotFound",
+      "serve": "/index.html"
+    }
+  ],
+  "routes": [
+    {
+      "route": "/api/*",
+      "allowedRoles": ["anonymous"]
+    }
+  ]
 }
