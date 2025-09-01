@@ -55,7 +55,7 @@ export const InactivityProvider: React.FC<InactivityProviderProps> = ({ children
     if (isAuthenticated) {
       // Set inactivity timeout (reduced to 30 seconds for testing, change back to 15 minutes in production)
       const timeoutDuration = process.env.NODE_ENV === 'development' ? 30 * 1000 : 15 * 60 * 1000;
-      console.log(`Setting inactivity timeout for ${timeoutDuration / 1000} seconds`);
+     
       
       inactivityTimeoutRef.current = setTimeout(() => {
         console.log('Inactivity timeout triggered - showing dialog');
@@ -115,8 +115,6 @@ export const InactivityProvider: React.FC<InactivityProviderProps> = ({ children
     }
 
     const events = [
-      'mousedown',
-      'mousemove',
       'keypress',
       'scroll',
       'touchstart',

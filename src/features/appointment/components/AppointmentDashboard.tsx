@@ -68,6 +68,7 @@ export const AppointmentDashboard = () => {
   const [selectedPatient, setSelectedPatient] = useState<Appointment | null>(null);
   const [activeTab, setActiveTab] = useState<'current' | 'past' | 'future'>('current');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
 
   // Calculate KPIs
   const kpis = useMemo(() => {
@@ -90,7 +91,7 @@ export const AppointmentDashboard = () => {
     };
   }, []);
 
-  // Calculate past history stats
+      // Calculate past appointments stats
   const pastStats = useMemo(() => {
     const totalPast = mockPastAppointments.length;
     const completedPast = mockPastAppointments.filter(apt => apt.status === 'completed').length;
@@ -129,13 +130,61 @@ export const AppointmentDashboard = () => {
       const matchesDoctor = doctorFilter === 'all' || appointment.doctorName === doctorFilter;
       const matchesSelectedStatus = selectedStatus === 'all' || appointment.status === selectedStatus;
       
-      const matchesDate = !selectedDate || appointment.appointmentDate === format(selectedDate, 'yyyy-MM-dd');
+      // Date filtering logic
+      let matchesDate = true;
+      
+      if (activeTab === 'current') {
+        // Current tab: use single date filter
+        matchesDate = !selectedDate || appointment.appointmentDate === format(selectedDate, 'yyyy-MM-dd');
+      } else if (activeTab === 'past') {
+        // Past tab: use date range filter with max date constraint
+        if (dateRange.startDate && dateRange.endDate) {
+          const appointmentDate = new Date(appointment.appointmentDate);
+          const startDate = new Date(dateRange.startDate);
+          const endDate = new Date(dateRange.endDate);
+          endDate.setHours(23, 59, 59); // Include the entire end date
+          matchesDate = appointmentDate >= startDate && appointmentDate <= endDate;
+        } else if (dateRange.startDate) {
+          const appointmentDate = new Date(appointment.appointmentDate);
+          const startDate = new Date(dateRange.startDate);
+          matchesDate = appointmentDate >= startDate;
+        } else if (dateRange.endDate) {
+          const appointmentDate = new Date(appointment.appointmentDate);
+          const endDate = new Date(dateRange.endDate);
+          endDate.setHours(23, 59, 59); // Include the entire end date
+          matchesDate = appointmentDate <= endDate;
+        } else {
+          // Fallback to single date filter if no range is set
+          matchesDate = !selectedDate || appointment.appointmentDate === format(selectedDate, 'yyyy-MM-dd');
+        }
+      } else if (activeTab === 'future') {
+        // Future tab: use date range filter with min date constraint
+        if (dateRange.startDate && dateRange.endDate) {
+          const appointmentDate = new Date(appointment.appointmentDate);
+          const startDate = new Date(dateRange.startDate);
+          const endDate = new Date(dateRange.endDate);
+          endDate.setHours(23, 59, 59); // Include the entire end date
+          matchesDate = appointmentDate >= startDate && appointmentDate <= endDate;
+        } else if (dateRange.startDate) {
+          const appointmentDate = new Date(appointment.appointmentDate);
+          const startDate = new Date(dateRange.startDate);
+          matchesDate = appointmentDate >= startDate;
+        } else if (dateRange.endDate) {
+          const appointmentDate = new Date(appointment.appointmentDate);
+          const endDate = new Date(dateRange.endDate);
+          endDate.setHours(23, 59, 59); // Include the entire end date
+          matchesDate = appointmentDate <= endDate;
+        } else {
+          // Fallback to single date filter if no range is set
+          matchesDate = !selectedDate || appointment.appointmentDate === format(selectedDate, 'yyyy-MM-dd');
+        }
+      }
       
       return matchesSearch && matchesStatus && matchesDoctor && matchesSelectedStatus && matchesDate;
     });
 
     return appointments;
-  }, [searchTerm, statusFilter, doctorFilter, selectedStatus, activeTab, selectedDate]);
+  }, [searchTerm, statusFilter, doctorFilter, selectedStatus, activeTab, selectedDate, dateRange]);
 
   const getStatusBadge = (status: Appointment['status'], appointment?: Appointment) => {
     switch (status) {
@@ -180,6 +229,11 @@ export const AppointmentDashboard = () => {
   };
 
   const uniqueDoctors = [...new Set(mockAppointments.map(apt => apt.doctorName))];
+
+  const clearDateFilters = () => {
+    setSelectedDate(undefined);
+    setDateRange({ startDate: '', endDate: '' });
+  };
 
   // If booking view is active, show the booking component
   if (showBooking) {
@@ -810,7 +864,7 @@ export const AppointmentDashboard = () => {
             </TabsContent>
 
             <TabsContent value="past" className="p-6">
-              {/* Past History Header */}
+              {/* Past Appointments Header */}
               <div className="mb-6">
               <div className="flex items-center justify-between mb-4">
                   <div>
@@ -869,41 +923,60 @@ export const AppointmentDashboard = () => {
               {/* Past Appointments Filters */}
               <div className="mb-6">
                 <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                                      <div className="flex flex-col lg:flex-row gap-4">
-                      <div className="flex-1">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Past Appointments</label>
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                          <Input
-                            placeholder="Search by patient name, ID, or doctor..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10"
-                          />
-                        </div>
+                                                        <div className="flex flex-col lg:flex-row gap-4 mb-4">
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Past Appointments</label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          placeholder="Search by patient name, ID, or doctor..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10"
+                        />
                       </div>
-                      <div className="lg:w-64">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Filter by Date</label>
-                      <div className="flex gap-2">
-                  <Input
-                    type="date"
-                    value={selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''}
-                    onChange={(e) => setSelectedDate(e.target.value ? new Date(e.target.value) : undefined)}
-                    max={format(new Date(), 'yyyy-MM-dd')}
-                          className="flex-1"
-                  />
-                {selectedDate && (
-                  <Button
-                    variant="outline"
-                    onClick={() => setSelectedDate(undefined)}
-                            size="sm"
-                            className="px-3"
-                  >
-                            <X className="h-4 w-4" />
-                  </Button>
-                )}
-                </div>
                     </div>
+                  </div>
+                  
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Filter by Date Range</label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Start Date</label>
+                        <Input
+                          type="date"
+                          value={dateRange.startDate}
+                          onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                          max={format(new Date(), 'yyyy-MM-dd')}
+                          className="w-full"
+                          placeholder="Select start date"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">End Date</label>
+                        <Input
+                          type="date"
+                          value={dateRange.endDate}
+                          onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                          max={format(new Date(), 'yyyy-MM-dd')}
+                          className="w-full"
+                          placeholder="Select end date"
+                        />
+                      </div>
+                    </div>
+                    {(dateRange.startDate || dateRange.endDate) && (
+                      <div className="mt-3">
+                        <Button
+                          variant="outline"
+                          onClick={clearDateFilters}
+                          size="sm"
+                          className="w-full md:w-auto"
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Clear Date Filters
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   {selectedDate && (
                                          <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
@@ -1080,7 +1153,7 @@ export const AppointmentDashboard = () => {
                              {/* Search and Filters for Future Appointments */}
                <div className="mb-6">
                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                  <div className="flex flex-col lg:flex-row gap-4">
+                  <div className="flex flex-col lg:flex-row gap-4 mb-4">
                     <div className="flex-1">
                                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Future Patients</label>
                       <div className="relative">
@@ -1094,28 +1167,61 @@ export const AppointmentDashboard = () => {
                       </div>
                     </div>
                     <div className="lg:w-64">
-                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Filter by Date</label>
-                      <div className="flex gap-2">
-                        <Input
-                          type="date"
-                          value={selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''}
-                          onChange={(e) => setSelectedDate(e.target.value ? new Date(e.target.value) : undefined)}
-                          max={format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd')}
-                          className="flex-1"
-                        />
-                        {selectedDate && (
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Filter by Date Range</label>
+                      <div className="space-y-2">
+                        <div className="space-y-2">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Start Date</label>
+                            <Input
+                              type="date"
+                              value={dateRange.startDate}
+                              onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                              min={format(new Date(), 'yyyy-MM-dd')}
+                              className="w-full"
+                              placeholder="Select start date"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">End Date</label>
+                            <Input
+                              type="date"
+                              value={dateRange.endDate}
+                              onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                              min={format(new Date(), 'yyyy-MM-dd')}
+                              className="w-full"
+                              placeholder="Select end date"
+                            />
+                          </div>
+                        </div>
+                        {(dateRange.startDate || dateRange.endDate) && (
                           <Button
                             variant="outline"
-                            onClick={() => setSelectedDate(undefined)}
+                            onClick={clearDateFilters}
                             size="sm"
-                            className="px-3"
+                            className="w-full"
                           >
-                            <X className="h-4 w-4" />
+                            <X className="h-4 w-4 mr-1" />
+                            Clear Filters
                           </Button>
                         )}
-                    </div>
+                      </div>
                     </div>
                   </div>
+                  {(dateRange.startDate || dateRange.endDate) && (
+                    <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                      <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-400">
+                        <CalendarIcon className="h-4 w-4" />
+                        Showing appointments from{' '}
+                        <span className="font-medium">
+                          {dateRange.startDate ? format(new Date(dateRange.startDate), 'MMM dd, yyyy') : 'today'}
+                        </span>
+                        {' '}to{' '}
+                        <span className="font-medium">
+                          {dateRange.endDate ? format(new Date(dateRange.endDate), 'MMM dd, yyyy') : 'future'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1124,8 +1230,11 @@ export const AppointmentDashboard = () => {
                  <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
                   <div className="flex items-center justify-between">
                                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                       {selectedDate ? `Appointments on ${format(selectedDate, 'MMMM dd, yyyy')}` : 'All Future Appointments'}
-                     </h3>
+                       {(dateRange.startDate || dateRange.endDate) 
+                        ? `Future Appointments ${dateRange.startDate && dateRange.endDate ? `(${format(new Date(dateRange.startDate), 'MMM dd')} - ${format(new Date(dateRange.endDate), 'MMM dd, yyyy')})` : dateRange.startDate ? `(from ${format(new Date(dateRange.startDate), 'MMM dd, yyyy')})` : `(until ${format(new Date(dateRange.endDate), 'MMM dd, yyyy')})`}`
+                        : 'All Future Appointments'
+                      }
+                    </h3>
                     <Badge variant="outline" className="bg-blue-50 text-blue-700">
                       {filteredAppointments.length} records
                     </Badge>

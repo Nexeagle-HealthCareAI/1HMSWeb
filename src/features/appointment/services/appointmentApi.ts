@@ -143,6 +143,56 @@ export interface DoctorSlotsResponse {
   shiftInfo: ShiftInfo[];
 }
 
+export interface RegisterAppointmentRequest {
+  patient: {
+    fullName: string;
+    mobile: string;
+    ageYears: number;
+    sex: string;
+    addressLine1: string;
+    city: string;
+    pincode: string;
+    insuranceId: string;
+    paymentMode: string;
+  };
+  doctorId: string;
+  apptDate: string;
+  startAt: string;
+  slotTimeInMinutes: number;
+}
+
+export interface RegisterAppointmentResponse {
+  appointmentId: string;
+  patientId: string;
+}
+
+export interface PatientSearchRequest {
+  by: 'patientId' | 'patientName' | 'appointmentId' | 'contact';
+  q: string;
+  scope?: 'local' | 'global';
+}
+
+export interface PatientSearchItem {
+  patientId: string;
+  fullName: string;
+  mobile: string;
+  sex: string;
+  dateOfBirth: string;
+  lastRegistrationAt: string;
+  lastRegistrationId: string;
+  matched: {
+    by: string;
+    value: string;
+  };
+  AppointmentDate: string | null;
+  "Token No": string | null;
+}
+
+export interface PatientSearchResponse {
+  items: PatientSearchItem[];
+  totalpatient: number;
+}
+
 // Appointment API service
 export const appointmentApi = {   
 
@@ -168,6 +218,18 @@ export const appointmentApi = {
   // Get doctor slots
   getDoctorSlots: (doctorId: string, date: string): Promise<DoctorSlotsResponse> => {
     const url = `/calendar/doctor/slots?doctorId=${doctorId}&slotDate=${date}`;
+    return apiClient.get(url);
+  },
+
+  // Register appointment
+  registerAppointment: (hospitalId: string, request: RegisterAppointmentRequest): Promise<RegisterAppointmentResponse> => {
+    const url = `/appointments/register/${hospitalId}?allocateToken=true`;
+    return apiClient.post(url, request);
+  },
+
+  // Search patients
+  searchPatients: (request: PatientSearchRequest): Promise<PatientSearchResponse> => {
+    const url = `/appointments/patient-details/search?by=${request.by}&q=${encodeURIComponent(request.q)}&scope=${request.scope || 'local'}`;
     return apiClient.get(url);
   }
 };

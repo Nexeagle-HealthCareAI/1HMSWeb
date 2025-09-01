@@ -1,9 +1,6 @@
 // API Configuration
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
-  (import.meta.env.DEV 
-    ? 'http://localhost:3000/api' 
-    : 'https://easyhmsapi-b2fpcsh4cpbafxf0.centralindia-01.azurewebsites.net'
-  );
+  'https://easyhmsapi-b2fpcsh4cpbafxf0.centralindia-01.azurewebsites.net';
 
 // API Endpoints
 export const API_ENDPOINTS = {

@@ -276,10 +276,16 @@ const mockFuturePatients: Patient[] = [
 export const PatientFlow = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [doctorFilter, setDoctorFilter] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [activeTab, setActiveTab] = useState<'current' | 'past' | 'future'>('current');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [dateRange, setDateRange] = useState<{
+    startDate: string;
+    endDate: string;
+  }>({
+    startDate: '',
+    endDate: ''
+  });
 
   // Calculate KPIs
   const kpis = useMemo(() => {
@@ -302,7 +308,7 @@ export const PatientFlow = () => {
     };
   }, []);
 
-  // Calculate past history stats
+      // Calculate past appointments stats
   const pastStats = useMemo(() => {
     const totalPast = mockPastPatients.length;
     const completedPast = mockPastPatients.filter(apt => apt.status === 'completed').length;
@@ -338,16 +344,37 @@ export const PatientFlow = () => {
         patient.patientId.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesStatus = statusFilter === 'all' || patient.status === statusFilter;
-      const matchesDoctor = doctorFilter === 'all' || patient.doctorName === doctorFilter;
       const matchesSelectedStatus = selectedStatus === 'all' || patient.status === selectedStatus;
       
-      const matchesDate = !selectedDate || patient.appointmentDate === format(selectedDate, 'yyyy-MM-dd');
+      // Date filtering logic
+      let matchesDate = true;
       
-      return matchesSearch && matchesStatus && matchesDoctor && matchesSelectedStatus && matchesDate;
+      if (activeTab === 'current') {
+        // For current tab, use single date filter
+        matchesDate = !selectedDate || patient.appointmentDate === format(selectedDate, 'yyyy-MM-dd');
+      } else if (activeTab === 'past' || activeTab === 'future') {
+        // For past and future tabs, use date range filter
+        if (dateRange.startDate && dateRange.endDate) {
+          const patientDate = new Date(patient.appointmentDate);
+          const startDate = new Date(dateRange.startDate);
+          const endDate = new Date(dateRange.endDate);
+          matchesDate = patientDate >= startDate && patientDate <= endDate;
+        } else if (dateRange.startDate) {
+          const patientDate = new Date(patient.appointmentDate);
+          const startDate = new Date(dateRange.startDate);
+          matchesDate = patientDate >= startDate;
+        } else if (dateRange.endDate) {
+          const patientDate = new Date(patient.appointmentDate);
+          const endDate = new Date(dateRange.endDate);
+          matchesDate = patientDate <= endDate;
+        }
+      }
+      
+      return matchesSearch && matchesStatus && matchesSelectedStatus && matchesDate;
     });
 
     return patients;
-  }, [searchTerm, statusFilter, doctorFilter, selectedStatus, activeTab, selectedDate]);
+  }, [searchTerm, statusFilter, selectedStatus, activeTab, selectedDate, dateRange]);
 
   const getStatusBadge = (status: Patient['status'], patient?: Patient) => {
     switch (status) {
@@ -380,6 +407,11 @@ export const PatientFlow = () => {
   };
 
   const uniqueDoctors = [...new Set(mockPatients.map(apt => apt.doctorName))];
+
+  const clearDateFilters = () => {
+    setSelectedDate(undefined);
+    setDateRange({ startDate: '', endDate: '' });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -638,7 +670,7 @@ export const PatientFlow = () => {
                 </TabsTrigger>
                 <TabsTrigger value="past" className="flex items-center gap-2">
                   <History className="h-4 w-4" />
-                  Past History
+                  Past Appointments
                 </TabsTrigger>
                 <TabsTrigger value="future" className="flex items-center gap-2">
                   <CalendarDays className="h-4 w-4" />
@@ -715,20 +747,7 @@ export const PatientFlow = () => {
                         />
                       </div>
                     </div>
-                    <div className="lg:w-64">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Filter by Doctor</label>
-                      <Select value={doctorFilter} onValueChange={setDoctorFilter}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="All Doctors" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">👥 All Doctors</SelectItem>
-                          {uniqueDoctors.map(doctor => (
-                            <SelectItem key={doctor} value={doctor}>👨‍⚕️ {doctor}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    
                   </div>
                 </div>
               </div>
@@ -953,18 +972,348 @@ export const PatientFlow = () => {
             </TabsContent>
 
             <TabsContent value="past" className="p-6">
-              <div className="text-center py-8">
-                <History className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Past Patient History</h3>
-                <p className="text-gray-600 dark:text-gray-400">View completed patient consultations and historical data</p>
+              {/* Past Appointments Header */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Past Appointments</h2>
+                    <p className="text-gray-600 dark:text-gray-400">View completed patient consultations and historical data</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <History className="h-4 w-4 text-gray-600" />
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Historical Data</span>
+                    </div>
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      {pastStats.completedPast} Completed
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Search and Date Range Filters */}
+              <div className="mb-6">
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                  <div className="flex flex-col lg:flex-row gap-4">
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Past Appointments</label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          placeholder="Search by patient name, ID, or doctor..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+                    
+                  </div>
+                  
+                  {/* Date Range Filter */}
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Filter by Date Range</label>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="flex-1">
+                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Start Date</label>
+                        <Input
+                          type="date"
+                          value={dateRange.startDate}
+                          onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                          max={format(new Date(), 'yyyy-MM-dd')}
+                          className="text-sm"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">End Date</label>
+                        <Input
+                          type="date"
+                          value={dateRange.endDate}
+                          onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                          max={format(new Date(), 'yyyy-MM-dd')}
+                          className="text-sm"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <Button
+                          variant="outline"
+                          onClick={clearDateFilters}
+                          size="sm"
+                          className="h-10 px-3"
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Clear
+                        </Button>
+                      </div>
+                    </div>
+                    {(dateRange.startDate || dateRange.endDate) && (
+                      <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
+                          <Calendar className="h-4 w-4" />
+                          <span>
+                            {dateRange.startDate && dateRange.endDate 
+                              ? `Showing appointments from ${format(new Date(dateRange.startDate), 'MMM dd, yyyy')} to ${format(new Date(dateRange.endDate), 'MMM dd, yyyy')}`
+                              : dateRange.startDate 
+                                ? `Showing appointments from ${format(new Date(dateRange.startDate), 'MMM dd, yyyy')} onwards`
+                                : `Showing appointments until ${format(new Date(dateRange.endDate), 'MMM dd, yyyy')}`
+                            }
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Past Appointments Table */}
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50 dark:bg-gray-700">
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Token</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Patient ID</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Patient Name</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Contact</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Date</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Time</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Status</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredPatients.length > 0 ? (
+                        filteredPatients.map((patient) => (
+                          <TableRow key={patient.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                            <TableCell className="text-xs font-medium">
+                              #{patient.tokenNo}
+                            </TableCell>
+                            <TableCell className="text-xs font-mono text-blue-600">
+                              {patient.patientId}
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium text-sm">{patient.patientName}</div>
+                                <div className="text-xs text-gray-500">ID: {patient.patientId}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              <div className="flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                {patient.phone}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              {format(new Date(patient.appointmentDate), 'MMM dd, yyyy')}
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              {format(new Date(`2000-01-01T${patient.appointmentTime}`), 'HH:mm')}
+                            </TableCell>
+                            <TableCell>
+                              {getStatusBadge(patient.status, patient)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs h-7 px-2"
+                                >
+                                  <Eye className="h-3 w-3 mr-1" />
+                                  View
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-8">
+                            <div className="flex flex-col items-center gap-2">
+                              <History className="h-8 w-8 text-muted-foreground" />
+                              <p className="text-muted-foreground">
+                                No past appointments found for the selected criteria
+                              </p>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             </TabsContent>
 
             <TabsContent value="future" className="p-6">
-              <div className="text-center py-8">
-                <CalendarDays className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Future Patients</h3>
-                <p className="text-gray-600 dark:text-gray-400">View upcoming patient appointments and scheduled consultations</p>
+              {/* Future Appointments Header */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Future Appointments</h2>
+                    <p className="text-gray-600 dark:text-gray-400">View upcoming patient appointments and scheduled consultations</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                      <CalendarDays className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Upcoming</span>
+                    </div>
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      {futureStats.readyFuture} Ready
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Search and Date Range Filters */}
+              <div className="mb-6">
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                  <div className="flex flex-col lg:flex-row gap-4">
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Future Appointments</label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          placeholder="Search by patient name, ID, or doctor..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+                    
+                  </div>
+                  
+                  {/* Date Range Filter */}
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Filter by Date Range</label>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="flex-1">
+                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Start Date</label>
+                        <Input
+                          type="date"
+                          value={dateRange.startDate}
+                          onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                          min={format(new Date(), 'yyyy-MM-dd')}
+                          className="text-sm"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">End Date</label>
+                        <Input
+                          type="date"
+                          value={dateRange.endDate}
+                          onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                          min={format(new Date(), 'yyyy-MM-dd')}
+                          className="text-sm"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <Button
+                          variant="outline"
+                          onClick={clearDateFilters}
+                          size="sm"
+                          className="h-10 px-3"
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Clear
+                        </Button>
+                      </div>
+                    </div>
+                    {(dateRange.startDate || dateRange.endDate) && (
+                      <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
+                          <Calendar className="h-4 w-4" />
+                          <span>
+                            {dateRange.startDate && dateRange.endDate 
+                              ? `Showing appointments from ${format(new Date(dateRange.startDate), 'MMM dd, yyyy')} to ${format(new Date(dateRange.endDate), 'MMM dd, yyyy')}`
+                              : dateRange.startDate 
+                                ? `Showing appointments from ${format(new Date(dateRange.startDate), 'MMM dd, yyyy')} onwards`
+                                : `Showing appointments until ${format(new Date(dateRange.endDate), 'MMM dd, yyyy')}`
+                            }
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Future Appointments Table */}
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50 dark:bg-gray-700">
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Token</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Patient ID</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Patient Name</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Contact</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Date</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Time</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Status</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredPatients.length > 0 ? (
+                        filteredPatients.map((patient) => (
+                          <TableRow key={patient.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                            <TableCell className="text-xs font-medium">
+                              #{patient.tokenNo}
+                            </TableCell>
+                            <TableCell className="text-xs font-mono text-blue-600">
+                              {patient.patientId}
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium text-sm">{patient.patientName}</div>
+                                <div className="text-xs text-gray-500">ID: {patient.patientId}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              <div className="flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                {patient.phone}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              {format(new Date(patient.appointmentDate), 'MMM dd, yyyy')}
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              {format(new Date(`2000-01-01T${patient.appointmentTime}`), 'HH:mm')}
+                            </TableCell>
+                            <TableCell>
+                              {getStatusBadge(patient.status, patient)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs h-7 px-2"
+                                >
+                                  <Eye className="h-3 w-3 mr-1" />
+                                  View
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-8">
+                            <div className="flex flex-col items-center gap-2">
+                              <CalendarDays className="h-8 w-8 text-muted-foreground" />
+                              <p className="text-muted-foreground">
+                                No future appointments found for the selected criteria
+                              </p>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             </TabsContent>
           </Tabs>

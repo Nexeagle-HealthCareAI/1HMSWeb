@@ -46,6 +46,8 @@ export interface TimeSlot {
   };
   doctorId: string;
   date: string;
+  slotDurationInMinutes?: number;
+  shiftName?: string;
 }
 
 export interface Department {
@@ -116,7 +118,9 @@ const generateTimeSlots = (doctorId: string, date: string): TimeSlot[] => {
     time,
     isBooked: false, // All slots are available by default
     doctorId,
-    date
+    date,
+    slotDurationInMinutes: 10, // Default slot duration
+    shiftName: 'Default'
   }));
 };
 
@@ -153,10 +157,6 @@ export const AppointmentBooking: React.FC = () => {
   const [appointmentId, setAppointmentId] = useState('');
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [patientData, setPatientData] = useState<any>(null);
-  const [showExtraSlotOption, setShowExtraSlotOption] = useState(false);
-  const [extraSlotTime, setExtraSlotTime] = useState<string>('');
-  const [showExtraSlotModal, setShowExtraSlotModal] = useState(false);
-  const [customSlotTime, setCustomSlotTime] = useState<string>('');
   
   // Fetch doctors for the selected department
   const { data: doctorsResponse, 
@@ -250,7 +250,18 @@ export const AppointmentBooking: React.FC = () => {
       if (doctorSlotsResponse.shiftInfo?.[0]?.shiftDayDetails) {
         const shiftDayDetails = doctorSlotsResponse.shiftInfo[0].shiftDayDetails;
         const generatedSlots = generateTimeSlotsFromShiftInfo(shiftDayDetails, selectedDoctor.id, formattedDate);
-        setTimeSlots(generatedSlots);
+        
+        // Convert GeneratedTimeSlot to TimeSlot with slot duration
+        const timeSlotsWithDuration: TimeSlot[] = generatedSlots.map(slot => {
+          const shiftDetail = shiftDayDetails.find(shift => shift.shiftName === slot.shiftName);
+          return {
+            ...slot,
+            slotDurationInMinutes: shiftDetail?.slotDurationInMinutes || 10,
+            shiftName: slot.shiftName
+          };
+        });
+        
+        setTimeSlots(timeSlotsWithDuration);
       } else {
         // Fallback to old generation method if no API data
         const dateStr = selectedDate.toISOString().split('T')[0];
@@ -337,149 +348,19 @@ export const AppointmentBooking: React.FC = () => {
     }
   };
 
-  // Function to check if extra slot can be added
-  const canAddExtraSlot = (): boolean => {
-    if (!selectedDoctor || !doctorSlotsResponse || doctorSlotsResponse.isTimeOff) {
-      return false;
-    }
-    
-    // Check if there are any available slots in the current shift
-    const selectedShiftData = availableShifts.find(s => s.id === selectedShift);
-    if (!selectedShiftData) return false;
-    
-    const currentShiftSlots = timeSlots.filter(slot => {
-      const slotHour = parseInt(slot.time.split(':')[0]);
-      const startHour = parseInt(selectedShiftData.startTime.split(':')[0]);
-      const endHour = parseInt(selectedShiftData.endTime.split(':')[0]);
-      return slotHour >= startHour && slotHour < endHour;
-    });
-    
-    // Allow extra slot if there are at least 2 available slots
-    return currentShiftSlots.filter(slot => !slot.isBooked).length >= 2;
-  };
 
-  // Function to add extra slot
-  const addExtraSlot = () => {
-    if (!selectedDoctor || !extraSlotTime) return;
-    
-    const selectedShiftData = availableShifts.find(s => s.id === selectedShift);
-    if (!selectedShiftData) return;
-    
-    // Create new extra slot
-    const newExtraSlot: TimeSlot = {
-      id: `${selectedDoctor.id}-${formattedDate}-${extraSlotTime}-extra`,
-      time: extraSlotTime,
-      isBooked: false,
-      doctorId: selectedDoctor.id,
-      date: formattedDate
-    };
-    
-    // Add to time slots
-    setTimeSlots(prev => [...prev, newExtraSlot]);
-    setShowExtraSlotOption(false);
-    setExtraSlotTime('');
-  };
-
-  // Function to add custom extra slot
-  const addCustomExtraSlot = () => {
-    if (!selectedDoctor || !customSlotTime) return;
-    
-    if (!validateCustomTime(customSlotTime)) {
-      alert('Please enter a valid time within the allowed range');
-      return;
-    }
-    
-    // Check if time already exists
-    const existingSlot = timeSlots.find(slot => slot.time === customSlotTime);
-    if (existingSlot) {
-      alert('A slot at this time already exists');
-      return;
-    }
-    
-    // Create new custom extra slot
-    const newExtraSlot: TimeSlot = {
-      id: `${selectedDoctor.id}-${formattedDate}-${customSlotTime}-extra`,
-      time: customSlotTime,
-      isBooked: false,
-      doctorId: selectedDoctor.id,
-      date: formattedDate
-    };
-    
-    // Add to time slots
-    setTimeSlots(prev => [...prev, newExtraSlot]);
-    setShowExtraSlotModal(false);
-    setCustomSlotTime('');
-  };
-
-  // Function to get available time options for extra slot
-  const getAvailableExtraSlotTimes = (): string[] => {
-    const selectedShiftData = availableShifts.find(s => s.id === selectedShift);
-    if (!selectedShiftData) return [];
-    
-    const startHour = parseInt(selectedShiftData.startTime.split(':')[0]);
-    const endHour = parseInt(selectedShiftData.endTime.split(':')[0]);
-    
-    const allTimes: string[] = [];
-    for (let hour = startHour; hour < endHour; hour++) {
-      allTimes.push(`${hour.toString().padStart(2, '0')}:00`);
-      allTimes.push(`${hour.toString().padStart(2, '0')}:30`);
-    }
-    
-    // Filter out times that already exist in timeSlots
-    const existingTimes = timeSlots.map(slot => slot.time);
-    return allTimes.filter(time => !existingTimes.includes(time));
-  };
-
-  // Function to get next available time after existing slots
-  const getNextAvailableTime = (): string => {
-    const availableTimes = getAvailableExtraSlotTimes();
-    if (availableTimes.length === 0) {
-      // If no available times in shift, suggest next 30-minute slot after shift end
-      const selectedShiftData = availableShifts.find(s => s.id === selectedShift);
-      if (selectedShiftData) {
-        const endHour = parseInt(selectedShiftData.endTime.split(':')[0]);
-        const endMinute = parseInt(selectedShiftData.endTime.split(':')[1]);
-        const nextTime = new Date();
-        nextTime.setHours(endHour, endMinute + 30, 0, 0);
-        return nextTime.toTimeString().slice(0, 5);
-      }
-    }
-    return availableTimes[0] || '18:00';
-  };
-
-  // Function to validate custom time
-  const validateCustomTime = (time: string): boolean => {
-    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!timeRegex.test(time)) return false;
-    
-    const [hours, minutes] = time.split(':').map(Number);
-    const selectedShiftData = availableShifts.find(s => s.id === selectedShift);
-    if (!selectedShiftData) return false;
-    
-    const startHour = parseInt(selectedShiftData.startTime.split(':')[0]);
-    const endHour = parseInt(selectedShiftData.endTime.split(':')[0]);
-    
-    // Allow time within shift or up to 2 hours after shift end
-    return hours >= startHour && hours <= endHour + 2;
-  };
-
-  // Function to handle extra slot modal
-  const handleExtraSlotClick = () => {
-    const nextTime = getNextAvailableTime();
-    setCustomSlotTime(nextTime);
-    setShowExtraSlotModal(true);
-  };
 
   const handleBookingComplete = (patientInfo: any) => {
     setPatientData(patientInfo);
+    // Use the appointmentId from the API response
+    if (patientInfo.appointmentId) {
+      setAppointmentId(patientInfo.appointmentId);
+    }
     setShowPatientForm(false);
     setShowVitalsForm(true);
   };
 
   const handleVitalsComplete = (vitalsData: any) => {
-    const newAppointmentId = `APT${Date.now()}`;
-    setAppointmentId(newAppointmentId);
-    
     // Update the slot as booked with both patient and vitals data
     setTimeSlots(prev => prev.map(slot => 
       slot.id === selectedSlot?.id 
@@ -494,9 +375,6 @@ export const AppointmentBooking: React.FC = () => {
   };
 
   const handleVitalsSkip = () => {
-    const newAppointmentId = `APT${Date.now()}`;
-    setAppointmentId(newAppointmentId);
-    
     // Update the slot as booked with only patient data
     setTimeSlots(prev => prev.map(slot => 
       slot.id === selectedSlot?.id 
@@ -977,13 +855,11 @@ export const AppointmentBooking: React.FC = () => {
                             ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-200 cursor-not-allowed opacity-60'
                             : selectedSlot?.id === slot.id
                             ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-blue-500 text-white shadow-lg scale-105'
-                            : slot.id.includes('-extra')
-                            ? 'bg-gradient-to-br from-blue-50 to-indigo-100 border-blue-200 hover:from-blue-100 hover:to-indigo-200 hover:border-blue-300 hover-scale'
                             : 'bg-gradient-to-br from-teal-50 to-emerald-100 border-teal-200 hover:from-teal-100 hover:to-emerald-200 hover:border-teal-300 hover-scale'
                         }`}
                       >
                         <div className={`font-bold text-xs mb-1 ${
-                          selectedSlot?.id === slot.id ? 'text-white' : slot.isBooked ? 'text-red-700' : slot.id.includes('-extra') ? 'text-blue-700' : 'text-teal-700'
+                          selectedSlot?.id === slot.id ? 'text-white' : slot.isBooked ? 'text-red-700' : 'text-teal-700'
                         }`}>
                           {slot.time}
                         </div>
@@ -992,11 +868,9 @@ export const AppointmentBooking: React.FC = () => {
                             ? 'bg-red-200 text-red-800'
                             : selectedSlot?.id === slot.id
                             ? 'bg-white/20 text-white'
-                            : slot.id.includes('-extra')
-                            ? 'bg-blue-200 text-blue-800'
                             : 'bg-teal-200 text-teal-800'
                         }`}>
-                          {slot.isBooked ? '❌' : selectedSlot?.id === slot.id ? '✅' : slot.id.includes('-extra') ? '➕' : '✓'}
+                          {slot.isBooked ? '❌' : selectedSlot?.id === slot.id ? '✅' : '✓'}
                         </div>
                         {slot.isBooked && (
                           <div className="flex justify-center gap-1 mt-1 opacity-60">
@@ -1037,38 +911,7 @@ export const AppointmentBooking: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Extra Slot Option */}
-                  {canAddExtraSlot() && (
-                    <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-shrink-0">
-                            <div className="w-8 h-8 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center">
-                              <span className="text-blue-600 dark:text-blue-400 text-lg">➕</span>
-                            </div>
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-1">
-                              Need an Extra Slot?
-                            </h3>
-                            <p className="text-sm text-blue-700 dark:text-blue-300">
-                              Doctor has availability for additional appointments today.
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-600 dark:text-blue-300 dark:hover:bg-blue-800"
-                          onClick={handleExtraSlotClick}
-                        >
-                          Add Extra Slot
-                        </Button>
-                      </div>
-                      
 
-                    </div>
-                  )}
 
                   {/* Legend */}
                   <div className="mt-3 p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
@@ -1078,10 +921,7 @@ export const AppointmentBooking: React.FC = () => {
                         <div className="w-3 h-3 bg-teal-200 rounded border border-teal-300"></div>
                         <span className="text-gray-600 dark:text-gray-400">Regular Available</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-blue-200 rounded border border-blue-300"></div>
-                        <span className="text-gray-600 dark:text-gray-400">Extra Slot</span>
-                      </div>
+
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-red-200 rounded border border-red-300"></div>
                         <span className="text-gray-600 dark:text-gray-400">Booked</span>
@@ -1092,7 +932,7 @@ export const AppointmentBooking: React.FC = () => {
                       </div>
                     </div>
                     <div className="mt-2 text-xs text-gray-500 dark:text-gray-500">
-                      💡 <strong>Tip:</strong> Tap any available slot to book an appointment. Slots are 30 minutes each.
+                      💡 <strong>Tip:</strong> Tap any available slot to book an appointment. Slot duration varies by shift.
                     </div>
                   </div>
                 </div>
@@ -1107,6 +947,7 @@ export const AppointmentBooking: React.FC = () => {
         <PatientForm
           selectedSlot={selectedSlot}
           doctor={selectedDoctor}
+          hospitalId={hospitalId}
           onSubmit={handleBookingComplete}
           onCancel={() => {
             setShowPatientForm(false);
@@ -1124,96 +965,7 @@ export const AppointmentBooking: React.FC = () => {
         />
       )}
 
-      {/* Extra Slot Modal */}
-      {showExtraSlotModal && (
-        <div 
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50"
-          onClick={(e) => e.preventDefault()}
-        >
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <div className="flex items-center gap-2 text-blue-600 mb-4">
-              <span className="text-2xl">➕</span>
-              <h2 className="text-lg font-semibold">Add Extra Appointment Slot</h2>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="text-center">
-                <p className="text-gray-600 dark:text-gray-300 mb-2">
-                  Add an extra appointment slot for {selectedDoctor?.name} on {format(selectedDate, 'MMM dd, yyyy')}
-                </p>
-                
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg mb-4">
-                  <p className="text-sm text-blue-700 dark:text-blue-300">
-                    <strong>Next Available Time:</strong> {getNextAvailableTime()}
-                  </p>
-                </div>
-              </div>
 
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-                    Select Time
-                  </label>
-                  <Select value={customSlotTime} onValueChange={setCustomSlotTime}>
-                    <SelectTrigger className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
-                      <SelectValue placeholder="Choose time..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getAvailableExtraSlotTimes().map((time) => (
-                        <SelectItem key={time} value={time}>
-                          {time}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-                    Or Enter Custom Time
-                  </label>
-                  <Input
-                    type="time"
-                    value={customSlotTime}
-                    onChange={(e) => setCustomSlotTime(e.target.value)}
-                    className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
-                    placeholder="HH:MM"
-                  />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Format: HH:MM (e.g., 14:30 for 2:30 PM)
-                  </p>
-                </div>
-
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
-                  <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                    <strong>Note:</strong> Custom times should be within the doctor's shift hours or up to 2 hours after.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => {
-                    setShowExtraSlotModal(false);
-                    setCustomSlotTime('');
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                  onClick={addCustomExtraSlot}
-                  disabled={!customSlotTime}
-                >
-                  Add Slot
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

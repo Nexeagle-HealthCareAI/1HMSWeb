@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Shield, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { RegisterAppointmentRequest } from '../services/appointmentApi';
+import { useAppointmentBooking } from '../hooks/useAppointmentBooking';
+import { usePatientSearch } from '../hooks/usePatientSearch';
+import { PatientSearchItem } from '../services/appointmentApi';
 
 // Define types locally to avoid import issues
 interface Doctor {
@@ -23,6 +27,8 @@ interface TimeSlot {
   };
   doctorId: string;
   date: string;
+  slotDurationInMinutes?: number;
+  shiftName?: string;
 }
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -35,6 +41,7 @@ import { format } from 'date-fns';
 interface PatientFormProps {
   selectedSlot: TimeSlot;
   doctor: Doctor;
+  hospitalId?: string;
   onSubmit: (patientInfo: any) => void;
   onCancel: () => void;
 }
@@ -42,6 +49,7 @@ interface PatientFormProps {
 export const PatientForm: React.FC<PatientFormProps> = ({
   selectedSlot,
   doctor,
+  hospitalId,
   onSubmit,
   onCancel
 }) => {
@@ -61,10 +69,13 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [searchField, setSearchField] = useState('patientId'); // Default search field
+  const [searchResults, setSearchResults] = useState<PatientSearchItem[]>([]);
+  const [searchField, setSearchField] = useState<'patientId' | 'patientName' | 'appointmentId' | 'contact'>('patientId'); // Default search field
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { bookAppointment, isLoading: isBookingLoading, error: bookingError, clearError } = useAppointmentBooking();
+  const { searchPatients, isLoading: isSearchLoading, error: searchError, clearError: clearSearchError } = usePatientSearch();
 
   const formatTime = (time: string) => {
     const [hour, minute] = time.split(':');
@@ -147,21 +158,19 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     }
 
     setIsSearching(true);
+    clearSearchError();
     
     try {
-      // TODO: Implement actual API call to search patients
-      // Example API call structure:
-      // const response = await searchPatientsAPI({
-      //   searchField,
-      //   searchQuery: searchQuery.trim()
-      // });
-      // setSearchResults(response.data);
+      const response = await searchPatients({
+        by: searchField,
+        q: searchQuery.trim(),
+        scope: 'local'
+      });
       
-      // For now, show no results to indicate API integration needed
-      setSearchResults([]);
+      setSearchResults(response.items);
       setShowSearchResults(true);
       
-      console.log('Search requested:', { searchField, searchQuery });
+      console.log('Search results:', response);
     } catch (error) {
       console.error('Search error:', error);
       setSearchResults([]);
@@ -172,13 +181,25 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   };
 
   // Handle patient selection from search results
-  const handlePatientSelect = (patient: any) => {
+  const handlePatientSelect = (patient: PatientSearchItem) => {
+    // Calculate age from date of birth
+    const calculateAge = (dateOfBirth: string) => {
+      const today = new Date();
+      const birthDate = new Date(dateOfBirth);
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age.toString();
+    };
+
     setFormData({
-      name: patient.name,
-      phone: patient.phone,
-      age: patient.age.toString(),
-      gender: patient.gender,
-      address: patient.address,
+      name: patient.fullName,
+      phone: patient.mobile,
+      age: calculateAge(patient.dateOfBirth),
+      gender: patient.sex,
+      address: '', // Not available in search response
       city: '',
       pincode: '',
       isPaid: false,
@@ -261,13 +282,59 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Prepare the appointment request
+      const appointmentRequest: RegisterAppointmentRequest = {
+        patient: {
+          fullName: formData.name,
+          mobile: formatPhoneNumber(formData.phone), // Use formatted phone number
+          ageYears: parseInt(formData.age),
+          sex: formData.gender,
+          addressLine1: formData.address,
+          city: formData.city,
+          pincode: formData.pincode,
+          insuranceId: formData.hasInsurance ? formData.insuranceId : '',
+          paymentMode: formData.paymentMode
+        },
+        doctorId: doctor.id,
+        apptDate: new Date(selectedSlot.date + 'T' + selectedSlot.time).toISOString(),
+        startAt: new Date(selectedSlot.date + 'T' + selectedSlot.time).toISOString(),
+        slotTimeInMinutes: selectedSlot.slotDurationInMinutes || 10 // Use slot duration from UI or default to 10
+      };
+
+      // Call the API using the hook
+      console.log('Sending appointment request:', appointmentRequest);
+      if (!hospitalId) {
+        throw new Error('Hospital ID is required to book appointment');
+      }
+      const response = await bookAppointment(appointmentRequest, hospitalId);
+      console.log('Appointment booking response:', response);
+      
+      // Pass the response data to the parent component
       onSubmit({
         ...formData,
-        age: parseInt(formData.age)
+        age: parseInt(formData.age),
+        appointmentId: response.appointmentId,
+        patientId: response.patientId
       });
+    } catch (error) {
+      console.error('Failed to register appointment:', error);
+      // The error is already handled by the hook, but we can show it here if needed
+      if (bookingError) {
+        alert(`Failed to book appointment: ${bookingError}. Please try again.`);
+        clearError();
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -302,6 +369,10 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                   <span>{formatTime(selectedSlot.time)}</span>
                 </div>
                 <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">⏱️</span>
+                  <span className="text-xs">Duration: {selectedSlot.slotDurationInMinutes || 10} minutes</span>
+                </div>
+                <div className="flex items-center gap-2">
                   <DollarSign className="h-3 w-3 text-healthcare-primary" />
                   <span className="font-medium">Fee: ₹500</span>
                 </div>
@@ -316,7 +387,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 <div className="space-y-2">
                   {/* Search Field Dropdown */}
                   <div className="flex gap-2">
-                    <Select value={searchField} onValueChange={setSearchField}>
+                    <Select value={searchField} onValueChange={(value: string) => setSearchField(value as 'patientId' | 'patientName' | 'appointmentId' | 'contact')}>
                       <SelectTrigger className="text-xs h-8 flex-1">
                         <SelectValue placeholder="Select search field" />
                       </SelectTrigger>
@@ -348,11 +419,27 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     size="sm"
                     className="w-full h-7 text-xs"
                     onClick={handleSearch}
-                    disabled={isSearching || !searchQuery.trim()}
+                    disabled={isSearching || isSearchLoading || !searchQuery.trim()}
                   >
                     <Search className="h-3 w-3 mr-1" />
-                    {isSearching ? 'Searching...' : 'Search Patient'}
+                    {isSearching || isSearchLoading ? 'Searching...' : 'Search Patient'}
                   </Button>
+                  
+                  {/* Search Error Display */}
+                  {searchError && (
+                    <div className="text-red-500 text-xs bg-red-50 dark:bg-red-900/20 p-2 rounded border border-red-200 dark:border-red-800">
+                      <p>Search error: {searchError}</p>
+                      <Button 
+                        type="button" 
+                        size="sm" 
+                        variant="outline" 
+                        className="mt-1 h-6 text-xs"
+                        onClick={clearSearchError}
+                      >
+                        Clear Error
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             </Card>
@@ -592,9 +679,10 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 </Button>
                 <Button
                   type="submit"
+                  disabled={isSubmitting || isBookingLoading}
                   className="flex-1 bg-healthcare-primary hover:bg-healthcare-primary/90 h-10"
                 >
-                  Book Appointment
+                  {isSubmitting || isBookingLoading ? 'Booking Appointment...' : 'Book Appointment'}
                 </Button>
               </div>
             </form>
@@ -620,7 +708,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
               <div className="grid gap-3">
                 {searchResults.map((patient, index) => (
                   <Card 
-                    key={patient.id} 
+                    key={patient.patientId} 
                     className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors border-2 hover:border-blue-300"
                     onClick={() => handlePatientSelect(patient)}
                   >
@@ -631,33 +719,33 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                             <User className="h-5 w-5 text-blue-600" />
                           </div>
                           <div>
-                            <h4 className="font-semibold text-foreground">{patient.name}</h4>
-                            <p className="text-sm text-muted-foreground">ID: {patient.id}</p>
+                            <h4 className="font-semibold text-foreground">{patient.fullName}</h4>
+                            <p className="text-sm text-muted-foreground">ID: {patient.patientId}</p>
                           </div>
                         </div>
                         
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div>
                             <span className="text-muted-foreground">Phone:</span>
-                            <p className="font-medium">{patient.phone}</p>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Age:</span>
-                            <p className="font-medium">{patient.age} years</p>
+                            <p className="font-medium">{patient.mobile}</p>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Gender:</span>
-                            <p className="font-medium">{patient.gender}</p>
+                            <p className="font-medium">{patient.sex}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">DOB:</span>
+                            <p className="font-medium">{new Date(patient.dateOfBirth).toLocaleDateString()}</p>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Last Visit:</span>
-                            <p className="font-medium">{patient.lastVisit}</p>
+                            <p className="font-medium">{patient.lastRegistrationAt ? new Date(patient.lastRegistrationAt).toLocaleDateString() : 'N/A'}</p>
                           </div>
                         </div>
                         
                         <div className="mt-2">
-                          <span className="text-muted-foreground text-sm">Address:</span>
-                          <p className="text-sm">{patient.address}</p>
+                          <span className="text-muted-foreground text-sm">Matched by:</span>
+                          <p className="text-sm">{patient.matched.by}: {patient.matched.value}</p>
                         </div>
                       </div>
                       
