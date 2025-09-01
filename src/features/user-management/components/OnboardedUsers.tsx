@@ -269,8 +269,13 @@ export const OnboardedUsers: React.FC = () => {
                             fullName: user.fullName,
                             email: user.email
                           })}
-                          className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
-                          title="Deactivate User"
+                          className={`h-7 w-7 p-0 ${
+                            user.userId === currentUserId 
+                              ? 'opacity-50 cursor-not-allowed' 
+                              : 'hover:bg-red-50 hover:text-red-600'
+                          }`}
+                          title={user.userId === currentUserId ? "Cannot deactivate yourself" : "Deactivate User"}
+                          disabled={user.userId === currentUserId}
                         >
                           <UserX className="h-3.5 w-3.5" />
                         </Button>
