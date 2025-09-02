@@ -53,8 +53,8 @@ export const InactivityProvider: React.FC<InactivityProviderProps> = ({ children
 
     // Only set up timers if user is authenticated
     if (isAuthenticated) {
-      // Set inactivity timeout (reduced to 30 seconds for testing, change back to 15 minutes in production)
-      const timeoutDuration = process.env.NODE_ENV === 'development' ? 30 * 1000 : 15 * 60 * 1000;
+      // Set inactivity timeout to 15 minutes for all environments
+      const timeoutDuration = 15 * 60 * 1000; // 15 minutes in milliseconds
      
       
       inactivityTimeoutRef.current = setTimeout(() => {
@@ -84,6 +84,12 @@ export const InactivityProvider: React.FC<InactivityProviderProps> = ({ children
 
   // Handle user choosing to stay connected
   const handleStayConnected = () => {
+    console.log('User chose to stay connected - resetting timer');
+    // Clear the countdown interval first
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+    }
+    // Reset the timer and close dialog
     resetInactivityTimer();
   };
 
@@ -184,20 +190,7 @@ export const InactivityProvider: React.FC<InactivityProviderProps> = ({ children
     isInactivityDialogOpen
   };
 
-  // Debug function to test inactivity dialog (remove in production)
-  const testInactivityDialog = () => {
-    console.log('Testing inactivity dialog...');
-    setIsInactivityDialogOpen(true);
-    setTimeRemaining(120);
-    startCountdown();
-  };
 
-  // Add test button in development mode
-  if (process.env.NODE_ENV === 'development') {
-    // Add test button to window for debugging
-    (window as any).testInactivityDialog = testInactivityDialog;
-    console.log('Inactivity test function available: window.testInactivityDialog()');
-  }
 
   return (
     <InactivityContext.Provider value={contextValue}>

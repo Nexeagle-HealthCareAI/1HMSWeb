@@ -531,7 +531,6 @@ export const AppointmentDashboard = () => {
                 <div className="flex items-center justify-between mb-4">
                                      <div>
                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('appointmentDashboard.currentAppointments')}</h2>
-                     <p className="text-gray-600 dark:text-gray-400">{t('appointmentDashboard.managePatientFlow')}</p>
                    </div>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
@@ -542,38 +541,6 @@ export const AppointmentDashboard = () => {
                       {kpis.totalToday} {t('appointmentDashboard.totalToday')}
                     </Badge>
                   </div>
-                </div>
-
-                {/* Quick Actions Bar */}
-                <div className="flex flex-wrap gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4 text-orange-600" />
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('appointmentDashboard.priorityActions')}</span>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="bg-red-50 text-red-700 border-red-300 hover:bg-red-100"
-                  >
-                    <Heart className="h-4 w-4 mr-2" />
-                    Vitals ({kpis.vitalsRequired})
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="bg-green-50 text-green-700 border-green-300 hover:bg-green-100"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Ready ({kpis.readyConsultation})
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100"
-                  >
-                    <Stethoscope className="h-4 w-4 mr-2" />
-                    Consulting ({kpis.underConsultation})
-                  </Button>
                 </div>
               </div>
 
@@ -1116,38 +1083,6 @@ export const AppointmentDashboard = () => {
                     </Badge>
                   </div>
                 </div>
-
-                                 {/* Quick Actions Bar for Future Appointments */}
-                 <div className="flex flex-wrap gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg border border-blue-200 dark:border-blue-800 mb-6">
-                                     <div className="flex items-center gap-2">
-                     <AlertCircle className="h-4 w-4 text-orange-600" />
-                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Priority Actions:</span>
-                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="bg-green-50 text-green-700 border-green-300 hover:bg-green-100"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Ready ({mockFutureAppointments.filter(apt => apt.status === 'ready-consultation').length})
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100"
-                  >
-                    <Stethoscope className="h-4 w-4 mr-2" />
-                    Consulting ({mockFutureAppointments.filter(apt => apt.status === 'under-consultation').length})
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100"
-                  >
-                    <FlaskConical className="h-4 w-4 mr-2" />
-                    Lab Tests ({mockFutureAppointments.filter(apt => apt.status === 'lab-test-required').length})
-                  </Button>
-                </div>
               </div>
 
                              {/* Search and Filters for Future Appointments */}
@@ -1166,46 +1101,47 @@ export const AppointmentDashboard = () => {
                         />
                       </div>
                     </div>
-                    <div className="lg:w-64">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Filter by Date Range</label>
-                      <div className="space-y-2">
-                        <div className="space-y-2">
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Start Date</label>
-                            <Input
-                              type="date"
-                              value={dateRange.startDate}
-                              onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-                              min={format(new Date(), 'yyyy-MM-dd')}
-                              className="w-full"
-                              placeholder="Select start date"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">End Date</label>
-                            <Input
-                              type="date"
-                              value={dateRange.endDate}
-                              onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
-                              min={format(new Date(), 'yyyy-MM-dd')}
-                              className="w-full"
-                              placeholder="Select end date"
-                            />
-                          </div>
-                        </div>
-                        {(dateRange.startDate || dateRange.endDate) && (
-                          <Button
-                            variant="outline"
-                            onClick={clearDateFilters}
-                            size="sm"
-                            className="w-full"
-                          >
-                            <X className="h-4 w-4 mr-1" />
-                            Clear Filters
-                          </Button>
-                        )}
+                  </div>
+                  
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Filter by Date Range</label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Start Date</label>
+                        <Input
+                          type="date"
+                          value={dateRange.startDate}
+                          onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                          min={format(new Date(), 'yyyy-MM-dd')}
+                          className="w-full"
+                          placeholder="Select start date"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">End Date</label>
+                        <Input
+                          type="date"
+                          value={dateRange.endDate}
+                          onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                          min={format(new Date(), 'yyyy-MM-dd')}
+                          className="w-full"
+                          placeholder="Select end date"
+                        />
                       </div>
                     </div>
+                    {(dateRange.startDate || dateRange.endDate) && (
+                      <div className="mt-3">
+                        <Button
+                          variant="outline"
+                          onClick={clearDateFilters}
+                          size="sm"
+                          className="w-full md:w-auto"
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Clear Date Filters
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   {(dateRange.startDate || dateRange.endDate) && (
                     <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
