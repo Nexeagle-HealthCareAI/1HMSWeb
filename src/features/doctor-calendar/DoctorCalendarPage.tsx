@@ -30,13 +30,14 @@ export const DoctorCalendarPage: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'>('timeGridDay');
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isTimeOffWarningClosed, setIsTimeOffWarningClosed] = useState(false);
   const calendarRef = useRef<FullCalendar>(null);
   
   // Modal states
   const [editShiftModal, setEditShiftModal] = useState({
     open: false,
     shiftDate: '',
-    shiftName: 'Morning' as ShiftName,
+    shiftName: t('doctorCalendar.shifts.morning') as ShiftName,
     initialData: undefined as any
   });
   
@@ -270,50 +271,7 @@ export const DoctorCalendarPage: React.FC = () => {
   const deleteTimeOffMutation = useDeleteTimeOff();
   const { cancelAppointment, isPending: isCancelPending } = useAppointmentCancel();
   
-  // Function to scroll to morning slot
-  const scrollToMorningSlot = useCallback(() => {
-    if (calendarRef.current) {
-      const calendarApi = calendarRef.current.getApi();
-      if (calendarApi) {
-        // Scroll to 9 AM (morning slot)
-        calendarApi.scrollToTime('09:00:00');
-        console.log('📅 Scrolled to morning slot (9:00 AM)');
-      }
-    }
-  }, []);
 
-  // Function to scroll to specific shift time
-  const scrollToShiftTime = useCallback((shiftName: string, startTime: string) => {
-    if (calendarRef.current) {
-      const calendarApi = calendarRef.current.getApi();
-      if (calendarApi) {
-        // Scroll to the start time of the shift
-        calendarApi.scrollToTime(startTime);
-        console.log(`📅 Scrolled to ${shiftName} shift (${startTime})`);
-        
-        // Add visual highlight for morning shift
-        if (shiftName.toLowerCase() === 'morning') {
-          // Find and highlight morning shift events
-          const morningEvents = document.querySelectorAll('.fc-event[data-event-id*="shift"]');
-          morningEvents.forEach((eventElement: any) => {
-            const eventId = eventElement.getAttribute('data-event-id');
-            if (eventId && eventId.includes('shift')) {
-              // Add a subtle highlight effect
-              eventElement.style.boxShadow = '0 0 10px rgba(74, 222, 128, 0.6)';
-              eventElement.style.transform = 'scale(1.02)';
-              eventElement.style.transition = 'all 0.3s ease';
-              
-              // Remove highlight after 3 seconds
-              setTimeout(() => {
-                eventElement.style.boxShadow = '';
-                eventElement.style.transform = '';
-              }, 3000);
-            }
-          });
-        }
-      }
-    }
-  }, []);
   
   // Handle view changes
   React.useEffect(() => {
@@ -322,15 +280,10 @@ export const DoctorCalendarPage: React.FC = () => {
       if (calendarApi) {
         calendarApi.changeView(view);
         
-        // Scroll to 9 AM when switching to any time-based view
-        if (view === 'timeGridDay' || view === 'timeGridWeek') {
-          setTimeout(() => {
-            scrollToMorningSlot();
-          }, 100); // Small delay to ensure view is fully rendered
-        }
+
       }
     }
-  }, [view, scrollToMorningSlot]);
+  }, [view]);
 
   // Handle date changes
   React.useEffect(() => {
@@ -347,41 +300,13 @@ export const DoctorCalendarPage: React.FC = () => {
     const timer = setTimeout(() => {
       setIsInitialLoading(false);
       
-      // Scroll to morning shift (9 AM) after loading is complete
-      if (view === 'timeGridDay' || view === 'timeGridWeek') {
-        setTimeout(() => {
-          scrollToMorningSlot();
-        }, 100); // Small delay to ensure calendar is fully rendered
-      }
+
     }, 1000); // Reduced to 1 second for better UX
 
     return () => clearTimeout(timer);
-  }, [view, scrollToMorningSlot]);
+  }, [view]);
 
-  // Auto-scroll to morning shift when events are loaded
-  React.useEffect(() => {
-    if (!isInitialLoading && events.length > 0 && (view === 'timeGridDay' || view === 'timeGridWeek')) {
-      // Find morning shift events
-      const morningShifts = events.filter(event => 
-        event.extendedProps?.shiftName?.toLowerCase() === 'morning'
-      );
-      
-      if (morningShifts.length > 0) {
-        // Scroll to the first morning shift
-        const morningShift = morningShifts[0];
-        const startTime = morningShift.extendedProps?.startTime || '09:00:00';
-        
-        setTimeout(() => {
-          scrollToShiftTime('Morning', startTime);
-        }, 200);
-      } else {
-        // Fallback to default morning slot
-        setTimeout(() => {
-          scrollToMorningSlot();
-        }, 200);
-      }
-    }
-  }, [events, isInitialLoading, view, scrollToShiftTime, scrollToMorningSlot]);
+
 
 
   
@@ -423,18 +348,7 @@ export const DoctorCalendarPage: React.FC = () => {
       return; // Stop processing for time-off events
     }
     
-    // Scroll to specific shift time when event is clicked
-    if (eventType === 'shift' && shiftName) {
-      const startTime = event.extendedProps?.startTime || '09:00:00';
-      setTimeout(() => {
-        scrollToShiftTime(shiftName, startTime);
-      }, 100);
-    } else {
-      // Default scroll to morning slot for other events
-      setTimeout(() => {
-        scrollToMorningSlot();
-      }, 100);
-    }
+
     
     // OVERRIDE EVENT HANDLING: Show action dialog for any click on override events
     if ((eventType === 'shift' || eventType === 'block') && event.extendedProps?.source === 'override') {
@@ -585,10 +499,6 @@ export const DoctorCalendarPage: React.FC = () => {
   }, [toast]);
   
      const handleDateSelect = useCallback((selectInfo: any) => {
-     // Scroll to morning slot when date is selected
-     setTimeout(() => {
-       scrollToMorningSlot();
-     }, 50);
      
      // Check if the selection is on an override event
      const selectedStart = selectInfo.start;
@@ -664,30 +574,20 @@ export const DoctorCalendarPage: React.FC = () => {
    }, [events, toast]);
   
   const handleEventDrop = useCallback((dropInfo: any) => {
-    // Scroll to morning slot when event is dropped
-    setTimeout(() => {
-      scrollToMorningSlot();
-    }, 100);
-    
     // Handle event drag and drop
     toast({
       title: t('doctorCalendar.eventMoved'),
       description: `${dropInfo.event.title} moved to ${format(dropInfo.event.start!, 'MMM dd, yyyy')}`,
     });
-  }, [toast, scrollToMorningSlot]);
+  }, [toast]);
   
   const handleEventResize = useCallback((resizeInfo: any) => {
-    // Scroll to morning slot when event is resized
-    setTimeout(() => {
-      scrollToMorningSlot();
-    }, 100);
-    
     // Handle event resize
     toast({
       title: t('doctorCalendar.eventResized'),
       description: `${resizeInfo.event.title} resized`,
     });
-  }, [toast, scrollToMorningSlot]);
+  }, [toast]);
   
        // Override events are now clickable and handled by the main eventClick handler
   // No global event prevention needed
@@ -707,14 +607,7 @@ export const DoctorCalendarPage: React.FC = () => {
      firstDay: 1, // Monday
      timezone: 'local',
          slotDuration: '00:15:00',
-    scrollTime: '09:00:00', // Initial scroll position to 9 AM
-     // Add calendar click handler to scroll to morning slot
-     datesSet: (dateInfo: any) => {
-       // Scroll to morning slot when calendar dates are set/loaded
-       setTimeout(() => {
-         scrollToMorningSlot();
-       }, 100);
-     },
+
      selectOverlap: (event: any) => {
        // Don't allow selection to overlap with override events
        if (event && event.extendedProps?.isOverride) {
@@ -787,32 +680,21 @@ export const DoctorCalendarPage: React.FC = () => {
         const isOverride = arg.event.extendedProps?.isOverride;
         
         if (isOverride) {
-          // Override shifts - clickable for action dialog
-          const sourceId = arg.event.extendedProps?.sourceId;
-          const shiftName = arg.event.extendedProps?.shiftName;
-          const startTime = arg.event.extendedProps?.startTime || '09:00';
-          const endTime = arg.event.extendedProps?.endTime || '12:00';
-          const shiftDate = arg.event.start ? format(arg.event.start, 'yyyy-MM-dd') : '';
-          
-          // Validate required data
-          if (!sourceId || !shiftName || !shiftDate) {
-            console.warn('Missing required data for override event:', { sourceId, shiftName, shiftDate });
-          }
-          
+          // Override shifts - show only essential info
           return {
             html: `
               <div class="fc-event-main-content override-event-content">
-                <div class="text-xs font-medium">${arg.event.title}</div>
+                <div class="text-xs font-bold">${arg.event.title}</div>
                 <div class="text-xs text-gray-600">${t('doctorCalendar.clickToManage')}</div>
               </div>
             `
           };
         } else {
-          // Regular shift events
+          // Regular shift events - show only essential info
           return {
             html: `
               <div class="fc-event-main-content">
-                <div class="text-xs font-medium">${arg.event.title}</div>
+                <div class="text-xs font-bold">${arg.event.title}</div>
               </div>
             `
           };
@@ -821,23 +703,16 @@ export const DoctorCalendarPage: React.FC = () => {
         return {
           html: `
             <div class="fc-event-main-content">
-              <div class="text-xs font-bold">${arg.event.extendedProps?.tokenNumber}</div>
-              <div class="text-xs">${arg.event.extendedProps?.patientName}</div>
+              <div class="text-xs font-bold">${arg.event.extendedProps?.tokenNumber || '#'}</div>
             </div>
           `
         };
       } else if (eventType === 'timeoff') {
-        // Time-off events with cancel button
-        console.log('🎯 Rendering time-off event:', {
-          id: arg.event.id,
-          title: arg.event.title,
-          type: arg.event.extendedProps?.type
-        });
+        // Time-off events - show only essential info
         return {
           html: `
             <div class="fc-event-main-content timeoff-event-content">
-              <div class="text-xs font-medium">${arg.event.title}</div>
-              <div class="text-xs text-red-200">${t('doctorCalendar.clickToCancel')}</div>
+              <div class="text-xs font-bold">${arg.event.title}</div>
             </div>
           `
         };
@@ -845,42 +720,29 @@ export const DoctorCalendarPage: React.FC = () => {
         const isTimeOff = arg.event.extendedProps?.isTimeOff;
         
         if (isTimeOff) {
-          // Time-off events with cancel button
+          // Time-off events - show only essential info
           return {
             html: `
               <div class="fc-event-main-content timeoff-event-content">
-                <div class="text-xs font-medium">${arg.event.title}</div>
-                <button class="cancel-timeoff-btn" data-timeoff-id="${arg.event.extendedProps?.timeOffId}" data-reason="${arg.event.extendedProps?.reason || arg.event.title}">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </button>
+                <div class="text-xs font-bold">${arg.event.title}</div>
               </div>
             `
           };
         } else if (arg.event.extendedProps?.isShiftBlock) {
-          // Shift block events - show with time range
-          const startTime = arg.event.extendedProps?.startTime || '00:00';
-          const endTime = arg.event.extendedProps?.endTime || '00:00';
-          const shiftName = arg.event.extendedProps?.shiftName || 'Shift';
-          const isOverride = arg.event.extendedProps?.isOverride;
-          
+          // Shift block events - show only essential info
           return {
             html: `
               <div class="fc-event-main-content">
-                <div class="text-xs font-bold">${shiftName}</div>
-                <div class="text-xs">${startTime} - ${endTime}</div>
-                ${isOverride ? `<div class="text-xs text-green-200 font-semibold">${t('doctorCalendar.personalized')}</div>` : ''}
+                <div class="text-xs font-bold">${arg.event.title}</div>
               </div>
             `
           };
         } else {
-          // Regular block events
+          // Regular block events - show only essential info
           return {
             html: `
               <div class="fc-event-main-content">
-                <div class="text-xs font-medium">${arg.event.title}</div>
+                <div class="text-xs font-bold">${arg.event.title}</div>
               </div>
             `
           };
@@ -890,7 +752,7 @@ export const DoctorCalendarPage: React.FC = () => {
       return {
         html: `
           <div class="fc-event-main-content">
-            <div class="text-xs">${arg.event.title}</div>
+            <div class="text-xs font-bold">${arg.event.title}</div>
           </div>
         `
       };
@@ -911,9 +773,9 @@ export const DoctorCalendarPage: React.FC = () => {
           } else {
             // Regular shift events
             classes.push('shift-event');
-            if (shiftName === 'Morning') classes.push('shift-morning');
-            else if (shiftName === 'Afternoon') classes.push('shift-afternoon');
-            else if (shiftName === 'Evening') classes.push('shift-evening');
+                    if (shiftName === t('doctorCalendar.shifts.morning')) classes.push('shift-morning');
+        else if (shiftName === t('doctorCalendar.shifts.afternoon')) classes.push('shift-afternoon');
+        else if (shiftName === t('doctorCalendar.shifts.evening')) classes.push('shift-evening');
         
           }
         } else if (eventType === 'block') {
@@ -1390,12 +1252,6 @@ export const DoctorCalendarPage: React.FC = () => {
               ) : (
                 <div 
                   className="calendar-container"
-                  onClick={() => {
-                    // Scroll to morning slot when calendar container is clicked
-                    setTimeout(() => {
-                      scrollToMorningSlot();
-                    }, 50);
-                  }}
                 >
                   <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
                     <FullCalendar
@@ -1412,10 +1268,12 @@ export const DoctorCalendarPage: React.FC = () => {
             <div className="lg:col-span-1">
               <div className="h-fit">
                 <ShiftDetailsCard 
-              events={allEvents}
-              calendarConfig={calendarConfig}
-              isLoading={eventsLoading || configLoading}
-            />
+                  events={allEvents}
+                  calendarConfig={calendarConfig}
+                  isLoading={eventsLoading || configLoading}
+                  isTimeOffWarningClosed={isTimeOffWarningClosed}
+                  onCloseTimeOffWarning={() => setIsTimeOffWarningClosed(true)}
+                />
               </div>
             </div>
           </div>

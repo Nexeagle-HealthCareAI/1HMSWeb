@@ -276,7 +276,299 @@
     "noEvents": "No events for this period",
     "addEvent": "Add Event",
     "editEvent": "Edit Event",
-    "deleteEvent": "Delete Event"
+    "deleteEvent": "Delete Event",
+    "view": "View",
+    "views": {
+      "day": "Day",
+      "week": "Week",
+      "month": "Month",
+      "agenda": "Agenda"
+    },
+    "navigation": {
+      "previous": "Previous",
+      "next": "Next",
+      "today": "Today"
+    },
+    "time": {
+      "allDay": "All Day",
+      "am": "AM",
+      "pm": "PM",
+      "time": "Time",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "duration": "Duration"
+    },
+    "date": {
+      "date": "Date",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "selectDate": "Select Date",
+      "selectDateRange": "Select Date Range"
+    },
+    "actions": {
+      "add": "Add",
+      "edit": "Edit",
+      "delete": "Delete",
+      "save": "Save",
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "close": "Close",
+      "apply": "Apply",
+      "clear": "Clear",
+      "reset": "Reset"
+    },
+    "status": {
+      "busy": "Busy",
+      "free": "Free",
+      "tentative": "Tentative",
+      "outOfOffice": "Out of Office"
+    },
+    "messages": {
+      "loading": "Loading calendar...",
+      "noEventsFound": "No events found for this period",
+      "eventSaved": "Event saved successfully",
+      "eventDeleted": "Event deleted successfully",
+      "eventUpdated": "Event updated successfully",
+      "confirmDelete": "Are you sure you want to delete this event?",
+      "confirmDeleteMessage": "This action cannot be undone."
+    }
+  },
+  "doctorCalendar": {
+    "title": "Doctor Calendar",
+    "myCalendar": "My Calendar",
+    "calendarView": "Calendar View",
+    "scheduleAndTimeOff": "Schedule & Time Off",
+    "clickForToday": "Click for today",
+    "views": {
+      "month": "Month",
+      "week": "Week",
+      "day": "Day"
+    },
+    "navigation": {
+      "previous": "Previous",
+      "next": "Next",
+      "today": "Today"
+    },
+    "shifts": {
+      "morning": "Morning",
+      "afternoon": "Afternoon",
+      "evening": "Evening",
+      "night": "Night",
+      "morningOPDHours": "Morning OPD Hours",
+      "afternoonOPDHours": "Afternoon OPD Hours",
+      "eveningOPDHours": "Evening OPD Hours",
+      "nightOPDHours": "Night OPD Hours"
+    },
+    "templates": {
+      "standardOPD": "Standard OPD",
+      "emergencySchedule": "Emergency Schedule",
+      "partTimeSchedule": "Part-time Schedule",
+      "standardOPDDescription": "Standard outpatient department schedule",
+      "emergencyScheduleDescription": "24/7 emergency department schedule",
+      "partTimeScheduleDescription": "Part-time morning schedule"
+    },
+    "shiftDetails": {
+      "calendarGuide": "Calendar Guide",
+      "dataSource": "Data Source",
+      "personalizedSchedule": "Personalized Schedule",
+      "personalizedScheduleActive": "Personalized schedule active",
+      "usingDefaultSchedule": "Using default schedule",
+      "timeOffStatus": "Time-Off Status",
+      "active": "active",
+      "workingShiftsNotApplicable": "⚠️ Working Shifts Not Applicable",
+      "timeOffOverlapMessage": "Time-off periods overlap with scheduled shifts. No appointments can be booked during these times.",
+      "timeOffPeriodsActive": "📅 Time-Off Periods Active",
+      "timeOffAffectsShifts": "You have scheduled time-off periods. Regular shifts may be affected.",
+      "timeOff": "Time Off",
+      "allDay": "All Day",
+      "partial": "Partial",
+      "activeShifts": "Active Shifts",
+      "types": "types",
+      "loadingShifts": "Loading shifts...",
+      "noShiftsScheduled": "No shifts scheduled",
+      "howToUse": "How to Use",
+      "clickShiftToScroll": "Click any shift to scroll to that time",
+      "doubleClickToEdit": "Double-click to edit shift details",
+      "useHeaderButtons": "Use header buttons to navigate dates",
+      "clickTimeOffToCancel": "Click time-off events to cancel them",
+      "quickStats": "Quick Stats",
+      "totalEvents": "Total Events:",
+      "shiftTypes": "Shift Types:",
+      "timeOffPeriods": "Time-Off Periods:",
+      "scheduleType": "Schedule Type:",
+      "colorGuide": "Color Guide",
+      "timeOffPeriodsLabel": "Time-off periods"
+    },
+    "schedule": {
+      "title": "Schedule",
+      "personalizedSchedule": "Personalized Schedule",
+      "addOverride": "Add Shift Override",
+      "editShift": "Edit Shift",
+      "deleteShift": "Delete Shift",
+      "shiftOverride": "Shift Override",
+      "timeOff": "Time Off",
+      "scheduleTimeOff": "Schedule Time Off",
+      "cancelTimeOff": "Cancel Time Off",
+      "blockTime": "Block Time",
+      "unblockTime": "Unblock Time"
+    },
+    "timeOff": {
+      "title": "Time Off",
+      "requestTimeOff": "Request Time Off",
+      "approveTimeOff": "Approve Time Off",
+      "rejectTimeOff": "Reject Time Off",
+      "timeOffRequested": "Time Off Requested",
+      "timeOffApproved": "Time Off Approved",
+      "timeOffRejected": "Time Off Rejected",
+      "timeOffCancelled": "Time Off Cancelled"
+    },
+    "blocks": {
+      "title": "Time Blocks",
+      "addBlock": "Add Time Block",
+      "editBlock": "Edit Time Block",
+      "deleteBlock": "Delete Time Block",
+      "blockTypes": {
+        "leave": "Leave",
+        "personal": "Personal",
+        "surgery": "Surgery",
+        "admin": "Admin",
+        "meeting": "Meeting",
+        "training": "Training",
+        "emergency": "Emergency"
+      }
+    },
+    "appointments": {
+      "title": "Appointments",
+      "newAppointment": "New Appointment",
+      "editAppointment": "Edit Appointment",
+      "cancelAppointment": "Cancel Appointment",
+      "rescheduleAppointment": "Reschedule Appointment",
+      "appointmentDetails": "Appointment Details",
+      "patientName": "Patient Name",
+      "patientPhone": "Patient Phone",
+      "appointmentTime": "Appointment Time",
+      "appointmentDate": "Appointment Date",
+      "appointmentStatus": "Appointment Status",
+      "statuses": {
+        "scheduled": "Scheduled",
+        "confirmed": "Confirmed",
+        "inProgress": "In Progress",
+        "completed": "Completed",
+        "cancelled": "Cancelled",
+        "noShow": "No Show"
+      }
+    },
+    "settings": {
+      "title": "Calendar Settings",
+      "workingHours": "Working Hours",
+      "breakTime": "Break Time",
+      "slotDuration": "Slot Duration",
+      "maxPatients": "Max Patients",
+      "availability": "Availability",
+      "notifications": "Notifications",
+      "reminders": "Reminders",
+      "autoConfirm": "Auto Confirm",
+      "requireConfirmation": "Require Confirmation"
+    },
+    "form": {
+      "title": "Title",
+      "reason": "Reason",
+      "description": "Description",
+      "startDateTime": "Start Date & Time",
+      "endDateTime": "End Date & Time",
+      "slotMinutes": "Slot Duration (minutes)",
+      "maxPatientsOptional": "Max Patients (optional)",
+      "reasonOptional": "Reason (optional)",
+      "selectShift": "Select Shift",
+      "selectBlockType": "Select Block Type",
+      "selectDateRange": "Select Date Range",
+      "enterTitle": "Enter title",
+      "enterReason": "Enter reason",
+      "enterDescription": "Enter description"
+    },
+    "messages": {
+      "loading": "Loading...",
+      "saving": "Saving...",
+      "deleting": "Deleting...",
+      "confirmDelete": "Are you sure you want to delete this?",
+      "confirmDeleteMessage": "This action cannot be undone.",
+      "confirmCancel": "Are you sure you want to cancel this?",
+      "confirmCancelMessage": "This will cancel the scheduled item.",
+      "success": "Success",
+      "error": "Error",
+      "info": "Information",
+      "warning": "Warning"
+    },
+    "notifications": {
+      "scheduleSaved": "Schedule saved successfully! 🎉",
+      "scheduleSavedMessage": "Your personalized schedule has been saved successfully. Your new working hours are now active.",
+      "overridesCreated": "Shift overrides created",
+      "changesReflected": "Changes will be reflected immediately in your calendar",
+      "patientsCanBook": "Patients can now book appointments during your updated hours",
+      "partiallySaved": "Partially saved ⚠️",
+      "partiallySavedMessage": "Some of your shift overrides were saved, but some failed to save.",
+      "overridesSaved": "Overrides saved successfully",
+      "overridesFailed": "Failed to save overrides",
+      "tryAgainFailed": "You can try to save the failed overrides again",
+      "timeOffScheduled": "Time off scheduled successfully! 🏖️",
+      "timeOffScheduledMessage": "Your time off has been scheduled and you will be unavailable during the selected period.",
+      "timeOffBlocked": "Time off period blocked in your calendar",
+      "duration": "Duration",
+      "noAppointmentsBooked": "No appointments can be booked during this time",
+      "cancelTimeOffAnytime": "You can cancel this time off anytime from your calendar",
+      "shiftOverrideCreated": "Shift override created successfully",
+      "shiftOverrideCanceled": "Shift override canceled successfully",
+      "timeOffDeleted": "Time off deleted successfully",
+      "appointmentCanceled": "Appointment canceled successfully"
+    },
+    "errors": {
+      "failedToCreateOverride": "Failed to create shift override",
+      "failedToCancelOverride": "Failed to cancel shift override. Please try again.",
+      "failedToDeleteTimeOff": "Failed to delete time off",
+      "failedToScheduleTimeOff": "Failed to schedule time off",
+      "failedToCreateOverrides": "Failed to create shift overrides",
+      "failedToOpenModal": "Failed to open personalized schedule modal",
+      "noOverrideData": "No override data found",
+      "noAppointmentData": "No appointment data found for cancellation",
+      "invalidEventDate": "Invalid event date",
+      "eventMoved": "Event moved",
+      "eventResized": "Event resized"
+    },
+    "conflicts": {
+      "shiftBlock": "Shift Block",
+      "shiftBlockMessage": "This time period is covered by a shift. Please choose a different time or modify the existing shift.",
+      "timeOffConflict": "Time Off Conflict",
+      "timeOffConflictMessage": "This time period is already blocked. Please choose a different time or cancel the existing time off first.",
+      "timeOffConflictToday": "You already have time off scheduled for today. Please cancel the existing time off first or choose a different date."
+    },
+    "actions": {
+      "clickToManage": "Click to manage",
+      "clickToCancel": "Click to cancel",
+      "personalized": "Personalized",
+      "retry": "Retry",
+      "tryAgain": "Try Again"
+    },
+    "loading": {
+      "initializingCalendar": "Initializing calendar...",
+      "loadingDoctorProfile": "Loading doctor profile...",
+      "loadingCalendarConfig": "Loading calendar configuration...",
+      "preparingCalendar": "Preparing your calendar...",
+      "loadingProfile": "Loading your profile...",
+      "loadingScheduleConfig": "Loading your schedule settings...",
+      "pleaseWait": "Please wait...",
+      "preparingMessage": "Setting up your personalized calendar experience",
+      "fetchingProfileMessage": "Fetching your doctor profile details",
+      "loadingScheduleMessage": "Loading your schedule settings"
+    },
+    "profile": {
+      "doctorProfileRequired": "Doctor profile required",
+      "initializingMessage": "Please wait while we prepare your calendar and load all data.",
+      "loadingProfileMessage": "Please wait while we load your doctor profile.",
+      "loadingConfigMessage": "Please wait while we load your working schedule configuration.",
+      "profileLoadError": "Cannot load doctor profile. Please try refreshing the page.",
+      "userIdRequired": "User ID required",
+      "userIdRequiredMessage": "Cannot get user ID. Please try logging in again."
+    }
   },
   "settings": {
     "title": "Settings",

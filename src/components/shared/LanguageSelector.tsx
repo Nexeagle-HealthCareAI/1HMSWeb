@@ -60,14 +60,9 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
     i18n.changeLanguage(languageCode);
     setIsOpen(false);
     
-    // Update document direction for RTL languages
-    if (languageCode === 'ar') {
-      document.documentElement.dir = 'rtl';
-      document.documentElement.lang = 'ar';
-    } else {
-      document.documentElement.dir = 'ltr';
-      document.documentElement.lang = languageCode;
-    }
+    // Update document language
+    document.documentElement.dir = 'ltr';
+    document.documentElement.lang = languageCode;
   };
 
   const renderLanguageOption = (language: Language, showFullInfo = false) => (
@@ -163,10 +158,10 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
                 <Monitor className="h-3 w-3" />
                 <span>Language changes apply immediately</span>
               </div>
-              {i18n.language === 'ar' && (
+              {i18n.language === 'hi' && (
                 <div className="flex items-center gap-2 text-xs text-blue-600 mt-1">
-                  <span>🔄</span>
-                  <span>Right-to-Left (RTL) layout enabled</span>
+                  <span>🇮🇳</span>
+                  <span>Hindi language active</span>
                 </div>
               )}
             </div>

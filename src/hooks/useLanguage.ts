@@ -8,32 +8,22 @@ export const useLanguage = () => {
   useEffect(() => {
     const currentLang = i18n.language;
     
-    // Set document direction for RTL languages
-    if (currentLang === 'ar') {
-      document.documentElement.dir = 'rtl';
-      document.documentElement.lang = 'ar';
-    } else {
-      document.documentElement.dir = 'ltr';
-      document.documentElement.lang = currentLang;
-    }
+    // Set document language (all languages use LTR)
+    document.documentElement.dir = 'ltr';
+    document.documentElement.lang = currentLang;
   }, [i18n.language]);
 
   const changeLanguage = (languageCode: string) => {
     i18n.changeLanguage(languageCode);
     
-    // Update document direction for RTL languages
-    if (languageCode === 'ar') {
-      document.documentElement.dir = 'rtl';
-      document.documentElement.lang = 'ar';
-    } else {
-      document.documentElement.dir = 'ltr';
-      document.documentElement.lang = languageCode;
-    }
+    // Update document language (all languages use LTR)
+    document.documentElement.dir = 'ltr';
+    document.documentElement.lang = languageCode;
   };
 
   const getCurrentLanguage = () => i18n.language;
   
-  const isRTL = () => i18n.language === 'ar';
+  const isRTL = () => false; // No RTL languages supported
 
   return {
     t,

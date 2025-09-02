@@ -14,6 +14,7 @@ import { format, parseISO, addDays, addWeeks, addMonths } from 'date-fns';
 import { Clock, Calendar, Repeat, Sun, Moon, Sunrise, Sunset, Info, AlertCircle, CheckCircle } from 'lucide-react';
 import { CalendarService, CalendarViewType, DateRange } from '../services/calendarService';
 import { DateRangeSelectionPopup } from './DateRangeSelectionPopup';
+import { useTranslation } from 'react-i18next';
 
 interface PersonalizedScheduleModalProps {
   open: boolean;
@@ -38,33 +39,6 @@ interface ShiftTemplate {
   description: string;
 }
 
-const SHIFT_TEMPLATES: ShiftTemplate[] = [
-  {
-    name: 'Morning',
-    icon: <Sunrise className="h-4 w-4" />,
-    defaultStartTime: '09:00',
-    defaultEndTime: '12:00',
-    color: 'bg-teal-50 border-teal-200 text-teal-800',
-    description: 'Morning OPD Hours'
-  },
-  {
-    name: 'Afternoon',
-    icon: <Sun className="h-4 w-4" />,
-    defaultStartTime: '14:00',
-    defaultEndTime: '17:00',
-    color: 'bg-amber-50 border-amber-200 text-amber-800',
-    description: 'Afternoon OPD Hours'
-  },
-  {
-    name: 'Evening',
-    icon: <Sunset className="h-4 w-4" />,
-    defaultStartTime: '18:00',
-    defaultEndTime: '21:00',
-    color: 'bg-violet-50 border-violet-200 text-violet-800',
-    description: 'Evening OPD Hours'
-  }
-];
-
 export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps> = ({
   open,
   onOpenChange,
@@ -78,6 +52,35 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
   onSaveBlock,
   isLoading = false
 }) => {
+  const { t } = useTranslation();
+  
+  const SHIFT_TEMPLATES: ShiftTemplate[] = [
+    {
+      name: 'Morning',
+      icon: <Sunrise className="h-4 w-4" />,
+      defaultStartTime: '09:00',
+      defaultEndTime: '12:00',
+      color: 'bg-teal-50 border-teal-200 text-teal-800',
+      description: t('doctorCalendar.shifts.morningOPDHours')
+    },
+    {
+      name: 'Afternoon',
+      icon: <Sun className="h-4 w-4" />,
+      defaultStartTime: '14:00',
+      defaultEndTime: '17:00',
+      color: 'bg-amber-50 border-amber-200 text-amber-800',
+      description: t('doctorCalendar.shifts.afternoonOPDHours')
+    },
+    {
+      name: 'Evening',
+      icon: <Sunset className="h-4 w-4" />,
+      defaultStartTime: '18:00',
+      defaultEndTime: '21:00',
+      color: 'bg-violet-50 border-violet-200 text-violet-800',
+      description: t('doctorCalendar.shifts.eveningOPDHours')
+    }
+  ];
+  
   const [selectedShifts, setSelectedShifts] = useState<Set<ShiftName>>(new Set());
   const [shiftConfigs, setShiftConfigs] = useState<Record<ShiftName, {
     startTime: string;

@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, RotateCcw, U
 import { useAuthStore } from '@/store';
 import { useUserDetails } from '@/hooks/useUserProfileApi';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
 interface CalendarHeaderProps {
   currentDate: Date;
@@ -22,6 +23,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   onAddOverride,
   onRegenerateDay
 }) => {
+  const { t } = useTranslation();
   const { getUserId } = useAuthStore();
   const userId = getUserId();
   const { data: userDetailsResponse } = useUserDetails(userId || '');
@@ -80,7 +82,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           </div>
           <div className="flex flex-col">
             <span className="text-xs font-semibold text-blue-900 dark:text-blue-100">Dr. {doctorName}</span>
-            <span className="text-xs text-blue-600 dark:text-blue-300">Calendar View</span>
+            <span className="text-xs text-blue-600 dark:text-blue-300">{t('doctorCalendar.calendarView')}</span>
           </div>
         </div>
 
@@ -104,7 +106,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             >
               {getViewLabel()}
             </Button>
-            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Click for today</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{t('doctorCalendar.clickForToday')}</span>
           </div>
           
           <Button
@@ -129,7 +131,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                 : 'text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
             }`}
           >
-            Month
+            {t('doctorCalendar.views.month')}
           </Button>
           <Button
             variant={view === 'timeGridWeek' ? 'default' : 'ghost'}
@@ -141,7 +143,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                 : 'text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
             }`}
           >
-            Week
+            {t('doctorCalendar.views.week')}
           </Button>
           <Button
             variant={view === 'timeGridDay' ? 'default' : 'ghost'}
@@ -153,7 +155,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                 : 'text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
             }`}
           >
-            Day
+            {t('doctorCalendar.views.day')}
           </Button>
         </div>
       </div>
@@ -167,7 +169,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           className="h-8 gap-1.5 px-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-700 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-800/30 hover:border-green-300 dark:hover:border-green-600 transition-all duration-200 font-medium text-xs"
         >
           <Plus className="h-3 w-3" />
-          Schedule & Time Off
+          {t('doctorCalendar.scheduleAndTimeOff')}
         </Button>
       </div>
     </div>

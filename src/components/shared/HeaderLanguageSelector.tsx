@@ -46,14 +46,9 @@ export const HeaderLanguageSelector: React.FC = () => {
     i18n.changeLanguage(languageCode);
     setIsOpen(false);
     
-    // Update document direction for RTL languages
-    if (languageCode === 'ar') {
-      document.documentElement.dir = 'rtl';
-      document.documentElement.lang = 'ar';
-    } else {
-      document.documentElement.dir = 'ltr';
-      document.documentElement.lang = languageCode;
-    }
+    // Update document language
+    document.documentElement.dir = 'ltr';
+    document.documentElement.lang = languageCode;
   };
 
   return (

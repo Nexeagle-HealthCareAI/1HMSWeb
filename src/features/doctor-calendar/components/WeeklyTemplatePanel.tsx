@@ -23,6 +23,7 @@ import { ShiftTemplate, ShiftName } from '../api/types';
 import { useTemplates, useSaveTemplates } from '../hooks/useCalendar';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { useTranslation } from 'react-i18next';
 
 interface WeeklyTemplatePanelProps {
   doctorId: string;
@@ -31,57 +32,58 @@ interface WeeklyTemplatePanelProps {
 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const shiftNames: ShiftName[] = ['Morning', 'Afternoon', 'Evening'];
 
-// Preset templates for common schedules
-const presetTemplates = {
-  'Standard OPD': {
-    description: 'Standard outpatient department schedule',
-    templates: [
-      { dayOfWeek: 1, shiftName: 'Morning' as ShiftName, startTime: '09:00', endTime: '12:00', slotMinutes: 15, maxPatients: 20, isActive: true },
-      { dayOfWeek: 1, shiftName: 'Afternoon' as ShiftName, startTime: '14:00', endTime: '17:00', slotMinutes: 15, maxPatients: 20, isActive: true },
-      { dayOfWeek: 2, shiftName: 'Morning' as ShiftName, startTime: '09:00', endTime: '12:00', slotMinutes: 15, maxPatients: 20, isActive: true },
-      { dayOfWeek: 2, shiftName: 'Afternoon' as ShiftName, startTime: '14:00', endTime: '17:00', slotMinutes: 15, maxPatients: 20, isActive: true },
-      { dayOfWeek: 3, shiftName: 'Morning' as ShiftName, startTime: '09:00', endTime: '12:00', slotMinutes: 15, maxPatients: 20, isActive: true },
-      { dayOfWeek: 3, shiftName: 'Afternoon' as ShiftName, startTime: '14:00', endTime: '17:00', slotMinutes: 15, maxPatients: 20, isActive: true },
-      { dayOfWeek: 4, shiftName: 'Morning' as ShiftName, startTime: '09:00', endTime: '12:00', slotMinutes: 15, maxPatients: 20, isActive: true },
-      { dayOfWeek: 4, shiftName: 'Afternoon' as ShiftName, startTime: '14:00', endTime: '17:00', slotMinutes: 15, maxPatients: 20, isActive: true },
-      { dayOfWeek: 5, shiftName: 'Morning' as ShiftName, startTime: '09:00', endTime: '12:00', slotMinutes: 15, maxPatients: 20, isActive: true },
-      { dayOfWeek: 5, shiftName: 'Afternoon' as ShiftName, startTime: '14:00', endTime: '17:00', slotMinutes: 15, maxPatients: 20, isActive: true },
-    ]
-  },
-  'Emergency Schedule': {
-    description: '24/7 emergency department schedule',
-    templates: [
-      { dayOfWeek: 1, shiftName: 'Morning' as ShiftName, startTime: '08:00', endTime: '16:00', slotMinutes: 20, maxPatients: null, isActive: true },
-      { dayOfWeek: 1, shiftName: 'Evening' as ShiftName, startTime: '16:00', endTime: '00:00', slotMinutes: 20, maxPatients: null, isActive: true },
-      { dayOfWeek: 2, shiftName: 'Morning' as ShiftName, startTime: '08:00', endTime: '16:00', slotMinutes: 20, maxPatients: null, isActive: true },
-      { dayOfWeek: 2, shiftName: 'Evening' as ShiftName, startTime: '16:00', endTime: '00:00', slotMinutes: 20, maxPatients: null, isActive: true },
-      { dayOfWeek: 3, shiftName: 'Morning' as ShiftName, startTime: '08:00', endTime: '16:00', slotMinutes: 20, maxPatients: null, isActive: true },
-      { dayOfWeek: 3, shiftName: 'Evening' as ShiftName, startTime: '16:00', endTime: '00:00', slotMinutes: 20, maxPatients: null, isActive: true },
-      { dayOfWeek: 4, shiftName: 'Morning' as ShiftName, startTime: '08:00', endTime: '16:00', slotMinutes: 20, maxPatients: null, isActive: true },
-      { dayOfWeek: 4, shiftName: 'Evening' as ShiftName, startTime: '16:00', endTime: '00:00', slotMinutes: 20, maxPatients: null, isActive: true },
-      { dayOfWeek: 5, shiftName: 'Morning' as ShiftName, startTime: '08:00', endTime: '16:00', slotMinutes: 20, maxPatients: null, isActive: true },
-      { dayOfWeek: 5, shiftName: 'Evening' as ShiftName, startTime: '16:00', endTime: '00:00', slotMinutes: 20, maxPatients: null, isActive: true },
-    ]
-  },
-  'Part-time Schedule': {
-    description: 'Part-time morning schedule',
-    templates: [
-      { dayOfWeek: 1, shiftName: 'Morning' as ShiftName, startTime: '09:00', endTime: '13:00', slotMinutes: 20, maxPatients: 15, isActive: true },
-      { dayOfWeek: 3, shiftName: 'Morning' as ShiftName, startTime: '09:00', endTime: '13:00', slotMinutes: 20, maxPatients: 15, isActive: true },
-      { dayOfWeek: 5, shiftName: 'Morning' as ShiftName, startTime: '09:00', endTime: '13:00', slotMinutes: 20, maxPatients: 15, isActive: true },
-    ]
-  }
-};
-
 export const WeeklyTemplatePanel: React.FC<WeeklyTemplatePanelProps> = ({
   doctorId
 }) => {
+  const { t } = useTranslation();
   const [templates, setTemplates] = useState<ShiftTemplate[]>([]);
   const [isDirty, setIsDirty] = useState(false);
   const [activeTab, setActiveTab] = useState('custom');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   
   const { toast } = useToast();
+  
+  // Preset templates for common schedules
+  const presetTemplates = {
+    [t('doctorCalendar.templates.standardOPD')]: {
+      description: t('doctorCalendar.templates.standardOPDDescription'),
+      templates: [
+        { dayOfWeek: 1, shiftName: 'Morning' as ShiftName, startTime: '09:00', endTime: '12:00', slotMinutes: 15, maxPatients: 20, isActive: true },
+        { dayOfWeek: 1, shiftName: 'Afternoon' as ShiftName, startTime: '14:00', endTime: '17:00', slotMinutes: 15, maxPatients: 20, isActive: true },
+        { dayOfWeek: 2, shiftName: 'Morning' as ShiftName, startTime: '09:00', endTime: '12:00', slotMinutes: 15, maxPatients: 20, isActive: true },
+        { dayOfWeek: 2, shiftName: 'Afternoon' as ShiftName, startTime: '14:00', endTime: '17:00', slotMinutes: 15, maxPatients: 20, isActive: true },
+        { dayOfWeek: 3, shiftName: 'Morning' as ShiftName, startTime: '09:00', endTime: '12:00', slotMinutes: 15, maxPatients: 20, isActive: true },
+        { dayOfWeek: 3, shiftName: 'Afternoon' as ShiftName, startTime: '14:00', endTime: '17:00', slotMinutes: 15, maxPatients: 20, isActive: true },
+        { dayOfWeek: 4, shiftName: 'Morning' as ShiftName, startTime: '09:00', endTime: '12:00', slotMinutes: 15, maxPatients: 20, isActive: true },
+        { dayOfWeek: 4, shiftName: 'Afternoon' as ShiftName, startTime: '14:00', endTime: '17:00', slotMinutes: 15, maxPatients: 20, isActive: true },
+        { dayOfWeek: 5, shiftName: 'Morning' as ShiftName, startTime: '09:00', endTime: '12:00', slotMinutes: 15, maxPatients: 20, isActive: true },
+        { dayOfWeek: 5, shiftName: 'Afternoon' as ShiftName, startTime: '14:00', endTime: '17:00', slotMinutes: 15, maxPatients: 20, isActive: true },
+      ]
+    },
+    [t('doctorCalendar.templates.emergencySchedule')]: {
+      description: t('doctorCalendar.templates.emergencyScheduleDescription'),
+      templates: [
+        { dayOfWeek: 1, shiftName: 'Morning' as ShiftName, startTime: '08:00', endTime: '16:00', slotMinutes: 20, maxPatients: null, isActive: true },
+        { dayOfWeek: 1, shiftName: 'Evening' as ShiftName, startTime: '16:00', endTime: '00:00', slotMinutes: 20, maxPatients: null, isActive: true },
+        { dayOfWeek: 2, shiftName: 'Morning' as ShiftName, startTime: '08:00', endTime: '16:00', slotMinutes: 20, maxPatients: null, isActive: true },
+        { dayOfWeek: 2, shiftName: 'Evening' as ShiftName, startTime: '16:00', endTime: '00:00', slotMinutes: 20, maxPatients: null, isActive: true },
+        { dayOfWeek: 3, shiftName: 'Morning' as ShiftName, startTime: '08:00', endTime: '16:00', slotMinutes: 20, maxPatients: null, isActive: true },
+        { dayOfWeek: 3, shiftName: 'Evening' as ShiftName, startTime: '16:00', endTime: '00:00', slotMinutes: 20, maxPatients: null, isActive: true },
+        { dayOfWeek: 4, shiftName: 'Morning' as ShiftName, startTime: '08:00', endTime: '16:00', slotMinutes: 20, maxPatients: null, isActive: true },
+        { dayOfWeek: 4, shiftName: 'Evening' as ShiftName, startTime: '16:00', endTime: '00:00', slotMinutes: 20, maxPatients: null, isActive: true },
+        { dayOfWeek: 5, shiftName: 'Morning' as ShiftName, startTime: '08:00', endTime: '16:00', slotMinutes: 20, maxPatients: null, isActive: true },
+        { dayOfWeek: 5, shiftName: 'Evening' as ShiftName, startTime: '16:00', endTime: '00:00', slotMinutes: 20, maxPatients: null, isActive: true },
+      ]
+    },
+    [t('doctorCalendar.templates.partTimeSchedule')]: {
+      description: t('doctorCalendar.templates.partTimeScheduleDescription'),
+      templates: [
+        { dayOfWeek: 1, shiftName: 'Morning' as ShiftName, startTime: '09:00', endTime: '13:00', slotMinutes: 20, maxPatients: 15, isActive: true },
+        { dayOfWeek: 3, shiftName: 'Morning' as ShiftName, startTime: '09:00', endTime: '13:00', slotMinutes: 20, maxPatients: 15, isActive: true },
+        { dayOfWeek: 5, shiftName: 'Morning' as ShiftName, startTime: '09:00', endTime: '13:00', slotMinutes: 20, maxPatients: 15, isActive: true },
+      ]
+    }
+  };
   
   // Queries
   const { data: existingTemplates = [], isLoading } = useTemplates(doctorId);
