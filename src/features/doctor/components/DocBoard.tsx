@@ -133,7 +133,7 @@ export const ClinicalDashboard: React.FC = () => {
   const [doctorFilter, setDoctorFilter] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [currentView, setCurrentView] = useState('dashboard');
-  const [activeTab, setActiveTab] = useState<'current' | 'past'>('current');
+  const [activeTab, setActiveTab] = useState<'current' | 'past' | 'future'>('current');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [showPatientModal, setShowPatientModal] = useState(false);
@@ -144,7 +144,36 @@ export const ClinicalDashboard: React.FC = () => {
   ];
 
   // TODO: Replace with actual API data
-  const kpiData: KPIData[] = [];
+  const kpiData: KPIData[] = [
+    {
+      title: 'Total Patients',
+      value: '24',
+      change: '+12%',
+      icon: Users,
+      color: 'blue'
+    },
+    {
+      title: 'Active Consultations',
+      value: '8',
+      change: '+5%',
+      icon: Stethoscope,
+      color: 'green'
+    },
+    {
+      title: 'Pending Vitals',
+      value: '3',
+      change: '-2%',
+      icon: Heart,
+      color: 'red'
+    },
+    {
+      title: 'Completed Today',
+      value: '15',
+      change: '+8%',
+      icon: CheckCircle,
+      color: 'emerald'
+    }
+  ];
 
   // TODO: Replace with actual API data
   const mockPatients: Patient[] = [];
@@ -172,17 +201,17 @@ export const ClinicalDashboard: React.FC = () => {
   const getAppointmentStatusBadge = (status: Appointment['status']) => {
     switch (status) {
       case 'vitals-required':
-        return <Badge className="bg-red-100 text-red-800 border-red-300">❤️ Vitals Required</Badge>;
+        return <Badge className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 border-red-300 dark:border-red-600">❤️ Vitals Required</Badge>;
       case 'ready-consultation':
-        return <Badge className="bg-green-100 text-green-800 border-green-300">✅ Ready For Consultation</Badge>;
+        return <Badge className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 border-green-300 dark:border-green-600">✅ Ready For Consultation</Badge>;
       case 'under-consultation':
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-300">👨‍⚕️ Under Consultation</Badge>;
+        return <Badge className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-600">👨‍⚕️ Under Consultation</Badge>;
       case 'lab-test-required':
-        return <Badge className="bg-purple-100 text-purple-800 border-purple-300">🧪 Lab Test Required</Badge>;
+        return <Badge className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 border-purple-300 dark:border-purple-600">🧪 Lab Test Required</Badge>;
       case 'awaiting-reconsultation':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">⏳ Awaiting Reconsultation</Badge>;
+        return <Badge className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 border-yellow-300 dark:border-yellow-600">⏳ Awaiting Reconsultation</Badge>;
       case 'completed':
-        return <Badge className="bg-green-100 text-green-800 border-green-300">🏁 Completed</Badge>;
+        return <Badge className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 border-green-300 dark:border-green-600">🏁 Completed</Badge>;
       default:
         return null;
     }
@@ -287,6 +316,19 @@ export const ClinicalDashboard: React.FC = () => {
       totalPast,
       completedPast,
       uniqueDates
+    };
+  }, []);
+
+      // Calculate future appointments stats
+  const futureStats = useMemo(() => {
+    const totalFuture = mockFutureAppointments.length;
+    const readyFuture = mockFutureAppointments.filter(apt => apt.status === 'ready-consultation').length;
+    const uniqueFutureDates = [...new Set(mockFutureAppointments.map(apt => apt.appointmentDate))].length;
+
+    return {
+      totalFuture,
+      readyFuture,
+      uniqueFutureDates
     };
   }, []);
 
@@ -460,12 +502,12 @@ export const ClinicalDashboard: React.FC = () => {
           return (
             <Card 
               key={module.id}
-              className={`cursor-pointer transition-all relative ${
+              className={`cursor-pointer transition-all relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 ${
                 isLocked 
                   ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800' 
                   : currentView === module.id 
-                    ? 'ring-2 ring-primary bg-primary/5 hover:shadow-lg' 
-                    : 'hover:bg-muted/50 hover:shadow-lg'
+                    ? 'ring-2 ring-primary bg-primary/5 dark:bg-primary/10 hover:shadow-lg' 
+                    : 'hover:bg-gray-50 dark:hover:bg-gray-700 hover:shadow-lg'
               }`}
               onClick={() => {
                 if (!isLocked) {
@@ -477,10 +519,10 @@ export const ClinicalDashboard: React.FC = () => {
                 <div className="relative">
                   <module.icon className={`h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 ${
                     isLocked 
-                      ? 'text-gray-400' 
+                      ? 'text-gray-400 dark:text-gray-500' 
                       : currentView === module.id 
                         ? 'text-primary' 
-                        : 'text-muted-foreground'
+                        : 'text-gray-600 dark:text-gray-300'
                   }`} />
                   {isLocked && (
                     <div className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1">
@@ -490,15 +532,15 @@ export const ClinicalDashboard: React.FC = () => {
                 </div>
                 <h3 className={`font-medium text-xs lg:text-sm mb-1 ${
                   isLocked 
-                    ? 'text-gray-400' 
+                    ? 'text-gray-400 dark:text-gray-500' 
                     : currentView === module.id 
                       ? 'text-primary' 
-                      : 'text-foreground'
+                      : 'text-gray-900 dark:text-white'
                 }`}>
                   {module.name}
                 </h3>
                 <p className={`text-xs hidden sm:block ${
-                  isLocked ? 'text-gray-400' : 'text-muted-foreground'
+                  isLocked ? 'text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-400'
                 }`}>
                   {isLocked ? 'Locked' : module.description}
                 </p>
@@ -515,110 +557,212 @@ export const ClinicalDashboard: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             {activeTab === 'current' ? (
               kpiData.map((kpi, index) => (
-                <Card key={index} className={`shadow-card hover:shadow-hover transition-shadow ${!isProfileComplete ? 'opacity-50' : ''}`}>
+                <Card key={index} className={`bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700 ${!isProfileComplete ? 'opacity-50' : ''}`}>
                   <CardContent className="p-4 lg:p-6">
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-muted-foreground truncate">
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 truncate">
                           {kpi.title}
                         </p>
-                        <p className="text-2xl lg:text-3xl font-bold text-foreground">
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
                           {kpi.value}
                         </p>
                         <p className={`text-xs ${
-                          kpi.change.startsWith('+') ? 'text-healthcare-success' : 'text-healthcare-error'
+                          kpi.change.startsWith('+') ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                         }`}>
                           {kpi.change} from yesterday
                         </p>
                       </div>
-                      <div className={`p-2 lg:p-3 rounded-full bg-${kpi.color}/10 flex-shrink-0`}>
-                        <kpi.icon className={`h-5 w-5 lg:h-6 lg:w-6 text-${kpi.color}`} />
+                      <div className={`p-2 lg:p-3 rounded-full flex-shrink-0 ${
+                        kpi.color === 'blue' ? 'bg-blue-100 dark:bg-blue-900/30' :
+                        kpi.color === 'green' ? 'bg-green-100 dark:bg-green-900/30' :
+                        kpi.color === 'red' ? 'bg-red-100 dark:bg-red-900/30' :
+                        kpi.color === 'emerald' ? 'bg-emerald-100 dark:bg-emerald-900/30' :
+                        kpi.color === 'purple' ? 'bg-purple-100 dark:bg-purple-900/30' :
+                        kpi.color === 'yellow' ? 'bg-yellow-100 dark:bg-yellow-900/30' :
+                        'bg-gray-100 dark:bg-gray-700'
+                      }`}>
+                        <kpi.icon className={`h-5 w-5 lg:h-6 lg:w-6 ${
+                          kpi.color === 'blue' ? 'text-blue-600 dark:text-blue-400' :
+                          kpi.color === 'green' ? 'text-green-600 dark:text-green-400' :
+                          kpi.color === 'red' ? 'text-red-600 dark:text-red-400' :
+                          kpi.color === 'emerald' ? 'text-emerald-600 dark:text-emerald-400' :
+                          kpi.color === 'purple' ? 'text-purple-600 dark:text-purple-400' :
+                          kpi.color === 'yellow' ? 'text-yellow-600 dark:text-yellow-400' :
+                          'text-gray-600 dark:text-gray-300'
+                        }`} />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               ))
-            ) : (
+            ) : activeTab === 'past' ? (
               <>
-                <Card className={`shadow-card hover:shadow-hover transition-shadow ${!isProfileComplete ? 'opacity-50' : ''}`}>
+                <Card className={`bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700 ${!isProfileComplete ? 'opacity-50' : ''}`}>
                   <CardContent className="p-4 lg:p-6">
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-muted-foreground truncate">
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 truncate">
                           Total Past Appointments
                         </p>
-                        <p className="text-2xl lg:text-3xl font-bold text-foreground">
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
                           {pastStats.totalPast}
                         </p>
-                        <p className="text-xs text-gray-600">
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
                           Historical records
                         </p>
                       </div>
-                      <div className="p-2 lg:p-3 rounded-full bg-gray-100 flex-shrink-0">
-                        <History className="h-5 w-5 lg:h-6 lg:w-6 text-gray-600" />
+                      <div className="p-2 lg:p-3 rounded-full bg-gray-100 dark:bg-gray-700 flex-shrink-0">
+                        <History className="h-5 w-5 lg:h-6 lg:w-6 text-gray-600 dark:text-gray-300" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className={`shadow-card hover:shadow-hover transition-shadow ${!isProfileComplete ? 'opacity-50' : ''}`}>
+                <Card className={`bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700 ${!isProfileComplete ? 'opacity-50' : ''}`}>
                   <CardContent className="p-4 lg:p-6">
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-muted-foreground truncate">
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 truncate">
                           Completed Appointments
                         </p>
-                        <p className="text-2xl lg:text-3xl font-bold text-foreground">
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
                           {pastStats.completedPast}
                         </p>
-                        <p className="text-xs text-green-600">
+                        <p className="text-xs text-green-600 dark:text-green-400">
                           Successfully completed
                         </p>
                       </div>
-                      <div className="p-2 lg:p-3 rounded-full bg-green-100 flex-shrink-0">
-                        <CheckCircle className="h-5 w-5 lg:h-6 lg:w-6 text-green-600" />
+                      <div className="p-2 lg:p-3 rounded-full bg-green-100 dark:bg-green-900/30 flex-shrink-0">
+                        <CheckCircle className="h-5 w-5 lg:h-6 lg:w-6 text-green-600 dark:text-green-400" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className={`shadow-card hover:shadow-hover transition-shadow ${!isProfileComplete ? 'opacity-50' : ''}`}>
+                <Card className={`bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700 ${!isProfileComplete ? 'opacity-50' : ''}`}>
                   <CardContent className="p-4 lg:p-6">
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-muted-foreground truncate">
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 truncate">
                           Unique Dates
                         </p>
-                        <p className="text-2xl lg:text-3xl font-bold text-foreground">
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
                           {pastStats.uniqueDates}
                         </p>
-                        <p className="text-xs text-blue-600">
+                        <p className="text-xs text-blue-600 dark:text-blue-400">
                           Different appointment days
                         </p>
                       </div>
-                      <div className="p-2 lg:p-3 rounded-full bg-blue-100 flex-shrink-0">
-                        <Calendar className="h-5 w-5 lg:h-6 lg:w-6 text-blue-600" />
+                      <div className="p-2 lg:p-3 rounded-full bg-blue-100 dark:bg-blue-900/30 flex-shrink-0">
+                        <Calendar className="h-5 w-5 lg:h-6 lg:w-6 text-blue-600 dark:text-blue-400" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className={`shadow-card hover:shadow-hover transition-shadow ${!isProfileComplete ? 'opacity-50' : ''}`}>
+                <Card className={`bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700 ${!isProfileComplete ? 'opacity-50' : ''}`}>
                   <CardContent className="p-4 lg:p-6">
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-muted-foreground truncate">
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 truncate">
                           Filtered Results
                         </p>
-                        <p className="text-2xl lg:text-3xl font-bold text-foreground">
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
                           {filteredAppointments.length}
                         </p>
-                        <p className="text-xs text-purple-600">
+                        <p className="text-xs text-purple-600 dark:text-purple-400">
                           Current filter results
                         </p>
                       </div>
-                      <div className="p-2 lg:p-3 rounded-full bg-purple-100 flex-shrink-0">
-                        <Filter className="h-5 w-5 lg:h-6 lg:w-6 text-purple-600" />
+                      <div className="p-2 lg:p-3 rounded-full bg-purple-100 dark:bg-purple-900/30 flex-shrink-0">
+                        <Filter className="h-5 w-5 lg:h-6 lg:w-6 text-purple-600 dark:text-purple-400" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <>
+                <Card className={`bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700 ${!isProfileComplete ? 'opacity-50' : ''}`}>
+                  <CardContent className="p-4 lg:p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 truncate">
+                          Total Future Appointments
+                        </p>
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
+                          {futureStats.totalFuture}
+                        </p>
+                        <p className="text-xs text-blue-600 dark:text-blue-400">
+                          Upcoming appointments
+                        </p>
+                      </div>
+                      <div className="p-2 lg:p-3 rounded-full bg-blue-100 dark:bg-blue-900/30 flex-shrink-0">
+                        <CalendarDays className="h-5 w-5 lg:h-6 lg:w-6 text-blue-600 dark:text-blue-400" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className={`bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700 ${!isProfileComplete ? 'opacity-50' : ''}`}>
+                  <CardContent className="p-4 lg:p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 truncate">
+                          Ready for Consultation
+                        </p>
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
+                          {futureStats.readyFuture}
+                        </p>
+                        <p className="text-xs text-green-600 dark:text-green-400">
+                          Patients ready
+                        </p>
+                      </div>
+                      <div className="p-2 lg:p-3 rounded-full bg-green-100 dark:bg-green-900/30 flex-shrink-0">
+                        <CheckCircle className="h-5 w-5 lg:h-6 lg:w-6 text-green-600 dark:text-green-400" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className={`bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700 ${!isProfileComplete ? 'opacity-50' : ''}`}>
+                  <CardContent className="p-4 lg:p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 truncate">
+                          Unique Dates
+                        </p>
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
+                          {futureStats.uniqueFutureDates}
+                        </p>
+                        <p className="text-xs text-purple-600 dark:text-purple-400">
+                          Different appointment days
+                        </p>
+                      </div>
+                      <div className="p-2 lg:p-3 rounded-full bg-purple-100 dark:bg-purple-900/30 flex-shrink-0">
+                        <Calendar className="h-5 w-5 lg:h-6 lg:w-6 text-purple-600 dark:text-purple-400" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className={`bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700 ${!isProfileComplete ? 'opacity-50' : ''}`}>
+                  <CardContent className="p-4 lg:p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 truncate">
+                          Filtered Results
+                        </p>
+                        <p className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
+                          {filteredAppointments.length}
+                        </p>
+                        <p className="text-xs text-purple-600 dark:text-purple-400">
+                          Current filter results
+                        </p>
+                      </div>
+                      <div className="p-2 lg:p-3 rounded-full bg-purple-100 dark:bg-purple-900/30 flex-shrink-0">
+                        <Filter className="h-5 w-5 lg:h-6 lg:w-6 text-purple-600 dark:text-purple-400" />
                       </div>
                     </div>
                   </CardContent>

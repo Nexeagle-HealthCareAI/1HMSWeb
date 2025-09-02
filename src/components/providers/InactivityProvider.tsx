@@ -30,6 +30,7 @@ export const InactivityProvider: React.FC<InactivityProviderProps> = ({ children
   const { isAuthenticated, logout } = useAuthStore();
   const [isInactivityDialogOpen, setIsInactivityDialogOpen] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(120); // 2 minutes in seconds
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -95,15 +96,23 @@ export const InactivityProvider: React.FC<InactivityProviderProps> = ({ children
 
   // Handle logout
   const handleLogout = () => {
+    console.log('handleLogout called - starting logout process');
+    
+    // Set loading state
+    setIsLoggingOut(true);
+    
     // Clear all timeouts
     if (inactivityTimeoutRef.current) {
       clearTimeout(inactivityTimeoutRef.current);
+      inactivityTimeoutRef.current = null;
     }
     if (warningTimeoutRef.current) {
       clearTimeout(warningTimeoutRef.current);
+      warningTimeoutRef.current = null;
     }
     if (countdownIntervalRef.current) {
       clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
     }
 
     // Reset state
@@ -111,7 +120,14 @@ export const InactivityProvider: React.FC<InactivityProviderProps> = ({ children
     setTimeRemaining(120);
 
     // Perform logout
+    console.log('Calling logout from auth store...');
     logout();
+    
+    // Force a page reload to ensure complete logout
+    console.log('Logout completed - reloading page');
+    setTimeout(() => {
+      window.location.href = '/login';
+    }, 100);
   };
 
   // Set up event listeners for user activity
@@ -200,7 +216,10 @@ export const InactivityProvider: React.FC<InactivityProviderProps> = ({ children
       {isInactivityDialogOpen && createPortal(
         <div 
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50"
-          onClick={(e) => e.preventDefault()}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
         >
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
             <div className="flex items-center gap-2 text-red-600 mb-4">
@@ -223,16 +242,28 @@ export const InactivityProvider: React.FC<InactivityProviderProps> = ({ children
               <div className="flex gap-3">
                 <Button
                   onClick={handleStayConnected}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white transition-all duration-200 hover:scale-105"
                 >
                   {t('inactivity.stayConnected')}
                 </Button>
                 <Button
                   onClick={handleLogout}
                   variant="outline"
-                  className="flex-1"
+                  disabled={isLoggingOut}
+                  className="flex-1 border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:border-red-500 transition-all duration-200 hover:scale-105 focus:ring-2 focus:ring-red-300 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  autoFocus
                 >
-                  {t('inactivity.logoutNow')}
+                  {isLoggingOut ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                      Logging out...
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="h-4 w-4 mr-2" />
+                      {t('inactivity.logoutNow')}
+                    </>
+                  )}
                 </Button>
               </div>
 

@@ -20,7 +20,16 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
   const effectiveMode = getEffectiveMode();
 
   const toggleTheme = () => {
+    // Add class to disable all transitions during theme switch
+    document.body.classList.add('theme-switching');
+    
+    // Toggle theme
     setMode(mode === 'light' ? 'dark' : 'light');
+    
+    // Remove the class after a short delay to re-enable transitions
+    setTimeout(() => {
+      document.body.classList.remove('theme-switching');
+    }, 50);
   };
 
   return (
@@ -29,7 +38,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
       size={size}
       onClick={toggleTheme}
       className={`
-        relative overflow-hidden transition-all duration-300 ease-in-out hover:scale-105 
+        relative overflow-hidden
         group ${className}
       `}
       title={`Switch to ${effectiveMode === 'light' ? 'dark' : 'light'} mode`}
@@ -38,18 +47,18 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
       <div className="relative flex items-center gap-2">
         {effectiveMode === 'light' ? (
           <>
-            <Moon className="h-4 w-4 transition-all duration-300 ease-in-out group-hover:rotate-12" />
+            <Moon className="h-4 w-4" />
             {showLabel && (
-              <span className="text-sm font-medium transition-all duration-300 ease-in-out">
+              <span className="text-sm font-medium">
                 Dark Mode
               </span>
             )}
           </>
         ) : (
           <>
-            <Sun className="h-4 w-4 transition-all duration-300 ease-in-out group-hover:rotate-12" />
+            <Sun className="h-4 w-4" />
             {showLabel && (
-              <span className="text-sm font-medium transition-all duration-300 ease-in-out">
+              <span className="text-sm font-medium">
                 Light Mode
               </span>
             )}
@@ -57,8 +66,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
         )}
       </div>
       
-      {/* Ripple effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-in-out" />
+
     </Button>
   );
 };

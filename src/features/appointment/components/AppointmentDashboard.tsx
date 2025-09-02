@@ -403,57 +403,57 @@ export const AppointmentDashboard = () => {
             </>
               ) : activeTab === 'past' ? (
                 <>
-                  <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                  <Card className="bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs font-medium text-gray-600">Total Past</p>
-                          <p className="text-lg font-bold text-gray-900">{pastStats.totalPast}</p>
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Total Past</p>
+                          <p className="text-lg font-bold text-gray-900 dark:text-white">{pastStats.totalPast}</p>
                         </div>
-                        <div className="p-1.5 bg-gray-100 rounded-lg">
-                          <History className="h-4 w-4 text-gray-600" />
+                        <div className="p-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                          <History className="h-4 w-4 text-gray-600 dark:text-gray-300" />
                         </div>
                       </div>
                 </CardContent>
               </Card>
 
-                  <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                  <Card className="bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs font-medium text-gray-600">Completed</p>
-                          <p className="text-lg font-bold text-green-600">{pastStats.completedPast}</p>
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Completed</p>
+                          <p className="text-lg font-bold text-green-600 dark:text-green-400">{pastStats.completedPast}</p>
                         </div>
-                        <div className="p-1.5 bg-green-100 rounded-lg">
-                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        <div className="p-1.5 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                          <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
                         </div>
                       </div>
                 </CardContent>
               </Card>
 
-                  <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                  <Card className="bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs font-medium text-gray-600">Unique Dates</p>
-                          <p className="text-lg font-bold text-blue-600">{pastStats.uniqueDates}</p>
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Unique Dates</p>
+                          <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{pastStats.uniqueDates}</p>
                         </div>
-                        <div className="p-1.5 bg-blue-100 rounded-lg">
-                          <Calendar className="h-4 w-4 text-blue-600" />
+                        <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                          <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         </div>
                       </div>
                 </CardContent>
               </Card>
 
-                  <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                  <Card className="bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs font-medium text-gray-600">Filtered</p>
-                          <p className="text-lg font-bold text-purple-600">{filteredAppointments.length}</p>
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Filtered</p>
+                          <p className="text-lg font-bold text-purple-600 dark:text-purple-400">{filteredAppointments.length}</p>
                         </div>
-                        <div className="p-1.5 bg-purple-100 rounded-lg">
-                          <Filter className="h-4 w-4 text-purple-600" />
+                        <div className="p-1.5 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                          <Filter className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                         </div>
                       </div>
                     </CardContent>
@@ -461,43 +461,43 @@ export const AppointmentDashboard = () => {
                 </>
               ) : (
                 <>
-                  <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                  <Card className="bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs font-medium text-gray-600">Total Future</p>
-                          <p className="text-lg font-bold text-blue-900">{futureStats.totalFuture}</p>
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Total Future</p>
+                          <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{futureStats.totalFuture}</p>
                         </div>
-                        <div className="p-1.5 bg-blue-100 rounded-lg">
-                          <CalendarDays className="h-4 w-4 text-blue-600" />
+                        <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                          <CalendarDays className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         </div>
                       </div>
                 </CardContent>
               </Card>
 
-                  <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                  <Card className="bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs font-medium text-gray-600">Ready</p>
-                          <p className="text-lg font-bold text-green-600">{futureStats.readyFuture}</p>
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Ready</p>
+                          <p className="text-lg font-bold text-green-600 dark:text-green-400">{futureStats.readyFuture}</p>
                   </div>
-                        <div className="p-1.5 bg-green-100 rounded-lg">
-                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        <div className="p-1.5 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                          <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
                         </div>
                       </div>
                     </CardContent>
                   </Card>
 
-                  <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                  <Card className="bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs font-medium text-gray-600">Unique Dates</p>
-                          <p className="text-lg font-bold text-purple-600">{futureStats.uniqueFutureDates}</p>
+                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Unique Dates</p>
+                          <p className="text-lg font-bold text-purple-600 dark:text-purple-400">{futureStats.uniqueFutureDates}</p>
                         </div>
-                        <div className="p-1.5 bg-purple-100 rounded-lg">
-                          <Calendar className="h-4 w-4 text-purple-600" />
+                        <div className="p-1.5 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                          <Calendar className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                         </div>
                       </div>
                     </CardContent>
