@@ -91,6 +91,33 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const userId = authStore.getUserId();
   const profileTarget = (userRole === 'Doctor' || userRole === 'AdminDoctor') ? '/profile?tab=professional' : '/profile';
 
+  // Keyboard shortcut for sidebar toggle
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'b') {
+        event.preventDefault();
+        console.log('Keyboard shortcut triggered, current state:', sidebarCollapsed);
+        setSidebarCollapsed(!sidebarCollapsed);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [sidebarCollapsed]);
+
+  // Save sidebar state to localStorage
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', JSON.stringify(sidebarCollapsed));
+  }, [sidebarCollapsed]);
+
+  // Load sidebar state from localStorage on mount
+  useEffect(() => {
+    const savedState = localStorage.getItem('sidebarCollapsed');
+    if (savedState !== null) {
+      setSidebarCollapsed(JSON.parse(savedState));
+    }
+  }, []);
+
   // Fetch user details for profile dropdown
   const { data: userDetailsResponse } = useUserDetails(userId || '');
   
@@ -105,8 +132,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   // Navigation items with role-based filtering
   const allNavigationItems: NavigationItem[] = [
     { id: 'admin', name: t('header.adminPanel'), icon: Settings, path: '/admin' },
-    { id: 'dashboard', name: t('header.clinicalDashboard'), icon: Home, path: '/dashboard' },    
-    { id: 'calendar', name: t('header.doctorCalendar'), icon: Calendar, path: '/calendar' },
+    { id: 'dashboard', name: t('header.clinicalDashboard'), icon: Activity, path: '/dashboard' },    
+    { id: 'calendar', name: t('header.doctorCalendar'), icon: CalendarDays, path: '/calendar' },
     { id: 'appointments', name: t('header.appointmentScheduler'), icon: Calendar, path: '/appointment-dashboard' },
     { id: 'doc-ai', name: t('header.docAI'), icon: Bot, path: '/doc-ai' },
   ];
@@ -172,7 +199,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-all duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-all duration-300 overflow-x-hidden">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div 
@@ -183,132 +210,253 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
       {/* Sidebar */}
       <div className={`
-        fixed top-0 left-0 z-50 h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transform transition-all duration-300 ease-in-out shadow-sm
-        ${sidebarCollapsed ? 'w-16' : 'w-64'} 
+        fixed top-0 left-0 z-50 h-full bg-white/95 dark:bg-gray-900/95 border-r border-gray-200/50 dark:border-gray-700/50 transform transition-all duration-500 ease-in-out shadow-xl
+        ${sidebarCollapsed ? 'w-20' : 'w-64'} 
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        hover:shadow-2xl
+        group/sidebar
+        backdrop-blur-md
+        before:absolute before:inset-0 before:bg-gradient-to-b before:from-transparent before:via-white/5 before:to-transparent before:pointer-events-none
+        after:absolute after:inset-0 after:bg-gradient-to-r after:from-blue-500/5 after:via-transparent after:to-transparent after:pointer-events-none
+        animate-in slide-in-from-left-2 duration-500
+        overflow-hidden
       `}>
-        {/* Header with Logo */}
-        <div className={`flex items-center justify-between ${sidebarCollapsed ? 'p-3' : 'p-6'} border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 transition-all duration-200`}>
-                      <div className={`flex items-center ${sidebarCollapsed ? 'justify-center w-full' : 'gap-3'}`}>
-              <div className="flex-shrink-0">
-                <img src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" alt="Company Logo" className={`${sidebarCollapsed ? 'h-8 w-8' : 'h-9 w-9'} transition-all duration-200`} />
+        <div className="relative h-full w-full overflow-hidden">
+        {/* Sidebar Toggle Button - Right Side (Only visible when expanded) */}
+        {!sidebarCollapsed && (
+          <div className="absolute top-4 right-3 z-20 group">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                console.log('Sidebar toggle button clicked, current state:', sidebarCollapsed);
+                setSidebarCollapsed(!sidebarCollapsed);
+              }}
+              className="relative h-10 w-10 p-0 hover:bg-white/90 dark:hover:bg-gray-800/90 rounded-xl transition-all duration-300 hover:scale-110 hover:shadow-lg border border-gray-200/50 dark:border-gray-600/50 hover:border-blue-300 dark:hover:border-blue-600 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-md active:scale-95 active:rotate-3 overflow-hidden"
+              title="Collapse sidebar"
+            >
+              {/* Ripple effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-indigo-400/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              
+              {/* Icon with enhanced animations */}
+              <div className="relative z-10">
+                <X className="h-5 w-5 text-gray-600 dark:text-gray-300 transition-all duration-300 transform group-hover:rotate-90 group-active:rotate-180" />
               </div>
-              {!sidebarCollapsed && (
-                <div className="min-w-0">
-                  <h1 className="font-semibold text-gray-900 dark:text-white text-base transition-colors duration-200">NexEagle</h1>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-200">easyHMS</p>
-                </div>
-              )}
-            </div>
-          {!sidebarCollapsed && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="hidden lg:flex h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              <ChevronLeft className="h-4 w-4 text-gray-500" />
-            </Button>
-          )}
-        </div>
-
-        {/* Navigation */}
-        <nav className={`${sidebarCollapsed ? 'p-2' : 'p-4'} space-y-1 mt-2 transition-all duration-200`}>
-          {navigation.map((item) => {
-            const isActive = currentPage === item.id;
-            return (
-              <Button
-                key={item.id}
-                variant="ghost"
-                className={`
-                  w-full group relative transition-all duration-300 flex items-center hover-lift
-                  ${sidebarCollapsed ? 'justify-center px-2 h-11 w-11 mx-auto rounded-lg' : 'justify-start gap-3 h-11 px-3 rounded-lg'}
-                  ${isActive 
-                    ? 'ring-2 ring-primary bg-primary/5 text-primary border border-primary/20 shadow-sm' 
-                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-                  }
-                `}
-                onClick={() => handleNavigation(item)}
-                title={sidebarCollapsed ? item.name : undefined}
-              >
-                <item.icon className={`${sidebarCollapsed ? 'h-5 w-5' : 'h-4 w-4'} transition-colors ${
-                  isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
-                }`} />
-                
-                {!sidebarCollapsed && (
-                  <span className={`font-medium text-sm transition-colors ${
-                    isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
-                  }`}>
-                    {item.name}
-                  </span>
-                )}
-              </Button>
-            );
-          })}
-        </nav>
-
-        {/* Collapse/Expand Button for Collapsed State */}
-        {sidebarCollapsed && (
-          <div className="absolute top-4 right-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSidebarCollapsed(false)}
-              className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-600"
-              title="Expand sidebar"
-            >
-              <ChevronRight className="h-4 w-4 text-gray-500" />
+              
+              {/* Click pulse effect */}
+              <div className="absolute inset-0 bg-blue-400/30 rounded-xl scale-0 group-active:scale-100 transition-transform duration-200 ease-out"></div>
             </Button>
           </div>
         )}
 
-        {/* Logout Section */}
-        <div className={`absolute bottom-4 ${sidebarCollapsed ? 'left-2 right-2' : 'left-4 right-4'}`}>
+        {/* Navigation */}
+        <nav className={`${sidebarCollapsed ? 'p-3' : 'p-4'} space-y-3 mt-3 transition-all duration-300 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500`}>
+
+          
+          {navigation.map((item, index) => {
+            const isActive = currentPage === item.id;
+            return (
+              <div key={item.id} className="relative group overflow-hidden" style={{ animationDelay: `${index * 50}ms` }}>
+                <Button
+                  variant="ghost"
+                  className={`
+                    w-full relative transition-all duration-500 flex items-center animate-in slide-in-from-left-2
+                    ${sidebarCollapsed ? 'justify-center px-3 h-14 w-14 mx-auto rounded-2xl' : 'justify-start gap-4 h-14 px-5 rounded-2xl'}
+                    ${isActive 
+                      ? 'bg-gradient-to-r from-blue-50/80 via-indigo-50/60 to-blue-50/40 text-blue-600 dark:text-blue-400 border-2 border-blue-200/50 dark:border-blue-700/50 shadow-xl scale-105 ring-2 ring-blue-200/30 dark:ring-blue-700/30 backdrop-blur-sm' 
+                      : 'text-muted-foreground hover:bg-gradient-to-r hover:from-blue-50/60 hover:via-indigo-50/40 hover:to-blue-50/30 dark:hover:from-blue-900/20 dark:hover:via-indigo-900/15 dark:hover:to-blue-900/10 hover:text-blue-600 dark:hover:text-blue-400 hover:scale-105'
+                    }
+                    hover:shadow-xl active:scale-95
+                  `}
+                  onClick={() => handleNavigation(item)}
+                  title={sidebarCollapsed ? item.name : undefined}
+                >
+                  {/* Active indicator line */}
+                  {isActive && (
+                    <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1.5 h-10 bg-gradient-to-b from-blue-500 to-blue-400/80 rounded-r-full shadow-lg"></div>
+                  )}
+                  
+                  {/* Icon container with enhanced effects */}
+                  <div className={`
+                    relative flex items-center justify-center rounded-xl p-3 transition-all duration-300
+                    ${isActive 
+                      ? 'bg-gradient-to-br from-blue-100/80 to-indigo-100/60 text-blue-600 dark:text-blue-400 shadow-lg' 
+                      : 'bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 text-gray-600 dark:text-gray-400 group-hover:bg-gradient-to-br group-hover:from-blue-100/60 group-hover:to-indigo-100/40 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:shadow-lg'
+                    }
+                  `}>
+                    <item.icon className={`${sidebarCollapsed ? 'h-5 w-5' : 'h-6 w-6'} transition-all duration-300 group-hover:scale-110`} />
+                    
+                    {/* Icon glow effect */}
+                    {isActive && (
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-400/20 to-indigo-400/20 rounded-xl blur-lg animate-pulse"></div>
+                    )}
+                  </div>
+                  
+                  {!sidebarCollapsed && (
+                    <div className="flex flex-col items-start flex-1">
+                      <span className={`font-semibold text-sm transition-all duration-300 ${
+                        isActive ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground group-hover:text-foreground'
+                      }`}>
+                        {item.name}
+                      </span>
+                      {isActive && (
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                          <span className="text-xs font-medium text-blue-600/80 dark:text-blue-400/80 bg-blue-100/60 dark:bg-blue-900/30 px-2 py-1 rounded-full">Active</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Hover glow effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-400/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </Button>
+                
+                {/* Enhanced hover tooltip for collapsed state */}
+                {sidebarCollapsed && (
+                  <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-2 py-1 bg-gradient-to-r from-gray-900 to-gray-800 dark:from-gray-100 dark:to-gray-200 text-white dark:text-gray-900 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none z-50 whitespace-nowrap shadow-lg border border-gray-700/50 dark:border-gray-300/50 backdrop-blur-sm max-w-28 overflow-hidden">
+                    <div className="flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full flex-shrink-0"></div>
+                      <span className="font-semibold truncate">{item.name}</span>
+                    </div>
+                    {/* Tooltip arrow */}
+                    <div className="absolute left-0 top-1/2 transform -translate-x-full -translate-y-1/2 w-0 h-0 border-l-3 border-l-transparent border-r-3 border-r-gray-900 dark:border-r-gray-200 border-t-3 border-t-transparent border-b-3 border-b-transparent"></div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </nav>
+
+
+
+        {/* Floating Expand Button for Collapsed State */}
+        {sidebarCollapsed && (
+          <div className="absolute -right-3 top-1/2 transform -translate-y-1/2 z-10">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                console.log('Floating expand button clicked');
+                setSidebarCollapsed(false);
+              }}
+              className="h-8 w-8 p-0 hover:bg-blue-500 hover:text-white rounded-full transition-all duration-300 hover:scale-110 shadow-lg border-2 border-blue-500 bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400"
+              title="Expand sidebar"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
+        {/* Bottom Section - Profile & Logout */}
+        <div className={`absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100/50 dark:border-gray-700/50 bg-gradient-to-t from-gray-50/80 via-gray-50/40 to-transparent dark:from-gray-800/80 dark:via-gray-800/40 backdrop-blur-sm overflow-hidden`}>
+          {/* Profile Section */}
+          {!sidebarCollapsed && (
+            <div className="mb-4 p-4 bg-gradient-to-r from-white/90 to-gray-50/90 dark:from-gray-800/90 dark:to-gray-700/90 rounded-2xl border border-gray-200/50 dark:border-gray-600/50 shadow-lg backdrop-blur-sm hover:shadow-xl transition-all duration-300 group-hover:scale-105">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <Avatar className="h-10 w-10 ring-2 ring-primary/20 shadow-lg">
+                    <AvatarImage src="/avatars/01.png" alt="User" />
+                    <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white text-sm font-bold">
+                      {getUserDisplayName().charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  {/* Online indicator */}
+                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full animate-pulse"></div>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                    {getUserDisplayName()}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+                    <p className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full">
+                      {userRole}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Logout Button */}
           <Button
             variant="ghost"
             className={`
-              w-full group transition-all duration-200
-              ${sidebarCollapsed ? 'justify-center px-2 h-11 w-11 mx-auto rounded-lg' : 'justify-start gap-3 h-11 px-3 rounded-lg'}
-              text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 border border-border hover:border-red-200
+              w-full group transition-all duration-500
+              ${sidebarCollapsed ? 'justify-center px-3 h-14 w-14 mx-auto rounded-2xl' : 'justify-start gap-4 h-14 px-5 rounded-2xl'}
+              text-muted-foreground hover:text-red-600 hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100 dark:hover:from-red-900/20 dark:hover:to-red-800/20 border-2 border-gray-200/50 dark:border-gray-600/50 hover:border-red-300 dark:hover:border-red-600
+              hover:shadow-xl active:scale-95
             `}
             onClick={handleLogout}
             title={sidebarCollapsed ? "Logout" : undefined}
           >
-            <LogOut className={`${sidebarCollapsed ? 'h-5 w-5' : 'h-4 w-4'} transition-colors`} />
+            <div className={`
+              relative flex items-center justify-center rounded-xl p-3 transition-all duration-300
+              bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 text-red-600 dark:text-red-400 
+              group-hover:bg-gradient-to-br group-hover:from-red-100 group-hover:to-red-200 dark:group-hover:from-red-800/30 dark:group-hover:from-red-700/30
+              group-hover:shadow-lg group-hover:scale-110
+            `}>
+              <LogOut className={`${sidebarCollapsed ? 'h-6 w-6' : 'h-5 w-5'} transition-all duration-300`} />
+              
+              {/* Button glow effect */}
+              <div className="absolute inset-0 bg-gradient-to-br from-red-400/20 to-transparent rounded-xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </div>
             
             {!sidebarCollapsed && (
-              <span className="font-medium text-sm">Logout</span>
+              <div className="flex flex-col items-start">
+                <span className="font-semibold text-sm">Logout</span>
+                <span className="text-xs text-red-500/70">Sign out safely</span>
+              </div>
             )}
           </Button>
+        </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className={`${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'} flex flex-col h-screen transition-all duration-300 ease-in-out`}>
+         <div className={`${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} flex flex-col h-screen transition-all duration-500 ease-in-out overflow-x-hidden`}>
         {/* Top Bar */}
         <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex-shrink-0 shadow-sm transition-all duration-200">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-                              <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSidebarOpen(true)}
-                  className="lg:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
-                >
-                  <Menu className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-                </Button>
-                              <div>
-                  <h1 className="text-xl font-semibold text-gray-900 dark:text-white capitalize transition-colors duration-200">
-                    {currentPage === 'dashboard' ? t('header.clinicalDashboard') : navigation.find(n => n.id === currentPage)?.name}
-                  </h1>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 transition-colors duration-200">
-                    {t('header.welcomeBack')}, {getUserDisplayName()}
-                  </p>
+            <div className="flex items-center gap-6">
+              {/* Mobile Menu Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+              >
+                <Menu className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+              </Button>
+
+              {/* Logo and Branding */}
+              <div className="flex items-center gap-3">
+                <img src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" alt="Company Logo" className="h-8 w-8 transition-all duration-200" />
+                <div className="hidden md:block">
+                  <h1 className="font-black text-gray-900 dark:text-white text-xl transition-all duration-300 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">NexEagle</h1>
+                  <p className="text-sm font-bold text-transparent bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text transition-all duration-300">easyHMS</p>
                 </div>
+              </div>
+
+              {/* Page Title and Welcome */}
+              <div className="hidden lg:block border-l border-gray-200 dark:border-gray-700 pl-6">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white capitalize transition-colors duration-200">
+                  {currentPage === 'dashboard' ? t('header.clinicalDashboard') : navigation.find(n => n.id === currentPage)?.name}
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 transition-colors duration-200">
+                  {t('header.welcomeBack')}, {getUserDisplayName()}
+                </p>
+              </div>
             </div>
 
             <div className="flex items-center gap-4">
+              {/* Sidebar Toggle Hint */}
+              <div className="hidden lg:flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md">
+                <span>Ctrl+B</span>
+                <span>to toggle sidebar</span>
+              </div>
+              
               {/* Profile Completion Indicator */}
               {profileScore < 100 && (
                               <Button
@@ -382,7 +530,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto p-6 bg-gray-50 dark:bg-gray-950 transition-all duration-300">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto p-6 bg-gray-50 dark:bg-gray-950 transition-all duration-300">
           {children}
         </main>
       </div>

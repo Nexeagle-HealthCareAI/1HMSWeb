@@ -863,7 +863,7 @@ export const AppointmentDashboard = () => {
                     </div>
                   </div>
                   <div className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center   =-08`12 ustify-between">
                       <div>
                         <p className="text-xs font-medium text-green-700 dark:text-green-400">Successfully Completed</p>
                         <p className="text-lg font-bold text-green-900 dark:text-green-300">{pastStats.completedPast}</p>

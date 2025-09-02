@@ -268,7 +268,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
         {(template.header.hospitalName || template.header.showLogo || template.header.contactInfo || template.header.customText) && (
           <div className="relative min-h-[250px] border-2 border-dashed border-gray-300 dark:border-gray-600 p-4 rounded-lg bg-gray-50/30 dark:bg-gray-900/30 overflow-hidden">
             <div className="absolute top-2 left-2 z-10">
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600">
                 Header Section
               </Badge>
             </div>
@@ -298,7 +298,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                 <Draggable bounds="parent" defaultPosition={{ x: template.header.showLogo ? 120 : 20, y: 40 }} nodeRef={hospitalNameRef}>
                   <div
                     ref={hospitalNameRef}
-                    className="absolute p-2 cursor-move font-bold  rounded  border"
+                    className="absolute p-2 cursor-move font-bold text-gray-900 dark:text-white rounded border border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-900"
                     style={{...applyStyles(template.header.styles?.hospitalName), zIndex: 4}}
                   >
                     {template.header.hospitalName}
@@ -306,7 +306,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                 </Draggable>
               ) : (
                 <div
-                  className="absolute p-2 font-bold"
+                  className="absolute p-2 font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-500 rounded"
                   style={{
                     ...applyStyles(template.header.styles?.hospitalName),
                     left: template.header.showLogo ? '120px' : '20px',
@@ -322,7 +322,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
               showDraggable ? (
                 <Draggable bounds="parent" defaultPosition={{ x: 20, y: 80 }}>
                   <div
-                    className="absolute p-2 cursor-move text-sm  rounded  border max-w-xs"
+                    className="absolute p-2 cursor-move text-sm text-gray-900 dark:text-white rounded border border-gray-300 dark:border-gray-500 max-w-xs bg-white dark:bg-gray-900"
                     style={{...applyStyles(template.header.styles?.contactInfo), zIndex: 3}}
                   >
                     {template.header.contactDetails.split('\n').map((line, idx) => (
@@ -332,7 +332,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                 </Draggable>
               ) : (
                 <div
-                  className="absolute p-2 text-sm max-w-xs"
+                  className="absolute p-2 text-sm text-gray-900 dark:text-white max-w-xs bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-500 rounded"
                   style={{
                     ...applyStyles(template.header.styles?.contactInfo),
                     left: '20px',
@@ -350,7 +350,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
               showDraggable ? (
                 <Draggable bounds="parent" defaultPosition={{ x: 20, y: 140 }}>
                   <div
-                    className="absolute p-2 cursor-move italic text-sm  rounded  border"
+                    className="absolute p-2 cursor-move italic text-sm text-gray-900 dark:text-white rounded border border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-900"
                     style={{...applyStyles(template.header.styles?.customText), zIndex: 2}}
                   >
                     {template.header.customText}
@@ -358,7 +358,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                 </Draggable>
               ) : (
                 <div
-                  className="absolute p-2 italic text-sm"
+                  className="absolute p-2 italic text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-500 rounded"
                   style={{
                     ...applyStyles(template.header.styles?.customText),
                     left: '20px',
@@ -376,12 +376,12 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                 <Draggable bounds="parent" defaultPosition={{ x: 20, y: 180 }}>
                   <div className="absolute p-3 cursor-move bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 rounded-lg shadow-sm max-w-sm">
                     <div className="text-sm font-semibold text-green-800 dark:text-green-200 mb-1">Doctor Information</div>
-                    <div className="font-bold text-base">{doctorSettings.doctorName || 'Doctor Name'}</div>
+                    <div className="font-bold text-base text-green-900 dark:text-green-100">{doctorSettings.doctorName || 'Doctor Name'}</div>
                     {doctorSettings.qualifications && (
-                      <div className="text-sm text-gray-600">{doctorSettings.qualifications}</div>
+                      <div className="text-sm text-green-700 dark:text-green-300">{doctorSettings.qualifications}</div>
                     )}
                     {doctorSettings.designationRegNumber && (
-                      <div className="text-xs text-gray-500">{doctorSettings.designationRegNumber}</div>
+                      <div className="text-xs text-green-600 dark:text-green-400">{doctorSettings.designationRegNumber}</div>
                     )}
                   </div>
                 </Draggable>
@@ -391,12 +391,12 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                   style={{ left: '20px', top: '180px' }}
                 >
                   <div className="text-sm font-semibold text-green-800 dark:text-green-200 mb-1">Doctor Information</div>
-                  <div className="font-bold text-base">{doctorSettings.doctorName || 'Doctor Name'}</div>
+                  <div className="font-bold text-base text-green-900 dark:text-green-100">{doctorSettings.doctorName || 'Doctor Name'}</div>
                   {doctorSettings.qualifications && (
-                    <div className="text-sm text-gray-600">{doctorSettings.qualifications}</div>
+                    <div className="text-sm text-green-700 dark:text-green-300">{doctorSettings.qualifications}</div>
                   )}
                   {doctorSettings.designationRegNumber && (
-                    <div className="text-xs text-gray-500">{doctorSettings.designationRegNumber}</div>
+                    <div className="text-xs text-green-600 dark:text-green-400">{doctorSettings.designationRegNumber}</div>
                   )}
                 </div>
               )
@@ -406,7 +406,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                 style={{ left: '20px', top: '180px' }}
               >
                 <div className="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-1">Doctor Information Placeholder</div>
-                <div className="text-sm text-blue-600 dark:text-blue-300 italic">
+                <div className="text-sm text-blue-700 dark:text-blue-300 italic">
                   Doctor details will be inserted here automatically
                 </div>
               </div>
@@ -415,74 +415,74 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
         )}
 
         {/* Body Sections Preview */}
-        <div className="space-y-4 border rounded-lg p-4 bg-white dark:bg-gray-800">
+        <div className="space-y-4 border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-white dark:bg-gray-800 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
-            <Badge variant="outline" className="text-xs">Prescription Body</Badge>
+            <Badge variant="outline" className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600">Prescription Body</Badge>
           </div>
           
-          <div className="space-y-3">
-            <div>
-              <h4 className="font-semibold text-sm">Patient Information</h4>
-              <p className="text-sm text-gray-600">
-                Name: _________________ | Age: _____ | Date: {new Date().toLocaleDateString()}
-              </p>
-            </div>
-
-            {template.sections.vitals && (
+                      <div className="space-y-3">
               <div>
-                <h4 className="font-semibold text-sm">Vitals</h4>
-                <p className="text-sm text-gray-600">BP: _____ | Pulse: _____ | Temperature: _____°F</p>
+                <h4 className="font-semibold text-sm text-gray-900 dark:text-white">Patient Information</h4>
+                <p className="text-sm text-gray-700 dark:text-gray-200">
+                  Name: _________________ | Age: _____ | Date: {new Date().toLocaleDateString()}
+                </p>
               </div>
-            )}
 
-            {template.sections.diagnosis && (
-              <div>
-                <h4 className="font-semibold text-sm">Diagnosis</h4>
-                <p className="text-sm text-gray-600">_________________________________</p>
-              </div>
-            )}
-
-            {template.sections.advice && (
-              <div>
-                <h4 className="font-semibold text-sm">Advice</h4>
-                <p className="text-sm text-gray-600">_________________________________</p>
-              </div>
-            )}
-
-            {template.sections.medicines && (
-              <div>
-                <h4 className="font-semibold text-sm">Medicines</h4>
-                <div className="text-sm text-gray-600 space-y-1">
-                  <div>1. ____________________________</div>
-                  <div>2. ____________________________</div>
-                  <div>3. ____________________________</div>
+              {template.sections.vitals && (
+                <div>
+                  <h4 className="font-semibold text-sm text-gray-900 dark:text-white">Vitals</h4>
+                  <p className="text-sm text-gray-700 dark:text-gray-200">BP: _____ | Pulse: _____ | Temperature: _____°F</p>
                 </div>
-              </div>
-            )}
+              )}
 
-            {template.sections.nextAppointment && (
-              <div>
-                <h4 className="font-semibold text-sm">Next Appointment</h4>
-                <p className="text-sm text-gray-600">Follow-up: ________________</p>
-              </div>
-            )}
-          </div>
+              {template.sections.diagnosis && (
+                <div>
+                  <h4 className="font-semibold text-sm text-gray-900 dark:text-white">Diagnosis</h4>
+                  <p className="text-sm text-gray-700 dark:text-gray-200">_________________________________</p>
+                </div>
+              )}
+
+              {template.sections.advice && (
+                <div>
+                  <h4 className="font-semibold text-sm text-gray-900 dark:text-white">Advice</h4>
+                  <p className="text-sm text-gray-700 dark:text-gray-200">_________________________________</p>
+                </div>
+              )}
+
+              {template.sections.medicines && (
+                <div>
+                  <h4 className="font-semibold text-sm text-gray-900 dark:text-white">Medicines</h4>
+                  <div className="text-sm text-gray-700 dark:text-gray-200 space-y-1">
+                    <div>1. ____________________________</div>
+                    <div>2. ____________________________</div>
+                    <div>3. ____________________________</div>
+                  </div>
+                </div>
+              )}
+
+              {template.sections.nextAppointment && (
+                <div>
+                  <h4 className="font-semibold text-sm text-gray-900 dark:text-white">Next Appointment</h4>
+                  <p className="text-sm text-gray-700 dark:text-gray-200">Follow-up: ________________</p>
+                </div>
+              )}
+            </div>
         </div>
 
         {/* Footer Section */}
         {(template.footer.customNotes || template.footer.signature || template.footer.qrCode) && (
           <div className="relative min-h-[200px] border-2 border-dashed border-gray-300 dark:border-gray-600 p-4 rounded-lg bg-gray-50/30 dark:bg-gray-900/30 overflow-hidden">
-            <div className="absolute top-2 left-2 z-10">
-              <Badge variant="outline" className="text-xs">
-                Footer Section
-              </Badge>
-            </div>
+                         <div className="absolute top-2 left-2 z-10">
+               <Badge variant="outline" className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600">
+                 Footer Section
+               </Badge>
+             </div>
 
             {template.footer.customNotes && (
               showDraggable ? (
                 <Draggable bounds="parent" defaultPosition={{ x: 20, y: 30 }}>
                   <div
-                    className="absolute p-2 cursor-move text-sm  rounded  border max-w-md"
+                    className="absolute p-2 cursor-move text-sm text-gray-900 dark:text-white rounded border border-gray-300 dark:border-gray-500 max-w-md bg-white dark:bg-gray-900"
                     style={{...applyStyles(template.footer.styles?.customNotes), zIndex: 3}}
                   >
                     {template.footer.customNotes}
@@ -490,7 +490,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                 </Draggable>
               ) : (
                 <div
-                  className="absolute p-2 text-sm max-w-md"
+                  className="absolute p-2 text-sm text-gray-900 dark:text-white max-w-md bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-500 rounded"
                   style={{
                     ...applyStyles(template.footer.styles?.customNotes),
                     left: '20px',
@@ -505,46 +505,46 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
             {template.footer.signature && (
               showDraggable ? (
                 <Draggable bounds="parent" defaultPosition={{ x: 320, y: 100 }}>
-                  <div className="absolute cursor-move text-right  rounded  border p-2">
-                    <div className="border-t border-gray-400 w-32 mx-auto mb-2"></div>
+                  <div className="absolute cursor-move text-right rounded border border-gray-300 dark:border-gray-500 p-2 bg-white dark:bg-gray-900">
+                    <div className="border-t border-gray-400 dark:border-gray-400 w-32 mx-auto mb-2"></div>
                     {userRole === 'doctor' && doctorSettings ? (
                       <>
-                        <div className="text-sm font-semibold">Dr. {doctorSettings.doctorName || 'Doctor Name'}</div>
+                        <div className="text-sm font-semibold text-gray-900 dark:text-white">Dr. {doctorSettings.doctorName || 'Doctor Name'}</div>
                         {doctorSettings.qualifications && (
-                          <div className="text-xs text-gray-600">{doctorSettings.qualifications}</div>
+                          <div className="text-xs text-gray-700 dark:text-gray-200">{doctorSettings.qualifications}</div>
                         )}
                         {doctorSettings.designationRegNumber && (
-                          <div className="text-xs text-gray-500">{doctorSettings.designationRegNumber}</div>
+                          <div className="text-xs text-gray-600 dark:text-gray-300">{doctorSettings.designationRegNumber}</div>
                         )}
                       </>
                     ) : (
                       <>
-                        <div className="text-sm font-semibold">Dr. [Doctor Name]</div>
-                        <div className="text-xs text-gray-500">[Qualifications]</div>
+                        <div className="text-sm font-semibold text-gray-900 dark:text-white">Dr. [Doctor Name]</div>
+                        <div className="text-xs text-gray-600 dark:text-gray-300">[Qualifications]</div>
                       </>
                     )}
                   </div>
                 </Draggable>
               ) : (
                 <div 
-                  className="absolute text-right p-2"
+                  className="absolute text-right p-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-500 rounded"
                   style={{ right: '20px', bottom: '60px' }}
                 >
-                  <div className="border-t border-gray-400 w-32 mx-auto mb-2"></div>
+                  <div className="border-t border-gray-400 dark:border-gray-400 w-32 mx-auto mb-2"></div>
                   {userRole === 'doctor' && doctorSettings ? (
                     <>
-                      <div className="text-sm font-semibold">Dr. {doctorSettings.doctorName || 'Doctor Name'}</div>
+                      <div className="text-sm font-semibold text-gray-900 dark:text-white">Dr. {doctorSettings.doctorName || 'Doctor Name'}</div>
                       {doctorSettings.qualifications && (
-                        <div className="text-xs text-gray-600">{doctorSettings.qualifications}</div>
+                        <div className="text-xs text-gray-700 dark:text-gray-200">{doctorSettings.qualifications}</div>
                       )}
                       {doctorSettings.designationRegNumber && (
-                        <div className="text-xs text-gray-500">{doctorSettings.designationRegNumber}</div>
+                        <div className="text-xs text-gray-600 dark:text-gray-300">{doctorSettings.designationRegNumber}</div>
                       )}
                     </>
                   ) : (
                     <>
-                      <div className="text-sm font-semibold">Dr. [Doctor Name]</div>
-                      <div className="text-xs text-gray-500">[Qualifications]</div>
+                      <div className="text-sm font-semibold text-gray-900 dark:text-white">Dr. [Doctor Name]</div>
+                      <div className="text-xs text-gray-300">[Qualifications]</div>
                     </>
                   )}
                 </div>
@@ -554,13 +554,13 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
             {template.footer.qrCode && (
               showDraggable ? (
                 <Draggable bounds="parent" defaultPosition={{ x: 400, y: 30 }}>
-                  <div className="absolute w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center text-xs text-gray-500 cursor-move shadow border">
+                  <div className="absolute w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center text-xs text-gray-600 dark:text-white cursor-move shadow border">
                     QR Code
                   </div>
                 </Draggable>
               ) : (
                 <div 
-                  className="absolute w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center text-xs text-gray-500 shadow border"
+                  className="absolute w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center text-xs text-gray-600 dark:text-white shadow border"
                   style={{ right: '20px', top: '30px' }}
                 >
                   QR Code
