@@ -643,6 +643,14 @@
     "userInvitedSuccessfully": "User invited successfully",
     "userInvitedDescription": "Invitation has been sent to the user. They will receive an email to complete their registration."
   },
+  "appointmentBooking": {
+    "departmentSelection": "🏥 Department Selection",
+    "selectDepartment": "Select Department",
+    "chooseDepartment": "Choose a department for your appointment",
+    "noDepartmentsAvailable": "No departments available",
+    "loadingDepartments": "Loading departments...",
+    "errorLoadingDepartments": "Error loading departments"
+  },
   "languages": {
     "en": "English",
     "hi": "हिंदी"

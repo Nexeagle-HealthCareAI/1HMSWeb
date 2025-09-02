@@ -69,6 +69,7 @@ export const AppointmentDashboard = () => {
   const [activeTab, setActiveTab] = useState<'current' | 'past' | 'future'>('current');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
+  const [showFilters, setShowFilters] = useState(false);
 
   // Calculate KPIs
   const kpis = useMemo(() => {
@@ -262,73 +263,87 @@ export const AppointmentDashboard = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <div className="max-w-7xl mx-auto p-6 space-y-6">
         
-        {/* Header Section */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        {/* Enhanced Header Section */}
+        <div className="bg-gradient-to-r from-white to-blue-50/30 dark:from-gray-900 dark:to-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <Calendar className="h-6 w-6 text-blue-600" />
+              <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg">
+                <Calendar className="h-7 w-7 text-white" />
               </div>
-                          <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">{t('appointmentDashboard.title')}</h1>
-              <p className="text-gray-600 dark:text-gray-400">{t('appointmentDashboard.subtitle')}</p>
+              <div className="space-y-1">
+                <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
+                  {t('appointmentDashboard.title')}
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400 text-sm lg:text-base">
+                  {t('appointmentDashboard.subtitle')}
+                </p>
+              </div>
             </div>
-          </div>
-          <Button 
-            onClick={() => setShowBooking(true)} 
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-              {t('appointmentDashboard.bookAppointment')}
-          </Button>
+            <div className="flex items-center gap-3">
+              <Button 
+                onClick={() => setShowFilters(!showFilters)} 
+                variant="outline"
+                className="border-gray-300 hover:border-blue-400 hover:bg-blue-50 dark:border-gray-600 dark:hover:border-blue-500 dark:hover:bg-blue-900/20 transition-all duration-200"
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                {showFilters ? 'Hide Filters' : 'Show Filters'}
+              </Button>
+              <Button 
+                onClick={() => setShowBooking(true)} 
+                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                {t('appointmentDashboard.bookAppointment')}
+              </Button>
+            </div>
           </div>
         </div>
 
-                  {/* KPI Overview Cards */}
+                  {/* Enhanced KPI Overview Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 transition-all duration-300">
           {activeTab === 'current' ? (
             <>
-                  <Card className="bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
-                    <CardContent className="p-3">
+                  <Card className="bg-gradient-to-br from-white to-blue-50/50 dark:from-gray-800 dark:to-gray-700 rounded-xl shadow-sm border border-blue-200 dark:border-blue-700 hover:shadow-lg transition-all duration-300 hover:scale-105">
+                    <CardContent className="p-4">
                       <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">{t('appointmentDashboard.kpis.total')}</p>
-                          <p className="text-lg font-bold text-gray-900 dark:text-white">{kpis.totalToday}</p>
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">{t('appointmentDashboard.kpis.total')}</p>
+                          <p className="text-xl font-bold text-gray-900 dark:text-white">{kpis.totalToday}</p>
                         </div>
-                        <div className="p-1.5 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                          <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                          <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                         </div>
                       </div>
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
 
-                  <Card className="bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
-                    <CardContent className="p-3">
+                  <Card className="bg-gradient-to-br from-white to-red-50/50 dark:from-gray-800 dark:to-gray-700 rounded-xl shadow-sm border border-red-200 dark:border-red-700 hover:shadow-lg transition-all duration-300 hover:scale-105">
+                    <CardContent className="p-4">
                       <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">{t('appointmentDashboard.kpis.vitals')}</p>
-                          <p className="text-lg font-bold text-red-600 dark:text-red-400">{kpis.vitalsRequired}</p>
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wide">{t('appointmentDashboard.kpis.vitals')}</p>
+                          <p className="text-xl font-bold text-gray-900 dark:text-white">{kpis.vitalsRequired}</p>
                         </div>
-                        <div className="p-1.5 bg-red-100 dark:bg-red-900/20 rounded-lg">
-                          <Heart className="h-4 w-4 text-red-600 dark:text-red-400" />
+                        <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                          <Heart className="h-5 w-5 text-red-600 dark:text-red-400" />
                         </div>
                       </div>
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
 
-                  <Card className="bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
-                    <CardContent className="p-3">
+                  <Card className="bg-gradient-to-br from-white to-green-50/50 dark:from-gray-800 dark:to-gray-700 rounded-xl shadow-sm border border-green-200 dark:border-green-700 hover:shadow-lg transition-all duration-300 hover:scale-105">
+                    <CardContent className="p-4">
                       <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-medium text-gray-600 dark:text-gray-400">{t('appointmentDashboard.kpis.ready')}</p>
-                          <p className="text-lg font-bold text-green-600 dark:text-green-400">{kpis.readyConsultation}</p>
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wide">{t('appointmentDashboard.kpis.ready')}</p>
+                          <p className="text-xl font-bold text-gray-900 dark:text-white">{kpis.readyConsultation}</p>
                         </div>
-                        <div className="p-1.5 bg-green-100 dark:bg-green-900/20 rounded-lg">
-                          <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                          <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
                         </div>
                       </div>
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
 
                   <Card className="bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
                     <CardContent className="p-3">
@@ -505,20 +520,29 @@ export const AppointmentDashboard = () => {
           )}
         </div>
 
-                 {/* Main Content Area */}
-         <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                 {/* Enhanced Main Content Area */}
+         <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'current' | 'past' | 'future')} className="w-full">
-                         <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="current" className="flex items-center gap-2">
+                         <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4 bg-gradient-to-r from-gray-50 to-blue-50/30 dark:from-gray-800 dark:to-gray-700">
+              <TabsList className="grid w-full grid-cols-3 bg-white dark:bg-gray-800 p-1 rounded-lg shadow-sm">
+                <TabsTrigger 
+                  value="current" 
+                  className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200"
+                >
                   <Clock className="h-4 w-4" />
                   {t('appointmentDashboard.currentAppointments')}
                 </TabsTrigger>
-                <TabsTrigger value="past" className="flex items-center gap-2">
+                <TabsTrigger 
+                  value="past" 
+                  className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200"
+                >
                   <History className="h-4 w-4" />
                   {t('appointmentDashboard.pastHistory')}
                 </TabsTrigger>
-                <TabsTrigger value="future" className="flex items-center gap-2">
+                <TabsTrigger 
+                  value="future" 
+                  className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200"
+                >
                   <CalendarDays className="h-4 w-4" />
                   {t('appointmentDashboard.futureAppointments')}
                 </TabsTrigger>
@@ -544,47 +568,63 @@ export const AppointmentDashboard = () => {
                 </div>
               </div>
 
-              {/* Search and Filters */}
+              {/* Enhanced Search and Filters */}
               <div className="mb-6">
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                  <div className="flex flex-col lg:flex-row gap-4">
-              <div className="flex-1">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Patients</label>
-                <div className="relative">
+                <div className="bg-gradient-to-r from-gray-50 to-blue-50/30 dark:from-gray-800 dark:to-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      <Search className="h-5 w-5 text-blue-600" />
+                      Search & Filters
+                    </h3>
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-700">
+                      {filteredAppointments.length} results
+                    </Badge>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Search Patients</label>
+                      <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
+                        <Input
                           placeholder="Search by patient name, ID, or phone..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-10"
-                  />
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Filter by Doctor</label>
+                      <Select value={doctorFilter} onValueChange={setDoctorFilter}>
+                        <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                          <SelectValue placeholder="All Doctors" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">👥 All Doctors</SelectItem>
+                          {uniqueDoctors.map(doctor => (
+                            <SelectItem key={doctor} value={doctor}>👨‍⚕️ {doctor}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+
+                  </div>
                 </div>
               </div>
-                    <div className="lg:w-64">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Filter by Doctor</label>
-              <Select value={doctorFilter} onValueChange={setDoctorFilter}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="All Doctors" />
-                </SelectTrigger>
-                <SelectContent>
-                          <SelectItem value="all">👥 All Doctors</SelectItem>
-                  {uniqueDoctors.map(doctor => (
-                            <SelectItem key={doctor} value={doctor}>👨‍⚕️ {doctor}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            </div>
-            </div>
-        </div>
 
-              {/* Status Navigation */}
+              {/* Enhanced Status Navigation */}
           <div className="mb-6">
               <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Patient Journey Status</h3>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    Click any status to filter appointments
-                </div>
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-blue-600" />
+                    Patient Journey Status
+                  </h3>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-lg border border-blue-200 dark:border-blue-700">
+                    💡 Click any status to filter appointments
+                  </div>
               </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
                 <button
@@ -721,30 +761,44 @@ export const AppointmentDashboard = () => {
                 </div>
               </div>
 
-                             {/* Compact Appointments Table */}
-               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                 <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
+                             {/* Enhanced Appointments Table */}
+               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
+                 <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-600 bg-gradient-to-r from-gray-50 to-blue-50/30 dark:from-gray-700 dark:to-gray-600">
                   <div className="flex items-center justify-between">
-                                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                       {selectedStatus === 'all' ? 'All Appointments' : `${selectedStatus.replace('-', ' ').toUpperCase()} Appointments`}
-                     </h3>
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                      {filteredAppointments.length} results
-                    </Badge>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      <List className="h-5 w-5 text-blue-600" />
+                      {selectedStatus === 'all' ? 'All Appointments' : `${selectedStatus.replace('-', ' ').toUpperCase()} Appointments`}
+                    </h3>
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-700">
+                        {filteredAppointments.length} results
+                      </Badge>
+                      {selectedStatus !== 'all' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedStatus('all')}
+                          className="text-xs border-gray-300 hover:border-blue-400 hover:bg-blue-50 dark:border-gray-600 dark:hover:border-blue-500 dark:hover:bg-blue-900/20"
+                        >
+                          <X className="h-3 w-3 mr-1" />
+                          Clear Filter
+                        </Button>
+                      )}
+                    </div>
                   </div>
-              </div>
+                </div>
                 
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                                           <TableRow className="bg-gray-50 dark:bg-gray-700">
-                       <TableHead className="font-semibold text-gray-900 dark:text-white">Token</TableHead>
-                       <TableHead className="font-semibold text-gray-900 dark:text-white">Patient Details</TableHead>
-                       <TableHead className="font-semibold text-gray-900 dark:text-white">Doctor</TableHead>
-                       <TableHead className="font-semibold text-gray-900 dark:text-white">Time</TableHead>
-                       <TableHead className="font-semibold text-gray-900 dark:text-white">Status</TableHead>
-                       <TableHead className="font-semibold text-gray-900 dark:text-white">Actions</TableHead>
-                     </TableRow>
+                      <TableRow className="bg-gradient-to-r from-gray-50 to-blue-50/30 dark:from-gray-700 dark:to-gray-600">
+                        <TableHead className="font-semibold text-gray-900 dark:text-white px-6 py-4">Token</TableHead>
+                        <TableHead className="font-semibold text-gray-900 dark:text-white px-6 py-4">Patient Details</TableHead>
+                        <TableHead className="font-semibold text-gray-900 dark:text-white px-6 py-4">Doctor</TableHead>
+                        <TableHead className="font-semibold text-gray-900 dark:text-white px-6 py-4">Time</TableHead>
+                        <TableHead className="font-semibold text-gray-900 dark:text-white px-6 py-4">Status</TableHead>
+                        <TableHead className="font-semibold text-gray-900 dark:text-white px-6 py-4">Actions</TableHead>
+                      </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredAppointments.length === 0 ? (
@@ -763,48 +817,48 @@ export const AppointmentDashboard = () => {
                         </TableRow>
                       ) : (
                         filteredAppointments.map((appointment) => (
-                          <TableRow key={appointment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <Badge variant="outline" className="font-mono bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-700">
+                          <TableRow key={appointment.id} className="hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-all duration-200 border-b border-gray-100 dark:border-gray-700">
+                            <TableCell className="px-6 py-4">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="font-mono bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-700 px-3 py-1">
                                   #{appointment.tokenNo}
                                 </Badge>
                                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                               </div>
                             </TableCell>
-                            <TableCell>
-                              <div className="space-y-0.5">
-                                <div className="font-medium text-gray-900">{appointment.patientName}</div>
-                                <div className="flex items-center gap-1 text-xs text-gray-500">
-                                  <span className="font-mono">{appointment.patientId}</span>
+                            <TableCell className="px-6 py-4">
+                              <div className="space-y-1">
+                                <div className="font-medium text-gray-900 dark:text-white">{appointment.patientName}</div>
+                                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                  <span className="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{appointment.patientId}</span>
                                   <span>•</span>
-                                  <div className="flex items-center gap-0.5">
+                                  <div className="flex items-center gap-1">
                                     <Phone className="h-3 w-3" />
                                     {appointment.phone}
                                   </div>
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center">
-                                  <User className="h-4 w-4 text-blue-600" />
+                            <TableCell className="px-6 py-4">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                                  <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                                 </div>
-                                <span className="text-gray-700">{appointment.doctorName}</span>
+                                <span className="text-gray-700 dark:text-gray-300 font-medium">{appointment.doctorName}</span>
                               </div>
                             </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <Clock className="h-3 w-3 text-gray-400" />
-                                <span className="font-medium text-gray-900">{appointment.appointmentTime}</span>
+                            <TableCell className="px-6 py-4">
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4 text-blue-500" />
+                                <span className="font-medium text-gray-900 dark:text-white">{appointment.appointmentTime}</span>
                               </div>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="px-6 py-4">
                               {getStatusBadge(appointment.status, appointment)}
                             </TableCell>
-                            <TableCell>
-                              <div className="flex gap-1">
-                                <Button variant="outline" size="sm" className="hover:bg-blue-50">
+                            <TableCell className="px-6 py-4">
+                              <div className="flex gap-2">
+                                <Button variant="outline" size="sm" className="hover:bg-blue-50 dark:hover:bg-blue-900/20 border-blue-200 hover:border-blue-300 dark:border-blue-700 dark:hover:border-blue-600">
                                   <Eye className="h-3 w-3 mr-1" />
                                   View
                                 </Button>
@@ -813,7 +867,7 @@ export const AppointmentDashboard = () => {
                                     variant="outline" 
                                     size="sm"
                                     onClick={() => handleVitalsClick(appointment)}
-                                    className="text-red-600 border-red-300 hover:bg-red-50"
+                                    className="text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 dark:text-red-400 dark:border-red-600 dark:hover:border-red-500"
                                   >
                                     <Heart className="h-3 w-3 mr-1" />
                                     Vitals
