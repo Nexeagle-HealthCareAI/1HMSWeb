@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, 
   Plus, 
@@ -274,6 +275,7 @@ const mockFuturePatients: Patient[] = [
 ];
 
 export const PatientFlow = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
@@ -286,6 +288,11 @@ export const PatientFlow = () => {
     startDate: '',
     endDate: ''
   });
+
+  // Handle patient ID click to navigate to patient profile
+  const handlePatientIdClick = (patientId: string) => {
+    navigate(`/patient/${patientId}`);
+  };
 
   // Calculate KPIs
   const kpis = useMemo(() => {
@@ -650,7 +657,13 @@ export const PatientFlow = () => {
                               #{patient.tokenNo}
                             </TableCell>
                             <TableCell className="text-xs font-mono text-blue-600">
-                              {patient.patientId}
+                              <button
+                                onClick={() => handlePatientIdClick(patient.patientId)}
+                                className="hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                                title="Click to view patient profile"
+                              >
+                                {patient.patientId}
+                              </button>
                             </TableCell>
                             <TableCell>
                               <div>
@@ -821,7 +834,13 @@ export const PatientFlow = () => {
                               #{patient.tokenNo}
                             </TableCell>
                             <TableCell className="text-xs font-mono text-blue-600">
-                              {patient.patientId}
+                              <button
+                                onClick={() => handlePatientIdClick(patient.patientId)}
+                                className="hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                                title="Click to view patient profile"
+                              >
+                                {patient.patientId}
+                              </button>
                             </TableCell>
                             <TableCell>
                               <div>
@@ -994,7 +1013,13 @@ export const PatientFlow = () => {
                               #{patient.tokenNo}
                             </TableCell>
                             <TableCell className="text-xs font-mono text-blue-600">
-                              {patient.patientId}
+                              <button
+                                onClick={() => handlePatientIdClick(patient.patientId)}
+                                className="hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                                title="Click to view patient profile"
+                              >
+                                {patient.patientId}
+                              </button>
                             </TableCell>
                             <TableCell>
                               <div>

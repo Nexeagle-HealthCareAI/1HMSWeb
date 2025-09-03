@@ -6,6 +6,7 @@ import { BrowserRouter } from "react-router-dom";
 import { StoreProvider } from "@/store";
 import { InactivityProvider } from "@/components/providers/InactivityProvider";
 import { AppRoutes } from "./AppRoutes";
+import { Toaster as SonnerToaster } from 'sonner';
 import '@/i18n'; // Initialize i18n
 
 const queryClient = new QueryClient({
@@ -26,6 +27,7 @@ const App = () => (
       <InactivityProvider>
         <TooltipProvider>
           <Toaster />
+          <SonnerToaster />
           <BrowserRouter>
             <AppRoutes />
           </BrowserRouter>

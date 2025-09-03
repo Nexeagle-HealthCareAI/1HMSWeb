@@ -5,9 +5,14 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useSaveVitals } from '../hooks/useSaveVitals';
+import { useAuthStore } from '@/store/authStore';
+import { toast } from 'sonner';
 
 interface VitalsFormProps {
   patientName: string;
+  appointmentId: string;
+  patientId: string;
   onSubmit: (vitalsData: any) => void;
   onCancel: () => void;
   hideSkipButton?: boolean;
@@ -15,10 +20,16 @@ interface VitalsFormProps {
 
 export const VitalsForm: React.FC<VitalsFormProps> = ({
   patientName,
+  appointmentId,
+  patientId,
   onSubmit,
   onCancel,
   hideSkipButton = false
 }) => {
+  console.log('VitalsForm received props:', { patientName, appointmentId, patientId });
+  const { mutate: saveVitals, isPending } = useSaveVitals();
+  const { userId } = useAuthStore();
+  
   const [vitalsData, setVitalsData] = useState({
     systolic: '',
     diastolic: '',
@@ -109,10 +120,53 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
     e.preventDefault();
     if (validateVitals()) {
       const bmi = calculateBMI();
-      onSubmit({
-        ...vitalsData,
-        bmi,
-        bmiCategory: bmi ? getBMICategory(bmi).category : ''
+      
+      // Prepare vitals data for API
+      const apiVitalsData = {
+        appointmentId,
+        patientId,
+        vitalsJson: {
+          bp: {
+            sys: parseInt(vitalsData.systolic) || 0,
+            dia: parseInt(vitalsData.diastolic) || 0
+          },
+          pulse: parseInt(vitalsData.heartRate) || 0,
+          tempC: vitalsData.temperatureUnit === 'C' 
+            ? parseFloat(vitalsData.temperature) || 0
+            : ((parseFloat(vitalsData.temperature) || 0) - 32) * 5/9, // Convert F to C
+          spo2: parseInt(vitalsData.oxygenSaturation) || 0,
+          heightCm: vitalsData.heightUnit === 'cm' 
+            ? parseFloat(vitalsData.height) || 0
+            : parseFloat(vitalsData.height) * 30.48, // Convert ft to cm
+          weightKg: vitalsData.weightUnit === 'kg' 
+            ? parseFloat(vitalsData.weight) || 0
+            : parseFloat(vitalsData.weight) * 0.453592, // Convert lbs to kg
+          bmi: parseFloat(bmi) || 0
+        },
+        recordedBy: userId || ''
+      };
+      
+      console.log('Sending vitals API request with:', apiVitalsData);
+
+      // Call the API to save vitals
+      saveVitals(apiVitalsData, {
+        onSuccess: (response) => {
+          if (response.success) {
+            toast.success('Vitals saved successfully!');
+            // Call the original onSubmit with the formatted vitals data
+            onSubmit({
+              ...vitalsData,
+              bmi,
+              bmiCategory: bmi ? getBMICategory(bmi).category : ''
+            });
+          } else {
+            toast.error(response.message || 'Failed to save vitals');
+          }
+        },
+        onError: (error) => {
+          console.error('Failed to save vitals:', error);
+          toast.error('Failed to save vitals. Please try again.');
+        }
       });
     }
   };
@@ -367,9 +421,10 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
             )}
             <Button
               type="submit"
+              disabled={isPending}
               className={`${hideSkipButton ? 'px-8' : 'flex-1'} bg-healthcare-primary hover:bg-healthcare-primary/90 text-base py-2`}
             >
-              Save Vitals
+              {isPending ? 'Saving...' : 'Save Vitals'}
             </Button>
           </div>
         </form>

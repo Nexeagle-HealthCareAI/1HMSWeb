@@ -80,7 +80,7 @@ export type AppStore = AppState & AppActions;
 
 // Initial state
 const initialState: AppState = {
-  sidebarCollapsed: false,
+  sidebarCollapsed: true,
   currentRoute: '/',
   breadcrumbs: [],
   globalLoading: false,

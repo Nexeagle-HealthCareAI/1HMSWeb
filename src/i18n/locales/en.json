@@ -941,7 +941,8 @@
     "chooseDepartment": "Choose a department for your appointment",
     "noDepartmentsAvailable": "No departments available",
     "loadingDepartments": "Loading departments...",
-    "errorLoadingDepartments": "Error loading departments"
+    "errorLoadingDepartments": "Error loading departments",
+    "loadingHospitalInfo": "Loading hospital information..."
   },
   "languages": {
     "en": "English",

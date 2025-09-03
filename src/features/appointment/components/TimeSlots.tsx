@@ -1,21 +1,15 @@
-import React, { useState } from 'react';
-import { Clock, Edit, Calendar, X } from 'lucide-react';
-import { TimeSlot } from '../AppointmentBooking';
-import { Button } from '../ui/button';
-import { Card } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
-import { RescheduleDialog } from './RescheduleDialog';
-import { EditPatientDialog } from './EditPatientDialog';
-import { CancelAppointmentDialog } from './CancelAppointmentDialog';
+import React from 'react';
+import { Clock } from 'lucide-react';
+import { TimeSlot } from './AppointmentBooking';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 interface TimeSlotsProps {
   timeSlots: TimeSlot[];
   selectedShift: string;
   onSlotSelect: (slot: TimeSlot) => void;
-  onSlotUpdate: (slot: TimeSlot) => void;
-  onSlotCancel: (slotId: string) => void;
 }
 
 const shiftTimes = {
@@ -28,34 +22,12 @@ const shiftTimes = {
 export const TimeSlots: React.FC<TimeSlotsProps> = ({
   timeSlots,
   selectedShift,
-  onSlotSelect,
-  onSlotUpdate,
-  onSlotCancel
+  onSlotSelect
 }) => {
-  const [showReschedule, setShowReschedule] = useState(false);
-  const [showEdit, setShowEdit] = useState(false);
-  const [showCancel, setShowCancel] = useState(false);
-  const [selectedSlotForAction, setSelectedSlotForAction] = useState<TimeSlot | null>(null);
-
   const currentShiftTimes = shiftTimes[selectedShift as keyof typeof shiftTimes] || [];
   const currentShiftSlots = timeSlots.filter(slot => 
     currentShiftTimes.includes(slot.time)
   );
-
-  const handleReschedule = (slot: TimeSlot) => {
-    setSelectedSlotForAction(slot);
-    setShowReschedule(true);
-  };
-
-  const handleEdit = (slot: TimeSlot) => {
-    setSelectedSlotForAction(slot);
-    setShowEdit(true);
-  };
-
-  const handleCancel = (slot: TimeSlot) => {
-    setSelectedSlotForAction(slot);
-    setShowCancel(true);
-  };
 
   const formatTime = (time: string) => {
     const [hour, minute] = time.split(':');
@@ -78,10 +50,10 @@ export const TimeSlots: React.FC<TimeSlotsProps> = ({
               <TooltipTrigger asChild>
                 <Card
                   className={cn(
-                    "p-4 cursor-pointer transition-all duration-200 border-2",
+                    "p-4 transition-all duration-200 border-2",
                     slot.isBooked 
-                      ? "bg-slot-booked border-slot-booked-border hover:bg-slot-booked-hover hover:shadow-md" 
-                      : "bg-slot-available border-slot-available-border hover:bg-slot-available-hover hover:shadow-md"
+                      ? "bg-slot-booked border-slot-booked-border hover:bg-slot-booked-hover hover:shadow-md cursor-pointer" // Booked slots
+                      : "bg-slot-available border-slot-available-border hover:bg-slot-available-hover hover:shadow-md cursor-pointer" // Available slots
                   )}
                   onClick={() => !slot.isBooked && onSlotSelect(slot)}
                 >
@@ -102,45 +74,7 @@ export const TimeSlots: React.FC<TimeSlotsProps> = ({
                       </Badge>
                     </div>
                     
-                    {slot.isBooked && slot.patientInfo && (
-                      <div className="mt-3 pt-2 border-t border-border">
-                        <div className="flex gap-1 justify-center">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-2 text-xs"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleReschedule(slot);
-                            }}
-                          >
-                            <Calendar className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-2 text-xs"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEdit(slot);
-                            }}
-                          >
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-2 text-xs text-red-600 hover:text-red-700"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCancel(slot);
-                            }}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    )}
+
                   </div>
                 </Card>
               </TooltipTrigger>
@@ -167,51 +101,7 @@ export const TimeSlots: React.FC<TimeSlotsProps> = ({
         )}
       </div>
 
-      {/* Dialogs */}
-      {showReschedule && selectedSlotForAction && (
-        <RescheduleDialog
-          slot={selectedSlotForAction}
-          onConfirm={(newSlot) => {
-            onSlotUpdate(newSlot);
-            setShowReschedule(false);
-            setSelectedSlotForAction(null);
-          }}
-          onCancel={() => {
-            setShowReschedule(false);
-            setSelectedSlotForAction(null);
-          }}
-        />
-      )}
 
-      {showEdit && selectedSlotForAction && (
-        <EditPatientDialog
-          slot={selectedSlotForAction}
-          onConfirm={(updatedSlot) => {
-            onSlotUpdate(updatedSlot);
-            setShowEdit(false);
-            setSelectedSlotForAction(null);
-          }}
-          onCancel={() => {
-            setShowEdit(false);
-            setSelectedSlotForAction(null);
-          }}
-        />
-      )}
-
-      {showCancel && selectedSlotForAction && (
-        <CancelAppointmentDialog
-          slot={selectedSlotForAction}
-          onConfirm={() => {
-            onSlotCancel(selectedSlotForAction.id);
-            setShowCancel(false);
-            setSelectedSlotForAction(null);
-          }}
-          onCancel={() => {
-            setShowCancel(false);
-            setSelectedSlotForAction(null);
-          }}
-        />
-      )}
     </TooltipProvider>
   );
 };

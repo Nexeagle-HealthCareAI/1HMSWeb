@@ -1,5 +1,11 @@
 import { apiClient, ApiResponse, PaginatedResponse } from '@/services/axiosClient';
 
+// Utility function to generate unique patient ID
+export const generatePatientId = (): string => {
+  const randomDigits = Math.floor(Math.random() * 100000000).toString().padStart(8, '0');
+  return `PTID${randomDigits}`;
+};
+
 // Types
 export interface Appointment {
   id: string;
@@ -143,6 +149,36 @@ export interface DoctorSlotsResponse {
   shiftInfo: ShiftInfo[];
 }
 
+export interface BookedSlotsResponse {
+  doctorId: string;
+  date: string;
+  bookedSlots: string[];
+}
+
+export interface PatientVitalsRequest {
+  appointmentId: string;
+  patientId: string;
+  vitalsJson: {
+    bp: {
+      sys: number;
+      dia: number;
+    };
+    pulse: number;
+    tempC: number;
+    spo2: number;
+    heightCm: number;
+    weightKg: number;
+    bmi: number;
+  };
+  recordedBy: string;
+}
+
+export interface PatientVitalsResponse {
+  success: boolean;
+  message: string;
+  vitalsId?: string;
+}
+
 export interface RegisterAppointmentRequest {
   patient: {
     fullName: string;
@@ -154,20 +190,24 @@ export interface RegisterAppointmentRequest {
     pincode: string;
     insuranceId: string;
     paymentMode: string;
+    patientId: string;
   };
   doctorId: string;
   apptDate: string;
   startAt: string;
+  reason: string;
   slotTimeInMinutes: number;
+  userId: string;
 }
 
 export interface RegisterAppointmentResponse {
   appointmentId: string;
   patientId: string;
+  tokenNumber: string;
 }
 
 export interface PatientSearchRequest {
-  by: 'patientId' | 'patientName' | 'appointmentId' | 'contact';
+  by: 'patientId' | 'name' | 'appointmentId' | 'contact';
   q: string;
   scope?: 'local' | 'global';
 }
@@ -177,20 +217,55 @@ export interface PatientSearchItem {
   fullName: string;
   mobile: string;
   sex: string;
+  age: number;
   dateOfBirth: string;
+  address: string;
+  city: string;
+  pincode: string;
   lastRegistrationAt: string;
   lastRegistrationId: string;
   matched: {
     by: string;
     value: string;
   };
-  AppointmentDate: string | null;
-  "Token No": string | null;
+  appointmentDate: string | null;
+  appointmentId: string | null;
+  tokenNumber: string;
 }
 
 export interface PatientSearchResponse {
   items: PatientSearchItem[];
-  totalpatient: number;
+  totalPatients: number;
+}
+
+export interface AppointmentDetailsResponse {
+  items: AppointmentDetail[];
+}
+
+export interface AppointmentDetail {
+  appointmentId: string;
+  patientId: string;
+  patientFullName: string;
+  patientMobile: string;
+  patientSex: string;
+  patientAgeYears: number;
+  doctorId: string;
+  doctorName: string | null;
+  appointmentDate: string;
+  startAt: string;
+  endAt: string;
+  finalStatusCode: string;
+  reason: string;
+  insuranceId: string | null;
+  paymentMode: string;
+  lastStatusAt: string;
+  createdAt: string;
+  token: {
+    tokenId: string;
+    tokenNumber: number;
+    status: string | null;
+    createdAt: string;
+  };
 }
 
 // Appointment API service
@@ -221,6 +296,12 @@ export const appointmentApi = {
     return apiClient.get(url);
   },
 
+  // Get booked slots for a doctor on a specific date
+  getBookedSlots: (doctorId: string, date: string): Promise<BookedSlotsResponse> => {
+    const url = `/appointments/patient-booked-slots?doctorId=${doctorId}&date=${date}`;
+    return apiClient.get(url);
+  },
+
   // Register appointment
   registerAppointment: (hospitalId: string, request: RegisterAppointmentRequest): Promise<RegisterAppointmentResponse> => {
     const url = `/appointments/register/${hospitalId}?allocateToken=true`;
@@ -230,6 +311,23 @@ export const appointmentApi = {
   // Search patients
   searchPatients: (request: PatientSearchRequest): Promise<PatientSearchResponse> => {
     const url = `/appointments/patient-details/search?by=${request.by}&q=${encodeURIComponent(request.q)}&scope=${request.scope || 'local'}`;
+    return apiClient.get(url);
+  },
+
+  // Save patient vitals
+  savePatientVitals: (request: PatientVitalsRequest): Promise<PatientVitalsResponse> => {
+    const url = `/appointments/patient-vitals`;
+    return apiClient.post(url, request);
+  },
+
+  // Get appointment details
+  getAppointmentDetails: (params: {
+    status: string;
+    startDate: string;
+    endDate: string;
+    hospitalId: string;
+  }): Promise<AppointmentDetailsResponse> => {
+    const url = `/appointments/patient-appointment-details?status=${params.status}&startDate=${params.startDate}&endDate=${params.endDate}&hospitalId=${params.hospitalId}`;
     return apiClient.get(url);
   }
 };

@@ -41,7 +41,8 @@ import {
   Search,
   FileText,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  History as HistoryIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -65,19 +66,19 @@ interface NavigationItem {
   name: string;
   icon: React.ComponentType<any>;
   path: string;
+  subItems?: NavigationItem[];
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuthStore();
-  const { resetAppState } = useAppStore();
+  const { resetAppState, sidebarCollapsed, setSidebarCollapsed } = useAppStore();
   const { resetUserState } = useUserStore();
   const { clearNotifications } = useNotificationStore();
   const { resetColors } = useThemeStore();
   const queryClient = useQueryClient();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [currentPage, setCurrentPage] = useState('dashboard');
   const { currentLanguage, isRTL } = useLanguage();
   const { t } = useTranslation();
@@ -105,18 +106,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [sidebarCollapsed]);
 
-  // Save sidebar state to localStorage
-  useEffect(() => {
-    localStorage.setItem('sidebarCollapsed', JSON.stringify(sidebarCollapsed));
-  }, [sidebarCollapsed]);
 
-  // Load sidebar state from localStorage on mount
-  useEffect(() => {
-    const savedState = localStorage.getItem('sidebarCollapsed');
-    if (savedState !== null) {
-      setSidebarCollapsed(JSON.parse(savedState));
-    }
-  }, []);
 
   // Fetch user details for profile dropdown
   const { data: userDetailsResponse } = useUserDetails(userId || '');
@@ -134,7 +124,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     { id: 'admin', name: t('header.adminPanel'), icon: Settings, path: '/admin' },
     { id: 'dashboard', name: t('header.clinicalDashboard'), icon: Activity, path: '/dashboard' },    
     { id: 'calendar', name: t('header.doctorCalendar'), icon: CalendarDays, path: '/calendar' },
-    { id: 'appointments', name: t('header.appointmentScheduler'), icon: Calendar, path: '/appointment-dashboard' },
+    { 
+      id: 'appointments', 
+      name: t('header.appointmentScheduler'), 
+      icon: Calendar, 
+      path: '/appointment-dashboard',
+      
+    },
     { id: 'doc-ai', name: t('header.docAI'), icon: Bot, path: '/doc-ai' },
   ];
 
@@ -248,7 +244,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
           
           {navigation.map((item, index) => {
-            const isActive = currentPage === item.id;
+            const isActive = currentPage === item.id || currentPage.startsWith(item.id + '-');
             return (
               <div key={item.id} className="relative group overflow-hidden" style={{ animationDelay: `${index * 50}ms` }}>
                 <Button
@@ -296,7 +292,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                       )}
                     </div>
                   )}
-                </Button>
+                </Button>                            
                 
                 {/* Enhanced hover tooltip for collapsed state */}
                 {sidebarCollapsed && (
@@ -334,64 +330,35 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </div>
         )}
 
-        {/* Bottom Section - Profile & Logout */}
-        <div className={`absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg overflow-hidden`}>
-          {/* Profile Section */}
-          {!sidebarCollapsed && (
-            <div className="mb-4 p-4 bg-gradient-to-br from-gray-50 to-white dark:from-gray-700 dark:to-gray-600 rounded-xl border border-gray-200 dark:border-gray-500 shadow-sm">
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <Avatar className="h-12 w-12 ring-2 ring-blue-500/30 dark:ring-blue-400/40 shadow-lg">
-                    <AvatarImage src="/avatars/01.png" alt="User" />
-                    <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 dark:from-blue-500 dark:to-purple-500 text-white text-sm font-bold">
-                      {getUserDisplayName().charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  {/* Online indicator */}
-                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-700 rounded-full animate-pulse shadow-sm"></div>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
-                    {getUserDisplayName()}
-                  </p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
-                    <p className="text-xs font-semibold text-blue-800 dark:text-blue-100 bg-blue-100/80 dark:bg-blue-900/60 px-3 py-1.5 rounded-full border border-blue-200 dark:border-blue-700">
-                      {userRole}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {/* Logout Button */}
-          <Button
-            variant="ghost"
-            className={`
-              w-full group
-              ${sidebarCollapsed ? 'justify-center px-3 h-14 w-14 mx-auto rounded-xl' : 'justify-start gap-4 h-14 px-5 rounded-xl'}
-              text-gray-700 dark:text-gray-200 hover:text-red-600 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 border border-gray-200 dark:border-gray-500 hover:border-red-300 dark:hover:border-red-600
-            `}
-            onClick={handleLogout}
-            title={sidebarCollapsed ? "Logout" : undefined}
-          >
-            <div className={`
-              relative flex items-center justify-center rounded-lg p-3
-              bg-red-100 dark:bg-red-800/60 text-red-600 dark:text-red-300 
-              group-hover:bg-red-200 dark:group-hover:bg-red-700/80
-            `}>
-              <LogOut className={`${sidebarCollapsed ? 'h-6 w-6' : 'h-5 w-5'}`} />
-            </div>
-            
-            {!sidebarCollapsed && (
-              <div className="flex flex-col items-start">
-                <span className="font-semibold text-sm text-gray-900 dark:text-white">Logout</span>
-                <span className="text-xs text-red-600 dark:text-red-400">Sign out safely</span>
-              </div>
-            )}
-          </Button>
-        </div>
+                 {/* Bottom Section - Logout Only */}
+         <div className={`absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg overflow-hidden`}>
+           {/* Logout Button */}
+           <Button
+             variant="ghost"
+             className={`
+               w-full group
+               ${sidebarCollapsed ? 'justify-center px-3 h-14 w-14 mx-auto rounded-xl' : 'justify-start gap-4 h-14 px-5 rounded-xl'}
+               text-gray-700 dark:text-gray-200 hover:text-red-600 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 border border-gray-200 dark:border-gray-500 hover:border-red-300 dark:hover:border-red-600
+             `}
+             onClick={handleLogout}
+             title={sidebarCollapsed ? "Logout" : undefined}
+           >
+             <div className={`
+               relative flex items-center justify-center rounded-lg p-3
+               bg-red-100 dark:bg-red-800/60 text-red-600 dark:text-red-300 
+               group-hover:bg-red-200 dark:group-hover:bg-red-700/80
+             `}>
+               <LogOut className={`${sidebarCollapsed ? 'h-6 w-6' : 'h-5 w-5'}`} />
+             </div>
+             
+             {!sidebarCollapsed && (
+               <div className="flex flex-col items-start">
+                 <span className="font-semibold text-sm text-gray-900 dark:text-white">Logout</span>
+                 <span className="text-xs text-red-600 dark:text-red-400">Sign out safely</span>
+               </div>
+             )}
+           </Button>
+         </div>
         </div>
       </div>
 

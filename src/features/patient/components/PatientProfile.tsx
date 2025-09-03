@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   User, 
@@ -12,19 +12,23 @@ import {
   Download,
   Printer,
   Plus,
-  Settings
+  Settings,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
-import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Badge } from './ui/badge';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { Separator } from './ui/separator';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
+
+
 
 interface PatientProfileProps {
   patientId: string;
@@ -53,6 +57,15 @@ interface Prescription {
   visitType: string;
   symptoms: string;
   diagnosis: string;
+  vitals: {
+    bp: string;
+    pulse: string;
+    temp: string;
+    weight: string;
+    height: string;
+    spo2: string;
+    respiratoryRate: string;
+  };
   medications: {
     name: string;
     dosage: string;
@@ -99,6 +112,15 @@ const samplePrescriptions: Prescription[] = [
     visitType: 'Follow-up',
     symptoms: 'Chest pain, shortness of breath',
     diagnosis: 'Hypertensive cardiovascular disease (I11.9)',
+         vitals: {
+       bp: '140/90',
+       pulse: '72',
+       temp: '98.6°F',
+       weight: '75kg',
+       height: '170cm',
+       spo2: '98%',
+       respiratoryRate: '16'
+     },
     medications: [
       {
         name: 'Amlodipine',
@@ -151,10 +173,60 @@ export const PatientProfile: React.FC<PatientProfileProps> = ({ patientId, onClo
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [showCustomizePrescription, setShowCustomizePrescription] = useState(false);
+  const [fullScreenPrescription, setFullScreenPrescription] = useState<Prescription | null>(null);
+  const [editingVitals, setEditingVitals] = useState<string | null>(null);
+  const [vitalsTimeout, setVitalsTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // Handle escape key to exit full screen
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && fullScreenPrescription) {
+        setFullScreenPrescription(null);
+      }
+    };
+
+    if (fullScreenPrescription) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [fullScreenPrescription]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (vitalsTimeout) {
+        clearTimeout(vitalsTimeout);
+      }
+    };
+  }, [vitalsTimeout]);
 
   const handleSave = () => {
     setIsEditing(false);
     // Save logic here
+  };
+
+  // Auto-save vitals after user stops typing
+  const handleVitalsChange = (prescriptionId: string, field: keyof Prescription['vitals'], value: string) => {
+    // Update the prescription with new vitals value
+    const updatedPrescriptions = prescriptions.map(p => 
+      p.id === prescriptionId 
+        ? { ...p, vitals: { ...p.vitals, [field]: value } }
+        : p
+    );
+    
+    // Clear existing timeout
+    if (vitalsTimeout) {
+      clearTimeout(vitalsTimeout);
+    }
+    
+    // Set new timeout for auto-save
+    const timeout = setTimeout(() => {
+      // Here you would typically make an API call to save the vitals
+      console.log(`Auto-saving vitals for prescription ${prescriptionId}:`, field, value);
+      // For now, we'll just log it. In a real app, you'd make an API call here
+    }, 1000); // 1 second delay
+    
+    setVitalsTimeout(timeout);
   };
 
   const getStatusBadge = (status: LabTest['status']) => {
@@ -233,7 +305,7 @@ export const PatientProfile: React.FC<PatientProfileProps> = ({ patientId, onClo
         {/* Content */}
         <div className="flex-1 overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-            <TabsList className="grid w-full grid-cols-4 mx-4 mt-4">
+            <TabsList className="grid w-full grid-cols-5 mx-4 mt-4">
               <TabsTrigger value="profile" className="gap-2">
                 <User className="h-4 w-4" />
                 <span className="hidden sm:inline">Patient History</span>
@@ -243,6 +315,11 @@ export const PatientProfile: React.FC<PatientProfileProps> = ({ patientId, onClo
                 <FileText className="h-4 w-4" />
                 <span className="hidden sm:inline">E-Prescription</span>
                 <span className="sm:hidden">Rx</span>
+              </TabsTrigger>
+              <TabsTrigger value="lab" className="gap-2">
+                <TestTube className="h-4 w-4" />
+                <span className="hidden sm:inline">Lab Tests</span>
+                <span className="sm:hidden">Lab</span>
               </TabsTrigger>
               <TabsTrigger value="treatment" className="gap-2">
                 <Calendar className="h-4 w-4" />
@@ -369,6 +446,16 @@ export const PatientProfile: React.FC<PatientProfileProps> = ({ patientId, onClo
                           </div>
                         </div>
                         <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => setFullScreenPrescription(prescription)}
+                            title="View in full screen"
+                            className="hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors"
+                          >
+                            <Maximize2 className="h-3 w-3 mr-1" />
+                            <span className="text-xs">Full Screen</span>
+                          </Button>
                           <Button size="sm" variant="outline">
                             <Download className="h-3 w-3" />
                           </Button>
@@ -379,21 +466,100 @@ export const PatientProfile: React.FC<PatientProfileProps> = ({ patientId, onClo
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         <div>
+                           <Label>Symptoms</Label>
+                           <p className="text-sm">{prescription.symptoms}</p>
+                         </div>
+                         <div>
+                           <Label>Diagnosis</Label>
+                           <p className="text-sm font-medium">{prescription.diagnosis}</p>
+                         </div>
+                       </div>
+                       
+                       <Separator />
+                       
+                                               {/* Compact Vitals Section - Single Row */}
                         <div>
-                          <Label>Symptoms</Label>
-                          <p className="text-sm">{prescription.symptoms}</p>
+                          <Label className="text-sm font-medium mb-2">Vitals</Label>
+                          <div className="grid grid-cols-7 gap-1 text-xs min-w-0">
+                            <div className="flex flex-col items-center p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded border min-w-0">
+                              <span className="font-medium text-blue-700 dark:text-blue-300 text-xs">BP</span>
+                              <input
+                                type="text"
+                                value={prescription.vitals.bp}
+                                onChange={(e) => handleVitalsChange(prescription.id, 'bp', e.target.value)}
+                                className="w-full text-center bg-transparent border-none text-blue-900 dark:text-blue-100 focus:outline-none focus:ring-1 focus:ring-blue-300 text-xs"
+                                placeholder="--/--"
+                              />
+                            </div>
+                            <div className="flex flex-col items-center p-1.5 bg-green-50 dark:bg-green-900/20 rounded border min-w-0">
+                              <span className="font-medium text-green-700 dark:text-green-300 text-xs">Pulse</span>
+                              <input
+                                type="text"
+                                value={prescription.vitals.pulse}
+                                onChange={(e) => handleVitalsChange(prescription.id, 'pulse', e.target.value)}
+                                className="w-full text-center bg-transparent border-none text-green-900 dark:text-green-100 focus:outline-none focus:ring-1 focus:ring-green-300 text-xs"
+                                placeholder="--"
+                              />
+                            </div>
+                            <div className="flex flex-col items-center p-1.5 bg-yellow-50 dark:bg-yellow-900/20 rounded border min-w-0">
+                              <span className="font-medium text-yellow-700 dark:text-yellow-300 text-xs">Temp</span>
+                              <input
+                                type="text"
+                                value={prescription.vitals.temp}
+                                onChange={(e) => handleVitalsChange(prescription.id, 'temp', e.target.value)}
+                                className="w-full text-center bg-transparent border-none text-yellow-900 dark:text-yellow-100 focus:outline-none focus:ring-1 focus:ring-yellow-300 text-xs"
+                                placeholder="--°F"
+                              />
+                            </div>
+                            <div className="flex flex-col items-center p-1.5 bg-purple-50 dark:bg-purple-900/20 rounded border min-w-0">
+                              <span className="font-medium text-purple-700 dark:text-purple-300 text-xs">Weight</span>
+                              <input
+                                type="text"
+                                value={prescription.vitals.weight}
+                                onChange={(e) => handleVitalsChange(prescription.id, 'weight', e.target.value)}
+                                className="w-full text-center bg-transparent border-none text-purple-900 dark:text-purple-100 focus:outline-none focus:ring-1 focus:ring-purple-300 text-xs"
+                                placeholder="--kg"
+                              />
+                            </div>
+                            <div className="flex flex-col items-center p-1.5 bg-indigo-50 dark:bg-indigo-900/20 rounded border min-w-0">
+                              <span className="font-medium text-indigo-700 dark:text-indigo-300 text-xs">Height</span>
+                              <input
+                                type="text"
+                                value={prescription.vitals.height}
+                                onChange={(e) => handleVitalsChange(prescription.id, 'height', e.target.value)}
+                                className="w-full text-center bg-transparent border-none text-indigo-900 dark:text-indigo-100 focus:outline-none focus:ring-1 focus:ring-indigo-300 text-xs"
+                                placeholder="--cm"
+                              />
+                            </div>
+                            <div className="flex flex-col items-center p-1.5 bg-red-50 dark:bg-red-900/20 rounded border min-w-0">
+                              <span className="font-medium text-red-700 dark:text-red-300 text-xs">SpO2</span>
+                              <input
+                                type="text"
+                                value={prescription.vitals.spo2}
+                                onChange={(e) => handleVitalsChange(prescription.id, 'spo2', e.target.value)}
+                                className="w-full text-center bg-transparent border-none text-red-900 dark:text-red-100 focus:outline-none focus:ring-1 focus:ring-red-300 text-xs"
+                                placeholder="--%"
+                              />
+                            </div>
+                            <div className="flex flex-col items-center p-1.5 bg-orange-50 dark:bg-orange-900/20 rounded border min-w-0">
+                              <span className="font-medium text-orange-700 dark:text-orange-300 text-xs">RR</span>
+                              <input
+                                type="text"
+                                value={prescription.vitals.respiratoryRate}
+                                onChange={(e) => handleVitalsChange(prescription.id, 'respiratoryRate', e.target.value)}
+                                className="w-full text-center bg-transparent border-none text-orange-900 dark:text-orange-100 focus:outline-none focus:ring-1 focus:ring-orange-300 text-xs"
+                                placeholder="--"
+                              />
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <Label>Diagnosis</Label>
-                          <p className="text-sm font-medium">{prescription.diagnosis}</p>
-                        </div>
-                      </div>
-                      
-                      <Separator />
-                      
-                      <div>
-                        <Label>Medications</Label>
+                       
+                       <Separator />
+                       
+                       <div>
+                         <Label>Medications</Label>
                         <div className="mt-2 space-y-2">
                           {prescription.medications.map((med, index) => (
                             <div key={index} className="p-3 bg-muted rounded-lg">
@@ -657,7 +823,180 @@ export const PatientProfile: React.FC<PatientProfileProps> = ({ patientId, onClo
             </Card>
           </div>
         )}
-      </div>
-    </div>
-  );
-};
+
+        {/* Full Screen Prescription Modal */}
+        {fullScreenPrescription && (
+          <div className="fixed inset-0 bg-black/90 z-70 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-6xl h-[95vh] flex flex-col shadow-2xl">
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    E-Prescription - {fullScreenPrescription.id}
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    {fullScreenPrescription.date.toLocaleDateString()} • {fullScreenPrescription.doctor}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => setFullScreenPrescription(null)}
+                    title="Exit full screen"
+                  >
+                    <Minimize2 className="h-4 w-4" />
+                    Exit Full Screen
+                  </Button>
+                  <Button size="sm" variant="outline">
+                    <Download className="h-4 w-4" />
+                    Download
+                  </Button>
+                  <Button size="sm" variant="outline">
+                    <Printer className="h-4 w-4" />
+                    Print
+                  </Button>
+                </div>
+              </div>
+
+              {/* Prescription Content */}
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="max-w-4xl mx-auto space-y-8">
+                  {/* Patient Information */}
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Patient Information</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">Name:</span>
+                        <p className="text-gray-900 dark:text-white">{patient.name}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">Age:</span>
+                        <p className="text-gray-900 dark:text-white">{patient.age} years</p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">Gender:</span>
+                        <p className="text-gray-900 dark:text-white">{patient.gender}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">Blood Group:</span>
+                        <p className="text-gray-900 dark:text-white">{patient.bloodGroup}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                                     {/* Visit Details */}
+                   <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6">
+                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Visit Details</h3>
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                       <div>
+                         <span className="font-medium text-gray-700 dark:text-gray-300">Visit Type:</span>
+                         <p className="text-gray-900 dark:text-white">{fullScreenPrescription.visitType}</p>
+                       </div>
+                       <div>
+                         <span className="font-medium text-gray-700 dark:text-gray-300">Date:</span>
+                         <p className="text-gray-900 dark:text-white">{fullScreenPrescription.date.toLocaleDateString()}</p>
+                       </div>
+                       <div>
+                         <span className="font-medium text-gray-700 dark:text-gray-300">Doctor:</span>
+                         <p className="text-gray-900 dark:text-white">{fullScreenPrescription.doctor}</p>
+                       </div>
+                     </div>
+                   </div>
+
+                                       {/* Vitals Section */}
+                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Vitals</h3>
+                      <div className="grid grid-cols-3 md:grid-cols-7 gap-4 text-sm">
+                        <div className="text-center">
+                          <span className="font-medium text-gray-700 dark:text-gray-300 block mb-1">Blood Pressure</span>
+                          <p className="text-gray-900 dark:text-white font-semibold">{fullScreenPrescription.vitals.bp}</p>
+                        </div>
+                        <div className="text-center">
+                          <span className="font-medium text-gray-700 dark:text-gray-300 block mb-1">Pulse</span>
+                          <p className="text-gray-900 dark:text-white font-semibold">{fullScreenPrescription.vitals.pulse}</p>
+                        </div>
+                        <div className="text-center">
+                          <span className="font-medium text-gray-700 dark:text-gray-300 block mb-1">Temperature</span>
+                          <p className="text-gray-900 dark:text-white font-semibold">{fullScreenPrescription.vitals.temp}</p>
+                        </div>
+                        <div className="text-center">
+                          <span className="font-medium text-gray-700 dark:text-gray-300 block mb-1">Weight</span>
+                          <p className="text-gray-900 dark:text-white font-semibold">{fullScreenPrescription.vitals.weight}</p>
+                        </div>
+                        <div className="text-center">
+                          <span className="font-medium text-gray-700 dark:text-gray-300 block mb-1">Height</span>
+                          <p className="text-gray-900 dark:text-white font-semibold">{fullScreenPrescription.vitals.height}</p>
+                        </div>
+                        <div className="text-center">
+                          <span className="font-medium text-gray-700 dark:text-gray-300 block mb-1">SpO2</span>
+                          <p className="text-gray-900 dark:text-white font-semibold">{fullScreenPrescription.vitals.spo2}</p>
+                        </div>
+                        <div className="text-center">
+                          <span className="font-medium text-gray-700 dark:text-gray-300 block mb-1">Respiratory Rate</span>
+                          <p className="text-gray-900 dark:text-white font-semibold">{fullScreenPrescription.vitals.respiratoryRate}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                   {/* Symptoms and Diagnosis */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Symptoms</h3>
+                      <p className="text-gray-900 dark:text-white">{fullScreenPrescription.symptoms}</p>
+                    </div>
+                    <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Diagnosis</h3>
+                      <p className="text-gray-900 dark:text-white font-medium">{fullScreenPrescription.diagnosis}</p>
+                    </div>
+                  </div>
+
+                  {/* Medications */}
+                  <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Prescribed Medications</h3>
+                    <div className="space-y-4">
+                      {fullScreenPrescription.medications.map((med, index) => (
+                        <div key={index} className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <div>
+                              <span className="font-medium text-gray-700 dark:text-gray-300">Medication:</span>
+                              <p className="text-gray-900 dark:text-white font-semibold">{med.name}</p>
+                            </div>
+                            <div>
+                              <span className="font-medium text-gray-700 dark:text-gray-300">Dosage:</span>
+                              <p className="text-gray-900 dark:text-white">{med.dosage}</p>
+                            </div>
+                            <div>
+                              <span className="font-medium text-gray-700 dark:text-gray-300">Frequency:</span>
+                              <p className="text-gray-900 dark:text-white">{med.frequency}</p>
+                            </div>
+                            <div>
+                              <span className="font-medium text-gray-700 dark:text-gray-300">Duration:</span>
+                              <p className="text-gray-900 dark:text-white">{med.duration}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Instructions */}
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Instructions</h3>
+                    <p className="text-gray-900 dark:text-white">{fullScreenPrescription.instructions}</p>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="text-center text-gray-500 dark:text-gray-400 text-sm border-t border-gray-200 dark:border-gray-700 pt-6">
+                    <p>This prescription is valid for the specified duration only.</p>
+                    <p className="mt-1">Please follow the instructions carefully and consult your doctor if needed.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+                 )}
+       </div>
+     </div>
+   );
+ };

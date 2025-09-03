@@ -22,7 +22,9 @@ import { useDepartments } from '../hooks/useDepartments';
 import { useHospitalUser } from '../hooks/useHospitalUser';
 import { useDoctorsByDepartment } from '../hooks/useDoctorsByDepartment';
 import { useDoctorSlots } from '../hooks/useDoctorSlots';
-import { Department as ApiDepartment, ApiDoctor } from '../services/appointmentApi';
+import { useBookedSlots } from '../hooks/useBookedSlots';
+import { Department as ApiDepartment, ApiDoctor, BookedSlotsResponse } from '../services/appointmentApi';
+import { useQueryClient } from '@tanstack/react-query';
 import { generateTimeSlotsFromShiftInfo } from '../utils/slotGenerator';
 import { useAuthStore } from '@/store/authStore';
 
@@ -126,6 +128,7 @@ const generateTimeSlots = (doctorId: string, date: string): TimeSlot[] => {
 
 export const AppointmentBooking: React.FC = () => {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   // Get userId and authentication status from Zustand auth store
   const userId = useAuthStore((state) => state.userId);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -155,6 +158,7 @@ export const AppointmentBooking: React.FC = () => {
   const [showVitalsForm, setShowVitalsForm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [appointmentId, setAppointmentId] = useState('');
+  const [tokenNumber, setTokenNumber] = useState('');
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [patientData, setPatientData] = useState<any>(null);
   
@@ -170,6 +174,15 @@ export const AppointmentBooking: React.FC = () => {
   const { data: doctorSlotsResponse, 
     isLoading: doctorSlotsLoading, 
     error: doctorSlotsError } = useDoctorSlots(selectedDoctor?.id || '', formattedDate);
+
+  // Fetch booked slots for the selected doctor and date
+  const { data: bookedSlotsResponse, 
+    isLoading: bookedSlotsLoading, 
+    error: bookedSlotsError } = useBookedSlots(selectedDoctor?.id || '', formattedDate) as {
+    data: BookedSlotsResponse | undefined;
+    isLoading: boolean;
+    error: Error | null;
+  };
   
   // Transform API departments to match the component interface
   const departments: Department[] = React.useMemo(() => {
@@ -211,13 +224,14 @@ export const AppointmentBooking: React.FC = () => {
   useEffect(() => {
     if (doctorsResponse?.doctors && doctorsResponse.doctors.length > 0 && !selectedDoctor) {
       const firstDoctor = doctorsResponse.doctors[0];
-      setSelectedDoctor({
+      const newDoctor = {
         id: firstDoctor.doctorId,
         name: firstDoctor.doctorName,       
         specialization: firstDoctor.specializations?.length > 0 ? firstDoctor.specializations.join(', ') : 'General',
         department: selectedDepartment,
         is_available: true
-      });
+      };
+      handleDoctorSelect(newDoctor);
     }
   }, [doctorsResponse, selectedDepartment]);
 
@@ -252,7 +266,7 @@ export const AppointmentBooking: React.FC = () => {
         const generatedSlots = generateTimeSlotsFromShiftInfo(shiftDayDetails, selectedDoctor.id, formattedDate);
         
         // Convert GeneratedTimeSlot to TimeSlot with slot duration
-        const timeSlotsWithDuration: TimeSlot[] = generatedSlots.map(slot => {
+        let timeSlotsWithDuration: TimeSlot[] = generatedSlots.map(slot => {
           const shiftDetail = shiftDayDetails.find(shift => shift.shiftName === slot.shiftName);
           return {
             ...slot,
@@ -261,6 +275,25 @@ export const AppointmentBooking: React.FC = () => {
           };
         });
         
+        // Mark booked slots as unavailable if booked slots data is available
+        if (bookedSlotsResponse?.bookedSlots) {
+          timeSlotsWithDuration = timeSlotsWithDuration.map(slot => {
+            const slotTime = slot.time + ':00'; // Convert "08:30" to "08:30:00" to match API format
+            const isBooked = bookedSlotsResponse.bookedSlots.includes(slotTime);
+            return {
+              ...slot,
+              isBooked: isBooked || slot.isBooked, // Mark as booked if API shows it's booked OR if it was already locally booked
+              is_available: !(isBooked || slot.isBooked)
+            };
+          });
+        }
+        
+        console.log('Generated time slots:', timeSlotsWithDuration.map(slot => ({
+          id: slot.id,
+          time: slot.time,
+          date: slot.date,
+          shiftName: slot.shiftName
+        })));
         setTimeSlots(timeSlotsWithDuration);
       } else {
         // Fallback to old generation method if no API data
@@ -268,7 +301,7 @@ export const AppointmentBooking: React.FC = () => {
         setTimeSlots(generateTimeSlots(selectedDoctor.id, dateStr));
       }
     }
-  }, [selectedDoctor, selectedDate, doctorSlotsResponse, formattedDate]);
+  }, [selectedDoctor, selectedDate, doctorSlotsResponse, bookedSlotsResponse, formattedDate]);
 
   // Show authentication required message if user is not authenticated
   if (!isAuthenticated || !userId) {
@@ -343,6 +376,12 @@ export const AppointmentBooking: React.FC = () => {
 
   const handleSlotSelect = (slot: TimeSlot) => {
     if (!slot.isBooked) {
+      console.log('Selected slot:', {
+        id: slot.id,
+        date: slot.date,
+        time: slot.time,
+        shiftName: slot.shiftName
+      });
       setSelectedSlot(slot);
       setShowPatientForm(true);
     }
@@ -351,11 +390,16 @@ export const AppointmentBooking: React.FC = () => {
 
 
   const handleBookingComplete = (patientInfo: any) => {
+    console.log('handleBookingComplete received:', patientInfo);
     setPatientData(patientInfo);
-    // Use the appointmentId from the API response
+    // Use the appointmentId and tokenNumber from the API response
     if (patientInfo.appointmentId) {
       setAppointmentId(patientInfo.appointmentId);
     }
+    if (patientInfo.tokenNumber) {
+      setTokenNumber(patientInfo.tokenNumber);
+    }
+    console.log('Setting patientData with patientId:', patientInfo.patientId);
     setShowPatientForm(false);
     setShowVitalsForm(true);
   };
@@ -367,6 +411,13 @@ export const AppointmentBooking: React.FC = () => {
         ? { ...slot, isBooked: true, patientInfo: { ...patientData, vitals: vitalsData } }
         : slot
     ));
+    
+    // Refresh booked slots data to reflect the new booking
+    if (selectedDoctor?.id && formattedDate) {
+      queryClient.invalidateQueries({
+        queryKey: ['bookedSlots', selectedDoctor.id, formattedDate]
+      });
+    }
     
     setShowVitalsForm(false);
     setShowSuccess(true);
@@ -381,6 +432,13 @@ export const AppointmentBooking: React.FC = () => {
         ? { ...slot, isBooked: true, patientInfo: patientData }
         : slot
     ));
+    
+    // Refresh booked slots data to reflect the new booking
+    if (selectedDoctor?.id && formattedDate) {
+      queryClient.invalidateQueries({
+        queryKey: ['bookedSlots', selectedDoctor.id, formattedDate]
+      });
+    }
     
     setShowVitalsForm(false);
     setShowSuccess(true);
@@ -400,6 +458,29 @@ export const AppointmentBooking: React.FC = () => {
         ? { ...slot, isBooked: false, patientInfo: undefined }
         : slot
     ));
+  };
+
+  // Custom date selection handler that refreshes booked slots data
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date);
+    // Refresh booked slots data for the new date
+    if (selectedDoctor?.id) {
+      const newFormattedDate = format(date, 'yyyy-MM-dd');
+      queryClient.invalidateQueries({
+        queryKey: ['bookedSlots', selectedDoctor.id, newFormattedDate]
+      });
+    }
+  };
+
+  // Custom doctor selection handler that refreshes booked slots data
+  const handleDoctorSelect = (doctor: Doctor) => {
+    setSelectedDoctor(doctor);
+    // Refresh booked slots data for the new doctor
+    if (formattedDate) {
+      queryClient.invalidateQueries({
+        queryKey: ['bookedSlots', doctor.id, formattedDate]
+      });
+    }
   };
 
   // Loading state
@@ -471,6 +552,7 @@ export const AppointmentBooking: React.FC = () => {
     return (
       <BookingSuccess 
         appointmentId={appointmentId}
+        tokenNumber={tokenNumber}
         doctor={selectedDoctor!}
         date={selectedDate}
         timeSlot={selectedSlot}
@@ -481,6 +563,12 @@ export const AppointmentBooking: React.FC = () => {
         onClose={() => {
           setShowSuccess(false);
           setSelectedSlot(null);
+          // Refresh booked slots data to show updated status
+          if (selectedDoctor?.id && formattedDate) {
+            queryClient.invalidateQueries({
+              queryKey: ['bookedSlots', selectedDoctor.id, formattedDate]
+            });
+          }
         }}
         open={showSuccess}
       />
@@ -530,12 +618,13 @@ export const AppointmentBooking: React.FC = () => {
                   if (doctorsResponse?.doctors) {
                     const selectedApiDoctor = doctorsResponse.doctors.find(doc => doc.doctorId === value);
                     if (selectedApiDoctor && selectedDepartmentData) {
-                      setSelectedDoctor({
+                      const newDoctor = {
                         id: selectedApiDoctor.doctorId,
                         name: selectedApiDoctor.doctorName,
                         department: selectedDepartmentData.name,
                         specialization: selectedApiDoctor.specializations?.length > 0 ? selectedApiDoctor.specializations.join(', ') : 'General'
-                      });
+                      };
+                      handleDoctorSelect(newDoctor);
                     }
                   }
                 }}>
@@ -648,12 +737,15 @@ export const AppointmentBooking: React.FC = () => {
                     doctorsResponse.doctors.map((doctor) => (
                     <button
                         key={doctor.doctorId}
-                        onClick={() => setSelectedDoctor({
-                          id: doctor.doctorId,
-                          name: doctor.doctorName,
-                          department: selectedDepartmentData?.name || '',
-                          specialization: doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : 'General'
-                        })}
+                        onClick={() => {
+                          const newDoctor = {
+                            id: doctor.doctorId,
+                            name: doctor.doctorName,
+                            department: selectedDepartmentData?.name || '',
+                            specialization: doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : 'General'
+                          };
+                          handleDoctorSelect(newDoctor);
+                        }}
                       className={`w-full p-3 rounded-lg border text-left transition-all text-xs relative ${
                           selectedDoctor?.id === doctor.doctorId
                           ? 'border-blue-300 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 shadow-sm'
@@ -732,7 +824,7 @@ export const AppointmentBooking: React.FC = () => {
                       return (
                         <button
                           key={i}
-                          onClick={() => setSelectedDate(date)}
+                          onClick={() => handleDateSelect(date)}
                           className={`px-3 py-2.5 rounded-lg border text-center min-w-[68px] lg:min-w-[80px] flex-shrink-0 transition-all text-xs lg:text-sm ${
                             isSelected
                               ? 'bg-primary text-primary-foreground border-primary shadow-md scale-105'
@@ -761,7 +853,7 @@ export const AppointmentBooking: React.FC = () => {
                         <CalendarComponent
                           mode="single"
                           selected={selectedDate}
-                          onSelect={(date) => date && setSelectedDate(date)}
+                          onSelect={(date) => date && handleDateSelect(date)}
                           disabled={(date) => date < new Date() || date < new Date("1900-01-01")}
                           initialFocus
                           className="p-3 pointer-events-auto"
@@ -911,6 +1003,25 @@ export const AppointmentBooking: React.FC = () => {
                     </div>
                   )}
 
+                  {/* Booked Slots Loading/Error Messages */}
+                  {bookedSlotsLoading && (
+                    <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                      <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                        <span className="text-sm">Loading booked slots information...</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {bookedSlotsError && (
+                    <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                      <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-300">
+                        <span className="text-lg">⚠️</span>
+                        <span className="text-sm">Unable to load external booking information. Some slots may appear available but could be booked externally.</span>
+                      </div>
+                    </div>
+                  )}
+
 
 
                   {/* Legend */}
@@ -958,11 +1069,20 @@ export const AppointmentBooking: React.FC = () => {
 
       {/* Vitals Form Modal */}
       {showVitalsForm && patientData && (
-        <VitalsForm
-          patientName={patientData.name}
-          onSubmit={handleVitalsComplete}
-          onCancel={handleVitalsSkip}
-        />
+        <>
+          {console.log('Rendering VitalsForm with:', {
+            patientName: patientData.name,
+            appointmentId: appointmentId,
+            patientId: patientData.patientId
+          })}
+          <VitalsForm
+            patientName={patientData.name}
+            appointmentId={appointmentId}
+            patientId={patientData.patientId}
+            onSubmit={handleVitalsComplete}
+            onCancel={handleVitalsSkip}
+          />
+        </>
       )}
 
 

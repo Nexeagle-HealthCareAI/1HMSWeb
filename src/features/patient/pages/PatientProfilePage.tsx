@@ -311,7 +311,7 @@ export const PatientProfilePage: React.FC = () => {
   const [vitalSigns] = useState<VitalSigns[]>(sampleVitalSigns);
   const [activeTab, setActiveTab] = useState('overview');
   const [isLoading, setIsLoading] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
   // Create timeline events
   const timelineEvents = createTimelineEvents(appointments, prescriptions, labTests);

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Shield, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { RegisterAppointmentRequest } from '../services/appointmentApi';
+import { RegisterAppointmentRequest, generatePatientId } from '../services/appointmentApi';
 import { useAppointmentBooking } from '../hooks/useAppointmentBooking';
 import { usePatientSearch } from '../hooks/usePatientSearch';
 import { PatientSearchItem } from '../services/appointmentApi';
+import { useAuthStore } from '@/store/authStore';
 
 // Define types locally to avoid import issues
 interface Doctor {
@@ -61,6 +62,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     address: '',
     city: '',
     pincode: '',
+    reason: 'General consultation',
     isPaid: false,
     paymentMode: '',
     hasInsurance: false,
@@ -70,12 +72,13 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<PatientSearchItem[]>([]);
-  const [searchField, setSearchField] = useState<'patientId' | 'patientName' | 'appointmentId' | 'contact'>('patientId'); // Default search field
+  const [searchField, setSearchField] = useState<'patientId' | 'name' | 'appointmentId' | 'contact'>('patientId'); // Default search field
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { bookAppointment, isLoading: isBookingLoading, error: bookingError, clearError } = useAppointmentBooking();
   const { searchPatients, isLoading: isSearchLoading, error: searchError, clearError: clearSearchError } = usePatientSearch();
+  const { getUserId } = useAuthStore();
 
   const formatTime = (time: string) => {
     const [hour, minute] = time.split(':');
@@ -90,7 +93,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     switch (field) {
       case 'patientId':
         return 'Enter Patient ID (e.g., P001, PAT123)';
-      case 'patientName':
+      case 'name':
         return 'Enter Patient Name (e.g., John Doe, Sarah)';
       case 'appointmentId':
         return 'Enter Appointment ID (e.g., APT001, APT123)';
@@ -105,7 +108,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     switch (field) {
       case 'patientId':
         return 'Patient ID';
-      case 'patientName':
+      case 'name':
         return 'Patient Name';
       case 'appointmentId':
         return 'Appointment ID';
@@ -125,7 +128,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
             <p>• Unique identifier for each patient</p>
           </>
         );
-      case 'patientName':
+      case 'name':
         return (
           <>
             <p>• Full name: John Doe, Sarah Smith</p>
@@ -182,26 +185,15 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
   // Handle patient selection from search results
   const handlePatientSelect = (patient: PatientSearchItem) => {
-    // Calculate age from date of birth
-    const calculateAge = (dateOfBirth: string) => {
-      const today = new Date();
-      const birthDate = new Date(dateOfBirth);
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
-      return age.toString();
-    };
-
     setFormData({
       name: patient.fullName,
       phone: patient.mobile,
-      age: calculateAge(patient.dateOfBirth),
+      age: patient.age.toString(),
       gender: patient.sex,
-      address: '', // Not available in search response
-      city: '',
-      pincode: '',
+      address: patient.address || '',
+      city: patient.city || '',
+      pincode: patient.pincode || '',
+      reason: 'Follow-up consultation',
       isPaid: false,
       paymentMode: '',
       hasInsurance: false,
@@ -268,10 +260,12 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       newErrors.city = 'City is required';
     }
 
+
+
     if (!formData.pincode.trim()) {
       newErrors.pincode = 'Pincode is required';
     } else if (!/^\d{6}$/.test(formData.pincode)) {
-      newErrors.pincode = 'Please enter a valid 6-digit pincode';
+      newErrors.pincode = 'Pincode must be exactly 6 digits';
     }
 
     if (formData.isPaid && !formData.paymentMode) {
@@ -292,6 +286,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
     setIsSubmitting(true);
     try {
+      // Generate patient ID automatically before sending request
+      const generatedPatientId = generatePatientId();
+      
       // Prepare the appointment request
       const appointmentRequest: RegisterAppointmentRequest = {
         patient: {
@@ -303,28 +300,42 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           city: formData.city,
           pincode: formData.pincode,
           insuranceId: formData.hasInsurance ? formData.insuranceId : '',
-          paymentMode: formData.paymentMode
+          paymentMode: formData.paymentMode,
+          patientId: generatedPatientId
         },
         doctorId: doctor.id,
         apptDate: new Date(selectedSlot.date + 'T' + selectedSlot.time).toISOString(),
-        startAt: new Date(selectedSlot.date + 'T' + selectedSlot.time).toISOString(),
-        slotTimeInMinutes: selectedSlot.slotDurationInMinutes || 10 // Use slot duration from UI or default to 10
+        startAt: selectedSlot.date + 'T' + selectedSlot.time + ':00', // Keep as local time string, don't convert to UTC
+        reason: formData.reason || 'General consultation',
+        slotTimeInMinutes: selectedSlot.slotDurationInMinutes || 10, // Use slot duration from UI or default to 10
+        userId: getUserId() || ''
       };
 
       // Call the API using the hook
+      console.log('Selected slot details:', {
+        date: selectedSlot.date,
+        time: selectedSlot.time,
+        startAt: selectedSlot.date + 'T' + selectedSlot.time + ':00'
+      });
       console.log('Sending appointment request:', appointmentRequest);
       if (!hospitalId) {
         throw new Error('Hospital ID is required to book appointment');
       }
       const response = await bookAppointment(appointmentRequest, hospitalId);
       console.log('Appointment booking response:', response);
+      console.log('Using patientId from API response:', response.patientId);
+      console.log('Fallback generated patientId:', generatedPatientId);
       
       // Pass the response data to the parent component
+      const finalPatientId = response.patientId || generatedPatientId;
+      console.log('Final patientId being passed:', finalPatientId);
+      
       onSubmit({
         ...formData,
         age: parseInt(formData.age),
         appointmentId: response.appointmentId,
-        patientId: response.patientId
+        patientId: finalPatientId,
+        tokenNumber: response.tokenNumber
       });
     } catch (error) {
       console.error('Failed to register appointment:', error);
@@ -387,13 +398,13 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 <div className="space-y-2">
                   {/* Search Field Dropdown */}
                   <div className="flex gap-2">
-                    <Select value={searchField} onValueChange={(value: string) => setSearchField(value as 'patientId' | 'patientName' | 'appointmentId' | 'contact')}>
+                    <Select value={searchField} onValueChange={(value: string) => setSearchField(value as 'patientId' | 'name' | 'appointmentId' | 'contact')}>
                       <SelectTrigger className="text-xs h-8 flex-1">
                         <SelectValue placeholder="Select search field" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="patientId">Patient ID</SelectItem>
-                        <SelectItem value="patientName">Patient Name</SelectItem>
+                        <SelectItem value="name">Patient Name</SelectItem>
                         <SelectItem value="appointmentId">Appointment ID</SelectItem>
                         <SelectItem value="contact">Contact</SelectItem>
                       </SelectContent>
@@ -450,10 +461,12 @@ export const PatientForm: React.FC<PatientFormProps> = ({
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Personal & Contact Information - Single Row */}
               <Card className="p-4 dark:bg-gray-800">
-                <h3 className="font-semibold text-foreground dark:text-white mb-3 flex items-center gap-2">
-                  <User className="h-4 w-4 text-healthcare-primary" />
-                  Personal Information
-                </h3>
+                <div className="mb-3">
+                  <h3 className="font-semibold text-foreground dark:text-white flex items-center gap-2">
+                    <User className="h-4 w-4 text-healthcare-primary" />
+                    Personal Information
+                  </h3>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                   <div>
                     <Label htmlFor="name" className="text-sm font-medium dark:text-gray-300">
@@ -588,6 +601,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     </div>
                   </div>
                 </Card>
+
+
 
                 {/* Insurance & Payment Combined */}
                 <Card className="p-4">
@@ -734,8 +749,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                             <p className="font-medium">{patient.sex}</p>
                           </div>
                           <div>
-                            <span className="text-muted-foreground">DOB:</span>
-                            <p className="font-medium">{new Date(patient.dateOfBirth).toLocaleDateString()}</p>
+                            <span className="text-muted-foreground">Age:</span>
+                            <p className="font-medium">{patient.age} years</p>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Last Visit:</span>
@@ -743,10 +758,35 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                           </div>
                         </div>
                         
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mt-2">
+                          <div>
+                            <span className="text-muted-foreground">Address:</span>
+                            <p className="font-medium text-xs truncate">{patient.address || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">City:</span>
+                            <p className="font-medium">{patient.city || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Pincode:</span>
+                            <p className="font-medium">{patient.pincode || 'N/A'}</p>
+                          </div>
+                        </div>
+                        
                         <div className="mt-2">
                           <span className="text-muted-foreground text-sm">Matched by:</span>
                           <p className="text-sm">{patient.matched.by}: {patient.matched.value}</p>
                         </div>
+                        
+                        {patient.appointmentDate && (
+                          <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border">
+                            <span className="text-muted-foreground text-sm">Upcoming Appointment:</span>
+                            <p className="text-sm font-medium">
+                              {new Date(patient.appointmentDate).toLocaleDateString()} 
+                              {patient.tokenNumber && patient.tokenNumber !== '0' && ` (Token: ${patient.tokenNumber})`}
+                            </p>
+                          </div>
+                        )}
                       </div>
                       
                       <div className="flex items-center gap-2">
