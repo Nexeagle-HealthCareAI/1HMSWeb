@@ -116,7 +116,7 @@ export const AppointmentDashboard = () => {
     
     const today = new Date(); // Use actual current date
     
-    return appointments.filter(appointment => {
+    const filtered = appointments.filter(appointment => {
       const searchLower = searchTerm.toLowerCase();
       const matchesSearch = (
         appointment.patientFullName.toLowerCase().includes(searchLower) ||
@@ -161,6 +161,13 @@ export const AppointmentDashboard = () => {
       }
       
       return matchesSearch && matchesDoctor && matchesStatus && matchesDateRange && matchesType;
+    });
+
+    // Sort by appointment time in increasing order
+    return filtered.sort((a, b) => {
+      const timeA = new Date(a.startAt).getTime();
+      const timeB = new Date(b.startAt).getTime();
+      return timeA - timeB;
     });
   }, [searchTerm, selectedDoctor, selectedStatus, startDate, endDate, activeTab, appointments]);
 
@@ -454,6 +461,7 @@ export const AppointmentDashboard = () => {
                            <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Patient Name</TableHead>
                            <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Doctor Name</TableHead>
                            <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Token No</TableHead>
+                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Appointment Time</TableHead>
                            <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Current Status</TableHead>
                            <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Actions</TableHead>
                            <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Print Prescription</TableHead>
@@ -463,7 +471,7 @@ export const AppointmentDashboard = () => {
                       <TableBody>
                                                  {filteredAppointments.length === 0 ? (
                            <TableRow>
-                             <TableCell colSpan={8} className="text-center py-6">
+                             <TableCell colSpan={9} className="text-center py-6">
                               <div className="flex flex-col items-center gap-1.5">
                                 <div className="w-6 h-6 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
                                   <CalendarDays className="h-3 w-3 text-gray-400" />
@@ -514,49 +522,71 @@ export const AppointmentDashboard = () => {
                                  </div>
                                </TableCell>
                                
-                                                               {/* Token No */}
+                                                                                               {/* Token No */}
                                 <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                                   <span className="font-mono bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded text-xs font-medium">
                                     {appointment.token?.tokenNumber || 'N/A'}
                                   </span>
                                 </TableCell>
-                               
-                               {/* Current Status */}
+                                
+                                {/* Appointment Time */}
+                                <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="font-medium text-gray-900 dark:text-white text-xs">
+                                      {format(new Date(appointment.startAt), 'HH:mm')}
+                                    </span>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                      {format(new Date(appointment.endAt), 'HH:mm')}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                
+                                {/* Current Status */}
                                <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                                  {getStatusBadge(appointment.finalStatusCode, appointment)}
                                </TableCell>
                                
-                               {/* Actions */}
-                               <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                                                                                                     <div className="flex gap-1">
+                                                               {/* Actions */}
+                                <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
+                                                                                                    <div className="flex gap-1">
+                                   <Button 
+                                     variant="outline" 
+                                     size="sm"
+                                     disabled={['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(appointment.finalStatusCode)}
+                                     className={`h-6 px-2 text-xs ${
+                                       ['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(appointment.finalStatusCode)
+                                         ? 'text-gray-400 border-gray-200 cursor-not-allowed opacity-50'
+                                         : 'text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20'
+                                     }`}
+                                   >
+                                     <Calendar className="h-2.5 w-2.5 mr-1" />
+                                     Re-schedule
+                                   </Button>
+                                   <Button 
+                                     variant="outline" 
+                                     size="sm"
+                                     disabled={['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(appointment.finalStatusCode)}
+                                     className={`h-6 px-2 text-xs ${
+                                       ['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(appointment.finalStatusCode)
+                                         ? 'text-gray-400 border-gray-200 cursor-not-allowed opacity-50'
+                                         : 'text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-900/20'
+                                     }`}
+                                   >
+                                     <X className="h-2.5 w-2.5 mr-1" />
+                                     Cancel
+                                   </Button>
+                                  {appointment.finalStatusCode === 'VITALS_REQUIRED' && (
                                     <Button 
                                       variant="outline" 
                                       size="sm"
-                                      className="h-6 px-2 text-xs text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                                      onClick={() => handleVitalsClick(appointment)}
+                                      className="h-6 px-2 text-xs text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                                     >
-                                      <Calendar className="h-2.5 w-2.5 mr-1" />
-                                      Re-schedule
+                                      <Heart className="h-2.5 w-2.5 mr-1" />
+                                      Vitals
                                     </Button>
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm"
-                                      className="h-6 px-2 text-xs text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                    >
-                                      <X className="h-2.5 w-2.5 mr-1" />
-                                      Cancel
-                                    </Button>
-                                   {appointment.finalStatusCode === 'VITALS_REQUIRED' && (
-                                     <Button 
-                                       variant="outline" 
-                                       size="sm"
-                                       onClick={() => handleVitalsClick(appointment)}
-                                       className="h-6 px-2 text-xs text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20"
-                                     >
-                                       <Heart className="h-2.5 w-2.5 mr-1" />
-                                       Vitals
-                                     </Button>
-                                   )}
-                                 </div>
+                                  )}
+                                </div>
                                </TableCell>
                                
                                {/* Print Prescription */}
@@ -657,16 +687,17 @@ export const AppointmentDashboard = () => {
         </div>
       </div>
 
-      {/* Vitals Form Modal */}
-      {showVitalsForm && selectedPatient && (
-        <VitalsForm
-          patientName={selectedPatient.patientFullName}
-          appointmentId={selectedPatient.appointmentId}
-          patientId={selectedPatient.patientId}
-          onSubmit={handleVitalsSubmit}
-          onCancel={handleVitalsCancel}
-        />
-      )}
+             {/* Vitals Form Modal */}
+       {showVitalsForm && selectedPatient && (
+         <VitalsForm
+           patientName={selectedPatient.patientFullName}
+           appointmentId={selectedPatient.appointmentId}
+           patientId={selectedPatient.patientId}
+           onSubmit={handleVitalsSubmit}
+           onCancel={handleVitalsCancel}
+           hideSkipButton={true}
+         />
+       )}
     </div>
   );
 };
