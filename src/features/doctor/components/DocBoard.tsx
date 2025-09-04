@@ -4,9 +4,9 @@ import {
   Calendar, 
   Plus,
   Search, 
-  Heart, 
+  Heart,
   UserCheck, 
-  FlaskConical, 
+  FlaskConical,
   Clock, 
   Eye,
   User,
@@ -31,8 +31,12 @@ import {
   PaginationPrevious 
 } from '@/components/ui/pagination';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { format, subDays, addDays } from 'date-fns';
 import { useAuthStore } from '@/store/authStore';
+import { appointmentApi } from '@/features/appointment/services/appointmentApi';
+import { PrescriptionEditor } from './prescription/PrescriptionEditor';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Mock data - replace with actual API calls
 interface PatientAppointment {
@@ -45,13 +49,14 @@ interface PatientAppointment {
   };
   startAt: string;
   endAt: string;
-  finalStatusCode: 'VITALS_REQUIRED' | 'READY' | 'UNDER_CONSULT' | 'LAB_REQUIRED' | 'AWAITING_RECONSULT' | 'COMPLETED' | 'SCHEDULED';
+  finalStatusCode: 'VITALS_REQUIRED' | 'READY' | 'UNDER_CONSULT' | 'LAB_REQUIRED' | 'AWAITING_RECONSULT' | 'COMPLETED' | 'SCHEDULED' | 'CANCELLED';
   phone?: string;
 }
 
 export const ClinicalDashboard: React.FC = () => {
   const { t } = useTranslation();
   const { hospitalId } = useAuthStore();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'current' | 'past' | 'future'>('current');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -59,6 +64,10 @@ export const ClinicalDashboard: React.FC = () => {
   const [endDate, setEndDate] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [appointmentToCancel, setAppointmentToCancel] = useState<PatientAppointment | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [showPrescriptionEditor, setShowPrescriptionEditor] = useState(false);
 
   // Mock data - replace with actual API calls
   const mockAppointments: PatientAppointment[] = [
@@ -120,6 +129,8 @@ export const ClinicalDashboard: React.FC = () => {
         return <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs px-1.5 py-0.5 font-medium">Completed</Badge>;
       case 'SCHEDULED':
         return <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-xs px-1.5 py-0.5 font-medium">Scheduled</Badge>;
+      case 'CANCELLED':
+        return <Badge className="bg-gray-50 text-gray-600 border-gray-300 text-xs px-1.5 py-0.5 font-medium">Cancelled</Badge>;
       default:
         return <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-xs px-1.5 py-0.5 font-medium">{status}</Badge>;
     }
@@ -188,6 +199,67 @@ export const ClinicalDashboard: React.FC = () => {
     setCurrentPage(page);
   };
 
+  // Date validation functions
+  const handleStartDateChange = (value: string) => {
+    setStartDate(value);
+    // If end date is set and is before the new start date, update end date to match start date
+    if (value && endDate && new Date(value) > new Date(endDate)) {
+      setEndDate(value);
+    }
+  };
+
+  const handleEndDateChange = (value: string) => {
+    // If start date is set and the new end date is before start date, don't allow it
+    if (startDate && value && new Date(value) < new Date(startDate)) {
+      // Optionally show a toast or alert here
+      console.warn('Start date cannot be after end date');
+      return;
+    }
+    setEndDate(value);
+  };
+
+  const handleCancelClick = (appointment: PatientAppointment) => {
+    setAppointmentToCancel(appointment);
+    setCancelDialogOpen(true);
+  };
+
+  const handleCancelConfirm = async () => {
+    if (!appointmentToCancel) return;
+
+    setIsCancelling(true);
+    try {
+      console.log('Cancelling appointment:', appointmentToCancel.appointmentId);
+      
+      const response = await appointmentApi.cancelAppointment({
+        appointmentId: appointmentToCancel.appointmentId,
+        patientId: appointmentToCancel.patientId
+      });
+      
+      console.log('Cancel API response:', response);
+      
+      // Close dialog and reset state
+      setCancelDialogOpen(false);
+      setAppointmentToCancel(null);
+      
+      // Invalidate appointment details queries to refresh dashboard data
+      queryClient.invalidateQueries({
+        queryKey: ['appointmentDetails']
+      });
+      
+      console.log('Appointment cancelled successfully - status should be CANCELLED');
+    } catch (error) {
+      console.error('Error cancelling appointment:', error);
+      // TODO: Show error message
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  const handleCancelDialogClose = () => {
+    setCancelDialogOpen(false);
+    setAppointmentToCancel(null);
+  };
+
   const handleStatusClick = (status: string) => {
     setSelectedStatus(status);
     setCurrentPage(1);
@@ -196,28 +268,36 @@ export const ClinicalDashboard: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Clinical Dashboard</h1>
-          <p className="text-muted-foreground">Manage your patient appointments and consultations</p>
-        </div>
-
-      </div>
-
-      {/* Tabs */}
-              <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'current' | 'past' | 'future')}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="current">Current Appointments</TabsTrigger>
-          <TabsTrigger value="past">Past Appointments</TabsTrigger>
-          <TabsTrigger value="future">Future Appointments</TabsTrigger>
-        </TabsList>
+      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3 shadow-sm">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-white">Clinical Dashboard</h1>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex items-center gap-2"
+            onClick={() => setShowPrescriptionEditor(true)}
+          >
+            <FileText className="h-4 w-4" />
+            Prescription Settings
+          </Button>
+                  </div>
+                </div>
+                
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto p-4 lg:p-6">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'current' | 'past' | 'future')}>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="current">Current Appointments</TabsTrigger>
+            <TabsTrigger value="past">Past Appointments</TabsTrigger>
+            <TabsTrigger value="future">Future Appointments</TabsTrigger>
+          </TabsList>
 
         {/* Current Appointments Tab */}
         <TabsContent value="current" className="p-6">
           {/* Status Navigation */}
-          <div className="mb-6">
+            <div className="mb-6">
             <div className="flex flex-wrap gap-2">
               <Button
                 variant={selectedStatus === 'all' ? 'default' : 'outline'}
@@ -281,9 +361,18 @@ export const ClinicalDashboard: React.FC = () => {
                 <UserCheck className="h-3 w-3 mr-1" />
                 Completed
               </Button>
+              <Button
+                variant={selectedStatus === 'CANCELLED' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleStatusClick('CANCELLED')}
+                className="text-xs bg-gray-50 text-gray-600 border-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900/20"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Cancelled
+              </Button>
+              </div>
             </div>
-          </div>
-          
+            
           {/* Search and Filters */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="flex-1">
@@ -295,12 +384,12 @@ export const ClinicalDashboard: React.FC = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
-              </div>
-                  </div>
                 </div>
-                
+                </div>
+              </div>
+              
           {/* Appointments Table */}
-          <div className="bg-white rounded-lg border shadow-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -329,25 +418,17 @@ export const ClinicalDashboard: React.FC = () => {
                       <TableCell>{getStatusBadge(appointment.finalStatusCode)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button
+              <Button 
                             variant="outline"
                             size="sm"
-                            disabled={['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(appointment.finalStatusCode)}
-                            className="h-6 px-2 text-xs text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <Calendar className="h-2.5 w-2.5 mr-1" />
-                            Re-schedule
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(appointment.finalStatusCode)}
+                            disabled={['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
                             className="h-6 px-2 text-xs text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={() => handleCancelClick(appointment)}
                           >
                             <X className="h-2.5 w-2.5 mr-1" />
                             Cancel
-                          </Button>
-                    </div>
+              </Button>
+            </div>
                         {appointment.finalStatusCode === 'VITALS_REQUIRED' && (
                           <Button
                             variant="outline"
@@ -382,7 +463,7 @@ export const ClinicalDashboard: React.FC = () => {
                 )}
               </TableBody>
             </Table>
-              </div>
+          </div>
               
           {/* Pagination */}
           {totalPages > 1 && (
@@ -416,8 +497,8 @@ export const ClinicalDashboard: React.FC = () => {
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>
-                  </div>
-          )}
+        </div>
+      )}
         </TabsContent>
 
         {/* Past Appointments Tab */}
@@ -433,39 +514,45 @@ export const ClinicalDashboard: React.FC = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
-              </div>
-            </div>
-            <div className="flex gap-2">
+                  </div>
+                </div>
+          <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Date Range:</label>
               <Input
                 type="date"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => handleStartDateChange(e.target.value)}
                 className="w-[150px]"
+                placeholder="Start Date"
               />
+              <span className="text-gray-400 text-sm">to</span>
               <Input
                 type="date"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={(e) => handleEndDateChange(e.target.value)}
                 className="w-[150px]"
+                min={startDate || undefined}
+                placeholder="End Date"
               />
-              </div>
-            </div>
+          </div>
+        </div>
             
-          {/* Past Appointments Table */}
-          <div className="bg-white rounded-lg border shadow-sm">
+          {/* Main Content - Table and Analytics */}
+          <div className="flex gap-4">
+            {/* Past Appointments Table */}
+            <div className="flex-1 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Patient ID</TableHead>
-                  <TableHead>Patient Name</TableHead>
-                  <TableHead>Doctor Name</TableHead>
-                  <TableHead>Token No</TableHead>
-                  <TableHead>Appointment Time</TableHead>
-                  <TableHead>Current Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                  <TableHead>Print Prescription</TableHead>
-                  <TableHead>Next Meet Required</TableHead>
-                  <TableHead>Past Completed Status</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Patient ID</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Patient Name</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Doctor Name</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Token No</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Last Appt Date</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Last Status</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Print Rx</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">Next FollowUp</TableHead>
+                  <TableHead className="text-xs whitespace-nowrap">IsCompleted</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -477,69 +564,52 @@ export const ClinicalDashboard: React.FC = () => {
                       <TableCell>{appointment.doctorName}</TableCell>
                       <TableCell>{appointment.token?.tokenNumber || 'N/A'}</TableCell>
                       <TableCell>
-                        {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(appointment.finalStatusCode)}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(appointment.finalStatusCode)}
-                            className="h-6 px-2 text-xs text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <Calendar className="h-2.5 w-2.5 mr-1" />
-                            Re-schedule
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(appointment.finalStatusCode)}
-                            className="h-6 px-2 text-xs text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <X className="h-2.5 w-2.5 mr-1" />
-                            Cancel
-                          </Button>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-medium text-gray-900 dark:text-white text-xs">
+                            {format(new Date(appointment.startAt), 'MMM dd, yyyy')}
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
+                          </span>
                         </div>
                       </TableCell>
+                      <TableCell>{getStatusBadge(appointment.finalStatusCode)}</TableCell>
                       <TableCell>
                         <Button variant="outline" size="sm" className="h-6 px-2 text-xs">
                           <FileText className="h-2.5 w-2.5 mr-1" />
                           Print
-                        </Button>
+          </Button>
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-1">
-                          <Button variant="outline" size="sm" className="h-6 px-2 text-xs bg-green-50 text-green-700 border-green-300">
-                            Yes
-                          </Button>
-                          <Button variant="outline" size="sm" className="h-6 px-2 text-xs bg-red-50 text-red-700 border-red-300">
-                            No
-                          </Button>
-                        </div>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">NA</span>
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-1">
-                          <Button variant="outline" size="sm" className="h-6 px-2 text-xs bg-green-50 text-green-700 border-green-300">
-                            Completed
-                          </Button>
-                          <Button variant="outline" size="sm" className="h-6 px-2 text-xs bg-yellow-50 text-yellow-700 border-yellow-300">
-                            Pending
-                          </Button>
-                        </div>
+                        {appointment.finalStatusCode === 'COMPLETED' ? (
+                          <div className="flex items-center justify-center">
+                            <div className="w-6 h-6 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+        </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center">
+                            <div className="w-6 h-6 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                              <X className="h-4 w-4 text-red-500" />
+                            </div>
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                       No past appointments found
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
-              </div>
+      </div>
 
           {/* Pagination */}
           {totalPages > 1 && (
@@ -573,8 +643,69 @@ export const ClinicalDashboard: React.FC = () => {
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>
+                    </div>
+                  )}
+            
+            {/* Analytics Card - Ultra Compact */}
+            <div className="w-48 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-2">
+              <h3 className="text-xs font-semibold text-gray-900 dark:text-white mb-2">Analytics</h3>
+              
+              {/* Analytics Stats */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between p-1.5 bg-red-50 dark:bg-red-900/20 rounded">
+                  <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                    <span className="text-xs text-gray-700 dark:text-gray-300">No-Show</span>
                 </div>
-          )}
+                  <span className="text-xs font-bold text-red-600 dark:text-red-400">12</span>
+      </div>
+
+                <div className="flex items-center justify-between p-1.5 bg-orange-50 dark:bg-orange-900/20 rounded">
+                  <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                    <span className="text-xs text-gray-700 dark:text-gray-300">Cancelled</span>
+                      </div>
+                  <span className="text-xs font-bold text-orange-600 dark:text-orange-400">8</span>
+                      </div>
+                
+                <div className="flex items-center justify-between p-1.5 bg-green-50 dark:bg-green-900/20 rounded">
+                  <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                    <span className="text-xs text-gray-700 dark:text-gray-300">Completed</span>
+                    </div>
+                  <span className="text-xs font-bold text-green-600 dark:text-green-400">45</span>
+                      </div>
+                
+                <div className="flex items-center justify-between p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded">
+                  <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                    <span className="text-xs text-gray-700 dark:text-gray-300">Rescheduled</span>
+                      </div>
+                  <span className="text-xs font-bold text-blue-600 dark:text-blue-400">6</span>
+                    </div>
+                
+                <div className="flex items-center justify-between p-1.5 bg-purple-50 dark:bg-purple-900/20 rounded">
+                  <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
+                    <span className="text-xs text-gray-700 dark:text-gray-300">Late</span>
+                      </div>
+                  <span className="text-xs font-bold text-purple-600 dark:text-purple-400">3</span>
+                      </div>
+                    </div>
+              
+              {/* Summary */}
+              <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-600 dark:text-gray-400">Total</span>
+                  <span className="text-xs font-bold text-gray-900 dark:text-white">74</span>
+                      </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-600 dark:text-gray-400">Success</span>
+                  <span className="text-xs font-bold text-green-600 dark:text-green-400">60.8%</span>
+                      </div>
+                    </div>
+                      </div>
+                      </div>
         </TabsContent>
 
         {/* Future Appointments Tab */}
@@ -590,26 +721,31 @@ export const ClinicalDashboard: React.FC = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
-              </div>
-            </div>
-            <div className="flex gap-2">
+                    </div>
+                      </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Date Range:</label>
               <Input
                 type="date"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => handleStartDateChange(e.target.value)}
                 className="w-[150px]"
+                placeholder="Start Date"
               />
+              <span className="text-gray-400 text-sm">to</span>
               <Input
                 type="date"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={(e) => handleEndDateChange(e.target.value)}
                 className="w-[150px]"
+                min={startDate || undefined}
+                placeholder="End Date"
               />
-            </div>
-          </div>
-
+                      </div>
+                    </div>
+              
           {/* Future Appointments Table */}
-          <div className="bg-white rounded-lg border shadow-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -638,25 +774,17 @@ export const ClinicalDashboard: React.FC = () => {
                       <TableCell>{getStatusBadge(appointment.finalStatusCode)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button
+              <Button 
                             variant="outline"
                             size="sm"
-                            disabled={['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(appointment.finalStatusCode)}
-                            className="h-6 px-2 text-xs text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <Calendar className="h-2.5 w-2.5 mr-1" />
-                            Re-schedule
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(appointment.finalStatusCode)}
+                            disabled={['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
                             className="h-6 px-2 text-xs text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={() => handleCancelClick(appointment)}
                           >
                             <X className="h-2.5 w-2.5 mr-1" />
                             Cancel
-                          </Button>
-                        </div>
+              </Button>
+                      </div>
                       </TableCell>
                       <TableCell>
                         <Button variant="outline" size="sm" className="h-6 px-2 text-xs">
@@ -681,7 +809,7 @@ export const ClinicalDashboard: React.FC = () => {
                 )}
               </TableBody>
             </Table>
-          </div>
+                      </div>
 
           {/* Pagination */}
           {totalPages > 1 && (
@@ -715,11 +843,75 @@ export const ClinicalDashboard: React.FC = () => {
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>
-            </div>
-          )}
+                    </div>
+                  )}
         </TabsContent>
 
-      </Tabs>
+        </Tabs>
+                      </div>
+
+      {/* Cancel Confirmation Dialog */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cancel Appointment</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel this appointment? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {appointmentToCancel && (
+            <div className="py-4">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <div className="space-y-2 text-sm">
+                  <div><span className="font-medium">Patient:</span> {appointmentToCancel.patientFullName}</div>
+                  <div><span className="font-medium">Patient ID:</span> {appointmentToCancel.patientId}</div>
+                  <div><span className="font-medium">Doctor:</span> {appointmentToCancel.doctorName}</div>
+                  <div><span className="font-medium">Appointment ID:</span> {appointmentToCancel.appointmentId}</div>
+                      </div>
+                      </div>
+                    </div>
+      )}
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleCancelDialogClose}
+              disabled={isCancelling}
+            >
+              Keep Appointment
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelConfirm}
+              disabled={isCancelling}
+            >
+              {isCancelling ? 'Cancelling...' : 'Cancel Appointment'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Prescription Editor */}
+      {showPrescriptionEditor && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-7xl h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Prescription Template Editor
+              </h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowPrescriptionEditor(false)}
+              >
+                Close
+              </Button>
+                      </div>
+            <div className="h-[calc(100%-80px)] overflow-auto">
+              <PrescriptionEditor />
+                    </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }; 

@@ -11,6 +11,11 @@ export const useSaveVitals = () => {
       queryClient.invalidateQueries({
         queryKey: ['appointments', variables.appointmentId]
       });
+      
+      // Invalidate appointment details queries to refresh dashboard data
+      queryClient.invalidateQueries({
+        queryKey: ['appointmentDetails']
+      });
     },
   });
 };

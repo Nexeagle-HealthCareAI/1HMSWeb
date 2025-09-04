@@ -23,5 +23,7 @@ export const useAppointmentDetails = (
     enabled: enabled && !!hospitalId,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch when component mounts
   });
 };

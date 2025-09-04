@@ -329,5 +329,14 @@ export const appointmentApi = {
   }): Promise<AppointmentDetailsResponse> => {
     const url = `/appointments/patient-appointment-details?status=${params.status}&startDate=${params.startDate}&endDate=${params.endDate}&hospitalId=${params.hospitalId}`;
     return apiClient.get(url);
+  },
+
+  // Cancel appointment
+  cancelAppointment: (request: {
+    appointmentId: string;
+    patientId: string;
+  }): Promise<ApiResponse<any>> => {
+    const url = `/appointments/patient-cancel`;
+    return apiClient.patch(url, request);
   }
 };

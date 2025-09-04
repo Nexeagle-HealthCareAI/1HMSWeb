@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { 
   Pagination, 
   PaginationContent, 
@@ -35,15 +36,18 @@ import { ArrowUp, Minimize2, Maximize2 } from 'lucide-react';
 import { AppointmentBooking } from './AppointmentBooking';
 import { VitalsForm } from './VitalsForm';
 import { TokenPrintModal } from './TokenPrintModal';
+import { PatientOverview } from '@/features/patient/components/PatientOverview';
 import { format } from 'date-fns';
 import { useAppointmentDetails } from '../hooks/useAppointmentDetails';
 import { useAuthStore } from '@/store/authStore';
+import { useQueryClient } from '@tanstack/react-query';
 
-import { AppointmentDetail } from '../services/appointmentApi';
+import { AppointmentDetail, appointmentApi } from '../services/appointmentApi';
 
 export const AppointmentDashboard = () => {
   const { t } = useTranslation();
   const { hospitalId } = useAuthStore();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDoctor, setSelectedDoctor] = useState('all');
   const [activeTab, setActiveTab] = useState<'current' | 'past' | 'future'>('current');
@@ -53,11 +57,16 @@ export const AppointmentDashboard = () => {
   const [showBooking, setShowBooking] = useState(false);
   const [showVitalsForm, setShowVitalsForm] = useState(false);
   const [showTokenPrint, setShowTokenPrint] = useState(false);
+  const [showPatientProfile, setShowPatientProfile] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<AppointmentDetail | null>(null);
   const [selectedAppointmentForToken, setSelectedAppointmentForToken] = useState<AppointmentDetail | null>(null);
+  const [selectedPatientForProfile, setSelectedPatientForProfile] = useState<AppointmentDetail | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
   const [compactMode, setCompactMode] = useState(true);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [appointmentToCancel, setAppointmentToCancel] = useState<AppointmentDetail | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const getStatusBadge = (status: AppointmentDetail['finalStatusCode'], appointment?: AppointmentDetail) => {
     switch (status) {
@@ -82,6 +91,8 @@ export const AppointmentDashboard = () => {
         return <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs px-1.5 py-0.5 font-medium">Done</Badge>;
       case 'SCHEDULED':
         return <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-xs px-1.5 py-0.5 font-medium">Scheduled</Badge>;
+      case 'CANCELLED':
+        return <Badge className="bg-gray-50 text-gray-600 border-gray-300 text-xs px-1.5 py-0.5 font-medium">Cancelled</Badge>;
       default:
         return <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-xs px-1.5 py-0.5 font-medium">{status}</Badge>;
     }
@@ -94,6 +105,12 @@ export const AppointmentDashboard = () => {
 
   const handleVitalsSubmit = (vitalsData: any) => {
     console.log('Vitals submitted for patient:', selectedPatient?.patientFullName, vitalsData);
+    
+    // Invalidate appointment details queries to refresh dashboard data
+    queryClient.invalidateQueries({
+      queryKey: ['appointmentDetails']
+    });
+    
     setShowVitalsForm(false);
     setSelectedPatient(null);
   };
@@ -106,6 +123,11 @@ export const AppointmentDashboard = () => {
   const handleTokenPrintClick = (appointment: AppointmentDetail) => {
     setSelectedAppointmentForToken(appointment);
     setShowTokenPrint(true);
+  };
+
+  const handlePatientIdClick = (appointment: AppointmentDetail) => {
+    setSelectedPatientForProfile(appointment);
+    setShowPatientProfile(true);
   };
 
   const handleTokenPrintClose = () => {
@@ -145,6 +167,9 @@ export const AppointmentDashboard = () => {
   });
 
   const filteredAppointments = useMemo(() => {
+    console.log('🔄 FILTERING STARTED - useMemo triggered');
+    console.log('Filter parameters:', { selectedStatus, activeTab, searchTerm, selectedDoctor });
+    
     if (!appointments || appointments.length === 0) return [];
     
     const today = new Date(); // Use actual current date
@@ -165,6 +190,8 @@ export const AppointmentDashboard = () => {
       endDate,
       today: today.toDateString()
     });
+    
+    console.log('Current selectedStatus in filter:', selectedStatus, 'Type:', typeof selectedStatus);
     
     const filtered = appointments.filter(appointment => {
       const searchLower = searchTerm.toLowerCase();
@@ -190,8 +217,20 @@ export const AppointmentDashboard = () => {
            appointmentStatus,
            selectedStatusUpper,
            matchesStatus,
+           appointmentId: appointment.appointmentId,
            patientName: appointment.patientFullName
          });
+         
+         // Special debug for VITALS_REQUIRED
+         if (selectedStatusUpper === 'VITALS_REQUIRED') {
+           console.log('🔍 VITALS_REQUIRED filter debug:', {
+             appointmentStatus,
+             selectedStatusUpper,
+             matchesStatus,
+             appointmentId: appointment.appointmentId,
+             patientName: appointment.patientFullName
+           });
+         }
        }
       
       // Filter by date range if on past or future tab
@@ -258,6 +297,18 @@ export const AppointmentDashboard = () => {
              matchesType
            }
          });
+         
+         // Special debug for VITALS_REQUIRED
+         if (selectedStatus === 'VITALS_REQUIRED') {
+           console.log('VITALS_REQUIRED filter debug:', {
+             patientName: appointment.patientFullName,
+             appointmentStatus: appointment.finalStatusCode,
+             appointmentStatusUpper: String(appointment.finalStatusCode || '').toUpperCase(),
+             selectedStatusUpper: String(selectedStatus || '').toUpperCase(),
+             matchesStatus,
+             willBeIncluded: result
+           });
+         }
        }
        
        if (!result) {
@@ -280,11 +331,17 @@ export const AppointmentDashboard = () => {
        filteredCount: filtered.length,
        selectedStatus,
        activeTab,
+       totalAppointments: appointments.length,
        filteredAppointments: filtered.map(a => ({
          patientName: a.patientFullName,
          appointmentDate: a.appointmentDate,
          finalStatusCode: a.finalStatusCode
-       }))
+       })),
+       statusBreakdown: appointments.reduce((acc, apt) => {
+         const status = apt.finalStatusCode;
+         acc[status] = (acc[status] || 0) + 1;
+         return acc;
+       }, {} as Record<string, number>)
      });
      
      // Additional debug: Show what appointments exist for the current tab and status
@@ -308,8 +365,18 @@ export const AppointmentDashboard = () => {
        });
      }
      
+     // Final debug summary
+     console.log('🎯 FINAL FILTER RESULT:', {
+       selectedStatus,
+       activeTab,
+       totalAppointments: appointments.length,
+       filteredCount: filtered.length,
+       filteredAppointmentIds: filtered.map(a => a.appointmentId),
+       isEmpty: filtered.length === 0
+     });
+     
      // Log the current status filter for debugging
-     if (activeTab === 'current') {
+      if (activeTab === 'current') {
        console.log('Current tab status filter:', {
          selectedStatus,
          totalAppointments: appointments.length,
@@ -398,11 +465,24 @@ export const AppointmentDashboard = () => {
      }
 
     // Sort by appointment time in increasing order
-    return filtered.sort((a, b) => {
+    const sortedFiltered = filtered.sort((a, b) => {
       const timeA = new Date(a.startAt).getTime();
       const timeB = new Date(b.startAt).getTime();
       return timeA - timeB;
     });
+    
+    console.log('✅ FILTERING COMPLETED');
+    console.log('Final filtered result:', {
+      totalFiltered: sortedFiltered.length,
+      selectedStatus,
+      activeTab,
+      filteredAppointments: sortedFiltered.map(a => ({
+        patientName: a.patientFullName,
+        finalStatusCode: a.finalStatusCode
+      }))
+    });
+    
+    return sortedFiltered;
   }, [searchTerm, selectedDoctor, selectedStatus, startDate, endDate, activeTab, appointments]);
 
   // Pagination logic
@@ -432,14 +512,46 @@ export const AppointmentDashboard = () => {
     if (activeTab === 'past') {
       setStartDate(yesterday.toISOString().split('T')[0]);
       setEndDate(yesterday.toISOString().split('T')[0]);
-    } else if (activeTab === 'future') {
+      } else if (activeTab === 'future') {
       setStartDate(tomorrow.toISOString().split('T')[0]);
       setEndDate(tomorrow.toISOString().split('T')[0]);
-    } else {
+        } else {
       setStartDate('');
       setEndDate('');
     }
   }, [activeTab]);
+
+  // Initial load when component mounts
+  useEffect(() => {
+    if (refetch && hospitalId) {
+      console.log('AppointmentDashboard mounted - triggering initial API load');
+      refetch();
+    }
+  }, [refetch, hospitalId]);
+
+  // Refetch when page becomes visible again (user navigates back to dashboard)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && refetch && hospitalId) {
+        console.log('Page became visible - refetching appointments');
+        refetch();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [refetch, hospitalId]);
+
+  // Refetch when returning from appointment booking page
+  useEffect(() => {
+    if (!showBooking && refetch && hospitalId) {
+      console.log('Returned from appointment booking - refetching appointments');
+      refetch();
+    }
+  }, [showBooking, refetch, hospitalId]);
 
   // Auto-refresh appointments every 10 minutes
   useEffect(() => {
@@ -468,6 +580,72 @@ export const AppointmentDashboard = () => {
     if (tableElement) {
       tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+  };
+
+  // Date validation functions
+  const handleStartDateChange = (value: string) => {
+    setStartDate(value);
+    // If end date is set and is before the new start date, update end date to match start date
+    if (value && endDate && new Date(value) > new Date(endDate)) {
+      setEndDate(value);
+    }
+  };
+
+  const handleEndDateChange = (value: string) => {
+    // If start date is set and the new end date is before start date, don't allow it
+    if (startDate && value && new Date(value) < new Date(startDate)) {
+      // Optionally show a toast or alert here
+      console.warn('Start date cannot be after end date');
+      return;
+    }
+    setEndDate(value);
+  };
+
+  const handleCancelClick = (appointment: AppointmentDetail) => {
+    setAppointmentToCancel(appointment);
+    setCancelDialogOpen(true);
+  };
+
+  const handleCancelConfirm = async () => {
+    if (!appointmentToCancel) return;
+
+    setIsCancelling(true);
+    try {
+      console.log('Cancelling appointment:', appointmentToCancel.appointmentId);
+      
+      const response = await appointmentApi.cancelAppointment({
+        appointmentId: appointmentToCancel.appointmentId,
+        patientId: appointmentToCancel.patientId
+      });
+      
+      console.log('Cancel API response:', response);
+      
+      // Close dialog and reset state
+      setCancelDialogOpen(false);
+      setAppointmentToCancel(null);
+      
+      // Invalidate appointment details queries to refresh dashboard data
+      queryClient.invalidateQueries({
+        queryKey: ['appointmentDetails']
+      });
+      
+      // Refresh appointment data
+      if (refetch) {
+        refetch();
+      }
+      
+      console.log('Appointment cancelled successfully - status should be CANCELLED');
+    } catch (error) {
+      console.error('Error cancelling appointment:', error);
+      // TODO: Show error message
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  const handleCancelDialogClose = () => {
+    setCancelDialogOpen(false);
+    setAppointmentToCancel(null);
   };
 
   if (showBooking) {
@@ -579,7 +757,7 @@ export const AppointmentDashboard = () => {
                         <Input
                           type="date"
                           value={startDate}
-                          onChange={(e) => setStartDate(e.target.value)}
+                          onChange={(e) => handleStartDateChange(e.target.value)}
                           className="w-40 h-10 text-xs"
                           placeholder="Start Date"
                         />
@@ -590,16 +768,17 @@ export const AppointmentDashboard = () => {
                         <Input
                           type="date"
                           value={endDate}
-                          onChange={(e) => setEndDate(e.target.value)}
+                          onChange={(e) => handleEndDateChange(e.target.value)}
                           className="w-40 h-10 text-xs"
                           placeholder="End Date"
+                          min={startDate || undefined}
                         />
                     </div>
                         </div>
                         </div>
                 )}
                   </div>
-            </div>
+                  </div>
 
                          {/* Status Navigation - Only show for Current tab */}
              {activeTab === 'current' && (
@@ -612,36 +791,48 @@ export const AppointmentDashboard = () => {
                     { key: 'UNDER_CONSULT', label: 'Under Consult', color: 'bg-blue-100 text-blue-700 border-blue-200' },
                     { key: 'LAB_REQUIRED', label: 'Lab Required', color: 'bg-orange-100 text-orange-700 border-orange-200' },
                     { key: 'AWAITING_RECONSULT', label: 'Awaiting Reconsult', color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
-                    { key: 'COMPLETED', label: 'Completed', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' }
+                    { key: 'COMPLETED', label: 'Completed', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+                    { key: 'CANCELLED', label: 'Cancelled', color: 'bg-gray-100 text-gray-600 border-gray-300' }
                   ].map((status) => {
-                                                                                   const count = appointments.filter(a => {
-                       const appointmentStartDate = new Date(a.startAt);
-                       const appointmentDay = new Date(appointmentStartDate.getFullYear(), appointmentStartDate.getMonth(), appointmentStartDate.getDate());
-                       const todayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
-                       
-                       // For "all" status, count all current appointments
-                       if (status.key === 'all') {
-                         return appointmentDay.getTime() === todayStart.getTime();
-                       }
-                       
-                       // For specific status, count appointments with that status (case-insensitive)
-                       return appointmentDay.getTime() === todayStart.getTime() && 
-                              String(a.finalStatusCode || '').toUpperCase() === String(status.key || '').toUpperCase();
-                     }).length;
+                    const count = appointments.filter(a => {
+                      const appointmentStartDate = new Date(a.startAt);
+                      const appointmentDay = new Date(appointmentStartDate.getFullYear(), appointmentStartDate.getMonth(), appointmentStartDate.getDate());
+                      const todayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+                      
+                      // For "all" status, count all current appointments
+                      if (status.key === 'all') {
+                        return appointmentDay.getTime() === todayStart.getTime();
+                      }
+                      
+                      // For specific status, count appointments with that status (case-insensitive)
+                      return appointmentDay.getTime() === todayStart.getTime() && 
+                             String(a.finalStatusCode || '').toUpperCase() === String(status.key || '').toUpperCase();
+                    }).length;
                     
                     return (
                 <button
                          key={status.key}
                          onClick={() => {
                            console.log('Status button clicked:', status.key);
+                           console.log('Current selectedStatus before update:', selectedStatus);
                            setSelectedStatus(status.key);
-                           // Force a re-render by updating a state
                            setCurrentPage(1);
-                           // Add a small delay to ensure state update
-                           setTimeout(() => {
-                             console.log('Status updated to:', status.key);
-                             console.log('Current selectedStatus state:', status.key);
-                           }, 0);
+                           console.log('Status filter should now be:', status.key);
+                           
+                           // Debug: Check what appointments exist with this status
+                           const appointmentsWithThisStatus = appointments.filter(a => {
+                             const appointmentStartDate = new Date(a.startAt);
+                             const appointmentDay = new Date(appointmentStartDate.getFullYear(), appointmentStartDate.getMonth(), appointmentStartDate.getDate());
+                             const todayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+                             
+                             return appointmentDay.getTime() === todayStart.getTime() && 
+                                    String(a.finalStatusCode || '').toUpperCase() === String(status.key || '').toUpperCase();
+                           });
+                           
+                           console.log(`Appointments with status ${status.key}:`, appointmentsWithThisStatus.map(a => ({
+                             patientName: a.patientFullName,
+                             finalStatusCode: a.finalStatusCode
+                           })));
                          }}
                          className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 hover:scale-105 ${
                            selectedStatus === status.key
@@ -717,7 +908,9 @@ export const AppointmentDashboard = () => {
                            <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Patient Name</TableHead>
                            <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Doctor Name</TableHead>
                            <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Token No</TableHead>
-                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Appointment Time</TableHead>
+                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">
+                             {activeTab === 'past' ? 'Last Appointment Date' : activeTab === 'future' ? 'Appointment Date' : 'Appointment Time'}
+                           </TableHead>
                            <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">
                              {activeTab === 'past' ? 'Last Completed Status' : 'Current Status'}
                            </TableHead>
@@ -726,7 +919,7 @@ export const AppointmentDashboard = () => {
                            )}
                            <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Print Prescription</TableHead>
                                                        <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">
-                              {activeTab === 'past' ? 'Next Meet Required' : 'Print Token'}
+                              {activeTab === 'past' ? 'Next FollowUp Date' : 'Print Token'}
                             </TableHead>
                             {activeTab === 'past' && (
                               <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">IsCompleted</TableHead>
@@ -757,9 +950,12 @@ export const AppointmentDashboard = () => {
                              <TableRow key={appointment.appointmentId} className={`hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors border-b border-gray-100 dark:border-gray-700/50 ${compactMode ? 'h-10' : 'h-12'}`}>
                                {/* Patient ID */}
                                <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                                 <span className="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-xs font-medium">
+                                 <button
+                                   onClick={() => handlePatientIdClick(appointment)}
+                                   className="font-mono bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 px-2 py-1 rounded text-xs font-medium transition-colors cursor-pointer"
+                                 >
                                 {appointment.patientId}
-                                 </span>
+                                 </button>
                                </TableCell>
                                
                                {/* Patient Name */}
@@ -794,16 +990,36 @@ export const AppointmentDashboard = () => {
                                   </span>
                                 </TableCell>
                                 
-                                {/* Appointment Time */}
+                                {/* Appointment Time / Last Appointment Date / Appointment Date */}
                                 <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                                  <div className="flex flex-col gap-0.5">
-                                    <span className="font-medium text-gray-900 dark:text-white text-xs">
-                                      {format(new Date(appointment.startAt), 'HH:mm')}
-                                    </span>
-                                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                                      {format(new Date(appointment.endAt), 'HH:mm')}
-                                    </span>
+                                  {activeTab === 'past' ? (
+                                    <div className="flex flex-col gap-0.5">
+                                      <span className="font-medium text-gray-900 dark:text-white text-xs">
+                                        {format(new Date(appointment.startAt), 'MMM dd, yyyy')}
+                                      </span>
+                                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                                        {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
+                                      </span>
                               </div>
+                                  ) : activeTab === 'future' ? (
+                                    <div className="flex flex-col gap-0.5">
+                                      <span className="font-medium text-gray-900 dark:text-white text-xs">
+                                        {format(new Date(appointment.startAt), 'MMM dd, yyyy')}
+                                      </span>
+                                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                                        {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <div className="flex flex-col gap-0.5">
+                                      <span className="font-medium text-gray-900 dark:text-white text-xs">
+                                        {format(new Date(appointment.startAt), 'HH:mm')}
+                                      </span>
+                                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                                        {format(new Date(appointment.endAt), 'HH:mm')}
+                                      </span>
+                                    </div>
+                                  )}
                             </TableCell>
                                 
                                 {/* Current Status */}
@@ -818,54 +1034,42 @@ export const AppointmentDashboard = () => {
                                     <Button 
                                       variant="outline" 
                                       size="sm"
-                                       disabled={['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(appointment.finalStatusCode)}
+                                       disabled={['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
                                        className={`h-6 px-2 text-xs ${
-                                         ['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(appointment.finalStatusCode)
-                                           ? 'text-gray-400 border-gray-200 cursor-not-allowed opacity-50'
-                                           : 'text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20'
-                                       }`}
-                                     >
-                                       <Calendar className="h-2.5 w-2.5 mr-1" />
-                                       Re-schedule
-                                    </Button>
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm"
-                                       disabled={['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(appointment.finalStatusCode)}
-                                       className={`h-6 px-2 text-xs ${
-                                         ['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(appointment.finalStatusCode)
+                                         ['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)
                                            ? 'text-gray-400 border-gray-200 cursor-not-allowed opacity-50'
                                            : 'text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-900/20'
                                        }`}
+                                       onClick={() => handleCancelClick(appointment)}
                                      >
                                        <X className="h-2.5 w-2.5 mr-1" />
                                       Cancel
                                     </Button>
                                     {appointment.finalStatusCode === 'VITALS_REQUIRED' && (
-                              <Button 
-                                variant="outline" 
-                                size="sm"
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
                                         onClick={() => handleVitalsClick(appointment)}
                                         className="h-6 px-2 text-xs text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20"
-                              >
+                                    >
                                         <Heart className="h-2.5 w-2.5 mr-1" />
                                         Vitals
-                              </Button>
-                      )}
-                </div>
-                                 </TableCell>
+                                    </Button>
+                                )}
+                              </div>
+                            </TableCell>
                                 )}
                                
                                {/* Print Prescription */}
                                <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                          <Button
-                            variant="outline"
-                            size="sm"
+                              <Button 
+                                variant="outline" 
+                                size="sm"
                                    className="h-6 px-2 text-xs text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-900/20"
-                          >
+                              >
                                    <FileText className="h-2.5 w-2.5 mr-1" />
-                                   Print
-                          </Button>
+                                Print
+                              </Button>
                             </TableCell>
                                
                                                                {/* Print Token / Next Meet Required */}
@@ -873,55 +1077,55 @@ export const AppointmentDashboard = () => {
                                   {activeTab === 'past' ? (
                                     <div className="text-center">
                                       <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">NA</span>
-                                    </div>
+                                </div>
                                   ) : (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
+                          <Button
+                            variant="outline"
+                            size="sm"
                                       onClick={() => handleTokenPrintClick(appointment)}
                                       className="h-6 px-2 text-xs text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                                >
+                          >
                                       <Printer className="h-2.5 w-2.5 mr-1" />
                                   Print
-                                </Button>
-                                  )}
-                                </TableCell>
+                          </Button>
+                        )}
+                            </TableCell>
                                 
                                 {/* Past Completed Status - Only show for past tab */}
                                 {activeTab === 'past' && (
                                   <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'} text-center`}>
                                     <div className="flex justify-center items-center">
                                       {appointment.finalStatusCode === 'COMPLETED' ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
                                           className="h-6 px-2 text-xs text-emerald-600 border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
-                        >
+                                      >
                                           <UserCheck className="h-2.5 w-2.5 mr-1" />
                                           Completed
-                        </Button>
+                                      </Button>
                                       ) : (
                                         <div className="flex items-center justify-center w-8 h-8 bg-red-200 dark:bg-red-800/40 rounded-full border-2 border-red-300 dark:border-red-600 shadow-sm">
                                           <X className="h-5 w-5 text-red-700 dark:text-red-300 font-bold" />
                       </div>
-                    )}
-                  </div>
-                                  </TableCell>
+                                  )}
+                                </div>
+                              </TableCell>
                                 )}
-                      </TableRow>
-                        ))
-                      )}
-                  </TableBody>
-                </Table>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
               </div>
-              </div>
-                      </div>
             )}
 
             {/* Pagination */}
             {totalPages > 1 && (
               <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
-                <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600 dark:text-gray-400">
                     Showing {startIndex + 1} to {Math.min(endIndex, filteredAppointments.length)} of {filteredAppointments.length} appointments
                       </div>
@@ -976,12 +1180,12 @@ export const AppointmentDashboard = () => {
                       </PaginationItem>
                     </PaginationContent>
                   </Pagination>
-                              </div>
-                              </div>
-                                )}
-                    </div>
-        </div>
-        </div>
+                      </div>
+                      </div>
+                    )}
+                  </div>
+              </div>
+            </div>
 
       {/* Vitals Form Modal */}
       {showVitalsForm && selectedPatient && (
@@ -1003,6 +1207,83 @@ export const AppointmentDashboard = () => {
            onClose={handleTokenPrintClose}
         />
       )}
+
+      {/* Patient Profile Modal */}
+      {showPatientProfile && selectedPatientForProfile && (
+        <Dialog open={showPatientProfile} onOpenChange={setShowPatientProfile}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Patient Profile - {selectedPatientForProfile.patientFullName}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="mt-4">
+              <PatientOverview
+                patient={{
+                  id: selectedPatientForProfile.patientId,
+                  name: selectedPatientForProfile.patientFullName,
+                  age: 0, // Default value, would need to be fetched from API
+                  gender: 'Unknown', // Default value, would need to be fetched from API
+                  phone: selectedPatientForProfile.patientMobile || '',
+                  email: '', // Default value, would need to be fetched from API
+                  address: '', // Default value, would need to be fetched from API
+                  bloodGroup: '', // Default value, would need to be fetched from API
+                  emergencyContact: '', // Default value, would need to be fetched from API
+                  medicalHistory: [], // Default value, would need to be fetched from API
+                  allergies: [], // Default value, would need to be fetched from API
+                  currentMedications: [] // Default value, would need to be fetched from API
+                }}
+                appointments={[]} // Default value, would need to be fetched from API
+                prescriptions={[]} // Default value, would need to be fetched from API
+                labTests={[]} // Default value, would need to be fetched from API
+                vitalSigns={[]} // Default value, would need to be fetched from API
+                onNavigateToTimeline={() => {}} // Placeholder function
+                        />
+                      </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Cancel Confirmation Dialog */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cancel Appointment</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel this appointment? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {appointmentToCancel && (
+            <div className="py-4">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <div className="space-y-2 text-sm">
+                  <div><span className="font-medium">Patient:</span> {appointmentToCancel.patientFullName}</div>
+                  <div><span className="font-medium">Patient ID:</span> {appointmentToCancel.patientId}</div>
+                  <div><span className="font-medium">Doctor:</span> {appointmentToCancel.doctorName}</div>
+                  <div><span className="font-medium">Appointment ID:</span> {appointmentToCancel.appointmentId}</div>
+                      </div>
+                      </div>
+                    </div>
+          )}
+          <DialogFooter className="flex gap-2">
+                        <Button
+                          variant="outline"
+              onClick={handleCancelDialogClose}
+              disabled={isCancelling}
+                        >
+              Keep Appointment
+                        </Button>
+                                  <Button 
+              variant="destructive"
+              onClick={handleCancelConfirm}
+              disabled={isCancelling}
+            >
+              {isCancelling ? 'Cancelling...' : 'Cancel Appointment'}
+                                  </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

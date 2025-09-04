@@ -419,6 +419,11 @@ export const AppointmentBooking: React.FC = () => {
       });
     }
     
+    // Invalidate appointment details queries to refresh dashboard data
+    queryClient.invalidateQueries({
+      queryKey: ['appointmentDetails']
+    });
+    
     setShowVitalsForm(false);
     setShowSuccess(true);
     setSelectedSlot(null);
@@ -439,6 +444,11 @@ export const AppointmentBooking: React.FC = () => {
         queryKey: ['bookedSlots', selectedDoctor.id, formattedDate]
       });
     }
+    
+    // Invalidate appointment details queries to refresh dashboard data
+    queryClient.invalidateQueries({
+      queryKey: ['appointmentDetails']
+    });
     
     setShowVitalsForm(false);
     setShowSuccess(true);
@@ -797,24 +807,24 @@ export const AppointmentBooking: React.FC = () => {
 
           {/* Main Content */}
           <div className="flex-1 overflow-hidden">
-            <div className="h-full p-4 lg:p-6 overflow-y-auto pb-safe">
+            <div className="h-full p-3 lg:p-4 overflow-y-auto pb-safe">
               <div className="max-w-4xl mx-auto">
-                {/* Desktop Header */}
-                <div className="hidden lg:block mb-6">
-                  <h1 className="text-2xl font-bold text-foreground dark:text-white mb-2">Schedule Appointment</h1>
-                  <p className="text-sm text-muted-foreground dark:text-gray-400">
+                {/* Desktop Header - Compact */}
+                <div className="hidden lg:block mb-3">
+                  <h1 className="text-xl font-bold text-foreground dark:text-white mb-1">Schedule Appointment</h1>
+                  <p className="text-xs text-muted-foreground dark:text-gray-400">
                     Selected: <span className="font-semibold text-primary">{selectedDoctor?.name || 'No doctor selected'}</span>
                     <span className="text-muted-foreground/50"> • </span>
                     <span>{selectedDoctor?.specialization || 'Select a department first'}</span>
                   </p>
                 </div>
 
-                {/* Date Selection with Calendar */}
-                <div className="mb-4">
-                  <h2 className="text-sm lg:text-base font-semibold mb-3 flex items-center gap-2 text-foreground dark:text-white">
+                {/* Date Selection with Calendar - Compact */}
+                <div className="mb-3">
+                  <h2 className="text-xs font-semibold mb-2 flex items-center gap-1 text-foreground dark:text-white">
                     📅 Select Date
                   </h2>
-                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                  <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
                     {Array.from({ length: 7 }, (_, i) => {
                       const date = new Date();
                       date.setDate(date.getDate() + i);
@@ -825,7 +835,7 @@ export const AppointmentBooking: React.FC = () => {
                         <button
                           key={i}
                           onClick={() => handleDateSelect(date)}
-                          className={`px-3 py-2.5 rounded-lg border text-center min-w-[68px] lg:min-w-[80px] flex-shrink-0 transition-all text-xs lg:text-sm ${
+                          className={`px-2 py-1.5 rounded-md border text-center min-w-[60px] lg:min-w-[70px] flex-shrink-0 transition-all text-xs ${
                             isSelected
                               ? 'bg-primary text-primary-foreground border-primary shadow-md scale-105'
                               : 'bg-card border-border hover:border-primary/50 hover:bg-accent hover:scale-105'
@@ -844,8 +854,8 @@ export const AppointmentBooking: React.FC = () => {
                     {/* Calendar Picker */}
                     <Popover>
                       <PopoverTrigger asChild>
-                        <button className="px-3 py-2.5 rounded-lg border border-dashed border-border bg-muted hover:bg-accent text-center min-w-[68px] lg:min-w-[80px] text-xs lg:text-sm flex-shrink-0 transition-all hover:scale-105">
-                          <CalendarIcon className="h-4 w-4 mx-auto text-muted-foreground" />
+                        <button className="px-2 py-1.5 rounded-md border border-dashed border-border bg-muted hover:bg-accent text-center min-w-[60px] lg:min-w-[70px] text-xs flex-shrink-0 transition-all hover:scale-105">
+                          <CalendarIcon className="h-3 w-3 mx-auto text-muted-foreground" />
                           <div className="mt-0.5 text-muted-foreground">Other</div>
                         </button>
                       </PopoverTrigger>
@@ -863,26 +873,26 @@ export const AppointmentBooking: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Medical-Appropriate Shift Selection */}
-                <div className="mb-4">
-                  <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                {/* Medical-Appropriate Shift Selection - Compact */}
+                <div className="mb-3">
+                  <h2 className="text-xs font-semibold mb-2 flex items-center gap-1">
                     ⏰ Select Time Shift
                   </h2>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                                         {availableShifts.length > 0 ? (
                       availableShifts.map((shift) => (
                       <button
                         key={shift.id}
                         onClick={() => setSelectedShift(shift.id)}
-                        className={`p-3 rounded-lg border text-center transition-all text-xs shadow-sm animate-scale-in ${
+                        className={`p-2 rounded-md border text-center transition-all text-xs shadow-sm animate-scale-in ${
                           selectedShift === shift.id
                             ? `bg-gradient-to-r ${shift.gradient} text-white border-transparent shadow-md scale-105`
                             : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md hover-scale'
                         }`}
                       >
-                        <div className="text-lg mb-1">{shift.icon}</div>
-                        <div className="font-medium">{shift.label}</div>
-                        <div className={`text-xs mt-1 ${
+                        <div className="text-sm mb-0.5">{shift.icon}</div>
+                        <div className="font-medium text-xs">{shift.label}</div>
+                        <div className={`text-xs mt-0.5 ${
                           selectedShift === shift.id ? 'text-white/90' : 'text-gray-600'
                         }`}>
                           {shift.time}
@@ -897,11 +907,11 @@ export const AppointmentBooking: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Time Slots - Ultra-Responsive Grid */}
+                {/* Time Slots - Ultra-Responsive Grid - Compact */}
                 <div>
-                  <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <h2 className="text-xs font-semibold mb-2 flex items-center gap-1">
                     🕐 Available Time Slots
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                    <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">
                       {timeSlots.filter(slot => {
                         const selectedShiftData = availableShifts.find(s => s.id === selectedShift);
                         if (!selectedShiftData) return true;
@@ -915,7 +925,7 @@ export const AppointmentBooking: React.FC = () => {
                     </span>
                   </h2>
                   
-                  <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2">
+                  <div className="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-9 lg:grid-cols-11 xl:grid-cols-13 gap-1.5">
                     {timeSlots.length === 0 && doctorSlotsResponse?.isTimeOff ? (
                       <div className="col-span-full text-center py-8">
                         <div className="text-red-500 text-4xl mb-3">🚫</div>
@@ -942,7 +952,7 @@ export const AppointmentBooking: React.FC = () => {
                         key={slot.id}
                         onClick={() => !slot.isBooked && handleSlotSelect(slot)}
                         disabled={slot.isBooked}
-                        className={`p-2 rounded-lg border text-center transition-all text-xs min-h-[60px] flex flex-col justify-center shadow-sm hover:shadow-md animate-fade-in ${
+                        className={`p-1.5 rounded-md border text-center transition-all text-xs min-h-[45px] flex flex-col justify-center shadow-sm hover:shadow-md animate-fade-in ${
                           slot.isBooked
                             ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-200 cursor-not-allowed opacity-60'
                             : selectedSlot?.id === slot.id
@@ -950,12 +960,12 @@ export const AppointmentBooking: React.FC = () => {
                             : 'bg-gradient-to-br from-teal-50 to-emerald-100 border-teal-200 hover:from-teal-100 hover:to-emerald-200 hover:border-teal-300 hover-scale'
                         }`}
                       >
-                        <div className={`font-bold text-xs mb-1 ${
+                        <div className={`font-bold text-xs mb-0.5 ${
                           selectedSlot?.id === slot.id ? 'text-white' : slot.isBooked ? 'text-red-700' : 'text-teal-700'
                         }`}>
                           {slot.time}
                         </div>
-                        <div className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        <div className={`text-xs px-1 py-0.5 rounded-full font-medium ${
                           slot.isBooked
                             ? 'bg-red-200 text-red-800'
                             : selectedSlot?.id === slot.id
@@ -965,7 +975,7 @@ export const AppointmentBooking: React.FC = () => {
                           {slot.isBooked ? '❌' : selectedSlot?.id === slot.id ? '✅' : '✓'}
                         </div>
                         {slot.isBooked && (
-                          <div className="flex justify-center gap-1 mt-1 opacity-60">
+                          <div className="flex justify-center gap-0.5 mt-0.5 opacity-60">
                             <span className="text-xs">📋</span>
                             <span className="text-xs">✏️</span>
                           </div>
@@ -1024,26 +1034,25 @@ export const AppointmentBooking: React.FC = () => {
 
 
 
-                  {/* Legend */}
-                  <div className="mt-3 p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Slot Types:</div>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-teal-200 rounded border border-teal-300"></div>
-                        <span className="text-gray-600 dark:text-gray-400">Regular Available</span>
+                  {/* Legend - Compact */}
+                  <div className="mt-2 p-2 bg-white/50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
+                    <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Slot Types:</div>
+                    <div className="grid grid-cols-3 gap-1 text-xs">
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-teal-200 rounded border border-teal-300"></div>
+                        <span className="text-gray-600 dark:text-gray-400">Available</span>
                       </div>
-
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-red-200 rounded border border-red-300"></div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-red-200 rounded border border-red-300"></div>
                         <span className="text-gray-600 dark:text-gray-400">Booked</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-blue-500 rounded border border-blue-600"></div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-blue-500 rounded border border-blue-600"></div>
                         <span className="text-gray-600 dark:text-gray-400">Selected</span>
                       </div>
                     </div>
-                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-500">
-                      💡 <strong>Tip:</strong> Tap any available slot to book an appointment. Slot duration varies by shift.
+                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                      💡 Tap any available slot to book an appointment.
                     </div>
                   </div>
                 </div>

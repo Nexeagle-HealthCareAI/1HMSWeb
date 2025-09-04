@@ -21,6 +21,7 @@ export const useAppointmentCancel = () => {
       queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['doctor-appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['appointmentDetails'] });
     },
     onError: (error: any) => {
       console.error('Error cancelling appointment:', error);
