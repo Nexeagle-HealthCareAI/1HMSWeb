@@ -186,7 +186,12 @@ export const useAuthStore = create<AuthStore>()(
         },
 
         logout: () => {
+          console.log('Auth store logout called - clearing session');
+          // Clear localStorage
+          localStorage.removeItem('auth-storage');
+          // Reset to initial state
           set(initialState);
+          console.log('Auth store logout completed');
         },
       }),
       {

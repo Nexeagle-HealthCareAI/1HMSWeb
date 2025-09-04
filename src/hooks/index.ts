@@ -1,10 +1,10 @@
 export { useInactivityReset } from './useInactivityReset';
 export { useLanguage } from './useLanguage';
 export { useProfileCompletion } from './useProfileCompletion';
-export { useRouteGuard } from './useRouteGuard';
-export { useUserProfileApi } from './useUserProfileApi';
-export { useLazyData } from './useLazyData';
-export { useMediaUploadApi } from './useMediaUploadApi';
-export { useApi } from './useApi';
-export { useToast } from './use-toast';
-export { useMobile } from './use-mobile';
+export { useRouteGuard, usePermissions, useRoleGuard } from './useRouteGuard';
+export { useUserDetails, useUpdateUserDetails } from './useUserProfileApi';
+export { useLazyData, useLazyFetch } from './useLazyData';
+export { usePrepareUpload, useUploadToBlob, useFinalizeUpload, useGetMediaURL } from './useMediaUploadApi';
+export { createApiHook, createMutationHook, useAuthApi, useHospitalApi, useDepartmentApi, useSpecializationApi, useDoctorApi, useMediaApi, useInvalidateQueries } from './useApi';
+export { useToast, toast } from './use-toast';
+export { useIsMobile } from './use-mobile';
