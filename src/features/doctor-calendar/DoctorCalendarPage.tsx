@@ -14,7 +14,7 @@ import {
   ShiftDetailsCard,
   AppointmentCancelDialog
 } from './components';
-import { useCalendarEvents, useCreateOverride, useDeleteOverride, useCreateBlock, useDeleteBlock, useTimeOff, useCreateTimeOff, useDeleteTimeOff, useDoctorCalendarConfig, useAppointmentCancel } from './hooks/useCalendar';
+import { useCalendarEvents, useCreateOverride, useDeleteOverride, useTimeOff, useCreateTimeOff, useDeleteTimeOff, useDoctorCalendarConfig, useAppointmentCancel } from './hooks/useCalendar';
 import { CalendarEvent, CreateOverridePayload, CreateBlockPayload, ShiftName } from './api/types';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -265,8 +265,7 @@ export const DoctorCalendarPage: React.FC = () => {
   // Mutations
   const createOverrideMutation = useCreateOverride();
   const deleteOverrideMutation = useDeleteOverride();
-  const createBlockMutation = useCreateBlock();
-  const deleteBlockMutation = useDeleteBlock();
+  // Removed mock block mutations
   const createTimeOffMutation = useCreateTimeOff();
   const deleteTimeOffMutation = useDeleteTimeOff();
   const { cancelAppointment, isPending: isCancelPending } = useAppointmentCancel();
@@ -1808,7 +1807,7 @@ export const DoctorCalendarPage: React.FC = () => {
           initialEndDateTime={personalizedScheduleModal.initialEndDateTime}
           onSave={handleSavePersonalizedSchedule}
           onSaveBlock={handleSaveBlockFromPersonalized}
-          isLoading={createOverrideMutation.isPending || createBlockMutation.isPending}
+          isLoading={createOverrideMutation.isPending}
         />
 
         <DeleteTimeOffDialog

@@ -10,6 +10,7 @@ export interface User {
   role?: string;
   permissions?: string[];
   profilePicture?: string;
+  doctorId?: string;
 }
 
 export interface AuthState {

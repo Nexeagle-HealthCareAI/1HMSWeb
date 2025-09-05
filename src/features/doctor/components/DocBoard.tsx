@@ -37,14 +37,21 @@ import { useAuthStore } from '@/store/authStore';
 import { appointmentApi } from '@/features/appointment/services/appointmentApi';
 import { PrescriptionEditor } from './prescription/PrescriptionEditor';
 import { useQueryClient } from '@tanstack/react-query';
+import { useDoctorProfile } from '../hooks/useDoctorProfile';
+import { useDoctorAppointmentDetails } from '../hooks/useDoctorAppointmentDetails';
+import { DoctorAppointmentDetail } from '../services/doctorApi';
 
-// Mock data - replace with actual API calls
+
+
 interface PatientAppointment {
   appointmentId: string;
   patientFullName: string;
   patientId: string;
   doctorName: string;
   token?: {
+    tokenNumber: number;
+  };
+  tokenDetails?: {
     tokenNumber: number;
   };
   startAt: string;
@@ -55,8 +62,9 @@ interface PatientAppointment {
 
 export const ClinicalDashboard: React.FC = () => {
   const { t } = useTranslation();
-  const { hospitalId } = useAuthStore();
-  const queryClient = useQueryClient();
+  const { hospitalId,userId: authUserId, employeeId } = useAuthStore();
+  const queryClient = useQueryClient();  
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'current' | 'past' | 'future'>('current');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -69,31 +77,76 @@ export const ClinicalDashboard: React.FC = () => {
   const [isCancelling, setIsCancelling] = useState(false);
   const [showPrescriptionEditor, setShowPrescriptionEditor] = useState(false);
 
-  // Mock data - replace with actual API calls
-  const mockAppointments: PatientAppointment[] = [
-    {
-      appointmentId: 'APT001',
-      patientFullName: 'John Doe',
-      patientId: 'P001',
-      doctorName: 'Dr. Smith',
-      token: { tokenNumber: 1 },
-      startAt: '2024-01-15T09:00:00Z',
-      endAt: '2024-01-15T09:30:00Z',
-      finalStatusCode: 'VITALS_REQUIRED',
-      phone: '+1234567890'
-    },
-    {
-      appointmentId: 'APT002',
-      patientFullName: 'Jane Smith',
-      patientId: 'P002',
-      doctorName: 'Dr. Johnson',
-      token: { tokenNumber: 2 },
-      startAt: '2024-01-15T10:00:00Z',
-      endAt: '2024-01-15T10:30:00Z',
-      finalStatusCode: 'READY',
-      phone: '+1234567891'
+  // Get user ID for doctor profile API call - try multiple sources
+  const userId =  authUserId ||'';
+  
+  
+  // Get doctor profile to extract doctorId
+  const { data: doctorProfileResponse, isLoading: doctorProfileLoading, error: doctorProfileError } = useDoctorProfile(userId);
+  const doctorId = doctorProfileResponse?.doctorId || '';
+  // Doctor profile loaded
+  // Get appointment details based on active tab and date range - memoized to prevent unnecessary recalculations
+  const { startDate: apiStartDate, endDate: apiEndDate } = useMemo(() => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+    const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd');
+    
+    let result;
+    switch (activeTab) {
+      case 'current':
+        result = { startDate: today, endDate: today };
+        break;
+      case 'past':
+        result = { startDate: startDate || yesterday, endDate: endDate || today };
+        break;
+      case 'future':
+        result = { startDate: startDate || tomorrow, endDate: endDate || tomorrow };
+        break;
+      default:
+        result = { startDate: today, endDate: today };
     }
-  ];
+    
+    // Date range calculated
+    
+    return result;
+  }, [activeTab, startDate, endDate]);
+  
+  // Debug API call parameters
+  const appointmentApiEnabled = !!hospitalId && !!doctorId && !doctorProfileLoading;
+  
+  // API call parameters are now stable
+  
+  const { data: appointmentData, isLoading: appointmentLoading, error: appointmentError, refetch } = useDoctorAppointmentDetails({
+    status: 'ALL',
+    startDate: apiStartDate,
+    endDate: apiEndDate,
+    hospitalId: hospitalId || '',
+    doctorId: doctorId,
+    enabled: appointmentApiEnabled
+  });
+  
+  // Transform API data to match component expectations
+  const appointments: PatientAppointment[] = appointmentData?.items?.map(item => ({
+    appointmentId: item.appointmentId,
+    patientFullName: item.patientFullName,
+    patientId: item.patientId,
+    doctorName: 'Dr. Unknown',
+    tokenDetails: { tokenNumber: item.tokenDetails?.tokenNumber || 0 },
+    startAt: item.startAt,
+    endAt: item.endAt,
+    finalStatusCode: item.finalStatusCode as any,
+    phone: item.patientMobile
+  })) || [];
+  
+  // Combined loading and error states
+  const isDataLoading = doctorProfileLoading || appointmentLoading;
+  const hasError = doctorProfileError || appointmentError;
+  const shouldShowError = hasError && !isDataLoading;
+
+  // Removed auto-refresh useEffect hooks to prevent API call loops
+
+
+  
 
   // Set default dates for past and future tabs
   useEffect(() => {
@@ -109,7 +162,7 @@ export const ClinicalDashboard: React.FC = () => {
     }
   }, [activeTab]);
 
-  const getStatusBadge = (status: PatientAppointment['finalStatusCode']) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case 'VITALS_REQUIRED':
         return (
@@ -138,27 +191,27 @@ export const ClinicalDashboard: React.FC = () => {
 
   // Filter appointments based on active tab and search
   const filteredAppointments = useMemo(() => {
-    let appointments = mockAppointments;
+    
+    let filtered = appointments;
     
     // Filter by tab
     if (activeTab === 'past') {
-      appointments = appointments.filter(apt => 
-        new Date(apt.startAt) < new Date() && 
-        apt.finalStatusCode === 'COMPLETED'
+      filtered = filtered.filter(apt => 
+        new Date(apt.startAt) < new Date()
       );
     } else if (activeTab === 'future') {
-      appointments = appointments.filter(apt => 
+      filtered = filtered.filter(apt => 
         new Date(apt.startAt) > new Date()
       );
     } else {
-      appointments = appointments.filter(apt => 
+      filtered = filtered.filter(apt => 
         new Date(apt.startAt).toDateString() === new Date().toDateString()
       );
     }
 
     // Filter by search term
     if (searchTerm) {
-      appointments = appointments.filter(apt =>
+      filtered = filtered.filter(apt =>
         apt.patientFullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         apt.patientId.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -166,35 +219,94 @@ export const ClinicalDashboard: React.FC = () => {
 
     // Filter by status (for current tab)
     if (activeTab === 'current' && selectedStatus !== 'all') {
-      appointments = appointments.filter(apt => apt.finalStatusCode === selectedStatus);
+      filtered = filtered.filter(apt => apt.finalStatusCode === selectedStatus);
     }
 
     // Filter by date range (for past and future tabs)
     if (activeTab === 'past' || activeTab === 'future') {
       if (startDate) {
-        appointments = appointments.filter(apt => 
+        filtered = filtered.filter(apt => 
           new Date(apt.startAt) >= new Date(startDate)
         );
       }
       if (endDate) {
-        appointments = appointments.filter(apt => 
+        filtered = filtered.filter(apt => 
           new Date(apt.startAt) <= new Date(endDate)
         );
       }
     }
 
     // Sort by appointment time (increasing)
-    return appointments.sort((a, b) => 
+    const sorted = filtered.sort((a, b) => 
       new Date(a.startAt).getTime() - new Date(b.startAt).getTime()
     );
-  }, [mockAppointments, activeTab, searchTerm, selectedStatus, startDate, endDate]);
+    
+    // Filtering completed
+    
+    return sorted;
+  }, [appointments, activeTab, searchTerm, selectedStatus, startDate, endDate]);
+
+  // Calculate current appointment counts
+  const currentAppointmentCounts = useMemo(() => {
+    const currentAppointments = appointments.filter(apt => 
+      new Date(apt.startAt).toDateString() === new Date().toDateString()
+    );
+    
+    return {
+      all: currentAppointments.length,
+      vitalsRequired: currentAppointments.filter(apt => apt.finalStatusCode === 'VITALS_REQUIRED').length,
+      ready: currentAppointments.filter(apt => apt.finalStatusCode === 'READY').length,
+      underConsult: currentAppointments.filter(apt => apt.finalStatusCode === 'UNDER_CONSULT').length,
+      labRequired: currentAppointments.filter(apt => apt.finalStatusCode === 'LAB_REQUIRED').length,
+      awaitingReconsult: currentAppointments.filter(apt => apt.finalStatusCode === 'AWAITING_RECONSULT').length,
+      completed: currentAppointments.filter(apt => apt.finalStatusCode === 'COMPLETED').length,
+      cancelled: currentAppointments.filter(apt => apt.finalStatusCode === 'CANCELLED').length,
+    };
+  }, [appointments]);
+
+  // Calculate analytics for past appointments
+  const analytics = useMemo(() => {
+    const pastAppointments = appointments.filter(apt => 
+      new Date(apt.startAt) < new Date()
+    );
+    
+    const statusCounts = {
+      // Count appointments that were scheduled but never completed (no-show equivalent)
+      noShow: pastAppointments.filter(apt => 
+        apt.finalStatusCode === 'SCHEDULED' || apt.finalStatusCode === 'VITALS_REQUIRED'
+      ).length,
+      cancelled: pastAppointments.filter(apt => apt.finalStatusCode === 'CANCELLED').length,
+      completed: pastAppointments.filter(apt => apt.finalStatusCode === 'COMPLETED').length,
+      // Count appointments that required additional steps (rescheduled equivalent)
+      rescheduled: pastAppointments.filter(apt => 
+        apt.finalStatusCode === 'LAB_REQUIRED' || apt.finalStatusCode === 'AWAITING_RECONSULT'
+      ).length,
+      late: pastAppointments.filter(apt => {
+        // Consider appointments late if they were completed more than 15 minutes after scheduled time
+        if (apt.finalStatusCode !== 'COMPLETED') return false;
+        const scheduledTime = new Date(apt.startAt);
+        const completedTime = new Date(apt.endAt);
+        const delayMinutes = (completedTime.getTime() - scheduledTime.getTime()) / (1000 * 60);
+        return delayMinutes > 15;
+      }).length,
+    };
+    
+    const total = pastAppointments.length;
+    const successRate = total > 0 ? ((statusCounts.completed / total) * 100).toFixed(1) : '0.0';
+    
+    return {
+      ...statusCounts,
+      total,
+      successRate: `${successRate}%`
+    };
+  }, [appointments]);
 
   // Pagination
   const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentAppointments = filteredAppointments.slice(startIndex, endIndex);
-
+  
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
@@ -287,7 +399,57 @@ export const ClinicalDashboard: React.FC = () => {
                 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-4 lg:p-6">
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'current' | 'past' | 'future')}>
+        {/* Loading State */}
+        {isDataLoading && (
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8 text-center">
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+              <p className="text-gray-600 dark:text-gray-400">
+                {doctorProfileLoading ? 'Loading doctor profile...' : 'Loading appointment data...'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Error State */}
+        {shouldShowError && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 text-center">
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                <X className="h-4 w-4 text-red-600 dark:text-red-400" />
+              </div>
+              <p className="text-red-800 dark:text-red-200 font-medium">
+                {doctorProfileError ? 'Failed to load doctor profile' : 'Failed to load appointment data'}
+              </p>
+              <p className="text-red-600 dark:text-red-400 text-sm">
+                {!hospitalId || !doctorId 
+                  ? `Missing required data: ${!hospitalId ? 'Hospital ID' : ''} ${!doctorId ? 'Doctor ID' : ''}`
+                  : 'Please check the console for error details and try refreshing the page'
+                }
+              </p>
+              <div className="flex gap-2 mt-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => refetch?.()}
+                >
+                  Retry
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => window.location.reload()}
+                >
+                  Refresh Page
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Main Content */}
+        {!isDataLoading && !shouldShowError && (
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'current' | 'past' | 'future')}>
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="current">Current Appointments</TabsTrigger>
             <TabsTrigger value="past">Past Appointments</TabsTrigger>
@@ -305,7 +467,7 @@ export const ClinicalDashboard: React.FC = () => {
                 onClick={() => handleStatusClick('all')}
                 className="text-xs"
               >
-                All
+                All ({currentAppointmentCounts.all})
               </Button>
               <Button
                 variant={selectedStatus === 'VITALS_REQUIRED' ? 'default' : 'outline'}
@@ -314,7 +476,7 @@ export const ClinicalDashboard: React.FC = () => {
                 className="text-xs bg-red-50 text-red-700 border-red-300 hover:bg-red-100 dark:hover:bg-red-900/20"
               >
                 <Heart className="h-3 w-3 mr-1" />
-                Vitals Required
+                Vitals Required ({currentAppointmentCounts.vitalsRequired})
               </Button>
               <Button
                 variant={selectedStatus === 'READY' ? 'default' : 'outline'}
@@ -323,7 +485,7 @@ export const ClinicalDashboard: React.FC = () => {
                 className="text-xs bg-green-50 text-green-700 border-green-300 hover:bg-green-100 dark:hover:bg-green-900/20"
               >
                 <UserCheck className="h-3 w-3 mr-1" />
-                Ready
+                Ready ({currentAppointmentCounts.ready})
               </Button>
               <Button
                 variant={selectedStatus === 'UNDER_CONSULT' ? 'default' : 'outline'}
@@ -332,7 +494,7 @@ export const ClinicalDashboard: React.FC = () => {
                 className="text-xs bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/20"
               >
                 <Clock className="h-3 w-3 mr-1" />
-                Under Consult
+                Under Consult ({currentAppointmentCounts.underConsult})
               </Button>
               <Button
                 variant={selectedStatus === 'LAB_REQUIRED' ? 'default' : 'outline'}
@@ -341,7 +503,7 @@ export const ClinicalDashboard: React.FC = () => {
                 className="text-xs bg-orange-50 text-orange-700 border-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/20"
               >
                 <FlaskConical className="h-3 w-3 mr-1" />
-                Lab Required
+                Lab Required ({currentAppointmentCounts.labRequired})
               </Button>
               <Button
                 variant={selectedStatus === 'AWAITING_RECONSULT' ? 'default' : 'outline'}
@@ -350,7 +512,7 @@ export const ClinicalDashboard: React.FC = () => {
                 className="text-xs bg-yellow-50 text-yellow-700 border-yellow-300 hover:bg-yellow-100 dark:hover:bg-yellow-900/20"
               >
                 <Clock className="h-3 w-3 mr-1" />
-                Awaiting Reconsult
+                Awaiting Reconsult ({currentAppointmentCounts.awaitingReconsult})
               </Button>
               <Button
                 variant={selectedStatus === 'COMPLETED' ? 'default' : 'outline'}
@@ -359,7 +521,7 @@ export const ClinicalDashboard: React.FC = () => {
                 className="text-xs bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/20"
               >
                 <UserCheck className="h-3 w-3 mr-1" />
-                Completed
+                Completed ({currentAppointmentCounts.completed})
               </Button>
               <Button
                 variant={selectedStatus === 'CANCELLED' ? 'default' : 'outline'}
@@ -368,7 +530,7 @@ export const ClinicalDashboard: React.FC = () => {
                 className="text-xs bg-gray-50 text-gray-600 border-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900/20"
               >
                 <X className="h-3 w-3 mr-1" />
-                Cancelled
+                Cancelled ({currentAppointmentCounts.cancelled})
               </Button>
               </div>
             </div>
@@ -410,8 +572,8 @@ export const ClinicalDashboard: React.FC = () => {
                     <TableRow key={appointment.appointmentId}>
                       <TableCell className="font-medium">{appointment.patientId}</TableCell>
                       <TableCell>{appointment.patientFullName}</TableCell>
-                      <TableCell>{appointment.doctorName}</TableCell>
-                      <TableCell>{appointment.token?.tokenNumber || 'N/A'}</TableCell>
+                      <TableCell>Dr. Current User</TableCell>
+                      <TableCell>{appointment.tokenDetails?.tokenNumber || 'N/A'}</TableCell>
                       <TableCell>
                         {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
                       </TableCell>
@@ -556,13 +718,13 @@ export const ClinicalDashboard: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {currentAppointments.length > 0 ? (
-                  currentAppointments.map((appointment) => (
+                {filteredAppointments.length > 0 ? (
+                  filteredAppointments.map((appointment) => (
                     <TableRow key={appointment.appointmentId}>
                       <TableCell className="font-medium">{appointment.patientId}</TableCell>
                       <TableCell>{appointment.patientFullName}</TableCell>
-                      <TableCell>{appointment.doctorName}</TableCell>
-                      <TableCell>{appointment.token?.tokenNumber || 'N/A'}</TableCell>
+                      <TableCell>Dr. Current User</TableCell>
+                      <TableCell>{appointment.tokenDetails?.tokenNumber || 'N/A'}</TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-0.5">
                           <span className="font-medium text-gray-900 dark:text-white text-xs">
@@ -657,7 +819,7 @@ export const ClinicalDashboard: React.FC = () => {
                     <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
                     <span className="text-xs text-gray-700 dark:text-gray-300">No-Show</span>
                 </div>
-                  <span className="text-xs font-bold text-red-600 dark:text-red-400">12</span>
+                  <span className="text-xs font-bold text-red-600 dark:text-red-400">{analytics.noShow}</span>
       </div>
 
                 <div className="flex items-center justify-between p-1.5 bg-orange-50 dark:bg-orange-900/20 rounded">
@@ -665,7 +827,7 @@ export const ClinicalDashboard: React.FC = () => {
                     <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
                     <span className="text-xs text-gray-700 dark:text-gray-300">Cancelled</span>
                       </div>
-                  <span className="text-xs font-bold text-orange-600 dark:text-orange-400">8</span>
+                  <span className="text-xs font-bold text-orange-600 dark:text-orange-400">{analytics.cancelled}</span>
                       </div>
                 
                 <div className="flex items-center justify-between p-1.5 bg-green-50 dark:bg-green-900/20 rounded">
@@ -673,7 +835,7 @@ export const ClinicalDashboard: React.FC = () => {
                     <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
                     <span className="text-xs text-gray-700 dark:text-gray-300">Completed</span>
                     </div>
-                  <span className="text-xs font-bold text-green-600 dark:text-green-400">45</span>
+                  <span className="text-xs font-bold text-green-600 dark:text-green-400">{analytics.completed}</span>
                       </div>
                 
                 <div className="flex items-center justify-between p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded">
@@ -681,7 +843,7 @@ export const ClinicalDashboard: React.FC = () => {
                     <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
                     <span className="text-xs text-gray-700 dark:text-gray-300">Rescheduled</span>
                       </div>
-                  <span className="text-xs font-bold text-blue-600 dark:text-blue-400">6</span>
+                  <span className="text-xs font-bold text-blue-600 dark:text-blue-400">{analytics.rescheduled}</span>
                     </div>
                 
                 <div className="flex items-center justify-between p-1.5 bg-purple-50 dark:bg-purple-900/20 rounded">
@@ -689,7 +851,7 @@ export const ClinicalDashboard: React.FC = () => {
                     <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
                     <span className="text-xs text-gray-700 dark:text-gray-300">Late</span>
                       </div>
-                  <span className="text-xs font-bold text-purple-600 dark:text-purple-400">3</span>
+                  <span className="text-xs font-bold text-purple-600 dark:text-purple-400">{analytics.late}</span>
                       </div>
                     </div>
               
@@ -697,11 +859,11 @@ export const ClinicalDashboard: React.FC = () => {
               <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-600 dark:text-gray-400">Total</span>
-                  <span className="text-xs font-bold text-gray-900 dark:text-white">74</span>
+                  <span className="text-xs font-bold text-gray-900 dark:text-white">{analytics.total}</span>
                       </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-600 dark:text-gray-400">Success</span>
-                  <span className="text-xs font-bold text-green-600 dark:text-green-400">60.8%</span>
+                  <span className="text-xs font-bold text-green-600 dark:text-green-400">{analytics.successRate}</span>
                       </div>
                     </div>
                       </div>
@@ -761,13 +923,13 @@ export const ClinicalDashboard: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {currentAppointments.length > 0 ? (
-                  currentAppointments.map((appointment) => (
+                {filteredAppointments.length > 0 ? (
+                  filteredAppointments.map((appointment) => (
                     <TableRow key={appointment.appointmentId}>
                       <TableCell className="font-medium">{appointment.patientId}</TableCell>
                       <TableCell>{appointment.patientFullName}</TableCell>
-                      <TableCell>{appointment.doctorName}</TableCell>
-                      <TableCell>{appointment.token?.tokenNumber || 'N/A'}</TableCell>
+                      <TableCell>Dr. Current User</TableCell>
+                      <TableCell>{appointment.tokenDetails?.tokenNumber || 'N/A'}</TableCell>
                       <TableCell>
                         {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
                       </TableCell>
@@ -848,7 +1010,8 @@ export const ClinicalDashboard: React.FC = () => {
         </TabsContent>
 
         </Tabs>
-                      </div>
+        )}
+      </div>
 
       {/* Cancel Confirmation Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
@@ -865,7 +1028,7 @@ export const ClinicalDashboard: React.FC = () => {
                 <div className="space-y-2 text-sm">
                   <div><span className="font-medium">Patient:</span> {appointmentToCancel.patientFullName}</div>
                   <div><span className="font-medium">Patient ID:</span> {appointmentToCancel.patientId}</div>
-                  <div><span className="font-medium">Doctor:</span> {appointmentToCancel.doctorName}</div>
+                  <div><span className="font-medium">Doctor:</span> Dr. Current User</div>
                   <div><span className="font-medium">Appointment ID:</span> {appointmentToCancel.appointmentId}</div>
                       </div>
                       </div>
@@ -908,7 +1071,7 @@ export const ClinicalDashboard: React.FC = () => {
                       </div>
             <div className="h-[calc(100%-80px)] overflow-auto">
               <PrescriptionEditor />
-                    </div>
+                      </div>
           </div>
         </div>
       )}
