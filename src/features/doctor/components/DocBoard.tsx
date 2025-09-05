@@ -394,8 +394,8 @@ export const ClinicalDashboard: React.FC = () => {
             <FileText className="h-4 w-4" />
             Prescription Settings
           </Button>
+                    </div>
                   </div>
-                </div>
                 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-4 lg:p-6">
@@ -406,9 +406,9 @@ export const ClinicalDashboard: React.FC = () => {
               <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
               <p className="text-gray-600 dark:text-gray-400">
                 {doctorProfileLoading ? 'Loading doctor profile...' : 'Loading appointment data...'}
-              </p>
-            </div>
-          </div>
+                  </p>
+                </div>
+              </div>
         )}
 
         {/* Error State */}
@@ -417,7 +417,7 @@ export const ClinicalDashboard: React.FC = () => {
             <div className="flex flex-col items-center gap-2">
               <div className="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
                 <X className="h-4 w-4 text-red-600 dark:text-red-400" />
-              </div>
+                  </div>
               <p className="text-red-800 dark:text-red-200 font-medium">
                 {doctorProfileError ? 'Failed to load doctor profile' : 'Failed to load appointment data'}
               </p>
@@ -442,9 +442,9 @@ export const ClinicalDashboard: React.FC = () => {
                 >
                   Refresh Page
                 </Button>
+                </div>
               </div>
             </div>
-          </div>
         )}
 
         {/* Main Content */}
@@ -557,7 +557,6 @@ export const ClinicalDashboard: React.FC = () => {
                 <TableRow>
                   <TableHead>Patient ID</TableHead>
                   <TableHead>Patient Name</TableHead>
-                  <TableHead>Doctor Name</TableHead>
                   <TableHead>Token No</TableHead>
                   <TableHead>Appointment Time</TableHead>
                   <TableHead>Current Status</TableHead>
@@ -572,7 +571,6 @@ export const ClinicalDashboard: React.FC = () => {
                     <TableRow key={appointment.appointmentId}>
                       <TableCell className="font-medium">{appointment.patientId}</TableCell>
                       <TableCell>{appointment.patientFullName}</TableCell>
-                      <TableCell>Dr. Current User</TableCell>
                       <TableCell>{appointment.tokenDetails?.tokenNumber || 'N/A'}</TableCell>
                       <TableCell>
                         {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
@@ -618,7 +616,7 @@ export const ClinicalDashboard: React.FC = () => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                       No appointments found
                     </TableCell>
                   </TableRow>
@@ -708,7 +706,6 @@ export const ClinicalDashboard: React.FC = () => {
                 <TableRow>
                   <TableHead className="text-xs whitespace-nowrap">Patient ID</TableHead>
                   <TableHead className="text-xs whitespace-nowrap">Patient Name</TableHead>
-                  <TableHead className="text-xs whitespace-nowrap">Doctor Name</TableHead>
                   <TableHead className="text-xs whitespace-nowrap">Token No</TableHead>
                   <TableHead className="text-xs whitespace-nowrap">Last Appt Date</TableHead>
                   <TableHead className="text-xs whitespace-nowrap">Last Status</TableHead>
@@ -723,7 +720,6 @@ export const ClinicalDashboard: React.FC = () => {
                     <TableRow key={appointment.appointmentId}>
                       <TableCell className="font-medium">{appointment.patientId}</TableCell>
                       <TableCell>{appointment.patientFullName}</TableCell>
-                      <TableCell>Dr. Current User</TableCell>
                       <TableCell>{appointment.tokenDetails?.tokenNumber || 'N/A'}</TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-0.5">
@@ -764,7 +760,7 @@ export const ClinicalDashboard: React.FC = () => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                       No past appointments found
                     </TableCell>
                   </TableRow>
@@ -913,7 +909,6 @@ export const ClinicalDashboard: React.FC = () => {
                 <TableRow>
                   <TableHead>Patient ID</TableHead>
                   <TableHead>Patient Name</TableHead>
-                  <TableHead>Doctor Name</TableHead>
                   <TableHead>Token No</TableHead>
                   <TableHead>Appointment Time</TableHead>
                   <TableHead>Current Status</TableHead>
@@ -928,7 +923,6 @@ export const ClinicalDashboard: React.FC = () => {
                     <TableRow key={appointment.appointmentId}>
                       <TableCell className="font-medium">{appointment.patientId}</TableCell>
                       <TableCell>{appointment.patientFullName}</TableCell>
-                      <TableCell>Dr. Current User</TableCell>
                       <TableCell>{appointment.tokenDetails?.tokenNumber || 'N/A'}</TableCell>
                       <TableCell>
                         {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
@@ -964,7 +958,7 @@ export const ClinicalDashboard: React.FC = () => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                       No future appointments found
                     </TableCell>
                   </TableRow>
@@ -1011,7 +1005,7 @@ export const ClinicalDashboard: React.FC = () => {
 
         </Tabs>
         )}
-      </div>
+                      </div>
 
       {/* Cancel Confirmation Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
