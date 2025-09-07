@@ -14,7 +14,11 @@ import {
   Phone,
   X,
   FileText,
-  Printer
+  Printer,
+  RefreshCw,
+  Wifi,
+  WifiOff,
+  Activity
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -63,6 +67,10 @@ export const AppointmentDashboard = () => {
   const [selectedPatientForProfile, setSelectedPatientForProfile] = useState<AppointmentDetail | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
+  const [isLiveUpdateEnabled, setIsLiveUpdateEnabled] = useState(true);
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'online' | 'offline'>('online');
   const [compactMode, setCompactMode] = useState(true);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [appointmentToCancel, setAppointmentToCancel] = useState<AppointmentDetail | null>(null);
@@ -133,6 +141,21 @@ export const AppointmentDashboard = () => {
   const handleTokenPrintClose = () => {
     setShowTokenPrint(false);
     setSelectedAppointmentForToken(null);
+  };
+
+  // Manual refresh function
+  const handleManualRefresh = async () => {
+    if (!refetch) return;
+    
+    setIsRefreshing(true);
+    try {
+      await refetch();
+      setLastUpdateTime(new Date());
+    } catch (error) {
+      console.error('Manual refresh failed:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   // Use existing hook for appointment details
@@ -545,6 +568,49 @@ export const AppointmentDashboard = () => {
     };
   }, [refetch, hospitalId]);
 
+  // Live update functionality for current appointments
+  useEffect(() => {
+    if (!isLiveUpdateEnabled || activeTab !== 'current' || !refetch || !hospitalId) {
+      return;
+    }
+
+    const interval = setInterval(async () => {
+      setIsRefreshing(true);
+      try {
+        await refetch();
+        setLastUpdateTime(new Date());
+      } catch (error) {
+        console.error('Live update failed:', error);
+      } finally {
+        setIsRefreshing(false);
+      }
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [isLiveUpdateEnabled, activeTab, refetch, hospitalId]);
+
+  // Connection status monitoring
+  useEffect(() => {
+    const handleOnline = () => {
+      setConnectionStatus('online');
+      if (refetch && hospitalId) {
+        refetch(); // Refresh data when connection is restored
+      }
+    };
+
+    const handleOffline = () => {
+      setConnectionStatus('offline');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [refetch, hospitalId]);
+
   // Refetch when returning from appointment booking page
   useEffect(() => {
     if (!showBooking && refetch && hospitalId) {
@@ -683,7 +749,7 @@ export const AppointmentDashboard = () => {
             <Plus className="h-4 w-4 text-gray-600 dark:text-gray-300 transition-transform group-hover:translate-x-1" />
             <span className="text-gray-700 dark:text-gray-200 font-medium">Book Appointment</span>
               </Button>
-          </div>
+            </div>
         </div>                
 
       {/* Main Dashboard Content */}
@@ -703,17 +769,89 @@ export const AppointmentDashboard = () => {
                    <button
                      key={tab.key}
                      onClick={() => setActiveTab(tab.key as 'current' | 'past' | 'future')}
-                     className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                     className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 relative ${
                        activeTab === tab.key
                          ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
                      }`}
                    >
-                     <span>{tab.label}</span>
+                     <div className="flex items-center justify-center gap-2">
+                       <span>{tab.label}</span>
+                       {tab.key === 'current' && (
+                         <div className="flex items-center gap-1">
+                           {isLiveUpdateEnabled ? (
+                             <div className="flex items-center gap-1">
+                               {isRefreshing ? (
+                                 <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />
+                               ) : (
+                                 <Activity className="h-3 w-3 text-green-500" />
+                               )}
+                               {connectionStatus === 'online' ? (
+                                 <Wifi className="h-3 w-3 text-green-500" />
+                               ) : (
+                                 <WifiOff className="h-3 w-3 text-red-500" />
+                               )}
+                             </div>
+                           ) : (
+                             <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                           )}
+                         </div>
+                       )}
+                     </div>
                    </button>
                  ))}
+          </div>
+        </div>                
+
+            {/* Live Update Control Panel - Only for Current Appointments */}
+            {activeTab === 'current' && (
+              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        {isRefreshing ? (
+                          <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />
+                        ) : (
+                          <Activity className="h-4 w-4 text-green-500" />
+                        )}
+                        {connectionStatus === 'online' ? (
+                          <Wifi className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <WifiOff className="h-4 w-4 text-red-500" />
+                        )}
+                      </div>
+                      <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                        {isLiveUpdateEnabled ? 'Live Updates Active' : 'Live Updates Disabled'}
+                      </span>
+                    </div>
+                    <div className="text-xs text-blue-600 dark:text-blue-400">
+                      Last updated: {lastUpdateTime.toLocaleTimeString()}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleManualRefresh}
+                      disabled={isRefreshing}
+                      className="h-8 px-3 text-xs"
+                    >
+                      <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                      Refresh Now
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsLiveUpdateEnabled(!isLiveUpdateEnabled)}
+                      className="h-8 px-3 text-xs"
+                    >
+                      {isLiveUpdateEnabled ? 'Disable' : 'Enable'} Auto-Refresh
+                    </Button>
             </div>
                     </div>
+              </div>
+            )}
                     
             {/* Compact Search Bar */}
             <div className="mb-4">
@@ -904,7 +1042,13 @@ export const AppointmentDashboard = () => {
                     <Table className="border-collapse">
                                         <TableHeader>
                          <TableRow className="bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700">
-                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Patient ID</TableHead>
+                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">
+                             <div className="flex items-center gap-1.5">
+                               <User className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                               <span>Patient ID</span>
+                               <Eye className="h-2.5 w-2.5 text-gray-400" />
+                             </div>
+                           </TableHead>
                            <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Patient Name</TableHead>
                            <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Doctor Name</TableHead>
                            <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Token No</TableHead>
@@ -952,9 +1096,17 @@ export const AppointmentDashboard = () => {
                                <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                                  <button
                                    onClick={() => handlePatientIdClick(appointment)}
-                                   className="font-mono bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 px-2 py-1 rounded text-xs font-medium transition-colors cursor-pointer"
+                                   className="group relative font-mono bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600 px-3 py-2 rounded-md text-xs font-semibold text-blue-700 dark:text-blue-300 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md"
+                                   title="Click to view patient profile"
                                  >
-                                {appointment.patientId}
+                                   <div className="flex items-center gap-1.5">
+                                     <User className="h-3 w-3" />
+                                     <span>{appointment.patientId}</span>
+                                     <Eye className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                              </div>
+                                   <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                                     Click to view profile
+                </div>
                                  </button>
                                </TableCell>
                                
@@ -963,12 +1115,12 @@ export const AppointmentDashboard = () => {
                                  <div className="min-w-0">
                                    <div className="font-medium text-gray-900 dark:text-white text-xs truncate">
                                      {appointment.patientFullName}
-                                   </div>
+                      </div>
                                    <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                      <Phone className="h-2.5 w-2.5" />
                                      <span className="truncate">{appointment.patientMobile}</span>
-                                   </div>
-                              </div>
+                    </div>
+                  </div>
                             </TableCell>
                                
                                {/* Doctor Name */}
@@ -988,7 +1140,7 @@ export const AppointmentDashboard = () => {
                                   <span className="font-mono bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded text-xs font-medium">
                                     {appointment.token?.tokenNumber || 'N/A'}
                                   </span>
-                                </TableCell>
+                              </TableCell>
                                 
                                 {/* Appointment Time / Last Appointment Date / Appointment Date */}
                                 <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
@@ -1000,7 +1152,7 @@ export const AppointmentDashboard = () => {
                                       <span className="text-xs text-gray-500 dark:text-gray-400">
                                         {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
                                       </span>
-                              </div>
+                                  </div>
                                   ) : activeTab === 'future' ? (
                                     <div className="flex flex-col gap-0.5">
                                       <span className="font-medium text-gray-900 dark:text-white text-xs">
@@ -1009,7 +1161,7 @@ export const AppointmentDashboard = () => {
                                       <span className="text-xs text-gray-500 dark:text-gray-400">
                                         {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
                                       </span>
-                                    </div>
+                                </div>
                                   ) : (
                                     <div className="flex flex-col gap-0.5">
                                       <span className="font-medium text-gray-900 dark:text-white text-xs">
@@ -1018,22 +1170,22 @@ export const AppointmentDashboard = () => {
                                       <span className="text-xs text-gray-500 dark:text-gray-400">
                                         {format(new Date(appointment.endAt), 'HH:mm')}
                                       </span>
-                                    </div>
+                                </div>
                                   )}
-                            </TableCell>
+                              </TableCell>
                                 
                                 {/* Current Status */}
                                <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                                  {getStatusBadge(appointment.finalStatusCode, appointment)}
-                            </TableCell>
+                              </TableCell>
                                
                                                                {/* Actions - Only show for current and future tabs */}
                                 {activeTab !== 'past' && (
                                   <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                                     <div className="flex gap-1">
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm"
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
                                        disabled={['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
                                        className={`h-6 px-2 text-xs ${
                                          ['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)
@@ -1044,52 +1196,52 @@ export const AppointmentDashboard = () => {
                                      >
                                        <X className="h-2.5 w-2.5 mr-1" />
                                       Cancel
-                                    </Button>
+                                      </Button>
                                     {appointment.finalStatusCode === 'VITALS_REQUIRED' && (
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm"
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
                                         onClick={() => handleVitalsClick(appointment)}
                                         className="h-6 px-2 text-xs text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20"
-                                    >
+                                      >
                                         <Heart className="h-2.5 w-2.5 mr-1" />
                                         Vitals
-                                    </Button>
-                                )}
-                              </div>
-                            </TableCell>
+                                      </Button>
+                                  )}
+                                </div>
+                              </TableCell>
                                 )}
                                
                                {/* Print Prescription */}
                                <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                              <Button 
-                                variant="outline" 
-                                size="sm"
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
                                    className="h-6 px-2 text-xs text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-900/20"
-                              >
+                                >
                                    <FileText className="h-2.5 w-2.5 mr-1" />
-                                Print
-                              </Button>
-                            </TableCell>
+                                  Print
+                                </Button>
+                              </TableCell>
                                
                                                                {/* Print Token / Next Meet Required */}
                                 <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                                   {activeTab === 'past' ? (
                                     <div className="text-center">
                                       <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">NA</span>
-                                </div>
+                </div>
                                   ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
+                        <Button
+                          variant="outline"
+                          size="sm"
                                       onClick={() => handleTokenPrintClick(appointment)}
                                       className="h-6 px-2 text-xs text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                          >
+                        >
                                       <Printer className="h-2.5 w-2.5 mr-1" />
                                   Print
-                          </Button>
+                        </Button>
                         )}
-                            </TableCell>
+                        </TableCell>
                                 
                                 {/* Past Completed Status - Only show for past tab */}
                                 {activeTab === 'past' && (
@@ -1107,16 +1259,27 @@ export const AppointmentDashboard = () => {
                                       ) : (
                                         <div className="flex items-center justify-center w-8 h-8 bg-red-200 dark:bg-red-800/40 rounded-full border-2 border-red-300 dark:border-red-600 shadow-sm">
                                           <X className="h-5 w-5 text-red-700 dark:text-red-300 font-bold" />
-                      </div>
-                                  )}
                                 </div>
-                              </TableCell>
+                                  )}
+                              </div>
+                          </TableCell>
                                 )}
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
+                      </TableRow>
+                        ))
+                      )}
+                  </TableBody>
+                </Table>
+              </div>
+                  
+                  {/* User Guide */}
+                  <div className="mt-4 px-4 py-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
+                      <div className="flex items-center gap-1.5">
+                        <User className="h-4 w-4" />
+                        <span className="font-medium">Quick Tip:</span>
+                      </div>
+                      <span>Click on any <span className="font-mono bg-blue-100 dark:bg-blue-800 px-1.5 py-0.5 rounded text-xs font-semibold">Patient ID</span> to view the patient's complete profile and medical history</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1180,12 +1343,12 @@ export const AppointmentDashboard = () => {
                       </PaginationItem>
                     </PaginationContent>
                   </Pagination>
-                      </div>
-                      </div>
-                    )}
-                  </div>
-              </div>
-            </div>
+                              </div>
+                              </div>
+                                )}
+                    </div>
+        </div>
+        </div>
 
       {/* Vitals Form Modal */}
       {showVitalsForm && selectedPatient && (

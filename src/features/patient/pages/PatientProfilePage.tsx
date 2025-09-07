@@ -16,7 +16,6 @@ import { Button } from '@/components/ui/button';
 import { 
   PatientOverview,
   PatientTimeline,
-  PatientPrescriptions,
   PatientLabTests
 } from '../components';
 
@@ -474,11 +473,9 @@ export const PatientProfilePage: React.FC = () => {
 
           {/* Prescriptions Tab */}
           {activeTab === 'prescriptions' && (
-            <PatientPrescriptions
-              prescriptions={prescriptions}
-              onPrescriptionsChange={setPrescriptions}
-              patientVitals={vitalSigns[0]} // Pass the latest vitals
-            />
+            <div className="p-6 text-center">
+              <div className="text-gray-500">Prescriptions feature will be implemented here</div>
+            </div>
           )}
 
           {/* Lab Tests Tab */}

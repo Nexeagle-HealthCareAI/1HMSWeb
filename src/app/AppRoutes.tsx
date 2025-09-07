@@ -35,7 +35,6 @@ const DocAI = lazy(() => import('@/features/ai/components/DocAI').then(module =>
 const ProfilePage = lazy(() => import('@/features/profile/components/ProfilePage').then(module => ({ default: module.ProfilePage })));
 const Billing = lazy(() => import('@/features/billing/components/Billing').then(module => ({ default: module.Billing })));
 const UserOnboardingRegistration = lazy(() => import('@/features/auth/components/UserOnboardingRegistration').then(module => ({ default: module.default })));
-const CanvasPage = lazy(() => import('@/pages/admin/prescriptions/canvas').then(module => ({ default: module.default })));
 const NotFoundPage = lazy(() => import('@/components/shared/NotFoundPage').then(module => ({ default: module.default })));
 
 // Patient routes
@@ -235,17 +234,6 @@ export const AppRoutes: React.FC = () => {
               } 
             />
 
-            {/* Prescription Canvas Editor Route - Restricted to Admin and AdminDoctor roles */}
-            <Route 
-              path="/admin/prescriptions/canvas" 
-              element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
-                  <MainLayout>
-                    <CanvasPage />
-                  </MainLayout>
-                </RouteGuard>
-              } 
-            />
 
             {/* Patient Routes - Restricted to Admin and AdminDoctor roles */}
             <Route
