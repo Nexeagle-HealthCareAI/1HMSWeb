@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import {
-  Calendar,
+import { 
+  Calendar, 
   Plus,
   Search,
   Heart,
@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/pagination';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { PrescriptionSettings } from '@/pages/PrescriptionSettings';
 import { format, subDays, addDays } from 'date-fns';
 import { useAuthStore } from '@/store/authStore';
 import { appointmentApi } from '@/features/appointment/services/appointmentApi';
@@ -76,7 +77,7 @@ export const ClinicalDashboard: React.FC = () => {
   const { hospitalId, userId: authUserId, employeeId } = useAuthStore();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'current' | 'past' | 'future'>('current');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -93,6 +94,17 @@ export const ClinicalDashboard: React.FC = () => {
   const [isLiveUpdateEnabled, setIsLiveUpdateEnabled] = useState(true);
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Prevent body scrolling
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.body.style.height = '100vh';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.height = 'auto';
+    };
+  }, []);
   const [connectionStatus, setConnectionStatus] = useState<'online' | 'offline'>('online');
 
   // Helper function for safe date formatting (kept for future use)
@@ -420,15 +432,15 @@ export const ClinicalDashboard: React.FC = () => {
   return (
     <div className="h-screen bg-gray-50 dark:bg-gray-950 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="bg-gradient-to-r from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3 shadow-lg flex-shrink-0">
+      <div className="bg-gradient-to-r from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3 shadow-lg flex-shrink-0 sticky top-0 z-50">
         <div className="w-full mx-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
                 <Calendar className="h-4 w-4 text-white" />
-              </div>
+          </div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Doctor Dashboard</h1>
-            </div>
+                  </div>
             <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1 shadow-inner">
               <button
                 onClick={() => setActiveNavButton('appointments')}
@@ -452,15 +464,15 @@ export const ClinicalDashboard: React.FC = () => {
                 <FileText className="h-4 w-4" />
                 <span>Settings</span>
               </button>
-            </div>
-          </div>
-        </div>
+                </div>
+                    </div>
+                  </div>
       </div>
 
       {/* Main Content */}
       {activeNavButton === 'appointments' && (
         <div className="flex-1 overflow-hidden">
-          <div className="w-full mx-auto p-4 h-full overflow-hidden">
+          <div className="w-full mx-auto p-4 h-full overflow-y-auto">
           {/* Loading */}
           {isDataLoading && (
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-12 text-center shadow-lg">
@@ -488,7 +500,7 @@ export const ClinicalDashboard: React.FC = () => {
               <div className="flex flex-col items-center gap-4">
                 <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center animate-pulse">
                   <X className="h-8 w-8 text-red-600 dark:text-red-400" />
-                </div>
+                  </div>
                 <div className="space-y-2">
                   <p className="text-xl font-bold text-red-800 dark:text-red-200">
                     {doctorProfileError ? 'Failed to load doctor profile' : 'Failed to load appointment data'}
@@ -518,8 +530,8 @@ export const ClinicalDashboard: React.FC = () => {
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Refresh Page
                   </Button>
-                </div>
               </div>
+            </div>
             </div>
           )}
 
@@ -552,7 +564,7 @@ export const ClinicalDashboard: React.FC = () => {
                           ) : (
                             <WifiOff className="h-3 w-3 text-red-500" />
                           )}
-                        </div>
+              </div>
                       )}
                     </div>
                   </TabsTrigger>
@@ -563,7 +575,7 @@ export const ClinicalDashboard: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
                       Past Appointments
-                    </div>
+                </div>
                   </TabsTrigger>
                   <TabsTrigger
                     value="future"
@@ -572,11 +584,11 @@ export const ClinicalDashboard: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
                       Future Appointments
-                    </div>
+              </div>
                   </TabsTrigger>
                 </TabsList>
-              </div>
-
+            </div>
+            
               {/* Live Update Controls */}
               {activeTab === 'current' && (
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-3">
@@ -587,7 +599,7 @@ export const ClinicalDashboard: React.FC = () => {
                         <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
                           {isLiveUpdateEnabled ? 'Live Updates Active' : 'Live Updates Disabled'}
                         </span>
-                      </div>
+                </div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-blue-600 dark:text-blue-400">
                           Last updated: {format(lastUpdateTime, 'HH:mm:ss')}
@@ -597,10 +609,10 @@ export const ClinicalDashboard: React.FC = () => {
                         ) : (
                           <WifiOff className="h-3 w-3 text-red-500" />
                         )}
-                      </div>
-                    </div>
+                </div>
+              </div>
                     <div className="flex items-center gap-2">
-                      <Button
+              <Button 
                         variant="outline"
                         size="sm"
                         onClick={handleManualRefresh}
@@ -621,11 +633,11 @@ export const ClinicalDashboard: React.FC = () => {
                         }`}
                       >
                         {isLiveUpdateEnabled ? 'Disable Auto-Refresh' : 'Enable Auto-Refresh'}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
               {/* Current */}
               <TabsContent value="current" className="p-4 flex-1 overflow-auto">
@@ -645,7 +657,7 @@ export const ClinicalDashboard: React.FC = () => {
                       <div className="flex items-center gap-1.5">
                         <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
                         All ({currentAppointmentCounts.all})
-                      </div>
+          </div>
                     </Button>
 
                     <Button
@@ -661,8 +673,8 @@ export const ClinicalDashboard: React.FC = () => {
                       <div className="flex items-center gap-1.5">
                         <Heart className="h-3 w-3" />
                         Vitals ({currentAppointmentCounts.vitalsRequired})
-                      </div>
-                    </Button>
+        </div>
+          </Button>
 
                     <Button
                       variant={selectedStatus === 'READY' ? 'default' : 'outline'}
@@ -677,7 +689,7 @@ export const ClinicalDashboard: React.FC = () => {
                       <div className="flex items-center gap-1.5">
                         <UserCheck className="h-3 w-3" />
                         Ready ({currentAppointmentCounts.ready})
-                      </div>
+        </div>
                     </Button>
 
                     <Button
@@ -693,7 +705,7 @@ export const ClinicalDashboard: React.FC = () => {
                       <div className="flex items-center gap-1.5">
                         <Clock className="h-3 w-3" />
                         Consult ({currentAppointmentCounts.underConsult})
-                      </div>
+      </div>
                     </Button>
 
                     <Button
@@ -755,12 +767,12 @@ export const ClinicalDashboard: React.FC = () => {
                       }`}
                     >
                       <div className="flex items-center gap-1.5">
-                        <X className="h-3 w-3" />
+                      <X className="h-3 w-3" />
                         Cancel ({currentAppointmentCounts.cancelled})
-                      </div>
+                    </div>
                     </Button>
-                  </div>
                 </div>
+      </div>
 
                 {/* Search */}
                 <div className="flex flex-col sm:flex-row gap-3 mb-4">
@@ -781,9 +793,9 @@ export const ClinicalDashboard: React.FC = () => {
                           <X className="h-4 w-4" />
                         </button>
                       )}
+                      </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
 
                 {/* Table */}
                 <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
@@ -888,8 +900,8 @@ export const ClinicalDashboard: React.FC = () => {
                         )}
                       </TableBody>
                     </Table>
-                  </div>
-                </div>
+                      </div>
+                      </div>
 
                 {/* Pagination */}
                 <div className="flex justify-center mt-4 min-h-[50px]">
@@ -924,7 +936,7 @@ export const ClinicalDashboard: React.FC = () => {
                       </PaginationItem>
                     </PaginationContent>
                   </Pagination>
-                </div>
+                    </div>
               </TabsContent>
 
               {/* Past */}
@@ -940,8 +952,8 @@ export const ClinicalDashboard: React.FC = () => {
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-8 h-8 text-sm"
                       />
-                    </div>
-                  </div>
+                      </div>
+                      </div>
                   <div className="flex items-center gap-2">
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Date Range:</label>
                     <Input type="date" value={startDate} onChange={(e) => handleStartDateChange(e.target.value)} className="w-[150px]" />
@@ -953,7 +965,7 @@ export const ClinicalDashboard: React.FC = () => {
                       className="w-[150px]"
                       min={startDate || undefined}
                     />
-                  </div>
+                    </div>
                 </div>
 
                 {/* Table */}
@@ -999,7 +1011,7 @@ export const ClinicalDashboard: React.FC = () => {
                                   <span className="text-xs text-gray-500 dark:text-gray-400">
                                     {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
                                   </span>
-                                </div>
+                      </div>
                               </TableCell>
                               <TableCell className="py-3 px-4">{getStatusBadge(appointment.finalStatusCode)}</TableCell>
                               <TableCell className="py-3 px-4">
@@ -1021,14 +1033,14 @@ export const ClinicalDashboard: React.FC = () => {
                                   <div className="flex items-center justify-center">
                                     <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center shadow-sm">
                                       <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-                                    </div>
-                                  </div>
+                      </div>
+                    </div>
                                 ) : (
                                   <div className="flex items-center justify-center">
                                     <div className="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center shadow-sm border-2 border-red-200 dark:border-red-800">
                                       <X className="h-5 w-5 text-red-600 dark:text-red-400 font-bold" />
-                                    </div>
-                                  </div>
+                      </div>
+                      </div>
                                 )}
                               </TableCell>
                             </TableRow>
@@ -1042,8 +1054,8 @@ export const ClinicalDashboard: React.FC = () => {
                         )}
                       </TableBody>
                     </Table>
-                  </div>
-                </div>
+                      </div>
+                      </div>
 
                 {/* Pagination */}
                 <div className="flex justify-center mt-4 min-h-[50px]">
@@ -1078,7 +1090,7 @@ export const ClinicalDashboard: React.FC = () => {
                       </PaginationItem>
                     </PaginationContent>
                   </Pagination>
-                </div>
+                    </div>
               </TabsContent>
 
               {/* Future */}
@@ -1094,8 +1106,8 @@ export const ClinicalDashboard: React.FC = () => {
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-8 h-8 text-sm"
                       />
-                    </div>
-                  </div>
+                      </div>
+                      </div>
                   <div className="flex items-center gap-2">
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Date Range:</label>
                     <Input type="date" value={startDate} onChange={(e) => handleStartDateChange(e.target.value)} className="w-[150px]" />
@@ -1107,7 +1119,7 @@ export const ClinicalDashboard: React.FC = () => {
                       className="w-[150px]"
                       min={startDate || undefined}
                     />
-                  </div>
+                    </div>
                 </div>
 
                 {/* Table */}
@@ -1169,7 +1181,7 @@ export const ClinicalDashboard: React.FC = () => {
                                       Cancel
                                     </Button>
                                   )}
-                                </div>
+                      </div>
                               </TableCell>
                               <TableCell className="py-3 px-4">
                                 <Button
@@ -1202,8 +1214,8 @@ export const ClinicalDashboard: React.FC = () => {
                         )}
                       </TableBody>
                     </Table>
-                  </div>
-                </div>
+                      </div>
+                    </div>
 
                 {/* Pagination */}
                 <div className="flex justify-center mt-4 min-h-[50px]">
@@ -1238,10 +1250,10 @@ export const ClinicalDashboard: React.FC = () => {
                       </PaginationItem>
                     </PaginationContent>
                   </Pagination>
-                </div>
+                      </div>
               </TabsContent>
             </Tabs>
-          )}
+            )}
           </div>
         </div>
       )}
@@ -1249,19 +1261,7 @@ export const ClinicalDashboard: React.FC = () => {
       {/* Settings */}
       {activeNavButton === 'settings' && (
         <div className="flex-1 min-h-0 overflow-hidden">
-          <div className="w-full mx-auto p-4 h-full overflow-hidden">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 h-full flex items-center justify-center">
-              <div className="text-center">
-                <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  Prescription Settings
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Prescription settings will be available here
-                </p>
-              </div>
-            </div>
-          </div>
+          <PrescriptionSettings />
         </div>
       )}
 
@@ -1304,4 +1304,4 @@ export const ClinicalDashboard: React.FC = () => {
       </Dialog>
     </div>
   );
-};
+}; 
