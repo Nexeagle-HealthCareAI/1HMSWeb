@@ -1,6 +1,7 @@
 {
   "navigationFallback": {
-    "rewrite": "/index.html"
+    "rewrite": "/index.html",
+    "exclude": ["/assets/*", "*.{css,js,ico,png,jpg,jpeg,gif,svg,woff,woff2,ttf,eot}"]
   },
   "platformErrorOverrides": [
     {
@@ -12,6 +13,40 @@
     {
       "route": "/api/*",
       "allowedRoles": ["anonymous"]
+    },
+    {
+      "route": "/assets/*",
+      "headers": {
+        "Content-Type": "text/css"
+      }
+    },
+    {
+      "route": "*.css",
+      "headers": {
+        "Content-Type": "text/css"
+      }
+    },
+    {
+      "route": "*.js",
+      "headers": {
+        "Content-Type": "application/javascript"
+      }
     }
-  ]
+  ],
+  "mimeTypes": {
+    ".css": "text/css",
+    ".js": "application/javascript",
+    ".mjs": "application/javascript",
+    ".json": "application/json",
+    ".woff": "application/font-woff",
+    ".woff2": "application/font-woff2",
+    ".ttf": "application/font-ttf",
+    ".eot": "application/vnd.ms-fontobject",
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".ico": "image/x-icon"
+  }
 }
