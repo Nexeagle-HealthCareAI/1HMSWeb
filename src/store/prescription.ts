@@ -41,7 +41,8 @@ const defaultSettings: HeaderFooterSettings = {
     width: 100,
     showImage: true,
     showText: true,
-    text: 'Doctor Name\nDegree\nSpecialization',
+    text: '',
+    showOnAllPages: true,
   },
   footer: {
     height: 15,
@@ -52,7 +53,8 @@ const defaultSettings: HeaderFooterSettings = {
     text: '',
     signatureHeight: 10,
     signatureWidth: 20,
-    doctorName: 'Doctor Name',
+    doctorName: '',
+    showOnAllPages: true,
   },
   font: {
     family: 'Arial',

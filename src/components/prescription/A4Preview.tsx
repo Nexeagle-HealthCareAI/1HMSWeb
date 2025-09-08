@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { usePrescriptionStore } from '@/store/prescription';
 import { mmToPx, A4_WIDTH_MM, A4_HEIGHT_MM } from '@/utils/units';
 import { Button } from '@/components/ui/button';
-import { Printer, Eye, Grid3X3, Ruler, Maximize2, RotateCcw, Download, Settings, Square, ZoomIn, ZoomOut, RotateCw } from 'lucide-react';
+import { Printer, Eye, Grid3X3, Ruler, Maximize2, Download, Settings, Square, ZoomIn, ZoomOut } from 'lucide-react';
 
 interface A4PreviewProps {
   className?: string;
@@ -14,7 +14,19 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
   const [showRulers, setShowRulers] = useState(true);
   const [showMargins, setShowMargins] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [zoomLevel, setZoomLevel] = useState(1);
+  const [zoomLevel, setZoomLevel] = useState(1.2);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Helper functions to determine if header/footer should be shown
+  const shouldShowHeader = (pageNumber: number = currentPage) => {
+    if (pageNumber === 1) return true; // Always show on first page
+    return settings.header?.showOnAllPages ?? true;
+  };
+
+  const shouldShowFooter = (pageNumber: number = currentPage) => {
+    if (pageNumber === 1) return true; // Always show on first page
+    return settings.footer?.showOnAllPages ?? true;
+  };
 
   // Ensure settings are properly initialized
   if (!settings || !settings.page || !settings.header || !settings.footer || !settings.font) {
@@ -89,17 +101,15 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 width: 210mm; 
                 height: 297mm; 
                 margin: 0; 
-                padding: ${(settings.page?.margin?.top ?? 20) * 0.264583}mm ${(settings.page?.margin?.right ?? 20) * 0.264583}mm ${(settings.page?.margin?.bottom ?? 20) * 0.264583}mm ${(settings.page?.margin?.left ?? 20) * 0.264583}mm;
+                padding: ${settings.page?.margin?.top ?? 15}mm ${settings.page?.margin?.right ?? 15}mm ${settings.page?.margin?.bottom ?? 15}mm ${settings.page?.margin?.left ?? 15}mm;
                 position: relative;
                 background: white;
                 display: flex;
                 flex-direction: column;
                 box-sizing: border-box;
-                page-break-after: always;
               }
               .header { 
                 height: ${settings.useLetterhead ? (settings.letterhead?.headerHeight ?? 30) : (settings.header?.height ?? 20)}mm; 
-                border-bottom: 1px solid #eee;
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -123,7 +133,6 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
               }
               .footer { 
                 height: ${settings.useLetterhead ? (settings.letterhead?.footerHeight ?? 20) : (settings.footer?.height ?? 15)}mm; 
-                border-top: 1px solid #eee;
                 background-color: #f9fafb;
                 display: flex;
                 align-items: center;
@@ -159,6 +168,20 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 max-height: 100%;
                 object-fit: contain;
               }
+              .watermark {
+                position: absolute;
+                bottom: 3mm;
+                right: 3mm;
+                font-size: 10px;
+                color: #6b7280;
+                opacity: 0.8;
+                font-weight: 400;
+                z-index: 1000;
+                background: rgba(255, 255, 255, 0.9);
+                padding: 1mm 2mm;
+                border-radius: 2mm;
+                border: 1px solid #e5e7eb;
+              }
               @media print {
                 body { margin: 0; padding: 0; }
                 .prescription { border: none; }
@@ -171,10 +194,6 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 ${settings.useLetterhead ? 
                   `<div style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background-color: #f3f4f6; position: relative;">
                     <div style="position: absolute; inset: 0; opacity: 0.3; background-image: repeating-linear-gradient(45deg, #333, #333 3px, transparent 3px, transparent 12px);"></div>
-                    <div style="text-align: center; color: #6b7280; z-index: 10;">
-                      <div style="font-size: 12px; font-weight: 500;">Header Disabled</div>
-                      <div style="font-size: 10px;">Using default template</div>
-                    </div>
                   </div>` : 
                   ''
                 }
@@ -190,19 +209,28 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 }
               </div>
               <div class="content">
-                <div style="text-align: center; color: #666;">
-                  <div style="font-size: 24px; font-weight: 300; margin-bottom: 10px;">PRESCRIPTION</div>
-                  <div style="font-size: 14px; opacity: 0.75;">Content area for prescription details</div>
-                </div>
+                <!-- Content area for prescription details -->
               </div>
+              ${settings.footer?.showSignature ? 
+                `<div class="signature-section" style="display: flex; justify-content: flex-end; align-items: center; padding: 5mm 5mm 2mm 5mm; min-height: 15mm;">
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <div class="signature">
+                      ${settings.images?.signature ? 
+                        `<img src="${settings.images.signature}" alt="Signature" />` : 
+                        'Signature'
+                      }
+                    </div>
+                    <div style="text-align: center; font-size: 10px; margin-top: 2px; color: #666; line-height: 1.2;">
+                      ${settings.footer?.doctorName ? `<div style="font-weight: bold;">${settings.footer.doctorName}</div>` : ''}
+                    </div>
+                  </div>
+                </div>` : 
+                ''
+              }
               <div class="footer">
                 ${settings.useLetterhead ? 
                   `<div style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background-color: #f3f4f6; position: relative;">
                     <div style="position: absolute; inset: 0; opacity: 0.3; background-image: repeating-linear-gradient(45deg, #333, #333 3px, transparent 3px, transparent 12px);"></div>
-                    <div style="text-align: center; color: #6b7280; z-index: 10;">
-                      <div style="font-size: 12px; font-weight: 500;">Footer Disabled</div>
-                      <div style="font-size: 10px;">Using default template</div>
-                    </div>
                   </div>` : 
                   `<div class="flex-1">
                     ${settings.footer?.showImage && settings.images?.footer ? 
@@ -213,24 +241,11 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                       `<div style="font-size: ${settings.font?.size ?? 12}px;">${settings.footer.text}</div>` : 
                       ''
                     }
-                  </div>
-                  <div class="flex-shrink-0 ml-4" style="display: flex; flex-direction: column; align-items: center;">
-                    ${settings.footer?.showSignature ? 
-                      `<div class="signature">
-                        ${settings.images?.signature ? 
-                          `<img src="${settings.images.signature}" alt="Signature" />` : 
-                          'Signature'
-                        }
-                      </div>
-                      <div style="text-align: center; font-size: 10px; margin-top: 2px; color: #666; line-height: 1.2;">
-                        ${settings.footer?.doctorName ? `<div style="font-weight: bold;">${settings.footer.doctorName}</div>` : ''}
-                      </div>` : 
-                      ''
-                    }
                   </div>`
                 }
               </div>
             </div>
+            <div class="watermark">Powered by NexEagle</div>
           </body>
         </html>
       `);
@@ -247,33 +262,45 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
   };
 
   const handlePreview = () => {
-    // Open print preview
+    // Open preview window without auto-printing
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(`
         <html>
           <head>
-            <title>Prescription Preview</title>
+            <title>Prescription Preview - ${new Date().toLocaleDateString()}</title>
             <style>
-              body { margin: 0; padding: 20px; font-family: ${settings.font.family}; }
+              @page {
+                size: A4;
+                margin: 0;
+              }
+              body { 
+                margin: 0; 
+                padding: 20px; 
+                font-family: ${settings.font?.family ?? 'Arial'}; 
+                background: #f5f5f5;
+              }
               .prescription { 
                 width: 210mm; 
                 height: 297mm; 
                 margin: 0 auto; 
-                border: 1px solid #ccc;
+                padding: ${settings.page?.margin?.top ?? 15}mm ${settings.page?.margin?.right ?? 15}mm ${settings.page?.margin?.bottom ?? 15}mm ${settings.page?.margin?.left ?? 15}mm;
                 position: relative;
                 background: white;
                 display: flex;
                 flex-direction: column;
+                box-sizing: border-box;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                border-radius: 4px;
               }
               .header { 
-                height: ${settings.header?.height ?? 80}px; 
-                border-bottom: 1px solid #eee;
+                height: ${settings.useLetterhead ? (settings.letterhead?.headerHeight ?? 30) : (settings.header?.height ?? 20)}mm; 
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 position: relative;
                 overflow: hidden;
+                flex-shrink: 0;
               }
               .header img {
                 max-height: 100%;
@@ -282,23 +309,22 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
               }
               .content { 
                 flex: 1; 
-                padding: 20px;
+                padding: 5mm;
                 font-size: ${settings.font?.size ?? 12}px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
               }
               .footer { 
-                height: ${settings.footer?.height ?? 60}px; 
-                border-top: 2px solid #ccc;
+                height: ${settings.useLetterhead ? (settings.letterhead?.footerHeight ?? 20) : (settings.footer?.height ?? 15)}mm; 
                 background-color: #f9fafb;
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                padding: 10px 20px;
+                padding: 2.5mm 5mm;
                 position: relative;
                 overflow: hidden;
-                min-height: 40px;
+                min-height: 10mm;
                 flex-shrink: 0;
               }
               .footer img {
@@ -307,9 +333,9 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 object-fit: contain;
               }
               .signature { 
-                width: ${settings.footer?.signatureWidth ?? 80}px; 
-                height: ${settings.footer?.signatureHeight ?? 40}px;
-                border: 2px dashed #999;
+                width: ${settings.footer?.signatureWidth ?? 20}mm; 
+                height: ${settings.footer?.signatureHeight ?? 10}mm;
+                border: 1px dashed #ccc;
                 background-color: white;
                 display: flex;
                 align-items: center;
@@ -317,14 +343,217 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 font-size: 12px;
                 color: #666;
                 flex-shrink: 0;
-                border-radius: 4px;
-                min-width: 25px;
-                min-height: 20px;
+                border-radius: 1mm;
+                min-width: 6mm;
+                min-height: 5mm;
               }
               .signature img {
                 max-width: 100%;
                 max-height: 100%;
                 object-fit: contain;
+              }
+              .watermark {
+                position: absolute;
+                bottom: 3mm;
+                right: 3mm;
+                font-size: 10px;
+                color: #6b7280;
+                opacity: 0.8;
+                font-weight: 400;
+                z-index: 1000;
+                background: rgba(255, 255, 255, 0.9);
+                padding: 1mm 2mm;
+                border-radius: 2mm;
+                border: 1px solid #e5e7eb;
+              }
+              .preview-header {
+                text-align: center;
+                margin-bottom: 20px;
+                color: #666;
+              }
+              .preview-header h1 {
+                margin: 0;
+                font-size: 24px;
+                font-weight: 300;
+              }
+              .preview-header p {
+                margin: 5px 0 0 0;
+                font-size: 14px;
+                opacity: 0.8;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="preview-header">
+              <h1>Prescription Preview</h1>
+              <p>This is how your prescription will look when printed</p>
+            </div>
+            <div class="prescription">
+              <div class="header">
+                ${settings.useLetterhead ? 
+                  `<div style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background-color: #f3f4f6; position: relative;">
+                    <div style="position: absolute; inset: 0; opacity: 0.3; background-image: repeating-linear-gradient(45deg, #333, #333 3px, transparent 3px, transparent 12px);"></div>
+                  </div>` : 
+                  ''
+                }
+                ${!settings.useLetterhead && settings.header?.showImage && settings.images?.header ? 
+                  `<img src="${settings.images.header}" alt="Header" />` : 
+                  ''
+                }
+                ${!settings.useLetterhead && settings.header?.showText ? 
+                  `<div style="text-align: center; font-size: ${settings.font?.size ?? 12}px;">
+                    ${(settings.header?.text ?? '').split('\n').map(line => `<div>${line}</div>`).join('')}
+                  </div>` : 
+                  ''
+                }
+              </div>
+              <div class="content">
+                <!-- Content area for prescription details -->
+              </div>
+              ${settings.footer?.showSignature ? 
+                `<div class="signature-section" style="display: flex; justify-content: flex-end; align-items: center; padding: 5mm 5mm 2mm 5mm; min-height: 15mm;">
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <div class="signature">
+                      ${settings.images?.signature ? 
+                        `<img src="${settings.images.signature}" alt="Signature" />` : 
+                        'Signature'
+                      }
+                    </div>
+                    <div style="text-align: center; font-size: 10px; margin-top: 2px; color: #666; line-height: 1.2;">
+                      ${settings.footer?.doctorName ? `<div style="font-weight: bold;">${settings.footer.doctorName}</div>` : ''}
+                    </div>
+                  </div>
+                </div>` : 
+                ''
+              }
+              <div class="footer">
+                ${settings.useLetterhead ? 
+                  `<div style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background-color: #f3f4f6; position: relative;">
+                    <div style="position: absolute; inset: 0; opacity: 0.3; background-image: repeating-linear-gradient(45deg, #333, #333 3px, transparent 3px, transparent 12px);"></div>
+                  </div>` : 
+                  `<div class="flex-1">
+                    ${settings.footer?.showImage && settings.images?.footer ? 
+                      `<img src="${settings.images.footer}" alt="Footer" />` : 
+                      ''
+                    }
+                    ${settings.footer?.showText && settings.footer?.text ? 
+                      `<div style="font-size: ${settings.font?.size ?? 12}px;">${settings.footer.text}</div>` : 
+                      ''
+                    }
+                  </div>`
+                }
+              </div>
+            </div>
+            <div class="watermark">Powered by NexEagle</div>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
+  };
+
+  const handleExportPDF = () => {
+    // Create a new window with the prescription content for PDF export
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Prescription Export - ${new Date().toLocaleDateString()}</title>
+            <style>
+              @page {
+                size: A4;
+                margin: 0;
+              }
+              body { 
+                margin: 0; 
+                padding: 0; 
+                font-family: ${settings.font?.family ?? 'Arial'}; 
+                background: white;
+              }
+              .prescription { 
+                width: 210mm; 
+                height: 297mm; 
+                margin: 0; 
+                padding: ${settings.page?.margin?.top ?? 15}mm ${settings.page?.margin?.right ?? 15}mm ${settings.page?.margin?.bottom ?? 15}mm ${settings.page?.margin?.left ?? 15}mm;
+                position: relative;
+                background: white;
+                display: flex;
+                flex-direction: column;
+                box-sizing: border-box;
+              }
+              .header { 
+                height: ${settings.useLetterhead ? (settings.letterhead?.headerHeight ?? 30) : (settings.header?.height ?? 20)}mm; 
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+                overflow: hidden;
+                flex-shrink: 0;
+              }
+              .header img {
+                max-height: 100%;
+                max-width: 100%;
+                object-fit: contain;
+              }
+              .content { 
+                flex: 1; 
+                padding: 5mm;
+                font-size: ${settings.font?.size ?? 12}px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              }
+              .footer { 
+                height: ${settings.useLetterhead ? (settings.letterhead?.footerHeight ?? 20) : (settings.footer?.height ?? 15)}mm; 
+                background-color: #f9fafb;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 2.5mm 5mm;
+                position: relative;
+                overflow: hidden;
+                min-height: 10mm;
+                flex-shrink: 0;
+              }
+              .footer img {
+                max-height: 100%;
+                max-width: 100%;
+                object-fit: contain;
+              }
+              .signature { 
+                width: ${settings.footer?.signatureWidth ?? 20}mm; 
+                height: ${settings.footer?.signatureHeight ?? 10}mm;
+                border: 1px dashed #ccc;
+                background-color: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 12px;
+                color: #666;
+                flex-shrink: 0;
+                border-radius: 1mm;
+                min-width: 6mm;
+                min-height: 5mm;
+              }
+              .signature img {
+                max-width: 100%;
+                max-height: 100%;
+                object-fit: contain;
+              }
+              .watermark {
+                position: absolute;
+                bottom: 3mm;
+                right: 3mm;
+                font-size: 10px;
+                color: #6b7280;
+                opacity: 0.8;
+                font-weight: 400;
+                z-index: 1000;
+                background: rgba(255, 255, 255, 0.9);
+                padding: 1mm 2mm;
+                border-radius: 2mm;
+                border: 1px solid #e5e7eb;
               }
               @media print {
                 body { margin: 0; padding: 0; }
@@ -335,11 +564,17 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
           <body>
             <div class="prescription">
               <div class="header">
-                ${settings.header?.showImage && settings.images?.header ? 
-                  `<img src="${settings.images.header}" alt="Header" style="max-height: 100%; max-width: 100%;" />` : 
+                ${settings.useLetterhead ? 
+                  `<div style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background-color: #f3f4f6; position: relative;">
+                    <div style="position: absolute; inset: 0; opacity: 0.3; background-image: repeating-linear-gradient(45deg, #333, #333 3px, transparent 3px, transparent 12px);"></div>
+                  </div>` : 
                   ''
                 }
-                ${settings.header?.showText ? 
+                ${!settings.useLetterhead && settings.header?.showImage && settings.images?.header ? 
+                  `<img src="${settings.images.header}" alt="Header" />` : 
+                  ''
+                }
+                ${!settings.useLetterhead && settings.header?.showText ? 
                   `<div style="text-align: center; font-size: ${settings.font?.size ?? 12}px;">
                     ${(settings.header?.text ?? '').split('\n').map(line => `<div>${line}</div>`).join('')}
                   </div>` : 
@@ -347,38 +582,50 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 }
               </div>
               <div class="content">
-                <div style="text-align: center; color: #666; padding: 40px 20px;">
-                  <div style="font-size: 24px; font-weight: 300; margin-bottom: 10px;">Print Preview</div>
-                  <div style="font-size: 14px; opacity: 0.75;">Content area for prescription</div>
-                </div>
+                <!-- Content area for prescription details -->
               </div>
-              <div class="footer">
-                <div class="flex-1">
-                  ${settings.footer?.showImage && settings.images?.footer ? 
-                    `<img src="${settings.images.footer}" alt="Footer" />` : 
-                    ''
-                  }
-                  ${settings.footer?.showText && settings.footer?.text ? 
-                    `<div style="font-size: ${settings.font?.size ?? 12}px;">${settings.footer.text}</div>` : 
-                    ''
-                  }
-                </div>
-                <div class="flex-shrink-0 ml-4" style="display: flex; flex-direction: column; align-items: center;">
-                  ${settings.footer?.showSignature ? 
-                    `<div class="signature">
+              ${settings.footer?.showSignature ? 
+                `<div class="signature-section" style="display: flex; justify-content: flex-end; align-items: center; padding: 5mm 5mm 2mm 5mm; min-height: 15mm;">
+                  <div style="display: flex; flex-direction: column; align-items: center;">
+                    <div class="signature">
                       ${settings.images?.signature ? 
                         `<img src="${settings.images.signature}" alt="Signature" />` : 
-                        'Dr. Signature'
+                        'Signature'
                       }
                     </div>
                     <div style="text-align: center; font-size: 10px; margin-top: 2px; color: #666; line-height: 1.2;">
                       ${settings.footer?.doctorName ? `<div style="font-weight: bold;">${settings.footer.doctorName}</div>` : ''}
-                    </div>` : 
-                    ''
-                  }
-                </div>
+                    </div>
+                  </div>
+                </div>` : 
+                ''
+              }
+              <div class="footer">
+                ${settings.useLetterhead ? 
+                  `<div style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background-color: #f3f4f6; position: relative;">
+                    <div style="position: absolute; inset: 0; opacity: 0.3; background-image: repeating-linear-gradient(45deg, #333, #333 3px, transparent 3px, transparent 12px);"></div>
+                  </div>` : 
+                  `<div class="flex-1">
+                    ${settings.footer?.showImage && settings.images?.footer ? 
+                      `<img src="${settings.images.footer}" alt="Footer" />` : 
+                      ''
+                    }
+                    ${settings.footer?.showText && settings.footer?.text ? 
+                      `<div style="font-size: ${settings.font?.size ?? 12}px;">${settings.footer.text}</div>` : 
+                      ''
+                    }
+                  </div>`
+                }
               </div>
             </div>
+            <script>
+              // Auto-trigger print dialog for PDF export
+              window.onload = function() {
+                setTimeout(function() {
+                  window.print();
+                }, 500);
+              };
+            </script>
           </body>
         </html>
       `);
@@ -450,6 +697,29 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 <div className="text-gray-600">
                   <span className="font-medium">Zoom:</span> {Math.round(zoomLevel * 100)}%
                 </div>
+                <div className="flex items-center gap-2 text-gray-600">
+                  <span className="font-medium">Page:</span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      className="p-1 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
+                      disabled={currentPage === 1}
+                      title="Previous Page"
+                    >
+                      ←
+                    </button>
+                    <span className="px-2 py-1 bg-gray-100 rounded text-xs font-medium min-w-[2rem] text-center">
+                      {currentPage}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                      className="p-1 hover:bg-gray-100 rounded transition-colors"
+                      title="Next Page"
+                    >
+                      →
+                    </button>
+                  </div>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
@@ -463,24 +733,6 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-gray-700">View Options</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  setShowRulers(true);
-                  setShowGrid(false);
-                  setShowMargins(true);
-                }}
-                className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-              >
-                Reset View
-              </button>
-              <button
-                onClick={() => setZoomLevel(1)}
-                className="text-xs text-gray-600 hover:text-gray-800 font-medium"
-              >
-                Reset Zoom
-              </button>
-            </div>
           </div>
           <div className="grid grid-cols-3 gap-2">
             <button
@@ -788,13 +1040,14 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
             </div>
           )}
           {/* Header */}
-          <div
-            className="border-b border-gray-200 flex items-center justify-center relative overflow-hidden flex-shrink-0"
-            style={{ 
-              height: Math.max((settings.useLetterhead ? (settings.letterhead?.headerHeight ?? 30) : (settings.header?.height ?? 20)) * scale * 3.779527559, 30),
-              minHeight: '30px'
-            }}
-          >
+          {shouldShowHeader() && (
+            <div
+              className="flex items-center justify-center relative overflow-hidden flex-shrink-0"
+              style={{ 
+                height: Math.max((settings.useLetterhead ? (settings.letterhead?.headerHeight ?? 30) : (settings.header?.height ?? 20)) * scale * 3.779527559, 30),
+                minHeight: '30px'
+              }}
+            >
             {settings.useLetterhead ? (
               <div className="w-full h-full flex items-center justify-center bg-gray-100 relative">
                 <div 
@@ -874,6 +1127,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
               </>
             )}
           </div>
+          )}
 
           {/* Content Area */}
           <div
@@ -883,21 +1137,92 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
               padding: `${5 * scale}px`
             }}
           >
-            <div className="text-center text-gray-500">
-              <div className="text-2xl font-light mb-2">PRESCRIPTION</div>
-              <div className="text-sm opacity-75">Content area for prescription details</div>
+            <div className="text-center text-gray-400">
+              <div className="flex flex-col items-center justify-center h-full">
+                <div className="mb-3">
+                  <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
+                    <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-lg font-light text-gray-600">Prescription Content</div>
+                  <div className="text-sm text-gray-400 max-w-xs leading-relaxed">
+                    This area will contain your prescription details, medications, and instructions
+                  </div>
+                  <div className="flex items-center justify-center space-x-4 mt-4 text-xs text-gray-400">
+                    <div className="flex items-center space-x-1">
+                      <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                      <span>Medications</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                      <span>Instructions</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                      <span>Dosage</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
+          {/* Doctor Signature Section */}
+          {settings.footer?.showSignature && (
+            <div 
+              className="flex justify-end items-center relative overflow-hidden flex-shrink-0"
+              style={{ 
+                minHeight: `${15 * scale}px`,
+                padding: `${5 * scale}px ${5 * scale}px ${2 * scale}px ${5 * scale}px`
+              }}
+            >
+              <div className="flex flex-col items-center">
+                <div 
+                  className="border border-dashed border-gray-300 bg-white flex items-center justify-center text-gray-500"
+                  style={{
+                    width: `${(settings.footer?.signatureWidth ?? 20) * scale}px`,
+                    height: `${(settings.footer?.signatureHeight ?? 10) * scale}px`,
+                    minWidth: `${6 * scale}px`,
+                    minHeight: `${5 * scale}px`,
+                    borderRadius: `${1 * scale}px`,
+                    fontSize: `${Math.max(12 * scale, 8)}px`
+                  }}
+                >
+                  {settings.images?.signature ? (
+                    <img
+                      src={settings.images.signature}
+                      alt="Signature"
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  ) : (
+                    <span className="text-center">Signature</span>
+                  )}
+                </div>
+                <div 
+                  className="text-center text-gray-700 mt-1"
+                  style={{ fontSize: Math.max(10 * scale, 6) }}
+                >
+                  {settings.footer?.doctorName && (
+                    <div className="font-bold">{settings.footer.doctorName}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Footer */}
-          <div
-            className="border-t border-gray-200 bg-gray-50 flex items-center justify-between relative overflow-hidden min-h-0 flex-shrink-0"
-            style={{ 
-              height: Math.max((settings.useLetterhead ? (settings.letterhead?.footerHeight ?? 20) : (settings.footer?.height ?? 15)) * scale * 3.779527559, 40),
-              minHeight: '40px',
-              padding: `${2.5 * scale}px ${5 * scale}px`
-            }}
-          >
+          {shouldShowFooter() && (
+            <div
+              className="bg-gray-50 flex items-center justify-between relative overflow-hidden min-h-0 flex-shrink-0"
+              style={{ 
+                height: Math.max((settings.useLetterhead ? (settings.letterhead?.footerHeight ?? 20) : (settings.footer?.height ?? 15)) * scale * 3.779527559, 40),
+                minHeight: '40px',
+                padding: `${2.5 * scale}px ${5 * scale}px`
+              }}
+            >
             {settings.useLetterhead ? (
               <div className="w-full h-full flex items-center justify-center bg-gray-100 relative">
                 <div 
@@ -973,45 +1298,12 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                         </div>
                       )}
                     </div>
-                    <div className="flex-shrink-0 flex flex-col items-center">
-                      {settings.footer?.showSignature && (
-                        <>
-                          <div
-                            className="border border-dashed border-gray-300 bg-white flex items-center justify-center text-gray-600"
-                            style={{
-                              width: Math.max((settings.footer?.signatureWidth ?? 20) * scale * 3.779527559, 25),
-                              height: Math.max((settings.footer?.signatureHeight ?? 10) * scale * 3.779527559, 20),
-                              fontSize: Math.max(10 * scale, 7),
-                              minWidth: '25px',
-                              minHeight: '20px'
-                            }}
-                          >
-                            {settings.images?.signature ? (
-                              <img
-                                src={settings.images.signature}
-                                alt="Signature"
-                                className="max-h-full max-w-full object-contain"
-                              />
-                            ) : (
-                              <span className="text-center">Signature</span>
-                            )}
-                          </div>
-                          <div 
-                            className="text-center text-gray-700 mt-1 space-y-0.5"
-                            style={{ fontSize: Math.max(8 * scale, 6) }}
-                          >
-                            {settings.footer?.doctorName && (
-                              <div className="font-semibold">{settings.footer.doctorName}</div>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </div>
                   </>
                 )}
               </>
             )}
           </div>
+          )}
         </div>
       </div>
 
@@ -1019,12 +1311,8 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
         <div className="mt-6 pt-4 border-t border-gray-200">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium text-gray-700">Actions</span>
-            <div className="flex items-center gap-1 text-xs text-gray-500">
-              <Settings className="h-3 w-3" />
-              <span>Quick Actions</span>
-            </div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <Button
               onClick={handlePreview}
               variant="outline"
@@ -1042,25 +1330,21 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
               <Printer className="h-3 w-3" />
               Print
             </Button>
-          </div>
-          <div className="mt-2 flex gap-2">
             <Button
+              onClick={handleExportPDF}
               variant="ghost"
               size="sm"
-              className="flex items-center gap-2 h-8 text-xs text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+              className="flex items-center gap-2 h-9 text-xs text-gray-600 hover:text-gray-800 hover:bg-gray-100"
             >
               <Download className="h-3 w-3" />
               Export PDF
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex items-center gap-2 h-8 text-xs text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-            >
-              <RotateCcw className="h-3 w-3" />
-              Reset
-            </Button>
           </div>
+        </div>
+        
+        {/* Watermark */}
+        <div className="absolute bottom-20 right-3 text-sm text-gray-600 opacity-80 font-medium z-50 bg-white/90 px-2 py-1 rounded border border-gray-200">
+          Powered by NexEagle
         </div>
       </div>
     </div>

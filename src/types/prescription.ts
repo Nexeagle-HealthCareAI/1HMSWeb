@@ -40,6 +40,7 @@ export interface HeaderFooterSettings {
     showImage: boolean;
     showText: boolean;
     text: string;
+    showOnAllPages: boolean;
   };
   footer: {
     height: number;
@@ -51,6 +52,7 @@ export interface HeaderFooterSettings {
     signatureHeight: number;
     signatureWidth: number;
     doctorName: string;
+    showOnAllPages: boolean;
   };
   font: {
     family: FontFamily;

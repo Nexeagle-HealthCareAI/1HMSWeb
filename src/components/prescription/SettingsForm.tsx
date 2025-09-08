@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePrescriptionStore } from '@/store/prescription';
 import { ImageUploader } from './ImageUploader';
 import { NumberField } from './NumberField';
@@ -6,13 +6,17 @@ import { Toggle } from './Toggle';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Ruler, Image, User, Settings, HelpCircle, FileText } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Ruler, Image, User, Settings, HelpCircle, FileText, Save, Check } from 'lucide-react';
 
 export const SettingsForm: React.FC = () => {
   const { settings, update } = usePrescriptionStore();
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   const updateSettings = (key: string, value: any) => {
     update({ [key]: value });
+    setSaveStatus('idle');
   };
 
   const updateNestedSettings = (parentKey: string, childKey: string, value: any) => {
@@ -23,6 +27,31 @@ export const SettingsForm: React.FC = () => {
         [childKey]: value,
       },
     });
+    setSaveStatus('idle');
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    setSaveStatus('saving');
+    
+    try {
+      // Since Zustand with persist automatically saves to localStorage,
+      // we just need to trigger a save confirmation
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate save delay
+      setSaveStatus('saved');
+      
+      // Reset status after 2 seconds
+      setTimeout(() => {
+        setSaveStatus('idle');
+      }, 2000);
+    } catch (error) {
+      setSaveStatus('error');
+      setTimeout(() => {
+        setSaveStatus('idle');
+      }, 3000);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Ensure settings are properly initialized
@@ -164,6 +193,17 @@ export const SettingsForm: React.FC = () => {
               />
             </div>
             
+            <div className="flex items-center justify-between">
+              <Label className={`text-sm font-medium ${settings.useLetterhead ? 'text-gray-500 dark:text-gray-400' : 'text-green-700 dark:text-green-300'}`}>
+                Show on All Pages
+              </Label>
+              <Toggle
+                label=""
+                checked={settings.header?.showOnAllPages ?? true}
+                onCheckedChange={(checked) => updateNestedSettings('header', 'showOnAllPages', checked)}
+              />
+            </div>
+            
             {settings.header?.showImage && !settings.useLetterhead && (
               <>
                 <ImageUploader
@@ -199,6 +239,17 @@ export const SettingsForm: React.FC = () => {
                 label=""
                 checked={settings.footer?.showImage ?? true}
                 onCheckedChange={(checked) => !settings.useLetterhead && updateNestedSettings('footer', 'showImage', checked)}
+              />
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <Label className={`text-sm font-medium ${settings.useLetterhead ? 'text-gray-500 dark:text-gray-400' : 'text-green-700 dark:text-green-300'}`}>
+                Show on All Pages
+              </Label>
+              <Toggle
+                label=""
+                checked={settings.footer?.showOnAllPages ?? true}
+                onCheckedChange={(checked) => updateNestedSettings('footer', 'showOnAllPages', checked)}
               />
             </div>
             
@@ -309,6 +360,56 @@ export const SettingsForm: React.FC = () => {
               </div>
             </>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Save Button */}
+      <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Save className="h-4 w-4 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-200">Save Settings</h3>
+                <p className="text-xs text-blue-600 dark:text-blue-400">
+                  {saveStatus === 'idle' && 'Save your prescription settings'}
+                  {saveStatus === 'saving' && 'Saving settings...'}
+                  {saveStatus === 'saved' && 'Settings saved successfully!'}
+                  {saveStatus === 'error' && 'Error saving settings. Please try again.'}
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              className={`flex items-center gap-2 ${
+                saveStatus === 'saved' 
+                  ? 'bg-green-600 hover:bg-green-700' 
+                  : saveStatus === 'error'
+                  ? 'bg-red-600 hover:bg-red-700'
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
+            >
+              {saveStatus === 'saved' ? (
+                <>
+                  <Check className="h-4 w-4" />
+                  Saved
+                </>
+              ) : saveStatus === 'saving' ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  Save Settings
+                </>
+              )}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
