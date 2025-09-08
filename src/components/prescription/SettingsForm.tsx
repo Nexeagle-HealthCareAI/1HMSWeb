@@ -5,9 +5,8 @@ import { NumberField } from './NumberField';
 import { Toggle } from './Toggle';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Ruler, Image, User, Settings, HelpCircle } from 'lucide-react';
 
 export const SettingsForm: React.FC = () => {
   const { settings, update } = usePrescriptionStore();
@@ -33,11 +32,23 @@ export const SettingsForm: React.FC = () => {
   return (
     <div className="space-y-4 h-full overflow-y-auto">
       {/* Page Layout */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold">Page Layout</CardTitle>
+      <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
+        <CardHeader className="pb-3 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border-b border-purple-200 dark:border-purple-700">
+          <CardTitle className="text-md font-semibold text-purple-800 dark:text-purple-200 flex items-center gap-2">
+            <Ruler className="h-4 w-4" />
+            Page Layout
+            <div className="group relative">
+              <HelpCircle className="h-3 w-3 text-purple-500 cursor-help" />
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                Adjust page margins for optimal content spacing
+              </div>
+            </div>
+          </CardTitle>
+          <p className="text-xs text-purple-600 dark:text-purple-400">
+            Configure page margins to control content spacing
+          </p>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="p-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <NumberField
               label="Top Margin"
@@ -67,183 +78,177 @@ export const SettingsForm: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Header Settings */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold">Header Settings</CardTitle>
+      {/* Header & Footer Images */}
+      <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
+        <CardHeader className="pb-3 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-b border-green-200 dark:border-green-700">
+          <CardTitle className="text-md font-semibold text-green-800 dark:text-green-200 flex items-center gap-2">
+            <Image className="h-4 w-4" />
+            Header & Footer Images
+            <div className="group relative">
+              <HelpCircle className="h-3 w-3 text-green-500 cursor-help" />
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                Upload and customize header and footer images
+              </div>
+            </div>
+          </CardTitle>
+          <p className="text-xs text-green-600 dark:text-green-400">
+            Add your clinic logo or branding images
+          </p>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <Toggle
-            label="Show Header Image"
-            checked={settings.header?.showImage ?? true}
-            onCheckedChange={(checked) => updateNestedSettings('header', 'showImage', checked)}
-          />
-          
-          {settings.header?.showImage && (
-            <ImageUploader
-              value={settings.images?.header}
-              onChange={(image) => updateNestedSettings('images', 'header', image)}
-              placeholder="Upload header image"
-            />
-          )}
-
-          <div className="grid grid-cols-2 gap-3">
-            <NumberField
-              label="Height"
-              value={settings.header?.height ?? 80}
-              onChange={(value) => updateNestedSettings('header', 'height', value)}
-              unit="px"
-            />
-            <NumberField
-              label="Width"
-              value={settings.header?.width ?? 100}
-              onChange={(value) => updateNestedSettings('header', 'width', value)}
-              unit="%"
-            />
-          </div>
-
-          <Toggle
-            label="Show Header Text"
-            checked={settings.header?.showText ?? true}
-            onCheckedChange={(checked) => updateNestedSettings('header', 'showText', checked)}
-          />
-
-          {settings.header?.showText && (
-            <div className="space-y-1">
-              <Label className="text-xs font-medium text-gray-700">Header Text</Label>
-              <Textarea
-                value={settings.header?.text ?? ''}
-                onChange={(e) => updateNestedSettings('header', 'text', e.target.value)}
-                rows={3}
-                className="text-sm"
-                placeholder="Enter header text (use new lines for multiple lines)"
+        <CardContent className="p-4 space-y-4">
+          {/* Header Image Section */}
+          <div className="space-y-3 p-3 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-700">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium text-green-700 dark:text-green-300">Header Image</Label>
+              <Toggle
+                label=""
+                checked={settings.header?.showImage ?? true}
+                onCheckedChange={(checked) => updateNestedSettings('header', 'showImage', checked)}
               />
             </div>
-          )}
+            
+            {settings.header?.showImage && (
+              <>
+                <ImageUploader
+                  value={settings.images?.header}
+                  onChange={(image) => updateNestedSettings('images', 'header', image)}
+                  placeholder="Upload header image"
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <NumberField
+                    label="Height"
+                    value={settings.header?.height ?? 20}
+                    onChange={(value) => updateNestedSettings('header', 'height', value)}
+                    unit="mm"
+                  />
+                  <NumberField
+                    label="Width"
+                    value={settings.header?.width ?? 100}
+                    onChange={(value) => updateNestedSettings('header', 'width', value)}
+                    unit="%"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Footer Image Section */}
+          <div className="space-y-3 p-3 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-700">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium text-green-700 dark:text-green-300">Footer Image</Label>
+              <Toggle
+                label=""
+                checked={settings.footer?.showImage ?? true}
+                onCheckedChange={(checked) => updateNestedSettings('footer', 'showImage', checked)}
+              />
+            </div>
+            
+            {settings.footer?.showImage && (
+              <>
+                <ImageUploader
+                  value={settings.images?.footer}
+                  onChange={(image) => updateNestedSettings('images', 'footer', image)}
+                  placeholder="Upload footer image"
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <NumberField
+                    label="Height"
+                    value={settings.footer?.height ?? 15}
+                    onChange={(value) => updateNestedSettings('footer', 'height', value)}
+                    unit="mm"
+                  />
+                  <NumberField
+                    label="Width"
+                    value={settings.footer?.width ?? 100}
+                    onChange={(value) => updateNestedSettings('footer', 'width', value)}
+                    unit="%"
+                  />
+                </div>
+              </>
+            )}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Footer Settings */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold">Footer Settings</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Toggle
-            label="Show Footer Image"
-            checked={settings.footer?.showImage ?? true}
-            onCheckedChange={(checked) => updateNestedSettings('footer', 'showImage', checked)}
-          />
-          
-          {settings.footer?.showImage && (
-            <ImageUploader
-              value={settings.images?.footer}
-              onChange={(image) => updateNestedSettings('images', 'footer', image)}
-              placeholder="Upload footer image"
-            />
-          )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <NumberField
-              label="Height"
-              value={settings.footer?.height ?? 60}
-              onChange={(value) => updateNestedSettings('footer', 'height', value)}
-              unit="px"
-            />
-            <NumberField
-              label="Width"
-              value={settings.footer?.width ?? 100}
-              onChange={(value) => updateNestedSettings('footer', 'width', value)}
-              unit="%"
+      {/* Doctor Information */}
+      <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
+        <CardHeader className="pb-3 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 border-b border-orange-200 dark:border-orange-700">
+          <CardTitle className="text-md font-semibold text-orange-800 dark:text-orange-200 flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Doctor Information
+            <div className="group relative">
+              <HelpCircle className="h-3 w-3 text-orange-500 cursor-help" />
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                Set up your professional signature and details
+              </div>
+            </div>
+          </CardTitle>
+          <p className="text-xs text-orange-600 dark:text-orange-400">
+            Configure your signature and professional information
+          </p>
+        </CardHeader>
+        <CardContent className="p-4 space-y-4">
+          <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/10 rounded-lg border border-orange-200 dark:border-orange-700">
+            <div>
+              <Label className="text-sm font-medium text-orange-700 dark:text-orange-300">Show Doctor Information</Label>
+              <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">Display signature and name on prescription</p>
+            </div>
+            <Toggle
+              label=""
+              checked={settings.footer?.showSignature ?? true}
+              onCheckedChange={(checked) => updateNestedSettings('footer', 'showSignature', checked)}
             />
           </div>
 
-          <Toggle
-            label="Show Footer Text"
-            checked={settings.footer?.showText ?? true}
-            onCheckedChange={(checked) => updateNestedSettings('footer', 'showText', checked)}
-          />
-
-          {settings.footer?.showText && (
-            <div className="space-y-1">
-              <Label className="text-xs font-medium text-gray-700">Footer Text</Label>
-              <Input
-                value={settings.footer?.text ?? ''}
-                onChange={(e) => updateNestedSettings('footer', 'text', e.target.value)}
-                className="text-sm"
-                placeholder="Enter footer text"
-              />
-            </div>
-          )}
-
-          <Toggle
-            label="Show Doctor Signature"
-            checked={settings.footer?.showSignature ?? true}
-            onCheckedChange={(checked) => updateNestedSettings('footer', 'showSignature', checked)}
-          />
-
           {settings.footer?.showSignature && (
             <>
-              <ImageUploader
-                value={settings.images?.signature}
-                onChange={(image) => updateNestedSettings('images', 'signature', image)}
-                placeholder="Upload doctor signature"
-              />
-              
-              <div className="grid grid-cols-2 gap-3">
-                <NumberField
-                  label="Signature Height"
-                  value={settings.footer?.signatureHeight ?? 40}
-                  onChange={(value) => updateNestedSettings('footer', 'signatureHeight', value)}
-                  unit="px"
+              {/* Doctor Signature Upload */}
+              <div className="space-y-3 p-3 bg-orange-50 dark:bg-orange-900/10 rounded-lg border border-orange-200 dark:border-orange-700">
+                <Label className="text-sm font-medium text-orange-700 dark:text-orange-300">Doctor Signature</Label>
+                <ImageUploader
+                  value={settings.images?.signature}
+                  onChange={(image) => updateNestedSettings('images', 'signature', image)}
+                  placeholder="Upload doctor signature"
                 />
-                <NumberField
-                  label="Signature Width"
-                  value={settings.footer?.signatureWidth ?? 80}
-                  onChange={(value) => updateNestedSettings('footer', 'signatureWidth', value)}
-                  unit="px"
-                />
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <NumberField
+                    label="Signature Height"
+                    value={settings.footer?.signatureHeight ?? 10}
+                    onChange={(value) => updateNestedSettings('footer', 'signatureHeight', value)}
+                    unit="mm"
+                  />
+                  <NumberField
+                    label="Signature Width"
+                    value={settings.footer?.signatureWidth ?? 20}
+                    onChange={(value) => updateNestedSettings('footer', 'signatureWidth', value)}
+                    unit="mm"
+                  />
+                </div>
+              </div>
+
+              {/* Doctor Details */}
+              <div className="space-y-3 p-3 bg-orange-50 dark:bg-orange-900/10 rounded-lg border border-orange-200 dark:border-orange-700">
+                <Label className="text-sm font-medium text-orange-700 dark:text-orange-300">Doctor Details</Label>
+                
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-orange-600 dark:text-orange-400">Full Name</Label>
+                    <Input
+                      value={settings.footer?.doctorName ?? ''}
+                      onChange={(e) => updateNestedSettings('footer', 'doctorName', e.target.value)}
+                      className="text-sm border-orange-200 dark:border-orange-700 focus:border-orange-400 dark:focus:border-orange-500"
+                      placeholder="Dr. John Smith"
+                    />
+                  </div>
+                </div>
               </div>
             </>
           )}
         </CardContent>
       </Card>
 
-      {/* Font Settings */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold">Font Settings</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="space-y-1">
-            <Label className="text-xs font-medium text-gray-700">Font Family</Label>
-            <Select
-              value={settings.font?.family ?? 'Arial'}
-              onValueChange={(value) => updateNestedSettings('font', 'family', value)}
-            >
-              <SelectTrigger className="h-8 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Arial">Arial</SelectItem>
-                <SelectItem value="Times New Roman">Times New Roman</SelectItem>
-                <SelectItem value="Helvetica">Helvetica</SelectItem>
-                <SelectItem value="Georgia">Georgia</SelectItem>
-                <SelectItem value="Verdana">Verdana</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <NumberField
-            label="Font Size"
-            value={settings.font?.size ?? 12}
-            onChange={(value) => updateNestedSettings('font', 'size', value)}
-            min={8}
-            max={24}
-            unit="px"
-          />
-        </CardContent>
-      </Card>
     </div>
   );
 };

@@ -45,6 +45,7 @@ export interface HeaderFooterSettings {
     text: string;
     signatureHeight: number;
     signatureWidth: number;
+    doctorName: string;
   };
   font: {
     family: FontFamily;

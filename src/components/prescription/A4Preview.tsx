@@ -59,7 +59,163 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
   const a4Height = mmToPx(A4_HEIGHT_MM) * scale;
 
   const handlePrint = () => {
-    window.print();
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Prescription - ${new Date().toLocaleDateString()}</title>
+            <style>
+              @page {
+                size: A4;
+                margin: 0;
+              }
+              body { 
+                margin: 0; 
+                padding: 0; 
+                font-family: ${settings.font?.family ?? 'Arial'}; 
+                background: white;
+              }
+              .prescription { 
+                width: 210mm; 
+                height: 297mm; 
+                margin: 0; 
+                padding: ${(settings.page?.margin?.top ?? 20) * 0.264583}mm ${(settings.page?.margin?.right ?? 20) * 0.264583}mm ${(settings.page?.margin?.bottom ?? 20) * 0.264583}mm ${(settings.page?.margin?.left ?? 20) * 0.264583}mm;
+                position: relative;
+                background: white;
+                display: flex;
+                flex-direction: column;
+                box-sizing: border-box;
+                page-break-after: always;
+              }
+              .header { 
+                height: ${settings.header?.height ?? 20}mm; 
+                border-bottom: 1px solid #eee;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+                overflow: hidden;
+                flex-shrink: 0;
+              }
+              .header img {
+                max-height: 100%;
+                max-width: 100%;
+                object-fit: contain;
+              }
+              .content { 
+                flex: 1; 
+                padding: 5mm;
+                font-size: ${settings.font?.size ?? 12}px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 0;
+              }
+              .footer { 
+                height: ${settings.footer?.height ?? 15}mm; 
+                border-top: 1px solid #eee;
+                background-color: #f9fafb;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 2.5mm 5mm;
+                position: relative;
+                overflow: hidden;
+                min-height: 10mm;
+                flex-shrink: 0;
+              }
+              .footer img {
+                max-height: 100%;
+                max-width: 100%;
+                object-fit: contain;
+              }
+              .signature { 
+                width: ${settings.footer?.signatureWidth ?? 20}mm; 
+                height: ${settings.footer?.signatureHeight ?? 10}mm;
+                border: 1px dashed #ccc;
+                background-color: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 12px;
+                color: #666;
+                flex-shrink: 0;
+                border-radius: 1mm;
+                min-width: 6mm;
+                min-height: 5mm;
+              }
+              .signature img {
+                max-width: 100%;
+                max-height: 100%;
+                object-fit: contain;
+              }
+              @media print {
+                body { margin: 0; padding: 0; }
+                .prescription { border: none; }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="prescription">
+              <div class="header">
+                ${settings.header?.showImage && settings.images?.header ? 
+                  `<img src="${settings.images.header}" alt="Header" />` : 
+                  ''
+                }
+                ${settings.header?.showText ? 
+                  `<div style="text-align: center; font-size: ${settings.font?.size ?? 12}px;">
+                    ${(settings.header?.text ?? '').split('\n').map(line => `<div>${line}</div>`).join('')}
+                  </div>` : 
+                  ''
+                }
+              </div>
+              <div class="content">
+                <div style="text-align: center; color: #666;">
+                  <div style="font-size: 24px; font-weight: 300; margin-bottom: 10px;">PRESCRIPTION</div>
+                  <div style="font-size: 14px; opacity: 0.75;">Content area for prescription details</div>
+                </div>
+              </div>
+              <div class="footer">
+                <div class="flex-1">
+                  ${settings.footer?.showImage && settings.images?.footer ? 
+                    `<img src="${settings.images.footer}" alt="Footer" />` : 
+                    ''
+                  }
+                  ${settings.footer?.showText && settings.footer?.text ? 
+                    `<div style="font-size: ${settings.font?.size ?? 12}px;">${settings.footer.text}</div>` : 
+                    ''
+                  }
+                </div>
+                <div class="flex-shrink-0 ml-4" style="display: flex; flex-direction: column; align-items: center;">
+                  ${settings.footer?.showSignature ? 
+                    `<div class="signature">
+                      ${settings.images?.signature ? 
+                        `<img src="${settings.images.signature}" alt="Signature" />` : 
+                        'Dr. Signature'
+                      }
+                    </div>
+                    <div style="text-align: center; font-size: 10px; margin-top: 2px; color: #666; line-height: 1.2;">
+                      ${settings.footer?.doctorName ? `<div style="font-weight: bold;">${settings.footer.doctorName}</div>` : ''}
+                    </div>` : 
+                    ''
+                  }
+                </div>
+              </div>
+            </div>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      
+      // Wait for content to load then print
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+          printWindow.close();
+        }, 500);
+      };
+    }
   };
 
   const handlePreview = () => {
@@ -174,18 +330,21 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                     `<img src="${settings.images.footer}" alt="Footer" />` : 
                     ''
                   }
-                  ${settings.footer?.showText ? 
-                    `<div style="font-size: ${settings.font?.size ?? 12}px;">${settings.footer?.text ?? ''}</div>` : 
+                  ${settings.footer?.showText && settings.footer?.text ? 
+                    `<div style="font-size: ${settings.font?.size ?? 12}px;">${settings.footer.text}</div>` : 
                     ''
                   }
                 </div>
-                <div class="flex-shrink-0 ml-4">
+                <div class="flex-shrink-0 ml-4" style="display: flex; flex-direction: column; align-items: center;">
                   ${settings.footer?.showSignature ? 
                     `<div class="signature">
                       ${settings.images?.signature ? 
                         `<img src="${settings.images.signature}" alt="Signature" />` : 
                         'Dr. Signature'
                       }
+                    </div>
+                    <div style="text-align: center; font-size: 10px; margin-top: 2px; color: #666; line-height: 1.2;">
+                      ${settings.footer?.doctorName ? `<div style="font-weight: bold;">${settings.footer.doctorName}</div>` : ''}
                     </div>` : 
                     ''
                   }
@@ -213,13 +372,59 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
             height: Math.max(a4Height, 280), // Minimum height of 280px
             minWidth: '200px',
             minHeight: '280px',
+            padding: `${(settings.page?.margin?.top ?? 20) * scale}px ${(settings.page?.margin?.right ?? 20) * scale}px ${(settings.page?.margin?.bottom ?? 20) * scale}px ${(settings.page?.margin?.left ?? 20) * scale}px`,
+            boxSizing: 'border-box',
+            position: 'relative',
           }}
         >
+          {/* Margin Guides */}
+          <div className="absolute inset-0 pointer-events-none">
+            {/* Top margin guide */}
+            <div 
+              className="absolute bg-blue-200 opacity-30"
+              style={{
+                top: 0,
+                left: 0,
+                right: 0,
+                height: `${(settings.page?.margin?.top ?? 20) * scale}px`,
+              }}
+            />
+            {/* Right margin guide */}
+            <div 
+              className="absolute bg-blue-200 opacity-30"
+              style={{
+                top: 0,
+                right: 0,
+                bottom: 0,
+                width: `${(settings.page?.margin?.right ?? 20) * scale}px`,
+              }}
+            />
+            {/* Bottom margin guide */}
+            <div 
+              className="absolute bg-blue-200 opacity-30"
+              style={{
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: `${(settings.page?.margin?.bottom ?? 20) * scale}px`,
+              }}
+            />
+            {/* Left margin guide */}
+            <div 
+              className="absolute bg-blue-200 opacity-30"
+              style={{
+                top: 0,
+                left: 0,
+                bottom: 0,
+                width: `${(settings.page?.margin?.left ?? 20) * scale}px`,
+              }}
+            />
+          </div>
           {/* Header */}
           <div
-            className="border-b border-gray-200 flex items-center justify-center relative"
+            className="border-b border-gray-200 flex items-center justify-center relative overflow-hidden flex-shrink-0"
             style={{ 
-              height: Math.max((settings.header?.height ?? 80) * scale, 30),
+              height: Math.max((settings.header?.height ?? 20) * scale * 3.779527559, 30),
               minHeight: '30px'
             }}
           >
@@ -229,7 +434,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 alt="Header"
                 className="max-h-full max-w-full object-contain"
                 style={{
-                  maxHeight: `${Math.max((settings.header?.height ?? 80) * scale, 30)}px`,
+                  maxHeight: `${Math.max((settings.header?.height ?? 20) * scale * 3.779527559, 30)}px`,
                   maxWidth: `${Math.max((settings.header?.width ?? 100) * (a4Width / 100), 100)}px`
                 }}
               />
@@ -251,23 +456,25 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
 
           {/* Content Area */}
           <div
-            className="p-4 flex-1 flex items-center justify-center"
+            className="flex-1 flex items-center justify-center min-h-0"
             style={{ 
-              fontSize: Math.max((settings.font?.size ?? 12) * scale, 10)
+              fontSize: Math.max((settings.font?.size ?? 12) * scale, 10),
+              padding: `${5 * scale}px`
             }}
           >
             <div className="text-center text-gray-500">
-              <div className="text-2xl font-light mb-2">Print Preview</div>
-              <div className="text-sm opacity-75">Content area for prescription</div>
+              <div className="text-2xl font-light mb-2">PRESCRIPTION</div>
+              <div className="text-sm opacity-75">Content area for prescription details</div>
             </div>
           </div>
 
           {/* Footer */}
           <div
-            className="border-t-2 border-gray-300 bg-gray-50 flex items-center justify-between px-4 relative flex-shrink-0"
+            className="border-t border-gray-200 bg-gray-50 flex items-center justify-between relative overflow-hidden min-h-0 flex-shrink-0"
             style={{ 
-              height: Math.max((settings.footer?.height ?? 60) * scale, 40),
-              minHeight: '40px'
+              height: Math.max((settings.footer?.height ?? 15) * scale * 3.779527559, 40),
+              minHeight: '40px',
+              padding: `${2.5 * scale}px ${5 * scale}px`
             }}
           >
             <div className="flex-1 flex items-center">
@@ -275,14 +482,14 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 <img
                   src={settings.images.footer}
                   alt="Footer"
-                  className="max-h-full max-w-full object-contain mr-4"
+                  className="max-h-full max-w-full object-contain"
                   style={{
-                    maxHeight: `${Math.max((settings.footer?.height ?? 60) * scale, 40)}px`,
+                    maxHeight: `${Math.max((settings.footer?.height ?? 15) * scale * 3.779527559, 40)}px`,
                     maxWidth: `${Math.max((settings.footer?.width ?? 100) * (a4Width / 100), 100)}px`
                   }}
                 />
               )}
-              {settings.footer?.showText && (
+              {settings.footer?.showText && settings.footer?.text && (
                 <div 
                   className="text-gray-700"
                   style={{ 
@@ -291,32 +498,42 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                     fontWeight: '500'
                   }}
                 >
-                  {settings.footer?.text ?? 'Footer Text'}
+                  {settings.footer.text}
                 </div>
               )}
             </div>
-            <div className="flex-shrink-0 ml-4">
+            <div className="flex-shrink-0 flex flex-col items-center">
               {settings.footer?.showSignature && (
-                <div
-                  className="border-2 border-dashed border-gray-400 bg-white flex items-center justify-center text-gray-600 rounded"
-                  style={{
-                    width: Math.max((settings.footer?.signatureWidth ?? 80) * scale, 25),
-                    height: Math.max((settings.footer?.signatureHeight ?? 40) * scale, 20),
-                    fontSize: Math.max(10 * scale, 7),
-                    minWidth: '25px',
-                    minHeight: '20px'
-                  }}
-                >
-                  {settings.images?.signature ? (
-                    <img
-                      src={settings.images.signature}
-                      alt="Signature"
-                      className="max-h-full max-w-full object-contain"
-                    />
-                  ) : (
-                    <span className="text-center">Dr. Signature</span>
-                  )}
-                </div>
+                <>
+                  <div
+                    className="border border-dashed border-gray-300 bg-white flex items-center justify-center text-gray-600"
+                    style={{
+                      width: Math.max((settings.footer?.signatureWidth ?? 20) * scale * 3.779527559, 25),
+                      height: Math.max((settings.footer?.signatureHeight ?? 10) * scale * 3.779527559, 20),
+                      fontSize: Math.max(10 * scale, 7),
+                      minWidth: '25px',
+                      minHeight: '20px'
+                    }}
+                  >
+                    {settings.images?.signature ? (
+                      <img
+                        src={settings.images.signature}
+                        alt="Signature"
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    ) : (
+                      <span className="text-center">Dr. Signature</span>
+                    )}
+                  </div>
+                  <div 
+                    className="text-center text-gray-700 mt-1 space-y-0.5"
+                    style={{ fontSize: Math.max(8 * scale, 6) }}
+                  >
+                    {settings.footer?.doctorName && (
+                      <div className="font-semibold">{settings.footer.doctorName}</div>
+                    )}
+                  </div>
+                </>
               )}
             </div>
           </div>
