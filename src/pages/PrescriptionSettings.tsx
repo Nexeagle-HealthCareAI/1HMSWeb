@@ -6,11 +6,11 @@ import { FileText, Eye, Palette, Image, User } from 'lucide-react';
 export const PrescriptionSettings: React.FC = () => {
   return (
     <div className="h-full flex overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Settings Panel - 2/3 width */}
-      <div className="w-2/3 flex-shrink-0 border-r border-gray-200 dark:border-gray-700">
+      {/* Settings Panel - 1/2 width */}
+      <div className="w-1/2 flex-shrink-0 border-r border-gray-200 dark:border-gray-700">
         <div className="h-full flex flex-col">
           {/* Compact Header */}
-          <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <div className="flex-shrink-0 p-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
             <div className="flex items-center gap-3 mb-3">
               <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
                 <FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -52,17 +52,17 @@ export const PrescriptionSettings: React.FC = () => {
           </div>
           
           {/* Settings Form */}
-          <div className="flex-1 p-4 min-h-0 overflow-y-auto bg-white dark:bg-gray-800">
+          <div className="flex-1 p-3 min-h-0 overflow-y-auto bg-white dark:bg-gray-800">
             <SettingsForm />
           </div>
         </div>
       </div>
 
-      {/* Enhanced Preview Panel - 1/3 width */}
-      <div className="w-1/3 flex-shrink-0 bg-white dark:bg-gray-800 shadow-xl">
+      {/* Enhanced Preview Panel - 1/2 width */}
+      <div className="w-1/2 flex-shrink-0 bg-white dark:bg-gray-800 shadow-xl">
         <div className="h-full flex flex-col">
           {/* Compact Preview Header */}
-          <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700">
+          <div className="flex-shrink-0 p-3 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700">
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-blue-100 dark:bg-blue-900 rounded-md">
                 <Eye className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -79,7 +79,7 @@ export const PrescriptionSettings: React.FC = () => {
           </div>
           
           {/* Preview Content */}
-          <div className="flex-1 p-4 min-h-0 flex flex-col items-center justify-start overflow-y-auto bg-gray-50 dark:bg-gray-900">
+          <div className="flex-1 p-3 min-h-0 flex flex-col items-center justify-start overflow-y-auto bg-gray-50 dark:bg-gray-900">
             <A4Preview />
           </div>
         </div>

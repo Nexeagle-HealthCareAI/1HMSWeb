@@ -29,6 +29,11 @@ export interface HeaderFooterSettings {
   page: PageLayout;
   pdf: PdfLayout;
   images: Images;
+  useLetterhead: boolean;
+  letterhead: {
+    headerHeight: number;
+    footerHeight: number;
+  };
   header: {
     height: number;
     width: number;

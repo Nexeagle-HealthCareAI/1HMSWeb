@@ -31,12 +31,17 @@ const defaultSettings: HeaderFooterSettings = {
     footer: undefined,
     signature: undefined,
   },
+  useLetterhead: true,
+  letterhead: {
+    headerHeight: 30,
+    footerHeight: 20,
+  },
   header: {
     height: 20,
     width: 100,
     showImage: true,
     showText: true,
-    text: 'Dr. John Smith\nMBBS, MD\nCardiologist',
+    text: 'Doctor Name\nDegree\nSpecialization',
   },
   footer: {
     height: 15,
@@ -47,7 +52,7 @@ const defaultSettings: HeaderFooterSettings = {
     text: '',
     signatureHeight: 10,
     signatureWidth: 20,
-    doctorName: 'Dr. John Smith',
+    doctorName: 'Doctor Name',
   },
   font: {
     family: 'Arial',
