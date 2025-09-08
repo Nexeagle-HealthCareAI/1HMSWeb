@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { usePrescriptionStore } from '@/store/prescription';
 import { mmToPx, A4_WIDTH_MM, A4_HEIGHT_MM } from '@/utils/units';
 import { Button } from '@/components/ui/button';
-import { Printer, Eye, Grid3X3, Ruler, Maximize2, Download, Settings, Square, ZoomIn, ZoomOut } from 'lucide-react';
+import { Printer, Eye, Grid3X3, Maximize2, Download, Settings, Square, ZoomIn, ZoomOut } from 'lucide-react';
 
 interface A4PreviewProps {
   className?: string;
@@ -11,7 +11,6 @@ interface A4PreviewProps {
 export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
   const { settings } = usePrescriptionStore();
   const [showGrid, setShowGrid] = useState(false);
-  const [showRulers, setShowRulers] = useState(true);
   const [showMargins, setShowMargins] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1.2);
@@ -645,8 +644,8 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 <Eye className="h-4 w-4 text-blue-600" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-gray-900">Live Preview</h3>
-                <p className="text-xs text-gray-500">Real-time prescription preview</p>
+                <h3 className="text-sm font-semibold text-gray-900">Preview</h3>
+                <p className="text-xs text-gray-500">Prescription preview</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -688,7 +687,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
               <div className="flex items-center gap-6">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-gray-700 font-medium">Live Preview</span>
+                  <span className="text-gray-700 font-medium">Preview</span>
                 </div>
                 <div className="text-gray-600">
                   <span className="font-medium">Scale:</span> {Math.round(scale * 100)}% • 
@@ -734,18 +733,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-gray-700">View Options</span>
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              onClick={() => setShowRulers(!showRulers)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
-                showRulers 
-                  ? 'bg-purple-100 text-purple-700 border border-purple-300 shadow-sm' 
-                  : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              <Ruler className="h-3 w-3" />
-              Rulers
-            </button>
+          <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => setShowGrid(!showGrid)}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
@@ -772,75 +760,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
         </div>
 
         <div className="relative bg-white rounded-lg p-4 shadow-inner border border-gray-200">
-          {/* Horizontal Ruler */}
-          {showRulers && (
-            <div 
-              className="absolute top-0 left-0 right-0 h-4 bg-gray-100 border-b border-gray-300 flex items-center justify-between px-1 text-xs text-gray-600 z-40"
-              style={{ height: `${16 * scale}px` }}
-            >
-            {/* Simplified ruler markings - only major divisions */}
-            {Array.from({ length: Math.ceil(a4Width / 50) + 1 }, (_, i) => {
-              const position = i * 50 * scale;
-              const mm = i * 50;
-              return (
-                <div key={i} className="absolute flex flex-col items-center" style={{ left: `${position}px` }}>
-                  <div 
-                    className="bg-gray-500"
-                    style={{ 
-                      width: '1px', 
-                      height: '8px',
-                      marginTop: '2px'
-                    }}
-                  />
-                  <div 
-                    className="text-xs font-medium text-gray-600 mt-1"
-                    style={{ fontSize: `${Math.max(7 * scale, 5)}px` }}
-                  >
-                    {mm}
-                  </div>
-                </div>
-              );
-            })}
-            <div className="absolute right-1 top-1 text-xs text-gray-500" style={{ fontSize: `${Math.max(6 * scale, 4)}px` }}>
-              {Math.round(a4Width)}mm
-            </div>
-            </div>
-          )}
 
-          {/* Vertical Ruler */}
-          {showRulers && (
-            <div 
-              className="absolute top-0 left-0 bottom-0 w-4 bg-gray-100 border-r border-gray-300 flex flex-col items-center justify-between py-1 text-xs text-gray-600 z-40"
-              style={{ width: `${16 * scale}px` }}
-            >
-            {/* Simplified ruler markings - only major divisions */}
-            {Array.from({ length: Math.ceil(a4Height / 50) + 1 }, (_, i) => {
-              const position = i * 50 * scale;
-              const mm = i * 50;
-              return (
-                <div key={i} className="absolute flex flex-row items-center" style={{ top: `${position}px` }}>
-                  <div 
-                    className="bg-gray-500"
-                    style={{ 
-                      height: '1px', 
-                      width: '8px',
-                      marginLeft: '2px'
-                    }}
-                  />
-                  <div 
-                    className="text-xs font-medium text-gray-600 ml-1 transform -rotate-90 origin-center"
-                    style={{ fontSize: `${Math.max(7 * scale, 5)}px` }}
-                  >
-                    {mm}
-                  </div>
-                </div>
-              );
-            })}
-            <div className="absolute bottom-1 left-1 text-xs text-gray-500 transform -rotate-90 origin-center" style={{ fontSize: `${Math.max(6 * scale, 4)}px` }}>
-              {Math.round(a4Height)}mm
-            </div>
-            </div>
-          )}
 
           {/* Grid Overlay */}
           {showGrid && (
@@ -852,8 +772,8 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                   linear-gradient(to bottom, #ccc 1px, transparent 1px)
                 `,
                 backgroundSize: `${10 * scale}px ${10 * scale}px`,
-                marginTop: showRulers ? `${16 * scale}px` : '0px',
-                marginLeft: showRulers ? `${16 * scale}px` : '0px'
+                marginTop: '0px',
+                marginLeft: '0px'
               }}
             />
           )}
@@ -869,8 +789,8 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
               padding: `${(settings.page?.margin?.top ?? 20) * scale}px ${(settings.page?.margin?.right ?? 20) * scale}px ${(settings.page?.margin?.bottom ?? 20) * scale}px ${(settings.page?.margin?.left ?? 20) * scale}px`,
               boxSizing: 'border-box',
               position: 'relative',
-              marginTop: showRulers ? `${16 * scale}px` : '0px',
-              marginLeft: showRulers ? `${16 * scale}px` : '0px',
+              marginTop: '0px',
+              marginLeft: '0px',
               background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
             }}
           >
