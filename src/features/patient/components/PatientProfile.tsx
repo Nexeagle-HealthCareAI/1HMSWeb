@@ -14,7 +14,8 @@ import {
   Plus,
   Settings,
   Maximize2,
-  Minimize2
+  Minimize2,
+  PenTool
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
+import EPrescriptionPad from '@/pages/EPrescriptionPad';
 
 
 
@@ -176,6 +178,7 @@ export const PatientProfile: React.FC<PatientProfileProps> = ({ patientId, onClo
   const [fullScreenPrescription, setFullScreenPrescription] = useState<Prescription | null>(null);
   const [editingVitals, setEditingVitals] = useState<string | null>(null);
   const [vitalsTimeout, setVitalsTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [showNewPrescription, setShowNewPrescription] = useState(false);
 
   // Handle escape key to exit full screen
   useEffect(() => {
@@ -426,14 +429,38 @@ export const PatientProfile: React.FC<PatientProfileProps> = ({ patientId, onClo
 
               <TabsContent value="prescriptions" className="mt-0 space-y-6">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-semibold">Prescription History</h3>
-                  <Button className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    New Prescription
-                  </Button>
+                  <h3 className="text-lg font-semibold">
+                    {showNewPrescription ? 'E-Prescription Pad' : 'Prescription History'}
+                  </h3>
+                  <div className="flex gap-2">
+                    {showNewPrescription ? (
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setShowNewPrescription(false)}
+                        className="gap-2"
+                      >
+                        <FileText className="h-4 w-4" />
+                        View History
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={() => setShowNewPrescription(true)}
+                        className="gap-2"
+                      >
+                        <PenTool className="h-4 w-4" />
+                        New E-Prescription
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
-                {prescriptions.map((prescription) => (
+                {showNewPrescription ? (
+                  <div className="h-[600px]">
+                    <EPrescriptionPad />
+                  </div>
+                ) : (
+                  <>
+                    {prescriptions.map((prescription) => (
                   <Card key={prescription.id}>
                     <CardHeader>
                       <div className="flex justify-between items-start">
@@ -588,7 +615,9 @@ export const PatientProfile: React.FC<PatientProfileProps> = ({ patientId, onClo
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                    ))}
+                  </>
+                )}
               </TabsContent>
 
               <TabsContent value="lab" className="mt-0 space-y-6">

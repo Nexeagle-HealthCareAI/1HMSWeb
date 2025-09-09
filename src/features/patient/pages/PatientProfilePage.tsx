@@ -18,6 +18,7 @@ import {
   PatientTimeline,
   PatientLabTests
 } from '../components';
+import EPrescriptionPad from '@/pages/EPrescriptionPad';
 
 interface PatientData {
   id: string;
@@ -355,7 +356,7 @@ export const PatientProfilePage: React.FC = () => {
   const navigationItems = [
     { id: 'overview', label: 'Overview', icon: User },
     { id: 'timeline', label: 'Timeline', icon: History },
-    { id: 'prescriptions', label: 'Prescriptions', icon: FileText },
+    { id: 'prescriptions', label: 'E-Prescription', icon: FileText },
     { id: 'lab-tests', label: 'Lab Tests', icon: TestTube },
     { id: 'customize-eprescription', label: 'Customize ePrescription', icon: Settings },
   ];
@@ -473,8 +474,8 @@ export const PatientProfilePage: React.FC = () => {
 
           {/* Prescriptions Tab */}
           {activeTab === 'prescriptions' && (
-            <div className="p-6 text-center">
-              <div className="text-gray-500">Prescriptions feature will be implemented here</div>
+            <div className="h-full">
+              <EPrescriptionPad />
             </div>
           )}
 
