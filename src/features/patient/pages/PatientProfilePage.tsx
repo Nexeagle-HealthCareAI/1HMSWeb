@@ -469,7 +469,11 @@ export const PatientProfilePage: React.FC = () => {
 
           {/* Timeline Tab */}
           {activeTab === 'timeline' && (
-            <PatientTimeline timelineEvents={timelineEvents} />
+            <PatientTimeline 
+              timelineEvents={timelineEvents} 
+              patientStatus="Active"
+              lastVisitDate={appointments.length > 0 ? appointments[0].date : undefined}
+            />
           )}
 
           {/* Prescriptions Tab */}
