@@ -306,7 +306,7 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
                 ))}
               </select>
             </div>
-          </div>
+      </div>
 
           {/* View Mode Toggle */}
           <div className="flex items-center justify-between mt-4">
@@ -328,7 +328,7 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
 
       {/* Timeline View */}
       {viewMode === 'timeline' && (
-        <div className="relative">
+      <div className="relative">
           {/* Timeline Line with Date Markers */}
           <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-200 via-purple-200 to-green-200"></div>
           
@@ -355,14 +355,14 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
             </div>
           ))}
 
-          {/* Timeline Events */}
-          <div className="space-y-8">
+        {/* Timeline Events */}
+        <div className="space-y-8">
             {filteredEvents.map((event, index) => (
-              <div key={event.id} className="relative flex items-start gap-6">
-                {/* Timeline Dot */}
+            <div key={event.id} className="relative flex items-start gap-6">
+              {/* Timeline Dot */}
                 <div className={`relative z-10 flex items-center justify-center w-16 h-16 bg-white border-2 rounded-full shadow-lg ${getEventTypeColor(event.type).replace('text-', 'border-').replace('bg-', 'bg-')}`}>
-                  {getTimelineEventIcon(event)}
-                </div>
+                {getTimelineEventIcon(event)}
+              </div>
 
                 {/* Event Content - Simplified */}
                 <Card className="flex-1 hover:shadow-md transition-shadow">
@@ -373,10 +373,10 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
                           <Badge className={getEventTypeColor(event.type)}>
                             {event.type.replace('-', ' ').toUpperCase()}
                           </Badge>
-                          <Badge className={getTimelineEventStatusColor(event.status)}>
-                            {event.status.toUpperCase()}
-                          </Badge>
-                        </div>
+                  <Badge className={getTimelineEventStatusColor(event.status)}>
+                    {event.status.toUpperCase()}
+                  </Badge>
+                </div>
                         <CardTitle className="text-lg">{event.title}</CardTitle>
                         <p className="text-sm text-gray-600 mt-1 line-clamp-2">{event.description}</p>
                       </div>
@@ -396,18 +396,18 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
                   
                   <CardContent className="pt-0">
                     {/* Important Info Only */}
-                    <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
-                      <span className="flex items-center gap-1">
+                <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                  <span className="flex items-center gap-1">
                         <Clock className="h-4 w-4" />
                         {event.date.toLocaleTimeString('en-US', { 
                           hour: '2-digit', 
                           minute: '2-digit' 
-                        })}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Stethoscope className="h-4 w-4" />
-                        {event.doctor}
-                      </span>
+                    })}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Stethoscope className="h-4 w-4" />
+                    {event.doctor}
+                  </span>
                       {/* Show only critical info for each event type */}
                       {event.type === 'appointment' && event.details?.type && (
                         <span className="flex items-center gap-1">
@@ -426,17 +426,17 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
                           <Microscope className="h-4 w-4" />
                           {event.details.testName}
                         </span>
-                      )}
-                    </div>
+                    )}
+                  </div>
 
                     {renderEventDetails(event)}
                   </CardContent>
                 </Card>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
       {/* Grid View */}
       {viewMode === 'grid' && (
@@ -476,27 +476,27 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
                   <div className="flex items-center gap-2">
                     <Stethoscope className="h-4 w-4" />
                     {event.doctor}
-                  </div>
+                    </div>
                   {/* Show important info based on event type */}
                   {event.type === 'appointment' && event.details?.type && (
                     <div className="flex items-center gap-2">
                       <Activity className="h-4 w-4" />
                       {event.details.type}
-                    </div>
-                  )}
+                          </div>
+                        )}
                   {event.type === 'prescription' && event.details?.medications?.length > 0 && (
                     <div className="flex items-center gap-2">
                       <Pill className="h-4 w-4" />
                       {event.details.medications.length} medications
-                    </div>
-                  )}
+                      </div>
+                    )}
                   {event.type === 'lab-test' && event.details?.testName && (
                     <div className="flex items-center gap-2">
                       <Microscope className="h-4 w-4" />
                       {event.details.testName}
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
+              </div>
                 
                 <div className="mt-4 flex gap-2">
                   <Button
@@ -513,7 +513,7 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
                 {expandedEvents.has(event.id) && (
                   <div className="mt-4">
                     {renderEventDetails(event)}
-                  </div>
+            </div>
                 )}
               </CardContent>
             </Card>

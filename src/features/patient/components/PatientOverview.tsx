@@ -349,7 +349,7 @@ export const PatientOverview: React.FC<PatientOverviewProps> = ({
               </div>
               <div className="p-3 bg-blue-100 rounded-full">
                 <Calendar className="h-6 w-6 text-blue-600" />
-              </div>
+                    </div>
             </div>
           </CardContent>
         </Card>
@@ -358,15 +358,15 @@ export const PatientOverview: React.FC<PatientOverviewProps> = ({
         <Card className="hover:shadow-md transition-shadow">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <div>
+                    <div>
                 <p className="text-sm font-medium text-gray-600">Prescriptions</p>
                 <p className="text-2xl font-bold text-purple-600">{metrics.totalPrescriptions}</p>
                 <p className="text-xs text-gray-500">{metrics.activeMedications} active meds</p>
-              </div>
+                    </div>
               <div className="p-3 bg-purple-100 rounded-full">
                 <Pill className="h-6 w-6 text-purple-600" />
-              </div>
-            </div>
+                  </div>
+                    </div>
           </CardContent>
         </Card>
 
@@ -374,15 +374,15 @@ export const PatientOverview: React.FC<PatientOverviewProps> = ({
         <Card className="hover:shadow-md transition-shadow">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <div>
+                    <div>
                 <p className="text-sm font-medium text-gray-600">Conditions</p>
                 <p className="text-2xl font-bold text-orange-600">{metrics.medicalConditions}</p>
                 <p className="text-xs text-gray-500">{metrics.criticalAllergies} allergies</p>
-              </div>
+                    </div>
               <div className="p-3 bg-orange-100 rounded-full">
                 <History className="h-6 w-6 text-orange-600" />
-              </div>
-            </div>
+                  </div>
+                    </div>
           </CardContent>
         </Card>
 
@@ -390,16 +390,16 @@ export const PatientOverview: React.FC<PatientOverviewProps> = ({
         <Card className="hover:shadow-md transition-shadow">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <div>
+                    <div>
                 <p className="text-sm font-medium text-gray-600">Lab Tests</p>
                 <p className="text-2xl font-bold text-green-600">{labTests.length}</p>
                 <p className="text-xs text-gray-500">Recent results</p>
-              </div>
+                    </div>
               <div className="p-3 bg-green-100 rounded-full">
                 <Activity className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
+                  </div>
+                </div>
+              </CardContent>
         </Card>
       </div>
 
@@ -408,24 +408,24 @@ export const PatientOverview: React.FC<PatientOverviewProps> = ({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
+                <Activity className="h-5 w-5" />
               Latest Vital Signs
               <Badge variant="outline" className="ml-auto">
                 {new Date(metrics.latestVitals.date).toLocaleDateString()}
               </Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+            <CardContent>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Blood Pressure */}
               <div className="text-center p-4 bg-red-50 rounded-lg border border-red-200">
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <Heart className="h-5 w-5 text-red-600" />
                   {getTrendIcon(metrics.bloodPressureTrend)}
-                </div>
+              </div>
                 <div className="text-2xl font-bold text-red-600">
                   {metrics.latestVitals.systolic}/{metrics.latestVitals.diastolic}
-                </div>
+              </div>
                 <div className="text-sm text-red-600">Blood Pressure</div>
                 <div className="text-xs text-gray-500">mmHg</div>
               </div>
@@ -435,10 +435,10 @@ export const PatientOverview: React.FC<PatientOverviewProps> = ({
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <Activity className="h-5 w-5 text-green-600" />
                   {getTrendIcon(metrics.heartRateTrend)}
-                </div>
+              </div>
                 <div className="text-2xl font-bold text-green-600">
                   {metrics.latestVitals.heartRate}
-                </div>
+            </div>
                 <div className="text-sm text-green-600">Heart Rate</div>
                 <div className="text-xs text-gray-500">BPM</div>
               </div>
@@ -448,7 +448,7 @@ export const PatientOverview: React.FC<PatientOverviewProps> = ({
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <Zap className="h-5 w-5 text-orange-600" />
                   <Minus className="h-4 w-4 text-gray-500" />
-                </div>
+              </div>
                 <div className="text-2xl font-bold text-orange-600">
                   {metrics.latestVitals.temperature}°F
                 </div>
@@ -469,7 +469,7 @@ export const PatientOverview: React.FC<PatientOverviewProps> = ({
                 <div className="text-xs text-gray-500">Percentage</div>
               </div>
             </div>
-          </CardContent>
+            </CardContent>
         </Card>
       )}
 
@@ -482,7 +482,7 @@ export const PatientOverview: React.FC<PatientOverviewProps> = ({
               Critical Information
             </CardTitle>
           </CardHeader>
-          <CardContent>
+            <CardContent>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Allergies */}
               {metrics.criticalAllergies > 0 && (
@@ -492,12 +492,12 @@ export const PatientOverview: React.FC<PatientOverviewProps> = ({
                     <h4 className="font-semibold text-red-800">Allergies</h4>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {patient.allergies.map((allergy, index) => (
+              {patient.allergies.map((allergy, index) => (
                       <Badge key={index} variant="destructive" className="text-xs">
-                        {allergy}
-                      </Badge>
-                    ))}
-                  </div>
+                  {allergy}
+                </Badge>
+              ))}
+            </div>
                 </div>
               )}
 
@@ -507,50 +507,50 @@ export const PatientOverview: React.FC<PatientOverviewProps> = ({
                   <div className="flex items-center gap-2 mb-3">
                     <History className="h-5 w-5 text-red-600" />
                     <h4 className="font-semibold text-red-800">Medical Conditions</h4>
-                  </div>
+              </div>
                   <div className="space-y-2">
                     {patient.medicalHistory.slice(0, 3).map((condition, index) => (
                       <div key={index} className="text-sm text-red-700 bg-red-100 rounded px-2 py-1">
                         {condition}
-                      </div>
+                  </div>
                     ))}
                     {patient.medicalHistory.length > 3 && (
                       <div className="text-xs text-red-600">
                         +{patient.medicalHistory.length - 3} more conditions
-                      </div>
-                    )}
                   </div>
+                    )}
+                </div>
                 </div>
               )}
             </div>
-          </CardContent>
+            </CardContent>
         </Card>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Current Medications */}
-        <Card>
-          <CardHeader>
+      <Card>
+        <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Pill className="h-5 w-5" />
               Current Medications
               <Badge variant="outline" className="ml-auto">
                 {metrics.activeMedications}
               </Badge>
-            </CardTitle>
-          </CardHeader>
+          </CardTitle>
+        </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {patient.currentMedications.slice(0, 3).map((medication, index) => (
                 <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                   <div className="p-2 bg-green-100 rounded-full">
                     <CheckCircle className="h-4 w-4 text-green-600" />
-                  </div>
+                </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900">{medication}</p>
                     <p className="text-xs text-gray-500">Active medication</p>
-                  </div>
-                </div>
+              </div>
+            </div>
               ))}
               {patient.currentMedications.length > 3 && (
                 <div className="text-center">
@@ -563,47 +563,47 @@ export const PatientOverview: React.FC<PatientOverviewProps> = ({
                 <div className="text-center py-6 text-gray-500">
                   <Pill className="h-8 w-8 mx-auto mb-2 text-gray-400" />
                   <p className="text-sm">No current medications</p>
-                </div>
+              </div>
               )}
-            </div>
-          </CardContent>
+          </div>
+            </CardContent>
         </Card>
 
         {/* Recent Appointments */}
-        <Card>
-          <CardHeader>
+      <Card>
+        <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
               Recent Appointments
               <Badge variant="outline" className="ml-auto">
                 {appointments.length}
               </Badge>
-            </CardTitle>
-          </CardHeader>
+          </CardTitle>
+        </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {appointments.slice(0, 3).map((appointment) => (
                 <div key={appointment.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                   <div className="p-2 bg-blue-100 rounded-full">
                     <Calendar className="h-4 w-4 text-blue-600" />
-                  </div>
+                      </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900">{appointment.type}</p>
                     <p className="text-xs text-gray-500">
                       {appointment.date.toLocaleDateString()} - {appointment.doctor}
                     </p>
+                      </div>
+                    {getAppointmentStatusBadge(appointment.status)}
                   </div>
-                  {getAppointmentStatusBadge(appointment.status)}
-                </div>
               ))}
               {appointments.length > 3 && (
                 <div className="text-center">
                   <Button variant="outline" size="sm" className="text-xs" onClick={onNavigateToTimeline}>
                     View All ({appointments.length})
-                  </Button>
-                </div>
-              )}
-            </div>
+                        </Button>
+                            </div>
+                          )}
+                        </div>
           </CardContent>
         </Card>
 
@@ -616,15 +616,15 @@ export const PatientOverview: React.FC<PatientOverviewProps> = ({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+                          <div className="space-y-3">
               <Button className="w-full justify-start gap-2" variant="outline">
                 <Plus className="h-4 w-4" />
                 New Prescription
-              </Button>
+                                    </Button>
               <Button className="w-full justify-start gap-2" variant="outline">
                 <Calendar className="h-4 w-4" />
                 Schedule Appointment
-              </Button>
+                              </Button>
               <Button className="w-full justify-start gap-2" variant="outline">
                 <Activity className="h-4 w-4" />
                 Record Vitals
@@ -640,11 +640,11 @@ export const PatientOverview: React.FC<PatientOverviewProps> = ({
               <Button className="w-full justify-start gap-2" variant="outline">
                 <Download className="h-4 w-4" />
                 Export Records
-              </Button>
-            </div>
-          </CardContent>
+                 </Button>
+          </div>
+            </CardContent>
         </Card>
       </div>
-    </div>
-  );
-};
+      </div>
+    );
+  };

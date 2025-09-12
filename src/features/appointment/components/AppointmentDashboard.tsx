@@ -47,6 +47,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { AppointmentDetail, appointmentApi } from '../services/appointmentApi';
+import { printPrescription } from '@/utils/printPrescription';
 
 export const AppointmentDashboard = () => {
   const { t } = useTranslation();
@@ -714,6 +715,70 @@ export const AppointmentDashboard = () => {
     setAppointmentToCancel(null);
   };
 
+  const handlePrintPrescription = (appointment: AppointmentDetail) => {
+    // Create patient data from appointment
+    const patientData = {
+      id: appointment.patientId,
+      name: appointment.patientFullName,
+      age: 0, // Would need to be fetched from patient API
+      gender: 'Unknown', // Would need to be fetched from patient API
+      phone: appointment.patientMobile || '',
+      email: '', // Would need to be fetched from patient API
+      address: '', // Would need to be fetched from patient API
+      dateOfBirth: '', // Would need to be fetched from patient API
+      emergencyContact: '' // Would need to be fetched from patient API
+    };
+
+    // Create vitals data (would need to be fetched from vitals API)
+    const vitalsData = {
+      bloodPressure: '120/80',
+      temperature: '98.6°F',
+      heartRate: '72 bpm',
+      weight: '75 kg',
+      height: '175 cm',
+      bmi: '24.5',
+      oxygenSaturation: '98%'
+    };
+
+    // Create prescription data (would need to be fetched from prescription API)
+    const prescriptionData = {
+      chiefComplaint: 'Chest pain, Shortness of breath',
+      history: 'Family history of heart disease',
+      comorbidity: 'Hypertension, Diabetes',
+      examination: 'Blood pressure elevated, Heart rate regular',
+      diagnosis: 'Hypertension, Diabetes mellitus',
+      orders: {
+        investigations: ['Complete Blood Count', 'ECG', 'Chest X-Ray'],
+        procedures: ['Blood Pressure Monitoring']
+      },
+      medications: [
+        { name: 'Metformin', dosage: '500mg', frequency: 'Twice daily', duration: '30 days' },
+        { name: 'Lisinopril', dosage: '10mg', frequency: 'Once daily', duration: '30 days' }
+      ],
+      privateNotes: 'Follow up in 2 weeks',
+      certificates: 'Medical certificate issued',
+      immunizations: 'Annual flu vaccine recommended',
+      followUp: 'Follow up in 2 weeks',
+      nonPharmacologicalAdvice: 'Regular exercise, low sodium diet',
+      attachments: 'ECG report attached'
+    };
+
+    // Create doctor data (would need to be fetched from doctor API)
+    const doctorData = {
+      name: appointment.doctorName || 'Dr. Sarah Johnson',
+      degree: 'MBBS, MD (Cardiology)',
+      specialization: 'Cardiologist',
+      license: 'MD12345',
+      phone: '+1 (555) 234-5678',
+      email: 'dr.johnson@hospital.com',
+      address: 'Medical Center, 456 Health Street, City, State 12345',
+      signature: appointment.doctorName || 'Dr. Sarah Johnson'
+    };
+
+    // Call the print prescription function
+    printPrescription(patientData, vitalsData, prescriptionData, doctorData);
+  };
+
   if (showBooking) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -1217,7 +1282,8 @@ export const AppointmentDashboard = () => {
                                 <Button 
                                   variant="outline" 
                                   size="sm"
-                                   className="h-6 px-2 text-xs text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-900/20"
+                                  onClick={() => handlePrintPrescription(appointment)}
+                                  className="h-6 px-2 text-xs text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-900/20"
                                 >
                                    <FileText className="h-2.5 w-2.5 mr-1" />
                                   Print
