@@ -44,6 +44,9 @@ const PatientProfilePage = lazy(() => import('@/features/patient/pages/PatientPr
 // Settings route
 const SettingsPage = lazy(() => import('@/pages/SettingsPage').then(module => ({ default: module.SettingsPage })));
 
+// Prescription customization route
+const CustomizePrescriptionPage = lazy(() => import('@/pages/CustomizePrescriptionPage').then(module => ({ default: module.CustomizePrescriptionPage })));
+
 
 // Loading component for lazy routes
 const RouteLoadingSpinner = () => (

@@ -19,6 +19,7 @@ import {
   PatientLabTests
 } from '../components';
 import EPrescriptionPad from '@/pages/EPrescriptionPad';
+import PrescriptionCustomizePanel from '@/components/prescription/PrescriptionCustomizePanel';
 
 interface PatientData {
   id: string;
@@ -490,41 +491,8 @@ export const PatientProfilePage: React.FC = () => {
 
           {/* Customize ePrescription Tab */}
           {activeTab === 'customize-eprescription' && (
-            <div className="space-y-6">
-              {/* Header */}
-              <div className="flex items-center gap-4 mb-6">
-                                 <div className="p-3 bg-primary rounded-lg shadow-sm">
-                   <Settings className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                   <h2 className="text-2xl font-semibold text-foreground mb-2">Customize ePrescription</h2>
-                   <p className="text-muted-foreground">Configure prescription templates and settings for better workflow efficiency</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Template Settings */}
-                 <div className="bg-card rounded-lg border border-border p-6">
-                   <h3 className="text-lg font-semibold text-foreground mb-4">Template Settings</h3>
-                   <p className="text-muted-foreground text-sm mb-4">
-                     Configure default prescription templates and formatting options.
-                   </p>
-                   <Button className="bg-primary hover:bg-primary/90 text-white">
-                     Configure Templates
-                   </Button>
-                </div>
-
-                 {/* Prescription Settings */}
-                 <div className="bg-card rounded-lg border border-border p-6">
-                   <h3 className="text-lg font-semibold text-foreground mb-4">Prescription Settings</h3>
-                   <p className="text-muted-foreground text-sm mb-4">
-                     Set default medications, dosages, and prescription preferences.
-                   </p>
-                   <Button className="bg-primary hover:bg-primary/90 text-white">
-                     Manage Settings
-                   </Button>
-                  </div>
-              </div>
+            <div className="h-full">
+              <PrescriptionCustomizePanel showCloseButton={false} />
             </div>
           )}
         </div>

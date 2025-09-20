@@ -5,18 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AdvancedSuggestionInput from '@/components/ui/AdvancedSuggestionInput';
 import { printPrescription } from '@/utils/printPrescription';
 
 // Debug: Check if function is imported correctly
 console.log('printPrescription function imported:', typeof printPrescription);
 import { 
-  Settings, 
   Save, 
   Printer, 
-  Download, 
   Plus, 
   Trash2, 
   Edit3,
@@ -34,13 +31,10 @@ import {
   CheckCircle,
   Clock,
   FileImage,
-  Send,
-  ArrowRight,
-  X,
   ChevronDown,
   ChevronRight,
   Check,
-  Search
+  X
 } from 'lucide-react';
 
 interface EPrescriptionData {
@@ -208,10 +202,42 @@ export const EPrescriptionPad: React.FC = () => {
   });
 
   const [fieldConfigs, setFieldConfigs] = useState<FieldConfig[]>(defaultFieldConfigs);
-  const [showCustomize, setShowCustomize] = useState(false);
-  const [customizeTab, setCustomizeTab] = useState('fields');
-  const [isSavingConfig, setIsSavingConfig] = useState(false);
-  const [saveConfigStatus, setSaveConfigStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [showPreview, setShowPreview] = useState(false);
+  const [showDurationInput, setShowDurationInput] = useState<boolean>(false);
+  const [lastAddedComplaint, setLastAddedComplaint] = useState<string>('');
+  const [complaintDays, setComplaintDays] = useState<string>('');
+  const [durationUnit, setDurationUnit] = useState<string>('days');
+
+
+
+  // Function to add duration to last added complaint from search
+  const addDurationToLastComplaint = (days: string) => {
+    if (!lastAddedComplaint || !days) return;
+    
+    const currentValue = prescriptionData.chiefComplaint || '';
+    const updatedValue = currentValue.replace(
+      lastAddedComplaint, 
+      `${lastAddedComplaint} since ${days}`
+    );
+    
+    setPrescriptionData(prev => ({ ...prev, chiefComplaint: updatedValue }));
+    setShowDurationInput(false);
+    setLastAddedComplaint('');
+  };
+
+  // Custom onChange handler for chief complaint to detect new additions
+  const handleChiefComplaintChange = (tokens: string[], csv: string) => {
+    setPrescriptionData(prev => ({ ...prev, chiefComplaint: csv }));
+    
+    // Check if a new token was added (for duration input)
+    if (tokens.length > 0) {
+      const lastToken = tokens[tokens.length - 1];
+      if (lastToken && !prescriptionData.chiefComplaint.includes(lastToken)) {
+        setLastAddedComplaint(lastToken);
+        setShowDurationInput(true);
+      }
+    }
+  };
   
   // Collapsible sections state
   const [collapsedSections, setCollapsedSections] = useState<{ [key: string]: boolean }>({
@@ -235,34 +261,6 @@ export const EPrescriptionPad: React.FC = () => {
   const [fieldSaveStatus, setFieldSaveStatus] = useState<{ [key: string]: 'idle' | 'saving' | 'saved' | 'error' }>({});
   
 
-  const updateFieldConfig = (fieldId: string, enabled: boolean) => {
-    setFieldConfigs(prev => 
-      prev.map(field => 
-        field.id === fieldId ? { ...field, enabled } : field
-      )
-    );
-  };
-
-  const handleSaveConfiguration = async () => {
-    setIsSavingConfig(true);
-    setSaveConfigStatus('saving');
-    
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      localStorage.setItem('eprescription-field-configs', JSON.stringify(fieldConfigs));
-      setSaveConfigStatus('saved');
-      setTimeout(() => setSaveConfigStatus('idle'), 2000);
-    } catch (error) {
-      setSaveConfigStatus('error');
-      setTimeout(() => setSaveConfigStatus('idle'), 3000);
-    } finally {
-      setIsSavingConfig(false);
-    }
-  };
-
-  const resetToDefaults = () => {
-    setFieldConfigs(defaultFieldConfigs);
-  };
 
 
 
@@ -942,44 +940,121 @@ export const EPrescriptionPad: React.FC = () => {
             {/* Input Field with Advanced Auto-suggestion */}
             <div className="mb-6">
               {fieldId === 'chiefComplaint' ? (
-                <AdvancedSuggestionInput
-                  data={getAllOptionsForField(fieldId)}
-                  placeholder="Type symptoms or complaints... (comma to add multiple)"
-                  onChange={(tokens, csv) => setPrescriptionData(prev => ({ ...prev, chiefComplaint: csv }))}
-                  value={prescriptionData.chiefComplaint || ''}
-                  onValueChange={(value) => setPrescriptionData(prev => ({ ...prev, chiefComplaint: value }))}
-                  maxSuggestions={8}
-                  allowCustom={true}
-                  className="w-full"
-                />
+                <div className="space-y-3">
+                  <AdvancedSuggestionInput
+                    data={getAllOptionsForField(fieldId)}
+                    placeholder="Type symptoms or complaints... (comma to add multiple)"
+                    onChange={handleChiefComplaintChange}
+                    value={prescriptionData.chiefComplaint || ''}
+                    onValueChange={(value) => setPrescriptionData(prev => ({ ...prev, chiefComplaint: value }))}
+                    maxSuggestions={8}
+                    allowCustom={true}
+                    className="w-full"
+                  />
+                  
+                  {/* Duration Input for Last Added Complaint */}
+                  {showDurationInput && lastAddedComplaint && (
+                    <div className="flex gap-2 items-end p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex-1">
+                        <Label htmlFor="search-complaint-days" className="text-xs text-blue-700">
+                          Add duration for "{lastAddedComplaint}"
+                        </Label>
+                        <div className="flex gap-2 mt-1">
+                          <Input
+                            id="search-complaint-days"
+                            placeholder="Enter number"
+                            value={complaintDays}
+                            onChange={(e) => setComplaintDays(e.target.value)}
+                            className="h-8 text-sm flex-1"
+                            type="number"
+                            min="1"
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                const durationText = complaintDays ? `${complaintDays} ${durationUnit}` : '';
+                                addDurationToLastComplaint(durationText);
+                                setComplaintDays('');
+                              }
+                            }}
+                          />
+                          <Select value={durationUnit} onValueChange={setDurationUnit}>
+                            <SelectTrigger className="h-8 w-24 text-sm">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="days">Days</SelectItem>
+                              <SelectItem value="weeks">Weeks</SelectItem>
+                              <SelectItem value="months">Months</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => {
+                            const durationText = complaintDays ? `${complaintDays} ${durationUnit}` : '';
+                            addDurationToLastComplaint(durationText);
+                            setComplaintDays('');
+                          }}
+                          size="sm"
+                          className="bg-blue-600 hover:bg-blue-700 h-8"
+                          disabled={!complaintDays.trim()}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Add Duration
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setShowDurationInput(false);
+                            setLastAddedComplaint('');
+                            setComplaintDays('');
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="h-8"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : (
                 content
               )}
             </div>
             
-            {/* Quick Options within the same card */}
-            <div className="mt-4">
-              <div className="flex flex-wrap gap-2">
-                {predefinedOptions[fieldId as keyof typeof predefinedOptions]?.map((option, index) => (
-                  <button
-                    key={index}
-                    onClick={() => {
-                      // Add to the current complaint field
-                      const currentValue = prescriptionData.chiefComplaint || '';
-                      const newValue = currentValue ? `${currentValue}, ${option}` : option;
-                      setPrescriptionData(prev => ({ ...prev, chiefComplaint: newValue }));
-                    }}
-                    className="group flex items-center gap-1 bg-blue-50 border border-blue-200 rounded-full px-3 py-1.5 text-xs hover:bg-blue-100 hover:border-blue-400 transition-all duration-200"
-                    title="Click to add to complaint"
-                  >
-                    <span className="text-blue-600 hover:text-blue-800 font-medium">
-                      {option}
-                    </span>
-                    <Plus className="h-3 w-3 text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </button>
-                ))}
+            {/* Quick Add Options integrated into main card */}
+            {fieldId === 'chiefComplaint' && (
+              <div className="mt-4">
+                {/* Complaint Selection */}
+                <div className="flex flex-wrap gap-2">
+                  {predefinedOptions[fieldId as keyof typeof predefinedOptions]?.map((option, index) => (
+                    <button
+                      key={index}
+                      onClick={() => {
+                        // Add the complaint directly to the field
+                        const currentValue = prescriptionData.chiefComplaint || '';
+                        const newValue = currentValue ? `${currentValue}, ${option}` : option;
+                        setPrescriptionData(prev => ({ ...prev, chiefComplaint: newValue }));
+                        
+                        // Set up for duration prompt (same as search behavior)
+                        setLastAddedComplaint(option);
+                        setShowDurationInput(true);
+                        setComplaintDays('');
+                        setDurationUnit('days');
+                      }}
+                      className="group flex items-center gap-1 bg-white border border-gray-300 rounded-full px-3 py-1.5 text-xs hover:bg-gray-100 hover:border-gray-400 text-gray-700 transition-all duration-200"
+                      title="Click to add complaint and prompt for duration"
+                    >
+                      <span className="font-medium">
+                        {option}
+                      </span>
+                      <Plus className="h-3 w-3 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
             
             <div className="flex justify-end pt-4">
               <Button
@@ -1182,40 +1257,18 @@ export const EPrescriptionPad: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowCustomize(!showCustomize)}
+            <Button 
+              variant="outline" 
+              size="sm" 
               className="flex items-center gap-2"
+              onClick={() => setShowPreview(true)}
             >
-              <Settings className="h-4 w-4" />
-              Customize
-            </Button>
-            <Button variant="outline" size="sm" className="flex items-center gap-2">
               <Eye className="h-4 w-4" />
               Preview
             </Button>
             <Button variant="outline" size="sm" className="flex items-center gap-2">
               <Save className="h-4 w-4" />
               Save
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="flex items-center gap-2"
-              onClick={() => {
-                console.log('Test print button clicked');
-                // Simple test with minimal data
-                printPrescription(
-                  { id: 'TEST', name: 'Test Patient', age: 30, gender: 'Male', phone: '123-456-7890', email: 'test@test.com', address: 'Test Address', dateOfBirth: '1990-01-01', emergencyContact: 'Test Contact' },
-                  { bloodPressure: '120/80', temperature: '98.6°F', heartRate: '72 bpm', weight: '70 kg', height: '170 cm', bmi: '24.2', oxygenSaturation: '98%' },
-                  { chiefComplaint: 'Test complaint', history: 'Test history', comorbidity: 'Test comorbidity', examination: 'Test examination', diagnosis: 'Test diagnosis', orders: { investigations: ['Test'], procedures: ['Test'] }, medications: [{ name: 'Test Med', dosage: '100mg', frequency: 'Once daily', duration: '7 days' }], privateNotes: 'Test notes', certificates: 'Test certificate', immunizations: 'Test immunization', followUp: 'Test followup', nonPharmacologicalAdvice: 'Test advice', attachments: 'Test attachment' },
-                  { name: 'Dr. Test', degree: 'MBBS', specialization: 'General', license: 'TEST123', phone: '123-456-7890', email: 'dr@test.com', address: 'Test Address', signature: 'Dr. Test' }
-                );
-              }}
-            >
-              <Printer className="h-4 w-4" />
-              Test Print
             </Button>
             <Button 
               size="sm" 
@@ -1288,182 +1341,6 @@ export const EPrescriptionPad: React.FC = () => {
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Customize Panel */}
-        {showCustomize && (
-          <div className="w-96 bg-white border-r border-gray-200 flex flex-col">
-            {/* Customize Header */}
-            <div className="p-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Customize E-Prescription</h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowCustomize(false)}
-                  className="h-8 w-8 p-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Customize Tabs */}
-            <div className="p-4 border-b border-gray-200">
-              <Tabs value={customizeTab} onValueChange={setCustomizeTab}>
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="fields" className="text-xs">
-                    <span>Fields</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="layout" className="text-xs">
-                    <span>Layout</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="templates" className="text-xs">
-                    <span>Templates</span>
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-
-            {/* Customize Content */}
-            <div className="flex-1 overflow-y-auto p-4">
-              <Tabs value={customizeTab} onValueChange={setCustomizeTab}>
-                {/* Fields Tab */}
-                <TabsContent value="fields" className="space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-3">Field Configuration</h4>
-                    <div className="space-y-2">
-                      {fieldConfigs.map(field => (
-                        <div key={field.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50">
-                          <div className="flex items-center gap-3">
-                            <div className="flex-shrink-0">
-                              {renderFieldIcon(field.id)}
-                            </div>
-                            <div>
-                              <span className="text-sm font-medium text-gray-700">{field.label}</span>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge 
-                                  variant={field.category === 'basic' ? 'default' : 
-                                          field.category === 'clinical' ? 'secondary' :
-                                          field.category === 'treatment' ? 'outline' : 'destructive'}
-                                  className="text-xs"
-                                >
-                                  {field.category}
-                                </Badge>
-                                {field.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
-                              </div>
-                            </div>
-                          </div>
-                          <input
-                            type="checkbox"
-                            checked={field.enabled}
-                            onChange={(e) => updateFieldConfig(field.id, e.target.checked)}
-                            className="rounded border-gray-300 h-4 w-4"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </TabsContent>
-
-                {/* Layout Tab */}
-                <TabsContent value="layout" className="space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-3">Layout Options</h4>
-                    <div className="space-y-4">
-                      <div className="p-3 border border-gray-200 rounded-lg">
-                        <h5 className="text-sm font-medium text-gray-700 mb-2">Section Display</h5>
-                        <div className="space-y-2">
-                          <label className="flex items-center gap-2">
-                            <input type="checkbox" defaultChecked className="rounded border-gray-300" />
-                            <span className="text-sm text-gray-600">Collapsible sections</span>
-                          </label>
-                          <label className="flex items-center gap-2">
-                            <input type="checkbox" defaultChecked className="rounded border-gray-300" />
-                            <span className="text-sm text-gray-600">Show section icons</span>
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </TabsContent>
-
-                {/* Templates Tab */}
-                <TabsContent value="templates" className="space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-3">Prescription Templates</h4>
-                    <div className="space-y-3">
-                      <div className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                        <h5 className="text-sm font-medium text-gray-700">General Practice</h5>
-                        <p className="text-xs text-gray-500 mt-1">Standard fields for general consultations</p>
-                      </div>
-                      <div className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                        <h5 className="text-sm font-medium text-gray-700">Emergency Medicine</h5>
-                        <p className="text-xs text-gray-500 mt-1">Quick access to critical fields</p>
-                      </div>
-                      <div className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                        <h5 className="text-sm font-medium text-gray-700">Pediatrics</h5>
-                        <p className="text-xs text-gray-500 mt-1">Child-specific fields and dosages</p>
-                      </div>
-                      <div className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                        <h5 className="text-sm font-medium text-gray-700">Cardiology</h5>
-                        <p className="text-xs text-gray-500 mt-1">Heart-related fields and vitals</p>
-                      </div>
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </div>
-
-            {/* Customize Footer */}
-            <div className="p-4 border-t border-gray-200 space-y-3">
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleSaveConfiguration}
-                  disabled={isSavingConfig}
-                  className={`flex-1 ${
-                    saveConfigStatus === 'saved' 
-                      ? 'bg-green-600 hover:bg-green-700' 
-                      : saveConfigStatus === 'error'
-                      ? 'bg-red-600 hover:bg-red-700'
-                      : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
-                >
-                  {isSavingConfig ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Saving...
-                    </>
-                  ) : saveConfigStatus === 'saved' ? (
-                    <>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Saved
-                    </>
-                  ) : saveConfigStatus === 'error' ? (
-                    <>
-                      <AlertCircle className="h-4 w-4 mr-2" />
-                      Error
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Save Configuration
-                    </>
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={resetToDefaults}
-                  className="px-3"
-                >
-                  Reset
-                </Button>
-              </div>
-              <p className="text-xs text-gray-500 text-center">
-                Your configuration will be saved and applied to all future prescriptions
-              </p>
-            </div>
-          </div>
-        )}
-
         {/* Main Content */}
         <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-6xl mx-auto space-y-6">
@@ -1914,6 +1791,291 @@ export const EPrescriptionPad: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Preview Modal */}
+      {showPreview && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Eye className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Prescription Preview</h2>
+                  <p className="text-sm text-gray-500">Patient ID: {patientId}</p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowPreview(false)}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                {/* Prescription Header */}
+                <div className="text-center mb-6 border-b border-gray-200 pb-4">
+                  <h1 className="text-2xl font-bold text-gray-900 mb-2">E-PRESCRIPTION</h1>
+                  <div className="text-sm text-gray-600">
+                    <p>Date: {new Date().toLocaleDateString()}</p>
+                    <p>Patient ID: {patientId}</p>
+                  </div>
+                </div>
+
+                {/* Vitals Section */}
+                {fieldConfigs.find(f => f.id === 'vitals')?.enabled && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <Activity className="h-5 w-5 text-blue-600" />
+                      Vitals
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
+                      <div>
+                        <span className="text-sm font-medium text-gray-600">Blood Pressure:</span>
+                        <p className="text-gray-900">{prescriptionData.vitals.bloodPressure || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-gray-600">Temperature:</span>
+                        <p className="text-gray-900">{prescriptionData.vitals.temperature || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-gray-600">Heart Rate:</span>
+                        <p className="text-gray-900">{prescriptionData.vitals.heartRate || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-gray-600">Weight:</span>
+                        <p className="text-gray-900">{prescriptionData.vitals.weight || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-gray-600">Height:</span>
+                        <p className="text-gray-900">{prescriptionData.vitals.height || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-gray-600">BMI:</span>
+                        <p className="text-gray-900">{prescriptionData.vitals.bmi || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-gray-600">O2 Saturation:</span>
+                        <p className="text-gray-900">{prescriptionData.vitals.oxygenSaturation || 'N/A'}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Chief Complaint */}
+                {fieldConfigs.find(f => f.id === 'chiefComplaint')?.enabled && prescriptionData.chiefComplaint && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-red-600" />
+                      Chief Complaint
+                    </h3>
+                    <p className="text-gray-700 bg-red-50 p-4 rounded-lg border border-red-200">
+                      {prescriptionData.chiefComplaint}
+                    </p>
+                  </div>
+                )}
+
+                {/* History */}
+                {fieldConfigs.find(f => f.id === 'history')?.enabled && prescriptionData.history && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-blue-600" />
+                      History
+                    </h3>
+                    <p className="text-gray-700 bg-blue-50 p-4 rounded-lg border border-blue-200">
+                      {prescriptionData.history}
+                    </p>
+                  </div>
+                )}
+
+                {/* Comorbidity */}
+                {fieldConfigs.find(f => f.id === 'comorbidity')?.enabled && prescriptionData.comorbidity && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <Heart className="h-5 w-5 text-pink-600" />
+                      Comorbidity
+                    </h3>
+                    <p className="text-gray-700 bg-pink-50 p-4 rounded-lg border border-pink-200">
+                      {prescriptionData.comorbidity}
+                    </p>
+                  </div>
+                )}
+
+                {/* Examination */}
+                {fieldConfigs.find(f => f.id === 'examination')?.enabled && prescriptionData.examination && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <Stethoscope className="h-5 w-5 text-green-600" />
+                      Examination
+                    </h3>
+                    <p className="text-gray-700 bg-green-50 p-4 rounded-lg border border-green-200">
+                      {prescriptionData.examination}
+                    </p>
+                  </div>
+                )}
+
+                {/* Diagnosis */}
+                {fieldConfigs.find(f => f.id === 'diagnosis')?.enabled && prescriptionData.diagnosis && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      Diagnosis
+                    </h3>
+                    <p className="text-gray-700 bg-green-50 p-4 rounded-lg border border-green-200 font-medium">
+                      {prescriptionData.diagnosis}
+                    </p>
+                  </div>
+                )}
+
+                {/* Orders */}
+                {fieldConfigs.find(f => f.id === 'orders')?.enabled && (prescriptionData.orders.investigations.length > 0 || prescriptionData.orders.procedures.length > 0) && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <ClipboardList className="h-5 w-5 text-purple-600" />
+                      Orders
+                    </h3>
+                    <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                      {prescriptionData.orders.investigations.length > 0 && (
+                        <div className="mb-3">
+                          <h4 className="font-medium text-gray-900 mb-2">Investigations:</h4>
+                          <ul className="list-disc list-inside text-gray-700">
+                            {prescriptionData.orders.investigations.map((investigation, index) => (
+                              <li key={index}>{investigation}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {prescriptionData.orders.procedures.length > 0 && (
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Procedures:</h4>
+                          <ul className="list-disc list-inside text-gray-700">
+                            {prescriptionData.orders.procedures.map((procedure, index) => (
+                              <li key={index}>{procedure}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Medications */}
+                {fieldConfigs.find(f => f.id === 'medications')?.enabled && prescriptionData.medications.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <Pill className="h-5 w-5 text-blue-600" />
+                      Medications
+                    </h3>
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse">
+                          <thead>
+                            <tr className="border-b border-blue-200">
+                              <th className="text-left py-2 px-3 font-medium text-gray-900">#</th>
+                              <th className="text-left py-2 px-3 font-medium text-gray-900">Medication</th>
+                              <th className="text-left py-2 px-3 font-medium text-gray-900">Dosage</th>
+                              <th className="text-left py-2 px-3 font-medium text-gray-900">Frequency</th>
+                              <th className="text-left py-2 px-3 font-medium text-gray-900">Duration</th>
+                              <th className="text-left py-2 px-3 font-medium text-gray-900">Instructions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {prescriptionData.medications.map((medication, index) => (
+                              <tr key={medication.id} className="border-b border-blue-100">
+                                <td className="py-2 px-3 text-gray-700">{index + 1}</td>
+                                <td className="py-2 px-3 text-gray-700 font-medium">{medication.name}</td>
+                                <td className="py-2 px-3 text-gray-700">{medication.dosage}</td>
+                                <td className="py-2 px-3 text-gray-700">{medication.frequency}</td>
+                                <td className="py-2 px-3 text-gray-700">{medication.duration}</td>
+                                <td className="py-2 px-3 text-gray-700">{medication.instructions}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Non-pharmacological Advice */}
+                {fieldConfigs.find(f => f.id === 'nonPharmacologicalAdvice')?.enabled && prescriptionData.nonPharmacologicalAdvice && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <User className="h-5 w-5 text-orange-600" />
+                      Non-pharmacological Advice
+                    </h3>
+                    <p className="text-gray-700 bg-orange-50 p-4 rounded-lg border border-orange-200">
+                      {prescriptionData.nonPharmacologicalAdvice}
+                    </p>
+                  </div>
+                )}
+
+                {/* Follow-up */}
+                {fieldConfigs.find(f => f.id === 'followUp')?.enabled && (prescriptionData.followUp.date || prescriptionData.followUp.referral || prescriptionData.followUp.notes) && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-indigo-600" />
+                      Follow-up & Referral
+                    </h3>
+                    <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+                      {prescriptionData.followUp.date && (
+                        <p className="text-gray-700 mb-2"><span className="font-medium">Follow-up Date:</span> {prescriptionData.followUp.date}</p>
+                      )}
+                      {prescriptionData.followUp.referral && (
+                        <p className="text-gray-700 mb-2"><span className="font-medium">Referral:</span> {prescriptionData.followUp.referral}</p>
+                      )}
+                      {prescriptionData.followUp.notes && (
+                        <p className="text-gray-700"><span className="font-medium">Notes:</span> {prescriptionData.followUp.notes}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Doctor Signature */}
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <p className="text-sm text-gray-600">Doctor's Signature</p>
+                      <div className="mt-8 w-32 h-16 border-b-2 border-gray-400"></div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600">Date: {new Date().toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
+              <Button
+                variant="outline"
+                onClick={() => setShowPreview(false)}
+              >
+                Close
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowPreview(false);
+                  // Trigger print function here
+                  console.log('Print from preview modal');
+                }}
+                className="flex items-center gap-2"
+              >
+                <Printer className="h-4 w-4" />
+                Print
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

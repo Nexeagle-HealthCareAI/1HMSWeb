@@ -7,12 +7,21 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Ruler, Image, User, Settings, HelpCircle, FileText, Save, Check } from 'lucide-react';
+import { Ruler, Image, User, Settings, HelpCircle, FileText, Save, Check, RotateCcw } from 'lucide-react';
+import { prescriptionSettingsApi, PrescriptionSettingsRequest } from '@/features/doctor/services/prescriptionSettingsApi';
+import { useAuthStore } from '@/store/authStore';
+import { useDoctorProfile } from '@/features/doctor/hooks/useDoctorProfile';
 
 export const SettingsForm: React.FC = () => {
   const { settings, update } = usePrescriptionStore();
+  const { user, getUserId } = useAuthStore();
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  
+  // Get doctor profile to fetch the correct doctorId
+  const userId = getUserId() || '';
+  const { data: doctorProfile, isLoading: doctorProfileLoading } = useDoctorProfile(userId);
+  const doctorId = doctorProfile?.doctorId;
 
   const updateSettings = (key: string, value: any) => {
     update({ [key]: value });
@@ -30,21 +39,201 @@ export const SettingsForm: React.FC = () => {
     setSaveStatus('idle');
   };
 
+  // Map local settings to API format
+  const mapSettingsToApiFormat = (localSettings: typeof settings): PrescriptionSettingsRequest => {
+    return {
+      pageLayout: {
+        orientation: localSettings.page.orientation,
+        margin: {
+          top: localSettings.page.margin.top,
+          right: localSettings.page.margin.right,
+          bottom: localSettings.page.margin.bottom,
+          left: localSettings.page.margin.left,
+        },
+      },
+      headerSettings: {
+        height: localSettings.header.height,
+        width: localSettings.header.width,
+        showImage: localSettings.header.showImage,
+        showText: localSettings.header.showText,
+        text: localSettings.header.text,
+        showOnAllPages: localSettings.header.showOnAllPages,
+      },
+      footerSettings: {
+        height: localSettings.footer.height,
+        width: localSettings.footer.width,
+        showImage: localSettings.footer.showImage,
+        showText: localSettings.footer.showText,
+        showSignature: localSettings.footer.showSignature,
+        text: localSettings.footer.text,
+        signatureHeight: localSettings.footer.signatureHeight,
+        signatureWidth: localSettings.footer.signatureWidth,
+        doctorName: localSettings.footer.doctorName,
+        showOnAllPages: localSettings.footer.showOnAllPages,
+      },
+      fontSettings: {
+        family: localSettings.font.family,
+        size: localSettings.font.size,
+      },
+      colorSettings: {
+        primary: localSettings.colors.primary,
+        secondary: localSettings.colors.secondary,
+        text: localSettings.colors.text,
+      },
+      useLetterhead: localSettings.useLetterhead,
+      letterheadSettings: {
+        headerHeight: localSettings.letterhead.headerHeight,
+        footerHeight: localSettings.letterhead.footerHeight,
+      },
+    };
+  };
+
+  // Map API response to local settings format
+  const mapApiResponseToLocalSettings = (apiSettings: PrescriptionSettingsRequest) => {
+    return {
+      page: {
+        orientation: apiSettings.pageLayout.orientation as 'portrait' | 'landscape',
+        margin: {
+          top: apiSettings.pageLayout.margin.top,
+          right: apiSettings.pageLayout.margin.right,
+          bottom: apiSettings.pageLayout.margin.bottom,
+          left: apiSettings.pageLayout.margin.left,
+        },
+      },
+      pdf: {
+        margin: {
+          top: apiSettings.pageLayout.margin.top,
+          right: apiSettings.pageLayout.margin.right,
+          bottom: apiSettings.pageLayout.margin.bottom,
+          left: apiSettings.pageLayout.margin.left,
+        },
+      },
+      images: {
+        header: undefined,
+        footer: undefined,
+        signature: undefined,
+      },
+      useLetterhead: apiSettings.useLetterhead,
+      letterhead: {
+        headerHeight: apiSettings.letterheadSettings.headerHeight,
+        footerHeight: apiSettings.letterheadSettings.footerHeight,
+      },
+      header: {
+        height: apiSettings.headerSettings.height,
+        width: apiSettings.headerSettings.width,
+        showImage: apiSettings.headerSettings.showImage,
+        showText: apiSettings.headerSettings.showText,
+        text: apiSettings.headerSettings.text,
+        showOnAllPages: apiSettings.headerSettings.showOnAllPages,
+      },
+      footer: {
+        height: apiSettings.footerSettings.height,
+        width: apiSettings.footerSettings.width,
+        showImage: apiSettings.footerSettings.showImage,
+        showText: apiSettings.footerSettings.showText,
+        showSignature: apiSettings.footerSettings.showSignature,
+        text: apiSettings.footerSettings.text,
+        signatureHeight: apiSettings.footerSettings.signatureHeight,
+        signatureWidth: apiSettings.footerSettings.signatureWidth,
+        doctorName: apiSettings.footerSettings.doctorName,
+        showOnAllPages: apiSettings.footerSettings.showOnAllPages,
+      },
+      font: {
+        family: apiSettings.fontSettings.family as any,
+        size: apiSettings.fontSettings.size,
+      },
+      colors: {
+        primary: apiSettings.colorSettings.primary,
+        secondary: apiSettings.colorSettings.secondary,
+        text: apiSettings.colorSettings.text,
+      },
+    };
+  };
+
+  // Load settings from API
+  const loadSettingsFromApi = async () => {
+    if (!doctorId) {
+      console.error('Doctor ID not available for loading settings');
+      return;
+    }
+
+    try {
+      console.log('Loading prescription settings from API...');
+      const response = await prescriptionSettingsApi.getPrescriptionSettings(doctorId);
+      
+      if (response.success && response.data.settings) {
+        const localSettings = mapApiResponseToLocalSettings(response.data.settings);
+        update(localSettings);
+        console.log('Settings loaded from API:', localSettings);
+      }
+    } catch (error) {
+      console.error('Error loading settings from API:', error);
+    }
+  };
+
+  // Reset settings to defaults via API
+  const handleReset = async () => {
+    if (!doctorId) {
+      console.error('Doctor ID not available for reset');
+      return;
+    }
+
+    try {
+      console.log('Resetting prescription settings via API...');
+      const response = await prescriptionSettingsApi.resetPrescriptionSettings(doctorId);
+      
+      if (response.success && response.data.settings) {
+        const localSettings = mapApiResponseToLocalSettings(response.data.settings);
+        update(localSettings);
+        console.log('Settings reset via API:', localSettings);
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      }
+    } catch (error) {
+      console.error('Error resetting settings via API:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    }
+  };
+
   const handleSave = async () => {
+    if (!doctorId) {
+      console.error('Doctor ID not available. Doctor Profile:', doctorProfile);
+      console.error('User ID:', userId);
+      setSaveStatus('error');
+      return;
+    }
+
+    console.log('Sending prescription settings for doctor ID:', doctorId);
+    console.log('Doctor Profile:', doctorProfile);
+    console.log('User ID:', userId);
+
     setIsSaving(true);
     setSaveStatus('saving');
     
     try {
-      // Since Zustand with persist automatically saves to localStorage,
-      // we just need to trigger a save confirmation
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate save delay
-      setSaveStatus('saved');
+      // Map local settings to API format
+      const apiSettings = mapSettingsToApiFormat(settings);
+      
+      // Call the API to save prescription settings
+      const response = await prescriptionSettingsApi.updatePrescriptionSettings(doctorId, apiSettings);
+      
+      if (response.success) {
+        setSaveStatus('saved');
+        console.log('Prescription settings saved successfully:', response);
+        
+        // Fetch updated settings from API after successful save
+        await loadSettingsFromApi();
+      } else {
+        throw new Error(response.message || 'Failed to save settings');
+      }
       
       // Reset status after 2 seconds
       setTimeout(() => {
         setSaveStatus('idle');
       }, 2000);
     } catch (error) {
+      console.error('Error saving prescription settings:', error);
       setSaveStatus('error');
       setTimeout(() => {
         setSaveStatus('idle');
@@ -57,6 +246,18 @@ export const SettingsForm: React.FC = () => {
   // Ensure settings are properly initialized
   if (!settings || !settings.page || !settings.page.margin) {
     return <div>Loading settings...</div>;
+  }
+
+  // Load settings from API when doctorId becomes available
+  useEffect(() => {
+    if (doctorId && !doctorProfileLoading) {
+      loadSettingsFromApi();
+    }
+  }, [doctorId, doctorProfileLoading]);
+
+  // Show loading state while doctor profile is being fetched
+  if (doctorProfileLoading) {
+    return <div>Loading doctor profile...</div>;
   }
 
   return (
@@ -381,34 +582,45 @@ export const SettingsForm: React.FC = () => {
                 </p>
               </div>
             </div>
-            <Button
-              onClick={handleSave}
-              disabled={isSaving}
-              className={`flex items-center gap-2 ${
-                saveStatus === 'saved' 
-                  ? 'bg-green-600 hover:bg-green-700' 
-                  : saveStatus === 'error'
-                  ? 'bg-red-600 hover:bg-red-700'
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
-            >
-              {saveStatus === 'saved' ? (
-                <>
-                  <Check className="h-4 w-4" />
-                  Saved
-                </>
-              ) : saveStatus === 'saving' ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  Save Settings
-                </>
-              )}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleReset}
+                disabled={isSaving || !doctorId || doctorProfileLoading}
+                variant="outline"
+                className="flex items-center gap-2 border-orange-300 text-orange-700 hover:bg-orange-50 px-4 py-2"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset to Defaults
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={isSaving || !doctorId || doctorProfileLoading}
+                className={`flex items-center gap-2 ${
+                  saveStatus === 'saved' 
+                    ? 'bg-green-600 hover:bg-green-700' 
+                    : saveStatus === 'error'
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                {saveStatus === 'saved' ? (
+                  <>
+                    <Check className="h-4 w-4" />
+                    Saved
+                  </>
+                ) : saveStatus === 'saving' ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    Save Settings
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
