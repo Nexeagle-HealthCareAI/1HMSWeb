@@ -7,7 +7,6 @@ import {
   MapPin,
   Edit,
   Save,
-  Download,
   Printer,
   Plus,
   Heart,
@@ -114,6 +113,7 @@ interface PatientOverviewProps {
   labTests: any[];
   vitalSigns: VitalSigns[];
   onNavigateToTimeline: () => void;
+  onEditProfile?: () => void;
 }
 
 export const PatientOverview: React.FC<PatientOverviewProps> = ({
@@ -122,7 +122,8 @@ export const PatientOverview: React.FC<PatientOverviewProps> = ({
   prescriptions,
   labTests,
   vitalSigns,
-  onNavigateToTimeline
+  onNavigateToTimeline,
+  onEditProfile
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editingAppointmentPrescription, setEditingAppointmentPrescription] = useState<string | null>(null);
@@ -309,26 +310,13 @@ export const PatientOverview: React.FC<PatientOverviewProps> = ({
               {/* Action Buttons */}
               <div className="flex flex-col gap-2">
                 <Button
-                  variant={isEditing ? "default" : "outline"}
+                  variant="outline"
                   size="sm"
-                  onClick={() => setIsEditing(!isEditing)}
+                  onClick={onEditProfile || (() => setIsEditing(!isEditing))}
                   className="gap-2"
                 >
-                  {isEditing ? (
-                    <>
-                      <Save className="h-4 w-4" />
-                      Save Changes
-                    </>
-                  ) : (
-                    <>
-                      <Edit className="h-4 w-4" />
-                      Edit Profile
-                    </>
-                  )}
-                </Button>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Export Summary
+                  <Edit className="h-4 w-4" />
+                  Edit Profile
                 </Button>
               </div>
             </div>
@@ -637,10 +625,6 @@ export const PatientOverview: React.FC<PatientOverviewProps> = ({
                 <MessageSquare className="h-4 w-4" />
                 Send Message
               </Button>
-              <Button className="w-full justify-start gap-2" variant="outline">
-                <Download className="h-4 w-4" />
-                Export Records
-                 </Button>
           </div>
             </CardContent>
         </Card>

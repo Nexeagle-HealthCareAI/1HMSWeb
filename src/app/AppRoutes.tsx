@@ -259,6 +259,16 @@ export const AppRoutes: React.FC = () => {
                 </RouteGuard>
               }
             />
+            <Route
+              path="/patient/new"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor']}>
+                  <MainLayout>
+                    <PatientProfilePage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
 
             {/* Settings Routes - Available to all authenticated users */}
             <Route

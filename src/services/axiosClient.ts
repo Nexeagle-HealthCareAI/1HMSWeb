@@ -13,11 +13,23 @@ const axiosInstance: AxiosInstance = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
+  withCredentials: false, // Disable credentials for CORS
 });
 
 // Request interceptor
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    // Debug logging for development
+    if (import.meta.env.DEV) {
+      console.log('API Request:', {
+        method: config.method?.toUpperCase(),
+        url: config.url,
+        baseURL: config.baseURL,
+        fullURL: `${config.baseURL}${config.url}`,
+        headers: config.headers,
+      });
+    }
+
     // Add authentication token to requests
     const token = useAuthStore.getState().getToken();
     if (token && config.headers) {
@@ -40,6 +52,16 @@ axiosInstance.interceptors.request.use(
 // Response interceptor
 axiosInstance.interceptors.response.use(
   (response: AxiosResponse) => {
+    // Debug logging for development
+    if (import.meta.env.DEV) {
+      console.log('API Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.config.url,
+        data: response.data,
+      });
+    }
+    
     // Handle successful responses
     return response;
   },

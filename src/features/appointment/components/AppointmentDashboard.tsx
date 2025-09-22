@@ -40,7 +40,7 @@ import { ArrowUp, Minimize2, Maximize2 } from 'lucide-react';
 import { AppointmentBooking } from './AppointmentBooking';
 import { VitalsForm } from './VitalsForm';
 import { TokenPrintModal } from './TokenPrintModal';
-import { PatientOverview } from '@/features/patient/components/PatientOverview';
+import { PatientProfileModal } from '@/features/patient/components/PatientProfileModal';
 import { format } from 'date-fns';
 import { useAppointmentDetails } from '../hooks/useAppointmentDetails';
 import { useAuthStore } from '@/store/authStore';
@@ -1439,39 +1439,13 @@ export const AppointmentDashboard = () => {
 
       {/* Patient Profile Modal */}
       {showPatientProfile && selectedPatientForProfile && (
-        <Dialog open={showPatientProfile} onOpenChange={setShowPatientProfile}>
-          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Patient Profile - {selectedPatientForProfile.patientFullName}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="mt-4">
-              <PatientOverview
-                patient={{
-                  id: selectedPatientForProfile.patientId,
-                  name: selectedPatientForProfile.patientFullName,
-                  age: 0, // Default value, would need to be fetched from API
-                  gender: 'Unknown', // Default value, would need to be fetched from API
-                  phone: selectedPatientForProfile.patientMobile || '',
-                  email: '', // Default value, would need to be fetched from API
-                  address: '', // Default value, would need to be fetched from API
-                  bloodGroup: '', // Default value, would need to be fetched from API
-                  emergencyContact: '', // Default value, would need to be fetched from API
-                  medicalHistory: [], // Default value, would need to be fetched from API
-                  allergies: [], // Default value, would need to be fetched from API
-                  currentMedications: [] // Default value, would need to be fetched from API
-                }}
-                appointments={[]} // Default value, would need to be fetched from API
-                prescriptions={[]} // Default value, would need to be fetched from API
-                labTests={[]} // Default value, would need to be fetched from API
-                vitalSigns={[]} // Default value, would need to be fetched from API
-                onNavigateToTimeline={() => {}} // Placeholder function
-                        />
-                      </div>
-          </DialogContent>
-        </Dialog>
+        <PatientProfileModal
+          isOpen={showPatientProfile}
+          onClose={() => setShowPatientProfile(false)}
+          hospitalId={hospitalId}
+          patientId={selectedPatientForProfile.patientId}
+          patientName={selectedPatientForProfile.patientFullName}
+        />
       )}
 
       {/* Cancel Confirmation Dialog */}

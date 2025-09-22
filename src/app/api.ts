@@ -1,6 +1,9 @@
 // API Configuration
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
-  'https://easyhmsapi-b2fpcsh4cpbafxf0.centralindia-01.azurewebsites.net';
+  (import.meta.env.DEV 
+    ? '/api'  // Use proxy in development
+    : 'https://easyhmsapi-b2fpcsh4cpbafxf0.centralindia-01.azurewebsites.net'  // Direct URL in production
+  );
 
 // API Endpoints
 export const API_ENDPOINTS = {
@@ -112,6 +115,9 @@ export const API_ENDPOINTS = {
     SEND_REMINDER: (id: string) => `/patients/${id}/send-reminder`,
     BULK_REMINDERS: '/patients/bulk-reminders',
     GET_DASHBOARD: (id: string) => `/patients/${id}/dashboard`,
+    // Patient Profile API endpoints
+    GET_PROFILE_DETAILS: (hospitalId: string, patientId: string) => `/patient-profile?hospitalId=${hospitalId}&patientId=${patientId}`,
+    UPDATE_PROFILE_DETAILS: (hospitalId: string, patientId: string) => `/patient-profile?hospitalId=${hospitalId}&patientId=${patientId}`,
   },
   BILLING: {
     GET_ALL: '/bills',

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeft,
   ChevronRight,
@@ -16,10 +16,14 @@ import { Button } from '@/components/ui/button';
 import { 
   PatientOverview,
   PatientTimeline,
-  PatientLabTests
+  PatientLabTests,
+  PatientProfileModal
 } from '../components';
 import EPrescriptionPad from '@/pages/EPrescriptionPad';
 import PrescriptionCustomizePanel from '@/components/prescription/PrescriptionCustomizePanel';
+import { usePatientProfile } from '../hooks/usePatientProfile';
+import { useAuthStore } from '@/store/authStore';
+import { PatientProfileData } from '../services/patientProfileApi';
 
 interface PatientData {
   id: string;
@@ -303,30 +307,54 @@ const createTimelineEvents = (appointments: Appointment[], prescriptions: Prescr
 };
 
 export const PatientProfilePage: React.FC = () => {
-  const { patientId } = useParams<{ patientId: string }>();
+  const { patientId: routePatientId } = useParams<{ patientId: string }>();
+  const [searchParams] = useSearchParams();
+  const queryPatientId = searchParams.get('patientId');
   const navigate = useNavigate();
+  const { hospitalId } = useAuthStore();
+  
+  // Use patientId from route params or query params
+  const patientId = routePatientId || queryPatientId;
+  
   const [patient, setPatient] = useState<PatientData>(samplePatient);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>(samplePrescriptions);
   const [labTests] = useState<LabTestResult[]>(sampleLabTests);
   const [appointments, setAppointments] = useState<Appointment[]>(sampleAppointments);
   const [vitalSigns] = useState<VitalSigns[]>(sampleVitalSigns);
   const [activeTab, setActiveTab] = useState('overview');
-  const [isLoading, setIsLoading] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [showPatientProfileModal, setShowPatientProfileModal] = useState(false);
+
+  // Use the patient profile hook for real data
+  const {
+    patientProfile,
+    isLoading: profileLoading,
+    error: profileError,
+    refetch: refetchProfile
+  } = usePatientProfile(hospitalId || '', patientId || '');
 
   // Create timeline events
   const timelineEvents = createTimelineEvents(appointments, prescriptions, labTests);
 
+  // Update local patient state when real profile data is loaded
   useEffect(() => {
-    if (patientId) {
-      // TODO: Fetch patient data from API
-      setIsLoading(true);
-      // Simulate API call
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 1000);
+    if (patientProfile) {
+      setPatient({
+        id: patientProfile.patientId,
+        name: patientProfile.fullName,
+        age: patientProfile.ageYears,
+        gender: patientProfile.sex,
+        phone: patientProfile.mobile,
+        email: '', // Not available in API response
+        address: `${patientProfile.addressLine1}, ${patientProfile.city}, ${patientProfile.state || ''}, ${patientProfile.country} - ${patientProfile.pincode}`,
+        bloodGroup: '', // Not available in API response
+        emergencyContact: '', // Not available in API response
+        medicalHistory: [], // Not available in API response
+        allergies: [], // Not available in API response
+        currentMedications: [] // Not available in API response
+      });
     }
-  }, [patientId]);
+  }, [patientProfile]);
 
   // Handle automatic new prescription creation when navigating to prescriptions tab
   useEffect(() => {
@@ -362,12 +390,42 @@ export const PatientProfilePage: React.FC = () => {
     { id: 'customize-eprescription', label: 'Customize ePrescription', icon: Settings },
   ];
 
-  if (isLoading) {
+  // Handle edit profile click
+  const handleEditProfile = () => {
+    setShowPatientProfileModal(true);
+  };
+
+  // Handle profile modal close
+  const handleProfileModalClose = () => {
+    setShowPatientProfileModal(false);
+  };
+
+  // Handle profile update success
+  const handleProfileUpdateSuccess = () => {
+    refetchProfile();
+    setShowPatientProfileModal(false);
+  };
+
+  if (profileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="text-muted-foreground">Loading patient profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (profileError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="text-red-500 text-xl">Error loading patient profile</div>
+          <p className="text-muted-foreground">Please try again later.</p>
+          <Button onClick={() => refetchProfile()} variant="outline">
+            Retry
+          </Button>
         </div>
       </div>
     );
@@ -465,6 +523,7 @@ export const PatientProfilePage: React.FC = () => {
               labTests={labTests}
               vitalSigns={vitalSigns}
               onNavigateToTimeline={() => setActiveTab('timeline')}
+              onEditProfile={handleEditProfile}
             />
           )}
 
@@ -497,6 +556,17 @@ export const PatientProfilePage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Patient Profile Modal */}
+      {showPatientProfileModal && patientId && (
+        <PatientProfileModal
+          isOpen={showPatientProfileModal}
+          onClose={handleProfileModalClose}
+          hospitalId={hospitalId || ''}
+          patientId={patientId}
+          patientName={patient.name}
+        />
+      )}
     </div>
   );
 };
