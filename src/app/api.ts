@@ -60,9 +60,9 @@ export const API_ENDPOINTS = {
     GET_DASHBOARD: '/doctors/dashboard',
     UPDATE_AVAILABILITY: '/doctors/availability',
     GET_AVAILABLE_SLOTS: (date: string) => `/doctors/available-slots/${date}`,
-    UPDATE_PRESCRIPTION_SETTINGS: (id: string) => `/api/doctors/${id}/Prescription/prescription-settings`,
-    GET_PRESCRIPTION_SETTINGS: (id: string) => `/api/doctors/${id}/Prescription/prescription-settings`,
-    RESET_PRESCRIPTION_SETTINGS: (id: string) => `/api/doctors/${id}/Prescription/prescription-settings/reset`,
+    UPDATE_PRESCRIPTION_SETTINGS: () => `/prescription/prescription-settings`,
+    GET_PRESCRIPTION_SETTINGS: (id: string) => `/prescription/prescription-settings?doctorId=${id}`,
+    RESET_PRESCRIPTION_SETTINGS: (id: string) => `/prescription/prescription-settings/reset?doctorId=${id}`,
   },
   USER_MANAGEMENT: {
     INVITE_USER: '/admin/user-onboarding/invitations?scope=new',

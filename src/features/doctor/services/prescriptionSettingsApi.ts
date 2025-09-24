@@ -12,51 +12,39 @@ export interface PrescriptionSettingsRequest {
       left: number;
     };
   };
-  headerSettings: {
-    height: number;
-    width: number;
-    showImage: boolean;
-    showText: boolean;
-    text: string;
-    showOnAllPages: boolean;
-  };
-  footerSettings: {
-    height: number;
-    width: number;
-    showImage: boolean;
-    showText: boolean;
-    showSignature: boolean;
-    text: string;
-    signatureHeight: number;
-    signatureWidth: number;
-    doctorName: string;
-    showOnAllPages: boolean;
-  };
-  fontSettings: {
-    family: string;
-    size: number;
-  };
-  colorSettings: {
-    primary: string;
-    secondary: string;
-    text: string;
-  };
   useLetterhead: boolean;
   letterheadSettings: {
     headerHeight: number;
     footerHeight: number;
   };
+  useHeaderSettings: boolean;
+  headerSettings: {
+    height: number;
+    width: number;
+    showImage: boolean;
+    showOnAllPages: boolean;
+  };
+  useFooterSettings: boolean;
+  footerSettings: {
+    height: number;
+    width: number;
+    showImage: boolean;
+    showOnAllPages: boolean;
+  };
+  useDoctorSetting: boolean;
+  doctorSetting: {
+    showSignature: boolean;
+    signatureHeight: number;
+    signatureWidth: number;
+    doctorName: string;
+  };
 }
 
 export interface PrescriptionSettingsResponse {
   success: boolean;
-  data: {
-    id: string;
-    doctorId: string;
-    settings: PrescriptionSettingsRequest;
-    createdAt: string;
-    updatedAt: string;
-  };
+  prescriptionSettingsId: string;
+  doctorId: string;
+  settings: PrescriptionSettingsRequest;
   message: string;
 }
 
@@ -85,13 +73,18 @@ export const prescriptionSettingsApi = {
     settings: PrescriptionSettingsRequest
   ): Promise<PrescriptionSettingsResponse> => {
     try {
-      const url = API_ENDPOINTS.DOCTORS.UPDATE_PRESCRIPTION_SETTINGS(doctorId);
+      const url = API_ENDPOINTS.DOCTORS.UPDATE_PRESCRIPTION_SETTINGS();
+      const payload = {
+        doctorId: doctorId,
+        settings: settings
+      };
+      
       console.log('Prescription Settings API Call:');
       console.log('- Doctor ID:', doctorId);
       console.log('- URL:', url);
-      console.log('- Settings payload:', settings);
+      console.log('- Request payload:', payload);
       
-      const response = await apiClient.put(url, settings);
+      const response = await apiClient.put(url, payload);
       console.log('Prescription Settings PUT Response:', response);
       return response as PrescriptionSettingsResponse;
     } catch (error) {

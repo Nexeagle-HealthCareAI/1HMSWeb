@@ -51,39 +51,31 @@ export const SettingsForm: React.FC = () => {
           left: localSettings.page.margin.left,
         },
       },
-      headerSettings: {
-        height: localSettings.header.height,
-        width: localSettings.header.width,
-        showImage: localSettings.header.showImage,
-        showText: localSettings.header.showText,
-        text: localSettings.header.text,
-        showOnAllPages: localSettings.header.showOnAllPages,
-      },
-      footerSettings: {
-        height: localSettings.footer.height,
-        width: localSettings.footer.width,
-        showImage: localSettings.footer.showImage,
-        showText: localSettings.footer.showText,
-        showSignature: localSettings.footer.showSignature,
-        text: localSettings.footer.text,
-        signatureHeight: localSettings.footer.signatureHeight,
-        signatureWidth: localSettings.footer.signatureWidth,
-        doctorName: localSettings.footer.doctorName,
-        showOnAllPages: localSettings.footer.showOnAllPages,
-      },
-      fontSettings: {
-        family: localSettings.font.family,
-        size: localSettings.font.size,
-      },
-      colorSettings: {
-        primary: localSettings.colors.primary,
-        secondary: localSettings.colors.secondary,
-        text: localSettings.colors.text,
-      },
       useLetterhead: localSettings.useLetterhead,
       letterheadSettings: {
         headerHeight: localSettings.letterhead.headerHeight,
         footerHeight: localSettings.letterhead.footerHeight,
+      },
+      useHeaderSettings: localSettings.useHeaderSettings,
+      headerSettings: {
+        height: localSettings.header.height,
+        width: localSettings.header.width,
+        showImage: localSettings.header.showImage,
+        showOnAllPages: localSettings.header.showOnAllPages,
+      },
+      useFooterSettings: localSettings.useFooterSettings,
+      footerSettings: {
+        height: localSettings.footer.height,
+        width: localSettings.footer.width,
+        showImage: localSettings.footer.showImage,
+        showOnAllPages: localSettings.footer.showOnAllPages,
+      },
+      useDoctorSetting: localSettings.useDoctorSetting,
+      doctorSetting: {
+        showSignature: localSettings.footer.showSignature,
+        signatureHeight: localSettings.footer.signatureHeight,
+        signatureWidth: localSettings.footer.signatureWidth,
+        doctorName: localSettings.footer.doctorName,
       },
     };
   };
@@ -122,30 +114,30 @@ export const SettingsForm: React.FC = () => {
         height: apiSettings.headerSettings.height,
         width: apiSettings.headerSettings.width,
         showImage: apiSettings.headerSettings.showImage,
-        showText: apiSettings.headerSettings.showText,
-        text: apiSettings.headerSettings.text,
+        showText: apiSettings.useHeaderSettings, // Map useHeaderSettings to showText
+        text: '', // Default empty text
         showOnAllPages: apiSettings.headerSettings.showOnAllPages,
       },
       footer: {
         height: apiSettings.footerSettings.height,
         width: apiSettings.footerSettings.width,
         showImage: apiSettings.footerSettings.showImage,
-        showText: apiSettings.footerSettings.showText,
-        showSignature: apiSettings.footerSettings.showSignature,
-        text: apiSettings.footerSettings.text,
-        signatureHeight: apiSettings.footerSettings.signatureHeight,
-        signatureWidth: apiSettings.footerSettings.signatureWidth,
-        doctorName: apiSettings.footerSettings.doctorName,
+        showText: apiSettings.useFooterSettings, // Map useFooterSettings to showText
+        showSignature: apiSettings.doctorSetting.showSignature,
+        text: '', // Default empty text
+        signatureHeight: apiSettings.doctorSetting.signatureHeight,
+        signatureWidth: apiSettings.doctorSetting.signatureWidth,
+        doctorName: apiSettings.doctorSetting.doctorName,
         showOnAllPages: apiSettings.footerSettings.showOnAllPages,
       },
       font: {
-        family: apiSettings.fontSettings.family as any,
-        size: apiSettings.fontSettings.size,
+        family: 'Arial' as any, // Default font since not in new API
+        size: 12, // Default size since not in new API
       },
       colors: {
-        primary: apiSettings.colorSettings.primary,
-        secondary: apiSettings.colorSettings.secondary,
-        text: apiSettings.colorSettings.text,
+        primary: '#2563eb', // Default colors since not in new API
+        secondary: '#64748b',
+        text: '#1e293b',
       },
     };
   };
@@ -161,8 +153,8 @@ export const SettingsForm: React.FC = () => {
       console.log('Loading prescription settings from API...');
       const response = await prescriptionSettingsApi.getPrescriptionSettings(doctorId);
       
-      if (response.success && response.data.settings) {
-        const localSettings = mapApiResponseToLocalSettings(response.data.settings);
+      if (response.success && response.settings) {
+        const localSettings = mapApiResponseToLocalSettings(response.settings);
         update(localSettings);
         console.log('Settings loaded from API:', localSettings);
       }
@@ -182,8 +174,8 @@ export const SettingsForm: React.FC = () => {
       console.log('Resetting prescription settings via API...');
       const response = await prescriptionSettingsApi.resetPrescriptionSettings(doctorId);
       
-      if (response.success && response.data.settings) {
-        const localSettings = mapApiResponseToLocalSettings(response.data.settings);
+      if (response.success && response.settings) {
+        const localSettings = mapApiResponseToLocalSettings(response.settings);
         update(localSettings);
         console.log('Settings reset via API:', localSettings);
         setSaveStatus('saved');
@@ -335,7 +327,20 @@ export const SettingsForm: React.FC = () => {
             <Toggle
               label=""
               checked={settings.useLetterhead ?? false}
-              onCheckedChange={(checked) => updateSettings('useLetterhead', checked)}
+              onCheckedChange={(checked) => {
+                if (checked) {
+                  // When enabling default template, disable other settings
+                  update({
+                    useLetterhead: true,
+                    useHeaderSettings: false,
+                    useFooterSettings: false,
+                    useDoctorSetting: false
+                  });
+                } else {
+                  // When disabling default template, just update useLetterhead
+                  updateSettings('useLetterhead', false);
+                }
+              }}
             />
           </div>
 
@@ -389,8 +394,18 @@ export const SettingsForm: React.FC = () => {
               </Label>
               <Toggle
                 label=""
-                checked={settings.header?.showImage ?? true}
-                onCheckedChange={(checked) => !settings.useLetterhead && updateNestedSettings('header', 'showImage', checked)}
+                checked={settings.useHeaderSettings ?? false}
+                onCheckedChange={(checked) => {
+                  if (checked && settings.useLetterhead) {
+                    // When enabling header settings, disable default template
+                    update({
+                      useLetterhead: false,
+                      useHeaderSettings: true
+                    });
+                  } else {
+                    updateSettings('useHeaderSettings', checked);
+                  }
+                }}
               />
             </div>
             
@@ -405,7 +420,7 @@ export const SettingsForm: React.FC = () => {
               />
             </div>
             
-            {settings.header?.showImage && !settings.useLetterhead && (
+            {settings.useHeaderSettings && !settings.useLetterhead && (
               <>
                 <ImageUploader
                   value={settings.images?.header}
@@ -438,8 +453,18 @@ export const SettingsForm: React.FC = () => {
               </Label>
               <Toggle
                 label=""
-                checked={settings.footer?.showImage ?? true}
-                onCheckedChange={(checked) => !settings.useLetterhead && updateNestedSettings('footer', 'showImage', checked)}
+                checked={settings.useFooterSettings ?? false}
+                onCheckedChange={(checked) => {
+                  if (checked && settings.useLetterhead) {
+                    // When enabling footer settings, disable default template
+                    update({
+                      useLetterhead: false,
+                      useFooterSettings: true
+                    });
+                  } else {
+                    updateSettings('useFooterSettings', checked);
+                  }
+                }}
               />
             </div>
             
@@ -454,7 +479,7 @@ export const SettingsForm: React.FC = () => {
               />
             </div>
             
-            {settings.footer?.showImage && !settings.useLetterhead && (
+            {settings.useFooterSettings && !settings.useLetterhead && (
               <>
                 <ImageUploader
                   value={settings.images?.footer}
@@ -511,12 +536,22 @@ export const SettingsForm: React.FC = () => {
             </div>
             <Toggle
               label=""
-              checked={settings.footer?.showSignature ?? true}
-              onCheckedChange={(checked) => !settings.useLetterhead && updateNestedSettings('footer', 'showSignature', checked)}
+              checked={settings.useDoctorSetting ?? false}
+              onCheckedChange={(checked) => {
+                if (checked && settings.useLetterhead) {
+                  // When enabling doctor settings, disable default template
+                  update({
+                    useLetterhead: false,
+                    useDoctorSetting: true
+                  });
+                } else {
+                  updateSettings('useDoctorSetting', checked);
+                }
+              }}
             />
           </div>
 
-          {settings.footer?.showSignature && !settings.useLetterhead && (
+          {settings.useDoctorSetting && !settings.useLetterhead && (
             <>
               {/* Doctor Signature Upload */}
               <div className="space-y-3 p-3 bg-orange-50 dark:bg-orange-900/10 rounded-lg border border-orange-200 dark:border-orange-700">

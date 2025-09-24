@@ -34,6 +34,9 @@ export interface HeaderFooterSettings {
     headerHeight: number;
     footerHeight: number;
   };
+  useHeaderSettings: boolean;
+  useFooterSettings: boolean;
+  useDoctorSetting: boolean;
   header: {
     height: number;
     width: number;

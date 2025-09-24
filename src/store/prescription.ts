@@ -31,11 +31,14 @@ const defaultSettings: HeaderFooterSettings = {
     footer: undefined,
     signature: undefined,
   },
-  useLetterhead: true,
+  useLetterhead: false,
   letterhead: {
     headerHeight: 30,
     footerHeight: 20,
   },
+  useHeaderSettings: false,
+  useFooterSettings: false,
+  useDoctorSetting: false,
   header: {
     height: 20,
     width: 100,

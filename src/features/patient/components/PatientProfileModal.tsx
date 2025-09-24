@@ -89,9 +89,9 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
     }));
   };
 
-  // Standard input styling
-  const inputClassName = "h-9 text-sm border-2 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-gray-800 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed";
-  const labelClassName = "text-xs font-semibold text-gray-700 dark:text-gray-300";
+  // Standard input styling - more compact
+  const inputClassName = "h-8 text-xs border border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-gray-800 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed";
+  const labelClassName = "text-xs font-medium text-gray-600 dark:text-gray-400";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,25 +148,25 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
             <span className="ml-2 text-base text-gray-600 dark:text-gray-300">Loading patient profile...</span>
           </div>
         ) : (
-          <div className="p-4 space-y-4 bg-gray-50 dark:bg-gray-800 flex-1 overflow-y-auto">
+          <div className="p-3 space-y-3 bg-gray-50 dark:bg-gray-800 flex-1 overflow-y-auto">
             {/* Patient ID Badge */}
-            <div className="flex justify-center mb-2">
-              <Badge variant="outline" className="text-base px-4 py-2 bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700 font-semibold">
+            <div className="flex justify-center mb-1">
+              <Badge variant="outline" className="text-sm px-3 py-1 bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700 font-medium">
                 Patient ID: {patientId}
               </Badge>
             </div>
 
             <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
                 {/* Personal Information Card */}
                 <Card className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-lg">
-                  <CardHeader className="bg-blue-50 dark:bg-blue-900 border-b border-blue-200 dark:border-blue-700 px-3 py-2">
-                    <CardTitle className="flex items-center gap-2 text-base font-semibold text-blue-800 dark:text-blue-200">
-                      <User className="h-4 w-4" />
+                  <CardHeader className="bg-blue-50 dark:bg-blue-900 border-b border-blue-200 dark:border-blue-700 px-2 py-1">
+                    <CardTitle className="flex items-center gap-1 text-sm font-semibold text-blue-800 dark:text-blue-200">
+                      <User className="h-3 w-3" />
                       Personal Information
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3 p-4">
+                  <CardContent className="space-y-2 p-3">
                     <div className="space-y-1">
                       <Label htmlFor="fullName" className={labelClassName}>Full Name *</Label>
                       <Input
@@ -232,13 +232,13 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
 
                 {/* Address Information Card */}
                 <Card className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-lg">
-                  <CardHeader className="bg-green-50 dark:bg-green-900 border-b border-green-200 dark:border-green-700 px-3 py-2">
-                    <CardTitle className="flex items-center gap-2 text-base font-semibold text-green-800 dark:text-green-200">
-                      <MapPin className="h-4 w-4" />
+                  <CardHeader className="bg-green-50 dark:bg-green-900 border-b border-green-200 dark:border-green-700 px-2 py-1">
+                    <CardTitle className="flex items-center gap-1 text-sm font-semibold text-green-800 dark:text-green-200">
+                      <MapPin className="h-3 w-3" />
                       Address Information
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3 p-4">
+                  <CardContent className="space-y-2 p-3">
                     <div className="space-y-1">
                       <Label htmlFor="addressLine1" className={labelClassName}>Address Line 1 *</Label>
                       <Input
@@ -300,67 +300,67 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
                   </CardContent>
                 </Card>
 
-                {/* Insurance & Payment Card */}
+                {/* Insurance, Payment & Registration Information Card */}
                 <Card className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-lg">
-                  <CardHeader className="bg-purple-50 dark:bg-purple-900 border-b border-purple-200 dark:border-purple-700 px-3 py-2">
-                    <CardTitle className="flex items-center gap-2 text-base font-semibold text-purple-800 dark:text-purple-200">
-                      <CreditCard className="h-4 w-4" />
-                      Insurance & Payment Information
+                  <CardHeader className="bg-purple-50 dark:bg-purple-900 border-b border-purple-200 dark:border-purple-700 px-2 py-1">
+                    <CardTitle className="flex items-center gap-1 text-sm font-semibold text-purple-800 dark:text-purple-200">
+                      <CreditCard className="h-3 w-3" />
+                      Insurance, Payment & Registration
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3 p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label htmlFor="insuranceId" className={labelClassName}>Insurance ID</Label>
-                        <Input
-                          id="insuranceId"
-                          value={formData.insuranceId}
-                          onChange={(e) => handleInputChange('insuranceId', e.target.value)}
-                          disabled={!isEditing}
-                          placeholder="Enter insurance ID if applicable"
-                          className={inputClassName}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="paymentMode" className={labelClassName}>Payment Mode</Label>
-                        <Select
-                          value={formData.paymentMode}
-                          onValueChange={(value) => handleInputChange('paymentMode', value)}
-                          disabled={!isEditing}
-                        >
-                          <SelectTrigger className={inputClassName}>
-                            <SelectValue placeholder="Select payment mode" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Cash">Cash</SelectItem>
-                            <SelectItem value="Card">Card</SelectItem>
-                            <SelectItem value="Insurance">Insurance</SelectItem>
-                            <SelectItem value="UPI">UPI</SelectItem>
-                            <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                          </SelectContent>
-                        </Select>
+                  <CardContent className="space-y-3 p-3">
+                    {/* Insurance & Payment Section */}
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Insurance & Payment Information</h4>
+                      <div className="grid grid-cols-1 gap-2">
+                        <div className="space-y-1">
+                          <Label htmlFor="insuranceId" className={labelClassName}>Insurance ID</Label>
+                          <Input
+                            id="insuranceId"
+                            value={formData.insuranceId}
+                            onChange={(e) => handleInputChange('insuranceId', e.target.value)}
+                            disabled={!isEditing}
+                            placeholder="Enter insurance ID if applicable"
+                            className={inputClassName}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="paymentMode" className={labelClassName}>Payment Mode</Label>
+                          <Select
+                            value={formData.paymentMode}
+                            onValueChange={(value) => handleInputChange('paymentMode', value)}
+                            disabled={!isEditing}
+                          >
+                            <SelectTrigger className={inputClassName}>
+                              <SelectValue placeholder="Select payment mode" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Cash">Cash</SelectItem>
+                              <SelectItem value="Card">Card</SelectItem>
+                              <SelectItem value="Insurance">Insurance</SelectItem>
+                              <SelectItem value="UPI">UPI</SelectItem>
+                              <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
 
-                {/* Registration Information (Read-only) */}
-                <Card className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-lg">
-                  <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-3 py-2">
-                    <CardTitle className="flex items-center gap-2 text-base font-semibold text-gray-800 dark:text-gray-200">
-                      <Calendar className="h-4 w-4" />
-                      Registration Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">Registered At:</span>
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatDate(patientProfile?.registeredAt || '')}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">Registered By:</span>
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{patientProfile?.registeredBy || 'N/A'}</p>
+                    {/* Registration Information Section */}
+                    <div className="border-t border-gray-200 dark:border-gray-700 pt-2">
+                      <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        Registration Information
+                      </h4>
+                      <div className="grid grid-cols-1 gap-2">
+                        <div className="space-y-1">
+                          <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">Registered At:</span>
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatDate(patientProfile?.registeredAt || '')}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">Registered By:</span>
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{patientProfile?.registeredBy || 'N/A'}</p>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -370,9 +370,9 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
           </div>
         )}
 
-        <DialogFooter className="bg-gray-50 dark:bg-gray-800 px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+        <DialogFooter className="bg-gray-50 dark:bg-gray-800 px-3 py-2 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
           <div className="flex justify-between w-full">
-            <Button variant="outline" onClick={onClose} className="px-4 py-2 text-sm">
+            <Button variant="outline" onClick={onClose} className="px-3 py-1 text-xs">
               Close
             </Button>
             <div className="flex gap-2">
@@ -382,14 +382,14 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
                     variant="outline" 
                     onClick={handleCancel}
                     disabled={isUpdating}
-                    className="px-4 py-2 text-sm"
+                    className="px-3 py-1 text-xs"
                   >
                     Cancel
                   </Button>
                   <Button 
                     onClick={handleSubmit}
                     disabled={isUpdating}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm"
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs"
                   >
                     {isUpdating ? (
                       <>
@@ -405,7 +405,7 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
                   </Button>
                 </>
               ) : (
-                <Button onClick={handleEdit} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm">
+                <Button onClick={handleEdit} className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs">
                   <Edit3 className="mr-1 h-3 w-3" />
                   Edit Profile
                 </Button>
