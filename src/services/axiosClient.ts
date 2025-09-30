@@ -139,17 +139,6 @@ export const apiClient = {
     return axiosInstance.delete(url, config).then(response => response.data);
   },
 
-  // Upload file
-  //Note: we will need this once we are using blob storage
-  upload: <T = any>(url: string, formData: FormData, config?: AxiosRequestConfig): Promise<T> => {
-    return axiosInstance.post(url, formData, {
-      ...config,
-      headers: {
-        'Content-Type': 'multipart/form-data',
-        ...config?.headers,
-      },
-    }).then(response => response.data);
-  },
 
   // Download file
   //Note: we will need this once we are geting from blob storage

@@ -16,7 +16,7 @@ import { useDepartmentApi, useDoctorApi } from '@/hooks/useApi';
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { SpecializationSelector } from './SpecializationSelector';
 import { QualificationSelector } from './QualificationSelector';
-import { CreateDoctorProfileRequest, UpdateDoctorProfileRequest, DoctorProfileResponse } from '../services/doctorProfileApi';
+import { DoctorProfileResponse } from '../services/doctorProfileApi';
 
 interface DoctorProfileProps {
   isEditing?: boolean;
@@ -55,13 +55,11 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
   const { data: departmentsResponse, isLoading: departmentsLoading, error: departmentsError } = useDepartmentApi.getGlobalDepartments();
   
   // Doctor API hooks
-  const createDoctorProfileMutation = useDoctorApi.createDoctorProfile();
   const { data: doctorProfileResponse, isLoading: doctorProfileLoading, error: doctorProfileError } = useDoctorApi.getDoctorProfile(userId || '');
   
   // Track if doctor profile exists
   const [doctorProfileExists, setDoctorProfileExists] = useState<boolean>(false);
   const [doctorId, setDoctorId] = useState<string>('');
-  const updateDoctorProfileMutation = useDoctorApi.updateDoctorProfile(doctorId);
   const [saving, setSaving] = useState<boolean>(false);
   const [doctorErrors, setDoctorErrors] = useState<FieldErrors>({});
   
@@ -207,7 +205,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
       
       if (!doctorProfileExists) {
         // Create new doctor profile
-        const createData: CreateDoctorProfileRequest = {
+        const createData = {
           userId: userId || '',
           licenseNumber: profileData.licenseNumber || '',
           qualification: profileData.qualifications || [], // Note: API expects 'qualification' (singular)
@@ -221,15 +219,12 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
           hospitalId: hospitalId || ''
         };
 
-        response = await createDoctorProfileMutation.mutateAsync(createData);
-        setDoctorProfileExists(true);
-        if (response?.doctorId) {
-          setDoctorId(response.doctorId);
-        }
+        // TODO: Implement doctor profile creation API
         toast({ 
-          title: 'Success', 
-          description: 'Professional profile created successfully.' 
+          title: 'Info', 
+          description: 'Doctor profile creation is not yet implemented. Please contact administrator.' 
         });
+        return;
       } else {
         // Update existing doctor profile
         if (!doctorId) {
@@ -241,7 +236,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
           return;
         }
         
-        const updateData: UpdateDoctorProfileRequest = {
+        const updateData = {
           userId: userId || '',
           licenseNumber: profileData.licenseNumber || '',
           qualification: profileData.qualifications || [], // Note: API expects 'qualification' (singular)
@@ -254,12 +249,12 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
           specializations: profileData.specializations
         };
         
-        // Create update mutation with the correct doctorId
-              response = await updateDoctorProfileMutation.mutateAsync(updateData);
+        // TODO: Implement doctor profile update API
         toast({ 
-          title: 'Success', 
-          description: 'Professional details updated successfully.' 
+          title: 'Info', 
+          description: 'Doctor profile update is not yet implemented. Please contact administrator.' 
         });
+        return;
       }
       
       // Clear validation errors on successful save
@@ -303,6 +298,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
   return (
     <Card className={isProfileComplete ? 'border-green-200 bg-green-50/30' : ''}>
       <CardContent className="p-6">
+        
         <Accordion type="single" collapsible defaultValue="doctor">
           <AccordionItem value="doctor">
             <AccordionTrigger className={isProfileComplete ? 'hover:bg-green-100/50' : ''}>

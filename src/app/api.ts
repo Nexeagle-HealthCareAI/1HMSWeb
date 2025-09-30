@@ -1,9 +1,6 @@
 // API Configuration
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
-  (import.meta.env.DEV 
-    ? '/api'  // Use proxy in development
-    : 'https://easyhmsapi-b2fpcsh4cpbafxf0.centralindia-01.azurewebsites.net'  // Direct URL in production
-  );
+  'https://easyhmsapi-b2fpcsh4cpbafxf0.centralindia-01.azurewebsites.net';
 
 // API Endpoints
 export const API_ENDPOINTS = {
@@ -20,11 +17,9 @@ export const API_ENDPOINTS = {
     PERMISSIONS: '/user/permissions',
     GET_DETAILS: (userId: string) => `/user/get-user-details?userId=${userId}`,
     UPDATE_DETAILS: '/user/update-user-details',
-    PROFILE_PHOTO: {
-      UPLOAD: '/user/profile/photo/upload',
-      FINALIZE: '/user/profile/photo/finalize',
-      DELETE: '/user/profile/photo',
-    },
+    UPLOAD_PROFILE_PICTURE: '/user/profile-picture/upload',
+    GET_PROFILE_PICTURE: (userId: string) => `/user/profile-picture/${userId}`,
+    REMOVE_PROFILE_PICTURE: '/user/profile-picture/remove',
   },
   HOSPITALS: {
     REGISTER: '/hospitals/register',
@@ -60,9 +55,9 @@ export const API_ENDPOINTS = {
     GET_DASHBOARD: '/doctors/dashboard',
     UPDATE_AVAILABILITY: '/doctors/availability',
     GET_AVAILABLE_SLOTS: (date: string) => `/doctors/available-slots/${date}`,
-    UPDATE_PRESCRIPTION_SETTINGS: () => `/prescription/prescription-settings`,
-    GET_PRESCRIPTION_SETTINGS: (id: string) => `/prescription/prescription-settings?doctorId=${id}`,
-    RESET_PRESCRIPTION_SETTINGS: (id: string) => `/prescription/prescription-settings/reset?doctorId=${id}`,
+    UPDATE_PRESCRIPTION_SETTINGS: () => `prescription/prescription-settings`,
+    GET_PRESCRIPTION_SETTINGS: (id: string) => `prescription/prescription-settings?doctorId=${id}`,
+    RESET_PRESCRIPTION_SETTINGS: (id: string) => `prescription/prescription-settings/reset?doctorId=${id}`,
   },
   USER_MANAGEMENT: {
     INVITE_USER: '/admin/user-onboarding/invitations?scope=new',
@@ -176,11 +171,6 @@ export const API_ENDPOINTS = {
     CREATE_DOCTOR_OVERRIDE: '/calendar/doctor/override',
     DELETE_DOCTOR_OVERRIDE: (overrideId: string) => `/calendar/doctor/override/${overrideId}`,
             },
-  MEDIA: {
-    PREPARE_UPLOAD: '/media/upload-assigned-url/prepare',
-    FINALIZE_UPLOAD: '/media/upload-assigned-url/finalize',
-    GET_URL: '/media/get-preassigned-url',
-  },
 } as const;
 
 // Default headers

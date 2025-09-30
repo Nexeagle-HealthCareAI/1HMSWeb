@@ -11,12 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ProfilePhotoUploader } from './ProfilePhotoUploader';
 
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { DoctorProfile } from '@/features/doctor/components/DoctorProfile';
 import { useUserDetails, useUpdateUserDetails } from '@/hooks/useUserProfileApi';
+import { ProfilePictureUploader } from '@/components/shared';
 import { UserProfileUpdateRequest, UserDetailsResponse } from '@/features/profile/services/userProfileApi';
+import { useMediaUploadApi } from '@/hooks/useApi';
 import { 
   User, 
   Building2, 
@@ -41,7 +42,8 @@ import {
   CheckCircle,
   AlertCircle,
   ExternalLink,
-  Edit3
+  Edit3,
+  X
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
@@ -148,11 +150,19 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('personal');
   const [isEditing, setIsEditing] = useState(false);
+  const [selectedProfilePictureFile, setSelectedProfilePictureFile] = useState<File | null>(null);
+  const [originalProfilePicture, setOriginalProfilePicture] = useState<string>('');
+  const [previewUrlToCleanup, setPreviewUrlToCleanup] = useState<string | null>(null);
   const roleFromStore = useAuthStore((state) => state.userRole);
   const effectiveRole = roleFromStore || userType;
   const isDoctorUser = effectiveRole === 'Doctor' || effectiveRole === 'AdminDoctor';
   const employeeIdFromStore = useAuthStore((state) => state.employeeId);
   const userId = useAuthStore((state) => state.userId);
+  const { uploadProfilePicture, removeProfilePicture } = useMediaUploadApi;
+  
+  // Initialize mutations at component level
+  const uploadMutation = uploadProfilePicture();
+  const removeMutation = removeProfilePicture();
   
   // Profile completion hook
   const { completionPercentage } = useProfileCompletion();
@@ -248,6 +258,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     if (userDetailsResponse && (userDetailsResponse as UserDetailsResponse).userProfile) {
       const userProfile = (userDetailsResponse as UserDetailsResponse).userProfile;
       const userDetails = userDetailsResponse as UserDetailsResponse;
+      const profilePictureURL = userProfile.profilePictureURL || '';
+      
+      // Store original profile picture
+      setOriginalProfilePicture(profilePictureURL);
       
       // Map API data to profile structure
       setProfileData({
@@ -255,7 +269,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           fullName: userProfile.fullName || '',
           email: userDetails.email || '',
           phone: userDetails.mobileNumber || '',
-          profilePicture: userProfile.profilePictureURL || '',
+          profilePicture: profilePictureURL,
           dateOfBirth: userProfile.dateOfBirth ? new Date(userProfile.dateOfBirth).toISOString().split('T')[0] : '',
           gender: userProfile.gender || '',
           language: userProfile.language || '',
@@ -386,6 +400,37 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         return;
       }
 
+      // Upload profile picture first if a file was selected
+      let profilePictureURL = profileData.personal.profilePicture || '';
+      if (selectedProfilePictureFile) {
+        try {
+          const uploadResponse = await uploadMutation.mutateAsync({
+            userId,
+            file: selectedProfilePictureFile,
+          });
+
+          if (uploadResponse.success && uploadResponse.profilePictureUrl) {
+            profilePictureURL = uploadResponse.profilePictureUrl;
+            // Update local state
+            setProfileData(prev => ({
+              ...prev,
+              personal: {
+                ...prev.personal,
+                profilePicture: profilePictureURL
+              }
+            }));
+            setOriginalProfilePicture(profilePictureURL);
+          }
+        } catch (uploadError) {
+          console.error('Error uploading profile picture:', uploadError);
+          toast({
+            title: 'Upload Error',
+            description: 'Failed to upload profile picture, but continuing with other updates.',
+            variant: 'destructive',
+          });
+        }
+      }
+
       const updateData: UserProfileUpdateRequest = {
         userId,
         mobileNumber: ValidationUtils.cleanMobileNumber(profileData.personal.phone),
@@ -393,7 +438,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         fullName: profileData.personal.fullName,
         gender: profileData.personal.gender || '',
         language: profileData.personal.language || '',
-        profilePictureURL: profileData.personal.profilePicture || '',
+        profilePictureURL: profilePictureURL,
         employeeID: profileData.personal.employeeId || '',
         dateOfBirth: profileData.personal.dateOfBirth ? new Date(profileData.personal.dateOfBirth).toISOString() : '',
         bloodGroup: profileData.personal.bloodGroup || '',
@@ -409,8 +454,16 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
       await updateUserDetailsMutation.mutateAsync(updateData);
       
+      // Clear selected file and preview URL after successful save
+      if (previewUrlToCleanup) {
+        URL.revokeObjectURL(previewUrlToCleanup);
+        setPreviewUrlToCleanup(null);
+      }
+      setSelectedProfilePictureFile(null);
+      
       // Refresh profile completion data
       queryClient.invalidateQueries({ queryKey: ['profile', 'completion'] });
+      queryClient.invalidateQueries({ queryKey: ['userDetails', userId] });
       
     } catch (error) {
       console.error('Error saving basic info:', error);
@@ -530,7 +583,25 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             </div>
           </div>
           <Button
-            onClick={() => setIsEditing(!isEditing)}
+            onClick={() => {
+              if (isEditing) {
+                // Cancel editing - revert profile picture to original
+                // Clean up preview URL
+                if (previewUrlToCleanup) {
+                  URL.revokeObjectURL(previewUrlToCleanup);
+                  setPreviewUrlToCleanup(null);
+                }
+                setProfileData(prev => ({
+                  ...prev,
+                  personal: {
+                    ...prev.personal,
+                    profilePicture: originalProfilePicture
+                  }
+                }));
+                setSelectedProfilePictureFile(null);
+              }
+              setIsEditing(!isEditing);
+            }}
             variant={isEditing ? "outline" : "default"}
             className="flex items-center gap-2"
           >
@@ -574,22 +645,215 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         {/* Profile Summary Card */}
         <Card className="lg:col-span-1">
           <CardContent className="p-6 text-center">
-            <div className="mb-4 flex items-center justify-center gap-3">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src={profileData.personal.profilePicture} />
-                <AvatarFallback className="text-lg">
-                  {profileData.personal.fullName.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
-                </AvatarFallback>
-              </Avatar>
+            <div className="mb-4 flex flex-col items-center gap-3">
               {isEditing && (
-                <ProfilePhotoUploader
-                  initialUrl={profileData.personal.profilePicture}
-                  disabled={!isEditing}
-                  onChange={(dataUrl) => handleInputChange('personal', 'profilePicture', dataUrl)}
-                  onUploaded={(urls) => handleInputChange('personal', 'profilePicture', urls.full || urls.medium || urls.thumb)}
-                  onRemoved={() => handleInputChange('personal', 'profilePicture', '')}
-                  buttonVariant="link"
-                />
+                <Badge variant="secondary" className="mb-2">
+                  <Edit3 className="h-3 w-3 mr-1" />
+                  Editing Mode
+                </Badge>
+              )}
+              <ProfilePictureUploader
+                currentImageUrl={profileData.personal.profilePicture}
+                onFileSelect={(file) => {
+                  console.log('File selected:', file ? file.name : 'null');
+                  // Clean up previous preview URL if it exists
+                  if (previewUrlToCleanup) {
+                    URL.revokeObjectURL(previewUrlToCleanup);
+                  }
+                  
+                  setSelectedProfilePictureFile(file);
+                  // Update preview in local state (just for display)
+                  if (file) {
+                    const previewUrl = URL.createObjectURL(file);
+                    setPreviewUrlToCleanup(previewUrl);
+                    setProfileData(prev => ({
+                      ...prev,
+                      personal: {
+                        ...prev.personal,
+                        profilePicture: previewUrl
+                      }
+                    }));
+                  } else {
+                    // If file is cleared, revert to original
+                    setPreviewUrlToCleanup(null);
+                    setProfileData(prev => ({
+                      ...prev,
+                      personal: {
+                        ...prev.personal,
+                        profilePicture: originalProfilePicture
+                      }
+                    }));
+                  }
+                }}
+                onRemove={async () => {
+                  // Handle remove from server
+                  if (!userId) {
+                    toast({ title: 'Error', description: 'User ID not found.', variant: 'destructive' });
+                    return;
+                  }
+
+                  try {
+                    const removeResponse = await removeMutation.mutateAsync(userId);
+
+                    if (removeResponse.success) {
+                      // Update the profile to remove picture URL
+                      const updateData: UserProfileUpdateRequest = {
+                        userId,
+                        mobileNumber: ValidationUtils.cleanMobileNumber(profileData.personal.phone),
+                        isActive: true,
+                        fullName: profileData.personal.fullName,
+                        gender: profileData.personal.gender || '',
+                        language: profileData.personal.language || '',
+                        profilePictureURL: '',
+                        employeeID: profileData.personal.employeeId || '',
+                        dateOfBirth: profileData.personal.dateOfBirth ? new Date(profileData.personal.dateOfBirth).toISOString() : '',
+                        bloodGroup: profileData.personal.bloodGroup || '',
+                        addressLine1: profileData.personal.addressLine1 || '',
+                        addressLine2: profileData.personal.addressLine2 || '',
+                        city: profileData.personal.city || '',
+                        state: profileData.personal.state || '',
+                        country: profileData.personal.country || '',
+                        pincode: profileData.personal.pincode || '',
+                        emergencyContactName: profileData.personal.emergencyContactName || '',
+                        emergencyContactNumber: profileData.personal.emergencyContactNumber || ''
+                      };
+
+                      await updateUserDetailsMutation.mutateAsync(updateData);
+                      
+                      // Update local state
+                      setProfileData(prev => ({
+                        ...prev,
+                        personal: {
+                          ...prev.personal,
+                          profilePicture: ''
+                        }
+                      }));
+                      setOriginalProfilePicture('');
+                      
+                      // Refresh queries
+                      queryClient.invalidateQueries({ queryKey: ['profile', 'completion'] });
+                      queryClient.invalidateQueries({ queryKey: ['userDetails', userId] });
+                      
+                      toast({
+                        title: 'Success',
+                        description: 'Profile picture removed successfully',
+                      });
+                      
+                      // Exit edit mode after successful removal
+                      setIsEditing(false);
+                    }
+                  } catch (error) {
+                    console.error('Error removing profile picture:', error);
+                    toast({
+                      title: 'Error',
+                      description: 'Failed to remove profile picture. Please try again.',
+                      variant: 'destructive',
+                    });
+                  }
+                }}
+                size="lg"
+                disabled={!isEditing}
+                autoUpload={false}
+              />
+              
+              {/* Save Profile Picture Button - only show when a file is selected */}
+              {selectedProfilePictureFile && isEditing && (
+                <Button
+                  onClick={async () => {
+                    if (!userId) {
+                      toast({ title: 'Error', description: 'User ID not found.', variant: 'destructive' });
+                      return;
+                    }
+
+                    setSaving((s) => ({ ...s, basic: true }));
+                    try {
+                      const uploadResponse = await uploadMutation.mutateAsync({
+                        userId,
+                        file: selectedProfilePictureFile,
+                      });
+
+                      if (uploadResponse.success && uploadResponse.profilePictureUrl) {
+                        const profilePictureURL = uploadResponse.profilePictureUrl;
+                        
+                        // Update the profile with new picture URL
+                        const updateData: UserProfileUpdateRequest = {
+                          userId,
+                          mobileNumber: ValidationUtils.cleanMobileNumber(profileData.personal.phone),
+                          isActive: true,
+                          fullName: profileData.personal.fullName,
+                          gender: profileData.personal.gender || '',
+                          language: profileData.personal.language || '',
+                          profilePictureURL: profilePictureURL,
+                          employeeID: profileData.personal.employeeId || '',
+                          dateOfBirth: profileData.personal.dateOfBirth ? new Date(profileData.personal.dateOfBirth).toISOString() : '',
+                          bloodGroup: profileData.personal.bloodGroup || '',
+                          addressLine1: profileData.personal.addressLine1 || '',
+                          addressLine2: profileData.personal.addressLine2 || '',
+                          city: profileData.personal.city || '',
+                          state: profileData.personal.state || '',
+                          country: profileData.personal.country || '',
+                          pincode: profileData.personal.pincode || '',
+                          emergencyContactName: profileData.personal.emergencyContactName || '',
+                          emergencyContactNumber: profileData.personal.emergencyContactNumber || ''
+                        };
+
+                        await updateUserDetailsMutation.mutateAsync(updateData);
+                        
+                        // Update local state
+                        setProfileData(prev => ({
+                          ...prev,
+                          personal: {
+                            ...prev.personal,
+                            profilePicture: profilePictureURL
+                          }
+                        }));
+                        setOriginalProfilePicture(profilePictureURL);
+                        
+                        // Clean up
+                        if (previewUrlToCleanup) {
+                          URL.revokeObjectURL(previewUrlToCleanup);
+                          setPreviewUrlToCleanup(null);
+                        }
+                        setSelectedProfilePictureFile(null);
+                        
+                        // Refresh queries
+                        queryClient.invalidateQueries({ queryKey: ['profile', 'completion'] });
+                        queryClient.invalidateQueries({ queryKey: ['userDetails', userId] });
+                        
+                        toast({
+                          title: 'Success',
+                          description: 'Profile picture updated successfully',
+                        });
+                        
+                        // Exit edit mode after successful save
+                        setIsEditing(false);
+                      }
+                    } catch (error) {
+                      console.error('Error saving profile picture:', error);
+                      toast({
+                        title: 'Error',
+                        description: 'Failed to save profile picture. Please try again.',
+                        variant: 'destructive',
+                      });
+                    } finally {
+                      setSaving((s) => ({ ...s, basic: false }));
+                    }
+                  }}
+                  disabled={saving.basic}
+                  className="w-full"
+                >
+                  {saving.basic ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Profile Picture
+                    </>
+                  )}
+                </Button>
               )}
             </div>
 

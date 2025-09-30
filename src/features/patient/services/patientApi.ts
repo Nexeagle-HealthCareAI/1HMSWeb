@@ -183,12 +183,6 @@ export const patientApi = {
     return apiClient.put(`/patients/${id}/profile`, data);
   },
 
-  // Upload patient photo
-  uploadPhoto: (id: string, file: File): Promise<ApiResponse<{ photo_url: string }>> => {
-    const formData = new FormData();
-    formData.append('photo', file);
-    return apiClient.upload(`/patients/${id}/photo`, formData);
-  },
 
   // Get patient medical records
   getMedicalRecords: (id: string): Promise<ApiResponse<MedicalRecord[]>> => {

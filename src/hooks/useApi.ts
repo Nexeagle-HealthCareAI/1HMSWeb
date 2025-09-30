@@ -4,7 +4,7 @@ import { hospitalApi } from '@/features/hospital/services/hospitalApi';
 import { departmentApi } from '@/features/hospital/services/departmentApi';
 import { specializationApi } from '@/features/hospital/services/specializationApi';
 import { doctorProfileApi } from '@/features/doctor/services/doctorProfileApi';
-import { mediaUploadApi } from '@/features/profile/services/mediaUploadApi';
+import { mediaUploadApi } from '@/services/mediaUploadApi';
 
 // Generic API hook factory
 export const createApiHook = <TData, TError = Error>(
@@ -127,48 +127,40 @@ export const useDoctorApi = {
     }
   ),
   
-  // Create doctor profile
-  createDoctorProfile: () => createMutationHook(doctorProfileApi.createDoctorProfile),
-  
-  // Update doctor profile
-  updateDoctorProfile: (doctorId: string) =>
-    createMutationHook((data: Parameters<typeof doctorProfileApi.updateDoctorProfile>[1]) =>
-      doctorProfileApi.updateDoctorProfile(doctorId, data)
-    ),
 };
 
 // Media Upload API hooks
-export const useMediaApi = {
-  prepareUpload: () => useMutation({
-    mutationFn: mediaUploadApi.prepareUpload,
-    onError: (error) => {
-      console.error('Error preparing upload:', error);
-    },
+export const useMediaUploadApi = {
+  // Upload profile picture
+  uploadProfilePicture: () => useMutation({
+    mutationFn: ({ userId, file }: { userId: string; file: File }) => 
+      mediaUploadApi.uploadProfilePicture(userId, file),
   }),
 
-  uploadToBlob: () => useMutation({
-    mutationFn: ({ uploadURL, file }: { uploadURL: string; file: File }) =>
-      mediaUploadApi.uploadToBlob(uploadURL, file),
-    onError: (error) => {
-      console.error('Error uploading to blob:', error);
-    },
+  // Remove profile picture
+  removeProfilePicture: () => useMutation({
+    mutationFn: (userId: string) => 
+      mediaUploadApi.removeProfilePicture(userId),
   }),
 
-  finalizeUpload: () => useMutation({
-    mutationFn: mediaUploadApi.finalizeUpload,
-    onError: (error) => {
-      console.error('Error finalizing upload:', error);
-    },
-  }),
-
-  getMediaURL: (scope: string, userId: string) => useQuery({
-    queryKey: ['media', 'url', scope, userId],
-    queryFn: () => mediaUploadApi.getMediaURL(scope, userId),
-    enabled: !!scope && !!userId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-  }),
+  // Get profile picture
+  getProfilePicture: (userId: string) => createApiHook(
+    ['profile-picture', userId],
+    () => mediaUploadApi.getProfilePicture(userId),
+    {
+      enabled: !!userId,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: (failureCount, error: any) => {
+        // Don't retry on 404 errors (no profile picture)
+        if (error?.response?.status === 404) {
+          return false;
+        }
+        return failureCount < 2; // Retry up to 2 times for other errors
+      },
+    }
+  ),
 };
+
 
 // Utility hook for invalidating queries
 export const useInvalidateQueries = () => {
