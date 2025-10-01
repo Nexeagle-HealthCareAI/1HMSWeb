@@ -157,7 +157,8 @@ const defaultFieldConfigs: FieldConfig[] = [
   { id: 'comorbidity', label: 'Comorbidity', enabled: true, required: false, category: 'clinical' },
   { id: 'examination', label: 'Examination', enabled: true, required: false, category: 'clinical' },
   { id: 'diagnosis', label: 'Diagnosis', enabled: true, required: true, category: 'clinical' },
-  { id: 'orders', label: 'Orders', enabled: true, required: false, category: 'treatment' },
+  { id: 'investigations', label: 'Investigations', enabled: true, required: false, category: 'treatment' },
+  { id: 'procedures', label: 'Procedures', enabled: true, required: false, category: 'treatment' },
   { id: 'medications', label: 'Medications', enabled: true, required: false, category: 'treatment' },
   { id: 'privateNotes', label: 'Private Notes', enabled: true, required: false, category: 'administrative' },
   { id: 'certificates', label: 'Certificates & Notes', enabled: true, required: false, category: 'administrative' },
@@ -595,9 +596,8 @@ export const EPrescriptionPad: React.FC = () => {
     onChange: (value: string) => void;
     className?: string;
   }) => {
-    const [fieldSaveStatus, setFieldSaveStatus] = useState<Record<string, 'idle' | 'saving' | 'saved'>>({});
-
-    const saveFieldData = async (fieldId: string, data: any) => {
+    // Use parent's saveFieldData function
+    const saveAutoSuggestionFieldData = async (fieldId: string, data: any) => {
       setFieldSaveStatus(prev => ({ ...prev, [fieldId]: 'saving' }));
       
       // Simulate API call
@@ -607,12 +607,6 @@ export const EPrescriptionPad: React.FC = () => {
       setTimeout(() => {
         setFieldSaveStatus(prev => ({ ...prev, [fieldId]: 'idle' }));
       }, 2000);
-    };
-
-    const getAllOptionsForField = (fieldId: string): string[] => {
-      const predefined = predefinedOptions[fieldId as keyof typeof predefinedOptions] || [];
-      const personalized = getPersonalizedOptions(fieldId);
-      return [...new Set([...predefined, ...personalized])];
     };
 
     return (
@@ -655,7 +649,7 @@ export const EPrescriptionPad: React.FC = () => {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => saveFieldData(fieldId, value)}
+            onClick={() => saveAutoSuggestionFieldData(fieldId, value)}
             disabled={fieldSaveStatus[fieldId] === 'saving'}
             className="h-7 text-xs"
           >
@@ -670,190 +664,195 @@ export const EPrescriptionPad: React.FC = () => {
   };
 
   // Special Orders Field Component for Investigations and Procedures
-  const OrdersField = () => {
-    const [fieldSaveStatus, setFieldSaveStatus] = useState<Record<string, 'idle' | 'saving' | 'saved'>>({});
+  // Helper functions for orders (shared between Investigations and Procedures)
+  const saveOrdersFieldData = async (fieldId: string, data: any) => {
+    setFieldSaveStatus(prev => ({ ...prev, [fieldId]: 'saving' }));
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    setFieldSaveStatus(prev => ({ ...prev, [fieldId]: 'saved' }));
+    setTimeout(() => {
+      setFieldSaveStatus(prev => ({ ...prev, [fieldId]: 'idle' }));
+    }, 2000);
+  };
 
-    const saveFieldData = async (fieldId: string, data: any) => {
-      setFieldSaveStatus(prev => ({ ...prev, [fieldId]: 'saving' }));
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      setFieldSaveStatus(prev => ({ ...prev, [fieldId]: 'saved' }));
-      setTimeout(() => {
-        setFieldSaveStatus(prev => ({ ...prev, [fieldId]: 'idle' }));
-      }, 2000);
-    };
+  const addOrderItem = (type: 'investigations' | 'procedures', value: string) => {
+    if (value.trim()) {
+      setPrescriptionData(prev => ({
+        ...prev,
+        orders: {
+          ...prev.orders,
+          [type]: [...prev.orders[type], value.trim()]
+        }
+      }));
+    }
+  };
 
-    const getAllOptionsForField = (fieldId: string): string[] => {
-      const predefined = predefinedOptions[fieldId as keyof typeof predefinedOptions] || [];
-      const personalized = getPersonalizedOptions(fieldId);
-      return [...new Set([...predefined, ...personalized])];
-    };
-
-    const addOrderItem = (type: 'investigations' | 'procedures', value: string) => {
-      if (value.trim()) {
-        setPrescriptionData(prev => ({
-          ...prev,
-          orders: {
-            ...prev.orders,
-            [type]: [...prev.orders[type], value.trim()]
-          }
-        }));
+  const updateOrderItem = (type: 'investigations' | 'procedures', index: number, value: string) => {
+    setPrescriptionData(prev => ({
+      ...prev,
+      orders: {
+        ...prev.orders,
+        [type]: prev.orders[type].map((item, i) => i === index ? value : item)
       }
-    };
+    }));
+  };
 
-    const updateOrderItem = (type: 'investigations' | 'procedures', index: number, value: string) => {
-      setPrescriptionData(prev => ({
-        ...prev,
-        orders: {
-          ...prev.orders,
-          [type]: prev.orders[type].map((item, i) => i === index ? value : item)
-        }
-      }));
-    };
+  const removeOrderItem = (type: 'investigations' | 'procedures', index: number) => {
+    setPrescriptionData(prev => ({
+      ...prev,
+      orders: {
+        ...prev.orders,
+        [type]: prev.orders[type].filter((_, i) => i !== index)
+      }
+    }));
+  };
 
-    const removeOrderItem = (type: 'investigations' | 'procedures', index: number) => {
-      setPrescriptionData(prev => ({
-        ...prev,
-        orders: {
-          ...prev.orders,
-          [type]: prev.orders[type].filter((_, i) => i !== index)
-        }
-      }));
-    };
-
+  // Separate component for Investigations
+  const InvestigationsField = () => {
     return (
-      <div className="space-y-6">
-        {/* Investigations */}
-        <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-3">Investigations</h4>
-          <div className="space-y-3">
-            {/* Auto-suggestion input for new investigation */}
-            <AdvancedSuggestionInput
-              data={getAllOptionsForField('investigations')}
-              placeholder="Add investigation..."
-              value=""
-              onValueChange={(value) => {
-                if (value.trim()) {
-                  addOrderItem('investigations', value);
-                }
-              }}
-              maxSuggestions={8}
-              allowCustom={true}
-              className="w-full"
-            />
-            
-            {/* Quick options for investigations */}
-            <div className="flex flex-wrap gap-2">
-              {predefinedOptions.investigations?.slice(0, 8).map((option, index) => (
-                <button
-                  key={index}
-                  onClick={() => addOrderItem('investigations', option)}
-                  className="group flex items-center gap-1 bg-green-50 border border-green-200 rounded-full px-3 py-1.5 text-xs hover:bg-green-100 hover:border-green-400 transition-all duration-200"
-                  title="Click to add investigation"
-                >
-                  <span className="text-green-600 hover:text-green-800 font-medium">
-                    {option}
-                  </span>
-                  <Plus className="h-3 w-3 text-green-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </button>
-              ))}
-            </div>
-
-            {/* Existing investigations */}
-            {prescriptionData.orders.investigations.map((investigation, index) => (
-              <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                <Input
-                  value={investigation}
-                  onChange={(e) => updateOrderItem('investigations', index, e.target.value)}
-                  className="flex-1 text-sm"
-                  placeholder="Investigation name"
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => removeOrderItem('investigations', index)}
-                  className="h-8 w-8 p-0 text-red-600 hover:bg-red-50"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
+      <div className="space-y-3">
+        {/* Auto-suggestion input for new investigation */}
+        <AdvancedSuggestionInput
+          data={getAllOptionsForField('investigations')}
+          placeholder="Add investigation..."
+          value=""
+          onValueChange={(value) => {
+            if (value.trim()) {
+              addOrderItem('investigations', value);
+            }
+          }}
+          maxSuggestions={8}
+          allowCustom={true}
+          className="w-full"
+        />
+        
+        {/* Quick options for investigations */}
+        <div className="flex flex-wrap gap-2">
+          {predefinedOptions.investigations?.slice(0, 8).map((option, index) => (
+            <button
+              key={index}
+              onClick={() => addOrderItem('investigations', option)}
+              className="group flex items-center gap-1 bg-green-50 border border-green-200 rounded-full px-3 py-1.5 text-xs hover:bg-green-100 hover:border-green-400 transition-all duration-200"
+              title="Click to add investigation"
+            >
+              <span className="text-green-600 hover:text-green-800 font-medium">
+                {option}
+              </span>
+              <Plus className="h-3 w-3 text-green-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </button>
+          ))}
         </div>
 
-        {/* Procedures */}
-        <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-3">Procedures</h4>
-          <div className="space-y-3">
-            {/* Auto-suggestion input for new procedure */}
-            <AdvancedSuggestionInput
-              data={getAllOptionsForField('procedures')}
-              placeholder="Add procedure..."
-              value=""
-              onValueChange={(value) => {
-                if (value.trim()) {
-                  addOrderItem('procedures', value);
-                }
-              }}
-              maxSuggestions={8}
-              allowCustom={true}
-              className="w-full"
+        {/* Existing investigations */}
+        {prescriptionData.orders.investigations.map((investigation, index) => (
+          <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+            <Input
+              value={investigation}
+              onChange={(e) => updateOrderItem('investigations', index, e.target.value)}
+              className="flex-1 text-sm"
+              placeholder="Investigation name"
             />
-            
-            {/* Quick options for procedures */}
-            <div className="flex flex-wrap gap-2">
-              {predefinedOptions.procedures?.slice(0, 8).map((option, index) => (
-                <button
-                  key={index}
-                  onClick={() => addOrderItem('procedures', option)}
-                  className="group flex items-center gap-1 bg-purple-50 border border-purple-200 rounded-full px-3 py-1.5 text-xs hover:bg-purple-100 hover:border-purple-400 transition-all duration-200"
-                  title="Click to add procedure"
-                >
-                  <span className="text-purple-600 hover:text-purple-800 font-medium">
-                    {option}
-                  </span>
-                  <Plus className="h-3 w-3 text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </button>
-              ))}
-            </div>
-
-            {/* Existing procedures */}
-            {prescriptionData.orders.procedures.map((procedure, index) => (
-              <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                <Input
-                  value={procedure}
-                  onChange={(e) => updateOrderItem('procedures', index, e.target.value)}
-                  className="flex-1 text-sm"
-                  placeholder="Procedure name"
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => removeOrderItem('procedures', index)}
-                  className="h-8 w-8 p-0 text-red-600 hover:bg-red-50"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => removeOrderItem('investigations', index)}
+              className="h-8 w-8 p-0 text-red-600 hover:bg-red-50"
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-        </div>
+        ))}
 
         {/* Save button */}
-        <div className="flex justify-end pt-4">
+        <div className="flex justify-end pt-2">
           <Button
             size="sm"
             variant="outline"
-            onClick={() => saveFieldData('orders', prescriptionData.orders)}
-            disabled={fieldSaveStatus['orders'] === 'saving'}
+            onClick={() => saveOrdersFieldData('investigations', prescriptionData.orders.investigations)}
+            disabled={fieldSaveStatus['investigations'] === 'saving'}
             className="h-7 text-xs"
           >
-            {fieldSaveStatus['orders'] === 'saving' && <Clock className="h-3 w-3 mr-1 animate-spin" />}
-            {fieldSaveStatus['orders'] === 'saved' && <Check className="h-3 w-3 mr-1 text-green-600" />}
-            {fieldSaveStatus['orders'] === 'saving' ? 'Saving...' : 
-             fieldSaveStatus['orders'] === 'saved' ? 'Saved!' : 'Save'}
+            {fieldSaveStatus['investigations'] === 'saving' && <Clock className="h-3 w-3 mr-1 animate-spin" />}
+            {fieldSaveStatus['investigations'] === 'saved' && <Check className="h-3 w-3 mr-1 text-green-600" />}
+            {fieldSaveStatus['investigations'] === 'saving' ? 'Saving...' : 
+             fieldSaveStatus['investigations'] === 'saved' ? 'Saved!' : 'Save'}
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  // Separate component for Procedures
+  const ProceduresField = () => {
+    return (
+      <div className="space-y-3">
+        {/* Auto-suggestion input for new procedure */}
+        <AdvancedSuggestionInput
+          data={getAllOptionsForField('procedures')}
+          placeholder="Add procedure..."
+          value=""
+          onValueChange={(value) => {
+            if (value.trim()) {
+              addOrderItem('procedures', value);
+            }
+          }}
+          maxSuggestions={8}
+          allowCustom={true}
+          className="w-full"
+        />
+        
+        {/* Quick options for procedures */}
+        <div className="flex flex-wrap gap-2">
+          {predefinedOptions.procedures?.slice(0, 8).map((option, index) => (
+            <button
+              key={index}
+              onClick={() => addOrderItem('procedures', option)}
+              className="group flex items-center gap-1 bg-purple-50 border border-purple-200 rounded-full px-3 py-1.5 text-xs hover:bg-purple-100 hover:border-purple-400 transition-all duration-200"
+              title="Click to add procedure"
+            >
+              <span className="text-purple-600 hover:text-purple-800 font-medium">
+                {option}
+              </span>
+              <Plus className="h-3 w-3 text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </button>
+          ))}
+        </div>
+
+        {/* Existing procedures */}
+        {prescriptionData.orders.procedures.map((procedure, index) => (
+          <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+            <Input
+              value={procedure}
+              onChange={(e) => updateOrderItem('procedures', index, e.target.value)}
+              className="flex-1 text-sm"
+              placeholder="Procedure name"
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => removeOrderItem('procedures', index)}
+              className="h-8 w-8 p-0 text-red-600 hover:bg-red-50"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+
+        {/* Save button */}
+        <div className="flex justify-end pt-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => saveOrdersFieldData('procedures', prescriptionData.orders.procedures)}
+            disabled={fieldSaveStatus['procedures'] === 'saving'}
+            className="h-7 text-xs"
+          >
+            {fieldSaveStatus['procedures'] === 'saving' && <Clock className="h-3 w-3 mr-1 animate-spin" />}
+            {fieldSaveStatus['procedures'] === 'saved' && <Check className="h-3 w-3 mr-1 text-green-600" />}
+            {fieldSaveStatus['procedures'] === 'saving' ? 'Saving...' : 
+             fieldSaveStatus['procedures'] === 'saved' ? 'Saved!' : 'Save'}
           </Button>
         </div>
       </div>
@@ -1566,11 +1565,18 @@ export const EPrescriptionPad: React.FC = () => {
               />
             )}
 
-            {/* Orders Section */}
+            {/* Investigations Section */}
             {renderCollapsibleSection(
-              'orders',
-              'Orders: Investigations / Procedures',
-              <OrdersField />
+              'investigations',
+              'Investigations',
+              <InvestigationsField />
+            )}
+
+            {/* Procedures Section */}
+            {renderCollapsibleSection(
+              'procedures',
+              'Procedures',
+              <ProceduresField />
             )}
 
             {/* Medications Section */}

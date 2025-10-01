@@ -81,6 +81,34 @@ export const mediaUploadApi = {
     }
   },
 
+  // Upload prescription asset (header, footer, signature)
+  uploadPrescriptionAsset: async (doctorId: string, file: File): Promise<UploadResponse> => {
+    try {
+      const formData = new FormData();
+      formData.append('DoctorId', doctorId);
+      formData.append('File', file);
+
+      console.log('Upload Prescription Asset API Call:');
+      console.log('- Doctor ID:', doctorId);
+      console.log('- File name:', file.name);
+      console.log('- File size:', file.size);
+      console.log('- File type:', file.type);
+      console.log('- URL:', API_ENDPOINTS.PRESCRIPTION.UPLOAD_ASSET);
+
+      const response = await apiClient.post(API_ENDPOINTS.PRESCRIPTION.UPLOAD_ASSET, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      console.log('Upload Prescription Asset Response:', response);
+      return response as UploadResponse;
+    } catch (error) {
+      console.error('Error uploading prescription asset:', error);
+      throw error;
+    }
+  },
+
   // Generic file upload (for future use)
   uploadFile: async (file: File, folder?: string): Promise<UploadResponse> => {
     try {

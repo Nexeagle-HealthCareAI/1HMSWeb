@@ -159,6 +159,12 @@ export const useMediaUploadApi = {
       },
     }
   ),
+
+  // Upload prescription asset
+  uploadPrescriptionAsset: () => useMutation({
+    mutationFn: ({ doctorId, file }: { doctorId: string; file: File }) => 
+      mediaUploadApi.uploadPrescriptionAsset(doctorId, file),
+  }),
 };
 
 

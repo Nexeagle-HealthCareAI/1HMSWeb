@@ -125,15 +125,32 @@ export const InactivityProvider: React.FC<InactivityProviderProps> = ({ children
 
       // Perform logout
       console.log('Calling logout from auth store...');
-      logout();
+      
+      // Clear all localStorage items related to auth
+      localStorage.removeItem('auth-storage');
+      localStorage.removeItem('user-storage');
+      
+      // Call logout from store
+      if (logout && typeof logout === 'function') {
+        logout();
+      } else {
+        console.error('Logout function not available from auth store');
+      }
+      
+      // Clear any other session data
+      sessionStorage.clear();
       
       // Force a page reload to ensure complete logout
       console.log('Logout completed - redirecting to login');
-      window.location.href = '/login';
+      
+      // Use replace to prevent going back with browser back button
+      window.location.replace('/login');
     } catch (error) {
       console.error('Error during logout:', error);
       // Even if there's an error, try to redirect to login
-      window.location.href = '/login';
+      window.location.replace('/login');
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
@@ -254,6 +271,7 @@ export const InactivityProvider: React.FC<InactivityProviderProps> = ({ children
 
               <div className="flex gap-3">
                 <Button
+                  type="button"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -265,16 +283,16 @@ export const InactivityProvider: React.FC<InactivityProviderProps> = ({ children
                   {t('inactivity.stayConnected')}
                 </Button>
                 <Button
-                  onClick={(e) => {
+                  type="button"
+                  onClick={async (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('Logout button clicked');
-                    handleLogout();
+                    console.log('Logout button clicked - calling handleLogout');
+                    await handleLogout();
                   }}
                   variant="outline"
                   disabled={isLoggingOut}
                   className="flex-1 border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:border-red-500 transition-all duration-200 hover:scale-105 focus:ring-2 focus:ring-red-300 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  autoFocus
                 >
                   {isLoggingOut ? (
                     <>

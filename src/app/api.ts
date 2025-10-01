@@ -171,6 +171,9 @@ export const API_ENDPOINTS = {
     CREATE_DOCTOR_OVERRIDE: '/calendar/doctor/override',
     DELETE_DOCTOR_OVERRIDE: (overrideId: string) => `/calendar/doctor/override/${overrideId}`,
             },
+  PRESCRIPTION: {
+    UPLOAD_ASSET: '/prescription/assets/upload',
+  },
 } as const;
 
 // Default headers
