@@ -34,7 +34,12 @@ import {
   ChevronDown,
   ChevronRight,
   Check,
-  X
+  X,
+  Upload,
+  File,
+  Image,
+  TestTube,
+  FileType
 } from 'lucide-react';
 
 interface EPrescriptionData {
@@ -73,7 +78,13 @@ interface EPrescriptionData {
     notes: string;
   };
   nonPharmacologicalAdvice: string;
-  attachments: string[];
+  attachments: Array<{
+    id: string;
+    name: string;
+    type: 'test' | 'document' | 'image' | 'other';
+    file: File | string; // File object or URL string
+    uploadedAt: string;
+  }>;
 }
 
 interface FieldConfig {
@@ -91,6 +102,13 @@ const predefinedOptions = {
     'Abdominal pain', 'Back pain', 'Joint pain', 'Fatigue', 'Dizziness', 'Weight loss', 'Weight gain',
     'Sleep problems', 'Anxiety', 'Depression', 'Skin rash', 'Itching', 'Swelling', 'Bleeding',
     'Urinary problems', 'Vision problems', 'Hearing problems', 'Memory problems', 'Confusion'
+  ],
+  medications: [
+    'Paracetamol', 'Ibuprofen', 'Aspirin', 'Amoxicillin', 'Azithromycin', 'Ciprofloxacin',
+    'Metformin', 'Insulin', 'Amlodipine', 'Atenolol', 'Losartan', 'Enalapril',
+    'Omeprazole', 'Ranitidine', 'Pantoprazole', 'Domperidone', 'Ondansetron',
+    'Salbutamol', 'Montelukast', 'Cetirizine', 'Loratadine', 'Prednisolone',
+    'Atorvastatin', 'Rosuvastatin', 'Clopidogrel', 'Warfarin', 'Levothyroxine'
   ],
   comorbidity: [
     'Diabetes', 'Hypertension', 'Heart disease', 'Asthma', 'COPD', 'Arthritis', 'Osteoporosis',
@@ -148,6 +166,179 @@ const predefinedOptions = {
     'Splint Application', 'Physical Therapy', 'Occupational Therapy', 'Speech Therapy',
     'Counseling Session', 'Nutrition Counseling', 'Smoking Cessation Counseling'
   ]
+};
+
+// Attachment Field Component
+const AttachmentField: React.FC<{
+  attachments: Array<{
+    id: string;
+    name: string;
+    type: 'test' | 'document' | 'image' | 'other';
+    file: File | string;
+    uploadedAt: string;
+  }>;
+  onAttachmentsChange: (attachments: Array<{
+    id: string;
+    name: string;
+    type: 'test' | 'document' | 'image' | 'other';
+    file: File | string;
+    uploadedAt: string;
+  }>) => void;
+}> = ({ attachments, onAttachmentsChange }) => {
+  const [selectedType, setSelectedType] = useState<'test' | 'document' | 'image' | 'other'>('test');
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    try {
+      const newAttachments = Array.from(files).map(file => ({
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        name: file.name,
+        type: selectedType,
+        file: file,
+        uploadedAt: new Date().toISOString()
+      }));
+
+      onAttachmentsChange([...attachments, ...newAttachments]);
+    } catch (error) {
+      console.error('Error uploading files:', error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const removeAttachment = (id: string) => {
+    onAttachmentsChange(attachments.filter(attachment => attachment.id !== id));
+  };
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'test': return <TestTube className="h-4 w-4 text-blue-500" />;
+      case 'document': return <File className="h-4 w-4 text-green-500" />;
+      case 'image': return <Image className="h-4 w-4 text-purple-500" />;
+      default: return <FileType className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case 'test': return 'Test Results';
+      case 'document': return 'Document';
+      case 'image': return 'Image';
+      default: return 'Other';
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Upload Section */}
+      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+        <div className="text-center mb-4">
+          <FileImage className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+          <p className="text-sm text-gray-500 mb-4">Upload files, images, or documents</p>
+        </div>
+
+        {/* Type Selection */}
+        <div className="mb-4">
+          <Label className="text-sm font-medium text-gray-700 mb-2 block">Attachment Type</Label>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {[
+              { value: 'test', label: 'Test Results', icon: <TestTube className="h-4 w-4" /> },
+              { value: 'document', label: 'Document', icon: <File className="h-4 w-4" /> },
+              { value: 'image', label: 'Image', icon: <Image className="h-4 w-4" /> },
+              { value: 'other', label: 'Other', icon: <FileType className="h-4 w-4" /> }
+            ].map((option) => (
+              <button
+                key={option.value}
+                onClick={() => setSelectedType(option.value as any)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all ${
+                  selectedType === option.value
+                    ? 'bg-blue-50 border-blue-300 text-blue-700'
+                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {option.icon}
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* File Upload */}
+        <div className="flex items-center justify-center">
+          <label className="cursor-pointer">
+            <input
+              type="file"
+              multiple
+              onChange={handleFileUpload}
+              className="hidden"
+              accept={
+                selectedType === 'image' 
+                  ? 'image/*' 
+                  : selectedType === 'test' 
+                    ? '.pdf,.doc,.docx,.jpg,.jpeg,.png,.gif'
+                    : '*'
+              }
+            />
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-10 text-sm"
+              disabled={isUploading}
+            >
+              {isUploading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Add {getTypeLabel(selectedType)}
+                </>
+              )}
+            </Button>
+          </label>
+        </div>
+      </div>
+
+      {/* Attachments List */}
+      {attachments.length > 0 && (
+        <div className="space-y-2">
+          <Label className="text-sm font-medium text-gray-700">Uploaded Attachments</Label>
+          <div className="space-y-2">
+            {attachments.map((attachment) => (
+              <div
+                key={attachment.id}
+                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border"
+              >
+                <div className="flex items-center gap-3">
+                  {getTypeIcon(attachment.type)}
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{attachment.name}</p>
+                    <p className="text-xs text-gray-500">
+                      {getTypeLabel(attachment.type)} • {new Date(attachment.uploadedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeAttachment(attachment.id)}
+                  className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
 const defaultFieldConfigs: FieldConfig[] = [
@@ -707,6 +898,258 @@ export const EPrescriptionPad: React.FC = () => {
         [type]: prev.orders[type].filter((_, i) => i !== index)
       }
     }));
+  };
+
+  // Improved Medications Field Component - Tabular Form
+  const MedicationsField = () => {
+    const [activeQuickOptions, setActiveQuickOptions] = useState<string | null>(null);
+
+    const frequencyOptions = [
+      { value: 'OD', label: 'Once Daily', abbr: 'OD' },
+      { value: 'BD', label: 'Twice Daily', abbr: 'BD' },
+      { value: 'TDS', label: 'Three Times Daily', abbr: 'TDS' },
+      { value: 'QID', label: 'Four Times Daily', abbr: 'QID' },
+      { value: 'SOS', label: 'When Required', abbr: 'SOS' },
+      { value: 'STAT', label: 'Immediately', abbr: 'STAT' },
+    ];
+
+    const durationOptions = ['3 days', '5 days', '7 days', '10 days', '14 days', '21 days', '30 days', '2 months', '3 months'];
+    
+    const dosageOptions = ['250mg', '500mg', '750mg', '1000mg', '5mg', '10mg', '20mg', '25mg', '50mg', '100mg'];
+
+    const instructionOptions = ['Before food', 'After food', 'With food', 'Empty stomach', 'At bedtime', 'In the morning'];
+
+    return (
+      <div className="space-y-3">
+        {/* Add Medication Button - Always Visible */}
+        <div className="flex items-center justify-between gap-3 pb-3 mb-3 border-b border-gray-200 bg-blue-50/50 p-3 rounded-lg">
+          <div>
+            <h4 className="text-sm font-semibold text-gray-900 mb-1">Medications</h4>
+            <p className="text-xs text-gray-600">Add and manage patient medications</p>
+          </div>
+          <Button
+            onClick={addMedication}
+            className="h-10 bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+            size="sm"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Medication
+          </Button>
+        </div>
+
+        {/* Medications Table */}
+        {prescriptionData.medications.length > 0 ? (
+          <div className="overflow-x-auto border border-gray-200 rounded-lg">
+            <table className="w-full border-collapse bg-white">
+              <thead>
+                <tr className="bg-gradient-to-r from-blue-50 to-indigo-50">
+                  <th className="border-b border-gray-200 px-3 py-3 text-left text-xs font-semibold text-gray-700 w-8">#</th>
+                  <th className="border-b border-gray-200 px-3 py-3 text-left text-xs font-semibold text-gray-700">Medication Name</th>
+                  <th className="border-b border-gray-200 px-3 py-3 text-left text-xs font-semibold text-gray-700">Dosage</th>
+                  <th className="border-b border-gray-200 px-3 py-3 text-left text-xs font-semibold text-gray-700">Frequency</th>
+                  <th className="border-b border-gray-200 px-3 py-3 text-left text-xs font-semibold text-gray-700">Duration</th>
+                  <th className="border-b border-gray-200 px-3 py-3 text-left text-xs font-semibold text-gray-700">Instructions</th>
+                  <th className="border-b border-gray-200 px-3 py-3 text-center text-xs font-semibold text-gray-700 w-12">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {prescriptionData.medications.map((medication, index) => (
+                  <React.Fragment key={medication.id}>
+                    <tr className="hover:bg-blue-50/50 transition-colors">
+                      <td className="border-b border-gray-100 px-3 py-2 text-center text-sm text-gray-600 font-medium">
+                        {index + 1}
+                      </td>
+                      <td className="border-b border-gray-100 px-3 py-2">
+                        <div className="relative">
+                          <Input
+                            placeholder="Medication name"
+                            value={medication.name}
+                            onChange={(e) => updateMedication(medication.id, 'name', e.target.value)}
+                            onFocus={() => setActiveQuickOptions(`medicine-${medication.id}`)}
+                            onBlur={() => setTimeout(() => setActiveQuickOptions(null), 200)}
+                            list={`medications-datalist-${medication.id}`}
+                            className="h-8 text-sm min-w-[200px]"
+                          />
+                          <datalist id={`medications-datalist-${medication.id}`}>
+                            {predefinedOptions.medications?.map((med, idx) => (
+                              <option key={idx} value={med} />
+                            ))}
+                          </datalist>
+                          {activeQuickOptions === `medicine-${medication.id}` && (
+                            <div className="absolute z-50 mt-1 p-2 bg-white rounded-lg border border-blue-200 shadow-xl left-0 max-h-60 overflow-y-auto">
+                              <div className="grid grid-cols-2 gap-1 w-[320px]">
+                                {predefinedOptions.medications?.map((med, idx) => (
+                                  <button
+                                    key={idx}
+                                    onClick={() => {
+                                      updateMedication(medication.id, 'name', med);
+                                      setActiveQuickOptions(null);
+                                    }}
+                                    className="px-3 py-1.5 text-xs text-left bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 text-blue-700 whitespace-nowrap"
+                                  >
+                                    {med}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="border-b border-gray-100 px-3 py-2">
+                        <div className="relative">
+                          <Input
+                            placeholder="e.g., 500mg"
+                            value={medication.dosage}
+                            onChange={(e) => updateMedication(medication.id, 'dosage', e.target.value)}
+                            onFocus={() => setActiveQuickOptions(`dosage-${medication.id}`)}
+                            onBlur={() => setTimeout(() => setActiveQuickOptions(null), 200)}
+                            className="h-8 text-sm min-w-[100px]"
+                          />
+                          {activeQuickOptions === `dosage-${medication.id}` && (
+                            <div className="absolute z-50 mt-1 p-2 bg-white rounded-lg border border-purple-200 shadow-xl left-0">
+                              <div className="flex flex-wrap gap-1 w-[180px]">
+                                {dosageOptions.map((dose) => (
+                                  <button
+                                    key={dose}
+                                    onClick={() => {
+                                      updateMedication(medication.id, 'dosage', dose);
+                                      setActiveQuickOptions(null);
+                                    }}
+                                    className="px-2 py-1 text-xs bg-purple-50 border border-purple-300 rounded hover:bg-purple-100 text-purple-700"
+                                  >
+                                    {dose}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="border-b border-gray-100 px-3 py-2">
+                        <div className="min-w-[160px]">
+                          <div className="flex flex-wrap gap-1">
+                            {frequencyOptions.map((freq) => (
+                              <button
+                                key={freq.value}
+                                onClick={() => updateMedication(medication.id, 'frequency', freq.value)}
+                                className={`px-2 py-1 text-xs rounded border transition-colors ${
+                                  medication.frequency === freq.value
+                                    ? 'bg-green-600 text-white border-green-700 font-semibold'
+                                    : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+                                }`}
+                                title={freq.label}
+                              >
+                                {freq.abbr}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="border-b border-gray-100 px-3 py-2">
+                        <div className="relative">
+                          <Input
+                            placeholder="e.g., 7 days"
+                            value={medication.duration}
+                            onChange={(e) => updateMedication(medication.id, 'duration', e.target.value)}
+                            onFocus={() => setActiveQuickOptions(`duration-${medication.id}`)}
+                            onBlur={() => setTimeout(() => setActiveQuickOptions(null), 200)}
+                            className="h-8 text-sm min-w-[100px]"
+                          />
+                          {activeQuickOptions === `duration-${medication.id}` && (
+                            <div className="absolute z-50 mt-1 p-2 bg-white rounded-lg border border-amber-200 shadow-xl left-0">
+                              <div className="flex flex-wrap gap-1 w-[200px]">
+                                {durationOptions.map((duration) => (
+                                  <button
+                                    key={duration}
+                                    onClick={() => {
+                                      updateMedication(medication.id, 'duration', duration);
+                                      setActiveQuickOptions(null);
+                                    }}
+                                    className="px-2 py-1 text-xs bg-amber-50 border border-amber-300 rounded hover:bg-amber-100 text-amber-700 whitespace-nowrap"
+                                  >
+                                    {duration}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="border-b border-gray-100 px-3 py-2">
+                        <div className="relative">
+                          <Input
+                            placeholder="Special instructions"
+                            value={medication.instructions}
+                            onChange={(e) => updateMedication(medication.id, 'instructions', e.target.value)}
+                            onFocus={() => setActiveQuickOptions(`instructions-${medication.id}`)}
+                            onBlur={() => setTimeout(() => setActiveQuickOptions(null), 200)}
+                            className="h-8 text-sm min-w-[150px]"
+                          />
+                          {activeQuickOptions === `instructions-${medication.id}` && (
+                            <div className="absolute z-50 mt-1 p-2 bg-white rounded-lg border border-orange-200 shadow-xl left-0">
+                              <div className="flex flex-wrap gap-1 w-[220px]">
+                                {instructionOptions.map((instruction) => (
+                                  <button
+                                    key={instruction}
+                                    onClick={() => {
+                                      const currentInstructions = medication.instructions || '';
+                                      const newInstructions = currentInstructions 
+                                        ? `${currentInstructions}, ${instruction}`
+                                        : instruction;
+                                      updateMedication(medication.id, 'instructions', newInstructions);
+                                    }}
+                                    className="px-2 py-1 text-xs bg-orange-50 border border-orange-300 rounded hover:bg-orange-100 text-orange-700 whitespace-nowrap"
+                                  >
+                                    {instruction}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="border-b border-gray-100 px-3 py-2 text-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeMedication(medication.id)}
+                          className="h-7 w-7 p-0 hover:bg-red-50 hover:border-red-300 hover:text-red-700"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </td>
+                    </tr>
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500 dark:text-gray-400 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+            <Pill className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+            <p className="text-sm">No medications added yet. Click "Add Medication" button above to get started!</p>
+          </div>
+        )}
+
+        {/* Save All Medications */}
+        {prescriptionData.medications.length > 0 && (
+          <div className="flex justify-end pt-2 border-t border-gray-200">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => saveOrdersFieldData('medications', prescriptionData.medications)}
+              disabled={fieldSaveStatus['medications'] === 'saving'}
+              className="h-8 text-xs"
+            >
+              {fieldSaveStatus['medications'] === 'saving' && <Clock className="h-3 w-3 mr-1 animate-spin" />}
+              {fieldSaveStatus['medications'] === 'saved' && <Check className="h-3 w-3 mr-1 text-green-600" />}
+              {fieldSaveStatus['medications'] === 'saving' ? 'Saving...' : 
+               fieldSaveStatus['medications'] === 'saved' ? 'Saved!' : 'Save All Medications'}
+            </Button>
+          </div>
+        )}
+      </div>
+    );
   };
 
   // Separate component for Investigations
@@ -1583,95 +2026,7 @@ export const EPrescriptionPad: React.FC = () => {
             {renderCollapsibleSection(
               'medications',
               'Medications',
-              <div className="space-y-3">
-                {prescriptionData.medications.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse border border-gray-200 rounded-lg">
-                      <thead>
-                        <tr className="bg-gray-50 dark:bg-gray-800">
-                          <th className="border border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-300">#</th>
-                          <th className="border border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-300">Medication Name</th>
-                          <th className="border border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-300">Dosage</th>
-                          <th className="border border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-300">Frequency</th>
-                          <th className="border border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-300">Duration</th>
-                          <th className="border border-gray-200 px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-300">Instructions</th>
-                          <th className="border border-gray-200 px-3 py-2 text-center text-xs font-medium text-gray-600 dark:text-gray-300">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {prescriptionData.medications.map((medication, index) => (
-                          <tr key={medication.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                            <td className="border border-gray-200 px-3 py-2 text-center text-sm text-gray-600 dark:text-gray-300">{index + 1}</td>
-                            <td className="border border-gray-200 px-3 py-2">
-                              <Input
-                                placeholder="Medication name"
-                                value={medication.name}
-                                onChange={(e) => updateMedication(medication.id, 'name', e.target.value)}
-                                className="h-8 text-sm border-0 focus:ring-1 focus:ring-blue-500"
-                              />
-                            </td>
-                            <td className="border border-gray-200 px-3 py-2">
-                              <Input
-                                placeholder="e.g., 500mg"
-                                value={medication.dosage}
-                                onChange={(e) => updateMedication(medication.id, 'dosage', e.target.value)}
-                                className="h-8 text-sm border-0 focus:ring-1 focus:ring-blue-500"
-                              />
-                            </td>
-                            <td className="border border-gray-200 px-3 py-2">
-                              <Input
-                                placeholder="e.g., BD, TDS"
-                                value={medication.frequency}
-                                onChange={(e) => updateMedication(medication.id, 'frequency', e.target.value)}
-                                className="h-8 text-sm border-0 focus:ring-1 focus:ring-blue-500"
-                              />
-                            </td>
-                            <td className="border border-gray-200 px-3 py-2">
-                              <Input
-                                placeholder="e.g., 7 days"
-                                value={medication.duration}
-                                onChange={(e) => updateMedication(medication.id, 'duration', e.target.value)}
-                                className="h-8 text-sm border-0 focus:ring-1 focus:ring-blue-500"
-                              />
-                            </td>
-                            <td className="border border-gray-200 px-3 py-2">
-                              <Input
-                                placeholder="Special instructions"
-                                value={medication.instructions}
-                                onChange={(e) => updateMedication(medication.id, 'instructions', e.target.value)}
-                                className="h-8 text-sm border-0 focus:ring-1 focus:ring-blue-500"
-                              />
-                            </td>
-                            <td className="border border-gray-200 px-3 py-2 text-center">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => removeMedication(medication.id)}
-                                className="h-7 w-7 p-0 hover:bg-red-50 hover:border-red-300 hover:text-red-700"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    <Pill className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                    <p className="text-sm">No medications added yet</p>
-                  </div>
-                )}
-                <Button
-                  variant="outline"
-                  onClick={addMedication}
-                  className="w-full h-8 text-sm"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Medication
-                </Button>
-              </div>
+              <MedicationsField />
             )}
 
             {/* Non-pharmacological Advice Section */}
@@ -1784,14 +2139,13 @@ export const EPrescriptionPad: React.FC = () => {
             {renderCollapsibleSection(
               'attachments',
               'Attachments',
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <FileImage className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-500 mb-2">Upload files, images, or documents</p>
-                <Button variant="outline" size="sm" className="h-8 text-sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Attachment
-                </Button>
-              </div>
+              <AttachmentField
+                attachments={prescriptionData.attachments}
+                onAttachmentsChange={(attachments) => setPrescriptionData(prev => ({
+                  ...prev,
+                  attachments
+                }))}
+              />
             )}
 
           </div>
