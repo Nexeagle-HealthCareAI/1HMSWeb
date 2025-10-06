@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { usePrescriptionStore } from '@/store/prescription';
 import { ImageUploader } from './ImageUploader';
+import { PrescriptionAssetUploader } from './PrescriptionAssetUploader';
 import { NumberField } from './NumberField';
 import { Toggle } from './Toggle';
 import { Input } from '@/components/ui/input';
@@ -11,17 +12,35 @@ import { Ruler, Image, User, Settings, HelpCircle, FileText, Save, Check, Rotate
 import { prescriptionSettingsApi, PrescriptionSettingsRequest } from '@/features/doctor/services/prescriptionSettingsApi';
 import { useAuthStore } from '@/store/authStore';
 import { useDoctorProfile } from '@/features/doctor/hooks/useDoctorProfile';
+import { useMediaUploadApi } from '@/hooks/useApi';
 
 export const SettingsForm: React.FC = () => {
   const { settings, update } = usePrescriptionStore();
   const { user, getUserId } = useAuthStore();
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [prescriptionSettingId, setPrescriptionSettingId] = useState<string>('');
   
   // Get doctor profile to fetch the correct doctorId
   const userId = getUserId() || '';
   const { data: doctorProfile, isLoading: doctorProfileLoading } = useDoctorProfile(userId);
   const doctorId = doctorProfile?.doctorId;
+
+  // Fetch prescription assets
+  const { data: assetsData, isLoading: assetsLoading, refetch: refetchAssets } = useMediaUploadApi.getPrescriptionAssets(doctorId || '');
+
+  // Helper function to get asset URL by type
+  const getAssetByType = (assetType: 'header_image' | 'footer_image' | 'signature_image') => {
+    if (!assetsData?.assets) return undefined;
+    const asset = assetsData.assets.find(a => a.assetType === assetType);
+    return asset?.blobUrl;
+  };
+
+  // Helper function to get asset by type (returns full asset object)
+  const getAssetByTypeFull = (assetType: 'header_image' | 'footer_image' | 'signature_image') => {
+    if (!assetsData?.assets) return undefined;
+    return assetsData.assets.find(a => a.assetType === assetType);
+  };
 
   const updateSettings = (key: string, value: any) => {
     update({ [key]: value });
@@ -113,7 +132,7 @@ export const SettingsForm: React.FC = () => {
       header: {
         height: apiSettings.headerSettings.height,
         width: apiSettings.headerSettings.width,
-        showImage: apiSettings.headerSettings.showImage,
+        showImage: apiSettings.useHeaderSettings && apiSettings.headerSettings.showImage,
         showText: apiSettings.useHeaderSettings, // Map useHeaderSettings to showText
         text: '', // Default empty text
         showOnAllPages: apiSettings.headerSettings.showOnAllPages,
@@ -121,15 +140,18 @@ export const SettingsForm: React.FC = () => {
       footer: {
         height: apiSettings.footerSettings.height,
         width: apiSettings.footerSettings.width,
-        showImage: apiSettings.footerSettings.showImage,
+        showImage: apiSettings.useFooterSettings && apiSettings.footerSettings.showImage,
         showText: apiSettings.useFooterSettings, // Map useFooterSettings to showText
-        showSignature: apiSettings.doctorSetting.showSignature,
+        showSignature: apiSettings.useDoctorSetting && apiSettings.doctorSetting.showSignature,
         text: '', // Default empty text
         signatureHeight: apiSettings.doctorSetting.signatureHeight,
         signatureWidth: apiSettings.doctorSetting.signatureWidth,
         doctorName: apiSettings.doctorSetting.doctorName,
         showOnAllPages: apiSettings.footerSettings.showOnAllPages,
       },
+      useHeaderSettings: apiSettings.useHeaderSettings,
+      useFooterSettings: apiSettings.useFooterSettings,
+      useDoctorSetting: apiSettings.useDoctorSetting,
       font: {
         family: 'Arial' as any, // Default font since not in new API
         size: 12, // Default size since not in new API
@@ -156,7 +178,12 @@ export const SettingsForm: React.FC = () => {
       if (response.success && response.settings) {
         const localSettings = mapApiResponseToLocalSettings(response.settings);
         update(localSettings);
+        // Store the prescription setting ID for asset uploads
+        if (response.prescriptionSettingsId) {
+          setPrescriptionSettingId(response.prescriptionSettingsId);
+        }
         console.log('Settings loaded from API:', localSettings);
+        console.log('Prescription Setting ID:', response.prescriptionSettingsId);
       }
     } catch (error) {
       console.error('Error loading settings from API:', error);
@@ -422,11 +449,23 @@ export const SettingsForm: React.FC = () => {
             
             {settings.useHeaderSettings && !settings.useLetterhead && (
               <>
-                <ImageUploader
-                  value={settings.images?.header}
-                  onChange={(image) => updateNestedSettings('images', 'header', image)}
-                  placeholder="Upload header image"
-                />
+                {doctorId && prescriptionSettingId ? (
+                  <PrescriptionAssetUploader
+                    value={settings.images?.header || getAssetByType('header_image')}
+                    onChange={(image) => updateNestedSettings('images', 'header', image)}
+                    placeholder="Upload header image"
+                    assetType="header_image"
+                    doctorId={doctorId}
+                    prescriptionSettingId={prescriptionSettingId}
+                    onUploadSuccess={() => refetchAssets()}
+                    assetId={getAssetByTypeFull('header_image')?.prescriptionAssestId}
+                    blobAssetId={getAssetByTypeFull('header_image')?.blobAssetId}
+                  />
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                    <p className="text-sm text-gray-500">Loading...</p>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <NumberField
                     label="Height"
@@ -481,11 +520,23 @@ export const SettingsForm: React.FC = () => {
             
             {settings.useFooterSettings && !settings.useLetterhead && (
               <>
-                <ImageUploader
-                  value={settings.images?.footer}
-                  onChange={(image) => updateNestedSettings('images', 'footer', image)}
-                  placeholder="Upload footer image"
-                />
+                {doctorId && prescriptionSettingId ? (
+                  <PrescriptionAssetUploader
+                    value={settings.images?.footer || getAssetByType('footer_image')}
+                    onChange={(image) => updateNestedSettings('images', 'footer', image)}
+                    placeholder="Upload footer image"
+                    assetType="footer_image"
+                    doctorId={doctorId}
+                    prescriptionSettingId={prescriptionSettingId}
+                    onUploadSuccess={() => refetchAssets()}
+                    assetId={getAssetByTypeFull('footer_image')?.prescriptionAssestId}
+                    blobAssetId={getAssetByTypeFull('footer_image')?.blobAssetId}
+                  />
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                    <p className="text-sm text-gray-500">Loading...</p>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <NumberField
                     label="Height"
@@ -556,11 +607,23 @@ export const SettingsForm: React.FC = () => {
               {/* Doctor Signature Upload */}
               <div className="space-y-3 p-3 bg-orange-50 dark:bg-orange-900/10 rounded-lg border border-orange-200 dark:border-orange-700">
                 <Label className="text-sm font-medium text-orange-700 dark:text-orange-300">Doctor Signature</Label>
-                <ImageUploader
-                  value={settings.images?.signature}
-                  onChange={(image) => updateNestedSettings('images', 'signature', image)}
-                  placeholder="Upload doctor signature"
-                />
+                {doctorId && prescriptionSettingId ? (
+                  <PrescriptionAssetUploader
+                    value={settings.images?.signature || getAssetByType('signature_image')}
+                    onChange={(image) => updateNestedSettings('images', 'signature', image)}
+                    placeholder="Upload doctor signature"
+                    assetType="signature_image"
+                    doctorId={doctorId}
+                    prescriptionSettingId={prescriptionSettingId}
+                    onUploadSuccess={() => refetchAssets()}
+                    assetId={getAssetByTypeFull('signature_image')?.prescriptionAssestId}
+                    blobAssetId={getAssetByTypeFull('signature_image')?.blobAssetId}
+                  />
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                    <p className="text-sm text-gray-500">Loading...</p>
+                  </div>
+                )}
                 
                 <div className="grid grid-cols-2 gap-3">
                   <NumberField

@@ -3,6 +3,9 @@ import { usePrescriptionStore } from '@/store/prescription';
 import { mmToPx, A4_WIDTH_MM, A4_HEIGHT_MM } from '@/utils/units';
 import { Button } from '@/components/ui/button';
 import { Printer, Eye, Grid3X3, Maximize2, Download, Settings, Square, ZoomIn, ZoomOut } from 'lucide-react';
+import { useMediaUploadApi } from '@/hooks/useApi';
+import { useDoctorProfile } from '@/features/doctor/hooks/useDoctorProfile';
+import { useAuthStore } from '@/store/authStore';
 
 interface A4PreviewProps {
   className?: string;
@@ -10,6 +13,22 @@ interface A4PreviewProps {
 
 export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
   const { settings } = usePrescriptionStore();
+  
+  // Get doctor profile to fetch the correct doctorId
+  const { getUserId } = useAuthStore();
+  const userId = getUserId() || '';
+  const { data: doctorProfile, isLoading: doctorProfileLoading } = useDoctorProfile(userId);
+  const doctorId = doctorProfile?.doctorId;
+
+  // Fetch prescription assets
+  const { data: assetsData, isLoading: assetsLoading } = useMediaUploadApi.getPrescriptionAssets(doctorId || '');
+
+  // Helper function to get asset URL by type
+  const getAssetByType = (assetType: 'header_image' | 'footer_image' | 'signature_image') => {
+    if (!assetsData?.assets) return undefined;
+    const asset = assetsData.assets.find(a => a.assetType === assetType);
+    return asset?.blobUrl;
+  };
   const [showGrid, setShowGrid] = useState(false);
   const [showMargins, setShowMargins] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -78,7 +97,20 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
   const a4Width = mmToPx(A4_WIDTH_MM) * scale;
   const a4Height = mmToPx(A4_HEIGHT_MM) * scale;
 
+  // Get margin values, using 0 as default if not set (to match API response)
+  const topMargin = settings.page?.margin?.top ?? 1;
+  const rightMargin = settings.page?.margin?.right ?? 1;
+  const bottomMargin = settings.page?.margin?.bottom ?? 1;
+  const leftMargin = settings.page?.margin?.left ?? 1;
+
   const handlePrint = () => {
+    console.log('Print CSS will use:', {
+      topMargin: `${topMargin}mm`,
+      rightMargin: `${rightMargin}mm`, 
+      bottomMargin: `${bottomMargin}mm`,
+      leftMargin: `${leftMargin}mm`,
+      paddingCSS: `${topMargin}mm ${rightMargin}mm ${bottomMargin}mm ${leftMargin}mm`
+    });
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(`
@@ -90,22 +122,55 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 size: A4;
                 margin: 0;
               }
-              body { 
-                margin: 0; 
-                padding: 0; 
-                font-family: ${settings.font?.family ?? 'Arial'}; 
-                background: white;
+              * {
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+              }
+              html, body { 
+                margin: 0 !important; 
+                padding: 0 !important; 
+                font-family: ${settings.font?.family ?? 'Arial'} !important; 
+                background: white !important;
+                width: 100% !important;
+                height: 100% !important;
               }
               .prescription { 
-                width: 210mm; 
-                height: 297mm; 
-                margin: 0; 
-                padding: ${settings.page?.margin?.top ?? 15}mm ${settings.page?.margin?.right ?? 15}mm ${settings.page?.margin?.bottom ?? 15}mm ${settings.page?.margin?.left ?? 15}mm;
-                position: relative;
-                background: white;
-                display: flex;
-                flex-direction: column;
-                box-sizing: border-box;
+                width: 210mm !important; 
+                height: 297mm !important; 
+                margin: 0 !important; 
+                padding: ${topMargin}mm ${rightMargin}mm ${bottomMargin}mm ${leftMargin}mm !important;
+                position: relative !important;
+                background: white !important;
+                display: flex !important;
+                flex-direction: column !important;
+                box-sizing: border-box !important;
+                border: none !important;
+                outline: none !important;
+              }
+              .prescription * {
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+              }
+              /* Additional margin/padding reset */
+              div, span, p, img, table, tr, td, th, h1, h2, h3, h4, h5, h6 {
+                margin: 0 !important;
+                padding: 0 !important;
+                border: none !important;
+              }
+              /* Ensure no browser default margins */
+              @media print {
+                * {
+                  margin: 0 !important;
+                  padding: 0 !important;
+                }
+                html, body {
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  width: 100% !important;
+                  height: 100% !important;
+                }
               }
               .header { 
                 height: ${settings.useLetterhead ? (settings.letterhead?.headerHeight ?? 30) : (settings.header?.height ?? 20)}mm; 
@@ -123,12 +188,13 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
               }
               .content { 
                 flex: 1; 
-                padding: 5mm;
+                padding: 0;
                 font-size: ${settings.font?.size ?? 12}px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 min-height: 0;
+                overflow: hidden;
               }
               .footer { 
                 height: ${settings.useLetterhead ? (settings.letterhead?.footerHeight ?? 20) : (settings.footer?.height ?? 15)}mm; 
@@ -136,7 +202,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                padding: 2.5mm 5mm;
+                padding: 0;
                 position: relative;
                 overflow: hidden;
                 min-height: 10mm;
@@ -196,8 +262,8 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                   </div>` : 
                   ''
                 }
-                ${!settings.useLetterhead && settings.header?.showImage && settings.images?.header ? 
-                  `<img src="${settings.images.header}" alt="Header" />` : 
+                ${!settings.useLetterhead && settings.header?.showImage && (settings.images?.header || getAssetByType('header_image')) ? 
+                  `<img src="${settings.images?.header || getAssetByType('header_image')}" alt="Header" />` : 
                   ''
                 }
                 ${!settings.useLetterhead && settings.header?.showText ? 
@@ -210,12 +276,12 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
               <div class="content">
                 <!-- Content area for prescription details -->
               </div>
-              ${settings.footer?.showSignature ? 
-                `<div class="signature-section" style="display: flex; justify-content: flex-end; align-items: center; padding: 5mm 5mm 2mm 5mm; min-height: 15mm;">
+              ${(settings.footer?.showSignature || (settings.useDoctorSetting && (settings.images?.signature || getAssetByType('signature_image')))) ? 
+                `<div class="signature-section" style="display: flex; justify-content: flex-end; align-items: center; padding: 0; min-height: 15mm; page-break-inside: avoid;">
                   <div style="display: flex; flex-direction: column; align-items: center;">
                     <div class="signature">
-                      ${settings.images?.signature ? 
-                        `<img src="${settings.images.signature}" alt="Signature" />` : 
+                      ${(settings.images?.signature || getAssetByType('signature_image')) ? 
+                        `<img src="${settings.images?.signature || getAssetByType('signature_image')}" alt="Signature" />` : 
                         'Signature'
                       }
                     </div>
@@ -232,8 +298,8 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                     <div style="position: absolute; inset: 0; opacity: 0.3; background-image: repeating-linear-gradient(45deg, #333, #333 3px, transparent 3px, transparent 12px);"></div>
                   </div>` : 
                   `<div class="flex-1">
-                    ${settings.footer?.showImage && settings.images?.footer ? 
-                      `<img src="${settings.images.footer}" alt="Footer" />` : 
+                    ${((settings.footer?.showImage && settings.images?.footer) || getAssetByType('footer_image')) ? 
+                      `<img src="${settings.images?.footer || getAssetByType('footer_image')}" alt="Footer" />` : 
                       ''
                     }
                     ${settings.footer?.showText && settings.footer?.text ? 
@@ -271,7 +337,8 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
             <style>
               @page {
                 size: A4;
-                margin: 0;
+                margin: ${settings.page?.margin?.top ?? 1}mm ${settings.page?.margin?.right ?? 1}mm ${settings.page?.margin?.bottom ?? 1}mm ${settings.page?.margin?.left ?? 1}mm !important;
+                padding: 0 !important;
               }
               body { 
                 margin: 0; 
@@ -283,7 +350,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 width: 210mm; 
                 height: 297mm; 
                 margin: 0 auto; 
-                padding: ${settings.page?.margin?.top ?? 15}mm ${settings.page?.margin?.right ?? 15}mm ${settings.page?.margin?.bottom ?? 15}mm ${settings.page?.margin?.left ?? 15}mm;
+                padding: ${settings.page?.margin?.top ?? 1}mm ${settings.page?.margin?.right ?? 1}mm ${settings.page?.margin?.bottom ?? 1}mm ${settings.page?.margin?.left ?? 1}mm;
                 position: relative;
                 background: white;
                 display: flex;
@@ -308,7 +375,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
               }
               .content { 
                 flex: 1; 
-                padding: 5mm;
+                padding: 0;
                 font-size: ${settings.font?.size ?? 12}px;
                 display: flex;
                 align-items: center;
@@ -320,7 +387,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                padding: 2.5mm 5mm;
+                padding: 0;
                 position: relative;
                 overflow: hidden;
                 min-height: 10mm;
@@ -395,8 +462,8 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                   </div>` : 
                   ''
                 }
-                ${!settings.useLetterhead && settings.header?.showImage && settings.images?.header ? 
-                  `<img src="${settings.images.header}" alt="Header" />` : 
+                ${!settings.useLetterhead && settings.header?.showImage && (settings.images?.header || getAssetByType('header_image')) ? 
+                  `<img src="${settings.images?.header || getAssetByType('header_image')}" alt="Header" />` : 
                   ''
                 }
                 ${!settings.useLetterhead && settings.header?.showText ? 
@@ -409,12 +476,12 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
               <div class="content">
                 <!-- Content area for prescription details -->
               </div>
-              ${settings.footer?.showSignature ? 
-                `<div class="signature-section" style="display: flex; justify-content: flex-end; align-items: center; padding: 5mm 5mm 2mm 5mm; min-height: 15mm;">
+              ${(settings.footer?.showSignature || (settings.useDoctorSetting && (settings.images?.signature || getAssetByType('signature_image')))) ? 
+                `<div class="signature-section" style="display: flex; justify-content: flex-end; align-items: center; padding: 0; min-height: 15mm; page-break-inside: avoid;">
                   <div style="display: flex; flex-direction: column; align-items: center;">
                     <div class="signature">
-                      ${settings.images?.signature ? 
-                        `<img src="${settings.images.signature}" alt="Signature" />` : 
+                      ${(settings.images?.signature || getAssetByType('signature_image')) ? 
+                        `<img src="${settings.images?.signature || getAssetByType('signature_image')}" alt="Signature" />` : 
                         'Signature'
                       }
                     </div>
@@ -431,8 +498,8 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                     <div style="position: absolute; inset: 0; opacity: 0.3; background-image: repeating-linear-gradient(45deg, #333, #333 3px, transparent 3px, transparent 12px);"></div>
                   </div>` : 
                   `<div class="flex-1">
-                    ${settings.footer?.showImage && settings.images?.footer ? 
-                      `<img src="${settings.images.footer}" alt="Footer" />` : 
+                    ${((settings.footer?.showImage && settings.images?.footer) || getAssetByType('footer_image')) ? 
+                      `<img src="${settings.images?.footer || getAssetByType('footer_image')}" alt="Footer" />` : 
                       ''
                     }
                     ${settings.footer?.showText && settings.footer?.text ? 
@@ -464,22 +531,55 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 size: A4;
                 margin: 0;
               }
-              body { 
-                margin: 0; 
-                padding: 0; 
-                font-family: ${settings.font?.family ?? 'Arial'}; 
-                background: white;
+              * {
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+              }
+              html, body { 
+                margin: 0 !important; 
+                padding: 0 !important; 
+                font-family: ${settings.font?.family ?? 'Arial'} !important; 
+                background: white !important;
+                width: 100% !important;
+                height: 100% !important;
               }
               .prescription { 
-                width: 210mm; 
-                height: 297mm; 
-                margin: 0; 
-                padding: ${settings.page?.margin?.top ?? 15}mm ${settings.page?.margin?.right ?? 15}mm ${settings.page?.margin?.bottom ?? 15}mm ${settings.page?.margin?.left ?? 15}mm;
-                position: relative;
-                background: white;
-                display: flex;
-                flex-direction: column;
-                box-sizing: border-box;
+                width: 210mm !important; 
+                height: 297mm !important; 
+                margin: 0 !important; 
+                padding: ${topMargin}mm ${rightMargin}mm ${bottomMargin}mm ${leftMargin}mm !important;
+                position: relative !important;
+                background: white !important;
+                display: flex !important;
+                flex-direction: column !important;
+                box-sizing: border-box !important;
+                border: none !important;
+                outline: none !important;
+              }
+              .prescription * {
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+              }
+              /* Additional margin/padding reset */
+              div, span, p, img, table, tr, td, th, h1, h2, h3, h4, h5, h6 {
+                margin: 0 !important;
+                padding: 0 !important;
+                border: none !important;
+              }
+              /* Ensure no browser default margins */
+              @media print {
+                * {
+                  margin: 0 !important;
+                  padding: 0 !important;
+                }
+                html, body {
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  width: 100% !important;
+                  height: 100% !important;
+                }
               }
               .header { 
                 height: ${settings.useLetterhead ? (settings.letterhead?.headerHeight ?? 30) : (settings.header?.height ?? 20)}mm; 
@@ -497,7 +597,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
               }
               .content { 
                 flex: 1; 
-                padding: 5mm;
+                padding: 0;
                 font-size: ${settings.font?.size ?? 12}px;
                 display: flex;
                 align-items: center;
@@ -509,7 +609,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                padding: 2.5mm 5mm;
+                padding: 0;
                 position: relative;
                 overflow: hidden;
                 min-height: 10mm;
@@ -569,8 +669,8 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                   </div>` : 
                   ''
                 }
-                ${!settings.useLetterhead && settings.header?.showImage && settings.images?.header ? 
-                  `<img src="${settings.images.header}" alt="Header" />` : 
+                ${!settings.useLetterhead && settings.header?.showImage && (settings.images?.header || getAssetByType('header_image')) ? 
+                  `<img src="${settings.images?.header || getAssetByType('header_image')}" alt="Header" />` : 
                   ''
                 }
                 ${!settings.useLetterhead && settings.header?.showText ? 
@@ -583,12 +683,12 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
               <div class="content">
                 <!-- Content area for prescription details -->
               </div>
-              ${settings.footer?.showSignature ? 
-                `<div class="signature-section" style="display: flex; justify-content: flex-end; align-items: center; padding: 5mm 5mm 2mm 5mm; min-height: 15mm;">
+              ${(settings.footer?.showSignature || (settings.useDoctorSetting && (settings.images?.signature || getAssetByType('signature_image')))) ? 
+                `<div class="signature-section" style="display: flex; justify-content: flex-end; align-items: center; padding: 0; min-height: 15mm; page-break-inside: avoid;">
                   <div style="display: flex; flex-direction: column; align-items: center;">
                     <div class="signature">
-                      ${settings.images?.signature ? 
-                        `<img src="${settings.images.signature}" alt="Signature" />` : 
+                      ${(settings.images?.signature || getAssetByType('signature_image')) ? 
+                        `<img src="${settings.images?.signature || getAssetByType('signature_image')}" alt="Signature" />` : 
                         'Signature'
                       }
                     </div>
@@ -605,8 +705,8 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                     <div style="position: absolute; inset: 0; opacity: 0.3; background-image: repeating-linear-gradient(45deg, #333, #333 3px, transparent 3px, transparent 12px);"></div>
                   </div>` : 
                   `<div class="flex-1">
-                    ${settings.footer?.showImage && settings.images?.footer ? 
-                      `<img src="${settings.images.footer}" alt="Footer" />` : 
+                    ${((settings.footer?.showImage && settings.images?.footer) || getAssetByType('footer_image')) ? 
+                      `<img src="${settings.images?.footer || getAssetByType('footer_image')}" alt="Footer" />` : 
                       ''
                     }
                     ${settings.footer?.showText && settings.footer?.text ? 
@@ -786,7 +886,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
               height: Math.max(a4Height, 74), // Minimum height of 74mm
               minWidth: '53mm',
               minHeight: '74mm',
-              padding: `${(settings.page?.margin?.top ?? 20) * scale}px ${(settings.page?.margin?.right ?? 20) * scale}px ${(settings.page?.margin?.bottom ?? 20) * scale}px ${(settings.page?.margin?.left ?? 20) * scale}px`,
+              padding: `${topMargin * scale}px ${rightMargin * scale}px ${bottomMargin * scale}px ${leftMargin * scale}px`,
               boxSizing: 'border-box',
               position: 'relative',
               marginTop: '0px',
@@ -806,7 +906,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                     top: 0,
                     left: 0,
                     right: 0,
-                    height: `${(settings.page.margin.top ?? 15) * scale}px`,
+                    height: `${topMargin * scale}px`,
                   }}
                 >
                   {/* Top margin ruler line */}
@@ -828,7 +928,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                       fontSize: `${Math.max(8 * scale, 6)}px`,
                     }}
                   >
-                    {settings.page.margin.top ?? 15}mm
+                    {topMargin}mm
                   </div>
                 </div>
                 
@@ -839,7 +939,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                     bottom: 0,
                     left: 0,
                     right: 0,
-                    height: `${(settings.page.margin.bottom ?? 15) * scale}px`,
+                    height: `${bottomMargin * scale}px`,
                   }}
                 >
                   {/* Bottom margin ruler line */}
@@ -861,7 +961,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                       fontSize: `${Math.max(8 * scale, 6)}px`,
                     }}
                   >
-                    {settings.page.margin.bottom ?? 15}mm
+                    {bottomMargin}mm
                   </div>
                 </div>
                 
@@ -872,7 +972,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                     top: 0,
                     bottom: 0,
                     left: 0,
-                    width: `${(settings.page.margin.left ?? 15) * scale}px`,
+                    width: `${leftMargin * scale}px`,
                   }}
                 >
                   {/* Left margin ruler line */}
@@ -895,7 +995,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                       fontSize: `${Math.max(8 * scale, 6)}px`,
                     }}
                   >
-                    {settings.page.margin.left ?? 15}mm
+                    {leftMargin}mm
                   </div>
                 </div>
                 
@@ -906,7 +1006,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                     top: 0,
                     bottom: 0,
                     right: 0,
-                    width: `${(settings.page.margin.right ?? 15) * scale}px`,
+                    width: `${rightMargin * scale}px`,
                   }}
                 >
                   {/* Right margin ruler line */}
@@ -929,7 +1029,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                       fontSize: `${Math.max(8 * scale, 6)}px`,
                     }}
                   >
-                    {settings.page.margin.right ?? 15}mm
+                    {rightMargin}mm
                   </div>
                 </div>
 
@@ -937,10 +1037,10 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 <div 
                   className="absolute bg-green-50 opacity-30 border-2 border-green-300 border-dashed"
                   style={{
-                    top: `${(settings.page.margin.top ?? 15) * scale}px`,
-                    left: `${(settings.page.margin.left ?? 15) * scale}px`,
-                    right: `${(settings.page.margin.right ?? 15) * scale}px`,
-                    bottom: `${(settings.page.margin.bottom ?? 15) * scale}px`,
+                    top: `${topMargin * scale}px`,
+                    left: `${leftMargin * scale}px`,
+                    right: `${rightMargin * scale}px`,
+                    bottom: `${bottomMargin * scale}px`,
                   }}
                 >
                   {/* Content area label */}
@@ -1018,9 +1118,9 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                   </div>
                 ) : (
                   <>
-                    {settings.header?.showImage && settings.images?.header && (
+                    {((settings.header?.showImage && settings.images?.header) || getAssetByType('header_image')) && (
                       <img
-                        src={settings.images.header}
+                        src={settings.images?.header || getAssetByType('header_image')}
                         alt="Header"
                         className="max-h-full max-w-full object-contain"
                         style={{
@@ -1091,7 +1191,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
           </div>
 
           {/* Doctor Signature Section */}
-          {settings.footer?.showSignature && (
+          {(settings.footer?.showSignature || (settings.useDoctorSetting && (settings.images?.signature || getAssetByType('signature_image')))) && (
             <div 
               className="flex justify-end items-center relative overflow-hidden flex-shrink-0"
               style={{ 
@@ -1111,9 +1211,9 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                     fontSize: `${Math.max(12 * scale, 8)}px`
                   }}
                 >
-                  {settings.images?.signature ? (
+                  {(settings.images?.signature || getAssetByType('signature_image')) ? (
                     <img
-                      src={settings.images.signature}
+                      src={settings.images?.signature || getAssetByType('signature_image')}
                       alt="Signature"
                       className="max-h-full max-w-full object-contain"
                     />
@@ -1168,7 +1268,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
               </div>
             ) : (
               <>
-                {(!settings.footer?.showImage && !settings.footer?.showText && !settings.footer?.showSignature) ? (
+                {(!((settings.footer?.showImage && settings.images?.footer) || getAssetByType('footer_image')) && !settings.footer?.showText && !(settings.footer?.showSignature || (settings.useDoctorSetting && (settings.images?.signature || getAssetByType('signature_image'))))) ? (
                   <div className="w-full h-full flex items-center justify-center bg-gray-100 relative">
                     <div 
                       className="absolute inset-0 opacity-20"
@@ -1194,9 +1294,9 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 ) : (
                   <>
                     <div className="flex-1 flex items-center">
-                      {settings.footer?.showImage && settings.images?.footer && (
+                      {((settings.footer?.showImage && settings.images?.footer) || getAssetByType('footer_image')) && (
                         <img
-                          src={settings.images.footer}
+                          src={settings.images?.footer || getAssetByType('footer_image')}
                           alt="Footer"
                           className="max-h-full max-w-full object-contain"
                           style={{

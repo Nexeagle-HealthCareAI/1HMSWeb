@@ -12,18 +12,18 @@ const defaultSettings: HeaderFooterSettings = {
   page: {
     orientation: 'portrait',
     margin: {
-      top: 15,
-      right: 15,
-      bottom: 15,
-      left: 15,
+      top: 20,
+      right: 20,
+      bottom: 20,
+      left: 20,
     },
   },
   pdf: {
     margin: {
-      top: 15,
-      right: 15,
-      bottom: 15,
-      left: 15,
+      top: 20,
+      right: 20,
+      bottom: 20,
+      left: 20,
     },
   },
   images: {
@@ -37,7 +37,7 @@ const defaultSettings: HeaderFooterSettings = {
     footerHeight: 20,
   },
   useHeaderSettings: false,
-  useFooterSettings: false,
+  useFooterSettings: true,
   useDoctorSetting: false,
   header: {
     height: 20,

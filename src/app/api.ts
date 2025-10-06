@@ -173,6 +173,8 @@ export const API_ENDPOINTS = {
             },
   PRESCRIPTION: {
     UPLOAD_ASSET: '/prescription/assets/upload',
+    GET_ASSETS: (doctorId: string) => `/prescription/assets?doctorId=${doctorId}`,
+    DELETE_ASSET: '/prescription/assets/remove',
   },
 } as const;
 

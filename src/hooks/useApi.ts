@@ -162,8 +162,41 @@ export const useMediaUploadApi = {
 
   // Upload prescription asset
   uploadPrescriptionAsset: () => useMutation({
-    mutationFn: ({ doctorId, file }: { doctorId: string; file: File }) => 
-      mediaUploadApi.uploadPrescriptionAsset(doctorId, file),
+    mutationFn: ({ 
+      doctorId, 
+      file, 
+      assetType, 
+      prescriptionSettingId 
+    }: { 
+      doctorId: string; 
+      file: File; 
+      assetType: 'header_image' | 'footer_image' | 'signature_image';
+      prescriptionSettingId: string;
+    }) => 
+      mediaUploadApi.uploadPrescriptionAsset(doctorId, file, assetType, prescriptionSettingId),
+  }),
+
+  // Get prescription assets
+  getPrescriptionAssets: (doctorId: string) => createApiHook(
+    ['prescription-assets', doctorId],
+    () => mediaUploadApi.getPrescriptionAssets(doctorId),
+    {
+      enabled: !!doctorId,
+      staleTime: 2 * 60 * 1000, // 2 minutes
+      retry: (failureCount, error: any) => {
+        // Don't retry on 404 errors (no assets found)
+        if (error?.response?.status === 404) {
+          return false;
+        }
+        return failureCount < 2; // Retry up to 2 times for other errors
+      },
+    }
+  ),
+
+  // Delete prescription asset
+  deletePrescriptionAsset: () => useMutation({
+    mutationFn: (deleteRequest: { prescriptionAssestId: string; blobAssetId: string }) => 
+      mediaUploadApi.deletePrescriptionAsset(deleteRequest),
   }),
 };
 
