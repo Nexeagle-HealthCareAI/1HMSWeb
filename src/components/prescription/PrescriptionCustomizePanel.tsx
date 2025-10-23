@@ -381,8 +381,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
               <Settings className="h-5 w-5 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Medical Prescription Fields</h2>
-              <p className="text-sm text-gray-600">Enable or disable medical fields according to your practice needs</p>
+              <h2 className="text-xl font-bold text-gray-900">Prescription Fields Configuration</h2>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -397,18 +396,39 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
       {/* Compact Content - No Scrolling */}
       <div className="flex-1 flex flex-col h-full">
         <Tabs value={customizeTab} onValueChange={(value) => setCustomizeTab(value as 'fields' | 'playground')}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="fields">Fields</TabsTrigger>
-            <TabsTrigger value="playground">Personalized Data</TabsTrigger>
-          </TabsList>
+        <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-gray-700">
+          <TabsTrigger 
+            value="fields" 
+            className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+          >
+            <Settings className="h-4 w-4" />
+            <span className="font-medium">Prescription Fields</span>
+            {customizeTab === 'fields' && (
+              <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+            )}
+          </TabsTrigger>
+          <TabsTrigger 
+            value="playground" 
+            className="flex items-center gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-green-50 dark:hover:bg-green-900/20"
+          >
+            <Database className="h-4 w-4" />
+            <span className="font-medium">Personalized Data</span>
+            {customizeTab === 'playground' && (
+              <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
           <TabsContent value="fields" className="h-full flex flex-col">
-            {/* Compact Header */}
-            <div className="flex-shrink-0 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200">
-              <div className="flex items-center gap-2">
-                <Stethoscope className="h-4 w-4 text-blue-600" />
-                <h3 className="text-sm font-semibold text-blue-900">Medical Fields</h3>
-                <span className="text-xs text-blue-700">• Green = Active • Click ON/OFF to toggle</span>
+            {/* Enhanced Fields Header */}
+            <div className="flex-shrink-0 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b border-blue-200 dark:border-blue-700">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                <Stethoscope className="h-5 w-5 text-blue-600" />
+                <div>
+                  <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-200">Prescription Fields</h3>
+                  <p className="text-sm text-blue-700 dark:text-blue-300">• Green = Active • Click ON/OFF to toggle</p>
+                </div>
               </div>
             </div>
 
@@ -475,19 +495,22 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
           </TabsContent>
 
           <TabsContent value="playground" className="h-full flex flex-col">
-            {/* Header */}
-            <div className="flex-shrink-0 p-3 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            {/* Enhanced Personalized Data Header */}
+            <div className="flex-shrink-0 p-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Database className="h-4 w-4 text-blue-600" />
-                  <h3 className="text-sm font-semibold text-gray-900">Medical Templates</h3>
-                  <span className="text-xs text-blue-600">• 8 categories available</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></div>
+                  <Database className="h-5 w-5 text-green-600" />
+                  <div>
+                    <h3 className="text-lg font-semibold text-green-900 dark:text-green-200">Personalized Data</h3>
+                    <span className="text-sm text-green-700 dark:text-green-300">• 8 categories available</span>
+                  </div>
                 </div>
                 <Button
                   onClick={() => setShowAddModal(true)}
-                  className="bg-blue-600 hover:bg-blue-700 h-7 px-3 text-xs"
+                  className="bg-green-600 hover:bg-green-700 h-8 px-4 text-sm shadow-lg"
                 >
-                  <Plus className="h-3 w-3 mr-1" />
+                  <Plus className="h-4 w-4 mr-2" />
                   Add {personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label}
                 </Button>
               </div>
@@ -495,11 +518,14 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
 
             {/* Sidebar Layout */}
             <div className="flex-1 flex overflow-hidden">
-              {/* Category Sidebar */}
-              <div className="w-64 flex-shrink-0 border-r border-gray-200 bg-gray-50">
-                <div className="p-3">
-                  <h4 className="text-sm font-semibold text-gray-800 mb-3">Medical Categories</h4>
-                  <div className="space-y-1">
+              {/* Enhanced Category Sidebar */}
+              <div className="w-64 flex-shrink-0 border-r border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
+                <div className="p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <BookOpen className="h-4 w-4 text-gray-600" />
+                    <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Medical Categories</h4>
+                  </div>
+                  <div className="space-y-2">
                     {personalizedDataCategories.map((category) => {
                       const IconComponent = category.icon;
                       const isSelected = selectedPersonalizedCategory === category.id;
@@ -509,15 +535,26 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                         <button
                           key={category.id}
                           onClick={() => setSelectedPersonalizedCategory(category.id)}
-                          className={`w-full flex items-center gap-3 p-3 rounded-lg text-sm transition-all duration-200 ${
+                          className={`w-full flex items-center gap-3 p-3 rounded-lg text-sm transition-all duration-300 ${
                             isSelected
-                              ? 'bg-blue-100 text-blue-900 border border-blue-300'
-                              : 'hover:bg-white text-gray-700'
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-900 dark:text-green-200 border-2 border-green-300 dark:border-green-600 shadow-lg scale-105'
+                              : 'hover:bg-white dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 hover:scale-102'
                           }`}
                         >
-                          <IconComponent className={`h-4 w-4 ${category.color}`} />
-                          <span className="flex-1 text-left truncate">{category.label}</span>
-                          <span className="bg-gray-200 text-gray-600 px-2 py-1 rounded-full text-xs">{itemCount}</span>
+                          <div className={`p-1 rounded-md ${isSelected ? 'bg-green-200 dark:bg-green-800' : 'bg-gray-100 dark:bg-gray-600'}`}>
+                            <IconComponent className={`h-4 w-4 ${category.color}`} />
+                          </div>
+                          <span className="flex-1 text-left truncate font-medium">{category.label}</span>
+                          {isSelected && (
+                            <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></div>
+                          )}
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            isSelected 
+                              ? 'bg-green-600 text-white' 
+                              : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
+                          }`}>
+                            {itemCount}
+                          </span>
                         </button>
                       );
                     })}

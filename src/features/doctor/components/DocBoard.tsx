@@ -1272,14 +1272,26 @@ export const ClinicalDashboard: React.FC = () => {
             {/* Prescription Settings Tabs */}
             <div className="flex-shrink-0 p-3 border-b border-gray-200">
               <Tabs value={settingsTab} onValueChange={(value) => setSettingsTab(value as 'layout' | 'customize')}>
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="layout" className="flex items-center gap-2">
+                <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-gray-700">
+                  <TabsTrigger 
+                    value="layout" 
+                    className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  >
                     <SettingsIcon className="h-4 w-4" />
-                    <span>Layout Settings</span>
+                    <span className="font-medium">Layout Settings</span>
+                    {settingsTab === 'layout' && (
+                      <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                    )}
                   </TabsTrigger>
-                  <TabsTrigger value="customize" className="flex items-center gap-2">
+                  <TabsTrigger 
+                    value="customize" 
+                    className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  >
                     <FileText className="h-4 w-4" />
-                    <span>Customize Data</span>
+                    <span className="font-medium">Customize Data</span>
+                    {settingsTab === 'customize' && (
+                      <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                    )}
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -1289,6 +1301,18 @@ export const ClinicalDashboard: React.FC = () => {
             <div className="flex-1 min-h-0 overflow-y-auto">
               <Tabs value={settingsTab} onValueChange={(value) => setSettingsTab(value as 'layout' | 'customize')}>
                 <TabsContent value="layout" className="h-full m-0 overflow-y-auto">
+                  {/* Layout Settings Header */}
+                  <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b border-blue-200 dark:border-blue-700 p-3 mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                      <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200">
+                        Layout Settings
+                      </h3>
+                      <div className="text-sm text-blue-600 dark:text-blue-400">
+                        Configure your prescription layout
+                      </div>
+                    </div>
+                  </div>
                   <PrescriptionSettings />
                 </TabsContent>
                 <TabsContent value="customize" className="h-full m-0 overflow-y-auto">
