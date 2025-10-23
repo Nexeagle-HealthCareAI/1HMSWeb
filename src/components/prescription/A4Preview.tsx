@@ -94,6 +94,11 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
     return Math.max(calculatedScale, 0.4); // Minimum 40% scale for better visibility
   }, [isFullscreen, zoomLevel]);
 
+  // Helper function to convert mm to pixels with consistent scaling
+  const mmToPxScaled = (mm: number) => {
+    return mm * scale * 3.779527559; // Convert mm to pixels with proper scaling
+  };
+
   const a4Width = mmToPx(A4_WIDTH_MM) * scale;
   const a4Height = mmToPx(A4_HEIGHT_MM) * scale;
 
@@ -201,37 +206,49 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 background-color: #f9fafb;
                 display: flex;
                 align-items: center;
-                justify-content: space-between;
+                justify-content: center;
                 padding: 0;
                 position: relative;
                 overflow: hidden;
-                min-height: 10mm;
+                min-height: 12mm;
                 flex-shrink: 0;
+                border-top: 1px solid #e5e7eb;
+                margin-top: 4mm;
               }
               .footer img {
-                max-height: 100%;
-                max-width: 100%;
+                height: 100%;
+                width: 100%;
                 object-fit: contain;
+                object-position: center;
               }
               .signature { 
-                width: ${settings.footer?.signatureWidth ?? 20}mm; 
-                height: ${settings.footer?.signatureHeight ?? 10}mm;
-                border: 1px dashed #ccc;
-                background-color: white;
+                width: ${settings.footer?.signatureWidth ?? 25}mm; 
+                height: ${settings.footer?.signatureHeight ?? 12}mm;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 font-size: 12px;
                 color: #666;
                 flex-shrink: 0;
-                border-radius: 1mm;
-                min-width: 6mm;
-                min-height: 5mm;
+                min-width: 8mm;
+                min-height: 6mm;
+                background: transparent;
+                border: none;
+                outline: none;
+              }
+              .signature img {
+                border: none !important;
+                outline: none !important;
+                background: transparent !important;
+                box-shadow: none !important;
               }
               .signature img {
                 max-width: 100%;
                 max-height: 100%;
                 object-fit: contain;
+                background: transparent !important;
+                mix-blend-mode: normal;
+                filter: none;
               }
               .watermark {
                 position: absolute;
@@ -277,16 +294,16 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 <!-- Content area for prescription details -->
               </div>
               ${(settings.footer?.showSignature || (settings.useDoctorSetting && (settings.images?.signature || getAssetByType('signature_image')))) ? 
-                `<div class="signature-section" style="display: flex; justify-content: flex-end; align-items: center; padding: 0; min-height: 15mm; page-break-inside: avoid;">
-                  <div style="display: flex; flex-direction: column; align-items: center;">
+                `<div class="signature-section" style="display: flex; justify-content: flex-end; align-items: flex-start; padding: 8mm 10mm 4mm 10mm; min-height: 20mm; page-break-inside: avoid; margin-bottom: 8mm;">
+                  <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
                     <div class="signature">
                       ${(settings.images?.signature || getAssetByType('signature_image')) ? 
-                        `<img src="${settings.images?.signature || getAssetByType('signature_image')}" alt="Signature" />` : 
-                        'Signature'
+                        `<img src="${settings.images?.signature || getAssetByType('signature_image')}" alt="Signature" style="width: 100%; height: 100%; object-fit: contain; background: transparent; mix-blend-mode: normal; filter: none; border: none; outline: none;" onerror="this.style.display='none';" />` : 
+                        '<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; color: #9ca3af;"><span style="font-size: 10px;">No Signature</span><span style="font-size: 8px; opacity: 0.75;">Upload in settings</span></div>'
                       }
                     </div>
-                    <div style="text-align: center; font-size: 10px; margin-top: 2px; color: #666; line-height: 1.2;">
-                      ${settings.footer?.doctorName ? `<div style="font-weight: bold;">${settings.footer.doctorName}</div>` : ''}
+                    <div style="text-align: center; font-size: 11px; color: #374151; line-height: 1.2; font-weight: 500;">
+                      ${settings.footer?.doctorName ? `<div style="font-weight: 600; color: #1f2937;">${settings.footer.doctorName}</div>` : ''}
                     </div>
                   </div>
                 </div>` : 
@@ -297,13 +314,9 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                   `<div style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background-color: #f3f4f6; position: relative;">
                     <div style="position: absolute; inset: 0; opacity: 0.3; background-image: repeating-linear-gradient(45deg, #333, #333 3px, transparent 3px, transparent 12px);"></div>
                   </div>` : 
-                  `<div class="flex-1">
+                  `<div class="flex-1" style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">
                     ${((settings.footer?.showImage && settings.images?.footer) || getAssetByType('footer_image')) ? 
-                      `<img src="${settings.images?.footer || getAssetByType('footer_image')}" alt="Footer" />` : 
-                      ''
-                    }
-                    ${settings.footer?.showText && settings.footer?.text ? 
-                      `<div style="font-size: ${settings.font?.size ?? 12}px;">${settings.footer.text}</div>` : 
+                      `<img src="${settings.images?.footer || getAssetByType('footer_image')}" alt="Footer" style="height: 100%; width: 100%; object-fit: contain; object-position: center;" />` : 
                       ''
                     }
                   </div>`
@@ -386,37 +399,49 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 background-color: #f9fafb;
                 display: flex;
                 align-items: center;
-                justify-content: space-between;
+                justify-content: center;
                 padding: 0;
                 position: relative;
                 overflow: hidden;
-                min-height: 10mm;
+                min-height: 12mm;
                 flex-shrink: 0;
+                border-top: 1px solid #e5e7eb;
+                margin-top: 4mm;
               }
               .footer img {
-                max-height: 100%;
-                max-width: 100%;
+                height: 100%;
+                width: 100%;
                 object-fit: contain;
+                object-position: center;
               }
               .signature { 
-                width: ${settings.footer?.signatureWidth ?? 20}mm; 
-                height: ${settings.footer?.signatureHeight ?? 10}mm;
-                border: 1px dashed #ccc;
-                background-color: white;
+                width: ${settings.footer?.signatureWidth ?? 25}mm; 
+                height: ${settings.footer?.signatureHeight ?? 12}mm;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 font-size: 12px;
                 color: #666;
                 flex-shrink: 0;
-                border-radius: 1mm;
-                min-width: 6mm;
-                min-height: 5mm;
+                min-width: 8mm;
+                min-height: 6mm;
+                background: transparent;
+                border: none;
+                outline: none;
+              }
+              .signature img {
+                border: none !important;
+                outline: none !important;
+                background: transparent !important;
+                box-shadow: none !important;
               }
               .signature img {
                 max-width: 100%;
                 max-height: 100%;
                 object-fit: contain;
+                background: transparent !important;
+                mix-blend-mode: normal;
+                filter: none;
               }
               .watermark {
                 position: absolute;
@@ -477,16 +502,16 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 <!-- Content area for prescription details -->
               </div>
               ${(settings.footer?.showSignature || (settings.useDoctorSetting && (settings.images?.signature || getAssetByType('signature_image')))) ? 
-                `<div class="signature-section" style="display: flex; justify-content: flex-end; align-items: center; padding: 0; min-height: 15mm; page-break-inside: avoid;">
-                  <div style="display: flex; flex-direction: column; align-items: center;">
+                `<div class="signature-section" style="display: flex; justify-content: flex-end; align-items: flex-start; padding: 8mm 10mm 4mm 10mm; min-height: 20mm; page-break-inside: avoid; margin-bottom: 8mm;">
+                  <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
                     <div class="signature">
                       ${(settings.images?.signature || getAssetByType('signature_image')) ? 
-                        `<img src="${settings.images?.signature || getAssetByType('signature_image')}" alt="Signature" />` : 
-                        'Signature'
+                        `<img src="${settings.images?.signature || getAssetByType('signature_image')}" alt="Signature" style="width: 100%; height: 100%; object-fit: contain; background: transparent; mix-blend-mode: normal; filter: none; border: none; outline: none;" onerror="this.style.display='none';" />` : 
+                        '<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; color: #9ca3af;"><span style="font-size: 10px;">No Signature</span><span style="font-size: 8px; opacity: 0.75;">Upload in settings</span></div>'
                       }
                     </div>
-                    <div style="text-align: center; font-size: 10px; margin-top: 2px; color: #666; line-height: 1.2;">
-                      ${settings.footer?.doctorName ? `<div style="font-weight: bold;">${settings.footer.doctorName}</div>` : ''}
+                    <div style="text-align: center; font-size: 11px; color: #374151; line-height: 1.2; font-weight: 500;">
+                      ${settings.footer?.doctorName ? `<div style="font-weight: 600; color: #1f2937;">${settings.footer.doctorName}</div>` : ''}
                     </div>
                   </div>
                 </div>` : 
@@ -497,13 +522,9 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                   `<div style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background-color: #f3f4f6; position: relative;">
                     <div style="position: absolute; inset: 0; opacity: 0.3; background-image: repeating-linear-gradient(45deg, #333, #333 3px, transparent 3px, transparent 12px);"></div>
                   </div>` : 
-                  `<div class="flex-1">
+                  `<div class="flex-1" style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">
                     ${((settings.footer?.showImage && settings.images?.footer) || getAssetByType('footer_image')) ? 
-                      `<img src="${settings.images?.footer || getAssetByType('footer_image')}" alt="Footer" />` : 
-                      ''
-                    }
-                    ${settings.footer?.showText && settings.footer?.text ? 
-                      `<div style="font-size: ${settings.font?.size ?? 12}px;">${settings.footer.text}</div>` : 
+                      `<img src="${settings.images?.footer || getAssetByType('footer_image')}" alt="Footer" style="height: 100%; width: 100%; object-fit: contain; object-position: center;" />` : 
                       ''
                     }
                   </div>`
@@ -608,37 +629,49 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 background-color: #f9fafb;
                 display: flex;
                 align-items: center;
-                justify-content: space-between;
+                justify-content: center;
                 padding: 0;
                 position: relative;
                 overflow: hidden;
-                min-height: 10mm;
+                min-height: 12mm;
                 flex-shrink: 0;
+                border-top: 1px solid #e5e7eb;
+                margin-top: 4mm;
               }
               .footer img {
-                max-height: 100%;
-                max-width: 100%;
+                height: 100%;
+                width: 100%;
                 object-fit: contain;
+                object-position: center;
               }
               .signature { 
-                width: ${settings.footer?.signatureWidth ?? 20}mm; 
-                height: ${settings.footer?.signatureHeight ?? 10}mm;
-                border: 1px dashed #ccc;
-                background-color: white;
+                width: ${settings.footer?.signatureWidth ?? 25}mm; 
+                height: ${settings.footer?.signatureHeight ?? 12}mm;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 font-size: 12px;
                 color: #666;
                 flex-shrink: 0;
-                border-radius: 1mm;
-                min-width: 6mm;
-                min-height: 5mm;
+                min-width: 8mm;
+                min-height: 6mm;
+                background: transparent;
+                border: none;
+                outline: none;
+              }
+              .signature img {
+                border: none !important;
+                outline: none !important;
+                background: transparent !important;
+                box-shadow: none !important;
               }
               .signature img {
                 max-width: 100%;
                 max-height: 100%;
                 object-fit: contain;
+                background: transparent !important;
+                mix-blend-mode: normal;
+                filter: none;
               }
               .watermark {
                 position: absolute;
@@ -684,16 +717,16 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                 <!-- Content area for prescription details -->
               </div>
               ${(settings.footer?.showSignature || (settings.useDoctorSetting && (settings.images?.signature || getAssetByType('signature_image')))) ? 
-                `<div class="signature-section" style="display: flex; justify-content: flex-end; align-items: center; padding: 0; min-height: 15mm; page-break-inside: avoid;">
-                  <div style="display: flex; flex-direction: column; align-items: center;">
+                `<div class="signature-section" style="display: flex; justify-content: flex-end; align-items: flex-start; padding: 8mm 10mm 4mm 10mm; min-height: 20mm; page-break-inside: avoid; margin-bottom: 8mm;">
+                  <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
                     <div class="signature">
                       ${(settings.images?.signature || getAssetByType('signature_image')) ? 
-                        `<img src="${settings.images?.signature || getAssetByType('signature_image')}" alt="Signature" />` : 
-                        'Signature'
+                        `<img src="${settings.images?.signature || getAssetByType('signature_image')}" alt="Signature" style="width: 100%; height: 100%; object-fit: contain; background: transparent; mix-blend-mode: normal; filter: none; border: none; outline: none;" onerror="this.style.display='none';" />` : 
+                        '<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; color: #9ca3af;"><span style="font-size: 10px;">No Signature</span><span style="font-size: 8px; opacity: 0.75;">Upload in settings</span></div>'
                       }
                     </div>
-                    <div style="text-align: center; font-size: 10px; margin-top: 2px; color: #666; line-height: 1.2;">
-                      ${settings.footer?.doctorName ? `<div style="font-weight: bold;">${settings.footer.doctorName}</div>` : ''}
+                    <div style="text-align: center; font-size: 11px; color: #374151; line-height: 1.2; font-weight: 500;">
+                      ${settings.footer?.doctorName ? `<div style="font-weight: 600; color: #1f2937;">${settings.footer.doctorName}</div>` : ''}
                     </div>
                   </div>
                 </div>` : 
@@ -704,13 +737,9 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                   `<div style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background-color: #f3f4f6; position: relative;">
                     <div style="position: absolute; inset: 0; opacity: 0.3; background-image: repeating-linear-gradient(45deg, #333, #333 3px, transparent 3px, transparent 12px);"></div>
                   </div>` : 
-                  `<div class="flex-1">
+                  `<div class="flex-1" style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">
                     ${((settings.footer?.showImage && settings.images?.footer) || getAssetByType('footer_image')) ? 
-                      `<img src="${settings.images?.footer || getAssetByType('footer_image')}" alt="Footer" />` : 
-                      ''
-                    }
-                    ${settings.footer?.showText && settings.footer?.text ? 
-                      `<div style="font-size: ${settings.font?.size ?? 12}px;">${settings.footer.text}</div>` : 
+                      `<img src="${settings.images?.footer || getAssetByType('footer_image')}" alt="Footer" style="height: 100%; width: 100%; object-fit: contain; object-position: center;" />` : 
                       ''
                     }
                   </div>`
@@ -733,7 +762,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
   };
 
   return (
-    <div className={`flex flex-col items-center space-y-4 w-full ${className}`}>
+    <div className={`flex flex-col items-center space-y-4 w-full min-h-0 ${className}`}>
       {/* Enhanced A4 Preview */}
       <div className={`relative bg-gradient-to-br from-slate-50 to-gray-100 p-6 rounded-xl w-full shadow-lg border border-gray-200 ${isFullscreen ? 'max-w-none' : 'max-w-2xl'}`}>
         {/* Enhanced Preview Header */}
@@ -1190,24 +1219,24 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
             </div>
           </div>
 
-          {/* Doctor Signature Section */}
+          {/* Doctor Signature Section - Fixed Layout to Match Print */}
           {(settings.footer?.showSignature || (settings.useDoctorSetting && (settings.images?.signature || getAssetByType('signature_image')))) && (
             <div 
-              className="flex justify-end items-center relative overflow-hidden flex-shrink-0"
+              className="flex justify-end items-start relative overflow-hidden flex-shrink-0 mb-2"
               style={{ 
-                minHeight: `${15 * scale}px`,
-                padding: `${5 * scale}px ${5 * scale}px ${2 * scale}px ${5 * scale}px`
+                minHeight: `${mmToPxScaled(20)}px`,
+                padding: `${mmToPxScaled(8)}px ${mmToPxScaled(10)}px ${mmToPxScaled(4)}px ${mmToPxScaled(10)}px`,
+                marginBottom: `${mmToPxScaled(8)}px`
               }}
             >
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center space-y-2">
                 <div 
-                  className="border border-dashed border-gray-300 bg-white flex items-center justify-center text-gray-500"
+                  className="flex items-center justify-center"
                   style={{
-                    width: `${(settings.footer?.signatureWidth ?? 20) * scale}px`,
-                    height: `${(settings.footer?.signatureHeight ?? 10) * scale}px`,
-                    minWidth: `${6 * scale}px`,
-                    minHeight: `${5 * scale}px`,
-                    borderRadius: `${1 * scale}px`,
+                    width: `${mmToPxScaled(settings.footer?.signatureWidth ?? 25)}px`,
+                    height: `${mmToPxScaled(settings.footer?.signatureHeight ?? 12)}px`,
+                    minWidth: `${mmToPxScaled(8)}px`,
+                    minHeight: `${mmToPxScaled(6)}px`,
                     fontSize: `${Math.max(12 * scale, 8)}px`
                   }}
                 >
@@ -1215,32 +1244,57 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                     <img
                       src={settings.images?.signature || getAssetByType('signature_image')}
                       alt="Signature"
-                      className="max-h-full max-w-full object-contain"
+                      className="object-contain"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                        background: 'transparent',
+                        mixBlendMode: 'normal',
+                        filter: 'none',
+                        border: 'none',
+                        outline: 'none'
+                      }}
+                      onError={(e) => {
+                        console.error('Signature image failed to load:', e);
+                        e.currentTarget.style.display = 'none';
+                      }}
+                      onLoad={() => {
+                        console.log('Signature image loaded successfully');
+                      }}
                     />
                   ) : (
-                    <span className="text-center">Signature</span>
+                    <div className="flex flex-col items-center justify-center text-gray-400 space-y-1">
+                      <span className="text-xs">No Signature</span>
+                      <span className="text-xs opacity-75">Upload in settings</span>
+                    </div>
                   )}
                 </div>
                 <div 
-                  className="text-center text-gray-700 mt-1"
-                  style={{ fontSize: Math.max(10 * scale, 6) }}
+                  className="text-center text-gray-700"
+                  style={{ 
+                    fontSize: Math.max(11 * scale, 7),
+                    lineHeight: '1.2',
+                    fontWeight: '500'
+                  }}
                 >
                   {settings.footer?.doctorName && (
-                    <div className="font-bold">{settings.footer.doctorName}</div>
+                    <div className="font-semibold text-gray-800">{settings.footer.doctorName}</div>
                   )}
                 </div>
               </div>
             </div>
           )}
 
-          {/* Footer */}
+          {/* Footer - Fixed Layout to Match Print */}
           {shouldShowFooter() && (
             <div
-              className="bg-gray-50 flex items-center justify-between relative overflow-hidden min-h-0 flex-shrink-0"
+              className="bg-gray-50 flex items-center justify-center relative overflow-hidden min-h-0 flex-shrink-0 border-t border-gray-200"
               style={{ 
-                height: Math.max((settings.useLetterhead ? (settings.letterhead?.footerHeight ?? 20) : (settings.footer?.height ?? 15)) * scale * 3.779527559, 40),
-                minHeight: '40px',
-                padding: `${2.5 * scale}px ${5 * scale}px`
+                height: Math.max(mmToPxScaled(settings.useLetterhead ? (settings.letterhead?.footerHeight ?? 20) : (settings.footer?.height ?? 15)), 50),
+                minHeight: '50px',
+                padding: '0',
+                marginTop: `${mmToPxScaled(4)}px`
               }}
             >
             {settings.useLetterhead ? (
@@ -1268,7 +1322,7 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
               </div>
             ) : (
               <>
-                {(!((settings.footer?.showImage && settings.images?.footer) || getAssetByType('footer_image')) && !settings.footer?.showText && !(settings.footer?.showSignature || (settings.useDoctorSetting && (settings.images?.signature || getAssetByType('signature_image'))))) ? (
+                {(!((settings.footer?.showImage && settings.images?.footer) || getAssetByType('footer_image')) && !(settings.footer?.showSignature || (settings.useDoctorSetting && (settings.images?.signature || getAssetByType('signature_image'))))) ? (
                   <div className="w-full h-full flex items-center justify-center bg-gray-100 relative">
                     <div 
                       className="absolute inset-0 opacity-20"
@@ -1293,28 +1347,20 @@ export const A4Preview: React.FC<A4PreviewProps> = ({ className = '' }) => {
                   </div>
                 ) : (
                   <>
-                    <div className="flex-1 flex items-center">
+                    <div className="flex-1 flex items-center justify-center w-full h-full">
                       {((settings.footer?.showImage && settings.images?.footer) || getAssetByType('footer_image')) && (
-                        <img
-                          src={settings.images?.footer || getAssetByType('footer_image')}
-                          alt="Footer"
-                          className="max-h-full max-w-full object-contain"
-                          style={{
-                            maxHeight: `${Math.max((settings.footer?.height ?? 15) * scale * 3.779527559, 40)}px`,
-                            maxWidth: `${Math.max((settings.footer?.width ?? 100) * (a4Width / 100), 100)}px`
-                          }}
-                        />
-                      )}
-                      {settings.footer?.showText && settings.footer?.text && (
-                        <div 
-                          className="text-gray-700"
-                          style={{ 
-                            fontSize: Math.max((settings.font?.size ?? 12) * scale, 9),
-                            lineHeight: '1.3',
-                            fontWeight: '500'
-                          }}
-                        >
-                          {settings.footer.text}
+                        <div className="w-full h-full flex items-center justify-center">
+                          <img
+                            src={settings.images?.footer || getAssetByType('footer_image')}
+                            alt="Footer"
+                            className="object-contain"
+                            style={{
+                              height: `${Math.max((settings.footer?.height ?? 15) * scale * 3.779527559, 40)}px`,
+                              width: `${Math.max((settings.footer?.width ?? 100) * (a4Width / 100), 100)}px`,
+                              maxHeight: '100%',
+                              maxWidth: '100%'
+                            }}
+                          />
                         </div>
                       )}
                     </div>

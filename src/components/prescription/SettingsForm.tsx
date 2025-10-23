@@ -13,6 +13,7 @@ import { prescriptionSettingsApi, PrescriptionSettingsRequest } from '@/features
 import { useAuthStore } from '@/store/authStore';
 import { useDoctorProfile } from '@/features/doctor/hooks/useDoctorProfile';
 import { useMediaUploadApi } from '@/hooks/useApi';
+import { SignatureDebugInfo } from './SignatureDebugInfo';
 
 export const SettingsForm: React.FC = () => {
   const { settings, update } = usePrescriptionStore();
@@ -144,6 +145,8 @@ export const SettingsForm: React.FC = () => {
         showText: apiSettings.useFooterSettings, // Map useFooterSettings to showText
         showSignature: apiSettings.useDoctorSetting && apiSettings.doctorSetting.showSignature,
         text: '', // Default empty text
+        textSize: 10, // Default text size
+        textAlign: 'center' as const, // Default text alignment
         signatureHeight: apiSettings.doctorSetting.signatureHeight,
         signatureWidth: apiSettings.doctorSetting.signatureWidth,
         doctorName: apiSettings.doctorSetting.doctorName,
@@ -190,30 +193,6 @@ export const SettingsForm: React.FC = () => {
     }
   };
 
-  // Reset settings to defaults via API
-  const handleReset = async () => {
-    if (!doctorId) {
-      console.error('Doctor ID not available for reset');
-      return;
-    }
-
-    try {
-      console.log('Resetting prescription settings via API...');
-      const response = await prescriptionSettingsApi.resetPrescriptionSettings(doctorId);
-      
-      if (response.success && response.settings) {
-        const localSettings = mapApiResponseToLocalSettings(response.settings);
-        update(localSettings);
-        console.log('Settings reset via API:', localSettings);
-        setSaveStatus('saved');
-        setTimeout(() => setSaveStatus('idle'), 2000);
-      }
-    } catch (error) {
-      console.error('Error resetting settings via API:', error);
-      setSaveStatus('error');
-      setTimeout(() => setSaveStatus('idle'), 3000);
-    }
-  };
 
   const handleSave = async () => {
     if (!doctorId) {
@@ -280,7 +259,7 @@ export const SettingsForm: React.FC = () => {
   }
 
   return (
-    <div className="space-y-3 h-full overflow-y-auto">
+    <div className="p-3 space-y-3 pb-48">
       {/* Page Layout */}
       <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
         <CardHeader className="pb-2 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border-b border-purple-200 dark:border-purple-700">
@@ -520,23 +499,43 @@ export const SettingsForm: React.FC = () => {
             
             {settings.useFooterSettings && !settings.useLetterhead && (
               <>
-                {doctorId && prescriptionSettingId ? (
-                  <PrescriptionAssetUploader
-                    value={settings.images?.footer || getAssetByType('footer_image')}
-                    onChange={(image) => updateNestedSettings('images', 'footer', image)}
-                    placeholder="Upload footer image"
-                    assetType="footer_image"
-                    doctorId={doctorId}
-                    prescriptionSettingId={prescriptionSettingId}
-                    onUploadSuccess={() => refetchAssets()}
-                    assetId={getAssetByTypeFull('footer_image')?.prescriptionAssestId}
-                    blobAssetId={getAssetByTypeFull('footer_image')?.blobAssetId}
-                  />
-                ) : (
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                    <p className="text-sm text-gray-500">Loading...</p>
+                {/* Footer Image Section */}
+                <div className="space-y-3 p-3 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-700">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium text-green-700 dark:text-green-300">
+                      Footer Image
+                    </Label>
+                    <Toggle
+                      label=""
+                      checked={settings.footer?.showImage ?? false}
+                      onCheckedChange={(checked) => updateNestedSettings('footer', 'showImage', checked)}
+                    />
                   </div>
-                )}
+                  
+                  {settings.footer?.showImage && (
+                    <>
+                      {doctorId && prescriptionSettingId ? (
+                        <PrescriptionAssetUploader
+                          value={settings.images?.footer || getAssetByType('footer_image')}
+                          onChange={(image) => updateNestedSettings('images', 'footer', image)}
+                          placeholder="Upload footer image"
+                          assetType="footer_image"
+                          doctorId={doctorId}
+                          prescriptionSettingId={prescriptionSettingId}
+                          onUploadSuccess={() => refetchAssets()}
+                          assetId={getAssetByTypeFull('footer_image')?.prescriptionAssestId}
+                          blobAssetId={getAssetByTypeFull('footer_image')?.blobAssetId}
+                        />
+                      ) : (
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                          <p className="text-sm text-gray-500">Loading...</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Footer Dimensions */}
                 <div className="grid grid-cols-2 gap-3">
                   <NumberField
                     label="Height"
@@ -663,7 +662,7 @@ export const SettingsForm: React.FC = () => {
       </Card>
 
       {/* Save Button */}
-      <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+      <Card className="border-4 border-red-500 shadow-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -681,15 +680,6 @@ export const SettingsForm: React.FC = () => {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button
-                onClick={handleReset}
-                disabled={isSaving || !doctorId || doctorProfileLoading}
-                variant="outline"
-                className="flex items-center gap-2 border-orange-300 text-orange-700 hover:bg-orange-50 px-4 py-2"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Reset to Defaults
-              </Button>
               <Button
                 onClick={handleSave}
                 disabled={isSaving || !doctorId || doctorProfileLoading}
@@ -722,6 +712,15 @@ export const SettingsForm: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Signature Debug Info - Development Only */}
+      {process.env.NODE_ENV === 'development' && (
+        <SignatureDebugInfo
+          settings={settings}
+          assets={[]}
+          onRefresh={() => refetchAssets()}
+        />
+      )}
 
     </div>
   );

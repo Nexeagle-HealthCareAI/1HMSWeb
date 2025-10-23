@@ -14,7 +14,8 @@ import {
   CheckCircle,
   AlertCircle,
   Info,
-  Globe
+  Globe,
+  FileText
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -29,6 +30,7 @@ import { ThemeSettings } from '@/components/ui/theme-settings';
 import { LanguageSelector } from '@/components/shared/LanguageSelector';
 import { LanguageGuide } from '@/components/shared/LanguageGuide';
 import { LanguageDemo } from '@/components/shared/LanguageDemo';
+import { PrescriptionCustomizePanel } from '@/components/prescription/PrescriptionCustomizePanel';
 
 export const SettingsPage: React.FC = () => {
   const [notificationSettings, setNotificationSettings] = useState({
@@ -78,34 +80,41 @@ export const SettingsPage: React.FC = () => {
 
       {/* Enhanced Settings Tabs */}
       <Tabs defaultValue="theme" className="space-y-8">
-        <TabsList className="grid w-full grid-cols-4 h-14 bg-gray-50 dark:bg-gray-800/50 p-1 rounded-xl">
+        <TabsList className="flex w-full h-14 bg-gray-50 dark:bg-gray-800/50 p-1 rounded-xl overflow-x-auto">
           <TabsTrigger 
             value="theme" 
-            className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-md rounded-lg transition-all duration-200"
+            className="flex items-center gap-2 min-w-fit px-3 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-md rounded-lg transition-all duration-200"
           >
             <Palette className="h-4 w-4" />
-            <span className="hidden sm:inline">Theme</span>
+            <span>Theme</span>
           </TabsTrigger>
           <TabsTrigger 
             value="notifications" 
-            className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-md rounded-lg transition-all duration-200"
+            className="flex items-center gap-2 min-w-fit px-3 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-md rounded-lg transition-all duration-200"
           >
             <Bell className="h-4 w-4" />
-            <span className="hidden sm:inline">Notifications</span>
+            <span>Notifications</span>
           </TabsTrigger>
           <TabsTrigger 
             value="security" 
-            className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-md rounded-lg transition-all duration-200"
+            className="flex items-center gap-2 min-w-fit px-3 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-md rounded-lg transition-all duration-200"
           >
             <Shield className="h-4 w-4" />
-            <span className="hidden sm:inline">Security</span>
+            <span>Security</span>
           </TabsTrigger>
           <TabsTrigger 
             value="data" 
-            className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-md rounded-lg transition-all duration-200"
+            className="flex items-center gap-2 min-w-fit px-3 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-md rounded-lg transition-all duration-200"
           >
             <Database className="h-4 w-4" />
-            <span className="hidden sm:inline">Data</span>
+            <span>Data</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="prescription" 
+            className="flex items-center gap-2 min-w-fit px-3 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-md rounded-lg transition-all duration-200"
+          >
+            <FileText className="h-4 w-4" />
+            <span>Prescription</span>
           </TabsTrigger>
         </TabsList>
 
@@ -601,6 +610,13 @@ export const SettingsPage: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Prescription Tab */}
+        <TabsContent value="prescription" className="space-y-6">
+          <div className="h-[700px] overflow-hidden border border-gray-200 rounded-lg">
+            <PrescriptionCustomizePanel showCloseButton={false} />
+          </div>
         </TabsContent>
       </Tabs>
     </div>

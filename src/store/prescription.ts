@@ -54,6 +54,8 @@ const defaultSettings: HeaderFooterSettings = {
     showText: true,
     showSignature: true,
     text: '',
+    textSize: 10,
+    textAlign: 'center',
     signatureHeight: 10,
     signatureWidth: 20,
     doctorName: '',

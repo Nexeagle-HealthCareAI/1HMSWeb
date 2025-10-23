@@ -52,6 +52,8 @@ export interface HeaderFooterSettings {
     showText: boolean;
     showSignature: boolean;
     text: string;
+    textSize: number;
+    textAlign: 'left' | 'center' | 'right';
     signatureHeight: number;
     signatureWidth: number;
     doctorName: string;

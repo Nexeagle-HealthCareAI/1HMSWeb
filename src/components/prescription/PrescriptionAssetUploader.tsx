@@ -66,9 +66,12 @@ export const PrescriptionAssetUploader: React.FC<PrescriptionAssetUploaderProps>
 
       setIsUploading(true);
       try {
+        const processedFile = file;
+
+
         const response = await uploadMutation.mutateAsync({
           doctorId,
-          file,
+          file: processedFile,
           assetType,
           prescriptionSettingId,
         });
@@ -183,7 +186,9 @@ export const PrescriptionAssetUploader: React.FC<PrescriptionAssetUploaderProps>
           {isUploading ? (
             <>
               <Loader2 className="h-8 w-8 mx-auto mb-2 text-blue-500 animate-spin" />
-              <p className="text-sm text-blue-600">Uploading...</p>
+              <p className="text-sm text-blue-600">
+                Uploading...
+              </p>
             </>
           ) : (
             <>

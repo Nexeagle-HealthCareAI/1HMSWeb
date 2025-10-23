@@ -20,7 +20,8 @@ import {
   RefreshCw,
   Activity,
   Wifi,
-  WifiOff
+  WifiOff,
+  Settings as SettingsIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +40,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { PrescriptionSettings } from '@/pages/PrescriptionSettings';
+import { PrescriptionCustomizePanel } from '@/components/prescription/PrescriptionCustomizePanel';
 import { format, subDays, addDays } from 'date-fns';
 import { useAuthStore } from '@/store/authStore';
 import { appointmentApi } from '@/features/appointment/services/appointmentApi';
@@ -89,6 +91,7 @@ export const ClinicalDashboard: React.FC = () => {
   const [appointmentToCancel, setAppointmentToCancel] = useState<PatientAppointment | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [activeNavButton, setActiveNavButton] = useState<'appointments' | 'settings'>('appointments');
+  const [settingsTab, setSettingsTab] = useState<'layout' | 'customize'>('layout');
 
   // Live update states
   const [isLiveUpdateEnabled, setIsLiveUpdateEnabled] = useState(true);
@@ -462,7 +465,7 @@ export const ClinicalDashboard: React.FC = () => {
                 }`}
               >
                 <FileText className="h-4 w-4" />
-                <span>Settings</span>
+                <span>Prescription Settings</span>
               </button>
                 </div>
                     </div>
@@ -1258,10 +1261,44 @@ export const ClinicalDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Settings */}
+      {/* Prescription Settings */}
       {activeNavButton === 'settings' && (
         <div className="flex-1 min-h-0 overflow-hidden">
-          <PrescriptionSettings />
+          <div className="h-full flex flex-col">
+            {/* Prescription Settings Header */}
+            <div className="flex-shrink-0 p-4 border-b border-gray-200 bg-white">
+            </div>
+
+            {/* Prescription Settings Tabs */}
+            <div className="flex-shrink-0 p-3 border-b border-gray-200">
+              <Tabs value={settingsTab} onValueChange={(value) => setSettingsTab(value as 'layout' | 'customize')}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="layout" className="flex items-center gap-2">
+                    <SettingsIcon className="h-4 w-4" />
+                    <span>Layout Settings</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="customize" className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    <span>Customize Data</span>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+
+            {/* Prescription Settings Content */}
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <Tabs value={settingsTab} onValueChange={(value) => setSettingsTab(value as 'layout' | 'customize')}>
+                <TabsContent value="layout" className="h-full m-0 overflow-y-auto">
+                  <PrescriptionSettings />
+                </TabsContent>
+                <TabsContent value="customize" className="h-full m-0 overflow-y-auto">
+                  <div className="h-full overflow-y-auto">
+                    <PrescriptionCustomizePanel showCloseButton={false} />
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </div>
         </div>
       )}
 

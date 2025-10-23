@@ -187,9 +187,6 @@ export const EPrescriptionPad: React.FC = () => {
     }
   };
 
-  const resetToDefaults = () => {
-    setFieldConfigs(defaultFieldConfigs);
-  };
 
   const renderFieldIcon = (fieldId: string) => {
     const iconMap: { [key: string]: React.ReactNode } = {
@@ -587,13 +584,6 @@ export const EPrescriptionPad: React.FC = () => {
                       Save Configuration
                     </>
                   )}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={resetToDefaults}
-                  className="px-3"
-                >
-                  Reset
                 </Button>
               </div>
               <p className="text-xs text-gray-500 text-center">
