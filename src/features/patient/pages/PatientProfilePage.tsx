@@ -10,9 +10,18 @@ import {
   Activity,
   Settings,
   ChevronLeft,
-  Menu
+  Menu,
+  Phone,
+  Heart,
+  Mail,
+  Edit,
+  CheckCircle,
+  AlertCircle,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { 
   PatientOverview,
   PatientTimeline,
@@ -115,196 +124,7 @@ interface VitalSigns {
   weight: number;
 }
 
-const samplePatient: PatientData = {
-  id: 'P001',
-  name: 'John Doe',
-  age: 45,
-  gender: 'Male',
-  phone: '+91-9876543210',
-  email: 'john.doe@email.com',
-  address: '123 Main Street, City, State - 123456',
-  bloodGroup: 'B+',
-  emergencyContact: '+91-9876543211',
-  medicalHistory: ['Hypertension (2020)', 'Diabetes Type 2 (2018)'],
-  allergies: ['Penicillin', 'Shellfish'],
-  currentMedications: ['Metformin 500mg', 'Lisinopril 10mg']
-};
 
-const samplePrescriptions: Prescription[] = [
-  {
-    id: 'RX001',
-    date: new Date('2024-01-15'),
-    doctor: 'Dr. Sarah Johnson',
-    visitType: 'Follow-up',
-    chiefComplaint: 'Chest pain and shortness of breath for the past 3 days',
-    patientHistory: 'Patient has a history of hypertension for 5 years. Previous episodes of chest pain were managed with medication adjustments.',
-    comorbidity: 'Hypertension, Type 2 Diabetes, Hyperlipidemia',
-    advice: 'Maintain low-sodium diet, regular exercise, and stress management. Monitor blood pressure twice daily.',
-    investigation: 'ECG, Chest X-ray, Lipid profile, Blood sugar monitoring',
-    observation: 'Blood pressure elevated at 160/95 mmHg. Heart rate regular at 85 bpm. No signs of acute cardiac event.',
-    medications: [
-      {
-        name: 'Amlodipine',
-        composition: 'Amlodipine Besylate',
-        dosage: '5mg',
-        frequency: 'Once daily',
-        duration: '30 days'
-      },
-      {
-        name: 'Atenolol',
-        composition: 'Atenolol',
-        dosage: '25mg',
-        frequency: 'Twice daily',
-        duration: '30 days'
-      }
-    ],
-    instructions: 'Take medications with food. Monitor blood pressure daily. Return in 4 weeks for follow-up.'
-  }
-];
-
-const sampleLabTests: LabTestResult[] = [
-  {
-    id: 'LAB001',
-    appointmentId: 'APT001',
-    testName: 'Complete Blood Count',
-    testDate: new Date('2024-01-15'),
-    orderedBy: 'Dr. Sarah Johnson',
-    status: 'completed',
-    results: [
-      { parameter: 'Hemoglobin', value: '13.5', unit: 'g/dL', normalRange: '13.0-17.0', status: 'normal' },
-      { parameter: 'WBC Count', value: '8.2', unit: 'K/μL', normalRange: '4.0-11.0', status: 'normal' },
-      { parameter: 'Platelet Count', value: '250', unit: 'K/μL', normalRange: '150-400', status: 'normal' }
-    ],
-    notes: 'All parameters within normal range'
-  },
-  {
-    id: 'LAB002',
-    appointmentId: 'APT001',
-    testName: 'Lipid Profile',
-    testDate: new Date('2024-01-10'),
-    orderedBy: 'Dr. Sarah Johnson',
-    status: 'completed',
-    results: [
-      { parameter: 'Total Cholesterol', value: '220', unit: 'mg/dL', normalRange: '<200', status: 'high' },
-      { parameter: 'HDL Cholesterol', value: '45', unit: 'mg/dL', normalRange: '>40', status: 'normal' },
-      { parameter: 'LDL Cholesterol', value: '140', unit: 'mg/dL', normalRange: '<100', status: 'high' }
-    ],
-    notes: 'Elevated total and LDL cholesterol levels noted'
-  }
-];
-
-const sampleAppointments: Appointment[] = [
-  {
-    id: 'APT001',
-    date: new Date('2024-01-20'),
-    time: '09:00 AM',
-    doctor: 'Dr. Sarah Johnson',
-    status: 'completed',
-    type: 'Follow-up',
-    notes: 'Patient reported improvement in symptoms',
-    prescription: {
-      id: 'RX001',
-      date: new Date('2024-01-20'),
-      doctor: 'Dr. Sarah Johnson',
-      visitType: 'Follow-up',
-      chiefComplaint: 'Chest pain and shortness of breath for the past 3 days',
-      patientHistory: 'Patient has a history of hypertension for 5 years. Previous episodes of chest pain were managed with medication adjustments.',
-      comorbidity: 'Hypertension, Type 2 Diabetes, Hyperlipidemia',
-      advice: 'Maintain low-sodium diet, regular exercise, and stress management. Monitor blood pressure twice daily.',
-      investigation: 'ECG, Chest X-ray, Lipid profile, Blood sugar monitoring',
-      observation: 'Blood pressure elevated at 160/95 mmHg. Heart rate regular at 85 bpm. No signs of acute cardiac event.',
-      medications: [
-        {
-          name: 'Amlodipine',
-          composition: 'Amlodipine Besylate',
-          dosage: '5mg',
-          frequency: 'Once daily',
-          duration: '30 days'
-        },
-        {
-          name: 'Atenolol',
-          composition: 'Atenolol',
-          dosage: '25mg',
-          frequency: 'Twice daily',
-          duration: '30 days'
-        }
-      ],
-      instructions: 'Take medications with food. Monitor blood pressure daily. Return in 4 weeks for follow-up.'
-    }
-  },
-  {
-    id: 'APT002',
-    date: new Date('2024-01-25'),
-    time: '10:30 AM',
-    doctor: 'Dr. Sarah Johnson',
-    status: 'scheduled',
-    type: 'Consultation'
-  }
-];
-
-const sampleVitalSigns: VitalSigns[] = [
-  { date: '2024-01-01', systolic: 140, diastolic: 90, heartRate: 85, temperature: 98.6, oxygenSaturation: 98, respiratoryRate: 16, weight: 75.2 },
-  { date: '2024-01-08', systolic: 135, diastolic: 88, heartRate: 82, temperature: 98.4, oxygenSaturation: 99, respiratoryRate: 15, weight: 74.8 },
-  { date: '2024-01-15', systolic: 130, diastolic: 85, heartRate: 78, temperature: 98.2, oxygenSaturation: 98, respiratoryRate: 14, weight: 74.5 },
-  { date: '2024-01-22', systolic: 128, diastolic: 82, heartRate: 75, temperature: 98.1, oxygenSaturation: 99, respiratoryRate: 14, weight: 74.2 },
-  { date: '2024-01-29', systolic: 125, diastolic: 80, heartRate: 72, temperature: 98.0, oxygenSaturation: 98, respiratoryRate: 13, weight: 73.8 },
-];
-
-// Create timeline events from all patient data
-const createTimelineEvents = (appointments: Appointment[], prescriptions: Prescription[], labTests: LabTestResult[]): TimelineEvent[] => {
-  const events: TimelineEvent[] = [];
-
-  // Add appointments
-  appointments.forEach(apt => {
-    events.push({
-      id: apt.id,
-      date: apt.date,
-      type: 'appointment',
-      title: `${apt.type} Appointment`,
-      description: `Appointment with ${apt.doctor} at ${apt.time}`,
-      doctor: apt.doctor,
-      status: apt.status,
-      icon: () => null, // Will be set by the component
-      color: apt.status === 'completed' ? 'text-green-600' : apt.status === 'cancelled' ? 'text-red-600' : 'text-blue-600',
-      details: apt
-    });
-  });
-
-  // Add prescriptions
-  prescriptions.forEach(pres => {
-    events.push({
-      id: pres.id,
-      date: pres.date,
-      type: 'prescription',
-      title: `Prescription - ${pres.visitType}`,
-      description: `${pres.medications.length} medications prescribed`,
-      doctor: pres.doctor,
-      status: 'active',
-      icon: () => null, // Will be set by the component
-      color: 'text-purple-600',
-      details: pres
-    });
-  });
-
-  // Add lab tests
-  labTests.forEach(test => {
-    events.push({
-      id: test.id,
-      date: test.testDate,
-      type: 'lab-test',
-      title: test.testName,
-      description: `Lab test ordered by ${test.orderedBy}`,
-      doctor: test.orderedBy,
-      status: test.status,
-      icon: () => null, // Will be set by the component
-      color: test.status === 'completed' ? 'text-green-600' : 'text-orange-600',
-      details: test
-    });
-  });
-
-  // Sort by date (newest first)
-  return events.sort((a, b) => b.date.getTime() - a.date.getTime());
-};
 
 export const PatientProfilePage: React.FC = () => {
   const { patientId: routePatientId } = useParams<{ patientId: string }>();
@@ -316,11 +136,11 @@ export const PatientProfilePage: React.FC = () => {
   // Use patientId from route params or query params
   const patientId = routePatientId || queryPatientId;
   
-  const [patient, setPatient] = useState<PatientData>(samplePatient);
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>(samplePrescriptions);
-  const [labTests] = useState<LabTestResult[]>(sampleLabTests);
-  const [appointments, setAppointments] = useState<Appointment[]>(sampleAppointments);
-  const [vitalSigns] = useState<VitalSigns[]>(sampleVitalSigns);
+  const [patient, setPatient] = useState<PatientData | null>(null);
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [labTests, setLabTests] = useState<LabTestResult[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [vitalSigns, setVitalSigns] = useState<VitalSigns[]>([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [showPatientProfileModal, setShowPatientProfileModal] = useState(false);
@@ -333,8 +153,8 @@ export const PatientProfilePage: React.FC = () => {
     refetch: refetchProfile
   } = usePatientProfile(hospitalId || '', patientId || '');
 
-  // Create timeline events
-  const timelineEvents = createTimelineEvents(appointments, prescriptions, labTests);
+  // Timeline events will be created from real data when available
+  const timelineEvents: TimelineEvent[] = [];
 
   // Update local patient state when real profile data is loaded
   useEffect(() => {
@@ -364,7 +184,7 @@ export const PatientProfilePage: React.FC = () => {
         const newPrescription: Prescription = {
           id: `RX${Date.now()}`,
           date: new Date(),
-          doctor: 'Dr. Sarah Johnson',
+          doctor: 'Current Doctor', // Will be replaced with actual doctor name
           visitType: 'New Consultation',
           chiefComplaint: '',
           patientHistory: '',
@@ -387,7 +207,7 @@ export const PatientProfilePage: React.FC = () => {
     { id: 'timeline', label: 'Timeline', icon: History },
     { id: 'prescriptions', label: 'E-Prescription', icon: FileText },
     { id: 'lab-tests', label: 'Lab Tests', icon: TestTube },
-    { id: 'customize-eprescription', label: 'Customize ePrescription', icon: Settings },
+    { id: 'prescription-fields', label: 'Prescription Fields', icon: Settings },
   ];
 
   // Handle edit profile click
@@ -405,6 +225,30 @@ export const PatientProfilePage: React.FC = () => {
     refetchProfile();
     setShowPatientProfileModal(false);
   };
+
+  // Calculate risk level for patient header
+  const getRiskLevel = () => {
+    if (!patient) return { level: 'Low', color: 'text-green-600', bg: 'bg-green-50', icon: CheckCircle };
+    
+    let riskScore = 0;
+    
+    // Check age risk
+    if (patient.age > 65) riskScore += 1;
+    if (patient.age > 80) riskScore += 1;
+    
+    // Check medical history
+    if (patient.medicalHistory && patient.medicalHistory.length > 2) riskScore += 1;
+    if (patient.allergies && patient.allergies.length > 1) riskScore += 1;
+    
+    // Check current medications
+    if (patient.currentMedications && patient.currentMedications.length > 3) riskScore += 1;
+    
+    if (riskScore >= 4) return { level: 'High', color: 'text-red-600', bg: 'bg-red-50', icon: AlertTriangle };
+    if (riskScore >= 2) return { level: 'Medium', color: 'text-yellow-600', bg: 'bg-yellow-50', icon: AlertCircle };
+    return { level: 'Low', color: 'text-green-600', bg: 'bg-green-50', icon: CheckCircle };
+  };
+
+  const riskLevel = getRiskLevel();
 
   if (profileLoading) {
     return (
@@ -513,49 +357,122 @@ export const PatientProfilePage: React.FC = () => {
         </div>
 
         {/* Scrollable Content Area */}
-        <div className={`flex-1 ${sidebarCollapsed ? 'ml-16' : 'ml-64'} p-6 overflow-y-auto h-screen transition-all duration-300 ease-in-out bg-gray-50 dark:bg-gray-950`}>
-          {/* Overview Tab */}
-          {activeTab === 'overview' && (
-            <PatientOverview
-              patient={patient}
-              appointments={appointments}
-              prescriptions={prescriptions}
-              labTests={labTests}
-              vitalSigns={vitalSigns}
-              onNavigateToTimeline={() => setActiveTab('timeline')}
-              onEditProfile={handleEditProfile}
-            />
-          )}
+        <div className={`flex-1 ${sidebarCollapsed ? 'ml-16' : 'ml-64'} overflow-y-auto transition-all duration-300 ease-in-out bg-gray-50 dark:bg-gray-950`} style={{ height: '100vh' }}>
+          <div className="ml-4">
+          {/* Patient Header - Show for all tabs */}
+          {patient && (
+            <div className="bg-white border-b border-gray-200 shadow-sm">
+              <div className="px-6 py-4">
+                <div className="flex items-center justify-between gap-4">
+                  {/* Left Section: Avatar + Basic Info */}
+                  <div className="flex items-center gap-4 min-w-0 flex-1">
+                    {/* Patient Avatar with Risk Indicator */}
+                    <div className="relative flex-shrink-0">
+                      <Avatar className="h-12 w-12 border-2 border-white shadow-md">
+                        <AvatarImage src="/api/placeholder/80/80" />
+                        <AvatarFallback className="text-sm font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                          {patient.name.split(' ').map(n => n[0]).join('')}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className={`absolute -bottom-1 -right-1 border-2 border-white rounded-full p-0.5 ${riskLevel.bg}`}>
+                        <riskLevel.icon className={`h-2.5 w-2.5 ${riskLevel.color}`} />
+                      </div>
+                    </div>
 
-          {/* Timeline Tab */}
-          {activeTab === 'timeline' && (
-            <PatientTimeline 
-              timelineEvents={timelineEvents} 
-              patientStatus="Active"
-              lastVisitDate={appointments.length > 0 ? appointments[0].date : undefined}
-            />
-          )}
+                    {/* Patient Name and Basic Info */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-3 mb-1">
+                        <h1 className="text-lg font-bold text-gray-900 truncate">{patient.name}</h1>
+                        <Badge className={`${riskLevel.bg} ${riskLevel.color} border-0 text-xs px-2 py-0.5`}>
+                          {riskLevel.level} Risk
+                        </Badge>
+                      </div>
+                      
+                      {/* Compact Info Row */}
+                      <div className="flex items-center gap-4 text-xs text-gray-600">
+                        <span className="flex items-center gap-1">
+                          <span className="font-medium">ID:</span>
+                          <span className="text-blue-600 font-mono">{patient.id}</span>
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="font-medium">Age:</span>
+                          <span>{patient.age}y, {patient.gender}</span>
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Phone className="h-3 w-3" />
+                          <span className="truncate max-w-32">{patient.phone}</span>
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Heart className="h-3 w-3" />
+                          <span>{patient.bloodGroup}</span>
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Mail className="h-3 w-3" />
+                          <span className="truncate max-w-32">{patient.email}</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
-          {/* Prescriptions Tab */}
-          {activeTab === 'prescriptions' && (
-            <div className="h-full">
-              <EPrescriptionPad />
+                  {/* Right Section: Action Button */}
+                  <div className="flex-shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleEditProfile}
+                      className="gap-2 text-xs h-8 px-3"
+                    >
+                      <Edit className="h-3 w-3" />
+                      Edit
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Lab Tests Tab */}
-          {activeTab === 'lab-tests' && (
-            <PatientLabTests labTests={labTests} appointments={appointments} />
-          )}
+            {/* Overview Tab */}
+            {activeTab === 'overview' && (
+              <PatientOverview
+                patient={patient}
+                appointments={appointments}
+                prescriptions={prescriptions}
+                labTests={labTests}
+                vitalSigns={vitalSigns}
+                onNavigateToTimeline={() => setActiveTab('timeline')}
+                onEditProfile={handleEditProfile}
+              />
+            )}
 
-          {/* Customize ePrescription Tab */}
-          {activeTab === 'customize-eprescription' && (
-            <div className="h-full">
-              <PrescriptionCustomizePanel showCloseButton={false} />
-            </div>
-          )}
+            {/* Timeline Tab */}
+            {activeTab === 'timeline' && (
+              <PatientTimeline 
+                timelineEvents={timelineEvents} 
+                patientStatus="Active"
+                lastVisitDate={appointments.length > 0 ? appointments[0].date : undefined}
+              />
+            )}
+
+            {/* Prescriptions Tab */}
+            {activeTab === 'prescriptions' && (
+              <div className="h-full">
+                <EPrescriptionPad />
+              </div>
+            )}
+
+            {/* Prescription Fields Tab */}
+            {activeTab === 'prescription-fields' && (
+              <div className="h-full">
+                <PrescriptionCustomizePanel showCloseButton={false} defaultTab="fields" />
+              </div>
+            )}
+
+            {/* Lab Tests Tab */}
+            {activeTab === 'lab-tests' && (
+              <PatientLabTests labTests={labTests} appointments={appointments} />
+            )}
+          </div>
         </div>
-      </div>
 
       {/* Patient Profile Modal */}
       {showPatientProfileModal && patientId && (
@@ -564,9 +481,10 @@ export const PatientProfilePage: React.FC = () => {
           onClose={handleProfileModalClose}
           hospitalId={hospitalId || ''}
           patientId={patientId}
-          patientName={patient.name}
+          patientName={patient?.name || 'Unknown Patient'}
         />
       )}
+      </div>
     </div>
   );
 };

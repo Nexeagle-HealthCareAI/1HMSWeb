@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { usePrescriptionFieldConfig } from '@/features/doctor/hooks/usePrescriptionFieldConfig';
 import { 
   Settings, 
   Save, 
@@ -82,29 +83,24 @@ interface PersonalizedData {
 
 interface PrescriptionCustomizePanelProps {
   showCloseButton?: boolean;
+  defaultTab?: 'fields' | 'personalized';
 }
 
 export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProps> = ({ 
-  showCloseButton = true 
+  showCloseButton = true,
+  defaultTab = 'fields'
 }) => {
-  const [customizeTab, setCustomizeTab] = useState<'fields' | 'playground'>('fields');
-  const [fields, setFields] = useState<FieldConfig[]>([
-    { id: 'vitals', label: 'Vitals', enabled: true },
-    { id: 'chiefComplaint', label: 'Chief Complaint', enabled: true },
-    { id: 'history', label: 'History', enabled: true },
-    { id: 'comorbidity', label: 'Comorbidity', enabled: true },
-    { id: 'examination', label: 'Examination', enabled: true },
-    { id: 'diagnosis', label: 'Diagnosis', enabled: true },
-    { id: 'investigations', label: 'Investigations', enabled: true },
-    { id: 'procedures', label: 'Procedures', enabled: true },
-    { id: 'medications', label: 'Medications', enabled: true },
-    { id: 'nonPharmacologicalAdvice', label: 'Non-pharmacological Advice', enabled: true },
-    { id: 'privateNotes', label: 'Private Notes', enabled: false },
-    { id: 'certificatesNotes', label: 'Certificates & Notes', enabled: true },
-    { id: 'immunizations', label: 'Immunizations', enabled: true },
-    { id: 'followUpReferral', label: 'Follow-up & Referral', enabled: true },
-    { id: 'attachments', label: 'Attachments', enabled: true }
-  ]);
+  const [customizeTab, setCustomizeTab] = useState<'fields' | 'playground'>(defaultTab === 'personalized' ? 'playground' : 'fields');
+  
+  // Use API hook for field configuration
+  const {
+    fields,
+    updateFieldConfig,
+    saveFieldConfiguration,
+    isLoadingPreferences,
+    isSaving,
+    preferencesError
+  } = usePrescriptionFieldConfig();
 
   const [personalizedData, setPersonalizedData] = useState<PersonalizedData>({
     chiefComplaint: [],
@@ -166,11 +162,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
     { id: 'medications', label: 'Medications', icon: Pill, color: 'text-green-600' }
   ];
 
-  const updateFieldConfig = (fieldId: string, enabled: boolean) => {
-    setFields(prev => prev.map(field => 
-      field.id === fieldId ? { ...field, enabled } : field
-    ));
-  };
+  // Field configuration is now handled by the API hook
 
 
   const renderFieldIcon = (fieldId: string) => {
@@ -277,8 +269,8 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
         medicineId: editItemMedicineId
       };
 
-      setPersonalizedData(prev => ({
-        ...prev,
+    setPersonalizedData(prev => ({
+      ...prev,
         [selectedPersonalizedCategory]: prev[selectedPersonalizedCategory as keyof PersonalizedData].map(i => 
           i.id === itemId ? updatedItem : i
         )
@@ -354,16 +346,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
       }
     }
 
-    // Load field configuration
-    const savedFields = localStorage.getItem('prescription-field-config');
-    if (savedFields) {
-      try {
-        const parsed = JSON.parse(savedFields);
-        setFields(parsed);
-      } catch (error) {
-        console.error('Error loading field configuration:', error);
-      }
-    }
+    // Field configuration is now loaded via API
   }, []);
 
   useEffect(() => {
@@ -373,92 +356,58 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
 
   return (
     <div className="w-full bg-white flex flex-col" style={{ minHeight: '100vh' }}>
-      {/* Enhanced Header */}
-      <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Settings className="h-5 w-5 text-blue-600" />
-            </div>
+
+      {/* Direct Content - No Internal Navigation */}
+      <div className="flex-1 flex flex-col h-full">
+        {customizeTab === 'fields' ? (
+          <div className="h-full flex flex-col">
+            {/* Enhanced Fields Header - Mobile Responsive */}
+            <div className="flex-shrink-0 p-2 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b border-blue-200 dark:border-blue-700">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                  <Stethoscope className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Prescription Fields Configuration</h2>
+                    <h3 className="text-base sm:text-lg font-semibold text-blue-900 dark:text-blue-200">Prescription Fields</h3>
+                    <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 hidden sm:block">• Green = Active • Click ON/OFF to toggle</p>
+                    {isLoadingPreferences && (
+                      <p className="text-xs text-blue-600">Loading preferences...</p>
+                    )}
+                    {preferencesError && (
+                      <p className="text-xs text-red-600">Failed to load preferences. Using defaults.</p>
+          )}
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="px-3 py-1">
-              <Database className="h-3 w-3 mr-1" />
-              {Object.values(personalizedData).flat().length} Templates
-            </Badge>
           </div>
         </div>
-      </div>
-
-      {/* Compact Content - No Scrolling */}
-      <div className="flex-1 flex flex-col h-full">
-        <Tabs value={customizeTab} onValueChange={(value) => setCustomizeTab(value as 'fields' | 'playground')}>
-        <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-gray-700">
-          <TabsTrigger 
-            value="fields" 
-            className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-          >
-            <Settings className="h-4 w-4" />
-            <span className="font-medium">Prescription Fields</span>
-            {customizeTab === 'fields' && (
-              <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-            )}
-          </TabsTrigger>
-          <TabsTrigger 
-            value="playground" 
-            className="flex items-center gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-green-50 dark:hover:bg-green-900/20"
-          >
-            <Database className="h-4 w-4" />
-            <span className="font-medium">Personalized Data</span>
-            {customizeTab === 'playground' && (
-              <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-            )}
-          </TabsTrigger>
-        </TabsList>
-
-          <TabsContent value="fields" className="h-full flex flex-col">
-            {/* Enhanced Fields Header */}
-            <div className="flex-shrink-0 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b border-blue-200 dark:border-blue-700">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-                <Stethoscope className="h-5 w-5 text-blue-600" />
-                <div>
-                  <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-200">Prescription Fields</h3>
-                  <p className="text-sm text-blue-700 dark:text-blue-300">• Green = Active • Click ON/OFF to toggle</p>
-                </div>
-              </div>
             </div>
 
-            {/* Compact Field Grid */}
-            <div className="flex-1 p-3 overflow-hidden">
-              <div className="h-full grid grid-cols-1 lg:grid-cols-2 gap-2">
+            {/* Compact Field Grid - Mobile Responsive */}
+            <div className="flex-1 p-2 sm:p-3 overflow-hidden">
+              <div className="h-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-2 sm:gap-3">
                 {fields.map((field) => (
-                  <div 
-                    key={field.id} 
-                    className={`flex items-center justify-between p-3 rounded-lg border transition-all duration-200 ${
-                      field.enabled 
+                <div 
+                  key={field.id} 
+                    className={`flex items-center justify-between p-2 sm:p-3 rounded-lg border transition-all duration-200 ${
+                    field.enabled 
                         ? 'border-green-300 bg-green-50' 
                         : 'border-gray-200 bg-white'
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <div className={`p-1.5 rounded-md ${
+                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+                      <div className={`p-1 sm:p-1.5 rounded-md flex-shrink-0 ${
                         field.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                      }`}>
-                        {renderFieldIcon(field.id)}
-                      </div>
-                      <div>
-                        <span className="text-sm font-medium text-gray-900">{field.label}</span>
-                      </div>
+                    }`}>
+                      {renderFieldIcon(field.id)}
                     </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs sm:text-sm font-medium text-gray-900 truncate block">{field.label}</span>
+                    </div>
+                  </div>
                     
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                       <button
                         onClick={() => updateFieldConfig(field.id, !field.enabled)}
-                        className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                        className={`px-2 sm:px-3 py-1 rounded-md text-xs font-medium transition-colors ${
                           field.enabled
                             ? 'bg-green-500 text-white'
                             : 'bg-gray-200 text-gray-700'
@@ -466,325 +415,322 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                       >
                         {field.enabled ? 'ON' : 'OFF'}
                       </button>
-                    </div>
                   </div>
-                ))}
+                </div>
+              ))}
               </div>
             </div>
             
-            {/* Save Button for Fields */}
-            <div className="flex-shrink-0 p-3 border-t border-gray-200 bg-white">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600">
+            {/* Save Button for Fields - Mobile Responsive */}
+            <div className="flex-shrink-0 p-2 sm:p-3 border-t border-gray-200 bg-white">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+                <div className="text-xs sm:text-sm text-gray-600">
                   <span className="font-medium">{fields.filter(f => f.enabled).length}</span> of <span className="font-medium">{fields.length}</span> fields enabled
                 </div>
                 <Button 
-                  onClick={() => {
-                    // Save field configuration
-                    localStorage.setItem('prescription-field-config', JSON.stringify(fields));
-                    // Show success message
-                    alert('Field configuration saved successfully!');
-                  }}
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 transition-colors"
+                  onClick={saveFieldConfiguration}
+                  disabled={isSaving}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 sm:px-6 py-2 text-xs sm:text-sm transition-colors w-full sm:w-auto disabled:opacity-50"
                 >
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
+                  <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  {isSaving ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
             </div>
-          </TabsContent>
-
-          <TabsContent value="playground" className="h-full flex flex-col">
-            {/* Enhanced Personalized Data Header */}
-            <div className="flex-shrink-0 p-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></div>
-                  <Database className="h-5 w-5 text-green-600" />
+          </div>
+        ) : (
+            <div className="h-full flex flex-col">
+            {/* Enhanced Personalized Data Header - Mobile Responsive */}
+            <div className="flex-shrink-0 p-2 sm:p-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-600 rounded-full animate-pulse"></div>
+                  <Database className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                   <div>
-                    <h3 className="text-lg font-semibold text-green-900 dark:text-green-200">Personalized Data</h3>
-                    <span className="text-sm text-green-700 dark:text-green-300">• 8 categories available</span>
+                    <h3 className="text-base sm:text-lg font-semibold text-green-900 dark:text-green-200">Personalized Data</h3>
+                    <span className="text-xs sm:text-sm text-green-700 dark:text-green-300 hidden sm:inline">• 8 categories available</span>
                   </div>
                 </div>
-                <Button
+                    <Button
                   onClick={() => setShowAddModal(true)}
-                  className="bg-green-600 hover:bg-green-700 h-8 px-4 text-sm shadow-lg"
+                  className="bg-green-600 hover:bg-green-700 h-7 sm:h-8 px-3 sm:px-4 text-xs sm:text-sm shadow-lg w-full sm:w-auto"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add {personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label}
-                </Button>
+                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Add {personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label}</span>
+                  <span className="sm:hidden">Add {personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label.split(' ')[0]}</span>
+                    </Button>
+                </div>
               </div>
-            </div>
 
-            {/* Sidebar Layout */}
-            <div className="flex-1 flex overflow-hidden">
-              {/* Enhanced Category Sidebar */}
-              <div className="w-64 flex-shrink-0 border-r border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
-                <div className="p-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <BookOpen className="h-4 w-4 text-gray-600" />
-                    <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Medical Categories</h4>
+            {/* Sidebar Layout - Mobile Responsive */}
+            <div className="flex-1 flex flex-col sm:flex-row overflow-hidden">
+              {/* Enhanced Category Sidebar - Mobile Responsive */}
+              <div className="w-full sm:w-64 flex-shrink-0 border-r-0 sm:border-r border-b sm:border-b-0 border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
+                <div className="p-2 sm:p-4">
+                  <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                    <BookOpen className="h-3 w-3 sm:h-4 sm:w-4 text-gray-600" />
+                    <h4 className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200">Medical Categories</h4>
                   </div>
-                  <div className="space-y-2">
-                    {personalizedDataCategories.map((category) => {
-                      const IconComponent = category.icon;
-                      const isSelected = selectedPersonalizedCategory === category.id;
-                      const itemCount = personalizedData[category.id as keyof PersonalizedData]?.length || 0;
-                      
-                      return (
-                        <button
-                          key={category.id}
-                          onClick={() => setSelectedPersonalizedCategory(category.id)}
-                          className={`w-full flex items-center gap-3 p-3 rounded-lg text-sm transition-all duration-300 ${
-                            isSelected
+                  <div className="space-y-1 sm:space-y-2">
+                      {personalizedDataCategories.map((category) => {
+                        const IconComponent = category.icon;
+                        const isSelected = selectedPersonalizedCategory === category.id;
+                        const itemCount = personalizedData[category.id as keyof PersonalizedData]?.length || 0;
+                        
+                        return (
+                          <button
+                            key={category.id}
+                            onClick={() => setSelectedPersonalizedCategory(category.id)}
+                          className={`w-full flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg text-xs sm:text-sm transition-all duration-300 ${
+                              isSelected
                               ? 'bg-green-100 dark:bg-green-900/30 text-green-900 dark:text-green-200 border-2 border-green-300 dark:border-green-600 shadow-lg scale-105'
                               : 'hover:bg-white dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 hover:scale-102'
                           }`}
                         >
-                          <div className={`p-1 rounded-md ${isSelected ? 'bg-green-200 dark:bg-green-800' : 'bg-gray-100 dark:bg-gray-600'}`}>
-                            <IconComponent className={`h-4 w-4 ${category.color}`} />
-                          </div>
+                          <div className={`p-1 rounded-md flex-shrink-0 ${isSelected ? 'bg-green-200 dark:bg-green-800' : 'bg-gray-100 dark:bg-gray-600'}`}>
+                            <IconComponent className={`h-3 w-3 sm:h-4 sm:w-4 ${category.color}`} />
+                            </div>
                           <span className="flex-1 text-left truncate font-medium">{category.label}</span>
                           {isSelected && (
-                            <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></div>
+                            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-600 rounded-full animate-pulse"></div>
                           )}
-                          <span className={`px-2 py-1 rounded-full text-xs ${
+                          <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs ${
                             isSelected 
                               ? 'bg-green-600 text-white' 
                               : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
                           }`}>
                             {itemCount}
                           </span>
-                        </button>
-                      );
-                    })}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Main Content Area */}
-              <div className="flex-1 flex flex-col">
-                {/* Content Header */}
-                <div className="flex-shrink-0 p-3 border-b border-gray-200 bg-white">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {React.createElement(personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.icon || FileText, {
-                        className: `h-4 w-4 ${personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.color}`
-                      })}
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label}
+              {/* Main Content Area - Mobile Responsive */}
+                <div className="flex-1 flex flex-col">
+                {/* Content Header - Mobile Responsive */}
+                <div className="flex-shrink-0 p-2 sm:p-3 border-b border-gray-200 bg-white">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+                        {React.createElement(personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.icon || FileText, {
+                        className: `h-3 w-3 sm:h-4 sm:w-4 ${personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.color}`
+                        })}
+                      <h3 className="text-sm sm:text-lg font-semibold text-gray-900 truncate">
+                          {personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label}
                       </h3>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-xs sm:text-sm text-gray-500 hidden sm:inline">
                         ({personalizedData[selectedPersonalizedCategory as keyof PersonalizedData]?.length || 0} templates)
                       </span>
-                    </div>
-                    <div className="max-w-sm">
-                      <div className="relative">
-                        <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                        <Input
+                      </div>
+                    <div className="w-full sm:max-w-sm">
+                        <div className="relative">
+                        <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3 sm:h-4 sm:w-4" />
+                          <Input
                           placeholder={`Search ${personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label.toLowerCase()} templates...`}
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          className="pl-8 h-8 text-sm"
-                        />
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                          className="pl-6 sm:pl-8 h-7 sm:h-8 text-xs sm:text-sm"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
                 {/* Add Item Form - Removed, now using modal */}
                 {false && (
-                  <div className="flex-shrink-0 p-4 border-b border-gray-200 bg-blue-50">
-                    <div className="max-w-4xl">
+                    <div className="flex-shrink-0 p-4 border-b border-gray-200 bg-blue-50">
+                      <div className="max-w-4xl">
                       <h5 className="text-sm font-semibold text-gray-900 mb-3">
                         Add New {personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label}
                       </h5>
-                      
-                      {selectedPersonalizedCategory === 'medications' ? (
+                        
+                        {selectedPersonalizedCategory === 'medications' ? (
                         <div className="space-y-3">
                           <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Generic Name</label>
-                              <Input
-                                value={newItemGenericName}
-                                onChange={(e) => setNewItemGenericName(e.target.value)}
-                                placeholder="e.g., Atorvastatin"
-                                className="w-full"
-                                autoFocus
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Brand Name</label>
-                              <Input
-                                value={newItemBrandName}
-                                onChange={(e) => setNewItemBrandName(e.target.value)}
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Generic Name</label>
+                                <Input
+                                  value={newItemGenericName}
+                                  onChange={(e) => setNewItemGenericName(e.target.value)}
+                                  placeholder="e.g., Atorvastatin"
+                                  className="w-full"
+                                  autoFocus
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Brand Name</label>
+                                <Input
+                                  value={newItemBrandName}
+                                  onChange={(e) => setNewItemBrandName(e.target.value)}
                                 placeholder="e.g., Lipitor"
-                                className="w-full"
-                              />
+                                  className="w-full"
+                                />
+                              </div>
                             </div>
-                          </div>
                           <div className="grid grid-cols-3 gap-3">
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Form</label>
-                              <Input
-                                value={newItemForm}
-                                onChange={(e) => setNewItemForm(e.target.value)}
-                                placeholder="e.g., Tablet"
-                                className="w-full"
-                              />
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Form</label>
+                                <Input
+                                  value={newItemForm}
+                                  onChange={(e) => setNewItemForm(e.target.value)}
+                                  placeholder="e.g., Tablet"
+                                  className="w-full"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Strength Value</label>
+                                <Input
+                                  value={newItemStrengthValue}
+                                  onChange={(e) => setNewItemStrengthValue(e.target.value)}
+                                  placeholder="e.g., 10"
+                                  className="w-full"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Strength Unit</label>
+                                <Input
+                                  value={newItemStrengthUnit}
+                                  onChange={(e) => setNewItemStrengthUnit(e.target.value)}
+                                  placeholder="e.g., mg"
+                                  className="w-full"
+                                />
+                              </div>
                             </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Strength Value</label>
-                              <Input
-                                value={newItemStrengthValue}
-                                onChange={(e) => setNewItemStrengthValue(e.target.value)}
-                                placeholder="e.g., 10"
-                                className="w-full"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Strength Unit</label>
-                              <Input
-                                value={newItemStrengthUnit}
-                                onChange={(e) => setNewItemStrengthUnit(e.target.value)}
-                                placeholder="e.g., mg"
-                                className="w-full"
-                              />
-                            </div>
-                          </div>
                           <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Route</label>
-                              <Input
-                                value={newItemRoute}
-                                onChange={(e) => setNewItemRoute(e.target.value)}
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Route</label>
+                                <Input
+                                  value={newItemRoute}
+                                  onChange={(e) => setNewItemRoute(e.target.value)}
                                 placeholder="e.g., Oral"
+                                  className="w-full"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Dose</label>
+                                <Input
+                                  value={newItemDose}
+                                  onChange={(e) => setNewItemDose(e.target.value)}
+                                  placeholder="e.g., 1 tab"
+                                  className="w-full"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Indication</label>
+                              <Input
+                                value={newItemIndication}
+                                onChange={(e) => setNewItemIndication(e.target.value)}
+                                placeholder="e.g., Primary hypercholesterolemia"
                                 className="w-full"
                               />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Dose</label>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
                               <Input
-                                value={newItemDose}
-                                onChange={(e) => setNewItemDose(e.target.value)}
-                                placeholder="e.g., 1 tab"
+                                value={newItemNotes}
+                                onChange={(e) => setNewItemNotes(e.target.value)}
+                                placeholder="e.g., if any"
                                 className="w-full"
                               />
                             </div>
+                            <div className="flex gap-2">
+                              <Button onClick={addPersonalizedDataItem} className="bg-green-600 hover:bg-green-700">
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                Save
+                              </Button>
+                              <Button 
+                                onClick={() => {
+                                  setIsAddingItem(false);
+                                  setNewItemGenericName('');
+                                  setNewItemBrandName('');
+                                  setNewItemForm('');
+                                  setNewItemStrengthValue('');
+                                  setNewItemStrengthUnit('');
+                                  setNewItemRoute('');
+                                  setNewItemDose('');
+                                  setNewItemIndication('');
+                                  setNewItemNotes('');
+                                  setNewItemMedicineId('');
+                                }} 
+                                variant="outline"
+                              >
+                                <X className="h-4 w-4 mr-1" />
+                                Cancel
+                              </Button>
+                            </div>
                           </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">Indication</label>
-                            <Input
-                              value={newItemIndication}
-                              onChange={(e) => setNewItemIndication(e.target.value)}
-                              placeholder="e.g., Primary hypercholesterolemia"
-                              className="w-full"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
-                            <Input
-                              value={newItemNotes}
-                              onChange={(e) => setNewItemNotes(e.target.value)}
-                              placeholder="e.g., if any"
-                              className="w-full"
-                            />
-                          </div>
-                          <div className="flex gap-2">
-                            <Button onClick={addPersonalizedDataItem} className="bg-green-600 hover:bg-green-700">
-                              <CheckCircle className="h-4 w-4 mr-1" />
-                              Save
-                            </Button>
-                            <Button 
-                              onClick={() => {
-                                setIsAddingItem(false);
-                                setNewItemGenericName('');
-                                setNewItemBrandName('');
-                                setNewItemForm('');
-                                setNewItemStrengthValue('');
-                                setNewItemStrengthUnit('');
-                                setNewItemRoute('');
-                                setNewItemDose('');
-                                setNewItemIndication('');
-                                setNewItemNotes('');
-                                setNewItemMedicineId('');
-                              }} 
-                              variant="outline"
-                            >
-                              <X className="h-4 w-4 mr-1" />
-                              Cancel
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
+                        ) : (
+                          <div className="space-y-3">
                           <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Name</label>
-                              <Input
-                                value={newItemName}
-                                onChange={(e) => setNewItemName(e.target.value)}
-                                placeholder={getNamePlaceholder(selectedPersonalizedCategory)}
-                                className="w-full"
-                                autoFocus
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Code</label>
-                              <Input
-                                value={newItemCode}
-                                onChange={(e) => setNewItemCode(e.target.value)}
-                                placeholder={getCodePlaceholder(selectedPersonalizedCategory)}
-                                className="w-full"
-                              />
-                            </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Name</label>
+                                <Input
+                                  value={newItemName}
+                                  onChange={(e) => setNewItemName(e.target.value)}
+                                  placeholder={getNamePlaceholder(selectedPersonalizedCategory)}
+                                  className="w-full"
+                                  autoFocus
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Code</label>
+                                <Input
+                                  value={newItemCode}
+                                  onChange={(e) => setNewItemCode(e.target.value)}
+                                  placeholder={getCodePlaceholder(selectedPersonalizedCategory)}
+                                  className="w-full"
+                                />
+                              </div>
                           </div>
                           <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Short Description</label>
-                              <Input
-                                value={newItemShortDesc}
-                                onChange={(e) => setNewItemShortDesc(e.target.value)}
-                                placeholder={getShortDescPlaceholder(selectedPersonalizedCategory)}
-                                className="w-full"
-                              />
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Short Description</label>
+                                <Input
+                                  value={newItemShortDesc}
+                                  onChange={(e) => setNewItemShortDesc(e.target.value)}
+                                  placeholder={getShortDescPlaceholder(selectedPersonalizedCategory)}
+                                  className="w-full"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Synonyms</label>
+                                <Input
+                                  value={newItemSynonyms}
+                                  onChange={(e) => setNewItemSynonyms(e.target.value)}
+                                  placeholder={getSynonymsPlaceholder(selectedPersonalizedCategory)}
+                                  className="w-full"
+                                />
+                              </div>
                             </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Synonyms</label>
-                              <Input
-                                value={newItemSynonyms}
-                                onChange={(e) => setNewItemSynonyms(e.target.value)}
-                                placeholder={getSynonymsPlaceholder(selectedPersonalizedCategory)}
-                                className="w-full"
-                              />
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button onClick={addPersonalizedDataItem} className="bg-green-600 hover:bg-green-700">
-                              <CheckCircle className="h-4 w-4 mr-1" />
-                              Save
-                            </Button>
-                            <Button 
-                              onClick={() => {
-                                setIsAddingItem(false);
-                                setNewItemName('');
+                            <div className="flex gap-2">
+                              <Button onClick={addPersonalizedDataItem} className="bg-green-600 hover:bg-green-700">
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                Save
+                              </Button>
+                              <Button 
+                                onClick={() => {
+                                  setIsAddingItem(false);
+                                  setNewItemName('');
                                 setNewItemCode('');
-                                setNewItemShortDesc('');
-                                setNewItemSynonyms('');
-                              }} 
-                              variant="outline"
-                            >
-                              <X className="h-4 w-4 mr-1" />
-                              Cancel
-                            </Button>
+                                  setNewItemShortDesc('');
+                                  setNewItemSynonyms('');
+                                }} 
+                                variant="outline"
+                              >
+                                <X className="h-4 w-4 mr-1" />
+                                Cancel
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Tabular Data Display */}
+                {/* Tabular Data Display - Mobile Responsive */}
                 <div className="flex-1 overflow-y-auto bg-white">
                   {(() => {
                     const items = personalizedData[selectedPersonalizedCategory as keyof PersonalizedData] || [];
@@ -797,57 +743,57 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                       : items;
 
                     return (
-                      <div className="p-3">
+                      <div className="p-2 sm:p-3">
                         {filteredItems.length > 0 ? (
                           <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
+                            <table className="w-full text-xs sm:text-sm">
                               <thead>
                                 <tr className="border-b border-gray-200">
-                                  <th className="text-left py-2 px-3 font-semibold text-gray-700">Name</th>
-                                  <th className="text-left py-2 px-3 font-semibold text-gray-700">Code</th>
-                                  <th className="text-left py-2 px-3 font-semibold text-gray-700">Description</th>
+                                  <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm">Name</th>
+                                  <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden sm:table-cell">Code</th>
+                                  <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden md:table-cell">Description</th>
                                   {selectedPersonalizedCategory === 'medications' && (
                                     <>
-                                      <th className="text-left py-2 px-3 font-semibold text-gray-700">Brand</th>
-                                      <th className="text-left py-2 px-3 font-semibold text-gray-700">Strength</th>
-                                      <th className="text-left py-2 px-3 font-semibold text-gray-700">Form</th>
+                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">Brand</th>
+                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">Strength</th>
+                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">Form</th>
                                     </>
                                   )}
-                                  <th className="text-right py-2 px-3 font-semibold text-gray-700">Actions</th>
+                                  <th className="text-right py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm">Actions</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {filteredItems.map((item) => (
                                   <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
-                                    <td className="py-2 px-3">
-                                      <span className="font-medium text-gray-900">
+                                    <td className="py-1.5 sm:py-2 px-2 sm:px-3">
+                                      <span className="font-medium text-gray-900 text-xs sm:text-sm">
                                         {selectedPersonalizedCategory === 'medications' ? item.genericName || item.name : item.name}
                                       </span>
                                     </td>
-                                    <td className="py-2 px-3">
-                                      <span className="text-gray-600">{item.code}</span>
+                                    <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden sm:table-cell">
+                                      <span className="text-gray-600 text-xs sm:text-sm">{item.code}</span>
                                     </td>
-                                    <td className="py-2 px-3">
-                                      <span className="text-gray-600">
+                                    <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden md:table-cell">
+                                      <span className="text-gray-600 text-xs sm:text-sm">
                                         {selectedPersonalizedCategory === 'medications' ? item.brandName || item.shortDesc : item.shortDesc}
                                       </span>
                                     </td>
                                     {selectedPersonalizedCategory === 'medications' && (
                                       <>
-                                        <td className="py-2 px-3">
-                                          <span className="text-gray-600">{item.brandName}</span>
+                                        <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden lg:table-cell">
+                                          <span className="text-gray-600 text-xs sm:text-sm">{item.brandName}</span>
                                         </td>
-                                        <td className="py-2 px-3">
-                                          <span className="text-gray-600">
+                                        <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden lg:table-cell">
+                                          <span className="text-gray-600 text-xs sm:text-sm">
                                             {item.strengthValue} {item.strengthUnit}
                                           </span>
                                         </td>
-                                        <td className="py-2 px-3">
-                                          <span className="text-gray-600">{item.form}</span>
+                                        <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden lg:table-cell">
+                                          <span className="text-gray-600 text-xs sm:text-sm">{item.form}</span>
                                         </td>
                                       </>
                                     )}
-                                    <td className="py-2 px-3">
+                                    <td className="py-1.5 sm:py-2 px-2 sm:px-3">
                                       <div className="flex items-center justify-end gap-1">
                                         <Button
                                           onClick={() => {
@@ -872,17 +818,17 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                                           }}
                                           variant="outline"
                                           size="sm"
-                                          className="h-6 w-6 p-0"
+                                          className="h-5 w-5 sm:h-6 sm:w-6 p-0"
                                         >
-                                          <Edit className="h-3 w-3" />
+                                          <Edit className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                                         </Button>
                                         <Button
                                           onClick={() => deletePersonalizedDataItem(item.id)}
                                           variant="outline"
                                           size="sm"
-                                          className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                          className="h-5 w-5 sm:h-6 sm:w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                                         >
-                                          <Trash2 className="h-3 w-3" />
+                                          <Trash2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                                         </Button>
                                       </div>
                                     </td>
@@ -904,8 +850,8 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                 </div>
               </div>
             </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        )}
       </div>
 
       {/* Enhanced Footer - Only show when not in settings context */}
@@ -950,143 +896,143 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
               {selectedPersonalizedCategory === 'medications' ? (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
+                                          <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Generic Name</label>
-                      <Input
+                                            <Input
                         value={newItemGenericName}
                         onChange={(e) => setNewItemGenericName(e.target.value)}
-                        placeholder="e.g., Atorvastatin"
+                                              placeholder="e.g., Atorvastatin"
                         className="w-full"
-                        autoFocus
-                      />
-                    </div>
-                    <div>
+                                              autoFocus
+                                            />
+                                          </div>
+                                          <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Brand Name</label>
-                      <Input
+                                            <Input
                         value={newItemBrandName}
                         onChange={(e) => setNewItemBrandName(e.target.value)}
                         placeholder="e.g., Lipitor"
                         className="w-full"
-                      />
-                    </div>
-                  </div>
+                                            />
+                                          </div>
+                                        </div>
                   <div className="grid grid-cols-3 gap-4">
-                    <div>
+                                          <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Form</label>
-                      <Input
+                                            <Input
                         value={newItemForm}
                         onChange={(e) => setNewItemForm(e.target.value)}
-                        placeholder="e.g., Tablet"
+                                              placeholder="e.g., Tablet"
                         className="w-full"
-                      />
-                    </div>
-                    <div>
+                                            />
+                                          </div>
+                                          <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Strength Value</label>
-                      <Input
+                                            <Input
                         value={newItemStrengthValue}
                         onChange={(e) => setNewItemStrengthValue(e.target.value)}
-                        placeholder="e.g., 10"
+                                              placeholder="e.g., 10"
                         className="w-full"
-                      />
-                    </div>
-                    <div>
+                                            />
+                                          </div>
+                                          <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Strength Unit</label>
-                      <Input
+                                            <Input
                         value={newItemStrengthUnit}
                         onChange={(e) => setNewItemStrengthUnit(e.target.value)}
-                        placeholder="e.g., mg"
+                                              placeholder="e.g., mg"
                         className="w-full"
-                      />
-                    </div>
-                  </div>
+                                            />
+                                          </div>
+                                        </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
+                                          <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Route</label>
-                      <Input
+                                            <Input
                         value={newItemRoute}
                         onChange={(e) => setNewItemRoute(e.target.value)}
                         placeholder="e.g., Oral"
                         className="w-full"
-                      />
-                    </div>
-                    <div>
+                                            />
+                                          </div>
+                                          <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Dose</label>
-                      <Input
+                                            <Input
                         value={newItemDose}
                         onChange={(e) => setNewItemDose(e.target.value)}
-                        placeholder="e.g., 1 tab"
+                                              placeholder="e.g., 1 tab"
                         className="w-full"
-                      />
-                    </div>
-                  </div>
-                  <div>
+                                            />
+                                          </div>
+                                        </div>
+                                        <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Indication</label>
-                    <Input
+                                          <Input
                       value={newItemIndication}
                       onChange={(e) => setNewItemIndication(e.target.value)}
-                      placeholder="e.g., Primary hypercholesterolemia"
+                                            placeholder="e.g., Primary hypercholesterolemia"
                       className="w-full"
-                    />
-                  </div>
-                  <div>
+                                          />
+                                        </div>
+                                        <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                    <Input
+                                          <Input
                       value={newItemNotes}
                       onChange={(e) => setNewItemNotes(e.target.value)}
                       placeholder="e.g., if any"
                       className="w-full"
-                    />
-                  </div>
-                  <div>
+                                          />
+                                        </div>
+                                        <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Medicine ID</label>
-                    <Input
+                                          <Input
                       value={newItemMedicineId}
                       onChange={(e) => setNewItemMedicineId(e.target.value)}
                       placeholder="e.g., MED001"
                       className="w-full"
-                    />
-                  </div>
-                </div>
-              ) : (
+                                          />
+                                        </div>
+                                      </div>
+                                    ) : (
                 <div className="space-y-4">
-                  <div>
+                                          <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                    <Input
+                                            <Input
                       value={newItemName}
                       onChange={(e) => setNewItemName(e.target.value)}
-                      placeholder={getNamePlaceholder(selectedPersonalizedCategory)}
+                                              placeholder={getNamePlaceholder(selectedPersonalizedCategory)}
                       className="w-full"
-                      autoFocus
-                    />
-                  </div>
-                  <div>
+                                              autoFocus
+                                            />
+                                          </div>
+                                          <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Code</label>
-                    <Input
+                                            <Input
                       value={newItemCode}
                       onChange={(e) => setNewItemCode(e.target.value)}
-                      placeholder={getCodePlaceholder(selectedPersonalizedCategory)}
+                                              placeholder={getCodePlaceholder(selectedPersonalizedCategory)}
                       className="w-full"
-                    />
-                  </div>
-                  <div>
+                                            />
+                                          </div>
+                                          <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                    <Input
+                                            <Input
                       value={newItemShortDesc}
                       onChange={(e) => setNewItemShortDesc(e.target.value)}
-                      placeholder={getShortDescPlaceholder(selectedPersonalizedCategory)}
+                                              placeholder={getShortDescPlaceholder(selectedPersonalizedCategory)}
                       className="w-full"
-                    />
-                  </div>
-                  <div>
+                                            />
+                                          </div>
+                                          <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Synonyms</label>
-                    <Input
+                                            <Input
                       value={newItemSynonyms}
                       onChange={(e) => setNewItemSynonyms(e.target.value)}
-                      placeholder={getSynonymsPlaceholder(selectedPersonalizedCategory)}
+                                              placeholder={getSynonymsPlaceholder(selectedPersonalizedCategory)}
                       className="w-full"
-                    />
-                  </div>
-                  <div>
+                                            />
+                                          </div>
+                                    <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                     <Input
                       value={newItemNotes}
@@ -1094,19 +1040,19 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                       placeholder="Additional notes (optional)"
                       className="w-full"
                     />
-                  </div>
-                </div>
-              )}
-            </div>
+                                          </div>
+                                    </div>
+                                  )}
+                                </div>
             
             <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
-              <Button
+                                    <Button
                 onClick={() => setShowAddModal(false)}
-                variant="outline"
-              >
+                                      variant="outline"
+                                    >
                 Cancel
-              </Button>
-              <Button
+                                    </Button>
+                                    <Button
                 onClick={() => {
                   addPersonalizedDataItem();
                   setShowAddModal(false);
@@ -1115,8 +1061,8 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Add {personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label}
-              </Button>
-            </div>
+                                    </Button>
+                                  </div>
           </div>
         </div>
       )}

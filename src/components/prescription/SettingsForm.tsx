@@ -13,7 +13,6 @@ import { prescriptionSettingsApi, PrescriptionSettingsRequest } from '@/features
 import { useAuthStore } from '@/store/authStore';
 import { useDoctorProfile } from '@/features/doctor/hooks/useDoctorProfile';
 import { useMediaUploadApi } from '@/hooks/useApi';
-import { SignatureDebugInfo } from './SignatureDebugInfo';
 
 export const SettingsForm: React.FC = () => {
   const { settings, update } = usePrescriptionStore();
@@ -713,14 +712,6 @@ export const SettingsForm: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Signature Debug Info - Development Only */}
-      {process.env.NODE_ENV === 'development' && (
-        <SignatureDebugInfo
-          settings={settings}
-          assets={[]}
-          onRefresh={() => refetchAssets()}
-        />
-      )}
 
     </div>
   );

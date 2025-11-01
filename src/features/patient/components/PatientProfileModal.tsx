@@ -134,39 +134,39 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[98vh] overflow-hidden bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-2xl flex flex-col">
-        <DialogHeader className="bg-gray-50 dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-          <DialogTitle className="flex items-center gap-2 text-lg font-bold text-gray-900 dark:text-white">
-            <User className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            Patient Profile - {patientName || patientProfile?.fullName || patientId}
+      <DialogContent className="max-w-6xl max-h-[98vh] overflow-hidden bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-2xl flex flex-col w-[95vw] sm:w-full">
+        <DialogHeader className="bg-gray-50 dark:bg-gray-800 px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+            <User className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
+            <span className="truncate">Patient Profile - {patientName || patientProfile?.fullName || patientId}</span>
           </DialogTitle>
         </DialogHeader>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-8 flex-1">
-            <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-            <span className="ml-2 text-base text-gray-600 dark:text-gray-300">Loading patient profile...</span>
+          <div className="flex items-center justify-center py-6 sm:py-8 flex-1">
+            <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-blue-600" />
+            <span className="ml-2 text-sm sm:text-base text-gray-600 dark:text-gray-300">Loading patient profile...</span>
           </div>
         ) : (
-          <div className="p-3 space-y-3 bg-gray-50 dark:bg-gray-800 flex-1 overflow-y-auto">
-            {/* Patient ID Badge */}
+          <div className="p-2 sm:p-3 space-y-2 sm:space-y-3 bg-gray-50 dark:bg-gray-800 flex-1 overflow-y-auto">
+            {/* Patient ID Badge - Mobile Responsive */}
             <div className="flex justify-center mb-1">
-              <Badge variant="outline" className="text-sm px-3 py-1 bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700 font-medium">
+              <Badge variant="outline" className="text-xs sm:text-sm px-2 sm:px-3 py-1 bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700 font-medium">
                 Patient ID: {patientId}
               </Badge>
             </div>
 
             <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                {/* Personal Information Card */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-3">
+                {/* Personal Information Card - Mobile Responsive */}
                 <Card className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-lg">
                   <CardHeader className="bg-blue-50 dark:bg-blue-900 border-b border-blue-200 dark:border-blue-700 px-2 py-1">
-                    <CardTitle className="flex items-center gap-1 text-sm font-semibold text-blue-800 dark:text-blue-200">
+                    <CardTitle className="flex items-center gap-1 text-xs sm:text-sm font-semibold text-blue-800 dark:text-blue-200">
                       <User className="h-3 w-3" />
                       Personal Information
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2 p-3">
+                  <CardContent className="space-y-2 p-2 sm:p-3">
                     <div className="space-y-1">
                       <Label htmlFor="fullName" className={labelClassName}>Full Name *</Label>
                       <Input
@@ -179,7 +179,7 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                       <div className="space-y-1">
                         <Label htmlFor="ageYears" className={labelClassName}>Age *</Label>
                         <Input
@@ -251,7 +251,7 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                       <div className="space-y-1">
                         <Label htmlFor="city" className={labelClassName}>City *</Label>
                         <Input
@@ -275,7 +275,7 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                       <div className="space-y-1">
                         <Label htmlFor="country" className={labelClassName}>Country</Label>
                         <Input

@@ -21,7 +21,9 @@ import {
   Activity,
   Wifi,
   WifiOff,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Settings,
+  Database
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -91,12 +93,32 @@ export const ClinicalDashboard: React.FC = () => {
   const [appointmentToCancel, setAppointmentToCancel] = useState<PatientAppointment | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [activeNavButton, setActiveNavButton] = useState<'appointments' | 'settings'>('appointments');
-  const [settingsTab, setSettingsTab] = useState<'layout' | 'customize'>('layout');
+  const [settingsTab, setSettingsTab] = useState<'layout' | 'fields' | 'personalized'>('layout');
+  const [isMobile, setIsMobile] = useState(false);
 
   // Live update states
   const [isLiveUpdateEnabled, setIsLiveUpdateEnabled] = useState(true);
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // md breakpoint
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Auto-switch from layout tab on mobile
+  useEffect(() => {
+    if (isMobile && settingsTab === 'layout') {
+      setSettingsTab('fields'); // Switch to fields tab on mobile
+    }
+  }, [isMobile, settingsTab]);
 
   // Prevent body scrolling
   useEffect(() => {
@@ -108,6 +130,7 @@ export const ClinicalDashboard: React.FC = () => {
       document.body.style.height = 'auto';
     };
   }, []);
+
   const [connectionStatus, setConnectionStatus] = useState<'online' | 'offline'>('online');
 
   // Helper function for safe date formatting (kept for future use)
@@ -434,107 +457,109 @@ export const ClinicalDashboard: React.FC = () => {
 
   return (
     <div className="h-screen bg-gray-50 dark:bg-gray-950 flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3 shadow-lg flex-shrink-0 sticky top-0 z-50">
+      {/* Header - Mobile Responsive */}
+      <div className="bg-gradient-to-r from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 border-b border-gray-200 dark:border-gray-700 px-3 sm:px-6 py-2 sm:py-3 shadow-lg flex-shrink-0 sticky top-0 z-50">
         <div className="w-full mx-auto">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-                <Calendar className="h-4 w-4 text-white" />
-          </div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Doctor Dashboard</h1>
-                  </div>
-            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1 shadow-inner">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
+              </div>
+              <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Doctor Dashboard</h1>
+            </div>
+            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1 shadow-inner w-full sm:w-auto">
               <button
                 onClick={() => setActiveNavButton('appointments')}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 ${
+                className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 flex-1 sm:flex-none ${
                   activeNavButton === 'appointments'
                     ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white dark:hover:bg-gray-700'
                 }`}
               >
-                <Calendar className="h-4 w-4" />
-                <span>Appointments</span>
+                <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Appointments</span>
+                <span className="sm:hidden">Appts</span>
               </button>
               <button
                 onClick={() => setActiveNavButton('settings')}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 ${
+                className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 flex-1 sm:flex-none ${
                   activeNavButton === 'settings'
                     ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white dark:hover:bg-gray-700'
                 }`}
               >
-                <FileText className="h-4 w-4" />
-                <span>Prescription Settings</span>
+                <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Prescription Settings</span>
+                <span className="sm:hidden">Settings</span>
               </button>
-                </div>
-                    </div>
-                  </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content - Mobile Responsive */}
       {activeNavButton === 'appointments' && (
         <div className="flex-1 overflow-hidden">
-          <div className="w-full mx-auto p-4 h-full overflow-y-auto">
-          {/* Loading */}
+          <div className="w-full mx-auto p-2 sm:p-4 h-full overflow-y-auto">
+          {/* Loading - Mobile Responsive */}
           {isDataLoading && (
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-12 text-center shadow-lg">
-              <div className="flex flex-col items-center gap-6">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 sm:p-12 text-center shadow-lg">
+              <div className="flex flex-col items-center gap-4 sm:gap-6">
                 <div className="relative">
-                  <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                  <div className="w-8 h-8 sm:w-12 sm:h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
                   <div
-                    className="absolute inset-0 w-12 h-12 border-4 border-transparent border-t-blue-400 rounded-full animate-spin"
+                    className="absolute inset-0 w-8 h-8 sm:w-12 sm:h-12 border-4 border-transparent border-t-blue-400 rounded-full animate-spin"
                     style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}
                   ></div>
                 </div>
-                <div className="space-y-2">
-                  <p className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+                <div className="space-y-1 sm:space-y-2">
+                  <p className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300">
                     {doctorProfileLoading ? 'Loading doctor profile...' : 'Loading appointment data...'}
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Please wait while we fetch your data</p>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Please wait while we fetch your data</p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Error */}
+          {/* Error - Mobile Responsive */}
           {shouldShowError && (
-            <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border border-red-200 dark:border-red-800 rounded-xl p-8 text-center shadow-lg">
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center animate-pulse">
-                  <X className="h-8 w-8 text-red-600 dark:text-red-400" />
-                  </div>
-                <div className="space-y-2">
-                  <p className="text-xl font-bold text-red-800 dark:text-red-200">
+            <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border border-red-200 dark:border-red-800 rounded-xl p-4 sm:p-8 text-center shadow-lg">
+              <div className="flex flex-col items-center gap-3 sm:gap-4">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center animate-pulse">
+                  <X className="h-6 w-6 sm:h-8 sm:w-8 text-red-600 dark:text-red-400" />
+                </div>
+                <div className="space-y-1 sm:space-y-2">
+                  <p className="text-lg sm:text-xl font-bold text-red-800 dark:text-red-200">
                     {doctorProfileError ? 'Failed to load doctor profile' : 'Failed to load appointment data'}
                   </p>
-                  <p className="text-red-600 dark:text-red-400 text-sm max-w-md">
+                  <p className="text-red-600 dark:text-red-400 text-xs sm:text-sm max-w-md">
                     {!hospitalId || !doctorId
                       ? `Missing required data: ${!hospitalId ? 'Hospital ID' : ''} ${!doctorId ? 'Doctor ID' : ''}`
                       : 'Please check the console for error details and try refreshing the page'}
                   </p>
                 </div>
-                <div className="flex gap-3 mt-4">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-3 sm:mt-4 w-full sm:w-auto">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => refetch?.()}
-                    className="bg-white hover:bg-red-50 border-red-300 text-red-700 hover:text-red-800 transition-all duration-200"
+                    className="bg-white hover:bg-red-50 border-red-300 text-red-700 hover:text-red-800 transition-all duration-200 w-full sm:w-auto"
                   >
-                    <RefreshCw className="h-4 w-4 mr-2" />
+                    <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     Retry
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => window.location.reload()}
-                    className="bg-white hover:bg-red-50 border-red-300 text-red-700 hover:text-red-800 transition-all duration-200"
+                    className="bg-white hover:bg-red-50 border-red-300 text-red-700 hover:text-red-800 transition-all duration-200 w-full sm:w-auto"
                   >
-                    <RefreshCw className="h-4 w-4 mr-2" />
+                    <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     Refresh Page
                   </Button>
+                </div>
               </div>
-            </div>
             </div>
           )}
 
@@ -549,181 +574,195 @@ export const ClinicalDashboard: React.FC = () => {
               }}
               className="h-full flex flex-col"
             >
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-1 shadow-lg border border-gray-200 dark:border-gray-700 mb-3">
-                <TabsList className="grid w-full grid-cols-3 h-12 bg-transparent">
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-1 shadow-lg border border-gray-200 dark:border-gray-700 mb-2 sm:mb-3">
+                <TabsList className="grid w-full grid-cols-3 h-10 sm:h-12 bg-transparent">
                   <TabsTrigger
                     value="current"
-                    className="text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all duration-300 hover:scale-105 rounded-lg"
+                    className="text-xs sm:text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all duration-300 hover:scale-105 rounded-lg"
                   >
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-                      Current Appointments
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-500 rounded-full"></div>
+                      <span className="hidden sm:inline">Current Appointments</span>
+                      <span className="sm:hidden">Current</span>
                       {activeTab === 'current' && (
                         <div className="flex items-center gap-1">
-                          {isLiveUpdateEnabled && <Activity className="h-3 w-3 text-blue-500" />}
-                          {isRefreshing && <RefreshCw className="h-3 w-3 text-blue-500 animate-spin" />}
+                          {isLiveUpdateEnabled && <Activity className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-blue-500" />}
+                          {isRefreshing && <RefreshCw className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-blue-500 animate-spin" />}
                           {connectionStatus === 'online' ? (
-                            <Wifi className="h-3 w-3 text-green-500" />
+                            <Wifi className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-green-500" />
                           ) : (
-                            <WifiOff className="h-3 w-3 text-red-500" />
+                            <WifiOff className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-red-500" />
                           )}
-              </div>
+                        </div>
                       )}
                     </div>
                   </TabsTrigger>
                   <TabsTrigger
                     value="past"
-                    className="text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all duration-300 hover:scale-105 rounded-lg"
+                    className="text-xs sm:text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all duration-300 hover:scale-105 rounded-lg"
                   >
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-                      Past Appointments
-                </div>
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-500 rounded-full"></div>
+                      <span className="hidden sm:inline">Past Appointments</span>
+                      <span className="sm:hidden">Past</span>
+                    </div>
                   </TabsTrigger>
                   <TabsTrigger
                     value="future"
-                    className="text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all duration-300 hover:scale-105 rounded-lg"
+                    className="text-xs sm:text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all duration-300 hover:scale-105 rounded-lg"
                   >
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-                      Future Appointments
-              </div>
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-500 rounded-full"></div>
+                      <span className="hidden sm:inline">Future Appointments</span>
+                      <span className="sm:hidden">Future</span>
+                    </div>
                   </TabsTrigger>
                 </TabsList>
             </div>
             
-              {/* Live Update Controls */}
+              {/* Live Update Controls - Mobile Responsive */}
               {activeTab === 'current' && (
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <Activity className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2 sm:p-3 mb-2 sm:mb-3">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <Activity className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
+                        <span className="text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-200">
                           {isLiveUpdateEnabled ? 'Live Updates Active' : 'Live Updates Disabled'}
                         </span>
-                </div>
-                      <div className="flex items-center gap-2">
+                      </div>
+                      <div className="flex items-center gap-1.5 sm:gap-2">
                         <span className="text-xs text-blue-600 dark:text-blue-400">
                           Last updated: {format(lastUpdateTime, 'HH:mm:ss')}
                         </span>
                         {connectionStatus === 'online' ? (
-                          <Wifi className="h-3 w-3 text-green-500" />
+                          <Wifi className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-green-500" />
                         ) : (
-                          <WifiOff className="h-3 w-3 text-red-500" />
+                          <WifiOff className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-red-500" />
                         )}
-                </div>
-              </div>
-                    <div className="flex items-center gap-2">
-              <Button 
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+                      <Button 
                         variant="outline"
                         size="sm"
                         onClick={handleManualRefresh}
                         disabled={isRefreshing}
-                        className="h-8 px-3 text-xs bg-white hover:bg-blue-50 border-blue-300 text-blue-700 hover:text-blue-800"
+                        className="h-7 sm:h-8 px-2 sm:px-3 text-xs bg-white hover:bg-blue-50 border-blue-300 text-blue-700 hover:text-blue-800 flex-1 sm:flex-none"
                       >
-                        <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
-                        Refresh Now
+                        <RefreshCw className={`h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        <span className="hidden sm:inline">Refresh Now</span>
+                        <span className="sm:hidden">Refresh</span>
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setIsLiveUpdateEnabled(!isLiveUpdateEnabled)}
-                        className={`h-8 px-3 text-xs ${
+                        className={`h-7 sm:h-8 px-2 sm:px-3 text-xs flex-1 sm:flex-none ${
                           isLiveUpdateEnabled
                             ? 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100'
                             : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'
                         }`}
                       >
-                        {isLiveUpdateEnabled ? 'Disable Auto-Refresh' : 'Enable Auto-Refresh'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+                        <span className="hidden sm:inline">
+                          {isLiveUpdateEnabled ? 'Disable Auto-Refresh' : 'Enable Auto-Refresh'}
+                        </span>
+                        <span className="sm:hidden">
+                          {isLiveUpdateEnabled ? 'Disable' : 'Enable'}
+                        </span>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-              {/* Current */}
-              <TabsContent value="current" className="p-4 flex-1 overflow-auto">
-                {/* Status Filters */}
-                <div className="mb-3">
-                  <div className="flex flex-wrap gap-2">
+              {/* Current - Mobile Responsive */}
+              <TabsContent value="current" className="p-2 sm:p-4 flex-1 overflow-auto">
+                {/* Status Filters - Mobile Responsive */}
+                <div className="mb-2 sm:mb-3">
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
                     <Button
                       variant={selectedStatus === 'all' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleStatusClick('all')}
-                      className={`text-xs h-8 px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
+                      className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
                         selectedStatus === 'all'
                           ? 'bg-gradient-to-r from-gray-600 to-gray-700 text-white shadow-lg'
                           : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                       }`}
                     >
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-                        All ({currentAppointmentCounts.all})
-          </div>
+                      <div className="flex items-center gap-1 sm:gap-1.5">
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-500 rounded-full"></div>
+                        <span className="hidden sm:inline">All ({currentAppointmentCounts.all})</span>
+                        <span className="sm:hidden">All ({currentAppointmentCounts.all})</span>
+                      </div>
                     </Button>
 
                     <Button
                       variant={selectedStatus === 'VITALS_REQUIRED' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleStatusClick('VITALS_REQUIRED')}
-                      className={`text-xs h-8 px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
+                      className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
                         selectedStatus === 'VITALS_REQUIRED'
                           ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg'
                           : 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100 dark:hover:bg-red-900/20'
                       }`}
                     >
-                      <div className="flex items-center gap-1.5">
-                        <Heart className="h-3 w-3" />
-                        Vitals ({currentAppointmentCounts.vitalsRequired})
-        </div>
-          </Button>
+                      <div className="flex items-center gap-1 sm:gap-1.5">
+                        <Heart className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                        <span className="hidden sm:inline">Vitals ({currentAppointmentCounts.vitalsRequired})</span>
+                        <span className="sm:hidden">Vitals ({currentAppointmentCounts.vitalsRequired})</span>
+                      </div>
+                    </Button>
 
                     <Button
                       variant={selectedStatus === 'READY' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleStatusClick('READY')}
-                      className={`text-xs h-8 px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
+                      className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
                         selectedStatus === 'READY'
                           ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg'
                           : 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100 dark:hover:bg-green-900/20'
                       }`}
                     >
-                      <div className="flex items-center gap-1.5">
-                        <UserCheck className="h-3 w-3" />
-                        Ready ({currentAppointmentCounts.ready})
-        </div>
+                      <div className="flex items-center gap-1 sm:gap-1.5">
+                        <UserCheck className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                        <span className="hidden sm:inline">Ready ({currentAppointmentCounts.ready})</span>
+                        <span className="sm:hidden">Ready ({currentAppointmentCounts.ready})</span>
+                      </div>
                     </Button>
 
                     <Button
                       variant={selectedStatus === 'UNDER_CONSULT' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleStatusClick('UNDER_CONSULT')}
-                      className={`text-xs h-8 px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
+                      className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
                         selectedStatus === 'UNDER_CONSULT'
                           ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg'
                           : 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/20'
                       }`}
                     >
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="h-3 w-3" />
-                        Consult ({currentAppointmentCounts.underConsult})
-      </div>
+                      <div className="flex items-center gap-1 sm:gap-1.5">
+                        <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                        <span className="hidden sm:inline">Consult ({currentAppointmentCounts.underConsult})</span>
+                        <span className="sm:hidden">Consult ({currentAppointmentCounts.underConsult})</span>
+                      </div>
                     </Button>
 
                     <Button
                       variant={selectedStatus === 'LAB_REQUIRED' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleStatusClick('LAB_REQUIRED')}
-                      className={`text-xs h-8 px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
+                      className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
                         selectedStatus === 'LAB_REQUIRED'
                           ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg'
                           : 'bg-orange-50 text-orange-700 border-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/20'
                       }`}
                     >
-                      <div className="flex items-center gap-1.5">
-                        <FlaskConical className="h-3 w-3" />
-                        Lab ({currentAppointmentCounts.labRequired})
+                      <div className="flex items-center gap-1 sm:gap-1.5">
+                        <FlaskConical className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                        <span className="hidden sm:inline">Lab ({currentAppointmentCounts.labRequired})</span>
+                        <span className="sm:hidden">Lab ({currentAppointmentCounts.labRequired})</span>
                       </div>
                     </Button>
 
@@ -731,15 +770,16 @@ export const ClinicalDashboard: React.FC = () => {
                       variant={selectedStatus === 'AWAITING_RECONSULT' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleStatusClick('AWAITING_RECONSULT')}
-                      className={`text-xs h-8 px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
+                      className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
                         selectedStatus === 'AWAITING_RECONSULT'
                           ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-lg'
                           : 'bg-yellow-50 text-yellow-700 border-yellow-300 hover:bg-yellow-100 dark:hover:bg-yellow-900/20'
                       }`}
                     >
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="h-3 w-3" />
-                        Reconsult ({currentAppointmentCounts.awaitingReconsult})
+                      <div className="flex items-center gap-1 sm:gap-1.5">
+                        <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                        <span className="hidden sm:inline">Reconsult ({currentAppointmentCounts.awaitingReconsult})</span>
+                        <span className="sm:hidden">Reconsult ({currentAppointmentCounts.awaitingReconsult})</span>
                       </div>
                     </Button>
 
@@ -747,15 +787,16 @@ export const ClinicalDashboard: React.FC = () => {
                       variant={selectedStatus === 'COMPLETED' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleStatusClick('COMPLETED')}
-                      className={`text-xs h-8 px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
+                      className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
                         selectedStatus === 'COMPLETED'
                           ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg'
                           : 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/20'
                       }`}
                     >
-                      <div className="flex items-center gap-1.5">
-                        <UserCheck className="h-3 w-3" />
-                        Done ({currentAppointmentCounts.completed})
+                      <div className="flex items-center gap-1 sm:gap-1.5">
+                        <UserCheck className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                        <span className="hidden sm:inline">Done ({currentAppointmentCounts.completed})</span>
+                        <span className="sm:hidden">Done ({currentAppointmentCounts.completed})</span>
                       </div>
                     </Button>
 
@@ -763,42 +804,43 @@ export const ClinicalDashboard: React.FC = () => {
                       variant={selectedStatus === 'CANCELLED' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleStatusClick('CANCELLED')}
-                      className={`text-xs h-8 px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
+                      className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
                         selectedStatus === 'CANCELLED'
                           ? 'bg-gradient-to-r from-gray-500 to-gray-600 text-white shadow-lg'
                           : 'bg-gray-50 text-gray-600 border-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900/20'
                       }`}
                     >
-                      <div className="flex items-center gap-1.5">
-                      <X className="h-3 w-3" />
-                        Cancel ({currentAppointmentCounts.cancelled})
-                    </div>
+                      <div className="flex items-center gap-1 sm:gap-1.5">
+                        <X className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                        <span className="hidden sm:inline">Cancel ({currentAppointmentCounts.cancelled})</span>
+                        <span className="sm:hidden">Cancel ({currentAppointmentCounts.cancelled})</span>
+                      </div>
                     </Button>
                 </div>
       </div>
 
-                {/* Search */}
-                <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                {/* Search - Mobile Responsive */}
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-3 sm:mb-4">
                   <div className="flex-1">
                     <div className="relative group">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 group-focus-within:text-blue-500 transition-colors duration-200" />
+                      <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3 sm:h-4 sm:w-4 group-focus-within:text-blue-500 transition-colors duration-200" />
                       <Input
                         placeholder="Search patients by name or ID..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 h-10 text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 rounded-lg shadow-sm hover:shadow-md"
+                        className="pl-8 sm:pl-10 h-8 sm:h-10 text-xs sm:text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 rounded-lg shadow-sm hover:shadow-md"
                       />
                       {searchTerm && (
                         <button
                           onClick={() => setSearchTerm('')}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                          className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
                         >
-                          <X className="h-4 w-4" />
+                          <X className="h-3 w-3 sm:h-4 sm:w-4" />
                         </button>
                       )}
-                      </div>
-                      </div>
                     </div>
+                  </div>
+                </div>
 
                 {/* Table */}
                 <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
@@ -806,15 +848,15 @@ export const ClinicalDashboard: React.FC = () => {
                     <Table className="border-collapse">
                       <TableHeader>
                         <TableRow className="bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700">
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Patient ID</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Patient Name</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Token No</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Appointment Time</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Current Status</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Case</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Actions</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Print Prescription</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Print Token</TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2">Patient ID</TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2 hidden sm:table-cell">Patient Name</TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2">Token No</TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2 hidden md:table-cell">Appointment Time</TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2">Status</TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2 hidden lg:table-cell">Case</TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2">Actions</TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2 hidden lg:table-cell">Print Prescription</TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2 hidden lg:table-cell">Print Token</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -942,33 +984,54 @@ export const ClinicalDashboard: React.FC = () => {
                     </div>
               </TabsContent>
 
-              {/* Past */}
-              <TabsContent value="past" className="p-4 flex-1 overflow-auto">
-                {/* Search + Date Range */}
-                <div className="flex flex-col sm:flex-row gap-2 mb-2">
+              {/* Past - Mobile Responsive */}
+              <TabsContent value="past" className="p-2 sm:p-4 flex-1 overflow-auto">
+                {/* Search + Date Range - Mobile Responsive */}
+                <div className="flex flex-col gap-3 mb-3">
+                  {/* Search Bar */}
                   <div className="flex-1">
                     <div className="relative">
-                      <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-3.5 w-3.5" />
+                      <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3 sm:h-3.5 sm:w-3.5" />
                       <Input
                         placeholder="Search patients..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-8 h-8 text-sm"
+                        className="pl-7 sm:pl-8 h-8 sm:h-9 text-xs sm:text-sm"
                       />
-                      </div>
-                      </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Date Range:</label>
-                    <Input type="date" value={startDate} onChange={(e) => handleStartDateChange(e.target.value)} className="w-[150px]" />
-                    <span className="text-gray-400 text-sm">to</span>
-                    <Input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => handleEndDateChange(e.target.value)}
-                      className="w-[150px]"
-                      min={startDate || undefined}
-                    />
                     </div>
+                  </div>
+                  
+                  {/* Date Range - Mobile Optimized */}
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 sm:p-4">
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="flex-1">
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                          From Date
+                        </label>
+                        <Input 
+                          type="date" 
+                          value={startDate} 
+                          onChange={(e) => handleStartDateChange(e.target.value)} 
+                          className="w-full h-8 sm:h-9 text-xs sm:text-sm" 
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                          To Date
+                        </label>
+                        <Input
+                          type="date"
+                          value={endDate}
+                          onChange={(e) => handleEndDateChange(e.target.value)}
+                          className="w-full h-8 sm:h-9 text-xs sm:text-sm"
+                          min={startDate || undefined}
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      Select date range to filter past appointments
+                    </div>
+                  </div>
                 </div>
 
                 {/* Table */}
@@ -1096,33 +1159,54 @@ export const ClinicalDashboard: React.FC = () => {
                     </div>
               </TabsContent>
 
-              {/* Future */}
-              <TabsContent value="future" className="p-4 flex-1 overflow-auto">
-                {/* Search + Date Range */}
-                <div className="flex flex-col sm:flex-row gap-2 mb-2">
+              {/* Future - Mobile Responsive */}
+              <TabsContent value="future" className="p-2 sm:p-4 flex-1 overflow-auto">
+                {/* Search + Date Range - Mobile Responsive */}
+                <div className="flex flex-col gap-3 mb-3">
+                  {/* Search Bar */}
                   <div className="flex-1">
                     <div className="relative">
-                      <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-3.5 w-3.5" />
+                      <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3 sm:h-3.5 sm:w-3.5" />
                       <Input
                         placeholder="Search patients..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-8 h-8 text-sm"
+                        className="pl-7 sm:pl-8 h-8 sm:h-9 text-xs sm:text-sm"
                       />
-                      </div>
-                      </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Date Range:</label>
-                    <Input type="date" value={startDate} onChange={(e) => handleStartDateChange(e.target.value)} className="w-[150px]" />
-                    <span className="text-gray-400 text-sm">to</span>
-                    <Input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => handleEndDateChange(e.target.value)}
-                      className="w-[150px]"
-                      min={startDate || undefined}
-                    />
                     </div>
+                  </div>
+                  
+                  {/* Date Range - Mobile Optimized */}
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 sm:p-4">
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="flex-1">
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                          From Date
+                        </label>
+                        <Input 
+                          type="date" 
+                          value={startDate} 
+                          onChange={(e) => handleStartDateChange(e.target.value)} 
+                          className="w-full h-8 sm:h-9 text-xs sm:text-sm" 
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                          To Date
+                        </label>
+                        <Input
+                          type="date"
+                          value={endDate}
+                          onChange={(e) => handleEndDateChange(e.target.value)}
+                          className="w-full h-8 sm:h-9 text-xs sm:text-sm"
+                          min={startDate || undefined}
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      Select date range to filter future appointments
+                    </div>
+                  </div>
                 </div>
 
                 {/* Table */}
@@ -1131,15 +1215,15 @@ export const ClinicalDashboard: React.FC = () => {
                     <Table className="border-collapse">
                       <TableHeader>
                         <TableRow className="bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700">
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Patient ID</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Patient Name</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Token No</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Appointment Time</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Current Status</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Case</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Actions</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Print Prescription</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Print Token</TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2">Patient ID</TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2 hidden sm:table-cell">Patient Name</TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2">Token No</TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2 hidden md:table-cell">Appointment Time</TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2">Status</TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2 hidden lg:table-cell">Case</TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2">Actions</TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2 hidden lg:table-cell">Print Prescription</TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2 hidden lg:table-cell">Print Token</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1266,58 +1350,94 @@ export const ClinicalDashboard: React.FC = () => {
         <div className="flex-1 min-h-0 overflow-hidden">
           <div className="h-full flex flex-col">
             {/* Prescription Settings Header */}
-            <div className="flex-shrink-0 p-4 border-b border-gray-200 bg-white">
+            <div className="flex-shrink-0 p-2 sm:p-4 border-b border-gray-200 bg-white">
             </div>
 
-            {/* Prescription Settings Tabs */}
-            <div className="flex-shrink-0 p-3 border-b border-gray-200">
-              <Tabs value={settingsTab} onValueChange={(value) => setSettingsTab(value as 'layout' | 'customize')}>
-                <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-gray-700">
+            {/* Unified Prescription Settings Navigation - Mobile Responsive */}
+            <div className="flex-shrink-0 p-2 sm:p-3 border-b border-gray-200">
+              <Tabs value={settingsTab} onValueChange={(value) => setSettingsTab(value as 'layout' | 'fields' | 'personalized')}>
+                <TabsList className="grid w-full grid-cols-3 bg-gray-100 dark:bg-gray-700 h-auto">
                   <TabsTrigger 
                     value="layout" 
-                    className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                    disabled={isMobile}
+                    className={`flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 ${
+                      isMobile ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
                   >
-                    <SettingsIcon className="h-4 w-4" />
-                    <span className="font-medium">Layout Settings</span>
-                    {settingsTab === 'layout' && (
-                      <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                    <SettingsIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="font-medium hidden sm:inline">Layout</span>
+                    <span className="font-medium sm:hidden">Layout</span>
+                    {settingsTab === 'layout' && !isMobile && (
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
+                    )}
+                    {isMobile && (
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-400 rounded-full"></div>
                     )}
                   </TabsTrigger>
                   <TabsTrigger 
-                    value="customize" 
-                    className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                    value="fields" 
+                    className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-green-50 dark:hover:bg-green-900/20"
                   >
-                    <FileText className="h-4 w-4" />
-                    <span className="font-medium">Customize Data</span>
-                    {settingsTab === 'customize' && (
-                      <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                    <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="font-medium hidden sm:inline">Fields</span>
+                    <span className="font-medium sm:hidden">Fields</span>
+                    {settingsTab === 'fields' && (
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="personalized" 
+                    className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                  >
+                    <Database className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="font-medium hidden sm:inline">Personal Data</span>
+                    <span className="font-medium sm:hidden">Personal</span>
+                    {settingsTab === 'personalized' && (
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
                     )}
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
 
-            {/* Prescription Settings Content */}
+            {/* Prescription Settings Content - Mobile Responsive */}
             <div className="flex-1 min-h-0 overflow-y-auto">
-              <Tabs value={settingsTab} onValueChange={(value) => setSettingsTab(value as 'layout' | 'customize')}>
+              <Tabs value={settingsTab} onValueChange={(value) => setSettingsTab(value as 'layout' | 'fields' | 'personalized')}>
                 <TabsContent value="layout" className="h-full m-0 overflow-y-auto">
-                  {/* Layout Settings Header */}
-                  <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b border-blue-200 dark:border-blue-700 p-3 mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-                      <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200">
-                        Layout Settings
-                      </h3>
-                      <div className="text-sm text-blue-600 dark:text-blue-400">
-                        Configure your prescription layout
+                  {isMobile ? (
+                    <div className="p-4 sm:p-6 flex flex-col items-center justify-center h-full bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+                      <div className="text-center max-w-md mx-auto">
+                        <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <SettingsIcon className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                          Layout Settings Not Available on Mobile
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                          Layout settings require a larger screen for optimal editing experience. Please use a desktop or tablet device to access this feature.
+                        </p>
+                        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                          <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                            <span>Switch to desktop mode to access Layout Settings</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <PrescriptionSettings />
+                  ) : (
+                    <div className="p-2 sm:p-4">
+                      <PrescriptionSettings />
+                    </div>
+                  )}
                 </TabsContent>
-                <TabsContent value="customize" className="h-full m-0 overflow-y-auto">
-                  <div className="h-full overflow-y-auto">
-                    <PrescriptionCustomizePanel showCloseButton={false} />
+                <TabsContent value="fields" className="h-full m-0 overflow-y-auto">
+                  <div className="h-full overflow-y-auto p-2 sm:p-4">
+                    <PrescriptionCustomizePanel showCloseButton={false} defaultTab="fields" />
+                  </div>
+                </TabsContent>
+                <TabsContent value="personalized" className="h-full m-0 overflow-y-auto">
+                  <div className="h-full overflow-y-auto p-2 sm:p-4">
+                    <PrescriptionCustomizePanel showCloseButton={false} defaultTab="personalized" />
                   </div>
                 </TabsContent>
               </Tabs>
@@ -1366,3 +1486,4 @@ export const ClinicalDashboard: React.FC = () => {
     </div>
   );
 }; 
+

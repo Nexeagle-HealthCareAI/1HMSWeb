@@ -1,10 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { doctorApi } from '../services/doctorApi';
 import type { Doctor } from '../services/doctorApi';
+import { useAuthStore } from '@/store/authStore';
 
 export const useDoctorProfile = (userId?: string) => {
+  const { setDoctorId } = useAuthStore();
   
-  return useQuery<Doctor>({
+  const query = useQuery<Doctor>({
     queryKey: ['doctor', 'profile', userId],
     queryFn: async () => {
             
@@ -60,4 +63,14 @@ export const useDoctorProfile = (userId?: string) => {
       return failureCount < 3;
     },
   });
+
+  // Store doctor ID in auth store when successfully fetched
+  useEffect(() => {
+    if (query.data && query.data.doctorId) {
+      console.log('Storing doctor ID in auth store:', query.data.doctorId);
+      setDoctorId(query.data.doctorId);
+    }
+  }, [query.data, setDoctorId]);
+
+  return query;
 };
