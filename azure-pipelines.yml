@@ -1,45 +1,88 @@
 trigger:
-  - main
-  - Release
+- main
 
 pool:
   vmImage: 'ubuntu-latest'
 
+# CHANGE THESE if your app lives in a subfolder or uses CRA
 variables:
-  buildDir: 'dist'  # Vite outputs to dist
+  appLocation: '/'     # '/' if package.json is in repo root; else '/web' etc.
+  outLocation: 'dist'  # 'dist' for Vite, 'build' for CRA
 
-steps:
-  - task: UseNode@1
-    inputs:
-      version: '22.x'
-    displayName: 'Use Node.js 22'
+stages:
+# ---------- Build once ----------
+- stage: Build
+  displayName: Build
+  jobs:
+  - job: BuildJob
+    displayName: Build React
+    steps:
+    - task: NodeTool@0
+      displayName: 'Use Node 20.x'
+      inputs:
+        versionSpec: '20.x'
 
-  - script: |
-      npm ci
-    displayName: 'Install dependencies'
+    - task: Cache@2
+      displayName: Cache npm
+      inputs:
+        key: 'npm | "$(Agent.OS)" | package-lock.json'
+        path: '$(Pipeline.Workspace)/.npm'
 
-  - script: |
-      npx vite build
-    displayName: 'Build app using Vite'
+    - script: |
+        cd $(Build.SourcesDirectory)$(appLocation)
+        npm ci --cache "$(Pipeline.Workspace)/.npm" --prefer-offline
+        npm run build
+      displayName: 'Install & Build'
 
-  - task: CopyFiles@2
-    inputs:
-      SourceFolder: '$(buildDir)'  # <- 'dist'
-      Contents: '**'
-      TargetFolder: '$(Build.ArtifactStagingDirectory)'
-    displayName: 'Copy built files to staging'
+    # Publish the full repo so deploy stages can find $(outLocation) in the app folder
+    - publish: $(Build.SourcesDirectory)
+      artifact: webdrop
 
-  - task: PublishBuildArtifacts@1
-    inputs:
-      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-      ArtifactName: 'drop'
-      publishLocation: 'Container'
-    displayName: 'Publish build artifacts'
+# ---------- Deploy to Dev ----------
+- stage: Deploy_Dev
+  displayName: Deploy to Dev
+  dependsOn: Build
+  variables:
+  - group: swa-secrets-dev   # contains SWA_DEPLOYMENT_TOKEN (Dev)
+  jobs:
+  - deployment: DeployDev
+    environment: 'dev'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: webdrop
 
-  - task: AzureWebApp@1
-    inputs:
-      azureSubscription: 'AzureConnection-EasyHMS'
-      appType: 'webAppLinux'
-      appName: 'easyHMSWeb'
-      package: '$(Build.ArtifactStagingDirectory)'
-    displayName: 'Deploy to Azure App Service'
+          - task: AzureStaticWebApp@0
+            displayName: 'SWA Deploy (Dev)'
+            inputs:
+              app_location: '$(Pipeline.Workspace)/webdrop$(appLocation)'
+              output_location: '$(outLocation)'
+              skip_app_build: true
+              azure_static_web_apps_api_token: '$(SWA_DEPLOYMENT_TOKEN_WEB_DEV)'
+
+# ---------- Deploy to QA ----------
+- stage: Deploy_QA
+  displayName: Deploy to QA
+  dependsOn: Deploy_Dev
+  condition: succeeded()
+  variables:
+  - group: swa-secrets-qa    # contains SWA_DEPLOYMENT_TOKEN (QA)
+  jobs:
+  - deployment: DeployQA
+    environment: 'qa'        # add approvals on this Environment if desired
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: webdrop
+
+          - task: AzureStaticWebApp@0
+            displayName: 'SWA Deploy (QA)'
+            inputs:
+              app_location: '$(Pipeline.Workspace)/webdrop$(appLocation)'
+              output_location: '$(outLocation)'
+              skip_app_build: true
+              azure_static_web_apps_api_token: '$(SWA_DEPLOYMENT_TOKEN_WEB_QA)'
