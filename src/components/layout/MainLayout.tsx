@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuthStore, useAppStore, useUserStore, useNotificationStore, useThemeStore } from '@/store';
+import { useAuthStore, useAppStore, useUserStore, useThemeStore } from '@/store';
 import { useQueryClient } from '@tanstack/react-query';
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { useUserDetails } from '@/hooks/useUserProfileApi';
@@ -54,7 +54,6 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
-import { EyeFriendlyNotification } from '@/components/ui/eye-friendly-notification';
 import { HeaderLanguageSelector } from '@/components/shared/HeaderLanguageSelector';
 
 interface MainLayoutProps {
@@ -73,9 +72,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuthStore();
+  const hospitalAccessRestricted = useAuthStore(state => state.hospitalAccessRestricted);
+  const hospitalAccessMessage = useAuthStore(state => state.hospitalAccessMessage);
   const { resetAppState, sidebarCollapsed, setSidebarCollapsed } = useAppStore();
   const { resetUserState } = useUserStore();
-  const { clearNotifications } = useNotificationStore();
   const { resetColors } = useThemeStore();
   const queryClient = useQueryClient();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -158,6 +158,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   }, [location.pathname]);
 
   const handleNavigation = (item: NavigationItem) => {
+    if (hospitalAccessRestricted && item.id !== 'admin') {
+      setCurrentPage('admin');
+      setSidebarOpen(false);
+      navigate('/admin');
+      return;
+    }
     setCurrentPage(item.id);
     setSidebarOpen(false);
     navigate(item.path);
@@ -186,8 +192,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     // Clear all stores
     logout();
     resetAppState();
-    resetUserState();
-    clearNotifications();
+    resetUserState();  
     resetColors();
     
     // Navigate to home page
@@ -206,10 +211,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
       {/* Sidebar */}
       <div className={`
-        fixed top-0 left-0 z-50 h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-600 transform shadow-md
+        fixed top-0 left-0 z-50 h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-600 transform shadow-lg
         ${sidebarCollapsed ? 'w-20' : 'w-64'} 
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        overflow-hidden
+        overflow-hidden transition-transform duration-300 ease-in-out
       `}>
         <div className="relative h-full w-full overflow-hidden">
         {/* Sidebar Toggle Button - Right Side (Only visible when expanded) */}
@@ -245,6 +250,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           
           {navigation.map((item, index) => {
             const isActive = currentPage === item.id || currentPage.startsWith(item.id + '-');
+            const isDisabled = hospitalAccessRestricted && item.id !== 'admin';
             return (
               <div key={item.id} className="relative group overflow-hidden" style={{ animationDelay: `${index * 50}ms` }}>
                 <Button
@@ -256,8 +262,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                       ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
                       : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-300'
                     }
+                    ${isDisabled ? 'opacity-60 cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-400 dark:hover:text-gray-400' : ''}
                   `}
                   onClick={() => handleNavigation(item)}
+                  disabled={isDisabled}
                   title={sidebarCollapsed ? item.name : undefined}
                 >
                   {/* Active indicator line */}
@@ -289,6 +297,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                           <div className="w-1.5 h-1.5 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
                           <span className="text-xs font-medium text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-800/60 px-2 py-1 rounded-full">Active</span>
                         </div>
+                      )}
+                      {!isActive && isDisabled && (
+                        <span className="mt-1 text-xs font-medium text-amber-600 dark:text-amber-300">
+                          Restricted until hospital info complete
+                        </span>
                       )}
                     </div>
                   )}
@@ -363,7 +376,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       </div>
 
       {/* Main Content */}
-         <div className={`${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} flex flex-col h-screen overflow-x-hidden`}>
+         <div className={`${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} flex flex-col h-screen overflow-x-hidden relative z-0`}>
         {/* Top Bar */}
         <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex-shrink-0 shadow-sm">
           <div className="flex items-center justify-between">
@@ -428,12 +441,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               {/* Enhanced Language Selector */}
               <HeaderLanguageSelector />
 
-              {/* Notifications */}
-              <Button variant="ghost" size="sm" className="relative p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
-                <Bell className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-                <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-              </Button>
-
               {/* User Profile */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -483,8 +490,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         </main>
       </div>
       
-      {/* Eye-Friendly Notification */}
-      <EyeFriendlyNotification />
     </div>
   );
 }; 

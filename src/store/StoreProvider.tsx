@@ -2,7 +2,6 @@ import React, { useEffect, ReactNode } from 'react';
 import { useAuthStore } from './authStore';
 import { useAppStore } from './appStore';
 import { useUserStore } from './userStore';
-import { useNotificationStore } from './notificationStore';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 
 interface StoreProviderProps {
@@ -101,13 +100,11 @@ export const useStores = () => {
   const auth = useAuthStore();
   const app = useAppStore();
   const user = useUserStore();
-  const notifications = useNotificationStore();
 
   return {
     auth,
     app,
     user,
-    notifications,
   };
 };
 

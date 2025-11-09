@@ -1,10 +1,14 @@
 import React from 'react';
 import { 
   Settings,
-  FileText,
-  Palette
+  CreditCard,
+  Palette,
+  Calendar,
+  Wallet,
+  Receipt
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { HospitalBrandingConfig } from './HospitalBrandingConfig';
 import { useSystemConfiguration } from '../hooks';
 
@@ -29,9 +33,9 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="prescription" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            <span className="hidden sm:inline">Prescription Templates</span>
+          <TabsTrigger value="subscription" className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4" />
+            <span className="hidden sm:inline">Subscription</span>
           </TabsTrigger>
           <TabsTrigger value="branding" className="flex items-center gap-2" data-testid="hospital-branding-tab">
             <Palette className="h-4 w-4" />
@@ -39,20 +43,65 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
           </TabsTrigger>
         </TabsList>
 
-        {/* Prescription Template Tab */}
-        <TabsContent value="prescription">
-          <div className="space-y-4">
+        {/* Subscription Tab */}
+        <TabsContent value="subscription">
+          <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-semibold">Prescription Template Editor</h3>
+              <h3 className="text-lg font-semibold">Subscription Management</h3>
               <p className="text-sm text-muted-foreground">
-                Use the canvas editor to create and customize prescription templates
+                Manage your subscription plan, billing, and payment information
               </p>
             </div>
             
-            <div className="border rounded-lg p-4">
-              <div className="text-center text-gray-500">
-                Prescription templates configuration will be implemented here
-              </div>
+            {/* Subscription Information Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Remaining Subscription Days */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Remaining Days
+                  </CardTitle>
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">45</div>
+                  <p className="text-xs text-muted-foreground">
+                    Days remaining in your subscription
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Payment Mode */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Payment Mode
+                  </CardTitle>
+                  <Wallet className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">Credit Card</div>
+                  <p className="text-xs text-muted-foreground">
+                    Current payment method
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Total Bill */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Total Bill
+                  </CardTitle>
+                  <Receipt className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">₹12,000</div>
+                  <p className="text-xs text-muted-foreground">
+                    Total subscription amount
+                  </p>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </TabsContent>

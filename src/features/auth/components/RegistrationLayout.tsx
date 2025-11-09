@@ -89,40 +89,59 @@ export const RegistrationLayout: React.FC<RegistrationLayoutProps> = ({
       </div>
 
       {/* Right Side - Registration Form (1/3 width) */}
-      <div className="flex-1 lg:w-1/3 flex items-center justify-center p-6 lg:p-8">
-        <Card className="w-full max-w-md shadow-2xl border-0 bg-white/80 backdrop-blur-xl">
-          <CardHeader className="text-center space-y-4 pb-6">
+      <div className="flex-1 lg:w-1/3 flex items-center justify-center p-4 lg:p-6">
+        <Card className="w-full max-w-md shadow-2xl border-0 bg-white/80 backdrop-blur-xl my-4">
+          <CardHeader className="text-center space-y-2 pb-3 pt-4 relative">
+            {/* Back Arrow Button - Top Left */}
+            {((currentStep === 1 && onSwitchToLogin) || (currentStep > 1 && onBack)) && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  if (currentStep === 1 && onSwitchToLogin) {
+                    onSwitchToLogin();
+                  } else if (currentStep > 1 && onBack) {
+                    onBack();
+                  }
+                }}
+                className="absolute left-4 top-4 h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+                aria-label={currentStep === 1 ? "Back to login" : "Go back to previous step"}
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
+            
             {/* Progress Indicator */}
             <div className="flex items-center justify-end">
               <div className="text-right">
-                <div className="text-xs text-muted-foreground mb-1">Step {currentStep} of 3</div>
-                <Progress value={progressPercentage} className="w-20 h-2" />
+                <div className="text-xs text-muted-foreground mb-0.5">Step {currentStep} of 3</div>
+                <Progress value={progressPercentage} className="w-16 h-1.5" />
               </div>
             </div>
             
             {/* Header */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div className="flex justify-center">
-                <div className="p-4 ">
-                  <img src="/Logo.png" alt="Company Logo" className="h-13 w-16" />
+                <div className="p-1">
+                  <img src="/Logo.png" alt="Company Logo" className="h-10 w-12" />
                 </div>
               </div>
               
-              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              <CardTitle className="text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                 {currentStep === 1 && "Choose Your Role"}
                 {currentStep === 2 && "Quick Verification"}
                 {currentStep === 3 && "Account Setup"}
               </CardTitle>
               
-              <p className="text-muted-foreground text-sm">
-                {currentStep === 1 && "Select the access level that best matches your responsibilities and requirements"}
+              <p className="text-muted-foreground text-xs leading-tight">
+                {currentStep === 1 && "Select the access level that best matches your responsibilities"}
                 {currentStep === 2 && "Secure your account with mobile verification"}
                 {currentStep === 3 && "Set up email & password (optional)"}
               </p>
             </div>
           </CardHeader>
           
-          <CardContent className="bg-white space-y-4">
+          <CardContent className="bg-white space-y-2 px-4 pb-4">
             {children}
           </CardContent>
         </Card>

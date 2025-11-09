@@ -95,6 +95,8 @@
     "password": "Password",
     "confirmPassword": "Confirm Password",
     "forgotPassword": "Forgot Password?",
+    "resetPassword": "Reset Password",
+    "resetPasswordTitle": "Reset Password",
     "rememberMe": "Remember Me",
     "dontHaveAccount": "Don't have an account?",
     "alreadyHaveAccount": "Already have an account?",
@@ -104,7 +106,13 @@
     "passwordRequired": "Password is required",
     "loginSuccess": "Login successful",
     "logoutSuccess": "Logout successful",
-    "sessionExpired": "Your session has expired. Please login again."
+    "sessionExpired": "Your session has expired. Please login again.",
+    "lockedAccount": {
+      "title": "Account Locked",
+      "message": "Your account has been temporarily locked due to too many failed attempts.",
+      "timeRemaining": "Time remaining: {{time}}",
+      "unlockIn": "Will unlock in {{time}}"
+    }
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -947,5 +955,15 @@
   "languages": {
     "en": "English",
     "hi": "हिंदी"
+  },
+  "loginLayout": {
+    "companyName": "NexEagle easyHMS",
+    "tagline": "Streamline your healthcare practice",
+    "description": "Complete patient management, appointments, billing and more. Experience the future of healthcare administration.",
+    "uptime": "Uptime",
+    "doctors": "Doctors",
+    "patients": "Patients",
+    "support": "Support",
+    "signingIn": "Signing you in..."
   }
 }

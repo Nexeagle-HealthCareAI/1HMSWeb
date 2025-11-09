@@ -26,6 +26,10 @@ export interface AuthState {
   hospitalId: string | null;
   employeeId: string | null;
   doctorId: string | null;
+  hospitalAccessRestricted: boolean;
+  hospitalAccessMessage: string | null;
+  doctorProfileRestricted: boolean;
+  doctorProfileMessage: string | null;
 }
 
 export interface AuthActions {
@@ -53,6 +57,12 @@ export interface AuthActions {
   setLoading: (loading: boolean) => void;
   clearSession: () => void;
   logout: () => void;
+  setHospitalAccessRestriction: (restricted: boolean, message?: string | null) => void;
+  getHospitalAccessRestriction: () => boolean;
+  getHospitalAccessMessage: () => string | null;
+  setDoctorProfileRestriction: (restricted: boolean, message?: string | null) => void;
+  getDoctorProfileRestriction: () => boolean;
+  getDoctorProfileMessage: () => string | null;
 }
 
 export type AuthStore = AuthState & AuthActions;
@@ -70,6 +80,10 @@ const initialState: AuthState = {
   hospitalId: null,
   employeeId: null,
   doctorId: null,
+  hospitalAccessRestricted: false,
+  hospitalAccessMessage: null,
+  doctorProfileRestricted: false,
+  doctorProfileMessage: null,
 };
 
 // Create auth store
@@ -86,6 +100,10 @@ export const useAuthStore = create<AuthStore>()(
             isAuthenticated: !!user,
             userId: user?.id || null,
             userRole: user?.role || null,
+            hospitalAccessRestricted: false,
+            hospitalAccessMessage: null,
+            doctorProfileRestricted: false,
+            doctorProfileMessage: null,
           });
         },
 
@@ -107,6 +125,10 @@ export const useAuthStore = create<AuthStore>()(
             token,
             tokenExpiry,
             userId,
+            hospitalAccessRestricted: false,
+            hospitalAccessMessage: null,
+            doctorProfileRestricted: false,
+            doctorProfileMessage: null,
           });
         },
 
@@ -190,6 +212,36 @@ export const useAuthStore = create<AuthStore>()(
           return get().doctorId;
         },
 
+        setHospitalAccessRestriction: (restricted: boolean, message?: string | null) => {
+          set({
+            hospitalAccessRestricted: restricted,
+            hospitalAccessMessage: restricted ? (message ?? null) : null,
+          });
+        },
+
+        getHospitalAccessRestriction: () => {
+          return get().hospitalAccessRestricted;
+        },
+
+        getHospitalAccessMessage: () => {
+          return get().hospitalAccessMessage;
+        },
+
+        setDoctorProfileRestriction: (restricted: boolean, message?: string | null) => {
+          set({
+            doctorProfileRestricted: restricted,
+            doctorProfileMessage: restricted ? (message ?? null) : null,
+          });
+        },
+
+        getDoctorProfileRestriction: () => {
+          return get().doctorProfileRestricted;
+        },
+
+        getDoctorProfileMessage: () => {
+          return get().doctorProfileMessage;
+        },
+
         setLoading: (loading: boolean) => {
           set({ isLoading: loading });
         },
@@ -218,6 +270,10 @@ export const useAuthStore = create<AuthStore>()(
           employeeId: state.employeeId,
           doctorId: state.doctorId,
           isAuthenticated: state.isAuthenticated,
+          hospitalAccessRestricted: state.hospitalAccessRestricted,
+          hospitalAccessMessage: state.hospitalAccessMessage,
+          doctorProfileRestricted: state.doctorProfileRestricted,
+          doctorProfileMessage: state.doctorProfileMessage,
         }),
       }
     )

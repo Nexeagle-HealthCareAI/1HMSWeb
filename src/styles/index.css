@@ -181,6 +181,22 @@ html.dark {
   color-scheme: dark;
 }
 
+/* Hide scrollbar utility for mobile tabs */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+/* Smooth scrolling for mobile tabs */
+@supports (-webkit-overflow-scrolling: touch) {
+  .scrollbar-hide {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 /* Custom scrollbar for better dark mode experience */
 ::-webkit-scrollbar {
   width: 8px;

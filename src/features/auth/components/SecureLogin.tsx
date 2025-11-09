@@ -15,6 +15,11 @@ import {
   LoginLayout
 } from '@/features/auth/components';
 import { PasswordResetSuccessModal } from '@/components/modals';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Building2, AlertCircle, ArrowRight, X } from 'lucide-react';
+import { HospitalBrandingModal } from '@/features/hospital/components/HospitalBrandingModal';
+import { API_ENDPOINTS } from '@/app/api';
+import { axiosInstance } from '@/services/axiosClient';
 
 interface LoginProps {
   onLogin: () => void;
@@ -45,6 +50,10 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
   
   // Password reset success state
   const [showPasswordResetSuccess, setShowPasswordResetSuccess] = useState(false);
+  
+  // Hospital mapping 404 state
+  const [showHospitalMapping404, setShowHospitalMapping404] = useState(false);
+  const [showHospitalBrandingModal, setShowHospitalBrandingModal] = useState(false);
 
   // Helper function to get user-friendly error messages
   const getErrorMessage = (error: any): string => {
@@ -181,26 +190,80 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
   }, [isLocked, lockoutTimeRemaining]);
 
   // Handler functions for child components
-  const fetchAndStoreHospitalMapping = async (userId: string) => {
+  const fetchAndStoreHospitalMapping = async (userId: string): Promise<'found' | 'not_registered' | 'error'> => {
+    const authStore = useAuthStore.getState();
+    authStore.setHospitalId(null);
+    authStore.setEmployeeId(null);
+    authStore.setHospitalAccessRestriction(false, null);
+
+    queryClient.removeQueries({ queryKey: ['hospitalUserByUserId'] });
+    queryClient.removeQueries({ queryKey: ['hospital'] });
+
     try {
-      // Clear any existing hospitalId first to prevent stale data
-      const authStore = useAuthStore.getState();
-      authStore.setHospitalId(null);
-      authStore.setEmployeeId(null);
-      
-             // Clear any cached hospital data from React Query
-       queryClient.removeQueries({ queryKey: ['hospitalUserByUserId'] });
-       queryClient.removeQueries({ queryKey: ['hospital'] });
-      
-      const { hospitalApi } = await import('@/features/hospital/services/hospitalApi');
-      const res = await hospitalApi.getHospitalUserByUserId(userId);
-      
-      if (res?.hospitalId) authStore.setHospitalId(res.hospitalId);
-      if (res?.employeeID) authStore.setEmployeeId(res.employeeID);
-    } catch (e) {
-      console.warn('Hospital mapping fetch failed (non-blocking):', e);
+      const response = await axiosInstance.get(API_ENDPOINTS.HOSPITALS.GET_BY_USER_ID(userId), {
+        validateStatus: (status) => !!status && [200, 204, 404].includes(status),
+      });
+
+      const statusCode = response.status || 0;
+      const data = response.data as Record<string, any> | undefined;
+      const message = typeof data?.message === 'string' ? data.message : undefined;
+      const normalizedMessage = message?.toLowerCase() || '';
+
+      if (statusCode === 204) {
+        authStore.setHospitalAccessRestriction(true, message || 'Complete hospital information to unlock full access.');
+        setShowHospitalMapping404(false);
+        return 'not_registered';
+      }
+
+      if (statusCode === 200) {
+        const hospitalId = data?.hospitalId ?? data?.hospitalID ?? null;
+        const employeeId = data?.employeeID ?? data?.employeeId ?? null;
+
+        if (!hospitalId || normalizedMessage.includes('not registered')) {
+          authStore.setHospitalAccessRestriction(true, message || 'Hospital not registered. Complete mandatory information to get full access.');
+          return 'not_registered';
+        }
+
+        authStore.setHospitalId(hospitalId);
+        if (employeeId) {
+          authStore.setEmployeeId(employeeId);
+        }
+
+        authStore.setHospitalAccessRestriction(false, null);
+        setShowHospitalMapping404(false);
+        return 'found';
+      }
+
+      if (statusCode === 404) {
+        authStore.setHospitalAccessRestriction(true, message || 'Hospital mapping not found. Complete hospital information to unlock full access.');
+        const userRole = authStore.getUserRole();
+        if (userRole === 'Admin' || userRole === 'AdminDoctor') {
+          setShowHospitalMapping404(true);
+        }
+        return 'not_registered';
+      }
+
+      authStore.setHospitalAccessRestriction(true, message || 'Unexpected hospital mapping response.');
+      return 'error';
+    } catch (error: any) {
+      const statusCode = error?.response?.status ?? error?.response?.statusCode;
+      const message = error?.response?.data?.message || error?.message || 'Failed to fetch hospital mapping.';
+      authStore.setHospitalAccessRestriction(true, message);
+      setShowHospitalMapping404(false);
+
+      if (statusCode === 404) {
+        const userRole = authStore.getUserRole();
+        if (userRole === 'Admin' || userRole === 'AdminDoctor') {
+          setShowHospitalMapping404(true);
+        }
+        return 'not_registered';
+      }
+
+      console.warn('Hospital mapping fetch failed:', error);
+      return 'error';
     }
   };
+
 
   const handlePasswordLogin = async (userid: string, password: string) => {
     if (isLocked) {
@@ -248,26 +311,44 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
            name: sanitizedUserid,
          });
 
-         // Fetch hospital mapping once here
-         if (response.userId) {
-           await fetchAndStoreHospitalMapping(response.userId);
-         }
+        if (response.userId && response.accessToken) {
+          try {
+            await fetchAndStoreUserPermissions(response.userId, response.accessToken);
+          } catch (error) {
+            console.warn('Failed to fetch permissions:', error);
+          }
+        }
 
-         // Fetch and store user permissions (non-blocking)
-         if (response.userId && response.accessToken) {
-           fetchAndStoreUserPermissions(response.userId, response.accessToken).catch((error) => {
-             console.warn('Failed to fetch permissions (non-blocking):', error);
-           });
-         }
+        let hospitalResult: 'found' | 'not_registered' | 'error' = 'error';
 
-         // Invalidate and refetch auth data
-         invalidateAuth();
+        if (response.userId) {
+          hospitalResult = await fetchAndStoreHospitalMapping(response.userId);
 
-         toast({
-           title: "Login Successful",
-           description: "Welcome back!"
-         });
-         onLogin();
+          if (hospitalResult === 'found') {
+            try {
+              const { doctorApi } = await import('@/features/doctor/services/doctorApi');
+              await doctorApi.getById(response.userId);
+            } catch (doctorError: any) {
+              if (doctorError?.response?.status === 404) {
+                console.warn('Doctor profile not found (404):', doctorError);
+              } else {
+                console.warn('Doctor profile fetch failed (non-blocking):', doctorError);
+              }
+            }
+          } else {
+            console.info('Hospital information incomplete; skipping doctor profile fetch.');
+          }
+        }
+
+        invalidateAuth();
+
+        toast({
+          title: "Login Successful",
+          description: hospitalResult === 'found'
+            ? "Welcome back!"
+            : "Welcome back! Complete your hospital information for full access.",
+        });
+        onLogin();
        } else {
          handleFailedLogin();
        }
@@ -377,21 +458,38 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
            const tokenToUse = response.accessToken || 'otp-login';
            authStore.setAuthenticatedUser(storedUserId, tokenToUse);
            
-           // Fetch hospital mapping once here
-           await fetchAndStoreHospitalMapping(storedUserId);
+          if (response.accessToken) {
+            try {
+              await fetchAndStoreUserPermissions(storedUserId, response.accessToken);
+            } catch (error) {
+              console.warn('Failed to fetch permissions:', error);
+            }
+          }
 
-           // Fetch and store user permissions (non-blocking)
-           if (response.accessToken) {
-             fetchAndStoreUserPermissions(storedUserId, response.accessToken).catch((error) => {
-               console.warn('Failed to fetch permissions (non-blocking):', error);
-             });
-           }
-           
-           toast({
-             title: "Login Successful",
-             description: "Welcome back!"
-           });
-           onLogin();
+          const hospitalResult = await fetchAndStoreHospitalMapping(storedUserId);
+
+          if (hospitalResult === 'found') {
+            try {
+              const { doctorApi } = await import('@/features/doctor/services/doctorApi');
+              await doctorApi.getById(storedUserId);
+            } catch (doctorError: any) {
+              if (doctorError?.response?.status === 404) {
+                console.warn('Doctor profile not found (404):', doctorError);
+              } else {
+                console.warn('Doctor profile fetch failed (non-blocking):', doctorError);
+              }
+            }
+          } else {
+            console.info('Hospital information incomplete; skipping doctor profile fetch.');
+          }
+          
+          toast({
+            title: "Login Successful",
+            description: hospitalResult === 'found'
+              ? "Welcome back!"
+              : "Welcome back! Complete your hospital information for full access.",
+          });
+          onLogin();
          } else {
            toast({
              title: "OTP Verification Failed",
@@ -618,6 +716,92 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
     });
   };
 
+  // Hospital Branding Modal - Show when user clicks "Complete Info" from 404 modal
+  if (showHospitalBrandingModal) {
+    return (
+      <HospitalBrandingModal
+        isOpen={showHospitalBrandingModal}
+        onClose={() => {
+          setShowHospitalBrandingModal(false);
+          setShowHospitalMapping404(false);
+        }}
+        onComplete={() => {
+          // After hospital is created, refresh the mapping
+          const userId = useAuthStore.getState().getUserId();
+          if (userId) {
+            fetchAndStoreHospitalMapping(userId).then(() => {
+              setShowHospitalBrandingModal(false);
+              setShowHospitalMapping404(false);
+            });
+          }
+        }}
+      />
+    );
+  }
+
+// Full-screen 404 Modal - Blocks all features
+  if (showHospitalMapping404) {
+    return (
+      <Dialog open={showHospitalMapping404} onOpenChange={() => {}}>
+        <DialogContent 
+          className="max-w-2xl p-0 gap-0 overflow-hidden"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          <div className="bg-gradient-to-br from-red-50 via-orange-50 to-amber-50 dark:from-red-950/20 dark:via-orange-950/20 dark:to-amber-950/20 p-8">
+            <div className="flex items-start gap-4 mb-6">
+              <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full flex-shrink-0">
+                <AlertCircle className="h-8 w-8 text-red-600 dark:text-red-400" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold text-red-900 dark:text-red-100 mb-2">
+                  Hospital Information Required
+                </h2>
+                <p className="text-red-700 dark:text-red-300 text-base leading-relaxed">
+                  Your account is not associated with a hospital yet. Please complete your hospital information to continue using the system.
+                </p>
+              </div>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-6 mb-6 border border-red-200 dark:border-red-800">
+              <div className="flex items-center gap-3 mb-4">
+                <Building2 className="h-6 w-6 text-primary" />
+                <h3 className="text-lg font-semibold text-foreground">What's Next?</h3>
+              </div>
+              <ul className="space-y-3 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary font-bold mt-0.5">•</span>
+                  <span>Complete your hospital branding and registration details</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary font-bold mt-0.5">•</span>
+                  <span>Set up your hospital profile with contact and location information</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary font-bold mt-0.5">•</span>
+                  <span>Configure your hospital settings and preferences</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div className="flex justify-end gap-3">
+              <Button
+                onClick={() => {
+                  setShowHospitalMapping404(false);
+                  setShowHospitalBrandingModal(true);
+                }}
+                className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white font-semibold px-8 py-3 text-base shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                Complete Hospital Information
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   // Password Reset Success Popup
   if (showPasswordResetSuccess) {
     return (
@@ -649,7 +833,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
             className="h-12 w-12" 
             style={{ width: '48px', height: '48px' }} 
           />
-                      <h1 className="text-3xl font-bold">{t('auth.lockedAccount.title')}</h1>
+                      <h1 className="text-3xl font-bold">{t('auth.resetPasswordTitle')}</h1>
         </div>
         
         <h2 className="text-xl font-semibold mb-4">
@@ -684,7 +868,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
   // Main Login Screen
   return (
     <LoginLayout
-      title="NexEagle HMS"
+      title="NexEagle easyHMS"
       subtitle="Healthcare Management System"
       isLoading={loginMutation.isPending}
       loadingMessage="Signing you in..."
@@ -719,7 +903,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
             className="w-full h-12 bg-gradient-to-r from-primary to-primary/80 text-white font-bold text-base rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
             disabled={loginMutation.isPending || sendOTPMutation.isPending || verifyOTPMutation.isPending }
           >
-            🚀 Register Now
+            Register Now
           </Button>
           <p className="text-xs text-muted-foreground/80 px-2">
             Free account • Setup in 2 minutes • Start managing patients today

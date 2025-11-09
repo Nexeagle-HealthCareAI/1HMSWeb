@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
@@ -44,16 +44,12 @@ import {
   DashboardOverview,
   UserManagementModule,
   PatientManagementModule,
-  AppointmentOversightModule,
-  BillingInsuranceModule,
-  BulkMessagingModule,
-  SystemConfigModule,
-  AuditSecurityModule
 } from './index';
 // Removed ProfileCompletionBanner from Admin panel
 import { useHospitalApi } from '@/hooks/useApi';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { SystemConfigModule } from './SystemConfigModule';
 
 
 
@@ -65,6 +61,7 @@ export const AdminDashboard = () => {
   const [currentView, setCurrentView] = useState('dashboard');
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [showHospitalRegistrationDialog, setShowHospitalRegistrationDialog] = useState(false);
 
   // Fetch hospital profile status and compute completion from API
   const authStoreRef = useAuthStore.getState();
@@ -78,6 +75,30 @@ export const AdminDashboard = () => {
 
   const authStore = useAuthStore.getState();
   const userRole = authStore.getUserRole() || 'Admin';
+  const hospitalAccessRestricted = useAuthStore(state => state.hospitalAccessRestricted);
+  const hospitalAccessMessage = useAuthStore(state => state.hospitalAccessMessage);
+  const setHospitalAccessRestriction = useAuthStore(state => state.setHospitalAccessRestriction);
+
+  // Show Hospital Registration Dialog when admin lands on admin board and hospital is not 100% complete
+  useEffect(() => {
+    if (hospitalScore < 100 && !bannerDismissed) {
+      setShowHospitalRegistrationDialog(true);
+    }
+  }, [hospitalScore, bannerDismissed]);
+
+useEffect(() => {
+  if (hospitalScore >= 100) {
+    if (hospitalAccessRestricted) {
+      setHospitalAccessRestriction(false, null);
+    }
+    if (showHospitalRegistrationDialog) {
+      setShowHospitalRegistrationDialog(false);
+    }
+    if (!bannerDismissed) {
+      setBannerDismissed(true);
+    }
+  }
+}, [hospitalScore, hospitalAccessRestricted, setHospitalAccessRestriction, showHospitalRegistrationDialog, bannerDismissed]);
 
   // Auto-scroll to Hospital Branding section when navigating to hospital config
   useEffect(() => {
@@ -106,6 +127,17 @@ export const AdminDashboard = () => {
   }, [currentView]);
 
 
+
+  const focusHospitalBranding = useCallback(() => {
+    setCurrentView('system-config-hospital');
+    sessionStorage.setItem('admin-focus-tab', 'hospital');
+    requestAnimationFrame(() => {
+      const event = new CustomEvent('dashboard:navigate', {
+        detail: { view: 'system-config-hospital', focusTab: 'hospital' },
+      });
+      window.dispatchEvent(event);
+    });
+  }, [setCurrentView]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -163,79 +195,103 @@ export const AdminDashboard = () => {
 
 
   return (
-    <div className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle">
-      {/* Hospital Registration Meter - show until 100% */}
-      {hospitalScore < 100 && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl p-6 shadow-lg">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-600 rounded-full">
-                <Building2 className="h-8 w-8 text-white" />
+    <div className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle relative z-0">
+      {/* Hospital Registration Progress Dialog/Popup */}
+      <Dialog 
+        open={showHospitalRegistrationDialog} 
+        onOpenChange={(open) => {
+          // Only allow closing explicitly through button clicks, not outside clicks
+          if (!open) {
+            setBannerDismissed(true);
+            setShowHospitalRegistrationDialog(false);
+          }
+        }}
+      >
+        <DialogContent 
+          className="max-w-[95vw] sm:max-w-md md:max-w-lg lg:max-w-2xl w-full mx-4"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg p-4 sm:p-5 md:p-6">
+            {/* Header Section - Stack on mobile */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+              <div className="flex items-center gap-3 sm:gap-4 flex-1">
+                <div className="p-2 sm:p-3 bg-blue-600 rounded-full flex-shrink-0">
+                  <Building2 className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-lg sm:text-xl font-bold text-blue-900 dark:text-blue-100">
+                    {t('admin.hospitalRegistrationProgress')}
+                  </h2>
+                  <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 mt-0.5">
+                    {t('admin.completeHospitalDetails')}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-blue-900 dark:text-blue-100">
-                  {t('admin.hospitalRegistrationProgress')}
-                </h2>
-                <p className="text-blue-700 dark:text-blue-300">
-                  {t('admin.completeHospitalDetails')}
-                </p>
+              <div className="text-center sm:text-right flex-shrink-0">
+                <div className="text-3xl sm:text-4xl font-bold text-blue-600 mb-0.5">{hospitalScore}%</div>
+                <div className="text-xs sm:text-sm text-blue-500 uppercase tracking-wide">{t('admin.complete')}</div>
               </div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-blue-600 mb-1">{hospitalScore}%</div>
-              <div className="text-sm text-blue-500 uppercase tracking-wide">{t('admin.complete')}</div>
-            </div>
-          </div>
-          
-          <div className="mb-4">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-blue-800 dark:text-blue-200">{t('admin.progress')}</span>
-              <span className="text-sm text-blue-600">{hospitalScore}/100%</span>
-            </div>
-            <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-4 overflow-hidden">
-              <div 
-                className="bg-gradient-to-r from-blue-600 to-blue-500 h-4 rounded-full transition-all duration-500 ease-out relative"
-                style={{ width: `${hospitalScore}%` }}
-              >
-                <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm">
-              {!accessUnlocked ? (
-                <>
-                  <X className="h-4 w-4 text-red-500" />
-                  <span className="text-red-700 dark:text-red-300 font-medium">
-                    {t('admin.adminFeaturesLocked')}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  <span className="text-green-700 dark:text-green-300 font-medium">
-                    {t('admin.basicFeaturesUnlocked')}
-                  </span>
-                </>
-              )}
             </div>
             
-            <Button 
-              onClick={() => setCurrentView('system-config-hospital')} 
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2"
-            >
-              {!accessUnlocked ? t('admin.completeHospitalInfo') : t('admin.updateHospitalDetails')}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+            {/* Progress Bar Section */}
+            <div className="mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-200">{t('admin.progress')}</span>
+                <span className="text-xs sm:text-sm text-blue-600">{hospitalScore}/100%</span>
+              </div>
+              <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-3 sm:h-4 overflow-hidden">
+                <div 
+                  className="bg-gradient-to-r from-blue-600 to-blue-500 h-3 sm:h-4 rounded-full transition-all duration-500 ease-out relative"
+                  style={{ width: `${hospitalScore}%` }}
+                >
+                  <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Footer Section - Stack on mobile */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+              <div className="flex items-center gap-2 text-xs sm:text-sm">
+                {!accessUnlocked ? (
+                  <>
+                    <X className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500 flex-shrink-0" />
+                    <span className="text-red-700 dark:text-red-300 font-medium">
+                      {t('admin.adminFeaturesLocked')}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500 flex-shrink-0" />
+                    <span className="text-green-700 dark:text-green-300 font-medium">
+                      {t('admin.basicFeaturesUnlocked')}
+                    </span>
+                  </>
+                )}
+              </div>
+              
+              <Button 
+                onClick={() => {
+                  setShowHospitalRegistrationDialog(false);
+                  setBannerDismissed(true);
+                  setCurrentView('system-config-hospital');
+                }} 
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 sm:px-6 py-2 text-sm sm:text-base"
+              >
+                <span className="hidden sm:inline">
+                  {!accessUnlocked ? t('admin.completeHospitalInfo') : t('admin.updateHospitalDetails')}
+                </span>
+                <span className="sm:hidden">
+                  {!accessUnlocked ? 'Complete Info' : 'Update Details'}
+                </span>
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
-      {/* Removed the completion banner at 100% as requested */}
+        </DialogContent>
+      </Dialog>
 
-      {/* Profile completion banner removed for Admin panel */}
-
-      {/* Setup Dialog - Removed WelcomeSetup component */}
+      {/* Setup Dialog */}
       <Dialog open={showSetupDialog} onOpenChange={setShowSetupDialog}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
           <div className="text-center py-8">
@@ -250,99 +306,145 @@ export const AdminDashboard = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Top Navigation */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-foreground">{t('admin.adminBoard')}</h1>
-            {hospitalScore === 100 && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 px-2.5 py-0.5 shadow-sm text-[11px] font-medium">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                {t('admin.hospitalSetup100')}
-              </span>
-            )}
-          </div>
-          <p className="text-muted-foreground">{t('admin.hospitalManagementOverview')}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Select defaultValue="today">
-            <SelectTrigger className="w-[120px] sm:w-[150px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="today">{t('admin.today')}</SelectItem>
-              <SelectItem value="week">{t('admin.thisWeek')}</SelectItem>
-              <SelectItem value="month">{t('admin.thisMonth')}</SelectItem>
-              <SelectItem value="year">{t('admin.thisYear')}</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            <span className="hidden sm:inline">{t('admin.export')}</span>
-          </Button>
-        </div>
+      {/* Compact Top Navigation */}
+      <div className="flex items-center gap-2 sm:gap-3 mb-4">
+        <h1 className="text-xl lg:text-2xl font-bold text-foreground">{t('admin.adminBoard')}</h1>
+        {hospitalAccessRestricted && (
+          <button
+            type="button"
+            onClick={focusHospitalBranding}
+            className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[10px] sm:text-xs font-semibold text-primary shadow-sm transition-colors hover:bg-primary/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          >
+            <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-primary/20 text-[9px] font-bold text-primary">
+              {Math.round(hospitalScore)}
+            </span>
+            <span className="hidden sm:inline">{hospitalAccessMessage || 'Complete hospital information to unlock full access.'}</span>
+            <span className="sm:hidden">{Math.round(hospitalScore)}%</span>
+          </button>
+        )}
+        {hospitalScore === 100 && (
+          <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            {t('admin.hospitalSetup100')}
+          </Badge>
+        )}
       </div>
 
-      {/* Admin Navigation Modules */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 lg:gap-4 transition-all duration-300">
-        {adminModules.map((module) => {
-          const isLocked = !accessUnlocked && module.id !== 'dashboard' && module.id !== 'system-config';
-          
-          return (
-            <Card 
-              key={module.id}
-              className={`cursor-pointer transition-all relative ${
-                isLocked 
-                  ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800' 
-                  : currentView === module.id 
-                    ? 'ring-2 ring-primary bg-primary/5 hover:shadow-lg' 
-                    : 'hover:bg-muted/50 hover:shadow-lg'
-              }`}
-              onClick={() => {
-                if (!isLocked) {
-                  setCurrentView(module.id);
-                } else {
-                  toast({
-                    title: t('admin.featureLocked'),
-                    description: t('admin.completeHospitalRegistration'),
-                    variant: "destructive"
-                  });
-                }
-              }}
-            >
-              <CardContent className="p-3 lg:p-4 text-center">
-                <div className="relative">
-                  <module.icon className={`h-6 w-6 lg:h-8 lg:w-8 mx-auto mb-2 ${
-                    isLocked 
-                      ? 'text-gray-400' 
-                      : currentView === module.id 
-                        ? 'text-primary' 
-                        : 'text-muted-foreground'
-                  }`} />
+      {/* Enhanced Navigation Tabs - Mobile Optimized */}
+      <div className="relative mb-4 sm:mb-6">
+        {/* Mobile: Horizontal Scrollable Tabs */}
+        <div className="border-b border-border/60 bg-white/50 dark:bg-gray-950/50 backdrop-blur-sm rounded-t-lg sm:rounded-lg overflow-visible">
+          <div 
+            className="flex gap-1 sm:gap-1.5 overflow-x-auto scrollbar-hide px-2 sm:px-3 py-2 sm:py-2.5 snap-x snap-mandatory" 
+            style={{ 
+              WebkitOverflowScrolling: 'touch',
+              scrollBehavior: 'smooth',
+              overflowX: 'auto',
+              overflowY: 'hidden'
+            }}
+          >
+            {adminModules.map((module) => {
+              const isLocked = !accessUnlocked && module.id !== 'dashboard' && module.id !== 'system-config';
+              const isActive = currentView === module.id;
+              
+              return (
+                <button
+                  key={module.id}
+                  onClick={() => {
+                    if (!isLocked) {
+                      setCurrentView(module.id);
+                    } else {
+                      toast({
+                        title: t('admin.featureLocked'),
+                        description: t('admin.completeHospitalRegistration'),
+                        variant: "destructive"
+                      });
+                    }
+                  }}
+                  disabled={isLocked}
+                  className={`
+                    group relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3 
+                    text-[10px] sm:text-xs md:text-sm font-medium transition-all duration-300 ease-out
+                    rounded-lg sm:rounded-lg whitespace-nowrap flex-shrink-0 snap-start
+                    min-w-[max-content] sm:min-w-auto
+                    ${isLocked 
+                      ? 'opacity-40 cursor-not-allowed text-muted-foreground' 
+                      : isActive
+                        ? 'text-primary bg-primary/10 shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/70 active:scale-95'
+                    }
+                  `}
+                >
+                  {/* Active indicator background */}
+                  {isActive && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 rounded-lg -z-0" />
+                  )}
+                  
+                  {/* Icon with smooth transitions */}
+                  <div className={`
+                    relative z-10 transition-transform duration-300 flex-shrink-0
+                    ${isActive ? 'scale-110' : 'group-hover:scale-105'}
+                  `}>
+                    <module.icon className={`
+                      h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-[18px] md:w-[18px] transition-colors duration-200
+                      ${isLocked 
+                        ? 'text-muted-foreground' 
+                        : isActive
+                          ? 'text-primary'
+                          : 'text-muted-foreground group-hover:text-foreground'
+                      }
+                    `} />
+                  </div>
+                  
+                  {/* Label - Responsive text */}
+                  <span className={`
+                    relative z-10 transition-colors duration-200
+                    ${isLocked 
+                      ? 'text-muted-foreground' 
+                      : isActive
+                        ? 'text-primary font-semibold'
+                        : 'text-muted-foreground group-hover:text-foreground'
+                    }
+                  `}>
+                    {/* Show full name on sm+ screens, abbreviated on mobile */}
+                    <span className="hidden sm:inline">{module.name}</span>
+                    <span className="sm:hidden">
+                      {module.id === 'system-config' 
+                        ? 'System Config' 
+                        : module.name.split(' ')[0]
+                      }
+                    </span>
+                  </span>
+                  
+                  {/* Locked indicator */}
                   {isLocked && (
-                    <div className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1">
-                      <X className="h-3 w-3" />
+                    <div className="relative z-10 flex items-center flex-shrink-0">
+                      <X className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-red-500 ml-0.5 sm:ml-1" />
                     </div>
                   )}
-                </div>
-                <h3 className={`font-medium text-xs lg:text-sm mb-1 ${
-                  isLocked 
-                    ? 'text-gray-400' 
-                    : currentView === module.id 
-                      ? 'text-primary' 
-                      : 'text-foreground'
-                }`}>
-                  {module.name}
-                </h3>
-                <p className={`text-xs hidden sm:block ${
-                  isLocked ? 'text-gray-400' : 'text-muted-foreground'
-                }`}>
-                  {isLocked ? t('admin.locked') : module.description}
-                </p>
-              </CardContent>
-            </Card>
-          );
-        })}
+                  
+                  {/* Active bottom border indicator */}
+                  {isActive && (
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3/4 h-0.5 bg-primary rounded-full shadow-sm shadow-primary/50" />
+                  )}
+                  
+                  {/* Hover effect */}
+                  {!isLocked && !isActive && (
+                    <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-transparent via-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-0" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        
+        {/* Mobile: Scroll indicator gradients - Always visible to indicate scrollability */}
+        <div className="absolute left-0 top-0 bottom-0 w-6 sm:w-8 bg-gradient-to-r from-background via-background/80 to-transparent pointer-events-none sm:hidden" />
+        <div className="absolute right-0 top-0 bottom-0 w-6 sm:w-8 bg-gradient-to-l from-background via-background/80 to-transparent pointer-events-none sm:hidden" />
+        
+        {/* Desktop: Subtle gradient overlay at edges */}
+        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent pointer-events-none hidden sm:block" />
+        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none hidden sm:block" />
       </div>
 
       {/* Dashboard Content */}
@@ -358,34 +460,13 @@ export const AdminDashboard = () => {
 
       {/* Patient Management Module */}
       {currentView === 'patient-management' && <PatientManagementModule />}
-
-      {/* Appointment Oversight Module */}
-      {currentView === 'appointment-oversight' && <AppointmentOversightModule />}
-
-      {/* System Configuration Module */}
-      {currentView === 'system-config' && <SystemConfigModule />}
-
-      {/* Hospital Registration Module */}
-      {currentView === 'system-config-hospital' && (
-        <div data-module="system-config-hospital">
-          <SystemConfigModule focusTab="hospital" />
-        </div>
-      )}
-
-      {/* Billing & Insurance Module */}
-      {currentView === 'billing-insurance' && <BillingInsuranceModule />}
-
-      {/* Bulk Messaging Module */}
-      {currentView === 'bulk-messaging' && <BulkMessagingModule />}
-
-      {/* Audit & Security Module */}
-      {currentView === 'audit-security' && (
-        <AuditSecurityModule 
-          moduleName={adminModules.find(m => m.id === currentView)?.name || 'Audit & Security'}
-          moduleDescription={adminModules.find(m => m.id === currentView)?.description || 'Logs & Security'}
-          moduleIcon={adminModules.find(m => m.id === currentView)?.icon || ShieldCheck}
-        />
-      )}
+ 
+ {/* System Configuration Module */}
+{(currentView === 'system-config' || currentView === 'system-config-hospital') && (
+  <div data-module={currentView === 'system-config-hospital' ? 'system-config-hospital' : 'system-config'}>
+    <SystemConfigModule focusTab={currentView === 'system-config-hospital' ? 'hospital' : undefined} />
+  </div>
+)}
     </div>
   );
 };

@@ -24,6 +24,33 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
 }) => {
   const { t } = useTranslation();
   const defaultLoadingMessage = t('loginLayout.signingIn');
+
+  // Helper function to render company name with "easyHMS" in blue
+  const renderCompanyName = (companyName: string, textColorClass: string = '', fontSize: string = '') => {
+    const parts = companyName.split(' easyHMS');
+    if (parts.length === 2) {
+      return (
+        <span className={`${textColorClass} ${fontSize}`}>
+          {parts[0]} <span className="text-healthcare-primary">easyHMS</span>
+        </span>
+      );
+    }
+    return <span className={`${textColorClass} ${fontSize}`}>{companyName}</span>;
+  };
+
+  // Helper function to render title with "easyHMS" in blue
+  const renderTitle = (titleText: string) => {
+    const parts = titleText.split(' easyHMS');
+    if (parts.length === 2) {
+      return (
+        <>
+          {parts[0]} <span className="text-healthcare-primary">easyHMS</span>
+        </>
+      );
+    }
+    return titleText;
+  };
+
     const defaultPromotionalContent = (
     <div className="text-white max-w-2xl">
       <div className="flex items-center gap-3 mb-6">
@@ -33,7 +60,7 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
           className="h-12 w-12"
           style={{ width: '48px', height: '48px' }}
         />
-        <h1 className="text-3xl font-bold">{t('loginLayout.companyName')}</h1>
+        <h1 className="text-3xl font-bold text-white">{t('loginLayout.companyName')}</h1>
       </div>
       
       <h2 className="text-xl font-semibold mb-4">
@@ -78,7 +105,7 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
             className="h-6 w-6"
             style={{ width: '24px', height: '24px' }}
           />
-          <span className="font-bold text-base text-gray-900 dark:text-white">{t('loginLayout.companyName')}</span>
+          {renderCompanyName(t('loginLayout.companyName'), 'font-bold text-base text-gray-900 dark:text-white')}
         </div>
       </div>
 
@@ -94,18 +121,18 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
         <Card className="w-full max-w-md shadow-elegant">
           <CardHeader className="text-center space-y-3 pb-4">
             {/* Desktop Logo */}
-            <div className="hidden lg:flex justify-center mb-3">
-              <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
+            <div className="hidden lg:flex flex-col items-center justify-center mb-3">
+              <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl mb-2">
                 <img 
                   src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
                   alt="Company Logo" 
                   className="h-12 w-12" 
-                  style={{ width: '48px', height: '48px' }}
+                  style={{ width: '60px', height: '50px' }}
                 />
-              </div>
+              </div>             
             </div>
-            <CardTitle className="text-xl lg:text-2xl font-bold text-healthcare-primary">
-              {title}
+            <CardTitle className="text-xl lg:text-3xl font-bold">
+              {renderTitle(title)}
             </CardTitle>
             {subtitle && (
               <p className="text-muted-foreground text-sm">

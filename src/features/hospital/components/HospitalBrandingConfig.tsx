@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { 
+import {
   Building2,
   Save,
   Phone,
@@ -136,16 +136,51 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
   const previousBrandingRef = useRef<HospitalBranding | null>(null);
 
   // Validation functions
+  const requiredFields: Array<keyof HospitalBranding> = [
+    'name',
+    'type',
+    'contact',
+    'email',
+    'location',
+    'city',
+    'state',
+    'country',
+    'pincode',
+    'registrationNumber'
+  ];
+
+  const fieldLabels: Record<keyof HospitalBranding, string> = {
+    name: 'Hospital name',
+    type: 'Hospital type',
+    email: 'Email address',
+    contact: 'Primary contact',
+    alternateContact: 'Alternate contact',
+    website: 'Website',
+    location: 'Street address',
+    city: 'City',
+    state: 'State/Province',
+    country: 'Country',
+    pincode: 'Postal code',
+    timeZone: 'Time zone',
+    registrationNumber: 'Registration number'
+  };
+
+  const RequiredIndicator: React.FC = () => (
+    <span className="text-red-500 font-semibold ml-1" aria-hidden="true">*</span>
+  );
+
   const validateEmail = (email: string): string | null => {
-    if (!email) return null; // Allow empty email
+    const trimmed = email.trim();
+    if (!trimmed) return 'Email address is required';
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email) ? null : 'Please enter a valid email address';
+    return emailRegex.test(trimmed) ? null : 'Please enter a valid email address';
   };
 
   const validatePhone = (phone: string): string | null => {
-    if (!phone) return null; // Allow empty phone
-    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-    return phoneRegex.test(phone.replace(/\s/g, '')) ? null : 'Please enter a valid phone number';
+    const trimmed = phone.trim();
+    if (!trimmed) return 'Primary contact is required';
+    const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/;
+    return phoneRegex.test(trimmed) ? null : 'Please enter a valid phone number';
   };
 
   const validateWebsite = (website: string): string | null => {
@@ -160,13 +195,20 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
     return pincodeRegex.test(pincode) ? null : 'Please enter a valid postal code (4-10 digits)';
   };
 
-  const validateField = (field: string, value: string): string | null => {
+  const validateField = (field: keyof HospitalBranding, value: string): string | null => {
+    const trimmedValue = value?.trim() ?? '';
+
+    if (requiredFields.includes(field) && !trimmedValue) {
+      return `${fieldLabels[field]} is required`;
+    }
+
     switch (field) {
       case 'email':
         return validateEmail(value);
       case 'contact':
-      case 'alternateContact':
         return validatePhone(value);
+      case 'alternateContact':
+        return trimmedValue ? validatePhone(value) : null;
       case 'website':
         return validateWebsite(value);
       case 'pincode':
@@ -174,6 +216,28 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
       default:
         return null;
     }
+  };
+
+  const validateBranding = (data: HospitalBranding) => {
+    const errors: Record<string, string> = {};
+
+    requiredFields.forEach(field => {
+      const error = validateField(field, data[field]);
+      if (error) {
+        errors[field] = error;
+      }
+    });
+
+    const optionalChecks: Array<keyof HospitalBranding> = ['alternateContact', 'website', 'timeZone'];
+    optionalChecks.forEach(field => {
+      const error = validateField(field, data[field]);
+      if (error) {
+        errors[field] = error;
+      }
+    });
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
   
   // Only fetch when a valid hospitalId is available
@@ -221,6 +285,16 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
       toast({
         title: "Error",
         description: "User ID not found. Please login again.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const isValid = validateBranding(branding);
+    if (!isValid) {
+      toast({
+        title: "Validation Error",
+        description: "Please complete all required fields before saving.",
         variant: "destructive"
       });
       return;
@@ -298,11 +372,20 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
     
     // Validate the field and update validation errors
     const error = validateField(field, value);
-    setValidationErrors(prev => ({
-      ...prev,
-      [field]: error || ''
-    }));
+    setValidationErrors(prev => {
+      const next = { ...prev };
+      if (error) {
+        next[field] = error;
+      } else {
+        delete next[field];
+      }
+      return next;
+    });
   };
+
+  const hasMissingRequiredFields = requiredFields.some(field => !(branding[field]?.trim()));
+  const hasValidationErrors = Object.keys(validationErrors).length > 0;
+  const isSaveDisabled = hasMissingRequiredFields || hasValidationErrors;
 
   // Show loading state
   if (isLoading) {
@@ -378,7 +461,8 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
               <div className="space-y-2">
                 <Label htmlFor="hospitalName" className="flex items-center gap-2">
                   <Building2 className="h-4 w-4" />
-                  Hospital Name *
+                  Hospital Name
+                  <RequiredIndicator />
                 </Label>
                 <Input
                   id="hospitalName"
@@ -387,13 +471,21 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                   placeholder="Enter hospital name"
                   required
                   disabled={isExistingHospital && !isEditMode}
+                  className={validationErrors.name ? 'border-red-500 focus:border-red-500' : ''}
                 />
                 <p className="text-xs text-muted-foreground">Maximum 150 characters</p>
+                {validationErrors.name && (
+                  <div className="flex items-center gap-1 text-xs text-red-500">
+                    <AlertCircle className="h-3 w-3" />
+                    {validationErrors.name}
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="hospitalType" className="flex items-center gap-2">
                   <Type className="h-4 w-4" />
-                  Hospital Type *
+                  Hospital Type
+                  <RequiredIndicator />
                 </Label>
                 <Select
                   value={hospitalTypes.some(t=>t.value===branding.type) ? branding.type : undefined}
@@ -402,7 +494,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                   }}
                   disabled={isExistingHospital && !isEditMode}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className={`w-full ${validationErrors.type ? 'border-red-500 focus:border-red-500' : ''}`}>
                     <SelectValue placeholder="Select hospital type" />
                   </SelectTrigger>
                   <SelectContent className="max-h-48 overflow-y-auto">
@@ -413,6 +505,12 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     ))}
                   </SelectContent>
                 </Select>
+                {validationErrors.type && (
+                  <div className="flex items-center gap-1 text-xs text-red-500">
+                    <AlertCircle className="h-3 w-3" />
+                    {validationErrors.type}
+                  </div>
+                )}
               </div>
                          </div>
           </CardContent>
@@ -434,7 +532,8 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
               <div className="space-y-2">
                 <Label htmlFor="contact" className="flex items-center gap-2">
                   <Phone className="h-4 w-4" />
-                  Primary Contact *
+                  Primary Contact
+                  <RequiredIndicator />
                 </Label>
                 <Input
                   id="contact"
@@ -481,6 +580,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                 <Label htmlFor="email" className="flex items-center gap-2">
                   <Mail className="h-4 w-4" />
                   Email Address
+                  <RequiredIndicator />
                 </Label>
                 <Input
                   id="email"
@@ -539,7 +639,8 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
              <div className="space-y-2">
                <Label htmlFor="location" className="flex items-center gap-2">
                  <MapPin className="h-4 w-4" />
-                 Street Address *
+                 Street Address
+                 <RequiredIndicator />
                </Label>
                 <Textarea
                  id="location"
@@ -549,13 +650,23 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                  rows={3}
                   required
                   disabled={isExistingHospital && !isEditMode}
+                  className={validationErrors.location ? 'border-red-500 focus:border-red-500' : ''}
                />
                <p className="text-xs text-muted-foreground">Detailed street address</p>
+                {validationErrors.location && (
+                  <div className="flex items-center gap-1 text-xs text-red-500">
+                    <AlertCircle className="h-3 w-3" />
+                    {validationErrors.location}
+                  </div>
+                )}
              </div>
              
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <div className="space-y-2">
-                 <Label htmlFor="city">City *</Label>
+                <Label htmlFor="city" className="flex items-center gap-2">
+                  City
+                  <RequiredIndicator />
+                </Label>
                   <Input
                    id="city"
                    value={branding.city}
@@ -563,10 +674,20 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                    placeholder="Enter city name"
                     required
                     disabled={isExistingHospital && !isEditMode}
+                    className={validationErrors.city ? 'border-red-500 focus:border-red-500' : ''}
                  />
+                {validationErrors.city && (
+                  <div className="flex items-center gap-1 text-xs text-red-500">
+                    <AlertCircle className="h-3 w-3" />
+                    {validationErrors.city}
+                  </div>
+                )}
                </div>
                <div className="space-y-2">
-                 <Label htmlFor="state">State/Province *</Label>
+                <Label htmlFor="state" className="flex items-center gap-2">
+                  State/Province
+                  <RequiredIndicator />
+                </Label>
                   <Input
                    id="state"
                    value={branding.state}
@@ -574,13 +695,23 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                    placeholder="Enter state or province"
                     required
                     disabled={isExistingHospital && !isEditMode}
+                    className={validationErrors.state ? 'border-red-500 focus:border-red-500' : ''}
                  />
+                {validationErrors.state && (
+                  <div className="flex items-center gap-1 text-xs text-red-500">
+                    <AlertCircle className="h-3 w-3" />
+                    {validationErrors.state}
+                  </div>
+                )}
                </div>
              </div>
              
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <div className="space-y-2">
-                 <Label htmlFor="country">Country *</Label>
+                <Label htmlFor="country" className="flex items-center gap-2">
+                  Country
+                  <RequiredIndicator />
+                </Label>
                   <Input
                    id="country"
                    value={branding.country}
@@ -588,10 +719,20 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                    placeholder="Enter country name"
                     required
                     disabled={isExistingHospital && !isEditMode}
+                    className={validationErrors.country ? 'border-red-500 focus:border-red-500' : ''}
                  />
+                {validationErrors.country && (
+                  <div className="flex items-center gap-1 text-xs text-red-500">
+                    <AlertCircle className="h-3 w-3" />
+                    {validationErrors.country}
+                  </div>
+                )}
                </div>
                <div className="space-y-2">
-                 <Label htmlFor="pincode">Postal Code *</Label>
+                <Label htmlFor="pincode" className="flex items-center gap-2">
+                  Postal Code
+                  <RequiredIndicator />
+                </Label>
                   <Input
                    id="pincode"
                    value={branding.pincode}
@@ -628,7 +769,8 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
               <div className="space-y-2">
                 <Label htmlFor="registrationNumber" className="flex items-center gap-2">
                   <Hash className="h-4 w-4" />
-                  Registration Number *
+                Registration Number
+                <RequiredIndicator />
                 </Label>
                 <Input
                   id="registrationNumber"
@@ -637,8 +779,15 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                   placeholder="Enter hospital registration number"
                   required
                   disabled={isExistingHospital && !isEditMode}
+                  className={validationErrors.registrationNumber ? 'border-red-500 focus:border-red-500' : ''}
                 />
                 <p className="text-xs text-muted-foreground">Official hospital registration number</p>
+                {validationErrors.registrationNumber && (
+                  <div className="flex items-center gap-1 text-xs text-red-500">
+                    <AlertCircle className="h-3 w-3" />
+                    {validationErrors.registrationNumber}
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="timeZone" className="flex items-center gap-2">
@@ -671,7 +820,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
         {!isExistingHospital && (
           <Button 
             onClick={handleSaveBranding}
-            disabled={registerHospitalMutation.isPending}
+            disabled={registerHospitalMutation.isPending || isSaveDisabled}
           >
             <Save className="h-4 w-4 mr-2" />
             {registerHospitalMutation.isPending ? 'Saving...' : 'Save Hospital Information'}
@@ -685,7 +834,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
             <Button variant="outline" onClick={handleCancelEdit}>Cancel</Button>
             <Button 
               onClick={handleSaveBranding}
-              disabled={updateHospitalMutation.isPending}
+              disabled={updateHospitalMutation.isPending || isSaveDisabled}
             >
               <Save className="h-4 w-4 mr-2" />
               {updateHospitalMutation.isPending ? 'Saving...' : 'Save Changes'}

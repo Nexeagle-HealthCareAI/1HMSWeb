@@ -31,10 +31,8 @@ const LoginPage = () => {
       if (intendedPath && intendedPath !== '/') {
         // Redirect to the originally requested page
         navigate(intendedPath);
-      } else if (userRole === 'Admin') {
+      } else if (userRole === 'Admin' || userRole === 'AdminDoctor') {
         navigate('/admin');
-      } else if (userRole === 'AdminDoctor') {
-        navigate('/dashboard');
       } else if (userRole === 'Receptionist' || userRole === 'Nurse') {
         navigate('/appointment-dashboard');
       } else if (userRole === 'Doctor') {
@@ -59,10 +57,8 @@ const LoginPage = () => {
     const intendedPath = location.state?.from?.pathname;
     if (intendedPath && intendedPath !== '/') {
       navigate(intendedPath);
-    } else if (currentUserRole === 'Admin') {
+    } else if (currentUserRole === 'Admin' || currentUserRole === 'AdminDoctor') {
       navigate('/admin');
-    } else if (currentUserRole === 'AdminDoctor') {
-      navigate('/dashboard');
     } else if (currentUserRole === 'Receptionist' || currentUserRole === 'Nurse') {
       navigate('/appointment-dashboard');
     } else if (currentUserRole === 'Doctor') {

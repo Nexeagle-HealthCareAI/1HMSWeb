@@ -33,7 +33,7 @@ const AppointmentOversight = lazy(() => import('@/features/appointment/component
 const DoctorCalendar = lazy(() => import('@/features/doctor-calendar/DoctorCalendarPage').then(module => ({ default: module.DoctorCalendarPage })));
 const DocAI = lazy(() => import('@/features/ai/components/DocAI').then(module => ({ default: module.DocAI })));
 const ProfilePage = lazy(() => import('@/features/profile/components/ProfilePage').then(module => ({ default: module.ProfilePage })));
-const Billing = lazy(() => import('@/features/billing/components/Billing').then(module => ({ default: module.Billing })));
+
 const UserOnboardingRegistration = lazy(() => import('@/features/auth/components/UserOnboardingRegistration').then(module => ({ default: module.default })));
 const NotFoundPage = lazy(() => import('@/components/shared/NotFoundPage').then(module => ({ default: module.default })));
 
@@ -43,10 +43,6 @@ const PatientProfilePage = lazy(() => import('@/features/patient/pages/PatientPr
 
 // Settings route
 const SettingsPage = lazy(() => import('@/pages/SettingsPage').then(module => ({ default: module.SettingsPage })));
-
-// Prescription customization route
-const CustomizePrescriptionPage = lazy(() => import('@/pages/CustomizePrescriptionPage').then(module => ({ default: module.CustomizePrescriptionPage })));
-
 
 // Loading component for lazy routes
 const RouteLoadingSpinner = () => (
@@ -223,19 +219,7 @@ export const AppRoutes: React.FC = () => {
                   </MainLayout>
                 </RouteGuard>
               } 
-            />
-
-            {/* Billing Routes */}
-            <Route 
-              path="/billing" 
-              element={
-                <RouteGuard>
-                  <MainLayout>
-                    <Billing />
-                  </MainLayout>
-                </RouteGuard>
-              } 
-            />
+            />        
 
 
             {/* Patient Routes - Restricted to Admin and AdminDoctor roles */}

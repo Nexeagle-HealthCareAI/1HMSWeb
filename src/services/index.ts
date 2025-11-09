@@ -6,9 +6,6 @@ export { authApi } from '@/features/auth/services/authApi';
 export { appointmentApi } from '@/features/appointment/services/appointmentApi';
 export { patientApi } from '@/features/patient/services/patientApi';
 export { doctorApi } from '@/features/doctor/services/doctorApi';
-export { billingApi } from '@/features/billing/services/billingApi';
-export { messagingApi } from '@/features/messaging/services/messagingApi';
-export { aiApi } from '@/features/ai/services/aiApi';
 
 // Re-export types for convenience
 export type {
@@ -16,8 +13,6 @@ export type {
   LoginRequest,
   RegisterRequest,
   AuthResponse,
-  User,
-  ChangePasswordRequest,
   ForgotPasswordRequest,
   ResetPasswordRequest,
 } from '@/features/auth/services/authApi';
@@ -45,61 +40,5 @@ export type {
 
 export type {
   // Doctor types
-  Doctor,
-  CreateDoctorRequest,
-  UpdateDoctorRequest,
-  DoctorFilters,
-  DoctorStats,
-  DoctorSchedule,
-  UpdateScheduleRequest,
-  Prescription,
-  CreatePrescriptionRequest,
+  Doctor
 } from '@/features/doctor/services/doctorApi';
-
-export type {
-  // Billing types
-  Bill,
-  BillItem,
-  CreateBillRequest,
-  UpdateBillRequest,
-  BillFilters,
-  Payment,
-  CreatePaymentRequest,
-  InsuranceClaim,
-  CreateInsuranceClaimRequest,
-  BillingStats,
-  BillingConfiguration,
-} from '@/features/billing/services/billingApi';
-
-export type {
-  // Messaging types
-  Message,
-  MessageAttachment,
-  CreateMessageRequest,
-  UpdateMessageRequest,
-  MessageFilters,
-  BulkMessageRequest,
-  MessageTemplate,
-  CreateTemplateRequest,
-  UpdateTemplateRequest,
-  Conversation,
-  MessageStats,
-} from '@/features/messaging/services/messagingApi';
-
-export type {
-  // AI types
-  ChatMessage,
-  Conversation as AIConversation,
-  CreateConversationRequest,
-  SendMessageRequest,
-  AIResponse,
-  DocumentAnalysis,
-  CreateDocumentAnalysisRequest,
-  MedicalInsight,
-  GenerateInsightRequest,
-  AIAssistant,
-  CreateAssistantRequest,
-  UpdateAssistantRequest,
-  AIUsageStats,
-  AIModel,
-} from '@/features/ai/services/aiApi';

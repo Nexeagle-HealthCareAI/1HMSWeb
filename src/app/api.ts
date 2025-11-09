@@ -1,6 +1,21 @@
 // API Configuration
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
-  'https://easyhmsapi-b2fpcsh4cpbafxf0.centralindia-01.azurewebsites.net';
+// Helper function to ensure URL has protocol
+const ensureProtocol = (url: string): string => {
+  if (!url) return url;
+  // If URL already has protocol, return as is
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  // Add https:// if no protocol
+  return `https://${url}`;
+};
+
+// Get API base URL from environment or use fallback
+const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 
+  'easyhmsapisevices-gcb4btbthmaedaex.centralindia-01.azurewebsites.net';
+
+// Ensure the URL has protocol
+export const API_BASE_URL = ensureProtocol(rawApiUrl);
 
 // API Endpoints
 export const API_ENDPOINTS = {
@@ -36,22 +51,12 @@ export const API_ENDPOINTS = {
     PROFILE: '/doctors',
     GET_ALL: '/doctors',
     GET_BY_ID: (id: string) => `/doctors/${id}`,
-    CREATE: '/doctors',
-    UPDATE: (id: string) => `/doctors/${id}`,
-    DELETE: (id: string) => `/doctors/${id}`,
+    CREATE: '/doctors',    
     GET_PROFILE: '/doctors/profile',
-    UPDATE_PROFILE: '/doctors/profile',
-    SEARCH: (query: string) => `/doctors/search?q=${encodeURIComponent(query)}`,
-    GET_STATS: '/doctors/stats',
-    GET_SCHEDULE: (id: string, date: string) => `/doctors/${id}/schedule/${date}`,
-    UPDATE_SCHEDULE: (id: string) => `/doctors/${id}/schedule`,
-    GET_APPOINTMENTS: (id: string, params: string) => `/doctors/${id}/appointments?${params}`,
-    GET_TODAY_APPOINTMENTS: '/doctors/appointments/today',
-    GET_PATIENTS: (id: string) => `/doctors/${id}/patients`,
+    UPDATE_PROFILE: '/doctors/profile',    
+    GET_STATS: '/doctors/stats',    
+    GET_TODAY_APPOINTMENTS: '/doctors/appointments/today',    
     CREATE_PRESCRIPTION: '/doctors/prescriptions',
-    GET_PRESCRIPTIONS: (params: string) => `/doctors/prescriptions?${params}`,
-    UPDATE_PRESCRIPTION: (id: string) => `/doctors/prescriptions/${id}`,
-    DELETE_PRESCRIPTION: (id: string) => `/doctors/prescriptions/${id}`,
     GET_DASHBOARD: '/doctors/dashboard',
     UPDATE_AVAILABILITY: '/doctors/availability',
     GET_AVAILABLE_SLOTS: (date: string) => `/doctors/available-slots/${date}`,
@@ -70,107 +75,21 @@ export const API_ENDPOINTS = {
     VALIDATE_TOKEN: '/admin/user-onboarding/validate',
   },
   APPOINTMENTS: {
-    GET_ALL: '/appointments',
-    GET_BY_ID: (id: string) => `/appointments/${id}`,
-    CREATE: '/appointments',
-    UPDATE: (id: string) => `/appointments/${id}`,
-    DELETE: (id: string) => `/appointments/${id}`,
-    GET_TODAY: '/appointments/today',
-    GET_BY_DATE: (date: string) => `/appointments/date/${date}`,
-    GET_BY_DOCTOR: (doctorId: string, params: string) => `/appointments/doctor/${doctorId}?${params}`,
-    GET_BY_PATIENT: (patientId: string) => `/appointments/patient/${patientId}`,
-    UPDATE_STATUS: (id: string) => `/appointments/${id}/status`,
-    RESCHEDULE: (id: string) => `/appointments/${id}/reschedule`,
-    CANCEL: (id: string) => `/appointments/${id}/cancel`,
-    COMPLETE: (id: string) => `/appointments/${id}/complete`,
-    NO_SHOW: (id: string) => `/appointments/${id}/no-show`,
-    GET_SLOTS: (doctorId: string, date: string) => `/appointments/slots/${doctorId}/${date}`,
-    BLOCK_SLOTS: '/appointments/block-slots',
-    UNBLOCK_SLOTS: '/appointments/unblock-slots',
-    GET_STATS: (params: string) => `/appointments/stats${params}`,
-    SEND_REMINDER: (id: string) => `/appointments/${id}/send-reminder`,
-    BULK_REMINDERS: '/appointments/bulk-reminders',
+    
   },
   PATIENTS: {
-    GET_ALL: '/patients',
-    GET_BY_ID: (id: string) => `/patients/${id}`,
-    CREATE: '/patients',
-    UPDATE: (id: string) => `/patients/${id}`,
-    DELETE: (id: string) => `/patients/${id}`,
-    SEARCH: (query: string) => `/patients/search?q=${encodeURIComponent(query)}`,
-    GET_STATS: '/patients/stats',
-    GET_PROFILE: (id: string) => `/patients/${id}/profile`,
-    UPDATE_PROFILE: (id: string) => `/patients/${id}/profile`,
-    GET_MEDICAL_RECORDS: (id: string) => `/patients/${id}/medical-records`,
-    CREATE_MEDICAL_RECORD: '/patients/medical-records',
-    UPDATE_MEDICAL_RECORD: (id: string) => `/patients/medical-records/${id}`,
-    DELETE_MEDICAL_RECORD: (id: string) => `/patients/medical-records/${id}`,
-    GET_APPOINTMENTS: (id: string) => `/patients/${id}/appointments`,
-    GET_BILLING: (id: string) => `/patients/${id}/billing`,
-    SEND_REMINDER: (id: string) => `/patients/${id}/send-reminder`,
-    BULK_REMINDERS: '/patients/bulk-reminders',
-    GET_DASHBOARD: (id: string) => `/patients/${id}/dashboard`,
     // Patient Profile API endpoints
     GET_PROFILE_DETAILS: (hospitalId: string, patientId: string) => `/patient-profile?hospitalId=${hospitalId}&patientId=${patientId}`,
     UPDATE_PROFILE_DETAILS: (hospitalId: string, patientId: string) => `/patient-profile?hospitalId=${hospitalId}&patientId=${patientId}`,
-  },
-  BILLING: {
-    GET_ALL: '/bills',
-    GET_BY_ID: (id: string) => `/bills/${id}`,
-    CREATE: '/bills',
-    UPDATE: (id: string) => `/bills/${id}`,
-    DELETE: (id: string) => `/bills/${id}`,
-    GET_BY_PATIENT: (patientId: string) => `/bills/patient/${patientId}`,
-    GET_BY_APPOINTMENT: (appointmentId: string) => `/bills/appointment/${appointmentId}`,
-    UPDATE_STATUS: (id: string) => `/bills/${id}/status`,
-    CREATE_PAYMENT: '/bills/payments',
-    GET_PAYMENTS: (billId: string) => `/bills/${billId}/payments`,
-    CREATE_INSURANCE_CLAIM: '/bills/insurance-claims',
-    GET_INSURANCE_CLAIMS: (params: string) => `/bills/insurance-claims?${params}`,
-    UPDATE_INSURANCE_CLAIM_STATUS: (id: string) => `/bills/insurance-claims/${id}/status`,
-    GET_STATS: (params: string) => `/bills/stats?${params}`,
-    GET_CONFIGURATION: '/bills/configuration',
-  },
-  AI: {
-    GET_CONVERSATIONS: (params: string) => `/ai/conversations?${params}`,
-    GET_CONVERSATION: (id: string) => `/ai/conversations/${id}`,
-    CREATE_CONVERSATION: '/ai/conversations',
-    DELETE_CONVERSATION: (id: string) => `/ai/conversations/${id}`,
-    GET_MESSAGES: (conversationId: string) => `/ai/conversations/${conversationId}/messages`,
-    SEND_MESSAGE: '/ai/conversations/send-message',
-    GET_DOCUMENT_ANALYSES: (params: string) => `/ai/document-analyses?${params}`,
-    GET_DOCUMENT_ANALYSIS: (id: string) => `/ai/document-analyses/${id}`,
-    CREATE_DOCUMENT_ANALYSIS: '/ai/document-analyses',
-    DELETE_DOCUMENT_ANALYSIS: (id: string) => `/ai/document-analyses/${id}`,
-    GET_MEDICAL_INSIGHTS: (params: string) => `/ai/medical-insights?${params}`,
-    GET_MEDICAL_INSIGHT: (id: string) => `/ai/medical-insights/${id}`,
-    GENERATE_MEDICAL_INSIGHT: '/ai/medical-insights/generate',
-    DELETE_MEDICAL_INSIGHT: (id: string) => `/ai/medical-insights/${id}`,
-    GET_ASSISTANTS: '/ai/assistants',
-    GET_ASSISTANT: (id: string) => `/ai/assistants/${id}`,
-    CREATE_ASSISTANT: '/ai/assistants',
-    UPDATE_ASSISTANT: (id: string) => `/ai/assistants/${id}`,
-    DELETE_ASSISTANT: (id: string) => `/ai/assistants/${id}`,
-    GET_MODELS: '/ai/models',
-    GET_MODEL: (id: string) => `/ai/models/${id}`,
-    GET_STATS: (params: string) => `/ai/stats?${params}`,
-    SEARCH_CONVERSATIONS: (query: string) => `/ai/conversations/search?q=${encodeURIComponent(query)}`,
-    DELETE_MESSAGES: (conversationId: string) => `/ai/conversations/${conversationId}/messages`,
-    GET_CONVERSATION_SUMMARY: (conversationId: string) => `/ai/conversations/${conversationId}/summary`,
-    GENERATE_CONVERSATION_TITLE: (conversationId: string) => `/ai/conversations/${conversationId}/generate-title`,
-    ANALYZE_MEDICAL_TEXT: '/ai/analyze-medical-text',
-    GET_PATIENT_SUGGESTIONS: (patientId: string) => `/ai/patients/${patientId}/suggestions`,
-    GET_DIAGNOSIS_SUGGESTIONS: '/ai/diagnosis-suggestions',
-    CHECK_MEDICATION_INTERACTIONS: '/ai/medication-interactions',
-  },
-              CALENDAR: {
+  },  
+   CALENDAR: {
               GET_DOCTOR_TIMEOFF: (doctorId: string) => `/calendar/doctor/timeoff?doctorId=${doctorId}`,
               CREATE_DOCTOR_TIMEOFF: '/calendar/doctor/timeoff',
               DELETE_DOCTOR_TIMEOFF: (timeOffId: string) => `/calendar/doctor/timeoff/${timeOffId}`,
-                  GET_DOCTOR_CONFIG: (doctorId: string, startDate: string, days: number) => `/calendar/doctor/config?doctorId=${doctorId}&startDate=${encodeURIComponent(startDate)}&daysCount=${days}`,
+              GET_DOCTOR_CONFIG: (doctorId: string, startDate: string, days: number) => `/calendar/doctor/config?doctorId=${doctorId}&startDate=${encodeURIComponent(startDate)}&daysCount=${days}`,
     CREATE_DOCTOR_OVERRIDE: '/calendar/doctor/override',
     DELETE_DOCTOR_OVERRIDE: (overrideId: string) => `/calendar/doctor/override/${overrideId}`,
-            },
+   },
   PRESCRIPTION: {
     UPLOAD_ASSET: '/prescription/assets/upload',
     GET_ASSETS: (doctorId: string) => `/prescription/assets?doctorId=${doctorId}`,

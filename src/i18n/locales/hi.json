@@ -51,6 +51,8 @@
     "password": "पासवर्ड",
     "confirmPassword": "पासवर्ड की पुष्टि करें",
     "forgotPassword": "पासवर्ड भूल गए?",
+    "resetPassword": "पासवर्ड रीसेट करें",
+    "resetPasswordTitle": "पासवर्ड रीसेट करें",
     "rememberMe": "मुझे याद रखें",
     "dontHaveAccount": "खाता नहीं है?",
     "alreadyHaveAccount": "पहले से खाता है?",
@@ -509,7 +511,7 @@
     }
   },
   "loginLayout": {
-    "companyName": "NexEagle HMS",
+    "companyName": "NexEagle easyHMS",
     "tagline": "अपने स्वास्थ्य देखभाल अभ्यास को सुव्यवस्थित करें",
     "description": "पूर्ण रोगी प्रबंधन, अपॉइंटमेंट, बिलिंग और अधिक। स्वास्थ्य देखभाल प्रशासन का भविष्य अनुभव करें।",
     "uptime": "अपटाइम",

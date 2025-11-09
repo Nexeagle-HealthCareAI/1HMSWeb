@@ -1,7 +1,6 @@
 import { useAuthStore } from './authStore';
 import { useAppStore } from './appStore';
 import { useUserStore } from './userStore';
-import { useNotificationStore } from './notificationStore';
 import { useThemeStore } from './themeStore';
 
 // Auth store hooks
