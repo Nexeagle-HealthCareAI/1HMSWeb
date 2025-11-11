@@ -41,5 +41,5 @@ steps:
       app_location: '.' # root of your Vite app
       api_location: '' # no API folder 
       output_location: '$(buildDir)'             # Vite build output folder
-      azure_static_web_apps_api_token: '$(SWA_DEPLOYMENT_TOKEN_WEB_QA)'
+      azure_static_web_apps_api_token: $(SWA_DEPLOYMENT_TOKEN_WEB_DEV)
     displayName: 'Deploy to Azure Static Web App'
