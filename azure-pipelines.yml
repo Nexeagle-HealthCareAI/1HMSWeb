@@ -29,6 +29,8 @@ stages:
     - script: |
         set -e
         cd "$(Build.SourcesDirectory)/$(appLocation)"
+        # Inject environment variable for Vite before build (used by src/app/api.ts)
+        echo "VITE_API_BASE_URL=$(VITE_API_BASE_URL)" > .env
         npm ci
         npm run build:dev
       displayName: 'Install & Build (Vite Dev)'
@@ -64,6 +66,8 @@ stages:
     - script: |
         set -e
         cd "$(Build.SourcesDirectory)/$(appLocation)"
+        # Inject environment variable for Vite before build (used by src/app/api.ts)
+        echo "VITE_API_BASE_URL=$(VITE_API_BASE_URL)" > .env
         npm ci
         npx vite build --mode qa
       displayName: 'Install & Build (Vite QA)'
