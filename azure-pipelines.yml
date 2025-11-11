@@ -65,7 +65,7 @@ stages:
         set -e
         cd "$(Build.SourcesDirectory)/$(appLocation)"
         npm ci
-        npm run build:qa
+        npx vite build --mode qa
       displayName: 'Install & Build (Vite QA)'
 
     - task: AzureStaticWebApp@0
