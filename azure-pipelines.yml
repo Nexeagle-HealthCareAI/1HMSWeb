@@ -7,7 +7,7 @@ pool:
 
 # Change these if your app lives in a subfolder or uses CRA
 variables:
-  appLocation: ''     # '' = repo root; or 'web' if your app is in /web
+  appLocation: '.'     # '' = repo root; or 'web' if your app is in /web
   buildDir: 'dist'    # Vite builds to 'dist' by default
 
 stages:
@@ -32,22 +32,11 @@ stages:
         npx vite build
       displayName: 'Install & Build (Vite)'
 
-    # Ensure config travels with the built files when we skip SWA build
-    - bash: |
-        set -e
-        SRC_ROOT="$(Build.SourcesDirectory)/$(appLocation)"
-        OUT_DIR="$(Build.SourcesDirectory)/$(appLocation)/$(buildDir)"
-        # copy config if present in app root
-        [ -f "$SRC_ROOT/staticwebapp.config.json" ] && cp "$SRC_ROOT/staticwebapp.config.json" "$OUT_DIR/" || true
-        echo "Prepared output folder:"
-        ls -la "$OUT_DIR" || true
-      displayName: 'Prepare build output (copy SWA config if any)'
-
     - task: AzureStaticWebApp@0
       displayName: 'Deploy to Azure Static Web App (Dev)'
       inputs:
         # Upload ONLY the built folder by pointing app_location to app root and output_location to 'dist'
-        app_location: '$(appLocation)'
+        app_location: '.'
         api_location: ''
         output_location: '$(buildDir)'
         skip_app_build: true
@@ -75,15 +64,6 @@ stages:
         npm ci
         npx vite build
       displayName: 'Install & Build (Vite)'
-
-    - bash: |
-        set -e
-        SRC_ROOT="$(Build.SourcesDirectory)/$(appLocation)"
-        OUT_DIR="$(Build.SourcesDirectory)/$(appLocation)/$(buildDir)"
-        [ -f "$SRC_ROOT/staticwebapp.config.json" ] && cp "$SRC_ROOT/staticwebapp.config.json" "$OUT_DIR/" || true
-        echo "Prepared output folder:"
-        ls -la "$OUT_DIR" || true
-      displayName: 'Prepare build output (copy SWA config if any)'
 
     - task: AzureStaticWebApp@0
       displayName: 'Deploy to Azure Static Web App (QA)'
