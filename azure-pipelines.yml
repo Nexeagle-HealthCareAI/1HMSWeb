@@ -30,8 +30,8 @@ stages:
         set -e
         cd "$(Build.SourcesDirectory)/$(appLocation)"
         npm ci
-        npx vite build
-      displayName: 'Install & Build (Vite)'
+        npm run build:dev
+      displayName: 'Install & Build (Vite Dev)'
 
     # Point SWA task directly to the built folder; no artifacts needed
     - task: AzureStaticWebApp@0
@@ -65,8 +65,8 @@ stages:
         set -e
         cd "$(Build.SourcesDirectory)/$(appLocation)"
         npm ci
-        npx vite build
-      displayName: 'Install & Build (Vite)'
+        npm run build:qa
+      displayName: 'Install & Build (Vite QA)'
 
     - task: AzureStaticWebApp@0
       displayName: 'Deploy to Azure Static Web App (QA)'
