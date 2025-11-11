@@ -1,24 +1,27 @@
+# azure-pipelines-swa.yml
 trigger:
-- main
+  branches:
+    include: [ main ]
 
 pool:
-  vmImage: 'ubuntu-latest'
+  vmImage: ubuntu-latest
 
-# CHANGE THESE if your app lives in a subfolder or uses CRA
+# Change these if your app isn't at repo root
+# If your React/Vite app is in a subfolder (e.g., /web), set appLocation: 'web'
 variables:
-  appLocation: '/'     # '/' if package.json is in repo root; else '/web' etc.
-  outLocation: 'dist'  # 'dist' for Vite, 'build' for CRA
+  appLocation: ''      # '' means repo root; NO leading slash
+  outLocation: 'dist'  # Vite default. For CRA use 'build'
 
 stages:
-# ---------- Build once ----------
+# ===================== BUILD ONCE =====================
 - stage: Build
   displayName: Build
   jobs:
   - job: BuildJob
-    displayName: Build React
+    displayName: Build React (Vite)
     steps:
     - task: NodeTool@0
-      displayName: 'Use Node 20.x'
+      displayName: Use Node 20.x
       inputs:
         versionSpec: '20.x'
 
@@ -29,24 +32,26 @@ stages:
         path: '$(Pipeline.Workspace)/.npm'
 
     - script: |
-        cd $(Build.SourcesDirectory)$(appLocation)
+        set -e
+        cd "$(Build.SourcesDirectory)/$(appLocation)"
         npm ci --cache "$(Pipeline.Workspace)/.npm" --prefer-offline
         npm run build
-      displayName: 'Install & Build'
+      displayName: Install & Build
 
-    # Publish the full repo so deploy stages can find $(outLocation) in the app folder
+    # Publish the entire repo (includes <appLocation>/<outLocation>)
     - publish: $(Build.SourcesDirectory)
       artifact: webdrop
+      displayName: Publish artifact (webdrop)
 
-# ---------- Deploy to Dev ----------
+# ===================== DEPLOY DEV =====================
 - stage: Deploy_Dev
   displayName: Deploy to Dev
   dependsOn: Build
   variables:
-  - group: swa-secrets-dev   # contains SWA_DEPLOYMENT_TOKEN (Dev)
+  - group: swa-secrets-dev   # must contain SWA_DEPLOYMENT_TOKEN_WEB_DEV
   jobs:
   - deployment: DeployDev
-    environment: 'dev'
+    environment: dev         # add checks/approvals if you want
     strategy:
       runOnce:
         deploy:
@@ -54,24 +59,38 @@ stages:
           - download: current
             artifact: webdrop
 
+          # Sanity check paths as seen by the SWA task container
+          - script: |
+              echo "PWD: $(pwd)"
+              echo "== listing =="
+              ls -la
+              echo "== webdrop =="
+              ls -la webdrop || true
+              echo "== app root =="
+              ls -la "webdrop/$(appLocation)" || true
+              echo "== build output =="
+              ls -la "webdrop/$(appLocation)/$(outLocation)" || true
+            displayName: Inspect artifact paths (Dev)
+
           - task: AzureStaticWebApp@0
-            displayName: 'SWA Deploy (Dev)'
+            displayName: SWA Deploy (Dev)
             inputs:
-              app_location: '$(Pipeline.Workspace)/webdrop$(appLocation)'
+              # IMPORTANT: use RELATIVE paths. The task mounts its own working dir.
+              app_location: 'webdrop/$(appLocation)'
               output_location: '$(outLocation)'
               skip_app_build: true
               azure_static_web_apps_api_token: '$(SWA_DEPLOYMENT_TOKEN_WEB_DEV)'
 
-# ---------- Deploy to QA ----------
+# ===================== DEPLOY QA ======================
 - stage: Deploy_QA
   displayName: Deploy to QA
   dependsOn: Deploy_Dev
   condition: succeeded()
   variables:
-  - group: swa-secrets-qa    # contains SWA_DEPLOYMENT_TOKEN (QA)
+  - group: swa-secrets-qa    # must contain SWA_DEPLOYMENT_TOKEN_WEB_QA
   jobs:
   - deployment: DeployQA
-    environment: 'qa'        # add approvals on this Environment if desired
+    environment: qa          # configure approvals on this Environment if desired
     strategy:
       runOnce:
         deploy:
@@ -79,10 +98,22 @@ stages:
           - download: current
             artifact: webdrop
 
+          - script: |
+              echo "PWD: $(pwd)"
+              echo "== listing =="
+              ls -la
+              echo "== webdrop =="
+              ls -la webdrop || true
+              echo "== app root =="
+              ls -la "webdrop/$(appLocation)" || true
+              echo "== build output =="
+              ls -la "webdrop/$(appLocation)/$(outLocation)" || true
+            displayName: Inspect artifact paths (QA)
+
           - task: AzureStaticWebApp@0
-            displayName: 'SWA Deploy (QA)'
+            displayName: SWA Deploy (QA)
             inputs:
-              app_location: '$(Pipeline.Workspace)/webdrop$(appLocation)'
+              app_location: 'webdrop/$(appLocation)'
               output_location: '$(outLocation)'
               skip_app_build: true
               azure_static_web_apps_api_token: '$(SWA_DEPLOYMENT_TOKEN_WEB_QA)'
