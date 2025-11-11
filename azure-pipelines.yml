@@ -6,10 +6,9 @@ trigger:
 pool:
   vmImage: ubuntu-latest
 
-# Change these if your app isn't at repo root
-# If your React/Vite app is in a subfolder (e.g., /web), set appLocation: 'web'
+# If your app is in a subfolder (e.g., /web), set appLocation: 'web' (no leading slash)
 variables:
-  appLocation: ''      # '' means repo root; NO leading slash
+  appLocation: ''      # '' means repo root
   outLocation: 'dist'  # Vite default. For CRA use 'build'
 
 stages:
@@ -51,21 +50,21 @@ stages:
   - group: swa-secrets-dev   # must contain SWA_DEPLOYMENT_TOKEN_WEB_DEV
   jobs:
   - deployment: DeployDev
-    environment: dev         # add checks/approvals if you want
+    environment: dev
     strategy:
       runOnce:
         deploy:
           steps:
           - download: current
             artifact: webdrop
+            path: $(System.DefaultWorkingDirectory)   # <-- Option 1: place under working dir
 
-          # Sanity check paths as seen by the SWA task container
           - script: |
               echo "PWD: $(pwd)"
-              echo "== listing =="
-              ls -la
+              echo "== DefaultWorkingDirectory =="
+              ls -la "$(System.DefaultWorkingDirectory)" || true
               echo "== webdrop =="
-              ls -la webdrop || true
+              ls -la "webdrop" || true
               echo "== app root =="
               ls -la "webdrop/$(appLocation)" || true
               echo "== build output =="
@@ -75,7 +74,7 @@ stages:
           - task: AzureStaticWebApp@0
             displayName: SWA Deploy (Dev)
             inputs:
-              # IMPORTANT: use RELATIVE paths. The task mounts its own working dir.
+              # RELATIVE paths (the task mounts $(System.DefaultWorkingDirectory) at /working_dir)
               app_location: 'webdrop/$(appLocation)'
               output_location: '$(outLocation)'
               skip_app_build: true
@@ -90,20 +89,21 @@ stages:
   - group: swa-secrets-qa    # must contain SWA_DEPLOYMENT_TOKEN_WEB_QA
   jobs:
   - deployment: DeployQA
-    environment: qa          # configure approvals on this Environment if desired
+    environment: qa
     strategy:
       runOnce:
         deploy:
           steps:
           - download: current
             artifact: webdrop
+            path: $(System.DefaultWorkingDirectory)   # <-- Option 1 here too
 
           - script: |
               echo "PWD: $(pwd)"
-              echo "== listing =="
-              ls -la
+              echo "== DefaultWorkingDirectory =="
+              ls -la "$(System.DefaultWorkingDirectory)" || true
               echo "== webdrop =="
-              ls -la webdrop || true
+              ls -la "webdrop" || true
               echo "== app root =="
               ls -la "webdrop/$(appLocation)" || true
               echo "== build output =="
