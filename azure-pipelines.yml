@@ -1,3 +1,4 @@
+# azure-pipelines-swa.yml
 trigger:
   - main
 
@@ -5,41 +6,92 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  group: swa-secrets-dev 
-  buildDir: 'dist'  # Vite outputs to dist
-  
-steps:
-  - task: UseNode@1
-    inputs:
-      version: '22.x'
-    displayName: 'Use Node.js 22'
+  buildDir: 'dist'   # Vite output folder
 
-  - script: |
-      npm ci
-    displayName: 'Install dependencies'
+stages:
+# ================= BUILD (once) =================
+- stage: Build
+  displayName: Build Vite app
+  jobs:
+  - job: BuildJob
+    displayName: Build
+    steps:
+    - task: UseNode@1
+      displayName: 'Use Node.js 22'
+      inputs:
+        version: '22.x'
 
-  - script: |
-      npx vite build
-    displayName: 'Build app using Vite'
+    - script: npm ci
+      displayName: 'Install dependencies'
 
-  - task: CopyFiles@2
-    inputs:
-      SourceFolder: '$(buildDir)'  # <- 'dist'
-      Contents: '**'
-      TargetFolder: '$(Build.ArtifactStagingDirectory)'
-    displayName: 'Copy built files to staging'
+    - script: npx vite build
+      displayName: 'Build app (Vite)'
 
-  - task: PublishBuildArtifacts@1
-    inputs:
-      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-      ArtifactName: 'drop'
-      publishLocation: 'Container'
-    displayName: 'Publish build artifacts'
+    # Publish ONLY the built static files (dist) as artifact "drop"
+    - task: CopyFiles@2
+      displayName: 'Copy built files to staging'
+      inputs:
+        SourceFolder: '$(buildDir)'
+        Contents: '**'
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
 
-  - task: AzureStaticWebApp@0
-    inputs:
-      app_location: '.' # root of your Vite app
-      api_location: '' # no API folder 
-      output_location: '$(buildDir)'             # Vite build output folder
-      azure_static_web_apps_api_token: $(SWA_DEPLOYMENT_TOKEN_WEB_DEV)
-    displayName: 'Deploy to Azure Static Web App'
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish build artifacts'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'drop'
+        publishLocation: 'Container'
+
+# ================= DEPLOY DEV =================
+- stage: Deploy_Dev
+  displayName: Deploy to Dev
+  dependsOn: Build
+  variables:
+  - group: swa-secrets-dev   # must have: SWA_DEPLOYMENT_TOKEN_WEB_DEV
+  jobs:
+  - job: DeployDev
+    displayName: 'Deploy (Dev)'
+    steps:
+    - task: DownloadPipelineArtifact@2
+      displayName: 'Download artifact (drop)'
+      inputs:
+        buildType: current
+        artifact: drop
+        path: '$(System.DefaultWorkingDirectory)'
+
+    # Deploy the artifact folder directly (contains only static files)
+    - task: AzureStaticWebApp@0
+      displayName: 'Deploy to Azure Static Web App (Dev)'
+      inputs:
+        app_location: 'drop'           # points to the downloaded built files
+        api_location: ''               # no API
+        output_location: ''            # empty because app_location already IS the built output
+        skip_app_build: true
+        azure_static_web_apps_api_token: $(SWA_DEPLOYMENT_TOKEN_WEB_DEV)
+
+# ================= DEPLOY QA =================
+- stage: Deploy_QA
+  displayName: Deploy to QA
+  dependsOn: Deploy_Dev
+  condition: succeeded()
+  variables:
+  - group: swa-secrets-qa    # must have: SWA_DEPLOYMENT_TOKEN_WEB_QA
+  jobs:
+  - job: DeployQA
+    displayName: 'Deploy (QA)'
+    steps:
+    - task: DownloadPipelineArtifact@2
+      displayName: 'Download artifact (drop)'
+      inputs:
+        buildType: current
+        artifact: drop
+        path: '$(System.DefaultWorkingDirectory)'
+
+    - task: AzureStaticWebApp@0
+      displayName: 'Deploy to Azure Static Web App (QA)'
+      inputs:
+        app_location: 'drop'
+        api_location: ''
+        output_location: ''
+        skip_app_build: true
+        azure_static_web_apps_api_token: $(SWA_DEPLOYMENT_TOKEN_WEB_QA)
