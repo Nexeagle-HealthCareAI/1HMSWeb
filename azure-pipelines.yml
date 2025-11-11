@@ -55,9 +55,12 @@ stages:
       runOnce:
         deploy:
           steps:
-          - download: current
-            artifact: webdrop
-            path: $(System.DefaultWorkingDirectory)   # <-- Option 1: place under working dir
+          - task: DownloadPipelineArtifact@2
+            displayName: Download artifact to DefaultWorkingDirectory (Dev)
+            inputs:
+              buildType: current
+              artifact: webdrop
+              path: $(System.DefaultWorkingDirectory)   # <-- Option 1
 
           - script: |
               echo "PWD: $(pwd)"
@@ -94,9 +97,12 @@ stages:
       runOnce:
         deploy:
           steps:
-          - download: current
-            artifact: webdrop
-            path: $(System.DefaultWorkingDirectory)   # <-- Option 1 here too
+          - task: DownloadPipelineArtifact@2
+            displayName: Download artifact to DefaultWorkingDirectory (QA)
+            inputs:
+              buildType: current
+              artifact: webdrop
+              path: $(System.DefaultWorkingDirectory)   # <-- Option 1
 
           - script: |
               echo "PWD: $(pwd)"
