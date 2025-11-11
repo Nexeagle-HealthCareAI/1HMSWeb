@@ -17,32 +17,17 @@ stages:
   - group: swa-secrets-dev   # contains: SWA_DEPLOYMENT_TOKEN_WEB_DEV
   jobs:
   - job: Dev
-    displayName: Build & Deploy (Dev)
+    displayName: Deploy (Dev) via SWA build
     steps:
     - checkout: self
 
-    - task: UseNode@1
-      displayName: 'Use Node.js 22'
-      inputs:
-        version: '22.x'
-
-    - script: |
-        set -e
-        cd "$(Build.SourcesDirectory)/$(appLocation)"
-        # Inject environment variable for Vite before build (used by src/app/api.ts)
-        echo "VITE_API_BASE_URL=$(VITE_API_BASE_URL)" > .env
-        npm ci
-        npm run build:dev
-      displayName: 'Install & Build (Vite Dev)'
-
-    # Point SWA task directly to the built folder; no artifacts needed
     - task: AzureStaticWebApp@0
       displayName: 'Deploy to Azure Static Web App (Dev)'
       inputs:
-        app_location: '$(appLocation)/$(buildDir)'  # upload built files only
-        api_location: ''                            # no API
-        output_location: ''                         # empty since app_location IS the output
-        skip_app_build: true
+        app_location: '$(appLocation)'
+        api_location: ''
+        output_location: '$(buildDir)'
+        skip_app_build: false
         azure_static_web_apps_api_token: $(SWA_DEPLOYMENT_TOKEN_WEB_DEV)
 
 # ============ QA (build + deploy) ============
@@ -54,29 +39,15 @@ stages:
   - group: swa-secrets-qa    # contains: SWA_DEPLOYMENT_TOKEN_WEB_QA
   jobs:
   - job: QA
-    displayName: Build & Deploy (QA)
+    displayName: Deploy (QA) via SWA build
     steps:
     - checkout: self
-
-    - task: UseNode@1
-      displayName: 'Use Node.js 22'
-      inputs:
-        version: '22.x'
-
-    - script: |
-        set -e
-        cd "$(Build.SourcesDirectory)/$(appLocation)"
-        # Inject environment variable for Vite before build (used by src/app/api.ts)
-        echo "VITE_API_BASE_URL=$(VITE_API_BASE_URL)" > .env
-        npm ci
-        npx vite build --mode qa
-      displayName: 'Install & Build (Vite QA)'
 
     - task: AzureStaticWebApp@0
       displayName: 'Deploy to Azure Static Web App (QA)'
       inputs:
-        app_location: '$(appLocation)/$(buildDir)'
+        app_location: '$(appLocation)'
         api_location: ''
-        output_location: ''
-        skip_app_build: true
+        output_location: '$(buildDir)'
+        skip_app_build: false
         azure_static_web_apps_api_token: $(SWA_DEPLOYMENT_TOKEN_WEB_QA)
