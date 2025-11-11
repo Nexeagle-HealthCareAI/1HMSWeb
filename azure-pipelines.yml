@@ -1,75 +1,45 @@
-# azure-pipelines-swa.yml
 trigger:
   - main
 
 pool:
   vmImage: 'ubuntu-latest'
 
-# Change these if your app lives in a subfolder or uses CRA
 variables:
-  appLocation: '.'     # '' = repo root; or 'web' if your app is in /web
-  buildDir: 'dist'    # Vite builds to 'dist' by default
+  group: swa-secrets-dev 
+  buildDir: 'dist'  # Vite outputs to dist
+  
+steps:
+  - task: UseNode@1
+    inputs:
+      version: '22.x'
+    displayName: 'Use Node.js 22'
 
-stages:
-# ===================== DEPLOY DEV (build + deploy) =====================
-- stage: Deploy_Dev
-  displayName: Deploy to Dev (build each time)
-  variables:
-  - group: swa-secrets-dev   # must contain: SWA_DEPLOYMENT_TOKEN_WEB_DEV
-  jobs:
-  - job: DevJob
-    displayName: Build & Deploy (Dev)
-    steps:
-    - task: UseNode@1
-      inputs:
-        version: '22.x'
-      displayName: 'Use Node.js 22'
+  - script: |
+      npm ci
+    displayName: 'Install dependencies'
 
-    - script: |
-        set -e
-        cd "$(Build.SourcesDirectory)/$(appLocation)"
-        npm ci
-        npx vite build
-      displayName: 'Install & Build (Vite)'
+  - script: |
+      npx vite build
+    displayName: 'Build app using Vite'
 
-    - task: AzureStaticWebApp@0
-      displayName: 'Deploy to Azure Static Web App (Dev)'
-      inputs:
-        # Upload ONLY the built folder by pointing app_location to app root and output_location to 'dist'
-        app_location: '.'
-        api_location: ''
-        output_location: '$(buildDir)'
-        skip_app_build: true
-        azure_static_web_apps_api_token: '$(SWA_DEPLOYMENT_TOKEN_WEB_DEV)'
+  - task: CopyFiles@2
+    inputs:
+      SourceFolder: '$(buildDir)'  # <- 'dist'
+      Contents: '**'
+      TargetFolder: '$(Build.ArtifactStagingDirectory)'
+    displayName: 'Copy built files to staging'
 
-# ===================== DEPLOY QA (build + deploy) ======================
-- stage: Deploy_QA
-  displayName: Deploy to QA (build each time)
-  dependsOn: Deploy_Dev
-  condition: succeeded()
-  variables:
-  - group: swa-secrets-qa    # must contain: SWA_DEPLOYMENT_TOKEN_WEB_QA
-  jobs:
-  - job: QaJob
-    displayName: Build & Deploy (QA)
-    steps:
-    - task: UseNode@1
-      inputs:
-        version: '22.x'
-      displayName: 'Use Node.js 22'
+  - task: PublishBuildArtifacts@1
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      ArtifactName: 'drop'
+      publishLocation: 'Container'
+    displayName: 'Publish build artifacts'
 
-    - script: |
-        set -e
-        cd "$(Build.SourcesDirectory)/$(appLocation)"
-        npm ci
-        npx vite build
-      displayName: 'Install & Build (Vite)'
-
-    - task: AzureStaticWebApp@0
-      displayName: 'Deploy to Azure Static Web App (QA)'
-      inputs:
-        app_location: '$(appLocation)'
-        api_location: ''
-        output_location: '$(buildDir)'
-        skip_app_build: true
-        azure_static_web_apps_api_token: '$(SWA_DEPLOYMENT_TOKEN_WEB_QA)'
+  - task: AzureStaticWebApp@0
+    inputs:
+      app_location: '.' # root of your Vite app
+      api_location: '' # no API folder 
+      output_location: '$(buildDir)'             # Vite build output folder
+      azure_static_web_apps_api_token:'$(SWA_DEPLOYMENT_TOKEN_WEB_DEV)'
+    displayName: 'Deploy to Azure Static Web App'
