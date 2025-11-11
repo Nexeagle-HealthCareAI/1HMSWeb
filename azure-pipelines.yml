@@ -3,56 +3,55 @@ trigger:
   - main
 
 pool:
-  vmImage: ubuntu-latest
+  vmImage: 'ubuntu-latest'
 
-# If your app is in a subfolder (e.g., 'web'), set appLocation: 'web' (no leading slash)
+# Change these if your app lives in a subfolder or uses CRA
 variables:
-  appLocation: ''      # '' = repo root
-  outLocation: 'dist'  # Vite default
+  appLocation: ''     # '' = repo root; or 'web' if your app is in /web
+  buildDir: 'dist'    # Vite builds to 'dist' by default
 
 stages:
 # ===================== DEPLOY DEV (build + deploy) =====================
 - stage: Deploy_Dev
   displayName: Deploy to Dev (build each time)
   variables:
-  - group: swa-secrets-dev   # must contain SWA_DEPLOYMENT_TOKEN_WEB_DEV
+  - group: swa-secrets-dev   # must contain: SWA_DEPLOYMENT_TOKEN_WEB_DEV
   jobs:
-  - deployment: DeployDev
-    environment: dev
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - checkout: self
-            clean: true
+  - job: DevJob
+    displayName: Build & Deploy (Dev)
+    steps:
+    - task: UseNode@1
+      inputs:
+        version: '22.x'
+      displayName: 'Use Node.js 22'
 
-          - task: NodeTool@0
-            displayName: Use Node.js 22.x
-            inputs:
-              versionSpec: '22.x'
+    - script: |
+        set -e
+        cd "$(Build.SourcesDirectory)/$(appLocation)"
+        npm ci
+        npx vite build
+      displayName: 'Install & Build (Vite)'
 
-          - task: Cache@2
-            displayName: Cache npm
-            inputs:
-              key: 'npm | "$(Agent.OS)" | $(Build.SourcesDirectory)/$(appLocation)/package-lock.json'
-              path: '$(Pipeline.Workspace)/.npm'
+    # Ensure config travels with the built files when we skip SWA build
+    - bash: |
+        set -e
+        SRC_ROOT="$(Build.SourcesDirectory)/$(appLocation)"
+        OUT_DIR="$(Build.SourcesDirectory)/$(appLocation)/$(buildDir)"
+        # copy config if present in app root
+        [ -f "$SRC_ROOT/staticwebapp.config.json" ] && cp "$SRC_ROOT/staticwebapp.config.json" "$OUT_DIR/" || true
+        echo "Prepared output folder:"
+        ls -la "$OUT_DIR" || true
+      displayName: 'Prepare build output (copy SWA config if any)'
 
-          - script: |
-              set -e
-              cd "$(Build.SourcesDirectory)/$(appLocation)"
-              npm ci --cache "$(Pipeline.Workspace)/.npm" --prefer-offline
-              npm run build
-            displayName: Install & Build (DEV)
-
-          # We already built → just upload the built folder
-          - task: AzureStaticWebApp@0
-            displayName: SWA Deploy (Dev)
-            inputs:
-              app_location: '$(appLocation)'       # relative to repo root mounted at /working_dir
-              api_location: ''                     # no API
-              output_location: '$(outLocation)'    # upload this folder
-              skip_app_build: true                 # don't rebuild in the SWA task
-              azure_static_web_apps_api_token: '$(SWA_DEPLOYMENT_TOKEN_WEB_DEV)'
+    - task: AzureStaticWebApp@0
+      displayName: 'Deploy to Azure Static Web App (Dev)'
+      inputs:
+        # Upload ONLY the built folder by pointing app_location to app root and output_location to 'dist'
+        app_location: '$(appLocation)'
+        api_location: ''
+        output_location: '$(buildDir)'
+        skip_app_build: true
+        azure_static_web_apps_api_token: '$(SWA_DEPLOYMENT_TOKEN_WEB_DEV)'
 
 # ===================== DEPLOY QA (build + deploy) ======================
 - stage: Deploy_QA
@@ -60,40 +59,37 @@ stages:
   dependsOn: Deploy_Dev
   condition: succeeded()
   variables:
-  - group: swa-secrets-qa    # must contain SWA_DEPLOYMENT_TOKEN_WEB_QA
+  - group: swa-secrets-qa    # must contain: SWA_DEPLOYMENT_TOKEN_WEB_QA
   jobs:
-  - deployment: DeployQA
-    environment: qa          # add approvals on this Environment if desired
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - checkout: self
-            clean: true
+  - job: QaJob
+    displayName: Build & Deploy (QA)
+    steps:
+    - task: UseNode@1
+      inputs:
+        version: '22.x'
+      displayName: 'Use Node.js 22'
 
-          - task: NodeTool@0
-            displayName: Use Node.js 22.x
-            inputs:
-              versionSpec: '22.x'
+    - script: |
+        set -e
+        cd "$(Build.SourcesDirectory)/$(appLocation)"
+        npm ci
+        npx vite build
+      displayName: 'Install & Build (Vite)'
 
-          - task: Cache@2
-            displayName: Cache npm
-            inputs:
-              key: 'npm | "$(Agent.OS)" | $(Build.SourcesDirectory)/$(appLocation)/package-lock.json'
-              path: '$(Pipeline.Workspace)/.npm'
+    - bash: |
+        set -e
+        SRC_ROOT="$(Build.SourcesDirectory)/$(appLocation)"
+        OUT_DIR="$(Build.SourcesDirectory)/$(appLocation)/$(buildDir)"
+        [ -f "$SRC_ROOT/staticwebapp.config.json" ] && cp "$SRC_ROOT/staticwebapp.config.json" "$OUT_DIR/" || true
+        echo "Prepared output folder:"
+        ls -la "$OUT_DIR" || true
+      displayName: 'Prepare build output (copy SWA config if any)'
 
-          - script: |
-              set -e
-              cd "$(Build.SourcesDirectory)/$(appLocation)"
-              npm ci --cache "$(Pipeline.Workspace)/.npm" --prefer-offline
-              npm run build
-            displayName: Install & Build (QA)
-
-          - task: AzureStaticWebApp@0
-            displayName: SWA Deploy (QA)
-            inputs:
-              app_location: '$(appLocation)'
-              api_location: ''
-              output_location: '$(outLocation)'
-              skip_app_build: true
-              azure_static_web_apps_api_token: '$(SWA_DEPLOYMENT_TOKEN_WEB_QA)'
+    - task: AzureStaticWebApp@0
+      displayName: 'Deploy to Azure Static Web App (QA)'
+      inputs:
+        app_location: '$(appLocation)'
+        api_location: ''
+        output_location: '$(buildDir)'
+        skip_app_build: true
+        azure_static_web_apps_api_token: '$(SWA_DEPLOYMENT_TOKEN_WEB_QA)'
