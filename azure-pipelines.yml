@@ -1,6 +1,15 @@
 # azure-pipelines-swa.yml
 trigger:
-  - main
+  branches:
+    include:
+      - 'release-*'
+      - 'feature/*'
+
+pr:
+  branches:
+    include:
+      - 'release-*'
+      - 'feature/*'
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -13,6 +22,12 @@ stages:
 # ============ DEV (build + deploy) ============
 - stage: Deploy_Dev
   displayName: Deploy to Dev
+  # Run for release-* and feature/*
+  condition: >
+    or(
+      startsWith(variables['Build.SourceBranch'], 'refs/heads/release-'),
+      startsWith(variables['Build.SourceBranch'], 'refs/heads/feature/')
+    )
   variables:
   - group: swa-secrets-dev   # contains: SWA_DEPLOYMENT_TOKEN_WEB_DEV, VITE_API_BASE_URL
   jobs:
@@ -36,7 +51,12 @@ stages:
 - stage: Deploy_QA
   displayName: Deploy to QA
   dependsOn: Deploy_Dev
-  condition: succeeded()
+  # Only run for release-* (not feature/*)
+  condition: >
+    and(
+      succeeded(),
+      startsWith(variables['Build.SourceBranch'], 'refs/heads/release-')
+    )
   variables:
   - group: swa-secrets-qa    # contains: SWA_DEPLOYMENT_TOKEN_WEB_QA, VITE_API_BASE_URL
   jobs:
