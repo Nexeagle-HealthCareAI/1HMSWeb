@@ -14,7 +14,7 @@ stages:
 - stage: Deploy_Dev
   displayName: Deploy to Dev
   variables:
-  - group: swa-secrets-dev   # contains: SWA_DEPLOYMENT_TOKEN_WEB_DEV
+  - group: swa-secrets-dev   # contains: SWA_DEPLOYMENT_TOKEN_WEB_DEV, VITE_API_BASE_URL
   jobs:
   - job: Dev
     displayName: Deploy (Dev) via SWA build
@@ -29,6 +29,8 @@ stages:
         output_location: '$(buildDir)'
         skip_app_build: false
         azure_static_web_apps_api_token: $(SWA_DEPLOYMENT_TOKEN_WEB_DEV)
+      env:
+        VITE_API_BASE_URL: $(VITE_API_BASE_URL)
 
 # ============ QA (build + deploy) ============
 - stage: Deploy_QA
@@ -36,7 +38,7 @@ stages:
   dependsOn: Deploy_Dev
   condition: succeeded()
   variables:
-  - group: swa-secrets-qa    # contains: SWA_DEPLOYMENT_TOKEN_WEB_QA
+  - group: swa-secrets-qa    # contains: SWA_DEPLOYMENT_TOKEN_WEB_QA, VITE_API_BASE_URL
   jobs:
   - job: QA
     displayName: Deploy (QA) via SWA build
@@ -51,3 +53,5 @@ stages:
         output_location: '$(buildDir)'
         skip_app_build: false
         azure_static_web_apps_api_token: $(SWA_DEPLOYMENT_TOKEN_WEB_QA)
+      env:
+        VITE_API_BASE_URL: $(VITE_API_BASE_URL)

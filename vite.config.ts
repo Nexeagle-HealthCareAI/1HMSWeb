@@ -5,7 +5,7 @@ import path from "path";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const apiBaseUrl = env.VITE_API_BASE_URL || 'https://easyhmsapi-b2fpcsh4cpbafxf0.centralindia-01.azurewebsites.net';
+  const apiBaseUrl = env.VITE_API_BASE_URL || 'easyhmsapiservices-bgasabd9ddbbdden.centralindia-01.azurewebsites.net';
 
   const createProxyConfig = (pathRewrite?: (path: string) => string) => ({
     target: apiBaseUrl,
