@@ -1,4 +1,4 @@
-import { apiClient, ApiResponse, PaginatedResponse } from '@/services/axiosClient';
+import { apiClient, ApiResponse, PaginatedResponse, axiosInstance } from '@/services/axiosClient';
 
 // Types
 export interface DoctorDepartment {
@@ -88,9 +88,48 @@ export interface DoctorAppointmentDetail {
 // Doctor API service
 export const doctorApi = {
   // Get doctor by ID
-  getById: (doctorId: string): Promise<Doctor> => {
+  getById: async (doctorId: string): Promise<Doctor> => {
     const url = `/doctors/${doctorId}`;
-    return apiClient.get(url);
+    try {
+      const response = await axiosInstance.get<Doctor>(url);
+      
+      // Check for 204 No Content status - treat as error
+      // 204 is a success status but means "no content", so we treat it as "not found"
+      if (response.status === 204) {
+        const error: any = new Error(`Doctor profile not found for user ID: ${doctorId}`);
+        error.response = { 
+          status: 204, 
+          statusText: response.statusText || 'No Content',
+          data: null
+        };
+        error.isAxiosError = true;
+        error.config = response.config;
+        throw error;
+      }
+      
+      // Also check if response.data is null/undefined after a successful response
+      // (This can happen with 204 or malformed responses)
+      if (response.data === null || response.data === undefined) {
+        const error: any = new Error(`Doctor profile not found for user ID: ${doctorId}`);
+        error.response = { 
+          status: response.status || 204, 
+          statusText: response.statusText || 'No Content',
+          data: null
+        };
+        error.isAxiosError = true;
+        error.config = response.config;
+        throw error;
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      // If it's already an axios error with response, re-throw it
+      if (error.response) {
+        throw error;
+      }
+      // Otherwise, wrap it
+      throw error;
+    }
   },
 
   // Get doctor dashboard appointment details

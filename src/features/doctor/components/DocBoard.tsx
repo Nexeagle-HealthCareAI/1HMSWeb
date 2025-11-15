@@ -151,6 +151,10 @@ export const ClinicalDashboard: React.FC = () => {
   // Doctor Profile
   const { data: doctorProfileResponse, isLoading: doctorProfileLoading, error: doctorProfileError } = useDoctorProfile(userId);
   const doctorId = doctorProfileResponse?.doctorId || '';
+  
+  // Check if doctor profile is restricted (204/404 means profile incomplete)
+  const doctorProfileRestricted = useAuthStore(state => state.doctorProfileRestricted);
+  const doctorProfileMessage = useAuthStore(state => state.doctorProfileMessage);
 
   // Compute API date window based on tab
   const { startDate: apiStartDate, endDate: apiEndDate } = useMemo(() => {
@@ -204,7 +208,17 @@ export const ClinicalDashboard: React.FC = () => {
 
   // Loading + Error state combine
   const isDataLoading = doctorProfileLoading || appointmentLoading;
-  const hasError = doctorProfileError || appointmentError;
+  
+  // Check if the error is a 204/404 (profile incomplete) - these should show restriction message, not error
+  const isProfileIncompleteError = doctorProfileError && (
+    (doctorProfileError as any)?.response?.status === 204 || 
+    (doctorProfileError as any)?.response?.status === 404 ||
+    doctorProfileError?.message?.includes('not found')
+  );
+  
+  // Only show error if it's NOT a profile incomplete error (204/404) or if profile is not restricted
+  // If profile is restricted, we show the restriction message instead
+  const hasError = (doctorProfileError || appointmentError) && !isProfileIncompleteError && !doctorProfileRestricted;
   const shouldShowError = hasError && !isDataLoading;
 
   // Reset pagination on filter changes
@@ -563,6 +577,106 @@ export const ClinicalDashboard: React.FC = () => {
             </div>
           )}
 
+          {/* Profile Restriction Message - Enhanced */}
+          {!isDataLoading && !shouldShowError && doctorProfileRestricted && (
+            <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-2xl p-6 sm:p-8 shadow-xl mb-6 relative overflow-hidden">
+              {/* Decorative background elements */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-200/20 dark:bg-blue-800/20 rounded-full blur-3xl -mr-16 -mt-16"></div>
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-200/20 dark:bg-indigo-800/20 rounded-full blur-2xl -ml-12 -mb-12"></div>
+              
+              <div className="relative z-10">
+                <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
+                  {/* Icon Section */}
+                  <div className="flex-shrink-0 mx-auto lg:mx-0">
+                    <div className="relative">
+                      <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-500 to-indigo-600 dark:from-blue-600 dark:to-indigo-700 rounded-2xl flex items-center justify-center shadow-lg transform rotate-3 hover:rotate-6 transition-transform duration-300">
+                        <UserCheck className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
+                      </div>
+                      <div className="absolute -top-2 -right-2 w-8 h-8 bg-yellow-400 dark:bg-yellow-500 rounded-full flex items-center justify-center shadow-md animate-pulse">
+                        <span className="text-yellow-900 font-bold text-sm">!</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Content Section */}
+                  <div className="flex-1 text-center lg:text-left">
+                    <div className="space-y-3 sm:space-y-4">
+                      <div>
+                        <h3 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
+                          Complete Your Doctor Profile
+                        </h3>
+                        <p className="text-blue-700 dark:text-blue-300 text-sm sm:text-base mt-2 font-medium">
+                          {doctorProfileMessage || 'Unlock full access to calendar, appointments, and prescription features'}
+                        </p>
+                      </div>
+
+                      {/* Required Information List */}
+                      <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-4 sm:p-5 border border-blue-100 dark:border-blue-900/50">
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                          Required Information:
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left">
+                          <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+                            <span>Medical License Number</span>
+                          </div>
+                          <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+                            <span>Department & Specializations</span>
+                          </div>
+                          <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+                            <span>Professional Qualifications</span>
+                          </div>
+                          <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+                            <span>Experience & Registration Details</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Benefits Section */}
+                      <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 text-xs sm:text-sm">
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">
+                          <Calendar className="h-3.5 w-3.5" />
+                          <span>Calendar Access</span>
+                        </div>
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-full">
+                          <FileText className="h-3.5 w-3.5" />
+                          <span>Prescriptions</span>
+                        </div>
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full">
+                          <Clock className="h-3.5 w-3.5" />
+                          <span>Appointments</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Button Section */}
+                  <div className="flex-shrink-0 w-full lg:w-auto">
+                    <Button
+                      variant="default"
+                      size="lg"
+                      onClick={() => navigate('/profile?tab=professional')}
+                      className="w-full lg:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-6 py-6 sm:py-7 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 rounded-xl"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Settings className="h-5 w-5" />
+                        <span className="text-base sm:text-lg">Complete Profile Now</span>
+                        <ExternalLink className="h-4 w-4" />
+                      </div>
+                    </Button>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 text-center lg:text-left mt-2">
+                      Takes only 2-3 minutes
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Content */}
           {!isDataLoading && !shouldShowError && (
             <Tabs
@@ -578,7 +692,8 @@ export const ClinicalDashboard: React.FC = () => {
                 <TabsList className="grid w-full grid-cols-3 h-10 sm:h-12 bg-transparent">
                   <TabsTrigger
                     value="current"
-                    className="text-xs sm:text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all duration-300 hover:scale-105 rounded-lg"
+                    disabled={doctorProfileRestricted}
+                    className="text-xs sm:text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all duration-300 hover:scale-105 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <div className="flex items-center gap-1 sm:gap-2">
                       <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-500 rounded-full"></div>
@@ -599,7 +714,8 @@ export const ClinicalDashboard: React.FC = () => {
                   </TabsTrigger>
                   <TabsTrigger
                     value="past"
-                    className="text-xs sm:text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all duration-300 hover:scale-105 rounded-lg"
+                    disabled={doctorProfileRestricted}
+                    className="text-xs sm:text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all duration-300 hover:scale-105 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <div className="flex items-center gap-1 sm:gap-2">
                       <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-500 rounded-full"></div>
@@ -609,7 +725,8 @@ export const ClinicalDashboard: React.FC = () => {
                   </TabsTrigger>
                   <TabsTrigger
                     value="future"
-                    className="text-xs sm:text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all duration-300 hover:scale-105 rounded-lg"
+                    disabled={doctorProfileRestricted}
+                    className="text-xs sm:text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all duration-300 hover:scale-105 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <div className="flex items-center gap-1 sm:gap-2">
                       <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-500 rounded-full"></div>
