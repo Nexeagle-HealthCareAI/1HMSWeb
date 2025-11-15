@@ -122,16 +122,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   // Navigation items with role-based filtering
   const allNavigationItems: NavigationItem[] = [
     { id: 'admin', name: t('header.adminPanel'), icon: Settings, path: '/admin' },
-    { id: 'dashboard', name: t('header.clinicalDashboard'), icon: Activity, path: '/dashboard' },    
-    { id: 'calendar', name: t('header.doctorCalendar'), icon: CalendarDays, path: '/calendar' },
+    { id: 'dashboard', name: t('header.clinicalDashboard'), icon: Activity, path: '/dashboard' },
     { 
       id: 'appointments', 
       name: t('header.appointmentScheduler'), 
       icon: Calendar, 
       path: '/appointment-dashboard',
-      
     },
-    { id: 'doc-ai', name: t('header.docAI'), icon: Bot, path: '/doc-ai' },
   ];
 
   // Filter navigation items based on user role

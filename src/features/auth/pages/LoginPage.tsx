@@ -100,9 +100,6 @@ const LoginPage = () => {
     }
   };
 
-
-
-
   const renderCurrentView = () => {
     switch (currentState) {
       case 'login':

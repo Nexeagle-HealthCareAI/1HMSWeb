@@ -227,13 +227,6 @@ export const patientApi = {
     return apiClient.download(`/patients/export?${params.toString()}`, 'patients.csv');
   },
 
-  // Import patients from CSV
-  importPatients: (file: File): Promise<ApiResponse<{ imported: number; errors: string[] }>> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    return apiClient.upload('/patients/import', formData);
-  },
-
   // Send patient reminder
   sendReminder: (id: string, message: string): Promise<ApiResponse<{ message: string }>> => {
     return apiClient.post(`/patients/${id}/send-reminder`, { message });

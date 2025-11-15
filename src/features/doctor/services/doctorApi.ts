@@ -1,4 +1,5 @@
-import { apiClient, ApiResponse, PaginatedResponse } from '@/services/axiosClient';
+import { API_ENDPOINTS } from '@/app/api';
+import { apiClient, ApiResponse, PaginatedResponse, axiosInstance } from '@/services/axiosClient';
 
 // Types
 export interface DoctorDepartment {
@@ -9,15 +10,21 @@ export interface DoctorDepartment {
   assignedAt: string;
 }
 
-export interface DoctorSpecialization {
-  doctorSpecializationId: string;
-  specializationId: string;
-  specializationName: string;
-  specializationDescription: string;
-  assignedAt: string;
+export interface DoctorProfessionalData {
+  userId: string;
+  licenseNumber: string;
+  qualification: string[];
+  experienceYears: number;
+  medicalCouncil: string;
+  registrationYear: number;
+  bio: string;
+  primaryDepartment: string;
+  department: string;
+  specializations: string[];
+  hospitalId: string;
 }
 
-export interface Doctor {
+export interface DoctorProfileResponse {
   doctorId: string;
   userId: string;
   licenseNumber: string;
@@ -32,32 +39,16 @@ export interface Doctor {
   createdAt: string;
   doctorDepartments: DoctorDepartment[];
   doctorSpecializations: DoctorSpecialization[];
-  // Legacy fields for backward compatibility
-  id?: string;
-  name?: string;
-  email?: string;
-  phone?: string;
-  specialization?: string;
-  department?: string;
-  license_number?: string;
-  experience_years?: number;
-  education?: string[];
-  certifications?: string[];
-  is_available?: boolean;
-  working_hours?: {
-    monday: { start: string; end: string; available: boolean };
-    tuesday: { start: string; end: string; available: boolean };
-    wednesday: { start: string; end: string; available: boolean };
-    thursday: { start: string; end: string; available: boolean };
-    friday: { start: string; end: string; available: boolean };
-    saturday: { start: string; end: string; available: boolean };
-    sunday: { start: string; end: string; available: boolean };
-  };
-  consultation_fee?: number;
-  avatar?: string;
-  created_at?: string;
-  updated_at?: string;
 }
+
+export interface DoctorSpecialization {
+  doctorSpecializationId: string;
+  specializationId: string;
+  specializationName: string;
+  specializationDescription: string;
+  assignedAt: string;
+}
+
 
 export interface DoctorAppointmentDetail {
   patientId: string;
@@ -87,12 +78,6 @@ export interface DoctorAppointmentDetail {
 
 // Doctor API service
 export const doctorApi = {
-  // Get doctor by ID
-  getById: (doctorId: string): Promise<Doctor> => {
-    const url = `/doctors/${doctorId}`;
-    return apiClient.get(url);
-  },
-
   // Get doctor dashboard appointment details
   getAppointmentDetails: (request: {
     status: string;
@@ -112,4 +97,52 @@ export const doctorApi = {
     return apiClient.get<{ items: DoctorAppointmentDetail[] }>(url);
   },
 
+  updateDoctorProfessional: async (payload: {
+      userId: string;
+      hospitalDepartmentMappingId: string;
+      licenseNumber: string;
+      qualification: string[];
+      experienceYears: number;
+      medicalCouncil: string;
+      registrationYear: number;
+      bio: string;
+      primaryDepartment: string;
+      department: string;
+      specializations: string[];
+    }) => {
+      try {
+        const response = await apiClient.put(`${API_ENDPOINTS.DOCTORS.UPDATE_PROFILE}`,
+          payload,
+          {
+            headers: {
+              'accept': 'text/plain',
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+       
+        return response;
+      } catch (error) {       
+        throw error;
+      }
+    },
+    // Get doctor profile
+    getDoctorProfile: async (doctorId: string): Promise<DoctorProfileResponse> => {
+      try {
+        const response = await apiClient.get(`${API_ENDPOINTS.DOCTORS.PROFILE}/${doctorId}`);        
+        return response as DoctorProfileResponse;
+      } catch (error) {        
+        throw error;
+      }
+    },
+  
+    // Create doctor profile
+    createDoctorProfile: async (doctorData: DoctorProfessionalData): Promise<DoctorProfileResponse> => {
+      try {
+        const response = await apiClient.post(API_ENDPOINTS.DOCTORS.PROFILE, doctorData);        
+        return response as DoctorProfileResponse;
+      } catch (error) {        
+        throw error;
+      }
+    },
 };

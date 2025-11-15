@@ -13,27 +13,16 @@ import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { useAuthStore } from '@/store/authStore';
 import { useDepartmentApi, useDoctorApi } from '@/hooks/useApi';
+import { doctorApi, DoctorProfileResponse } from '@/features/doctor/services/doctorApi';
+import type { DoctorProfessionalData } from '@/features/doctor/services/doctorApi';
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { SpecializationSelector } from './SpecializationSelector';
 import { QualificationSelector } from './QualificationSelector';
-import { DoctorProfileResponse } from '../services/doctorProfileApi';
 
 interface DoctorProfileProps {
   isEditing?: boolean;
   onSave?: () => void;
   onCancel?: () => void;
-}
-
-interface DoctorProfileData {
-  department: string;
-  primaryDepartment: string;
-  qualifications: string[];
-  specializations: string[];
-  licenseNumber: string;
-  experienceYears: number;
-  medicalCouncil: string;
-  registrationYear: number;
-  bio: string;
 }
 
 type FieldErrors = Record<string, string | undefined>;
@@ -46,6 +35,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
   const queryClient = useQueryClient();
   const userId = useAuthStore((state) => state.userId);
   const hospitalId = useAuthStore((state) => state.hospitalId);
+  const setDoctorProfileRestriction = useAuthStore((state) => state.setDoctorProfileRestriction);
   
   // Profile completion hook
   const { doctorProfileCompletion } = useProfileCompletion();
@@ -64,16 +54,18 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
   const [doctorErrors, setDoctorErrors] = useState<FieldErrors>({});
   
   // Profile data state
-  const [profileData, setProfileData] = useState<DoctorProfileData>({
-    department: '',
-    primaryDepartment: '',
-    qualifications: [],
-    specializations: [],
-    licenseNumber: '',
-    experienceYears: 0,
-    medicalCouncil: '',
-    registrationYear: new Date().getFullYear(),
-    bio: ''
+  const [profileData, setProfileData] = useState<DoctorProfessionalData>({
+  userId: userId || '',
+  licenseNumber: '',
+  qualification: [],
+  experienceYears: 0,
+  medicalCouncil: '',
+  registrationYear: new Date().getFullYear(),
+  bio: '',
+  primaryDepartment: '',
+  department: '',
+  specializations: [],
+  hospitalId: hospitalId || ''
   });
 
   // Extract department names from API response
@@ -117,23 +109,21 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
   useEffect(() => {
     if (doctorProfileResponse && (doctorProfileResponse as DoctorProfileResponse).doctorId) {
       const doctorData = doctorProfileResponse as DoctorProfileResponse;
-      
-      // Set doctor profile existence and ID
       setDoctorProfileExists(true);
       setDoctorId(doctorData.doctorId);
-      
-      // Update profile data
-      setProfileData({
-        licenseNumber: doctorData.licenseNumber || '',
-        qualifications: doctorData.qualifications || [],
-        experienceYears: doctorData.experienceYears || 0,
-        medicalCouncil: doctorData.medicalCouncil || '',
-        registrationYear: doctorData.registrationYear || new Date().getFullYear(),
-        bio: doctorData.bio || '',
-        specializations: doctorData.doctorSpecializations?.map(s => s.specializationName) || [],
-        department: doctorData.doctorDepartments?.[0]?.departmentName || '',
-        primaryDepartment: doctorData.primaryDepartmentName || ''
-      });
+          setProfileData({
+            userId: doctorData.userId || userId || '',
+            licenseNumber: doctorData.licenseNumber || '',
+            qualification: doctorData.qualifications || [],
+            experienceYears: doctorData.experienceYears || 0,
+            medicalCouncil: doctorData.medicalCouncil || '',
+            registrationYear: doctorData.registrationYear || new Date().getFullYear(),
+            bio: doctorData.bio || '',
+            primaryDepartment: doctorData.primaryDepartmentName || '',
+            department: doctorData.doctorDepartments?.[0]?.departmentId || '',
+            specializations: doctorData.doctorSpecializations?.map(s => s.specializationName) || [],
+            hospitalId: hospitalId || ''
+          });
     } else if (doctorProfileError?.response?.status === 404) {
       // Doctor profile doesn't exist yet
       setDoctorProfileExists(false);
@@ -145,7 +135,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
   }, [doctorProfileResponse, doctorProfileError, departmentsResponse]);
 
   // Handle input changes
-  const handleInputChange = (field: keyof DoctorProfileData, value: string | number) => {
+  const handleInputChange = (field: keyof DoctorProfessionalData, value: string | number) => {
     setProfileData(prev => ({
       ...prev,
       [field]: value
@@ -170,7 +160,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
   const validateDoctor = (): boolean => {
     const result = DoctorSchema.safeParse({
       licenseNumber: profileData.licenseNumber,
-      qualifications: profileData.qualifications,
+      qualifications: profileData.qualification,
       experienceYears: profileData.experienceYears,
       medicalCouncil: profileData.medicalCouncil,
       registrationYear: profileData.registrationYear,
@@ -191,8 +181,8 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
     setSaving(true);
     
     try {
-      const departmentId = getDepartmentId(profileData.department);
-      if (!departmentId) {
+      // Validate department
+      if (!profileData.department) {
         toast({ 
           title: 'Error', 
           description: 'Please select a valid department.',
@@ -202,29 +192,38 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
       }
 
       let response;
-      
+
       if (!doctorProfileExists) {
         // Create new doctor profile
-        const createData = {
-          userId: userId || '',
-          licenseNumber: profileData.licenseNumber || '',
-          qualification: profileData.qualifications || [], // Note: API expects 'qualification' (singular)
-          experienceYears: profileData.experienceYears || 0,
-          medicalCouncil: profileData.medicalCouncil || '',
-          registrationYear: profileData.registrationYear || new Date().getFullYear(),
-          bio: profileData.bio || '',
-          primaryDepartment: profileData.primaryDepartment || profileData.department,
+        const createData: DoctorProfessionalData = {
+          userId: profileData.userId,
+          licenseNumber: profileData.licenseNumber,
+          qualification: profileData.qualification,
+          experienceYears: profileData.experienceYears,
+          medicalCouncil: profileData.medicalCouncil,
+          registrationYear: profileData.registrationYear,
+          bio: profileData.bio,
+          primaryDepartment: profileData.primaryDepartment,
           department: profileData.department,
           specializations: profileData.specializations,
-          hospitalId: hospitalId || ''
+          hospitalId: profileData.hospitalId
         };
 
-        // TODO: Implement doctor profile creation API
-        toast({ 
-          title: 'Info', 
-          description: 'Doctor profile creation is not yet implemented. Please contact administrator.' 
-        });
-        return;
+        try {
+          const resp = await doctorApi.createDoctorProfile(createData);
+          const newDoctorId = resp?.doctorId || (resp as any)?.doctorId;
+          if (newDoctorId) {
+            setDoctorProfileExists(true);
+            setDoctorId(newDoctorId);
+            setDoctorProfileRestriction(false, null);
+            toast({ title: 'Success', description: 'Doctor profile created successfully.' });
+            queryClient.invalidateQueries({ queryKey: ['doctor', 'profile'] });
+            queryClient.invalidateQueries({ queryKey: ['profile', 'completion'] });
+            if (onSave) onSave();
+          }
+        } catch (err) {
+          throw err;
+        }
       } else {
         // Update existing doctor profile
         if (!doctorId) {
@@ -235,48 +234,48 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
           });
           return;
         }
-        
+
         const updateData = {
           userId: userId || '',
-          licenseNumber: profileData.licenseNumber || '',
-          qualification: profileData.qualifications || [], // Note: API expects 'qualification' (singular)
-          experienceYears: profileData.experienceYears || 0,
-          medicalCouncil: profileData.medicalCouncil || '',
-          registrationYear: profileData.registrationYear || new Date().getFullYear(),
-          bio: profileData.bio || '',
-          primaryDepartment: profileData.primaryDepartment || profileData.department,
-          department: profileData.department,
+          hospitalDepartmentMappingId: profileData.department,
+          licenseNumber: profileData.licenseNumber,
+          qualification: profileData.qualification,
+          experienceYears: profileData.experienceYears,
+          medicalCouncil: profileData.medicalCouncil,
+          registrationYear: profileData.registrationYear,
+          bio: profileData.bio,
+          primaryDepartment: '',
+          department: '',
           specializations: profileData.specializations
         };
-        
-        // TODO: Implement doctor profile update API
-        toast({ 
-          title: 'Info', 
-          description: 'Doctor profile update is not yet implemented. Please contact administrator.' 
-        });
-        return;
+
+        try {
+          const resp = await doctorApi.updateDoctorProfessional(updateData);
+          const updatedDoctorId = resp?.doctorId || (resp as any)?.doctorId || doctorId;
+          setDoctorProfileRestriction(false, null);
+          toast({ title: 'Success', description: 'Doctor profile updated successfully.' });
+          queryClient.invalidateQueries({ queryKey: ['doctor', 'profile', updatedDoctorId] });
+          queryClient.invalidateQueries({ queryKey: ['profile', 'completion'] });
+          if (onSave) onSave();
+        } catch (err) {
+          throw err;
+        }
       }
-      
-      // Clear validation errors on successful save
+
       setDoctorErrors({});
-      
-      // Invalidate queries to refresh data
+
       if (response?.doctorId) {
         queryClient.invalidateQueries({ queryKey: ['doctor', 'profile'] });
         queryClient.invalidateQueries({ queryKey: ['profile', 'completion'] });
       }
 
-      // Call onSave callback if provided
       if (onSave) {
         onSave();
       }
-      
+
     } catch (error: any) {
       console.error('Error saving doctor profile:', error);
-      
-      // Provide more specific error messages
       let errorMessage = 'Failed to save professional details. Please try again.';
-      
       if (error?.response?.status === 400) {
         errorMessage = 'Invalid data provided. Please check your information and try again.';
       } else if (error?.response?.status === 409) {
@@ -284,7 +283,6 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
       } else if (error?.response?.status === 404) {
         errorMessage = 'Profile not found. Please refresh the page and try again.';
       }
-      
       toast({ 
         title: 'Error', 
         description: errorMessage,
@@ -352,8 +350,8 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                 
                 <div className="md:col-span-2">
                   <SpecializationSelector
-                    departmentId={getDepartmentId(profileData.department)}
-                    departmentName={profileData.department}
+                    departmentId={profileData.department}
+                    departmentName={departmentOptions.find(d => getDepartmentId(d) === profileData.department) || ''}
                     selectedSpecializations={profileData.specializations}
                     onSpecializationsChange={handleSpecializationsChange}
                     disabled={!isEditing}
@@ -362,7 +360,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                 
                 <div className="md:col-span-2">
                   <QualificationSelector
-                    selectedQualifications={profileData.qualifications}
+                    selectedQualifications={profileData.qualification}
                     onQualificationsChange={handleQualificationsChange}
                     disabled={!isEditing}
                   />

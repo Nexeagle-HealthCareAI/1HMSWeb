@@ -9,21 +9,10 @@ export const useAuthState = () => useAuthStore((state) => ({
   user: state.user,
   isAuthenticated: state.isAuthenticated,
   isLoading: state.isLoading,
-  error: state.error,
   token: state.token,
 }));
 export const useAuthActions = () => useAuthStore((state) => ({
-  login: state.login,
-  loginWithOTP: state.loginWithOTP,
   logout: state.logout,
-  register: state.register,
-  sendOTP: state.sendOTP,
-  forgotPasswordSendOTP: state.forgotPasswordSendOTP,
-  resetPassword: state.resetPassword,
-  checkAuth: state.checkAuth,
-  clearError: state.clearError,
-  setLoading: state.setLoading,
-  updateUser: state.updateUser,
 }));
 
 // Token management hooks (replacing SessionManager)
@@ -43,9 +32,6 @@ export const useUserRole = () => useAuthStore((state) => ({
 }));
 export const useSession = () => useAuthStore((state) => ({
   clearSession: state.clearSession,
-}));
-export const useLoginStatus = () => useAuthStore((state) => ({
-  isLoggedIn: state.isLoggedIn,
 }));
 
 // App hooks
@@ -131,41 +117,6 @@ export const useUserActions = () => useUserStore((state) => ({
   resetUserState: state.resetUserState,
 }));
 
-// Notification hooks
-export const useNotifications = () => useNotificationStore();
-export const useNotificationState = () => useNotificationStore((state) => ({
-  notifications: state.notifications,
-  unreadCount: state.unreadCount,
-  settings: state.settings,
-  isOpen: state.isOpen,
-  position: state.position,
-}));
-export const useNotificationActions = () => useNotificationStore((state) => ({
-  addNotification: state.addNotification,
-  removeNotification: state.removeNotification,
-  markAsRead: state.markAsRead,
-  markAllAsRead: state.markAllAsRead,
-  clearNotifications: state.clearNotifications,
-  clearReadNotifications: state.clearReadNotifications,
-  success: state.success,
-  error: state.error,
-  warning: state.warning,
-  info: state.info,
-  updateSettings: state.updateSettings,
-  toggleEnabled: state.toggleEnabled,
-  toggleSound: state.toggleSound,
-  toggleDesktop: state.toggleDesktop,
-  toggleEmail: state.toggleEmail,
-  toggleSms: state.toggleSms,
-  toggleAutoDismiss: state.toggleAutoDismiss,
-  setAutoDismissDelay: state.setAutoDismissDelay,
-  toggleOpen: state.toggleOpen,
-  setOpen: state.setOpen,
-  setPosition: state.setPosition,
-  getUnreadNotifications: state.getUnreadNotifications,
-  getNotificationsByType: state.getNotificationsByType,
-  getNotificationsByDate: state.getNotificationsByDate,
-}));
 
 // Theme hooks
 export const useTheme = () => useThemeStore();
@@ -197,7 +148,6 @@ export const useThemeActions = () => useThemeStore((state) => ({
 export const useIsAuthenticated = () => useAuthStore((state) => state.isAuthenticated);
 export const useCurrentUser = () => useAuthStore((state) => state.user);
 export const useAuthLoading = () => useAuthStore((state) => state.isLoading);
-export const useAuthError = () => useAuthStore((state) => state.error);
 
 export const useSidebarCollapsed = () => useAppStore((state) => state.sidebarCollapsed);
 export const useGlobalLoading = () => useAppStore((state) => state.globalLoading);
@@ -208,9 +158,6 @@ export const useUserProfile = () => useUserStore((state) => state.profile);
 export const useUserPreferences = () => useUserStore((state) => state.preferences);
 export const useUserRoles = () => useUserStore((state) => state.roles);
 export const useUserPermissions = () => useUserStore((state) => state.permissions);
-
-export const useUnreadNotifications = () => useNotificationStore((state) => state.unreadCount);
-export const useNotificationSettings = () => useNotificationStore((state) => state.settings);
 
 export const useThemeMode = () => useThemeStore((state) => state.mode);
 export const useColorScheme = () => useThemeStore((state) => state.colorScheme);

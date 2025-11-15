@@ -13,7 +13,8 @@ export interface DoctorProfessionalData {
 }
 
 export interface DoctorProfileResponse {
-  doctor: {
+    doctorDepartments: any;
+  
     doctorId: string;
     userId: string;
     hospitalId: string;
@@ -27,10 +28,42 @@ export interface DoctorProfileResponse {
     specializations: string[];
     createdAt: string;
     updatedAt: string;
-  };
+  
 }
 
 export const doctorApi = {
+  // Update doctor professional info (new API spec)
+  updateDoctorProfessional: async (doctorId: string, payload: {
+  userId: string;
+  hospitalDepartmentMappingId: string;
+  licenseNumber: string;
+  qualification: string[];
+  experienceYears: number;
+  medicalCouncil: string;
+  registrationYear: number;
+  bio: string;
+  primaryDepartment: string;
+  department: string;
+  specializations: string[];
+}) => {
+    try {
+      const response = await apiClient.put(
+        'https://easyhmsapisevices-gcb4btbthmaedaex.centralindia-01.azurewebsites.net/doctors/profile',
+        payload,
+        {
+          headers: {
+            'accept': 'text/plain',
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      console.log('Doctor Professional PUT Response:', response);
+      return response;
+    } catch (error) {
+      console.error('Error updating doctor professional:', error);
+      throw error;
+    }
+  },
   // Get doctor profile
   getDoctorProfile: async (doctorId: string): Promise<DoctorProfileResponse> => {
     try {
@@ -51,18 +84,6 @@ export const doctorApi = {
       return response as DoctorProfileResponse;
     } catch (error) {
       console.error('Error creating doctor profile:', error);
-      throw error;
-    }
-  },
-
-  // Update doctor profile
-  updateDoctorProfile: async (doctorId: string, doctorData: Partial<DoctorProfessionalData>): Promise<DoctorProfileResponse> => {
-    try {
-      const response = await apiClient.put(`${API_ENDPOINTS.DOCTORS.PROFILE}/${doctorId}`, doctorData);
-      console.log('Doctor Profile PUT Response:', response);
-      return response as DoctorProfileResponse;
-    } catch (error) {
-      console.error('Error updating doctor profile:', error);
       throw error;
     }
   },
