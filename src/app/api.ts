@@ -12,6 +12,10 @@ export const API_BASE_URL = ensureProtocol(rawApiUrl);
 
 // API Endpoints
 export const API_ENDPOINTS = {
+  E_PRESCRIPTION: {
+    GET_FIELD_PREFERENCES: (doctorId: string) => `/e-prescription/configuration/preference-setting/doctorId=${doctorId}`,
+    UPDATE_FIELD_PREFERENCES: (doctorId: string) => `/e-prescription/configuration/update-preference-setting/doctorId=${doctorId}`,
+  },
   AUTH: {
     LOGIN: 'auth/user/login',
     SEND_OTP: 'auth/otp/send',

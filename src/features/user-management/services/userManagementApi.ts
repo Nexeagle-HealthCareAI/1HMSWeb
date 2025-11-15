@@ -65,6 +65,7 @@ export interface OnboardedUser {
   roleName: string;
   status: 'active' | 'inactive';
   onboardedAt: string;
+  invitationId: string;
   lastLogin: string;
 }
 

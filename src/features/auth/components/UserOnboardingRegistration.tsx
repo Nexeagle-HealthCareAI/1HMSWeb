@@ -58,6 +58,9 @@ const UserOnboardingRegistration: React.FC = () => {
     confirmPassword: ''
   });
 
+  // Store invitationId from validateToken API response
+  const [invitationId, setInvitationId] = useState<string>('');
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -129,7 +132,6 @@ const UserOnboardingRegistration: React.FC = () => {
 
     try {
       setIsValidatingToken(true);
-      
       const response = await validateTokenMutation.mutateAsync({
         token: token
       });
@@ -137,7 +139,10 @@ const UserOnboardingRegistration: React.FC = () => {
       if (response.success) {
         setIsTokenValid(true);
         setIsValidatingToken(false);
-        
+
+        // Store invitationId from response, fallback to token if not present
+        setInvitationId(response.invitationId ? response.invitationId : token || '');
+
         // Pre-fill form data if available
         if (response.name) {
           setFormData(prev => ({ ...prev, fullName: response.name || '' }));
@@ -152,7 +157,7 @@ const UserOnboardingRegistration: React.FC = () => {
         if (response.roleName) {
           setFormData(prev => ({ ...prev, userRole: response.roleName || '' }));
         }
-        
+
         toast({
           title: "Welcome!",
           description: "Your invitation is valid. Please complete your registration.",
@@ -231,9 +236,7 @@ const UserOnboardingRegistration: React.FC = () => {
         throw new Error(registerResponse.message || 'Failed to register user');
       }
     } catch (error: any) {
-      // Check if the error indicates mobile number already exists
-      console.log('Registration error:', error); // Debug log to see the actual error structure
-      
+
       // Check the API response structure for the specific error
       const apiResponse = error.response?.data;
       const apiMessage = apiResponse?.message || '';
@@ -253,11 +256,11 @@ const UserOnboardingRegistration: React.FC = () => {
       const isApiError = apiSuccess === false && isMobileExistsError;
       
       if (isMobileExistsError || isConflictStatus || isApiError) {
-        console.log('Detected user exists error, showing popup'); // Debug log
+        
         // Show user exists popup instead of error toast
         setShowUserExistsPopup(true);
       } else {
-        console.log('Showing generic error toast'); // Debug log
+        
         toast({
           title: "Error",
           description: apiMessage || error.message || "Failed to initiate registration. Please try again.",
@@ -314,7 +317,7 @@ const UserOnboardingRegistration: React.FC = () => {
     try {
       setOtpLoading(true);
       const cleanMobile = ValidationUtils.cleanMobileNumber(formData.mobileNumber);
-      
+
       const response = await verifyOTPMutation.mutateAsync({
         mobileNumber: cleanMobile,
         otp: otp
@@ -324,12 +327,12 @@ const UserOnboardingRegistration: React.FC = () => {
         // Store userId from OTP verification response
         const verifiedUserId = response.userId;
         setUserId(verifiedUserId);
-        
+
         // Call the update invited user API after successful OTP verification
-        if (token && verifiedUserId) {
+        if (invitationId && invitationId !== '' && verifiedUserId) {
           try {
             await updateInvitedUserMutation.mutateAsync({
-              invitationId: token,
+              invitationId: invitationId,
               userId: verifiedUserId
             });
           } catch (updateError: any) {
@@ -338,7 +341,7 @@ const UserOnboardingRegistration: React.FC = () => {
             // Just log the error and continue
           }
         }
-        
+
         setIsMobileVerified(true);
         toast({
           title: "Mobile Verified",

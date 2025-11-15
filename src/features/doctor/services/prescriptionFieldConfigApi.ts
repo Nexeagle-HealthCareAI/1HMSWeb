@@ -1,4 +1,5 @@
 import { apiClient } from '@/services/axiosClient';
+import { API_ENDPOINTS } from '@/app/api';
 
 export interface PrescriptionFieldPreference {
   preferenceId?: string;
@@ -60,7 +61,7 @@ export const prescriptionFieldConfigApi = {
   async getFieldPreferences(doctorId: string): Promise<PrescriptionFieldPreferenceResponse> {
     try {
       const response = await apiClient.get(
-        `/e-prescription/configuration/preference-setting/doctorId=${doctorId}`
+        API_ENDPOINTS.E_PRESCRIPTION.GET_FIELD_PREFERENCES(doctorId)
       );
       return response;
     } catch (error) {
@@ -81,7 +82,7 @@ export const prescriptionFieldConfigApi = {
   ): Promise<UpdatePrescriptionFieldPreferenceResponse> {
     try {      
       const response = await apiClient.put(
-        `/e-prescription/configuration/update-preference-setting/doctorId=${doctorId}`,
+        API_ENDPOINTS.E_PRESCRIPTION.UPDATE_FIELD_PREFERENCES(doctorId),
         preferences
       );
      

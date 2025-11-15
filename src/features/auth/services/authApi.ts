@@ -109,6 +109,7 @@ export interface ValidateTokenResponse {
   roleName: string | null;
   email: string | null;
   mobile: string;
+  invitationId?: string;
 }
 
 // Auth API service
