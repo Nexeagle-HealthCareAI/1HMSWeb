@@ -221,14 +221,6 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
   // Determine if we should show loading state
   const shouldShowLoading = !apiPreferences && (isLoadingApiPreferences || isLoadingPreferences);
   
-  // Debug logging
-  console.log('=== EPrescriptionPad Debug ===');
-  console.log('apiPreferences:', apiPreferences);
-  console.log('fieldConfigs:', fieldConfigs);
-  console.log('finalFieldConfigs:', finalFieldConfigs);
-  console.log('finalFieldConfigs length:', finalFieldConfigs?.length);
-  console.log('Enabled fields:', finalFieldConfigs?.filter(f => f.enabled));
-  
   // Search functionality state
   const [searchSuggestions, setSearchSuggestions] = useState<{ [key: string]: string[] }>({
     chiefComplaint: [
