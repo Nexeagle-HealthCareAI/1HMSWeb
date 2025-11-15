@@ -3,7 +3,8 @@ import { useAuthStore } from '@/store/authStore';
 import { useDoctorApi } from '@/hooks/useApi';
 import { useUserDetails } from './useUserProfileApi';
 import { UserDetailsResponse } from '@/features/profile/services/userProfileApi';
-import { DoctorProfileResponse } from '@/features/doctor/services/doctorProfileApi';
+import { DoctorProfileResponse } from '@/features/doctor/services/doctorApi';
+
 
 export const useProfileCompletion = () => {
   const userId = useAuthStore((state) => state.userId);
