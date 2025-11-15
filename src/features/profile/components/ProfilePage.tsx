@@ -1166,7 +1166,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                  </Card>
                </div>
 
-              {/* Employment section removed (Employee ID moved near avatar) */}
+             
 
               {/* Doctor Professional (moved to top) removed here to avoid duplicate */}
             </Accordion>
@@ -1174,29 +1174,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
           </CardContent>
         </Card>
-      </div>
-
-      {/* Achievement Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border-blue-200">
-          <CardContent className="p-4 text-center">
-            <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-blue-700">{profileData.achievements.totalPatients}</div>
-            <div className="text-sm text-blue-600">Total Patients Served</div>
-          </CardContent>
-        </Card>       
-        
-        
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20 border-purple-200">
-          <CardContent className="p-4 text-center">
-            <Clock className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-purple-700">{profileData.achievements.yearsOfService}</div>
-            <div className="text-sm text-purple-600">Years of Service</div>
-          </CardContent>
-        </Card>
-        
-       
-      </div>
+      </div>    
+      
+  
     </div>
   );
 };

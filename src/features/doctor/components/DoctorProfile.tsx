@@ -13,6 +13,7 @@ import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { useAuthStore } from '@/store/authStore';
 import { useDepartmentApi, useDoctorApi } from '@/hooks/useApi';
+import { doctorApi } from '@/features/hospital/services/doctorApi';
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { SpecializationSelector } from './SpecializationSelector';
 import { QualificationSelector } from './QualificationSelector';
@@ -46,6 +47,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
   const queryClient = useQueryClient();
   const userId = useAuthStore((state) => state.userId);
   const hospitalId = useAuthStore((state) => state.hospitalId);
+  const setDoctorProfileRestriction = useAuthStore((state) => state.setDoctorProfileRestriction);
   
   // Profile completion hook
   const { doctorProfileCompletion } = useProfileCompletion();
@@ -208,23 +210,32 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
         const createData = {
           userId: userId || '',
           licenseNumber: profileData.licenseNumber || '',
-          qualification: profileData.qualifications || [], // Note: API expects 'qualification' (singular)
+          qualifications: profileData.qualifications || [],
           experienceYears: profileData.experienceYears || 0,
           medicalCouncil: profileData.medicalCouncil || '',
           registrationYear: profileData.registrationYear || new Date().getFullYear(),
           bio: profileData.bio || '',
-          primaryDepartment: profileData.primaryDepartment || profileData.department,
-          department: profileData.department,
-          specializations: profileData.specializations,
-          hospitalId: hospitalId || ''
+          departmentId: getDepartmentId(profileData.department),
+          specializations: profileData.specializations || []
         };
 
-        // TODO: Implement doctor profile creation API
-        toast({ 
-          title: 'Info', 
-          description: 'Doctor profile creation is not yet implemented. Please contact administrator.' 
-        });
-        return;
+        try {
+          const resp = await doctorApi.createDoctorProfile(createData as any);
+          // Normalise different response shapes
+          const newDoctorId = resp?.doctor?.doctorId || (resp as any)?.doctorId;
+          if (newDoctorId) {
+            setDoctorProfileExists(true);
+            setDoctorId(newDoctorId);
+            // Clear any restriction now that profile exists
+            setDoctorProfileRestriction(false, null);
+            toast({ title: 'Success', description: 'Doctor profile created successfully.' });
+            queryClient.invalidateQueries({ queryKey: ['doctor', 'profile'] });
+            queryClient.invalidateQueries({ queryKey: ['profile', 'completion'] });
+            if (onSave) onSave();
+          }
+        } catch (err) {
+          throw err;
+        }
       } else {
         // Update existing doctor profile
         if (!doctorId) {
@@ -236,8 +247,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
           return;
         }
         
-        const updateData = {
-          userId: userId || '',
+        const updateData = {          
           licenseNumber: profileData.licenseNumber || '',
           qualification: profileData.qualifications || [], // Note: API expects 'qualification' (singular)
           experienceYears: profileData.experienceYears || 0,
@@ -249,12 +259,29 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
           specializations: profileData.specializations
         };
         
-        // TODO: Implement doctor profile update API
-        toast({ 
-          title: 'Info', 
-          description: 'Doctor profile update is not yet implemented. Please contact administrator.' 
-        });
-        return;
+        try {
+          const updateData = {            
+            licenseNumber: profileData.licenseNumber || '',
+            qualifications: profileData.qualifications || [],
+            experienceYears: profileData.experienceYears || 0,
+            medicalCouncil: profileData.medicalCouncil || '',
+            registrationYear: profileData.registrationYear || new Date().getFullYear(),
+            bio: profileData.bio || '',
+            departmentId: getDepartmentId(profileData.department),
+            specializations: profileData.specializations || []
+          };
+
+          const resp = await doctorApi.updateDoctorProfile(doctorId, updateData as any);
+          const updatedDoctorId = resp?.doctor?.doctorId || (resp as any)?.doctorId || doctorId;
+          // Clear restriction on successful update
+          setDoctorProfileRestriction(false, null);
+          toast({ title: 'Success', description: 'Doctor profile updated successfully.' });
+          queryClient.invalidateQueries({ queryKey: ['doctor', 'profile', updatedDoctorId] });
+          queryClient.invalidateQueries({ queryKey: ['profile', 'completion'] });
+          if (onSave) onSave();
+        } catch (err) {
+          throw err;
+        }
       }
       
       // Clear validation errors on successful save

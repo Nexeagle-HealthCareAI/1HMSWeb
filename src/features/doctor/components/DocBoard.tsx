@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -11,6 +11,7 @@ import {
   Clock,
   Eye,
   User,
+  Bot,
   CalendarDays,
   Phone,
   X,
@@ -50,6 +51,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useDoctorProfile } from '../hooks/useDoctorProfile';
 import { useDoctorAppointmentDetails } from '../hooks/useDoctorAppointmentDetails';
 import { DoctorAppointmentDetail } from '../services/doctorApi';
+
+// Lazy-load the calendar page so it only loads when the doctor opens it from the dashboard
+const DoctorCalendar = lazy(() => import('@/features/doctor-calendar/DoctorCalendarPage').then(module => ({ default: module.DoctorCalendarPage })));
+// Lazy-load the AI assistant so it only loads when opened from the dashboard
+const DocAI = lazy(() => import('@/features/ai/components/DocAI').then(module => ({ default: module.DocAI })));
 
 interface PatientAppointment {
   appointmentId: string;
@@ -92,7 +98,7 @@ export const ClinicalDashboard: React.FC = () => {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [appointmentToCancel, setAppointmentToCancel] = useState<PatientAppointment | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
-  const [activeNavButton, setActiveNavButton] = useState<'appointments' | 'settings'>('appointments');
+  const [activeNavButton, setActiveNavButton] = useState<'appointments' | 'settings' | 'calendar' | 'assistant'>('appointments');
   const [settingsTab, setSettingsTab] = useState<'layout' | 'fields' | 'personalized'>('layout');
   const [isMobile, setIsMobile] = useState(false);
 
@@ -495,12 +501,54 @@ export const ClinicalDashboard: React.FC = () => {
                 <span className="sm:hidden">Appts</span>
               </button>
               <button
-                onClick={() => setActiveNavButton('settings')}
+                onClick={() => {
+                  if (!doctorProfileRestricted) setActiveNavButton('calendar');
+                }}
+                disabled={doctorProfileRestricted}
+                aria-disabled={doctorProfileRestricted}
+                tabIndex={doctorProfileRestricted ? -1 : 0}
+                title={doctorProfileRestricted ? (doctorProfileMessage || 'Complete your profile to unlock calendar') : undefined}
+                className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 flex-1 sm:flex-none ${
+                  activeNavButton === 'calendar'
+                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white dark:hover:bg-gray-700'
+                } ${doctorProfileRestricted ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <CalendarDays className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">{t('doctorCalendar.myCalendar') || 'My Calendar'}</span>
+                <span className="sm:hidden">Cal</span>
+              </button>
+              <button
+                onClick={() => {
+                  if (!doctorProfileRestricted) setActiveNavButton('assistant');
+                }}
+                disabled={doctorProfileRestricted}
+                aria-disabled={doctorProfileRestricted}
+                tabIndex={doctorProfileRestricted ? -1 : 0}
+                title={doctorProfileRestricted ? (doctorProfileMessage || 'Complete your profile to unlock assistant') : undefined}
+                className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 flex-1 sm:flex-none ${
+                  activeNavButton === 'assistant'
+                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white dark:hover:bg-gray-700'
+                } ${doctorProfileRestricted ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <Bot className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">AI Assistant</span>
+                <span className="sm:hidden">AI</span>
+              </button>
+              <button
+                onClick={() => {
+                  if (!doctorProfileRestricted) setActiveNavButton('settings');
+                }}
+                disabled={doctorProfileRestricted}
+                aria-disabled={doctorProfileRestricted}
+                tabIndex={doctorProfileRestricted ? -1 : 0}
+                title={doctorProfileRestricted ? (doctorProfileMessage || 'Complete your profile to unlock settings') : undefined}
                 className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 flex-1 sm:flex-none ${
                   activeNavButton === 'settings'
                     ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white dark:hover:bg-gray-700'
-                }`}
+                } ${doctorProfileRestricted ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span className="hidden sm:inline">Prescription Settings</span>
@@ -1462,8 +1510,30 @@ export const ClinicalDashboard: React.FC = () => {
         </div>
       )}
 
+      {/* Doctor Calendar - embedded in DocBoard */}
+      {activeNavButton === 'calendar' && (
+        <div className="flex-1 overflow-hidden">
+          <div className="w-full mx-auto p-2 sm:p-4 h-full overflow-y-auto">
+            <Suspense fallback={<div className="p-6 text-center">Loading calendar...</div>}>
+              <DoctorCalendar />
+            </Suspense>
+          </div>
+        </div>
+      )}
+
+      {/* AI Assistant - embedded in DocBoard */}
+      {activeNavButton === 'assistant' && (
+        <div className="flex-1 overflow-hidden">
+          <div className="w-full mx-auto p-2 sm:p-4 h-full overflow-y-auto">
+            <Suspense fallback={<div className="p-6 text-center">Loading assistant...</div>}>
+              <DocAI />
+            </Suspense>
+          </div>
+        </div>
+      )}
+
       {/* Prescription Settings */}
-      {activeNavButton === 'settings' && (
+      {activeNavButton === 'settings'  && (
         <div className="flex-1 min-h-0 overflow-hidden">
           <div className="h-full flex flex-col">
             {/* Prescription Settings Header */}
