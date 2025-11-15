@@ -157,7 +157,8 @@ export const ClinicalDashboard: React.FC = () => {
   // Doctor Profile
   const { data: doctorProfileResponse, isLoading: doctorProfileLoading, error: doctorProfileError } = useDoctorProfile(userId);
   const doctorId = doctorProfileResponse?.doctorId || '';
-  
+  // Profile completion percentage for verified badge
+  const profileCompletionPercentage = doctorProfileResponse?.profileCompletionPercentage || 0;
   // Check if doctor profile is restricted (204/404 means profile incomplete)
   const doctorProfileRestricted = useAuthStore(state => state.doctorProfileRestricted);
   const doctorProfileMessage = useAuthStore(state => state.doctorProfileMessage);
@@ -486,6 +487,12 @@ export const ClinicalDashboard: React.FC = () => {
                 <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
               </div>
               <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Doctor Dashboard</h1>
+              {profileCompletionPercentage === 100 && (
+                <Badge className="ml-2 bg-green-100 text-green-700 border-green-300 flex items-center gap-1 px-2 py-1 text-xs font-semibold">
+                  <UserCheck className="h-3 w-3 text-green-600" />
+                  Verified
+                </Badge>
+              )}
             </div>
             <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1 shadow-inner w-full sm:w-auto">
               <button

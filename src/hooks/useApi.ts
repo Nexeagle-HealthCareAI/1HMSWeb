@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
 import { authApi } from '@/services';
+import { doctorApi } from '@/features/doctor/services/doctorApi';
 import { hospitalApi } from '@/features/hospital/services/hospitalApi';
 import { departmentApi } from '@/features/hospital/services/departmentApi';
 import { specializationApi } from '@/features/hospital/services/specializationApi';
-import { doctorProfileApi } from '@/features/doctor/services/doctorProfileApi';
+
 import { mediaUploadApi } from '@/services/mediaUploadApi';
 
 // Generic API hook factory
@@ -113,7 +114,7 @@ export const useDoctorApi = {
   // Get doctor profile
   getDoctorProfile: (doctorId: string) => createApiHook(
     ['doctor', 'profile', doctorId],
-    () => doctorProfileApi.getDoctorProfile(doctorId),
+    () => doctorApi.getDoctorProfile(doctorId),
     {
       enabled: !!doctorId,
       staleTime: 5 * 60 * 1000, // 5 minutes
