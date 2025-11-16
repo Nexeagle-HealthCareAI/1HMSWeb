@@ -336,13 +336,12 @@ const UserOnboardingRegistration: React.FC = () => {
               userId: verifiedUserId
             });
           } catch (updateError: any) {
-            console.error('Failed to update invited user:', updateError);
-            // Don't fail the OTP verification if this API call fails
-            // Just log the error and continue
+            
           }
         }
 
         setIsMobileVerified(true);
+        console.log('OTP verified, userId:', verifiedUserId);
         toast({
           title: "Mobile Verified",
           description: "Your mobile number has been successfully verified!",
@@ -430,7 +429,6 @@ const UserOnboardingRegistration: React.FC = () => {
 
     try {
       setIsLoading(true);
-      
       // Call set-password API with the user data
       const response = await setPasswordMutation.mutateAsync({
         userId: userId, // Use userId from OTP verification
@@ -439,8 +437,9 @@ const UserOnboardingRegistration: React.FC = () => {
       });
 
       if (response.success) {
-        // Show success popup
+        // Show success popup only after password setup
         setShowSuccessPopup(true);
+        console.log('Password setup successful, show success popup');
       } else {
         throw new Error(response.message || 'Password setup failed');
       }

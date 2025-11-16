@@ -478,6 +478,7 @@ export const ClinicalDashboard: React.FC = () => {
 
   return (
     <div className="h-screen bg-gray-50 dark:bg-gray-950 flex flex-col overflow-hidden">
+      <div style={{ pointerEvents: doctorProfileRestricted ? 'none' : 'auto', opacity: doctorProfileRestricted ? 0.5 : 1, height: '100%' }}>
       {/* Header - Mobile Responsive */}
       <div className="bg-gradient-to-r from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 border-b border-gray-200 dark:border-gray-700 px-3 sm:px-6 py-2 sm:py-3 shadow-lg flex-shrink-0 sticky top-0 z-30">
         <div className="w-full mx-auto">
@@ -487,7 +488,7 @@ export const ClinicalDashboard: React.FC = () => {
                 <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
               </div>
               <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Doctor Dashboard</h1>
-              {profileCompletionPercentage === 100 && (
+              {!doctorProfileRestricted && profileCompletionPercentage === 100 && (
                 <Badge className="ml-2 bg-green-100 text-green-700 border-green-300 flex items-center gap-1 px-2 py-1 text-xs font-semibold">
                   <UserCheck className="h-3 w-3 text-green-600" />
                   Verified
@@ -1677,6 +1678,7 @@ export const ClinicalDashboard: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }; 
