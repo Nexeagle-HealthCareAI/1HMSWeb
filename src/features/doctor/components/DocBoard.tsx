@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react';
+import type { AxiosError } from 'axios';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -24,7 +25,14 @@ import {
   WifiOff,
   Settings as SettingsIcon,
   Settings,
-  Database
+  Database,
+  History,
+  TrendingUp,
+  TrendingDown,
+  CalendarCheck,
+  ClipboardCheck,
+  CircleCheck,
+  LucideIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -107,54 +115,13 @@ export const ClinicalDashboard: React.FC = () => {
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Mobile detection
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768); // md breakpoint
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Auto-switch from layout tab on mobile
-  useEffect(() => {
-    if (isMobile && settingsTab === 'layout') {
-      setSettingsTab('fields'); // Switch to fields tab on mobile
-    }
-  }, [isMobile, settingsTab]);
-
-  // Prevent body scrolling
-  useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    document.body.style.height = '100vh';
-    return () => {
-      document.body.style.overflow = originalOverflow;
-      document.body.style.height = 'auto';
-    };
-  }, []);
-
   const [connectionStatus, setConnectionStatus] = useState<'online' | 'offline'>('online');
-
-  // Helper function for safe date formatting (kept for future use)
-  const formatSafeDate = (dateString: string | undefined, formatString: string): string => {
-    if (!dateString) return 'N/A';
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return 'N/A';
-      return format(date, formatString);
-    } catch {
-      return 'N/A';
-    }
-  };
 
   // userId for doctor profile
   const userId = authUserId || '';
 
-  // Doctor Profile
+  type NavKey = 'appointments' | 'calendar' | 'assistant' | 'settings';
+
   const { data: doctorProfileResponse, isLoading: doctorProfileLoading, error: doctorProfileError } = useDoctorProfile(userId);
   const doctorId = doctorProfileResponse?.doctorId || '';
   // Profile completion percentage for verified badge
@@ -162,6 +129,42 @@ export const ClinicalDashboard: React.FC = () => {
   // Check if doctor profile is restricted (204/404 means profile incomplete)
   const doctorProfileRestricted = useAuthStore(state => state.doctorProfileRestricted);
   const doctorProfileMessage = useAuthStore(state => state.doctorProfileMessage);
+
+  const doctorDisplayName = doctorProfileResponse?.userId || 'Doctor';
+
+  const navButtons: Array<{ key: NavKey; label: string; shortLabel: string; Icon: LucideIcon; requiresProfile?: boolean; description: string; }> = [
+    {
+      key: 'appointments',
+      label: 'Appointments',
+      shortLabel: 'Appts',
+      Icon: Calendar,
+      description: 'Monitor today’s queue'
+    },
+    {
+      key: 'calendar',
+      label: t('doctorCalendar.myCalendar') || 'My Calendar',
+      shortLabel: 'Cal',
+      Icon: CalendarDays,
+      requiresProfile: true,
+      description: 'Plan your week'
+    },
+    {
+      key: 'assistant',
+      label: 'AI Assistant',
+      shortLabel: 'AI',
+      Icon: Bot,
+      requiresProfile: true,
+      description: 'Summaries & insights'
+    },
+    {
+      key: 'settings',
+      label: 'Prescription Settings',
+      shortLabel: 'Settings',
+      Icon: FileText,
+      requiresProfile: true,
+      description: 'Personalize layouts'
+    }
+  ];
 
   // Compute API date window based on tab
   const { startDate: apiStartDate, endDate: apiEndDate } = useMemo(() => {
@@ -216,16 +219,21 @@ export const ClinicalDashboard: React.FC = () => {
   // Loading + Error state combine
   const isDataLoading = doctorProfileLoading || appointmentLoading;
   
+  const normalizedDoctorProfileError = doctorProfileError as AxiosError | undefined;
+  const normalizedAppointmentError = appointmentError as AxiosError | undefined;
+
   // Check if the error is a 204/404 (profile incomplete) - these should show restriction message, not error
-  const isProfileIncompleteError = doctorProfileError && (
-    (doctorProfileError as any)?.response?.status === 204 || 
-    (doctorProfileError as any)?.response?.status === 404 ||
-    doctorProfileError?.message?.includes('not found')
+  const isProfileIncompleteError = Boolean(
+    normalizedDoctorProfileError && (
+      normalizedDoctorProfileError.response?.status === 204 ||
+      normalizedDoctorProfileError.response?.status === 404 ||
+      normalizedDoctorProfileError.message?.includes('not found')
+    )
   );
   
   // Only show error if it's NOT a profile incomplete error (204/404) or if profile is not restricted
   // If profile is restricted, we show the restriction message instead
-  const hasError = (doctorProfileError || appointmentError) && !isProfileIncompleteError && !doctorProfileRestricted;
+  const hasError = (normalizedDoctorProfileError || normalizedAppointmentError) && !isProfileIncompleteError && !doctorProfileRestricted;
   const shouldShowError = hasError && !isDataLoading;
 
   // Reset pagination on filter changes
@@ -270,19 +278,22 @@ export const ClinicalDashboard: React.FC = () => {
     };
   }, [refetch, hospitalId, doctorId]);
 
+  const pastDateUpperBound = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+  const futureDateLowerBound = format(addDays(new Date(), 1), 'yyyy-MM-dd');
+
   // Default date ranges for past/future tabs
   useEffect(() => {
     if (activeTab === 'past') {
-      setStartDate(format(subDays(new Date(), 1), 'yyyy-MM-dd'));
-      setEndDate(format(new Date(), 'yyyy-MM-dd'));
+      setStartDate(pastDateUpperBound);
+      setEndDate(pastDateUpperBound);
     } else if (activeTab === 'future') {
-      setStartDate(format(addDays(new Date(), 1), 'yyyy-MM-dd'));
+      setStartDate(futureDateLowerBound);
       setEndDate(format(addDays(new Date(), 7), 'yyyy-MM-dd'));
     } else {
       setStartDate('');
       setEndDate('');
     }
-  }, [activeTab]);
+  }, [activeTab, pastDateUpperBound, futureDateLowerBound]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -395,6 +406,91 @@ export const ClinicalDashboard: React.FC = () => {
     };
   }, [appointments, todayStart, todayEnd]);
 
+  const appointmentTabCounts = useMemo(() => {
+    return appointments.reduce(
+      (acc, apt) => {
+        const d = new Date(apt.startAt);
+        if (d < todayStart) {
+          acc.past += 1;
+        } else if (d > todayEnd) {
+          acc.future += 1;
+        } else {
+          acc.current += 1;
+        }
+        return acc;
+      },
+      { current: 0, past: 0, future: 0 }
+    );
+  }, [appointments, todayStart, todayEnd]);
+
+  const pastAppointmentsSummary = useMemo(() => {
+    const pastAppointments = appointments.filter((apt) => new Date(apt.startAt) < todayStart);
+    const sorted = pastAppointments.length
+      ? [...pastAppointments].sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime())
+      : [];
+
+    return {
+      total: pastAppointments.length,
+      completed: pastAppointments.filter((apt) => apt.finalStatusCode === 'COMPLETED').length,
+      awaitingReconsult: pastAppointments.filter((apt) => apt.finalStatusCode === 'AWAITING_RECONSULT').length,
+      cancelled: pastAppointments.filter((apt) => apt.finalStatusCode === 'CANCELLED').length,
+      lastVisit: sorted[0]?.startAt || null
+    };
+  }, [appointments, todayStart]);
+
+  const futureAppointmentsSummary = useMemo(() => {
+    const futureAppointments = appointments.filter((apt) => new Date(apt.startAt) > todayEnd);
+    const sorted = futureAppointments.length
+      ? [...futureAppointments].sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
+      : [];
+
+    return {
+      total: futureAppointments.length,
+      scheduled: futureAppointments.filter((apt) => apt.finalStatusCode === 'SCHEDULED').length,
+      ready: futureAppointments.filter((apt) => apt.finalStatusCode === 'READY').length,
+      vitalsRequired: futureAppointments.filter((apt) => apt.finalStatusCode === 'VITALS_REQUIRED').length,
+      nextVisit: sorted[0]?.startAt || null
+    };
+  }, [appointments, todayEnd]);
+
+  const appointmentTabsConfig: Array<{
+    value: 'current' | 'past' | 'future';
+    label: string;
+    subLabel: string;
+    Icon: LucideIcon;
+    accent: string;
+    iconColor: string;
+    count: number;
+  }> = [
+    {
+      value: 'current',
+      label: 'Current Appointments',
+      subLabel: 'Live queue & vitals',
+      Icon: Activity,
+      accent: 'from-blue-500 via-indigo-500 to-purple-500',
+      iconColor: 'text-blue-500 dark:text-blue-300',
+      count: appointmentTabCounts.current
+    },
+    {
+      value: 'past',
+      label: 'Past Visits',
+      subLabel: 'History & follow-ups',
+      Icon: Clock,
+      accent: 'from-slate-500 via-slate-600 to-slate-700',
+      iconColor: 'text-slate-500 dark:text-slate-300',
+      count: appointmentTabCounts.past
+    },
+    {
+      value: 'future',
+      label: 'Upcoming Schedule',
+      subLabel: 'Next 7 days',
+      Icon: CalendarDays,
+      accent: 'from-emerald-500 via-teal-500 to-cyan-500',
+      iconColor: 'text-emerald-500 dark:text-emerald-300',
+      count: appointmentTabCounts.future
+    }
+  ];
+
   // Pagination slices
   const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -408,17 +504,34 @@ export const ClinicalDashboard: React.FC = () => {
 
   // Date validation handlers
   const handleStartDateChange = (value: string) => {
-    setStartDate(value);
-    if (value && endDate && new Date(value) > new Date(endDate)) {
-      setEndDate(value);
+    let nextValue = value;
+    if (activeTab === 'past' && nextValue && nextValue > pastDateUpperBound) {
+      nextValue = pastDateUpperBound;
+    }
+    if (activeTab === 'future' && nextValue && nextValue < futureDateLowerBound) {
+      nextValue = futureDateLowerBound;
+    }
+
+    setStartDate(nextValue);
+    if (nextValue && endDate && new Date(nextValue) > new Date(endDate)) {
+      setEndDate(nextValue);
     }
   };
   const handleEndDateChange = (value: string) => {
-    if (startDate && value && new Date(value) < new Date(startDate)) {
+    let nextValue = value;
+
+    if (activeTab === 'past' && nextValue && nextValue > pastDateUpperBound) {
+      nextValue = pastDateUpperBound;
+    }
+    if (activeTab === 'future' && nextValue && nextValue < futureDateLowerBound) {
+      nextValue = futureDateLowerBound;
+    }
+
+    if (startDate && nextValue && new Date(nextValue) < new Date(startDate)) {
       console.warn('Start date cannot be after end date');
       return;
     }
-    setEndDate(value);
+    setEndDate(nextValue);
   };
 
   const handleCancelClick = (appointment: PatientAppointment) => {
@@ -480,88 +593,62 @@ export const ClinicalDashboard: React.FC = () => {
     <div className="h-screen bg-gray-50 dark:bg-gray-950 flex flex-col overflow-hidden">
       <div style={{ pointerEvents: doctorProfileRestricted ? 'none' : 'auto', opacity: doctorProfileRestricted ? 0.5 : 1, height: '100%' }}>
       {/* Header - Mobile Responsive */}
-      <div className="bg-gradient-to-r from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 border-b border-gray-200 dark:border-gray-700 px-3 sm:px-6 py-2 sm:py-3 shadow-lg flex-shrink-0 sticky top-0 z-30">
+      <div className="bg-gradient-to-br from-white via-blue-50/60 to-indigo-50 dark:from-slate-900 dark:via-slate-900/80 dark:to-slate-900 border-b border-white/70 dark:border-slate-800 px-3 sm:px-6 py-4 shadow-lg flex-shrink-0 sticky top-0 z-30 backdrop-blur">
         <div className="w-full mx-auto">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-inner shadow-blue-500/40">
+                  <Calendar className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.3em] text-blue-600 dark:text-blue-300">Clinical HQ</p>
+                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">Doctor Dashboard</h1>
+                </div>
+                {!doctorProfileRestricted && profileCompletionPercentage === 100 && (
+                  <Badge className="ml-2 bg-white/80 dark:bg-slate-800/80 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-500/40 flex items-center gap-1 px-2.5 py-1 text-xs font-semibold shadow-sm">
+                    <UserCheck className="h-3.5 w-3.5 text-green-600" />
+                    Verified
+                  </Badge>
+                )}
               </div>
-              <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Doctor Dashboard</h1>
-              {!doctorProfileRestricted && profileCompletionPercentage === 100 && (
-                <Badge className="ml-2 bg-green-100 text-green-700 border-green-300 flex items-center gap-1 px-2 py-1 text-xs font-semibold">
-                  <UserCheck className="h-3 w-3 text-green-600" />
-                  Verified
-                </Badge>
-              )}
             </div>
-            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1 shadow-inner w-full sm:w-auto">
-              <button
-                onClick={() => setActiveNavButton('appointments')}
-                className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 flex-1 sm:flex-none ${
-                  activeNavButton === 'appointments'
-                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white dark:hover:bg-gray-700'
-                }`}
-              >
-                <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">Appointments</span>
-                <span className="sm:hidden">Appts</span>
-              </button>
-              <button
-                onClick={() => {
-                  if (!doctorProfileRestricted) setActiveNavButton('calendar');
-                }}
-                disabled={doctorProfileRestricted}
-                aria-disabled={doctorProfileRestricted}
-                tabIndex={doctorProfileRestricted ? -1 : 0}
-                title={doctorProfileRestricted ? (doctorProfileMessage || 'Complete your profile to unlock calendar') : undefined}
-                className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 flex-1 sm:flex-none ${
-                  activeNavButton === 'calendar'
-                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white dark:hover:bg-gray-700'
-                } ${doctorProfileRestricted ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <CalendarDays className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">{t('doctorCalendar.myCalendar') || 'My Calendar'}</span>
-                <span className="sm:hidden">Cal</span>
-              </button>
-              <button
-                onClick={() => {
-                  if (!doctorProfileRestricted) setActiveNavButton('assistant');
-                }}
-                disabled={doctorProfileRestricted}
-                aria-disabled={doctorProfileRestricted}
-                tabIndex={doctorProfileRestricted ? -1 : 0}
-                title={doctorProfileRestricted ? (doctorProfileMessage || 'Complete your profile to unlock assistant') : undefined}
-                className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 flex-1 sm:flex-none ${
-                  activeNavButton === 'assistant'
-                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white dark:hover:bg-gray-700'
-                } ${doctorProfileRestricted ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <Bot className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">AI Assistant</span>
-                <span className="sm:hidden">AI</span>
-              </button>
-              <button
-                onClick={() => {
-                  if (!doctorProfileRestricted) setActiveNavButton('settings');
-                }}
-                disabled={doctorProfileRestricted}
-                aria-disabled={doctorProfileRestricted}
-                tabIndex={doctorProfileRestricted ? -1 : 0}
-                title={doctorProfileRestricted ? (doctorProfileMessage || 'Complete your profile to unlock settings') : undefined}
-                className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 flex-1 sm:flex-none ${
-                  activeNavButton === 'settings'
-                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white dark:hover:bg-gray-700'
-                } ${doctorProfileRestricted ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">Prescription Settings</span>
-                <span className="sm:hidden">Settings</span>
-              </button>
+            <div className="w-full lg:w-auto">
+              <div className="flex flex-wrap gap-2 bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-1.5 shadow-inner shadow-white/60 dark:shadow-black/40">
+                {navButtons.map(({ key, label, shortLabel, Icon, requiresProfile, description }) => {
+                  const isActive = activeNavButton === key;
+                  const locked = requiresProfile && doctorProfileRestricted;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => {
+                        if (!locked) setActiveNavButton(key);
+                      }}
+                      disabled={locked}
+                      aria-disabled={locked}
+                      aria-pressed={isActive}
+                      tabIndex={locked ? -1 : 0}
+                      title={locked ? (doctorProfileMessage || 'Complete your profile to unlock this section') : description}
+                      className={`group flex-1 lg:flex-none min-w-[120px] flex flex-col items-start gap-1 rounded-xl px-3 py-2 border transition-all duration-300 ${
+                        isActive
+                          ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white border-transparent shadow-xl shadow-blue-500/30'
+                          : 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800/70'
+                      } ${locked ? 'opacity-40 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
+                    >
+                      <div className="flex items-center gap-2 text-sm font-semibold">
+                        <span className={`p-1.5 rounded-lg ${isActive ? 'bg-white/20' : 'bg-gray-100 dark:bg-slate-800'}`}>
+                          <Icon className={`h-4 w-4 ${isActive ? 'text-white' : 'text-blue-500 dark:text-blue-400'}`} />
+                        </span>
+                        <span className="hidden sm:inline">{label}</span>
+                        <span className="sm:hidden">{shortLabel}</span>
+                      </div>
+                      <span className={`text-[11px] leading-snug ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'}`}>
+                        {description}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -744,254 +831,209 @@ export const ClinicalDashboard: React.FC = () => {
               }}
               className="h-full flex flex-col"
             >
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-1 shadow-lg border border-gray-200 dark:border-gray-700 mb-2 sm:mb-3">
-                <TabsList className="grid w-full grid-cols-3 h-10 sm:h-12 bg-transparent">
-                  <TabsTrigger
-                    value="current"
-                    disabled={doctorProfileRestricted}
-                    className="text-xs sm:text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all duration-300 hover:scale-105 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-500 rounded-full"></div>
-                      <span className="hidden sm:inline">Current Appointments</span>
-                      <span className="sm:hidden">Current</span>
-                      {activeTab === 'current' && (
-                        <div className="flex items-center gap-1">
-                          {isLiveUpdateEnabled && <Activity className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-blue-500" />}
-                          {isRefreshing && <RefreshCw className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-blue-500 animate-spin" />}
-                          {connectionStatus === 'online' ? (
-                            <Wifi className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-green-500" />
-                          ) : (
-                            <WifiOff className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-red-500" />
-                          )}
+              <div className="bg-white/80 dark:bg-gray-900/70 rounded-2xl p-2 shadow-xl border border-white/60 dark:border-gray-800 mb-2 sm:mb-3 backdrop-blur">
+                <TabsList className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3 w-full bg-transparent h-auto">
+                  {appointmentTabsConfig.map(({ value, label, subLabel, Icon, accent, iconColor, count }) => {
+                    const isActive = activeTab === value;
+                    return (
+                      <TabsTrigger
+                        key={value}
+                        value={value}
+                        disabled={doctorProfileRestricted}
+                        className={`group relative overflow-hidden rounded-2xl border text-left px-4 py-3 sm:px-5 sm:py-4 transition-all duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 ${
+                          isActive
+                            ? 'bg-white dark:bg-gray-900 border-blue-200 dark:border-blue-900 shadow-xl shadow-blue-200/60 dark:shadow-blue-900/30 text-gray-900 dark:text-white'
+                            : 'bg-white/70 dark:bg-gray-900/60 border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-900'
+                        } ${doctorProfileRestricted ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`rounded-xl p-2 transition-all duration-300 ${
+                                isActive
+                                  ? `bg-gradient-to-br ${accent} text-white shadow-lg shadow-blue-500/30`
+                                  : `bg-gray-100 dark:bg-gray-800 ${iconColor}`
+                              }`}
+                            >
+                              <Icon className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold leading-tight">{label}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{subLabel}</p>
+                            </div>
+                          </div>
+                          <span
+                            className={`text-[11px] font-semibold px-2 py-1 rounded-full transition-colors duration-300 ${
+                              isActive
+                                ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/60 dark:text-blue-100'
+                                : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
+                            }`}
+                          >
+                            {count} appt{count === 1 ? '' : 's'}
+                          </span>
                         </div>
-                      )}
-                    </div>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="past"
-                    disabled={doctorProfileRestricted}
-                    className="text-xs sm:text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all duration-300 hover:scale-105 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-500 rounded-full"></div>
-                      <span className="hidden sm:inline">Past Appointments</span>
-                      <span className="sm:hidden">Past</span>
-                    </div>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="future"
-                    disabled={doctorProfileRestricted}
-                    className="text-xs sm:text-sm font-semibold data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm transition-all duration-300 hover:scale-105 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-500 rounded-full"></div>
-                      <span className="hidden sm:inline">Future Appointments</span>
-                      <span className="sm:hidden">Future</span>
-                    </div>
-                  </TabsTrigger>
+                      </TabsTrigger>
+                    );
+                  })}
                 </TabsList>
-            </div>
-            
-              {/* Live Update Controls - Mobile Responsive */}
-              {activeTab === 'current' && (
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2 sm:p-3 mb-2 sm:mb-3">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                      <div className="flex items-center gap-1.5 sm:gap-2">
-                        <Activity className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
-                        <span className="text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-200">
-                          {isLiveUpdateEnabled ? 'Live Updates Active' : 'Live Updates Disabled'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5 sm:gap-2">
-                        <span className="text-xs text-blue-600 dark:text-blue-400">
-                          Last updated: {format(lastUpdateTime, 'HH:mm:ss')}
-                        </span>
-                        {connectionStatus === 'online' ? (
-                          <Wifi className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-green-500" />
-                        ) : (
-                          <WifiOff className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-red-500" />
-                        )}
-                      </div>
+              </div>
+
+
+              {/* Current - Mobile Responsive */}
+              <TabsContent value="current" className="p-2 sm:p-4 flex-1 overflow-auto">
+                {/* Status Filters & Sync Controls */}
+                <div className="mb-2 sm:mb-3">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2 flex-1">
+                      <Button
+                        variant={selectedStatus === 'all' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleStatusClick('all')}
+                        className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
+                          selectedStatus === 'all'
+                            ? 'bg-gradient-to-r from-gray-600 to-gray-700 text-white shadow-lg'
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1 sm:gap-1.5">
+                          <CircleCheck className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                          <span>All ({currentAppointmentCounts.all})</span>
+                        </div>
+                      </Button>
+
+                      <Button
+                        variant={selectedStatus === 'VITALS_REQUIRED' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleStatusClick('VITALS_REQUIRED')}
+                        className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
+                          selectedStatus === 'VITALS_REQUIRED'
+                            ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg'
+                            : 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100 dark:hover:bg-red-900/20'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1 sm:gap-1.5">
+                          <Heart className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                          <span>Vitals ({currentAppointmentCounts.vitalsRequired})</span>
+                        </div>
+                      </Button>
+
+                      <Button
+                        variant={selectedStatus === 'READY' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleStatusClick('READY')}
+                        className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
+                          selectedStatus === 'READY'
+                            ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg'
+                            : 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100 dark:hover:bg-green-900/20'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1 sm:gap-1.5">
+                          <UserCheck className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                          <span>Ready ({currentAppointmentCounts.ready})</span>
+                        </div>
+                      </Button>
+
+                      <Button
+                        variant={selectedStatus === 'UNDER_CONSULT' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleStatusClick('UNDER_CONSULT')}
+                        className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
+                          selectedStatus === 'UNDER_CONSULT'
+                            ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg'
+                            : 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/20'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1 sm:gap-1.5">
+                          <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                          <span>Consulting ({currentAppointmentCounts.underConsult})</span>
+                        </div>
+                      </Button>
+
+                      <Button
+                        variant={selectedStatus === 'LAB_REQUIRED' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleStatusClick('LAB_REQUIRED')}
+                        className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
+                          selectedStatus === 'LAB_REQUIRED'
+                            ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg'
+                            : 'bg-orange-50 text-orange-700 border-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/20'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1 sm:gap-1.5">
+                          <FlaskConical className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                          <span>Lab ({currentAppointmentCounts.labRequired})</span>
+                        </div>
+                      </Button>
+
+                      <Button
+                        variant={selectedStatus === 'AWAITING_RECONSULT' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleStatusClick('AWAITING_RECONSULT')}
+                        className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
+                          selectedStatus === 'AWAITING_RECONSULT'
+                            ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-lg'
+                            : 'bg-yellow-50 text-yellow-700 border-yellow-300 hover:bg-yellow-100 dark:hover:bg-yellow-900/20'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1 sm:gap-1.5">
+                          <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                          <span>Reconsult ({currentAppointmentCounts.awaitingReconsult})</span>
+                        </div>
+                      </Button>
+
+                      <Button
+                        variant={selectedStatus === 'COMPLETED' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleStatusClick('COMPLETED')}
+                        className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
+                          selectedStatus === 'COMPLETED'
+                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg'
+                            : 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/20'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1 sm:gap-1.5">
+                          <UserCheck className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                          <span>Completed ({currentAppointmentCounts.completed})</span>
+                        </div>
+                      </Button>
+
+                      <Button
+                        variant={selectedStatus === 'CANCELLED' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleStatusClick('CANCELLED')}
+                        className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
+                          selectedStatus === 'CANCELLED'
+                            ? 'bg-gradient-to-r from-gray-500 to-gray-600 text-white shadow-lg'
+                            : 'bg-gray-50 text-gray-600 border-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900/20'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1 sm:gap-1.5">
+                          <X className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                          <span>Cancelled ({currentAppointmentCounts.cancelled})</span>
+                        </div>
+                      </Button>
                     </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
-                      <Button 
+
+                    <div className="flex flex-wrap items-center gap-2 justify-end">
+                      <div className="rounded-2xl border border-gray-200/80 dark:border-gray-700/80 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                        Last synced{' '}
+                        <span className="font-semibold text-gray-900 dark:text-white">
+                          {lastUpdateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <Button
                         variant="outline"
                         size="sm"
                         onClick={handleManualRefresh}
                         disabled={isRefreshing}
-                        className="h-7 sm:h-8 px-2 sm:px-3 text-xs bg-white hover:bg-blue-50 border-blue-300 text-blue-700 hover:text-blue-800 flex-1 sm:flex-none"
+                        className="h-8 sm:h-9 border-gray-200 dark:border-gray-700 text-blue-600 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-gray-800"
                       >
-                        <RefreshCw className={`h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
-                        <span className="hidden sm:inline">Refresh Now</span>
-                        <span className="sm:hidden">Refresh</span>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsLiveUpdateEnabled(!isLiveUpdateEnabled)}
-                        className={`h-7 sm:h-8 px-2 sm:px-3 text-xs flex-1 sm:flex-none ${
-                          isLiveUpdateEnabled
-                            ? 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100'
-                            : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'
-                        }`}
-                      >
-                        <span className="hidden sm:inline">
-                          {isLiveUpdateEnabled ? 'Disable Auto-Refresh' : 'Enable Auto-Refresh'}
-                        </span>
-                        <span className="sm:hidden">
-                          {isLiveUpdateEnabled ? 'Disable' : 'Enable'}
-                        </span>
+                        <RefreshCw className={`h-3.5 w-3.5 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        {isRefreshing ? 'Refreshing' : 'Refresh'}
                       </Button>
                     </div>
                   </div>
                 </div>
-              )}
-
-              {/* Current - Mobile Responsive */}
-              <TabsContent value="current" className="p-2 sm:p-4 flex-1 overflow-auto">
-                {/* Status Filters - Mobile Responsive */}
-                <div className="mb-2 sm:mb-3">
-                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                    <Button
-                      variant={selectedStatus === 'all' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => handleStatusClick('all')}
-                      className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
-                        selectedStatus === 'all'
-                          ? 'bg-gradient-to-r from-gray-600 to-gray-700 text-white shadow-lg'
-                          : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1 sm:gap-1.5">
-                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-gray-500 rounded-full"></div>
-                        <span className="hidden sm:inline">All ({currentAppointmentCounts.all})</span>
-                        <span className="sm:hidden">All ({currentAppointmentCounts.all})</span>
-                      </div>
-                    </Button>
-
-                    <Button
-                      variant={selectedStatus === 'VITALS_REQUIRED' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => handleStatusClick('VITALS_REQUIRED')}
-                      className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
-                        selectedStatus === 'VITALS_REQUIRED'
-                          ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg'
-                          : 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100 dark:hover:bg-red-900/20'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1 sm:gap-1.5">
-                        <Heart className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                        <span className="hidden sm:inline">Vitals ({currentAppointmentCounts.vitalsRequired})</span>
-                        <span className="sm:hidden">Vitals ({currentAppointmentCounts.vitalsRequired})</span>
-                      </div>
-                    </Button>
-
-                    <Button
-                      variant={selectedStatus === 'READY' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => handleStatusClick('READY')}
-                      className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
-                        selectedStatus === 'READY'
-                          ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg'
-                          : 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100 dark:hover:bg-green-900/20'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1 sm:gap-1.5">
-                        <UserCheck className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                        <span className="hidden sm:inline">Ready ({currentAppointmentCounts.ready})</span>
-                        <span className="sm:hidden">Ready ({currentAppointmentCounts.ready})</span>
-                      </div>
-                    </Button>
-
-                    <Button
-                      variant={selectedStatus === 'UNDER_CONSULT' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => handleStatusClick('UNDER_CONSULT')}
-                      className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
-                        selectedStatus === 'UNDER_CONSULT'
-                          ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg'
-                          : 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/20'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1 sm:gap-1.5">
-                        <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                        <span className="hidden sm:inline">Consult ({currentAppointmentCounts.underConsult})</span>
-                        <span className="sm:hidden">Consult ({currentAppointmentCounts.underConsult})</span>
-                      </div>
-                    </Button>
-
-                    <Button
-                      variant={selectedStatus === 'LAB_REQUIRED' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => handleStatusClick('LAB_REQUIRED')}
-                      className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
-                        selectedStatus === 'LAB_REQUIRED'
-                          ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg'
-                          : 'bg-orange-50 text-orange-700 border-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/20'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1 sm:gap-1.5">
-                        <FlaskConical className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                        <span className="hidden sm:inline">Lab ({currentAppointmentCounts.labRequired})</span>
-                        <span className="sm:hidden">Lab ({currentAppointmentCounts.labRequired})</span>
-                      </div>
-                    </Button>
-
-                    <Button
-                      variant={selectedStatus === 'AWAITING_RECONSULT' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => handleStatusClick('AWAITING_RECONSULT')}
-                      className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
-                        selectedStatus === 'AWAITING_RECONSULT'
-                          ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-lg'
-                          : 'bg-yellow-50 text-yellow-700 border-yellow-300 hover:bg-yellow-100 dark:hover:bg-yellow-900/20'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1 sm:gap-1.5">
-                        <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                        <span className="hidden sm:inline">Reconsult ({currentAppointmentCounts.awaitingReconsult})</span>
-                        <span className="sm:hidden">Reconsult ({currentAppointmentCounts.awaitingReconsult})</span>
-                      </div>
-                    </Button>
-
-                    <Button
-                      variant={selectedStatus === 'COMPLETED' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => handleStatusClick('COMPLETED')}
-                      className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
-                        selectedStatus === 'COMPLETED'
-                          ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg'
-                          : 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/20'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1 sm:gap-1.5">
-                        <UserCheck className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                        <span className="hidden sm:inline">Done ({currentAppointmentCounts.completed})</span>
-                        <span className="sm:hidden">Done ({currentAppointmentCounts.completed})</span>
-                      </div>
-                    </Button>
-
-                    <Button
-                      variant={selectedStatus === 'CANCELLED' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => handleStatusClick('CANCELLED')}
-                      className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${
-                        selectedStatus === 'CANCELLED'
-                          ? 'bg-gradient-to-r from-gray-500 to-gray-600 text-white shadow-lg'
-                          : 'bg-gray-50 text-gray-600 border-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900/20'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1 sm:gap-1.5">
-                        <X className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                        <span className="hidden sm:inline">Cancel ({currentAppointmentCounts.cancelled})</span>
-                        <span className="sm:hidden">Cancel ({currentAppointmentCounts.cancelled})</span>
-                      </div>
-                    </Button>
-                </div>
-      </div>
-
                 {/* Search - Mobile Responsive */}
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-3 sm:mb-4">
                   <div className="flex-1">
@@ -1016,20 +1058,38 @@ export const ClinicalDashboard: React.FC = () => {
                 </div>
 
                 {/* Table */}
-                <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-                  <div className="overflow-x-auto">
-                    <Table className="border-collapse">
+                <div className="rounded-3xl border border-gray-100/80 dark:border-gray-800/70 bg-white/95 dark:bg-gray-950/60 shadow-[0_30px_80px_-45px_rgba(37,99,235,0.65)] dark:shadow-[0_20px_70px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
+                  <div className="overflow-x-auto rounded-3xl">
+                    <Table className="min-w-full text-sm">
                       <TableHeader>
-                        <TableRow className="bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700">
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2">Patient ID</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2 hidden sm:table-cell">Patient Name</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2">Token No</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2 hidden md:table-cell">Appointment Time</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2">Status</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2 hidden lg:table-cell">Case</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2">Actions</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2 hidden lg:table-cell">Print Prescription</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2 hidden lg:table-cell">Print Token</TableHead>
+                        <TableRow className="bg-gradient-to-r from-blue-50/80 via-indigo-50/80 to-purple-50/80 dark:from-gray-800 dark:via-gray-800 dark:to-gray-900">
+                          <TableHead className="text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
+                            Patient
+                          </TableHead>
+                          <TableHead className="hidden xl:table-cell text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
+                            Patient Name
+                          </TableHead>
+                          <TableHead className="text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
+                            Token
+                          </TableHead>
+                          <TableHead className="hidden md:table-cell text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
+                            Appointment Time
+                          </TableHead>
+                          <TableHead className="text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
+                            Status
+                          </TableHead>
+                          <TableHead className="hidden lg:table-cell text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
+                            Case
+                          </TableHead>
+                          <TableHead className="text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
+                            Actions
+                          </TableHead>
+                          <TableHead className="hidden lg:table-cell text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
+                            Print Rx
+                          </TableHead>
+                          <TableHead className="hidden lg:table-cell text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
+                            Print Token
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1037,71 +1097,92 @@ export const ClinicalDashboard: React.FC = () => {
                           currentAppointments.map((appointment) => (
                             <TableRow
                               key={appointment.appointmentId}
-                              className="hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors duration-200 border-b border-gray-100 dark:border-gray-700"
+                              className="group border-b border-gray-100/80 dark:border-gray-800/70 last:border-b-0 hover:bg-blue-50/50 dark:hover:bg-gray-800/50 transition-all duration-200"
                             >
-                              <TableCell className="font-medium py-3 px-4">
-                                <button
-                                  onClick={() => handlePatientIdClick(appointment)}
-                                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline cursor-pointer transition-colors duration-200 flex items-center gap-1"
-                                >
-                                  {appointment.patientId}
-                                  <ExternalLink className="h-3 w-3" />
-                                </button>
+                              <TableCell className="py-4 px-4 align-top">
+                                <div className="space-y-1.5">
+                                  <button
+                                    onClick={() => handlePatientIdClick(appointment)}
+                                    className="text-sm font-semibold text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-200 inline-flex items-center gap-1 transition-colors"
+                                  >
+                                    {appointment.patientId}
+                                    <ExternalLink className="h-3 w-3" />
+                                  </button>
+                                  <p className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
+                                    {appointment.patientFullName}
+                                  </p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {appointment.phone || 'No mobile on file'}
+                                  </p>
+                                </div>
                               </TableCell>
-                              <TableCell className="py-3 px-4">{appointment.patientFullName}</TableCell>
-                              <TableCell className="py-3 px-4">{appointment.tokenDetails?.tokenNumber || 'N/A'}</TableCell>
-                              <TableCell className="py-3 px-4">
-                                {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
+                              <TableCell className="hidden xl:table-cell py-4 px-4 text-sm text-gray-600 dark:text-gray-300">
+                                {appointment.patientFullName}
                               </TableCell>
-                              <TableCell className="py-3 px-4">{getStatusBadge(appointment.finalStatusCode)}</TableCell>
-                              <TableCell className="py-3 px-4">
-                                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-300">
-                                  New
+                              <TableCell className="py-4 px-4">
+                                <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-100 px-3 py-1 text-xs font-semibold">
+                                  <span className="text-[11px] uppercase tracking-wide">Token</span>
+                                  <span>#{appointment.tokenDetails?.tokenNumber || 'N/A'}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell py-4 px-4">
+                                <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                                  {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  {format(new Date(appointment.startAt), 'EEE, MMM dd')}
+                                </div>
+                              </TableCell>
+                              <TableCell className="py-4 px-4 align-middle">
+                                {getStatusBadge(appointment.finalStatusCode)}
+                              </TableCell>
+                              <TableCell className="hidden lg:table-cell py-4 px-4">
+                                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                  New Case
                                 </Badge>
                               </TableCell>
-                              <TableCell className="py-3 px-4">
-                                <div className="flex gap-1">
-                                  {/* Hide the cancel button for statuses where it's not allowed */}
+                              <TableCell className="py-4 px-4">
+                                <div className="flex flex-wrap gap-2">
                                   {!['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(
                                     appointment.finalStatusCode
                                   ) && (
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="h-8 px-3 text-xs font-semibold text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 hover:scale-105"
+                                      className="h-8 px-3 text-xs font-semibold text-red-600 border-red-200 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
                                       onClick={() => handleCancelClick(appointment)}
                                     >
                                       <X className="h-3 w-3 mr-1" />
                                       Cancel
                                     </Button>
                                   )}
+                                  {appointment.finalStatusCode === 'VITALS_REQUIRED' && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8 px-3 text-xs font-semibold text-purple-600 border-purple-200 hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30"
+                                    >
+                                      <Heart className="h-3 w-3 mr-1" />
+                                      Vitals
+                                    </Button>
+                                  )}
                                 </div>
-                                {appointment.finalStatusCode === 'VITALS_REQUIRED' && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 px-3 text-xs font-semibold text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 mt-1 transition-all duration-200 hover:scale-105"
-                                  >
-                                    <Heart className="h-3 w-3 mr-1" />
-                                    Vitals
-                                  </Button>
-                                )}
                               </TableCell>
-                              <TableCell className="py-3 px-4">
+                              <TableCell className="hidden lg:table-cell py-4 px-4">
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="h-8 px-3 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100 transition-all duration-200 hover:scale-105"
+                                  className="h-8 px-3 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
                                 >
                                   <FileText className="h-3 w-3 mr-1" />
                                   Print
                                 </Button>
                               </TableCell>
-                              <TableCell className="py-3 px-4">
+                              <TableCell className="hidden lg:table-cell py-4 px-4">
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="h-8 px-3 text-xs font-semibold bg-green-50 text-green-700 border-green-300 hover:bg-green-100 transition-all duration-200 hover:scale-105"
+                                  className="h-8 px-3 text-xs font-semibold bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
                                 >
                                   <Printer className="h-3 w-3 mr-1" />
                                   Print
@@ -1111,406 +1192,369 @@ export const ClinicalDashboard: React.FC = () => {
                           ))
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                            <TableCell colSpan={9} className="text-center py-10 text-gray-500 dark:text-gray-400">
                               No appointments found
                             </TableCell>
                           </TableRow>
                         )}
                       </TableBody>
                     </Table>
-                      </div>
-                      </div>
-
-                {/* Pagination */}
-                <div className="flex justify-center mt-4 min-h-[50px]">
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious
-                          onClick={() => handlePageChange(currentPage - 1)}
-                          className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                        />
-                      </PaginationItem>
-
-                      {totalPages > 0 ? (
-                        Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                          <PaginationItem key={page}>
-                            <PaginationLink onClick={() => handlePageChange(page)} isActive={currentPage === page} className="cursor-pointer">
-                              {page}
-                            </PaginationLink>
-                          </PaginationItem>
-                        ))
-                      ) : (
-                        <PaginationItem>
-                          <PaginationLink className="opacity-50">1</PaginationLink>
-                        </PaginationItem>
-                      )}
-
-                      <PaginationItem>
-                        <PaginationNext
-                          onClick={() => handlePageChange(currentPage + 1)}
-                          className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                    </div>
-              </TabsContent>
-
-              {/* Past - Mobile Responsive */}
-              <TabsContent value="past" className="p-2 sm:p-4 flex-1 overflow-auto">
-                {/* Search + Date Range - Mobile Responsive */}
-                <div className="flex flex-col gap-3 mb-3">
-                  {/* Search Bar */}
-                  <div className="flex-1">
-                    <div className="relative">
-                      <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                      <Input
-                        placeholder="Search patients..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-7 sm:pl-8 h-8 sm:h-9 text-xs sm:text-sm"
-                      />
-                    </div>
                   </div>
-                  
-                  {/* Date Range - Mobile Optimized */}
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 sm:p-4">
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <div className="flex-1">
-                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                          From Date
-                        </label>
-                        <Input 
-                          type="date" 
-                          value={startDate} 
-                          onChange={(e) => handleStartDateChange(e.target.value)} 
-                          className="w-full h-8 sm:h-9 text-xs sm:text-sm" 
+                </div>
+
+                {/* Past - Mobile Responsive */}
+                </TabsContent>
+
+                <TabsContent value="past" className="p-2 sm:p-4 flex-1 overflow-auto">
+                  <div className="space-y-4">
+                  <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-700/50 p-3 md:p-4 shadow-sm">
+                    <div className="flex flex-wrap items-end gap-3">
+                      <div className="relative group flex-1 min-w-[220px]">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                        <Input
+                          placeholder="Search patients by name or ID..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-9 h-9 text-sm"
+                        />
+                        {searchTerm && (
+                          <button
+                            onClick={() => setSearchTerm('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-1 min-w-[140px] text-[11px] text-gray-600 dark:text-gray-300">
+                        <span>From</span>
+                        <Input
+                          type="date"
+                          value={startDate}
+                          onChange={(e) => handleStartDateChange(e.target.value)}
+                          className="h-9 text-sm"
+                          max={endDate || pastDateUpperBound}
                         />
                       </div>
-                      <div className="flex-1">
-                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                          To Date
-                        </label>
+                      <div className="flex flex-col gap-1 min-w-[140px] text-[11px] text-gray-600 dark:text-gray-300">
+                        <span>To</span>
                         <Input
                           type="date"
                           value={endDate}
                           onChange={(e) => handleEndDateChange(e.target.value)}
-                          className="w-full h-8 sm:h-9 text-xs sm:text-sm"
+                          className="h-9 text-sm"
                           min={startDate || undefined}
+                          max={pastDateUpperBound}
                         />
                       </div>
-                    </div>
-                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                      Select date range to filter past appointments
                     </div>
                   </div>
-                </div>
 
-                {/* Table */}
-                <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-                  <div className="overflow-x-auto">
-                    <Table className="border-collapse">
-                      <TableHeader>
-                        <TableRow className="bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700">
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Patient ID</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Patient Name</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Token No</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Last Appt Date</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Last Status</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Case</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Print Rx</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Next FollowUp</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">IsCompleted</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {currentAppointments.length > 0 ? (
-                          currentAppointments.map((appointment) => (
-                            <TableRow
-                              key={appointment.appointmentId}
-                              className="hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors duration-200 border-b border-gray-100 dark:border-gray-700"
-                            >
-                              <TableCell className="font-medium py-3 px-4">
-                                <button
-                                  onClick={() => handlePatientIdClick(appointment)}
-                                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline cursor-pointer transition-colors duration-200 flex items-center gap-1"
-                                >
-                                  {appointment.patientId}
-                                  <ExternalLink className="h-3 w-3" />
-                                </button>
-                              </TableCell>
-                              <TableCell className="py-3 px-4">{appointment.patientFullName}</TableCell>
-                              <TableCell className="py-3 px-4">{appointment.tokenDetails?.tokenNumber || 'N/A'}</TableCell>
-                              <TableCell className="py-3 px-4">
-                                <div className="flex flex-col gap-0.5">
-                                  <span className="font-medium text-gray-900 dark:text-white text-xs">
-                                    {format(new Date(appointment.startAt), 'MMM dd, yyyy')}
-                                  </span>
-                                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                                    {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
-                                  </span>
-                      </div>
-                              </TableCell>
-                              <TableCell className="py-3 px-4">{getStatusBadge(appointment.finalStatusCode)}</TableCell>
-                              <TableCell className="py-3 px-4">
-                                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-300">
-                                  New
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="py-3 px-4">
-                                <Button variant="outline" size="sm" className="h-6 px-2 text-xs">
-                                  <FileText className="h-2.5 w-2.5 mr-1" />
-                                  Print
-                                </Button>
-                              </TableCell>
-                              <TableCell className="py-3 px-4">
-                                <span className="text-xs text-gray-500 dark:text-gray-400">NA</span>
-                              </TableCell>
-                              <TableCell className="py-3 px-4">
-                                {appointment.finalStatusCode === 'COMPLETED' ? (
-                                  <div className="flex items-center justify-center">
-                                    <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center shadow-sm">
-                                      <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-                      </div>
-                    </div>
-                                ) : (
-                                  <div className="flex items-center justify-center">
-                                    <div className="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center shadow-sm border-2 border-red-200 dark:border-red-800">
-                                      <X className="h-5 w-5 text-red-600 dark:text-red-400 font-bold" />
-                      </div>
-                      </div>
-                                )}
+                  <div className="rounded-3xl border border-gray-100/80 dark:border-gray-800/70 bg-white/95 dark:bg-gray-950/60 shadow-[0_25px_70px_-40px_rgba(15,23,42,0.9)] backdrop-blur">
+                    <div className="overflow-x-auto rounded-3xl">
+                      <Table className="border-collapse">
+                        <TableHeader>
+                          <TableRow className="bg-gray-50 dark:bg-gray-800/80">
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Patient ID</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Patient Name</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Token</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Last Visit</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Status</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Case</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Print Rx</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Follow Up</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Completed</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {currentAppointments.length > 0 ? (
+                            currentAppointments.map((appointment) => (
+                              <TableRow
+                                key={appointment.appointmentId}
+                                className="hover:bg-blue-50/60 dark:hover:bg-gray-800/60 transition-colors duration-200 border-b border-gray-100/70 dark:border-gray-800/60"
+                              >
+                                <TableCell className="font-medium py-3 px-4">
+                                  <button
+                                    onClick={() => handlePatientIdClick(appointment)}
+                                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 inline-flex items-center gap-1"
+                                  >
+                                    {appointment.patientId}
+                                    <ExternalLink className="h-3 w-3" />
+                                  </button>
+                                </TableCell>
+                                <TableCell className="py-3 px-4">{appointment.patientFullName}</TableCell>
+                                <TableCell className="py-3 px-4">{appointment.tokenDetails?.tokenNumber || 'N/A'}</TableCell>
+                                <TableCell className="py-3 px-4">
+                                  <div className="space-y-0.5">
+                                    <span className="font-semibold text-gray-900 dark:text-white text-sm">
+                                      {format(new Date(appointment.startAt), 'MMM dd, yyyy')}
+                                    </span>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                      {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="py-3 px-4">{getStatusBadge(appointment.finalStatusCode)}</TableCell>
+                                <TableCell className="py-3 px-4">
+                                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-300">
+                                    New
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="py-3 px-4">
+                                  <Button variant="outline" size="sm" className="h-7 px-3 text-xs">
+                                    <FileText className="h-3 w-3 mr-1" />
+                                    Print
+                                  </Button>
+                                </TableCell>
+                                <TableCell className="py-3 px-4">
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">NA</span>
+                                </TableCell>
+                                <TableCell className="py-3 px-4">
+                                  {appointment.finalStatusCode === 'COMPLETED' ? (
+                                    <div className="flex items-center justify-center">
+                                      <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center shadow-sm">
+                                        <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center justify-center">
+                                      <div className="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center shadow-sm border-2 border-red-200 dark:border-red-800">
+                                        <X className="h-5 w-5 text-red-600 dark:text-red-400 font-bold" />
+                                      </div>
+                                    </div>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={9} className="text-center py-10 text-gray-500 dark:text-gray-400">
+                                No past appointments found
                               </TableCell>
                             </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center mt-4 min-h-[50px]">
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            onClick={() => handlePageChange(currentPage - 1)}
+                            className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                          />
+                        </PaginationItem>
+
+                        {totalPages > 0 ? (
+                          Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                            <PaginationItem key={page}>
+                              <PaginationLink onClick={() => handlePageChange(page)} isActive={currentPage === page} className="cursor-pointer">
+                                {page}
+                              </PaginationLink>
+                            </PaginationItem>
                           ))
                         ) : (
-                          <TableRow>
-                            <TableCell colSpan={9} className="text-center py-8 text-gray-500">
-                              No past appointments found
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                      </div>
-                      </div>
-
-                {/* Pagination */}
-                <div className="flex justify-center mt-4 min-h-[50px]">
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious
-                          onClick={() => handlePageChange(currentPage - 1)}
-                          className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                        />
-                      </PaginationItem>
-
-                      {totalPages > 0 ? (
-                        Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                          <PaginationItem key={page}>
-                            <PaginationLink onClick={() => handlePageChange(page)} isActive={currentPage === page} className="cursor-pointer">
-                              {page}
-                            </PaginationLink>
+                          <PaginationItem>
+                            <PaginationLink className="opacity-50">1</PaginationLink>
                           </PaginationItem>
-                        ))
-                      ) : (
-                        <PaginationItem>
-                          <PaginationLink className="opacity-50">1</PaginationLink>
-                        </PaginationItem>
-                      )}
+                        )}
 
-                      <PaginationItem>
-                        <PaginationNext
-                          onClick={() => handlePageChange(currentPage + 1)}
-                          className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                    </div>
+                        <PaginationItem>
+                          <PaginationNext
+                            onClick={() => handlePageChange(currentPage + 1)}
+                            className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
+                </div>
               </TabsContent>
 
               {/* Future - Mobile Responsive */}
               <TabsContent value="future" className="p-2 sm:p-4 flex-1 overflow-auto">
-                {/* Search + Date Range - Mobile Responsive */}
-                <div className="flex flex-col gap-3 mb-3">
-                  {/* Search Bar */}
-                  <div className="flex-1">
-                    <div className="relative">
-                      <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                      <Input
-                        placeholder="Search patients..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-7 sm:pl-8 h-8 sm:h-9 text-xs sm:text-sm"
-                      />
-                    </div>
-                  </div>
-                  
-                  {/* Date Range - Mobile Optimized */}
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 sm:p-4">
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <div className="flex-1">
-                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                          From Date
-                        </label>
-                        <Input 
-                          type="date" 
-                          value={startDate} 
-                          onChange={(e) => handleStartDateChange(e.target.value)} 
-                          className="w-full h-8 sm:h-9 text-xs sm:text-sm" 
+                <div className="space-y-4">
+                  <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-700/50 p-3 md:p-4 shadow-sm">
+                    <div className="flex flex-wrap items-end gap-3">
+                      <div className="relative group flex-1 min-w-[220px]">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                        <Input
+                          placeholder="Search upcoming patients..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-9 h-9 text-sm"
+                        />
+                        {searchTerm && (
+                          <button
+                            onClick={() => setSearchTerm('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-1 min-w-[140px] text-[11px] text-gray-600 dark:text-gray-300">
+                        <span>From</span>
+                        <Input
+                          type="date"
+                          value={startDate}
+                          onChange={(e) => handleStartDateChange(e.target.value)}
+                          className="h-9 text-sm"
+                          min={futureDateLowerBound}
                         />
                       </div>
-                      <div className="flex-1">
-                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                          To Date
-                        </label>
+                      <div className="flex flex-col gap-1 min-w-[140px] text-[11px] text-gray-600 dark:text-gray-300">
+                        <span>To</span>
                         <Input
                           type="date"
                           value={endDate}
                           onChange={(e) => handleEndDateChange(e.target.value)}
-                          className="w-full h-8 sm:h-9 text-xs sm:text-sm"
-                          min={startDate || undefined}
+                          className="h-9 text-sm"
+                          min={startDate || futureDateLowerBound}
                         />
                       </div>
                     </div>
-                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                      Select date range to filter future appointments
-                    </div>
                   </div>
-                </div>
 
-                {/* Table */}
-                <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-                  <div className="overflow-x-auto">
-                    <Table className="border-collapse">
-                      <TableHeader>
-                        <TableRow className="bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700">
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2">Patient ID</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2 hidden sm:table-cell">Patient Name</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2">Token No</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2 hidden md:table-cell">Appointment Time</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2">Status</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2 hidden lg:table-cell">Case</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2">Actions</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2 hidden lg:table-cell">Print Prescription</TableHead>
-                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1.5 sm:py-2 px-1 sm:px-2 hidden lg:table-cell">Print Token</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {currentAppointments.length > 0 ? (
-                          currentAppointments.map((appointment) => (
-                            <TableRow
-                              key={appointment.appointmentId}
-                              className="hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors duration-200 border-b border-gray-100 dark:border-gray-700"
-                            >
-                              <TableCell className="font-medium py-3 px-4">
-                                <button
-                                  onClick={() => handlePatientIdClick(appointment)}
-                                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline cursor-pointer transition-colors duration-200 flex items-center gap-1"
-                                >
-                                  {appointment.patientId}
-                                  <ExternalLink className="h-3 w-3" />
-                                </button>
-                              </TableCell>
-                              <TableCell className="py-3 px-4">{appointment.patientFullName}</TableCell>
-                              <TableCell className="py-3 px-4">{appointment.tokenDetails?.tokenNumber || 'N/A'}</TableCell>
-                              <TableCell className="py-3 px-4">
-                                {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
-                              </TableCell>
-                              <TableCell className="py-3 px-4">{getStatusBadge(appointment.finalStatusCode)}</TableCell>
-                              <TableCell className="py-3 px-4">
-                                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-300">
-                                  New
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="py-3 px-4">
-                                <div className="flex gap-1">
-                                  {!['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(
-                                    appointment.finalStatusCode
-                                  ) && (
+                  <div className="rounded-3xl border border-gray-100/80 dark:border-gray-800/70 bg-white/95 dark:bg-gray-950/60 shadow-[0_25px_70px_-40px_rgba(16,185,129,0.8)] backdrop-blur">
+                    <div className="overflow-x-auto rounded-3xl">
+                      <Table className="border-collapse">
+                        <TableHeader>
+                          <TableRow className="bg-gray-50 dark:bg-gray-800/80">
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Patient ID</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4 hidden sm:table-cell">Patient Name</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Token</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4 hidden md:table-cell">Time</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Status</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4 hidden lg:table-cell">Case</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Actions</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4 hidden lg:table-cell">Print Rx</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4 hidden lg:table-cell">Print Token</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {currentAppointments.length > 0 ? (
+                            currentAppointments.map((appointment) => (
+                              <TableRow
+                                key={appointment.appointmentId}
+                                className="hover:bg-emerald-50/60 dark:hover:bg-gray-800/60 transition-colors duration-200 border-b border-gray-100/70 dark:border-gray-800/60"
+                              >
+                                <TableCell className="font-medium py-3 px-4">
+                                  <button
+                                    onClick={() => handlePatientIdClick(appointment)}
+                                    className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-200 inline-flex items-center gap-1"
+                                  >
+                                    {appointment.patientId}
+                                    <ExternalLink className="h-3 w-3" />
+                                  </button>
+                                </TableCell>
+                                <TableCell className="py-3 px-4 hidden sm:table-cell">{appointment.patientFullName}</TableCell>
+                                <TableCell className="py-3 px-4">{appointment.tokenDetails?.tokenNumber || 'N/A'}</TableCell>
+                                <TableCell className="py-3 px-4 hidden md:table-cell">
+                                  {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
+                                </TableCell>
+                                <TableCell className="py-3 px-4">{getStatusBadge(appointment.finalStatusCode)}</TableCell>
+                                <TableCell className="py-3 px-4 hidden lg:table-cell">
+                                  <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
+                                    New
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="py-3 px-4">
+                                  <div className="flex flex-wrap gap-2">
+                                    {!['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(
+                                      appointment.finalStatusCode
+                                    ) && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 px-3 text-xs text-red-600 border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                        onClick={() => handleCancelClick(appointment)}
+                                      >
+                                        <X className="h-3 w-3 mr-1" />
+                                        Cancel
+                                      </Button>
+                                    )}
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="h-6 px-2 text-xs text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                      onClick={() => handleCancelClick(appointment)}
+                                      className="h-7 px-3 text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
                                     >
-                                      <X className="h-2.5 w-2.5 mr-1" />
-                                      Cancel
+                                      <Eye className="h-3 w-3 mr-1" />
+                                      Preview
                                     </Button>
-                                  )}
-                      </div>
-                              </TableCell>
-                              <TableCell className="py-3 px-4">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 px-3 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100 transition-all duration-200 hover:scale-105"
-                                >
-                                  <FileText className="h-3 w-3 mr-1" />
-                                  Print
-                                </Button>
-                              </TableCell>
-                              <TableCell className="py-3 px-4">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 px-3 text-xs font-semibold bg-green-50 text-green-700 border-green-300 hover:bg-green-100 transition-all duration-200 hover:scale-105"
-                                >
-                                  <Printer className="h-3 w-3 mr-1" />
-                                  Print
-                                </Button>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="py-3 px-4 hidden lg:table-cell">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 px-3 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                                  >
+                                    <FileText className="h-3 w-3 mr-1" />
+                                    Print
+                                  </Button>
+                                </TableCell>
+                                <TableCell className="py-3 px-4 hidden lg:table-cell">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 px-3 text-xs font-semibold bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                                  >
+                                    <Printer className="h-3 w-3 mr-1" />
+                                    Print
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={9} className="text-center py-10 text-gray-500 dark:text-gray-400">
+                                No future appointments found
                               </TableCell>
                             </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center mt-4 min-h-[50px]">
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            onClick={() => handlePageChange(currentPage - 1)}
+                            className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                          />
+                        </PaginationItem>
+
+                        {totalPages > 0 ? (
+                          Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                            <PaginationItem key={page}>
+                              <PaginationLink onClick={() => handlePageChange(page)} isActive={currentPage === page} className="cursor-pointer">
+                                {page}
+                              </PaginationLink>
+                            </PaginationItem>
                           ))
                         ) : (
-                          <TableRow>
-                            <TableCell colSpan={9} className="text-center py-8 text-gray-500">
-                              No future appointments found
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                      </div>
-                    </div>
-
-                {/* Pagination */}
-                <div className="flex justify-center mt-4 min-h-[50px]">
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious
-                          onClick={() => handlePageChange(currentPage - 1)}
-                          className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                        />
-                      </PaginationItem>
-
-                      {totalPages > 0 ? (
-                        Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                          <PaginationItem key={page}>
-                            <PaginationLink onClick={() => handlePageChange(page)} isActive={currentPage === page} className="cursor-pointer">
-                              {page}
-                            </PaginationLink>
+                          <PaginationItem>
+                            <PaginationLink className="opacity-50">1</PaginationLink>
                           </PaginationItem>
-                        ))
-                      ) : (
-                        <PaginationItem>
-                          <PaginationLink className="opacity-50">1</PaginationLink>
-                        </PaginationItem>
-                      )}
+                        )}
 
-                      <PaginationItem>
-                        <PaginationNext
-                          onClick={() => handlePageChange(currentPage + 1)}
-                          className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                      </div>
+                        <PaginationItem>
+                          <PaginationNext
+                            onClick={() => handlePageChange(currentPage + 1)}
+                            className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
+                </div>
               </TabsContent>
             </Tabs>
             )}

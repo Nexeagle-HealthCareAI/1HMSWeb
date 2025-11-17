@@ -23,7 +23,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { 
-  Users, 
   Mail, 
   Clock, 
   CheckCircle, 
@@ -166,21 +165,6 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
     }
   };
 
-  const getScopeIcon = (scope: string) => {
-    switch (scope) {
-      case 'ALL':
-        return <Users className="h-4 w-4" />;
-      case 'Pending':
-        return <Clock className="h-4 w-4" />;
-      case 'Accepted':
-        return <CheckCircle className="h-4 w-4" />;
-      case 'Revoked':
-        return <XCircle className="h-4 w-4" />;
-      default:
-        return <Users className="h-4 w-4" />;
-    }
-  };
-
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -283,28 +267,6 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
 
   return (
     <div className="space-y-6">
-      {/* Active Scope Indicator */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-full ${activeScope === 'ALL' ? 'bg-primary/10 text-primary' : activeScope === 'Pending' ? 'bg-yellow-100 text-yellow-700' : activeScope === 'Accepted' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-            {getScopeIcon(activeScope)}
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold capitalize">{activeScope} Invitations</h3>
-                         <p className="text-sm text-muted-foreground">
-               {activeScope === 'ALL' 
-                 ? `Showing all ${allUsers.length} invitations` 
-                 : `Showing ${getStatusCount(activeScope.toLowerCase())} ${activeScope.toLowerCase()} invitations`
-               }
-             </p>
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="text-2xl font-bold text-primary">{filteredUsers.length}</div>
-          <div className="text-xs text-muted-foreground">Filtered results</div>
-        </div>
-      </div>
-
       {/* Enhanced Scope Tabs */}
       <Card className="border-0 shadow-sm">
         <CardContent className="p-0">
@@ -314,26 +276,16 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
                 value="ALL" 
                 className="flex flex-col items-center gap-2 py-4 px-3 data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:border-2 data-[state=active]:border-primary/20 data-[state=active]:scale-105 transition-all duration-200 hover:bg-muted/50 rounded-lg"
               >
-                <div className="flex items-center gap-2">
-                  <div className={`p-1.5 rounded-full ${activeScope === 'ALL' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                    {getScopeIcon('ALL')}
-                  </div>
-                  <span className="font-medium">All</span>
-                </div>
-                                 <Badge variant={activeScope === 'ALL' ? 'default' : 'secondary'} className="text-xs">
-                   {allUsers.length}
-                 </Badge>
+                <span className="font-medium">All</span>
+                <Badge variant={activeScope === 'ALL' ? 'default' : 'secondary'} className="text-xs">
+                  {allUsers.length}
+                </Badge>
               </TabsTrigger>
               <TabsTrigger 
                 value="Pending" 
                 className="flex flex-col items-center gap-2 py-4 px-3 data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:border-2 data-[state=active]:border-yellow-200 data-[state=active]:scale-105 transition-all duration-200 hover:bg-muted/50 rounded-lg"
               >
-                <div className="flex items-center gap-2">
-                  <div className={`p-1.5 rounded-full ${activeScope === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-muted text-muted-foreground'}`}>
-                    {getScopeIcon('Pending')}
-                  </div>
-                  <span className="font-medium">Pending</span>
-                </div>
+                <span className="font-medium">Pending</span>
                 <Badge variant={activeScope === 'Pending' ? 'default' : 'secondary'} className="text-xs">
                   {getStatusCount('pending')}
                 </Badge>
@@ -342,12 +294,7 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
                 value="Accepted" 
                 className="flex flex-col items-center gap-2 py-4 px-3 data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:border-2 data-[state=active]:border-green-200 data-[state=active]:scale-105 transition-all duration-200 hover:bg-muted/50 rounded-lg"
               >
-                <div className="flex items-center gap-2">
-                  <div className={`p-1.5 rounded-full ${activeScope === 'Accepted' ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}>
-                    {getScopeIcon('Accepted')}
-                  </div>
-                  <span className="font-medium">Accepted</span>
-                </div>
+                <span className="font-medium">Accepted</span>
                 <Badge variant={activeScope === 'Accepted' ? 'default' : 'secondary'} className="text-xs">
                   {getStatusCount('accepted')}
                 </Badge>
@@ -356,12 +303,7 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
                 value="Revoked" 
                 className="flex flex-col items-center gap-2 py-4 px-3 data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:border-2 data-[state=active]:border-red-200 data-[state=active]:scale-105 transition-all duration-200 hover:bg-muted/50 rounded-lg"
               >
-                <div className="flex items-center gap-2">
-                  <div className={`p-1.5 rounded-full ${activeScope === 'Revoked' ? 'bg-red-100 text-red-700' : 'bg-muted text-muted-foreground'}`}>
-                    {getScopeIcon('Revoked')}
-                  </div>
-                  <span className="font-medium">Revoked</span>
-                </div>
+                <span className="font-medium">Revoked</span>
                 <Badge variant={activeScope === 'Revoked' ? 'default' : 'secondary'} className="text-xs">
                   {getStatusCount('revoked')}
                 </Badge>
