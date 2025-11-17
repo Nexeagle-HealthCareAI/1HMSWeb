@@ -353,6 +353,17 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
     }
    };
 
+  const clampDateToToday = React.useCallback((dateStr: string) => {
+    if (!dateStr) return format(new Date(), 'yyyy-MM-dd');
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    return dateStr < todayStr ? todayStr : dateStr;
+  }, []);
+
+  const ensureEndDateNotBeforeStart = React.useCallback((startDate: string, endDate: string) => {
+    if (!endDate) return startDate;
+    return endDate < startDate ? startDate : endDate;
+  }, []);
+
   const handleBlockSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -369,7 +380,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
         return;
       }
       
-      const generatedTitle = `${blockFormData.blockType} - ${format(startDate, 'MMM dd, yyyy')}`;
+  const generatedTitle = blockFormData.blockType;
       
       const payload: CreateBlockPayload = {
         doctorId,
@@ -555,7 +566,10 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                             type="date"
                             value={startDate}
                             min={getMinDate()}
-                            onChange={(e) => setStartDate(e.target.value)}
+                            onChange={(e) => {
+                              const safeDate = clampDateToToday(e.target.value);
+                              setStartDate(safeDate);
+                            }}
                             required
                           />
                         </div>
@@ -574,7 +588,11 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                               type="date"
                               value={startDate}
                               min={getMinDate()}
-                              onChange={(e) => setStartDate(e.target.value)}
+                              onChange={(e) => {
+                                const safeStart = clampDateToToday(e.target.value);
+                                setStartDate(safeStart);
+                                setRecurringEndDate(prev => ensureEndDateNotBeforeStart(safeStart, prev));
+                              }}
                               required
                             />
                           </div>
@@ -584,8 +602,13 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                               id="recurringEndDate"
                               type="date"
                               value={recurringEndDate}
-                              min={startDate}
-                              onChange={(e) => setRecurringEndDate(e.target.value)}
+                              min={startDate || getMinDate()}
+                              onChange={(e) => {
+                                const safeStart = clampDateToToday(startDate || getMinDate());
+                                const normalizedEnd = ensureEndDateNotBeforeStart(safeStart, e.target.value);
+                                setStartDate(safeStart);
+                                setRecurringEndDate(normalizedEnd);
+                              }}
                               required
                             />
                           </div>
@@ -765,11 +788,20 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                               value={blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[0] : ''}
                               min={format(new Date(), 'yyyy-MM-dd')}
                               onChange={(e) => {
-                                const date = e.target.value;
-                                const time = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[1] : '09:00';
-                                setBlockFormData(prev => ({ 
-                                  ...prev, 
-                                  startDateTime: `${date}T${time}` 
+                                const rawDate = e.target.value;
+                                const safeStartDate = clampDateToToday(rawDate);
+                                const currentStartTime = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[1] : '09:00';
+                                const currentEndTime = blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[1] : '17:00';
+                                const existingEndDate = blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[0] : safeStartDate;
+                                const normalizedEndDate = ensureEndDateNotBeforeStart(safeStartDate, existingEndDate);
+                                const normalizedEndTime = normalizedEndDate === safeStartDate && currentEndTime < currentStartTime
+                                  ? currentStartTime
+                                  : currentEndTime;
+
+                                setBlockFormData(prev => ({
+                                  ...prev,
+                                  startDateTime: `${safeStartDate}T${currentStartTime}`,
+                                  endDateTime: `${normalizedEndDate}T${normalizedEndTime}`
                                 }));
                               }}
                               required
@@ -798,11 +830,22 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                               value={blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[0] : ''}
                               min={blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd')}
                               onChange={(e) => {
-                                const date = e.target.value;
-                                const time = blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[1] : '17:00';
-                                setBlockFormData(prev => ({ 
-                                  ...prev, 
-                                  endDateTime: `${date}T${time}` 
+                                const rawDate = e.target.value;
+                                const startDate = blockFormData.startDateTime
+                                  ? blockFormData.startDateTime.split('T')[0]
+                                  : format(new Date(), 'yyyy-MM-dd');
+                                const safeStartDate = clampDateToToday(startDate);
+                                const normalizedEndDate = ensureEndDateNotBeforeStart(safeStartDate, rawDate);
+                                const currentEndTime = blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[1] : '17:00';
+                                const startTime = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[1] : '09:00';
+                                const adjustedEndTime = normalizedEndDate === safeStartDate && currentEndTime < startTime
+                                  ? startTime
+                                  : currentEndTime;
+
+                                setBlockFormData(prev => ({
+                                  ...prev,
+                                  startDateTime: prev.startDateTime || `${safeStartDate}T${startTime}`,
+                                  endDateTime: `${normalizedEndDate}T${adjustedEndTime}`
                                 }));
                               }}
                               required
@@ -842,18 +885,19 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
             </div>
 
             {/* Footer */}
-            <DialogFooter className="pt-4 border-t">
+            <DialogFooter className="pt-4 border-t bg-white dark:bg-gray-900 sticky bottom-0 z-10 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                className="w-full sm:w-auto h-11 text-sm font-semibold"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={isLoading || (scheduleType === 'schedule' ? !isScheduleFormValid() : !isBlockFormValid())}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="w-full sm:w-auto h-11 text-sm font-semibold bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 shadow-lg shadow-blue-200/60 dark:shadow-blue-900/30"
               >
                 {isLoading ? 'Saving...' : scheduleType === 'schedule' ? 'Save Schedule' : 'Save Time Off'}
               </Button>

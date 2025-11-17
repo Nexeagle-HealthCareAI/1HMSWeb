@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Building2,
@@ -11,7 +11,8 @@ import {
   FileText,
   Hash,
   Type,
-  AlertCircle
+  AlertCircle,
+  CheckCircle2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 // import { useToast } from '@/hooks/use-toast';
 import { useHospitalApi } from '@/hooks/useApi';
 import { useAuthStore } from '@/store/authStore';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export interface HospitalBranding {
   // Core Info
@@ -133,7 +135,8 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
   const [isEditMode, setIsEditMode] = useState(false);
   const [snapshotBeforeEdit, setSnapshotBeforeEdit] = useState<HospitalBranding | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const previousBrandingRef = useRef<HospitalBranding | null>(null);
+  const [previousBranding, setPreviousBranding] = useState<HospitalBranding | null>(null);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
 
   // Validation functions
   const requiredFields: Array<keyof HospitalBranding> = [
@@ -245,6 +248,21 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
   
   // Fetch hospital data
   const { data: hospitalData, isLoading, error } = useHospitalApi.getHospitalById(hospitalIdToUse);
+  const completionPercent = hospitalData?.profileStatus?.profileCompletionPercent ?? 0;
+  const completionChecklist = [
+    {
+      label: 'Basic Information',
+      complete: hospitalData?.profileStatus?.isBasicInfoComplete ?? false,
+    },
+    {
+      label: 'Location Details',
+      complete: hospitalData?.profileStatus?.isLocationInfoComplete ?? false,
+    },
+    {
+      label: 'Contact Information',
+      complete: hospitalData?.profileStatus?.isContactInfoComplete ?? false,
+    },
+  ];
 
   // Update branding when hospital data is fetched
   useEffect(() => {
@@ -267,12 +285,12 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
       
       // Only update if the data is actually different to prevent unnecessary re-renders
       const hasChanges = Object.keys(updatedBranding).some(key => 
-        updatedBranding[key as keyof HospitalBranding] !== previousBrandingRef.current?.[key as keyof HospitalBranding]
+        updatedBranding[key as keyof HospitalBranding] !== previousBranding?.[key as keyof HospitalBranding]
       );
       
       if (hasChanges) {
         onBrandingChange(updatedBranding);
-        previousBrandingRef.current = updatedBranding;
+        setPreviousBranding(updatedBranding);
       }
       
       // Store the hospitalId in auth store
@@ -325,6 +343,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
           setHospitalId(response.hospitalId);
           // Don't exit edit mode for initial save - let user continue editing
           queryClient.invalidateQueries({ queryKey: ['hospital', response.hospitalId] });
+          setShowCompletionModal(true);
           // toast removed temporarily
         } else {
           // toast removed temporarily
@@ -353,6 +372,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
           if (hospitalId) {
             queryClient.invalidateQueries({ queryKey: ['hospital', hospitalId] });
           }
+          setShowCompletionModal(true);
           // toast removed temporarily
         } else {
           // toast removed temporarily
@@ -433,15 +453,57 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
     setValidationErrors({}); // Clear validation errors when canceling edit
   };
 
+  const handleCompletionContinue = () => {
+    setShowCompletionModal(false);
+    requestAnimationFrame(() => {
+      const event = new CustomEvent('dashboard:navigate', {
+        detail: { view: 'dashboard', scrollToTop: true },
+      });
+      window.dispatchEvent(event);
+    });
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                 <div>
-           <h3 className="text-lg font-semibold">Hospital Information</h3>
-           <p className="text-sm text-muted-foreground">
-             Configure your hospital's complete information and details
-           </p>
-         </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Hospital Information</h3>
+          <p className="text-sm text-muted-foreground">
+            Configure your hospital's complete information and details
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {isExistingHospital && !isEditMode && (
+            <Button onClick={handleStartEdit} variant="outline" className="sm:w-auto">
+              Edit Details
+            </Button>
+          )}
+          {isExistingHospital && isEditMode && (
+            <>
+              <Button variant="outline" onClick={handleCancelEdit} className="sm:w-auto">
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSaveBranding}
+                disabled={updateHospitalMutation.isPending || isSaveDisabled}
+                className="sm:w-auto"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {updateHospitalMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </>
+          )}
+          {!isExistingHospital && (
+            <Button 
+              onClick={handleSaveBranding}
+              disabled={registerHospitalMutation.isPending || isSaveDisabled}
+              className="sm:w-auto"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {registerHospitalMutation.isPending ? 'Saving...' : 'Save Hospital Information'}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-6">
@@ -816,32 +878,46 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
       </div>
 
       {/* Action Buttons */}
-      <div className="flex justify-end gap-2">
-        {!isExistingHospital && (
-          <Button 
-            onClick={handleSaveBranding}
-            disabled={registerHospitalMutation.isPending || isSaveDisabled}
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {registerHospitalMutation.isPending ? 'Saving...' : 'Save Hospital Information'}
+      <div className="flex justify-end gap-2" />
+
+      <Dialog open={showCompletionModal} onOpenChange={setShowCompletionModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader className="text-center space-y-3">
+            <div className="mx-auto h-14 w-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <CheckCircle2 className="h-7 w-7" />
+            </div>
+            <DialogTitle className="text-2xl font-semibold">Hospital profile complete!</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              All required hospital details are now verified. Admin features are fully unlocked across the platform.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col items-center gap-1 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 p-4 text-center">
+            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-100">Completion score</p>
+            <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-200">{completionPercent}%</p>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            {completionChecklist.map((item) => (
+              <div key={item.label} className="flex items-center gap-2 rounded-lg border border-border/60 p-2 text-sm">
+                {item.complete ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                ) : (
+                  <AlertCircle className="h-4 w-4 text-amber-500" />
+                )}
+                <span className="font-medium text-foreground">{item.label}</span>
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {item.complete ? 'Complete' : 'Pending'}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <Button className="mt-6 w-full" onClick={handleCompletionContinue}>
+            Continue
           </Button>
-        )}
-        {isExistingHospital && !isEditMode && (
-          <Button onClick={handleStartEdit}>Edit Details</Button>
-        )}
-        {isExistingHospital && isEditMode && (
-          <>
-            <Button variant="outline" onClick={handleCancelEdit}>Cancel</Button>
-            <Button 
-              onClick={handleSaveBranding}
-              disabled={updateHospitalMutation.isPending || isSaveDisabled}
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {updateHospitalMutation.isPending ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </>
-        )}
-      </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

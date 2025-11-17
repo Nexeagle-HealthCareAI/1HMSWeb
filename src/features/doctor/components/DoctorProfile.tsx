@@ -1,11 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Stethoscope, Save, CheckCircle } from 'lucide-react';
@@ -33,6 +44,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
   onCancel
 }) => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const userId = useAuthStore((state) => state.userId);
   const hospitalId = useAuthStore((state) => state.hospitalId);
   const setDoctorProfileRestriction = useAuthStore((state) => state.setDoctorProfileRestriction);
@@ -45,13 +57,19 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
   const { data: departmentsResponse, isLoading: departmentsLoading, error: departmentsError } = useDepartmentApi.getGlobalDepartments();
   
   // Doctor API hooks
-  const { data: doctorProfileResponse, isLoading: doctorProfileLoading, error: doctorProfileError } = useDoctorApi.getDoctorProfile(userId || '');
+  const {
+    data: doctorProfileResponse,
+    isLoading: doctorProfileLoading,
+    error: doctorProfileError,
+    refetch: refetchDoctorProfile,
+  } = useDoctorApi.getDoctorProfile(userId || '');
   
   // Track if doctor profile exists
   const [doctorProfileExists, setDoctorProfileExists] = useState<boolean>(false);
   const [doctorId, setDoctorId] = useState<string>('');
   const [saving, setSaving] = useState<boolean>(false);
   const [doctorErrors, setDoctorErrors] = useState<FieldErrors>({});
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   
   // Profile data state
   const [profileData, setProfileData] = useState<DoctorProfessionalData>({
@@ -69,21 +87,19 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
   });
 
   // Extract department names from API response
-  const departmentOptions = React.useMemo(() => {
-    if (departmentsResponse?.departments) {
-      return departmentsResponse.departments
-        .filter(dept => dept.isActive)
-        .map(dept => dept.name)
-        .filter(name => name && name.trim() !== '');
-    }
-    return [];
+  const departmentOptions = useMemo(() => {
+    if (!departmentsResponse?.departments) return [];
+
+    return departmentsResponse.departments
+      .filter((dept) => dept.isActive && dept.departmentID && dept.name?.trim())
+      .map((dept) => ({
+        id: String(dept.departmentID),
+        name: dept.name,
+      }));
   }, [departmentsResponse]);
 
-  // Get department ID from department name
-  const getDepartmentId = (departmentName: string): string => {
-    const department = departmentsResponse?.departments?.find(dept => dept.name === departmentName);
-    return department?.departmentID || '';
-  };
+  const selectedDepartment = departmentOptions.find((dept) => dept.id === profileData.department) || null;
+  const selectedDepartmentName = selectedDepartment?.name || profileData.primaryDepartment || '';
 
   // Validation schema
   const DoctorSchema = z.object({
@@ -156,6 +172,15 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
     }));
   };
 
+  const handleDepartmentChange = (departmentId: string) => {
+    const department = departmentOptions.find((dept) => dept.id === departmentId);
+    setProfileData(prev => ({
+      ...prev,
+      department: departmentId,
+      primaryDepartment: department?.name || prev.primaryDepartment,
+    }));
+  };
+
   // Validate doctor data
   const validateDoctor = (): boolean => {
     const result = DoctorSchema.safeParse({
@@ -203,8 +228,8 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
           medicalCouncil: profileData.medicalCouncil,
           registrationYear: profileData.registrationYear,
           bio: profileData.bio,
-          primaryDepartment: profileData.primaryDepartment,
-          department: profileData.department,
+          primaryDepartment: selectedDepartmentName,
+          department: selectedDepartmentName,
           specializations: profileData.specializations,
           hospitalId: profileData.hospitalId
         };
@@ -219,6 +244,14 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
             toast({ title: 'Success', description: 'Doctor profile created successfully.' });
             queryClient.invalidateQueries({ queryKey: ['doctor', 'profile'] });
             queryClient.invalidateQueries({ queryKey: ['profile', 'completion'] });
+            try {
+              if (userId) {
+                await refetchDoctorProfile();
+              }
+            } catch (refreshError) {
+              console.error('Failed to refresh doctor profile after create:', refreshError);
+            }
+            setShowSuccessModal(true);
             if (onSave) onSave();
           }
         } catch (err) {
@@ -244,8 +277,8 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
           medicalCouncil: profileData.medicalCouncil,
           registrationYear: profileData.registrationYear,
           bio: profileData.bio,
-          primaryDepartment: '',
-          department: '',
+          primaryDepartment: selectedDepartmentName,
+          department: selectedDepartmentName,
           specializations: profileData.specializations
         };
 
@@ -256,6 +289,14 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
           toast({ title: 'Success', description: 'Doctor profile updated successfully.' });
           queryClient.invalidateQueries({ queryKey: ['doctor', 'profile', updatedDoctorId] });
           queryClient.invalidateQueries({ queryKey: ['profile', 'completion'] });
+          try {
+            if (userId) {
+              await refetchDoctorProfile();
+            }
+          } catch (refreshError) {
+            console.error('Failed to refresh doctor profile after update:', refreshError);
+          }
+          setShowSuccessModal(true);
           if (onSave) onSave();
         } catch (err) {
           throw err;
@@ -294,8 +335,9 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
   };
 
   return (
-    <Card className={isProfileComplete ? 'border-green-200 bg-green-50/30' : ''}>
-      <CardContent className="p-6">
+    <>
+      <Card className={isProfileComplete ? 'border-green-200 bg-green-50/30' : ''}>
+        <CardContent className="p-6">
         
         <Accordion type="single" collapsible defaultValue="doctor">
           <AccordionItem value="doctor">
@@ -321,7 +363,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                   <Label htmlFor="department">Department</Label>
                   <Select
                     value={profileData.department || ''}
-                    onValueChange={(val) => handleInputChange('department', val)}
+                    onValueChange={handleDepartmentChange}
                     disabled={!isEditing || departmentsLoading}
                   >
                     <SelectTrigger id="department" className="mt-1">
@@ -335,8 +377,8 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                       ) : departmentOptions.length === 0 ? (
                         <SelectItem value="no-data" disabled>No departments available</SelectItem>
                       ) : (
-                        departmentOptions.map((d) => (
-                          <SelectItem key={d} value={d}>{d}</SelectItem>
+                        departmentOptions.map(({ id, name }) => (
+                          <SelectItem key={id} value={id}>{name}</SelectItem>
                         ))
                       )}
                     </SelectContent>
@@ -351,7 +393,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                 <div className="md:col-span-2">
                   <SpecializationSelector
                     departmentId={profileData.department}
-                    departmentName={departmentOptions.find(d => getDepartmentId(d) === profileData.department) || ''}
+                    departmentName={selectedDepartment?.name || ''}
                     selectedSpecializations={profileData.specializations}
                     onSpecializationsChange={handleSpecializationsChange}
                     disabled={!isEditing}
@@ -470,6 +512,31 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
           </AccordionItem>
         </Accordion>
       </CardContent>
-    </Card>
+      </Card>
+
+      <AlertDialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Professional details updated</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your profile is now synced with the latest information. What would you like to do next?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowSuccessModal(false)}>
+              Continue editing
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowSuccessModal(false);
+                navigate('/dashboard');
+              }}
+            >
+              Go to dashboard
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };

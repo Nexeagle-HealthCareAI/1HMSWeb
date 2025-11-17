@@ -92,7 +92,7 @@ interface PatientAppointment {
 
 export const ClinicalDashboard: React.FC = () => {
   const { t } = useTranslation();
-  const { hospitalId, userId: authUserId, employeeId } = useAuthStore();
+  const { hospitalId, userId: authUserId, employeeId, userRole } = useAuthStore();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   
@@ -126,9 +126,12 @@ export const ClinicalDashboard: React.FC = () => {
   const doctorId = doctorProfileResponse?.doctorId || '';
   // Profile completion percentage for verified badge
   const profileCompletionPercentage = doctorProfileResponse?.profileCompletionPercentage || 0;
+  const clampedProfileCompletion = Math.min(Math.max(profileCompletionPercentage, 0), 100);
   // Check if doctor profile is restricted (204/404 means profile incomplete)
   const doctorProfileRestricted = useAuthStore(state => state.doctorProfileRestricted);
   const doctorProfileMessage = useAuthStore(state => state.doctorProfileMessage);
+  const canBypassDoctorRestriction = userRole === 'AdminDoctor' && Boolean(hospitalId);
+  const isDoctorExperienceLocked = doctorProfileRestricted && !canBypassDoctorRestriction;
 
   const doctorDisplayName = doctorProfileResponse?.userId || 'Doctor';
 
@@ -233,7 +236,7 @@ export const ClinicalDashboard: React.FC = () => {
   
   // Only show error if it's NOT a profile incomplete error (204/404) or if profile is not restricted
   // If profile is restricted, we show the restriction message instead
-  const hasError = (normalizedDoctorProfileError || normalizedAppointmentError) && !isProfileIncompleteError && !doctorProfileRestricted;
+  const hasError = (normalizedDoctorProfileError || normalizedAppointmentError) && !isProfileIncompleteError && !isDoctorExperienceLocked;
   const shouldShowError = hasError && !isDataLoading;
 
   // Reset pagination on filter changes
@@ -591,7 +594,7 @@ export const ClinicalDashboard: React.FC = () => {
 
   return (
     <div className="h-screen bg-gray-50 dark:bg-gray-950 flex flex-col overflow-hidden">
-      <div style={{ pointerEvents: doctorProfileRestricted ? 'none' : 'auto', opacity: doctorProfileRestricted ? 0.5 : 1, height: '100%' }}>
+  <div style={{ pointerEvents: isDoctorExperienceLocked ? 'none' : 'auto', opacity: isDoctorExperienceLocked ? 0.5 : 1, height: '100%' }}>
       {/* Header - Mobile Responsive */}
       <div className="bg-gradient-to-br from-white via-blue-50/60 to-indigo-50 dark:from-slate-900 dark:via-slate-900/80 dark:to-slate-900 border-b border-white/70 dark:border-slate-800 px-3 sm:px-6 py-4 shadow-lg flex-shrink-0 sticky top-0 z-30 backdrop-blur">
         <div className="w-full mx-auto">
@@ -604,6 +607,27 @@ export const ClinicalDashboard: React.FC = () => {
                 <div>
                   <p className="text-xs uppercase tracking-[0.3em] text-blue-600 dark:text-blue-300">Clinical HQ</p>
                   <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">Doctor Dashboard</h1>
+                  <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2 text-[11px] sm:text-xs">
+                    <button
+                      type="button"
+                      onClick={() => navigate('/profile?tab=professional')}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white/80 dark:bg-slate-900/70 border border-blue-100 dark:border-slate-800 shadow-inner transition-transform hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                      title="View professional profile"
+                    >
+                      <span className="uppercase tracking-wide text-blue-600 dark:text-blue-300 font-semibold">Professional profile</span>
+                      <div className="flex items-center gap-1 text-gray-900 dark:text-white font-bold">
+                        {clampedProfileCompletion}%
+                        {clampedProfileCompletion === 100 && <CircleCheck className="h-3.5 w-3.5 text-emerald-500" />}
+                      </div>
+                    </button>
+                    <div className="h-1.5 w-full sm:w-48 bg-blue-100/70 dark:bg-slate-800 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full transition-all duration-500"
+                        style={{ width: `${clampedProfileCompletion}%` }}
+                        aria-label={`Professional profile completion ${clampedProfileCompletion}%`}
+                      />
+                    </div>
+                  </div>
                 </div>
                 {!doctorProfileRestricted && profileCompletionPercentage === 100 && (
                   <Badge className="ml-2 bg-white/80 dark:bg-slate-800/80 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-500/40 flex items-center gap-1 px-2.5 py-1 text-xs font-semibold shadow-sm">
@@ -839,12 +863,12 @@ export const ClinicalDashboard: React.FC = () => {
                       <TabsTrigger
                         key={value}
                         value={value}
-                        disabled={doctorProfileRestricted}
+                        disabled={isDoctorExperienceLocked}
                         className={`group relative overflow-hidden rounded-2xl border text-left px-4 py-3 sm:px-5 sm:py-4 transition-all duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 ${
                           isActive
                             ? 'bg-white dark:bg-gray-900 border-blue-200 dark:border-blue-900 shadow-xl shadow-blue-200/60 dark:shadow-blue-900/30 text-gray-900 dark:text-white'
                             : 'bg-white/70 dark:bg-gray-900/60 border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-900'
-                        } ${doctorProfileRestricted ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        } ${isDoctorExperienceLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-3">
@@ -1642,7 +1666,7 @@ export const ClinicalDashboard: React.FC = () => {
             {/* Prescription Settings Content - Mobile Responsive */}
             <div className="flex-1 min-h-0 overflow-y-auto">
               <Tabs value={settingsTab} onValueChange={(value) => setSettingsTab(value as 'layout' | 'fields' | 'personalized')}>
-                <TabsContent value="layout" className="h-full m-0 overflow-y-auto">
+                <TabsContent value="layout" className="h-full m-0">
                   {isMobile ? (
                     <div className="p-4 sm:p-6 flex flex-col items-center justify-center h-full bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
                       <div className="text-center max-w-md mx-auto">
@@ -1664,18 +1688,18 @@ export const ClinicalDashboard: React.FC = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="p-2 sm:p-4">
+                    <div className="p-2 sm:p-4 max-h-[calc(100vh-220px)] overflow-y-auto">
                       <PrescriptionSettings />
                     </div>
                   )}
                 </TabsContent>
-                <TabsContent value="fields" className="h-full m-0 overflow-y-auto">
-                  <div className="h-full overflow-y-auto p-2 sm:p-4">
+                <TabsContent value="fields" className="h-full m-0">
+                  <div className="p-2 sm:p-4 max-h-[calc(100vh-220px)] overflow-y-auto">
                     <PrescriptionCustomizePanel showCloseButton={false} defaultTab="fields" />
                   </div>
                 </TabsContent>
-                <TabsContent value="personalized" className="h-full m-0 overflow-y-auto">
-                  <div className="h-full overflow-y-auto p-2 sm:p-4">
+                <TabsContent value="personalized" className="h-full m-0">
+                  <div className="p-2 sm:p-4 max-h-[calc(100vh-220px)] overflow-y-auto">
                     <PrescriptionCustomizePanel showCloseButton={false} defaultTab="personalized" />
                   </div>
                 </TabsContent>

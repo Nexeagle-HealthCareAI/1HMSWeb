@@ -1,9 +1,10 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Calendar, AlertTriangle, CheckCircle, XCircle, Info, MousePointer, Eye, X } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { CalendarEvent, DoctorCalendarConfigResponse } from '../api/types';
 import { useTranslation } from 'react-i18next';
+import { format, startOfDay, endOfDay } from 'date-fns';
 
 interface ShiftDetailsCardProps {
   events?: CalendarEvent[];
@@ -11,6 +12,8 @@ interface ShiftDetailsCardProps {
   isLoading?: boolean;
   isTimeOffWarningClosed?: boolean;
   onCloseTimeOffWarning?: () => void;
+  currentDate?: Date;
+  currentView?: 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay';
 }
 
 export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({ 
@@ -18,58 +21,133 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
   calendarConfig, 
   isLoading = false,
   isTimeOffWarningClosed = false,
-  onCloseTimeOffWarning
+  onCloseTimeOffWarning,
+  currentDate,
+  currentView
 }) => {
   const { t } = useTranslation();
+  const OVERRIDE_SHIFT_COLOR = '#6366f1';
+
+  const isDayView = currentView === 'timeGridDay' && Boolean(currentDate);
+
+  const visibleEvents = React.useMemo(() => {
+    if (!isDayView || !currentDate) return events;
+    const dayStart = startOfDay(currentDate);
+    const dayEnd = endOfDay(currentDate);
+
+    return events.filter(event => {
+      if (!event.start) return false;
+      const eventStart = new Date(event.start);
+      return eventStart >= dayStart && eventStart <= dayEnd;
+    });
+  }, [events, isDayView, currentDate]);
+
+  const extractSlotMinutes = React.useCallback((event: CalendarEvent): number | null => {
+    const extended = event.extendedProps || {};
+    const slotLike = extended.slotMinutes ?? extended.slotDurationInMinutes ?? extended.slotDuration ?? extended.slotLengthMinutes;
+
+    if (slotLike == null) return null;
+    if (typeof slotLike === 'number') return slotLike;
+    if (typeof slotLike === 'string') {
+      if (slotLike.includes(':')) {
+        const [hoursStr, minutesStr] = slotLike.split(':');
+        const hours = Number(hoursStr) || 0;
+        const minutes = Number(minutesStr) || 0;
+        return hours * 60 + minutes;
+      }
+      const parsed = parseInt(slotLike, 10);
+      return Number.isNaN(parsed) ? null : parsed;
+    }
+    return null;
+  }, []);
   
-  // Extract unique shifts from events
+  // Extract unique shifts from visible events
   const uniqueShifts = React.useMemo(() => {
-    const shifts = new Map<string, { count: number; color: string; times: string[] }>();
+    const shifts = new Map<
+      string,
+      {
+        displayName: string;
+        dataSource: 'Default' | 'Override';
+        color: string;
+        instances: Array<{
+          groupKey: string;
+          timeRange: string;
+          slotMinutes: number | null;
+          maxPatients?: number | null;
+          dayLabels: Set<string>;
+        }>;
+      }
+    >();
     
-    events.forEach(event => {
+    visibleEvents.forEach(event => {
       if (event.type === 'shift') {
-        const shiftName = event.extendedProps?.shiftName || 'Unknown';
-        const startTime = event.extendedProps?.startTime || '';
-        const endTime = event.extendedProps?.endTime || '';
-        const timeRange = `${startTime} - ${endTime}`;
-        
-        if (!shifts.has(shiftName)) {
-          // Set proper colors for different shift types
-          let shiftColor = '#6b7280'; // default gray
-          
-          if (shiftName === t('doctorCalendar.shifts.morning')) {
-            shiftColor = '#10b981'; // green
+        const shiftName =
+          event.extendedProps?.shiftName || t('doctorCalendar.shiftDetails.untitledShift', { defaultValue: 'Shift' });
+        const startDate = event.start ? new Date(event.start) : null;
+        const endDate = event.end ? new Date(event.end) : startDate;
+        const startTime = event.extendedProps?.startTime || (startDate ? format(startDate, 'HH:mm') : '');
+        const endTime = event.extendedProps?.endTime || (endDate ? format(endDate, 'HH:mm') : '');
+        const timeRange = startTime && endTime ? `${startTime} - ${endTime}` : t('doctorCalendar.shiftDetails.customTiming', { defaultValue: 'Custom timing' });
+        const slotMinutes = extractSlotMinutes(event);
+        const maxPatients = event.extendedProps?.maxPatients ?? event.extendedProps?.patientLimit;
+        const dayLabel = startDate ? format(startDate, 'EEE') : null;
+        const dataSource = event.extendedProps?.dataSource === 'Override' ? 'Override' : 'Default';
+        const shiftKey = `${shiftName}-${dataSource}`;
+        const isOverrideShift = dataSource === 'Override';
+
+        if (!shifts.has(shiftKey)) {
+          let shiftColor = event.backgroundColor || '#6b7280';
+          if (isOverrideShift) {
+            shiftColor = OVERRIDE_SHIFT_COLOR;
+          } else if (shiftName === t('doctorCalendar.shifts.morning')) {
+            shiftColor = '#10b981';
           } else if (shiftName === t('doctorCalendar.shifts.afternoon')) {
-            shiftColor = '#f59e0b'; // yellow
+            shiftColor = '#f59e0b';
           } else if (shiftName === t('doctorCalendar.shifts.evening')) {
-            shiftColor = '#f97316'; // orange
-          } else {
-            // Use event background color if available, otherwise use default
-            shiftColor = event.backgroundColor || '#6b7280';
+            shiftColor = '#f97316';
           }
-          
-          shifts.set(shiftName, {
-            count: 0,
+
+          shifts.set(shiftKey, {
+            displayName: shiftName,
+            dataSource,
             color: shiftColor,
-            times: []
+            instances: []
           });
         }
-        
-        const shift = shifts.get(shiftName)!;
-        shift.count++;
-        if (!shift.times.includes(timeRange)) {
-          shift.times.push(timeRange);
+
+        const shift = shifts.get(shiftKey)!;
+        const groupKey = `${timeRange}-${slotMinutes ?? 'custom'}-${maxPatients ?? 'unlimited'}`;
+        let instanceEntry = shift.instances.find(instance => instance.groupKey === groupKey);
+
+        if (!instanceEntry) {
+          instanceEntry = {
+            groupKey,
+            timeRange,
+            slotMinutes,
+            maxPatients,
+            dayLabels: new Set<string>()
+          };
+          shift.instances.push(instanceEntry);
+        }
+
+        if (dayLabel) {
+          instanceEntry.dayLabels.add(dayLabel);
         }
       }
     });
     
-    return Array.from(shifts.entries()).map(([name, data]) => ({
-      name,
-      count: data.count,
+    return Array.from(shifts.values()).map(data => ({
+      name: data.displayName,
       color: data.color,
-      times: data.times
+      dataSource: data.dataSource,
+      instances: data.instances.map(instance => ({
+        timeRange: instance.timeRange,
+        slotMinutes: instance.slotMinutes,
+        maxPatients: instance.maxPatients,
+        dayLabels: Array.from(instance.dayLabels)
+      }))
     }));
-  }, [events]);
+  }, [visibleEvents, extractSlotMinutes, t]);
 
   // Check for time-off events
   const timeOffEvents = React.useMemo(() => {
@@ -79,6 +157,34 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
       event.extendedProps?.type === 'timeoff'
     );
   }, [events]);
+
+  const formatTimeOffRange = React.useCallback(
+    (start: Date | null, end: Date | null) => {
+      if (!start) {
+        return t('doctorCalendar.shiftDetails.timeOffUnknown', { defaultValue: 'Date TBD' });
+      }
+      const endDate = end ?? start;
+      const sameDay = start.toDateString() === endDate.toDateString();
+      if (sameDay) {
+        return format(start, 'EEE, MMM d');
+      }
+      return `${format(start, 'MMM d')} - ${format(endDate, 'MMM d')}`;
+    },
+    [t]
+  );
+
+  const timeOffSummaries = React.useMemo(() => {
+    return timeOffEvents.map((event, idx) => {
+      const start = event.start ? new Date(event.start) : null;
+      const end = event.end ? new Date(event.end) : null;
+      const reason = event.extendedProps?.reason || event.title || t('doctorCalendar.shiftDetails.timeOff');
+      return {
+        id: event.id ?? `timeoff-${idx}`,
+        range: formatTimeOffRange(start, end),
+        reason
+      };
+    });
+  }, [timeOffEvents, formatTimeOffRange, t]);
 
   // Check if there are time-off conflicts with shifts
   const hasTimeOffConflicts = React.useMemo(() => {
@@ -107,61 +213,36 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
     });
   }, [events, timeOffEvents]);
 
-  const totalShifts = uniqueShifts.length;
-  const totalEvents = events.length;
+  
 
   return (
     <Card className="h-fit bg-white dark:bg-gray-800 shadow-md border border-gray-200 dark:border-gray-700 lg:max-w-xs">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
           <Info className="h-4 w-4 text-blue-600" />
-          {t('doctorCalendar.shiftDetails.calendarGuide')}
+          {t('doctorCalendar.shiftDetails.shiftOverview', { defaultValue: 'Shift Overview' })}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
 
 
-        {/* Time-Off Warning */}
-        {timeOffEvents.length > 0 && (
-          <div className="space-y-2">
+        {timeOffSummaries.length > 0 && (
+          <div className="space-y-1 rounded-md border border-amber-200 bg-amber-50/70 dark:border-amber-500/40 dark:bg-amber-900/20 p-2">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-medium text-red-600 dark:text-red-400 flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3" />
-                {t('doctorCalendar.shiftDetails.timeOffStatus')}
-              </h4>
-              <Badge variant="destructive" className="text-xs">
-                {timeOffEvents.length} {t('doctorCalendar.shiftDetails.active')}
+              <span className="text-xs font-semibold text-amber-800 dark:text-amber-200">
+                {t('doctorCalendar.shiftDetails.timeOffSummary', { defaultValue: 'Upcoming Time Off' })}
+              </span>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-200 text-amber-700 dark:border-amber-400 dark:text-amber-200 bg-white/70 dark:bg-transparent">
+                {timeOffSummaries.length} {t('doctorCalendar.shiftDetails.days', { defaultValue: 'entries' })}
               </Badge>
             </div>
-            
-            <div className="p-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-md">
-              <div className="text-xs text-orange-800 dark:text-orange-200 font-medium mb-1">
-                {t('doctorCalendar.shiftDetails.timeOffPeriodsActive')}
-              </div>
-              <div className="text-xs text-orange-700 dark:text-orange-300">
-                {t('doctorCalendar.shiftDetails.timeOffAffectsShifts')}
-              </div>
-            </div>
-            
             <div className="space-y-1">
-              {timeOffEvents.map((timeOffEvent, index) => (
-                <div 
-                  key={index}
-                  className="flex items-center gap-1.5 p-1.5 rounded-md border border-red-200 dark:border-red-800"
-                  style={{
-                    backgroundColor: '#fef2f2'
-                  }}
-                >
-                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                  <span className="text-xs font-medium text-red-700 dark:text-red-300 flex-1">
-                    {timeOffEvent.title || t('doctorCalendar.shiftDetails.timeOff')}
-                  </span>
-                  <Badge 
-                    variant="outline" 
-                    className="text-xs px-1 py-0 border-red-300 text-red-600"
-                  >
-                    {timeOffEvent.allDay ? t('doctorCalendar.shiftDetails.allDay') : t('doctorCalendar.shiftDetails.partial')}
-                  </Badge>
+              {timeOffSummaries.map(summary => (
+                <div key={summary.id} className="text-[11px] text-amber-900 dark:text-amber-100">
+                  <span className="font-semibold">{summary.range}</span>
+                  {summary.reason && (
+                    <span className="text-amber-800/80 dark:text-amber-200/80"> • {summary.reason}</span>
+                  )}
                 </div>
               ))}
             </div>
@@ -170,63 +251,100 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
 
         {/* Current Shifts */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h4 className="text-xs font-medium text-gray-900 dark:text-white">{t('doctorCalendar.shiftDetails.activeShifts')}</h4>
-            <Badge variant="outline" className="text-xs">
-              {totalShifts} {t('doctorCalendar.shiftDetails.types')}
-            </Badge>
-          </div>
           
           {isLoading ? (
             <div className="text-xs text-gray-500 dark:text-gray-400">Loading shifts...</div>
           ) : uniqueShifts.length > 0 ? (
             <div className="space-y-1">
               {uniqueShifts.map((shift, index) => {
-                // Temporarily disable time-off conflict detection to fix red color issue
                 const shiftHasTimeOffConflict = false;
-
-                // Debug: log the shift color
-                console.log(`Shift: ${shift.name}, Color: ${shift.color}, HasConflict: ${shiftHasTimeOffConflict}`);
-                
                 return (
-                  <div 
+                  <div
                     key={index}
-                    className={`flex items-center gap-1.5 p-1.5 rounded-md border ${
+                    className={`space-y-1.5 rounded-md border p-1.5 ${
                       shiftHasTimeOffConflict ? 'border-red-300 bg-red-50 dark:bg-red-900/20' : ''
                     }`}
                     style={{
-                      backgroundColor: shiftHasTimeOffConflict ? '#fef2f2' : `${shift.color}15`,
-                      borderColor: shiftHasTimeOffConflict ? '#fecaca' : `${shift.color}30`
+                      backgroundColor: shiftHasTimeOffConflict ? '#fef2f2' : `${shift.color}10`,
+                      borderColor: shiftHasTimeOffConflict ? '#fecaca' : `${shift.color}35`
                     }}
                   >
-                    <div 
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: shiftHasTimeOffConflict ? '#ef4444' : shift.color }}
-                    ></div>
-                    <span 
-                      className={`text-xs font-medium flex-1 ${
-                        shiftHasTimeOffConflict ? 'text-red-700 dark:text-red-300' : ''
-                      }`}
-                      style={!shiftHasTimeOffConflict ? { color: shift.color } : {}}
-                    >
-                      {shift.name}
-                      {shiftHasTimeOffConflict && (
-                        <span className="ml-1 text-red-500">(Time-off)</span>
-                      )}
-                    </span>
-                    <Badge 
-                      variant="outline" 
-                      className={`text-xs px-1 py-0 ${
-                        shiftHasTimeOffConflict ? 'border-red-300 text-red-600' : ''
-                      }`}
-                      style={!shiftHasTimeOffConflict ? {
-                        backgroundColor: `${shift.color}20`,
-                        borderColor: `${shift.color}40`,
-                        color: shift.color
-                      } : {}}
-                    >
-                      {shift.times[0] || 'Custom'}
-                    </Badge>
+                    <div className="flex items-center gap-1.5">
+                      <div
+                        className="w-2 h-2 rounded-full"
+                        style={{ backgroundColor: shiftHasTimeOffConflict ? '#ef4444' : shift.color }}
+                      ></div>
+                      <span
+                        className={`text-xs font-semibold flex-1 ${
+                          shiftHasTimeOffConflict ? 'text-red-700 dark:text-red-300' : ''
+                        }`}
+                        style={!shiftHasTimeOffConflict ? { color: shift.color } : {}}
+                      >
+                        {shift.name}
+                        {shiftHasTimeOffConflict && (
+                          <span className="ml-1 text-red-500">(Time-off)</span>
+                        )}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] px-1 py-0 ${
+                          shiftHasTimeOffConflict ? 'border-red-300 text-red-600' : ''
+                        }`}
+                        style={!shiftHasTimeOffConflict ? {
+                          backgroundColor: `${shift.color}15`,
+                          borderColor: `${shift.color}35`,
+                          color: shift.color
+                        } : {}}
+                      >
+                        {shift.instances.length} {t('doctorCalendar.shiftDetails.timeRanges', { defaultValue: 'slots' })}
+                      </Badge>
+                    </div>
+
+                    {shift.instances.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {shift.instances.map((instance, idx) => (
+                          <Badge
+                            key={`${shift.name}-${idx}`}
+                            variant="secondary"
+                            className="text-[10px] px-2 py-0.5 bg-white/70 dark:bg-white/10 text-gray-700 dark:text-gray-200 border border-white/40"
+                          >
+                            {instance.timeRange}
+                            {(() => {
+                              const dayAnnotation =
+                                !isDayView && instance.dayLabels?.length
+                                  ? ` (${instance.dayLabels.join(', ')})`
+                                  : '';
+                              if (instance.slotMinutes != null) {
+                                return (
+                                  <span className="ml-1 text-[10px] text-gray-500 dark:text-gray-400">
+                                    • {instance.slotMinutes}-min {t('doctorCalendar.shiftDetails.slots', { defaultValue: 'slots' })}
+                                    {dayAnnotation}
+                                  </span>
+                                );
+                              }
+
+                              if (dayAnnotation) {
+                                return (
+                                  <span className="ml-1 text-[10px] text-gray-500 dark:text-gray-400">
+                                    {dayAnnotation.trim()}
+                                  </span>
+                                );
+                              }
+                              return null;
+                            })()}
+                            {instance.maxPatients != null && (
+                              <span className="ml-1 text-[10px] text-gray-500 dark:text-gray-400">
+                                • {instance.maxPatients} {t('doctorCalendar.shiftDetails.patients', { defaultValue: 'pts' })}
+                              </span>
+                            )}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                        {t('doctorCalendar.shiftDetails.noTimeRanges', { defaultValue: 'No time ranges configured' })}
+                      </p>
+                    )}
                   </div>
                 );
               })}
@@ -235,31 +353,6 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
             <div className="text-xs text-gray-500 dark:text-gray-400">No shifts scheduled</div>
           )}
         </div>
-
-
-
-        {/* Quick Stats */}
-        <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
-          <h5 className="text-xs font-medium text-gray-900 dark:text-white mb-2">Quick Stats</h5>
-          <div className="space-y-1 text-xs">
-            <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Total Events:</span>
-              <span className="font-medium">{totalEvents}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Shift Types:</span>
-              <span className="font-medium">{totalShifts}</span>
-            </div>
-            {timeOffEvents.length > 0 && (
-              <div className="flex justify-between">
-                <span className="text-red-600 dark:text-red-400">Time-Off Periods:</span>
-                <span className="font-medium text-red-600 dark:text-red-400">{timeOffEvents.length}</span>
-              </div>
-            )}
-
-          </div>
-        </div>
-
 
       </CardContent>
     </Card>

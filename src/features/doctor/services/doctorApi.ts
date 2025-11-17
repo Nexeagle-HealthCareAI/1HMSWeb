@@ -8,6 +8,7 @@ export interface DoctorDepartment {
   departmentName: string;
   departmentDescription: string;
   assignedAt: string;
+  hospitalDepartmentMappingId?: string;
 }
 
 export interface DoctorProfessionalData {

@@ -32,6 +32,7 @@ import { useAuthApi } from '@/hooks/useApi';
 import { useUserManagementApi } from '@/features/user-management/hooks/useUserManagementApi';
 import { ValidationUtils } from '@/utils/validation';
 import { InvalidTokenPage } from '@/components/shared';
+import { useAuthStore } from '@/store/authStore';
 
 interface UserOnboardingData {
   fullName: string;
@@ -92,6 +93,7 @@ const UserOnboardingRegistration: React.FC = () => {
   const setPasswordMutation = useAuthApi.setPassword(); // Use set-password API
   const validateTokenMutation = useAuthApi.validateToken();
   const updateInvitedUserMutation = useUserManagementApi().updateInvitedUser;
+  const setAuthToken = useAuthStore((state) => state.setToken);
 
   // Validate token on component mount
   useEffect(() => {
@@ -327,6 +329,11 @@ const UserOnboardingRegistration: React.FC = () => {
         // Store userId from OTP verification response
         const verifiedUserId = response.userId;
         setUserId(verifiedUserId);
+
+        // Persist access token so subsequent API calls include authorization header
+        if (response.accessToken) {
+          setAuthToken(response.accessToken);
+        }
 
         // Call the update invited user API after successful OTP verification
         if (invitationId && invitationId !== '' && verifiedUserId) {

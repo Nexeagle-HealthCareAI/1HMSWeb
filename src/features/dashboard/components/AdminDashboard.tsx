@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
@@ -69,29 +69,39 @@ export const AdminDashboard = () => {
   const [showHospitalRegistrationDialog, setShowHospitalRegistrationDialog] = useState(false);
 
   // Fetch hospital profile status and compute completion from API
-  const authStoreRef = useAuthStore.getState();
-  const hospitalId = authStoreRef.getHospitalId() || '';
-  const { data: hospitalData } = useHospitalApi.getHospitalById(hospitalId);
+  const hospitalId = useAuthStore(state => state.hospitalId) ?? '';
+  const { 
+    data: hospitalData, 
+    isLoading: hospitalLoading, 
+    isFetching: hospitalFetching,
+    isError: hospitalError
+  } = useHospitalApi.getHospitalById(hospitalId);
   const hospitalScore = hospitalData?.profileStatus?.profileCompletionPercent ?? 0;
   const isBasicInfoComplete = hospitalData?.profileStatus?.isBasicInfoComplete ?? false;
   const isLocationInfoComplete = hospitalData?.profileStatus?.isLocationInfoComplete ?? false;
   const isContactInfoComplete = hospitalData?.profileStatus?.isContactInfoComplete ?? false;
   const accessUnlocked = isBasicInfoComplete && isLocationInfoComplete; // allow admin access if both true
+  const hasCompletedHospitalProfileFetch = !!hospitalId && !hospitalLoading && !hospitalFetching;
 
-  const authStore = useAuthStore.getState();
-  const userRole = authStore.getUserRole() || 'Admin';
+  const userRole = useAuthStore(state => state.userRole) ?? 'Admin';
   const hospitalAccessRestricted = useAuthStore(state => state.hospitalAccessRestricted);
   const hospitalAccessMessage = useAuthStore(state => state.hospitalAccessMessage);
   const setHospitalAccessRestriction = useAuthStore(state => state.setHospitalAccessRestriction);
+  const isAdminRole = userRole === 'Admin' || userRole === 'AdminDoctor';
+  const shouldShowPopupForIncompleteProfile = hasCompletedHospitalProfileFetch && hospitalScore < 100;
+  const shouldShowPopupForMissingHospital = isAdminRole && hospitalAccessRestricted && (!hospitalId || (!hospitalData && (hospitalError || hasCompletedHospitalProfileFetch)));
+  const shouldShowHospitalPopup = !bannerDismissed && (shouldShowPopupForIncompleteProfile || shouldShowPopupForMissingHospital);
+  const dashboardRootRef = useRef<HTMLDivElement | null>(null);
 
   // Show Hospital Registration Dialog when admin lands on admin board and hospital is not 100% complete
   useEffect(() => {
-    if (hospitalScore < 100 && !bannerDismissed) {
+    if (shouldShowHospitalPopup) {
       setShowHospitalRegistrationDialog(true);
     }
-  }, [hospitalScore, bannerDismissed]);
+  }, [shouldShowHospitalPopup]);
 
 useEffect(() => {
+  if (!hasCompletedHospitalProfileFetch) return;
   if (hospitalScore >= 100) {
     if (hospitalAccessRestricted) {
       setHospitalAccessRestriction(false, null);
@@ -103,7 +113,46 @@ useEffect(() => {
       setBannerDismissed(true);
     }
   }
-}, [hospitalScore, hospitalAccessRestricted, setHospitalAccessRestriction, showHospitalRegistrationDialog, bannerDismissed]);
+}, [hasCompletedHospitalProfileFetch, hospitalScore, hospitalAccessRestricted, setHospitalAccessRestriction, showHospitalRegistrationDialog, bannerDismissed]);
+
+  useEffect(() => {
+    if (!shouldShowPopupForIncompleteProfile && !shouldShowPopupForMissingHospital && showHospitalRegistrationDialog) {
+      setShowHospitalRegistrationDialog(false);
+    }
+  }, [shouldShowPopupForIncompleteProfile, shouldShowPopupForMissingHospital, showHospitalRegistrationDialog]);
+
+  useEffect(() => {
+    const handleDashboardNavigate = (event: Event) => {
+      const { view, focusTab, scrollToTop } = (event as CustomEvent<{
+        view?: string;
+        focusTab?: string;
+        scrollToTop?: boolean;
+      }>).detail || {};
+
+      if (focusTab) {
+        sessionStorage.setItem('admin-focus-tab', focusTab);
+      }
+
+      if (view) {
+        setCurrentView(view);
+      }
+
+      if (scrollToTop) {
+        requestAnimationFrame(() => {
+          if (dashboardRootRef.current) {
+            dashboardRootRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        });
+      }
+    };
+
+    window.addEventListener('dashboard:navigate', handleDashboardNavigate as EventListener);
+    return () => {
+      window.removeEventListener('dashboard:navigate', handleDashboardNavigate as EventListener);
+    };
+  }, []);
 
   // Auto-scroll to Hospital Branding section when navigating to hospital config
   useEffect(() => {
@@ -278,7 +327,7 @@ useEffect(() => {
 
 
   return (
-    <div className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle relative z-0">
+  <div ref={dashboardRootRef} className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle relative z-0">
       {/* Hospital Registration Progress Dialog/Popup */}
       <Dialog 
         open={showHospitalRegistrationDialog} 

@@ -134,7 +134,7 @@ export const DoctorCalendarPage: React.FC = () => {
   const doctorId = doctorProfile?.doctorId;
   
   // Get doctor name - prioritize from doctor profile, fallback to user details
-  const doctorName = doctorProfile?.name || userDetailsResponse?.userProfile?.fullName || userDetailsResponse?.mobileNumber || 'Doctor';
+  const doctorName = userDetailsResponse?.userProfile?.fullName || userDetailsResponse?.mobileNumber || 'Doctor';
   
   // Get date range for API calls
   const getDateRange = useCallback(() => {
@@ -195,6 +195,19 @@ export const DoctorCalendarPage: React.FC = () => {
   
   // Use real events directly
   const allEvents = events;
+  const clickToManageHint = t('doctorCalendar.clickToManage', 'Tap to manage override');
+  const overrideBadgeLabel = t('doctorCalendar.overrideBadge', 'Override');
+
+  const dynamicScrollTime = React.useMemo(() => {
+    if (view !== 'timeGridDay') return '06:00:00';
+    const now = new Date();
+    const earliestHour = 6;
+    if (now.getHours() < earliestHour) {
+      return '06:00:00';
+    }
+    return format(now, "HH:mm:ss");
+  }, [view]);
+
   
   // Debug time-off data
   React.useEffect(() => {
@@ -606,6 +619,8 @@ export const DoctorCalendarPage: React.FC = () => {
      firstDay: 1, // Monday
      timezone: 'local',
          slotDuration: '00:15:00',
+     slotMinTime: '06:00:00',
+   scrollTime: dynamicScrollTime,
 
      selectOverlap: (event: any) => {
        // Don't allow selection to overlap with override events
@@ -683,8 +698,11 @@ export const DoctorCalendarPage: React.FC = () => {
           return {
             html: `
               <div class="fc-event-main-content override-event-content">
-                <div class="text-xs font-bold">${arg.event.title}</div>
-                <div class="text-xs text-gray-600">${t('doctorCalendar.clickToManage')}</div>
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-[10px] uppercase tracking-[0.16em] text-white/80">${overrideBadgeLabel}</span>
+                  <span class="text-xs font-semibold leading-tight">${arg.event.title}</span>
+                  <span class="text-[10px] text-white/80">${clickToManageHint}</span>
+                </div>
               </div>
             `
           };
@@ -1252,12 +1270,14 @@ export const DoctorCalendarPage: React.FC = () => {
                 <div 
                   className="calendar-container"
                 >
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
-                    <FullCalendar
-                      key={`${view}-${currentDate.toISOString()}`}
-                      ref={calendarRef}
-                      {...calendarOptions}
-                    />
+                  <div className="relative rounded-[30px] bg-gradient-to-br from-white/70 via-slate-50/80 to-blue-50/80 dark:from-slate-900/50 dark:via-slate-900/60 dark:to-slate-900/70 p-[1px] shadow-2xl border border-white/50 dark:border-slate-800/70">
+                    <div className="rounded-[28px] bg-white/95 dark:bg-slate-950/80 backdrop-blur-xl overflow-hidden">
+                      <FullCalendar
+                        key={`${view}-${currentDate.toISOString()}`}
+                        ref={calendarRef}
+                        {...calendarOptions}
+                      />
+                    </div>
                   </div>
                 </div>
               )}
@@ -1272,6 +1292,8 @@ export const DoctorCalendarPage: React.FC = () => {
                   isLoading={eventsLoading || configLoading}
                   isTimeOffWarningClosed={isTimeOffWarningClosed}
                   onCloseTimeOffWarning={() => setIsTimeOffWarningClosed(true)}
+                  currentDate={currentDate}
+                  currentView={view as 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'}
                 />
               </div>
             </div>

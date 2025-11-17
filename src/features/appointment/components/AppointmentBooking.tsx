@@ -132,6 +132,7 @@ export const AppointmentBooking: React.FC = () => {
   // Get userId and authentication status from Zustand auth store
   const userId = useAuthStore((state) => state.userId);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const storedHospitalId = useAuthStore((state) => state.hospitalId);
   
   // Fetch hospital user information using the userId from auth store
   const { 
@@ -141,7 +142,8 @@ export const AppointmentBooking: React.FC = () => {
   } = useHospitalUser(userId || '');
   
   // Get hospital ID from the response
-  const hospitalId = hospitalUserResponse?.hospitalId; 
+  const hospitalId = hospitalUserResponse?.hospitalId || storedHospitalId || '';
+  const shouldShowHospitalLoader = hospitalUserLoading && !storedHospitalId;
   
   // Finally, fetch departments using the hospital ID
   const { data: departmentsResponse, 
@@ -319,7 +321,7 @@ export const AppointmentBooking: React.FC = () => {
   }
   
   // Show error if hospital user data is not available
-  if (hospitalUserError) {
+  if (hospitalUserError && !storedHospitalId) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 flex items-center justify-center">
         <div className="text-center">
@@ -340,7 +342,7 @@ export const AppointmentBooking: React.FC = () => {
   }
   
   // Show loading if hospital user data is loading
-  if (hospitalUserLoading || !hospitalId) {
+  if (shouldShowHospitalLoader || !hospitalId) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 flex items-center justify-center">
         <div className="text-center">
@@ -558,6 +560,22 @@ export const AppointmentBooking: React.FC = () => {
     );
   }
 
+  if (!departmentsLoading && departments.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <div className="text-5xl mb-4">🏥</div>
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-2">
+            {t('appointmentBooking.noDepartmentsAvailable')}
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            {t('appointmentBooking.noDepartmentsAvailableMessage')}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (showSuccess) {
     return (
       <BookingSuccess 
@@ -711,23 +729,25 @@ export const AppointmentBooking: React.FC = () => {
               </div>
 
               {/* More Departments Dropdown */}
-              <div className="mb-4">
-              <Select value={selectedDepartment} onValueChange={handleDepartmentSelect}>
-                  <SelectTrigger className="h-9 text-xs">
-                    <SelectValue placeholder={t('appointmentBooking.moreDepartments')} />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-gray-800 border dark:border-gray-700 shadow-lg z-50">
-                    {departments.slice(4).map((dept) => (
-                      <SelectItem key={dept.id} value={dept.id} className="text-xs">
-                        <div className="flex items-center gap-2">
-                          <dept.icon className="h-3 w-3" />
-                          <span>{dept.name}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {departments.length > 4 && (
+                <div className="mb-4">
+                  <Select value={selectedDepartment} onValueChange={handleDepartmentSelect}>
+                    <SelectTrigger className="h-9 text-xs">
+                      <SelectValue placeholder={t('appointmentBooking.moreDepartments')} />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white dark:bg-gray-800 border dark:border-gray-700 shadow-lg z-50">
+                      {departments.slice(4).map((dept) => (
+                        <SelectItem key={dept.id} value={dept.id} className="text-xs">
+                          <div className="flex items-center gap-2">
+                            <dept.icon className="h-3 w-3" />
+                            <span>{dept.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {/* Doctor Selection - Desktop */}
               <div className="border-t pt-4">

@@ -1,17 +1,15 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from 'react-i18next';
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   Users, 
   UserPlus, 
@@ -39,6 +37,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useMutation } from '@tanstack/react-query';
 import { InviteUserResponse } from '../services/userManagementApi';
 import { ValidationUtils } from '@/utils/validation';
+import { cn } from '@/lib/utils';
 
 export const UserManagement: React.FC = () => {
   const { t } = useTranslation();
@@ -74,29 +73,23 @@ export const UserManagement: React.FC = () => {
     workingHours: ''
   });
 
-  const userTabsConfig: Array<{
+  const navigationItems: Array<{
     value: 'onboarded' | 'invited';
     title: string;
-    helper: string;
+    description: string;
     Icon: LucideIcon;
-    accent: string;
-    indicator: string;
   }> = [
     {
       value: 'onboarded',
       title: t('userManagement.onboardedUsers'),
-      helper: t('userManagement.activeUsers'),
+      description: t('userManagement.activeUsers'),
       Icon: Users,
-      accent: 'from-sky-500 via-indigo-500 to-blue-600',
-      indicator: 'bg-sky-500'
     },
     {
       value: 'invited',
       title: t('userManagement.invitedUsers'),
-      helper: t('userManagement.pendingInvitations'),
+      description: t('userManagement.pendingInvitations'),
       Icon: Mail,
-      accent: 'from-amber-500 via-orange-500 to-pink-500',
-      indicator: 'bg-amber-500'
     }
   ];
 
@@ -171,88 +164,79 @@ export const UserManagement: React.FC = () => {
 
   return (
     <div className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle">
-      <div className="flex flex-col gap-2">
-        <h2 className="text-3xl font-bold text-foreground">{t('userManagement.title')}</h2>
-        <p className="text-muted-foreground text-sm">{t('userManagement.subtitle')}</p>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-transparent p-0">
-          {userTabsConfig.map(({ value, title, helper, Icon, accent, indicator }) => {
-            const isActive = activeTab === value;
-            return (
-              <TabsTrigger
-                key={value}
-                value={value}
-                className={`group relative overflow-hidden rounded-2xl border px-4 py-4 text-left transition-all duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 ${
-                  isActive
-                    ? 'bg-background border-primary/40 shadow-xl shadow-primary/20'
-                    : 'bg-white/90 dark:bg-gray-900 border-border hover:border-primary/30 hover:shadow-lg'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-3">
+      <div className="grid gap-6 lg:grid-cols-[280px,1fr]">
+        <aside className="hidden lg:flex">
+          <div className="w-full rounded-2xl border border-border/60 bg-card/60 p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">User areas</p>
+            <div className="mt-3 space-y-3">
+              {navigationItems.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setActiveTab(item.value)}
+                  className={cn(
+                    'w-full rounded-xl border px-3 py-3 text-left transition-all',
+                    activeTab === item.value
+                      ? 'border-primary/40 bg-primary/5 shadow-sm'
+                      : 'border-transparent hover:border-border'
+                  )}
+                >
                   <div className="flex items-center gap-3">
-                    <div
-                      className={`p-3 rounded-xl transition-all duration-300 ${
-                        isActive
-                          ? `bg-gradient-to-br ${accent} text-white shadow-lg`
-                          : 'bg-muted text-muted-foreground'
-                      }`}
+                    <span
+                      className={cn(
+                        'flex h-10 w-10 items-center justify-center rounded-xl border text-primary',
+                        activeTab === item.value
+                          ? 'border-primary/40 bg-white'
+                          : 'border-border/60 bg-muted/40'
+                      )}
                     >
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div className="space-y-0.5">
-                      <p className="font-semibold text-sm">{title}</p>
-                      <p className="text-xs text-muted-foreground">{helper}</p>
+                      <item.Icon className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <p className="text-sm font-semibold">{item.title}</p>
+                      <p className="text-xs text-muted-foreground">{item.description}</p>
                     </div>
                   </div>
-                  <span
-                    className={`text-[11px] font-semibold px-3 py-1 rounded-full transition-colors duration-300 ${
-                      isActive
-                        ? `${indicator} text-white`
-                        : 'bg-muted text-muted-foreground'
-                    }`}
+                </button>
+              ))}
+            </div>
+          </div>
+        </aside>
+
+        <section className="rounded-2xl border border-border/60 bg-card/70 p-4 sm:p-6 shadow-sm space-y-6">
+          <div className="flex justify-end">
+            <Button className="gap-2" onClick={() => setShowAddUser(true)}>
+              <Mail className="h-4 w-4" />
+              {t('userManagement.inviteUser')}
+            </Button>
+          </div>
+
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <div className="lg:hidden">
+              <TabsList className="flex gap-2 rounded-2xl bg-muted/40 p-1">
+                {navigationItems.map((item) => (
+                  <TabsTrigger
+                    key={item.value}
+                    value={item.value}
+                    className="group relative flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-medium"
                   >
-                    {isActive ? 'Active' : 'Switch'}
-                  </span>
-                </div>
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
+                    <item.Icon className="h-4 w-4 text-muted-foreground group-data-[state=active]:text-primary" />
+                    <span>{item.title}</span>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
 
-        <TabsContent value="onboarded" className="space-y-6">
-          {/* Header Actions */}
-          <div className="flex justify-end">
-            <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
-              <DialogTrigger asChild>
-                <Button className="gap-2">
-                  <Mail className="h-4 w-4" />
-                  {t('userManagement.inviteUser')}
-                </Button>
-              </DialogTrigger>
-            </Dialog>
-          </div>
+            <TabsContent value="onboarded" className="space-y-6">
+              <OnboardedUsers />
+            </TabsContent>
 
-          <OnboardedUsers />
-        </TabsContent>
-
-        <TabsContent value="invited" className="space-y-6">
-          {/* Header Actions */}
-          <div className="flex justify-end">
-            <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
-              <DialogTrigger asChild>
-                <Button className="gap-2">
-                  <Mail className="h-4 w-4" />
-                  {t('userManagement.inviteUser')}
-                </Button>
-              </DialogTrigger>
-            </Dialog>
-          </div>
-
-          <InvitedUsers initialScope={invitedUsersScope} />
-        </TabsContent>
-      </Tabs>
+            <TabsContent value="invited" className="space-y-6">
+              <InvitedUsers initialScope={invitedUsersScope} />
+            </TabsContent>
+          </Tabs>
+        </section>
+      </div>
 
       {/* Add User Dialog */}
       <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
