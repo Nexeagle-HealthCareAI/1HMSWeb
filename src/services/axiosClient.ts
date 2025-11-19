@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError, InternalAxiosRequestConfig, AxiosHeaders } from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import { API_BASE_URL, DEFAULT_HEADERS, API_ENDPOINTS } from '@/app/api';
 
@@ -32,8 +32,13 @@ axiosInstance.interceptors.request.use(
 
     // Add authentication token to requests
     const token = useAuthStore.getState().getToken();
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (token) {
+      const headers = config.headers instanceof AxiosHeaders
+        ? config.headers
+        : AxiosHeaders.from(config.headers || {});
+
+      headers.set('Authorization', `Bearer ${token}`);
+      config.headers = headers;
     }
     
     // Add CSRF token if available

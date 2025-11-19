@@ -51,7 +51,8 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
   
   // Profile completion hook
   const { doctorProfileCompletion } = useProfileCompletion();
-  const isProfileComplete = doctorProfileCompletion >= 100;
+  const clampedProfileCompletion = Math.min(Math.max(Math.round(doctorProfileCompletion ?? 0), 0), 100);
+  const isProfileComplete = clampedProfileCompletion >= 100;
   
   // Fetch departments from API
   const { data: departmentsResponse, isLoading: departmentsLoading, error: departmentsError } = useDepartmentApi.getGlobalDepartments();
@@ -104,20 +105,30 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
   // Validation schema
   const DoctorSchema = z.object({
     licenseNumber: z.string().min(1, 'License number is required'),
-    qualifications: z.array(z.string()).min(1, 'At least one qualification is required'),
+    qualifications: z.array(z.string()).min(1, 'Select at least one qualification'),
+    specializations: z.array(z.string()).min(1, 'Select at least one specialization'),
     experienceYears: z
       .union([z.string(), z.number()])
-      .transform((v) => (typeof v === 'string' ? Number(v || 0) : v))
-      .refine((v) => Number.isInteger(v) && v >= 0, { message: 'Experience must be a non-negative integer' })
-      .optional(),
-    medicalCouncil: z.string().max(100, 'Too long').optional(),
+      .transform((v) => {
+        if (typeof v === 'string') {
+          return Number(v);
+        }
+        return v;
+      })
+      .refine((v) => Number.isInteger(v) && v >= 0, { message: 'Experience years is required and must be a non-negative number' }),
+    medicalCouncil: z.string().min(1, 'Medical council is required').max(100, 'Too long'),
     registrationYear: z
       .union([z.string(), z.number()])
-      .transform((v) => (v === '' ? undefined : Number(v)))
-      .refine((v) => v === undefined || (Number.isInteger(v) && v <= new Date().getFullYear()), {
-        message: 'Invalid year',
+      .transform((v) => {
+        if (typeof v === 'string') {
+          return Number(v);
+        }
+        return v;
       })
-      .optional(),
+      .refine(
+        (v) => Number.isInteger(v) && v >= 1900 && v <= new Date().getFullYear(),
+        { message: 'Registration year is required and must be valid' }
+      ),
     bio: z.string().optional(),
   });
 
@@ -186,6 +197,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
     const result = DoctorSchema.safeParse({
       licenseNumber: profileData.licenseNumber,
       qualifications: profileData.qualification,
+      specializations: profileData.specializations,
       experienceYears: profileData.experienceYears,
       medicalCouncil: profileData.medicalCouncil,
       registrationYear: profileData.registrationYear,
@@ -360,7 +372,10 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
             <AccordionContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div>
-                  <Label htmlFor="department">Department</Label>
+                  <Label htmlFor="department" className="flex items-center gap-1">
+                    Department
+                    <span className="text-red-500">*</span>
+                  </Label>
                   <Select
                     value={profileData.department || ''}
                     onValueChange={handleDepartmentChange}
@@ -391,6 +406,10 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                 </div>
                 
                 <div className="md:col-span-2">
+                  <Label className="flex items-center gap-1 text-sm font-medium">
+                    Specializations
+                    <span className="text-red-500">*</span>
+                  </Label>
                   <SpecializationSelector
                     departmentId={profileData.department}
                     departmentName={selectedDepartment?.name || ''}
@@ -398,18 +417,31 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                     onSpecializationsChange={handleSpecializationsChange}
                     disabled={!isEditing}
                   />
+                  {doctorErrors.specializations && (
+                    <p className="text-xs text-red-600 mt-1">{doctorErrors.specializations}</p>
+                  )}
                 </div>
                 
                 <div className="md:col-span-2">
+                  <Label className="flex items-center gap-1 text-sm font-medium">
+                    Qualifications
+                    <span className="text-red-500">*</span>
+                  </Label>
                   <QualificationSelector
                     selectedQualifications={profileData.qualification}
                     onQualificationsChange={handleQualificationsChange}
                     disabled={!isEditing}
                   />
+                  {doctorErrors.qualifications && (
+                    <p className="text-xs text-red-600 mt-1">{doctorErrors.qualifications}</p>
+                  )}
                 </div>
                 
                 <div>
-                  <Label htmlFor="licenseNumber">Medical License Number *</Label>
+                  <Label htmlFor="licenseNumber" className="flex items-center gap-1">
+                    Medical License Number
+                    <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="licenseNumber"
                     value={profileData.licenseNumber}
@@ -417,11 +449,14 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                     disabled={!isEditing}
                     className="mt-1"
                   />
-                  {doctorErrors.licenseNumber && <p className="text-xs text-amber-600 mt-1">{doctorErrors.licenseNumber}</p>}
+                  {doctorErrors.licenseNumber && <p className="text-xs text-red-600 mt-1">{doctorErrors.licenseNumber}</p>}
                 </div>
                 
                 <div>
-                  <Label htmlFor="experienceYears">Years of Experience</Label>
+                  <Label htmlFor="experienceYears" className="flex items-center gap-1">
+                    Years of Experience
+                    <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="experienceYears"
                     type="number"
@@ -430,10 +465,16 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                     disabled={!isEditing}
                     className="mt-1"
                   />
+                  {doctorErrors.experienceYears && (
+                    <p className="text-xs text-red-600 mt-1">{doctorErrors.experienceYears}</p>
+                  )}
                 </div>
                 
                 <div>
-                  <Label htmlFor="medicalCouncil">Medical Council</Label>
+                  <Label htmlFor="medicalCouncil" className="flex items-center gap-1">
+                    Medical Council
+                    <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="medicalCouncil"
                     value={profileData.medicalCouncil || ''}
@@ -441,10 +482,16 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                     disabled={!isEditing}
                     className="mt-1"
                   />
+                  {doctorErrors.medicalCouncil && (
+                    <p className="text-xs text-red-600 mt-1">{doctorErrors.medicalCouncil}</p>
+                  )}
                 </div>
                 
                 <div>
-                  <Label htmlFor="registrationYear">Registration Year</Label>
+                  <Label htmlFor="registrationYear" className="flex items-center gap-1">
+                    Registration Year
+                    <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="registrationYear"
                     type="number"
@@ -453,7 +500,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                     disabled={!isEditing}
                     className="mt-1"
                   />
-                  {doctorErrors.registrationYear && <p className="text-xs text-amber-600 mt-1">{doctorErrors.registrationYear}</p>}
+                  {doctorErrors.registrationYear && <p className="text-xs text-red-600 mt-1">{doctorErrors.registrationYear}</p>}
                 </div>
                 
                 <div className="md:col-span-2">
@@ -479,7 +526,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
               </div>
               
               {Object.entries(doctorErrors).map(([k, v]) => v && (
-                <p key={k} className="text-xs text-amber-600 mt-2">{v}</p>
+                <p key={k} className="text-xs text-red-600 mt-2">{v}</p>
               ))}
               
               {isEditing && (
@@ -518,8 +565,26 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Professional details updated</AlertDialogTitle>
-            <AlertDialogDescription>
-              Your profile is now synced with the latest information. What would you like to do next?
+            <AlertDialogDescription className="space-y-4">
+              <p>Your profile is now synced with the latest information. What would you like to do next?</p>
+              <div className="border border-slate-100 rounded-xl p-4 bg-slate-50/60">
+                <div className="flex items-center justify-between text-sm font-medium text-slate-700">
+                  <span>Profile completion</span>
+                  <span className="text-blue-600">{clampedProfileCompletion}%</span>
+                </div>
+                <div className="mt-2 h-2 rounded-full bg-slate-200">
+                  <div
+                    className="h-full rounded-full bg-blue-600 transition-all"
+                    style={{ width: `${clampedProfileCompletion}%` }}
+                    aria-label={`Profile completion ${clampedProfileCompletion}%`}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  {clampedProfileCompletion === 100
+                    ? 'Amazing! Your professional profile is fully complete.'
+                    : 'Complete the remaining fields to unlock the full experience.'}
+                </p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

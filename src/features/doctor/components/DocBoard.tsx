@@ -130,7 +130,7 @@ export const ClinicalDashboard: React.FC = () => {
   // Check if doctor profile is restricted (204/404 means profile incomplete)
   const doctorProfileRestricted = useAuthStore(state => state.doctorProfileRestricted);
   const doctorProfileMessage = useAuthStore(state => state.doctorProfileMessage);
-  const canBypassDoctorRestriction = userRole === 'AdminDoctor' && Boolean(hospitalId);
+  const canBypassDoctorRestriction = (userRole === 'AdminDoctor' || userRole === 'Doctor') && Boolean(hospitalId);
   const isDoctorExperienceLocked = doctorProfileRestricted && !canBypassDoctorRestriction;
 
   const doctorDisplayName = doctorProfileResponse?.userId || 'Doctor';
