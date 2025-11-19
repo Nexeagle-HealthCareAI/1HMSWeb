@@ -168,7 +168,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
   const handleQualificationsChange = (qualifications: string[]) => {
     setProfileData(prev => ({
       ...prev,
-      qualifications
+      qualification: qualifications
     }));
   };
 
