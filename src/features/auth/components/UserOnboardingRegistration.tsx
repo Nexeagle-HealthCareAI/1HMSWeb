@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { isAxiosError } from 'axios';
 import { 
@@ -139,9 +139,10 @@ const UserOnboardingRegistration: React.FC = () => {
   const verifyOTPMutation = useAuthApi.verifyOTP();
   const registerMutation = useAuthApi.register(); // Use regular register API first
   const setPasswordMutation = useAuthApi.setPassword(); // Use set-password API
-  const validateTokenMutation = useAuthApi.validateToken();
+  const { mutateAsync: validateTokenAsync } = useAuthApi.validateToken();
   const updateInvitedUserMutation = useUserManagementApi().updateInvitedUser;
   const setAuthToken = useAuthStore((state) => state.setToken);
+  const [lastCheckedToken, setLastCheckedToken] = useState<string | null>(null);
 
   // Handle resend timer countdown
   useEffect(() => {
@@ -160,70 +161,74 @@ const UserOnboardingRegistration: React.FC = () => {
     return () => clearInterval(interval);
   }, [resendTimer]);
 
-  const validateToken = useCallback(async () => {
+  // Validate token on component mount
+  useEffect(() => {
     if (!token) {
       setIsValidatingToken(false);
       setIsTokenValid(false);
       setTokenValidationMessage("No invitation token provided.");
+      setLastCheckedToken(null);
       return;
     }
 
-    try {
-      setIsValidatingToken(true);
-      const response = await validateTokenMutation.mutateAsync({
-        token: token
-      });
+    if (lastCheckedToken === token) {
+      return;
+    }
 
-      if (response.success) {
-        setIsTokenValid(true);
-        setIsValidatingToken(false);
+    let isActive = true;
 
-        // Store invitationId from response, fallback to token if not present
-        setInvitationId(response.invitationId ? response.invitationId : token || '');
+    const runValidation = async () => {
+      try {
+        setIsValidatingToken(true);
+        const response = await validateTokenAsync({ token });
 
-        // Pre-fill form data if available
-        if (response.name) {
-          setFormData(prev => ({ ...prev, fullName: response.name || '' }));
-        }
-        if (response.email) {
-          setFormData(prev => ({ ...prev, email: response.email || '' }));
-        }
-        if (response.mobile) {
-          setFormData(prev => ({ ...prev, mobileNumber: response.mobile || '' }));
-          // Don't auto-verify mobile - user needs to go through OTP process
-        }
-        if (response.roleName) {
-          setFormData(prev => ({ ...prev, userRole: response.roleName || '' }));
+        if (!isActive) {
+          return;
         }
 
-        toast({
-          title: "Welcome!",
-          description: "Your invitation is valid. Please complete your registration.",
-        });
-      } else {
+        if (response.success) {
+          setIsTokenValid(true);
+          setInvitationId(response.invitationId ? response.invitationId : token || '');
+
+          if (response.name) {
+            setFormData(prev => ({ ...prev, fullName: response.name || '' }));
+          }
+          if (response.email) {
+            setFormData(prev => ({ ...prev, email: response.email || '' }));
+          }
+          if (response.mobile) {
+            setFormData(prev => ({ ...prev, mobileNumber: response.mobile || '' }));
+          }
+          if (response.roleName) {
+            setFormData(prev => ({ ...prev, userRole: response.roleName || '' }));
+          }
+
+          toast({
+            title: "Welcome!",
+            description: "Your invitation is valid. Please complete your registration.",
+          });
+        } else {
+          setIsTokenValid(false);
+          setTokenValidationMessage(response.message || "Invalid invitation token.");
+        }
+      } catch (error: unknown) {
+        console.error('Error validating token:', error);
         setIsTokenValid(false);
-        setIsValidatingToken(false);
-        setTokenValidationMessage(response.message || "Invalid invitation token.");
+        setTokenValidationMessage(getErrorMessage(error) || "Failed to validate invitation token. Please try again.");
+      } finally {
+        if (isActive) {
+          setIsValidatingToken(false);
+          setLastCheckedToken(token);
+        }
       }
-    } catch (error: unknown) {
-      console.error('Error validating token:', error);
-      setIsTokenValid(false);
-      setIsValidatingToken(false);
-      setTokenValidationMessage(getErrorMessage(error) || "Failed to validate invitation token. Please try again.");
-    }
-  }, [token, validateTokenMutation]);
+    };
 
-  // Validate token on component mount
-  useEffect(() => {
-    if (token) {
-      void validateToken();
-    } else {
-      // No token provided
-      setIsValidatingToken(false);
-      setIsTokenValid(false);
-      setTokenValidationMessage("No invitation token provided.");
-    }
-  }, [token, validateToken]);
+    void runValidation();
+
+    return () => {
+      isActive = false;
+    };
+  }, [token, lastCheckedToken, validateTokenAsync]);
 
   const handleNextStep = () => {
     if (!formData.fullName.trim()) {
