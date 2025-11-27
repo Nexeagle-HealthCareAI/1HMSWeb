@@ -15,7 +15,7 @@ import {
   AppointmentCancelDialog
 } from './components';
 import { useCalendarEvents, useCreateOverride, useDeleteOverride, useTimeOff, useCreateTimeOff, useDeleteTimeOff, useDoctorCalendarConfig, useAppointmentCancel } from './hooks/useCalendar';
-import { CalendarEvent, CreateOverridePayload, CreateBlockPayload, ShiftName } from './api/types';
+import { CalendarEvent, CreateOverridePayload, CreateBlockPayload, ShiftName, CreateTimeOffRequest } from './api/types';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -132,6 +132,8 @@ export const DoctorCalendarPage: React.FC = () => {
   
   // Use doctorId from doctor profile response - wait for it to load
   const doctorId = doctorProfile?.doctorId;
+  const authStore = useAuthStore();
+  const hospitalId = authStore.getHospitalId();
   
   // Get doctor name - prioritize from doctor profile, fallback to user details
   const doctorName = userDetailsResponse?.userProfile?.fullName || userDetailsResponse?.mobileNumber || 'Doctor';
@@ -189,9 +191,9 @@ export const DoctorCalendarPage: React.FC = () => {
   const daysCount = getDaysCount();
   
   // Queries - Use the same startDate for both hooks to ensure consistency
-  const { data: calendarConfig, isLoading: configLoading } = useDoctorCalendarConfig(doctorId, fromISO, daysCount);
-  const { data: events = [], isLoading: eventsLoading } = useCalendarEvents(doctorId, fromISO, toISO, calendarConfig);
-  const { data: timeOffData, isLoading: timeOffLoading } = useTimeOff(doctorId);
+  const { data: calendarConfig, isLoading: configLoading } = useDoctorCalendarConfig(doctorId,hospitalId, fromISO, daysCount);
+  const { data: events = [], isLoading: eventsLoading } = useCalendarEvents(doctorId,hospitalId, fromISO, toISO, calendarConfig);
+  const { data: timeOffData, isLoading: timeOffLoading } = useTimeOff(doctorId,hospitalId);
   
   // Use real events directly
   const allEvents = events;
@@ -881,7 +883,12 @@ export const DoctorCalendarPage: React.FC = () => {
   
   // Modal handlers
   const handleSaveOverride = (payload: CreateOverridePayload) => {
-    createOverrideMutation.mutate(payload, {
+    // Ensure hospitalId is present in payload
+    const finalPayload: CreateOverridePayload = {
+      ...payload,
+      hospitalId: hospitalId || payload.hospitalId,
+    };
+    createOverrideMutation.mutate(finalPayload, {
       onSuccess: (data) => {
     toast({
           title: "Success",
@@ -911,7 +918,11 @@ export const DoctorCalendarPage: React.FC = () => {
       
       for (const payload of payloads) {
         try {
-          await createOverrideMutation.mutateAsync(payload);
+          const finalPayload: CreateOverridePayload = {
+            ...payload,
+            hospitalId: hospitalId || payload.hospitalId,
+          };
+          await createOverrideMutation.mutateAsync(finalPayload);
           successCount++;
         } catch (error) {
           console.error('Error creating override:', error);
@@ -961,49 +972,58 @@ export const DoctorCalendarPage: React.FC = () => {
     
     processPayloads();
   };
-
-       const handleSaveBlockFromPersonalized = (payload: CreateBlockPayload) => {
+  const handleSaveBlockFromPersonalized = (payload: CreateBlockPayload) => {
+    if (!hospitalId) {
+      toast({
+        title: t('doctorCalendar.error'),
+        description: 'Hospital context is missing. Please refresh and try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     // Convert CreateBlockPayload to CreateTimeOffRequest
     // Format dates to YYYY-MM-DD format for the API
     const fromDate = new Date(payload.startDateTime);
     const toDate = new Date(payload.endDateTime);
     
-         const timeOffRequest = {
-       doctorId: payload.doctorId,
-       fromDate: format(fromDate, 'yyyy-MM-dd'),
-       toDate: format(toDate, 'yyyy-MM-dd'),
-       reason: payload.title
-     };
-     
-     createTimeOffMutation.mutate(timeOffRequest, {
-       onSuccess: (data) => {
-         setSuccessDialog({
-           open: true,
-           title: t('doctorCalendar.timeOffScheduled'),
-           message: t('doctorCalendar.timeOffScheduledMessage'),
-           details: [
-             `✅ ${t('doctorCalendar.timeOffBlocked')}`,
-             `📅 ${t('doctorCalendar.duration')}: ${format(fromDate, 'MMM dd, yyyy HH:mm')} - ${format(toDate, 'MMM dd, yyyy HH:mm')}`,
-             `🚫 ${t('doctorCalendar.noAppointmentsBooked')}`,
-             `📱 ${t('doctorCalendar.cancelTimeOffAnytime')}`
-           ]
-         });
-         setPersonalizedScheduleModal(prev => ({ ...prev, open: false }));
-         
-         // Reload page after successful time off creation
-         setTimeout(() => {
-           window.location.reload();
-         }, 1000);
-       },
-       onError: (error) => {
-                toast({
-         title: t('doctorCalendar.error'),
-         description: t('doctorCalendar.failedToScheduleTimeOff'),
-         variant: "destructive",
-       });
-       }
-     });
-   };
+    const timeOffRequest: CreateTimeOffRequest = {
+      doctorId: payload.doctorId,
+      hospitalId,
+      fromDate: format(fromDate, 'yyyy-MM-dd'),
+      toDate: format(toDate, 'yyyy-MM-dd'),
+      reason: payload.title
+    };
+    
+    createTimeOffMutation.mutate(timeOffRequest, {
+      onSuccess: (data) => {
+        setSuccessDialog({
+          open: true,
+          title: t('doctorCalendar.timeOffScheduled'),
+          message: t('doctorCalendar.timeOffScheduledMessage'),
+          details: [
+            `✅ ${t('doctorCalendar.timeOffBlocked')}`,
+            `📅 ${t('doctorCalendar.duration')}: ${format(fromDate, 'MMM dd, yyyy HH:mm')} - ${format(toDate, 'MMM dd, yyyy HH:mm')}`,
+            `🚫 ${t('doctorCalendar.noAppointmentsBooked')}`,
+            `📱 ${t('doctorCalendar.cancelTimeOffAnytime')}`
+          ]
+        });
+        setPersonalizedScheduleModal(prev => ({ ...prev, open: false }));
+        
+        // Reload page after successful time off creation
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      },
+      onError: (error) => {
+        toast({
+          title: t('doctorCalendar.error'),
+          description: t('doctorCalendar.failedToScheduleTimeOff'),
+          variant: 'destructive',
+        });
+      }
+    });
+  };
   
   const handleDeleteOverride = () => {
     // TODO: Implement when override API is available

@@ -10,8 +10,8 @@ import {
 
 export const timeOffApi = {
   // Get doctor's time-off data
-  getDoctorTimeOff: (doctorId: string): Promise<GetTimeOffResponse> => {
-    return apiClient.get(API_ENDPOINTS.CALENDAR.GET_DOCTOR_TIMEOFF(doctorId));
+  getDoctorTimeOff: (doctorId: string, hospitalId: string): Promise<GetTimeOffResponse> => {
+    return apiClient.get(API_ENDPOINTS.CALENDAR.GET_DOCTOR_TIMEOFF(doctorId, hospitalId));
   },
 
   // Create a new time-off entry
@@ -25,7 +25,7 @@ export const timeOffApi = {
   },
 
   // Get doctor calendar configuration
-  getDoctorCalendarConfig: (doctorId: string, startDate: string, days: number): Promise<DoctorCalendarConfigResponse> => {
-    return apiClient.get(API_ENDPOINTS.CALENDAR.GET_DOCTOR_CONFIG(doctorId, startDate, days));
+  getDoctorCalendarConfig: (doctorId: string, hospitalId: string, startDate: string, days: number): Promise<DoctorCalendarConfigResponse> => {
+    return apiClient.get(API_ENDPOINTS.CALENDAR.GET_DOCTOR_CONFIG(doctorId, hospitalId, startDate, days));
   },
 };

@@ -629,7 +629,7 @@ const UserOnboardingRegistration: React.FC = () => {
                   <p className="text-xs text-slate-500">Provided by your administrator</p>
                 </div>
                 <div className="text-xs text-slate-500">
-                  Questions? <span className="text-blue-600 font-semibold">support@nexeagle.com</span>
+                  Questions? <span className="text-blue-600 font-semibold">info@nexeagle.com</span>
                 </div>
               </div>
             </div>

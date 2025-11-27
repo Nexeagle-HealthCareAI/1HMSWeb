@@ -39,7 +39,7 @@ const LoginPage = () => {
         navigate('/dashboard');
       } else {
         // Default fallback
-        navigate('/dashboard');
+        navigate('/appointment-dashboard');
       }
     }
   }, [isAuthenticated, currentState, navigate, location.state]);
@@ -65,7 +65,7 @@ const LoginPage = () => {
       navigate('/dashboard');
     } else {
       // Default fallback
-      navigate('/dashboard');
+      navigate('/appointment-dashboard');
     }
   };
 

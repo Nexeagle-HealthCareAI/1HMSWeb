@@ -285,20 +285,20 @@ export const appointmentApi = {
   },
 
     // Get doctors by department
-  getDoctorsByDepartment: (departmentId: string): Promise<{ doctors: ApiDoctor[] }> => {
-       const url = `/appointments/department-doctor?departmentId=${departmentId}`;    
+    getDoctorsByDepartment: (departmentId: string, hospitalId: string): Promise<{ doctors: ApiDoctor[] }> => {
+      const url = `/appointments/department-doctor?departmentId=${departmentId}&hospitalId=${hospitalId}`;    
        return apiClient.get(url);
    },
 
   // Get doctor slots
-  getDoctorSlots: (doctorId: string, date: string): Promise<DoctorSlotsResponse> => {
-    const url = `/calendar/doctor/slots?doctorId=${doctorId}&slotDate=${date}`;
+  getDoctorSlots: (doctorId: string, hospitalId: string, date: string): Promise<DoctorSlotsResponse> => {
+    const url = `/calendar/doctor/slots?doctorId=${doctorId}&hospitalId=${hospitalId}&slotDate=${date}`;
     return apiClient.get(url);
   },
 
   // Get booked slots for a doctor on a specific date
-  getBookedSlots: (doctorId: string, date: string): Promise<BookedSlotsResponse> => {
-    const url = `/appointments/patient-booked-slots?doctorId=${doctorId}&date=${date}`;
+  getBookedSlots: (doctorId: string, hospitalId: string, date: string): Promise<BookedSlotsResponse> => {
+    const url = `/appointments/patient-booked-slots?doctorId=${doctorId}&hospitalId=${hospitalId}&date=${date}`;
     return apiClient.get(url);
   },
 

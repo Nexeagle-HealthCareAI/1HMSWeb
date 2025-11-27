@@ -167,7 +167,7 @@ export const AppointmentBooking: React.FC = () => {
   // Fetch doctors for the selected department
   const { data: doctorsResponse, 
     isLoading: doctorsLoading, 
-    error: doctorsError } = useDoctorsByDepartment(selectedDepartment);
+    error: doctorsError } = useDoctorsByDepartment(selectedDepartment, hospitalId);
   
   // Format selected date for API
   const formattedDate = selectedDate.toISOString().split('T')[0]; // YYYY-MM-DD format
@@ -175,12 +175,12 @@ export const AppointmentBooking: React.FC = () => {
   // Fetch doctor slots for the selected doctor and date
   const { data: doctorSlotsResponse, 
     isLoading: doctorSlotsLoading, 
-    error: doctorSlotsError } = useDoctorSlots(selectedDoctor?.id || '', formattedDate);
+    error: doctorSlotsError } = useDoctorSlots(selectedDoctor?.id || '', hospitalId, formattedDate);
 
   // Fetch booked slots for the selected doctor and date
   const { data: bookedSlotsResponse, 
     isLoading: bookedSlotsLoading, 
-    error: bookedSlotsError } = useBookedSlots(selectedDoctor?.id || '', formattedDate) as {
+    error: bookedSlotsError } = useBookedSlots(selectedDoctor?.id || '', hospitalId, formattedDate) as {
     data: BookedSlotsResponse | undefined;
     isLoading: boolean;
     error: Error | null;

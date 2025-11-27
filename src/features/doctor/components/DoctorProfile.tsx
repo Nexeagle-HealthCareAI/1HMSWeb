@@ -87,6 +87,17 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
   hospitalId: hospitalId || ''
   });
 
+  useEffect(() => {
+    if (hospitalId) {
+      setProfileData(prev => {
+        if (prev.hospitalId === hospitalId) {
+          return prev;
+        }
+        return { ...prev, hospitalId };
+      });
+    }
+  }, [hospitalId]);
+
   // Extract department names from API response
   const departmentOptions = useMemo(() => {
     if (!departmentsResponse?.departments) return [];
@@ -215,6 +226,16 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
   // Save doctor profile
   const saveDoctor = async () => {
     if (!validateDoctor()) return;
+    const resolvedHospitalId = hospitalId || profileData.hospitalId;
+
+    if (!resolvedHospitalId) {
+      toast({
+        title: 'Error',
+        description: 'Hospital information is missing. Please refresh and try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
     setSaving(true);
     
     try {
@@ -243,7 +264,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
           primaryDepartment: selectedDepartmentName,
           department: selectedDepartmentName,
           specializations: profileData.specializations,
-          hospitalId: profileData.hospitalId
+          hospitalId: resolvedHospitalId
         };
 
         try {

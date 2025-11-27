@@ -79,11 +79,11 @@ export const API_ENDPOINTS = {
     GET_PROFILE_DETAILS: (hospitalId: string, patientId: string) => `patient-profile?hospitalId=${hospitalId}&patientId=${patientId}`,
     UPDATE_PROFILE_DETAILS: (hospitalId: string, patientId: string) => `patient-profile?hospitalId=${hospitalId}&patientId=${patientId}`,
   },  
-   CALENDAR: {
-              GET_DOCTOR_TIMEOFF: (doctorId: string) => `calendar/doctor/timeoff?doctorId=${doctorId}`,
+  CALENDAR: {
+          GET_DOCTOR_TIMEOFF: (doctorId: string, hospitalId: string) => `calendar/doctor/timeoff?doctorId=${doctorId}&hospitalId=${hospitalId}`,
               CREATE_DOCTOR_TIMEOFF: 'calendar/doctor/timeoff',
               DELETE_DOCTOR_TIMEOFF: (timeOffId: string) => `calendar/doctor/timeoff/${timeOffId}`,
-              GET_DOCTOR_CONFIG: (doctorId: string, startDate: string, days: number) => `calendar/doctor/config?doctorId=${doctorId}&startDate=${encodeURIComponent(startDate)}&daysCount=${days}`,
+              GET_DOCTOR_CONFIG: (doctorId: string, hospitalId: string, startDate: string, days: number) => `calendar/doctor/config?doctorId=${doctorId}&hospitalId=${hospitalId}&startDate=${encodeURIComponent(startDate)}&daysCount=${days}`,
     CREATE_DOCTOR_OVERRIDE: 'calendar/doctor/override',
     DELETE_DOCTOR_OVERRIDE: (overrideId: string) => `calendar/doctor/override/${overrideId}`,
    },

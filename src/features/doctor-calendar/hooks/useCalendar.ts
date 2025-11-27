@@ -4,10 +4,7 @@ import { overrideApi } from '../api/overrideApi';
 import { 
   CalendarEvent,
   GetTimeOffResponse,
-  CreateTimeOffRequest,
-  CreateOverridePayload,
-  DoctorCalendarConfigResponse,
-  LegacyDoctorCalendarConfigResponse
+  DoctorCalendarConfigResponse
 } from '../api/types';
 
 // Query keys
@@ -16,39 +13,29 @@ export const calendarKeys = {
   events: (doctorId: string, fromISO: string, toISO: string) => 
     [...calendarKeys.all, 'events', doctorId, fromISO, toISO] as const,
   timeOff: (doctorId: string) => [...calendarKeys.all, 'timeOff', doctorId] as const,
-  config: (doctorId: string, startDate: string, days: number) => 
-    [...calendarKeys.all, 'config', doctorId, startDate, days] as const,
+  config: (doctorId: string, hospitalId: string, startDate: string, days: number) => 
+    [...calendarKeys.all, 'config', doctorId, hospitalId, startDate, days] as const,
 };
 
 // Time-off hooks
-export function useTimeOff(doctorId: string) {
+export function useTimeOff(doctorId: string,hospitalId:string) {
   return useQuery<GetTimeOffResponse>({
     queryKey: calendarKeys.timeOff(doctorId),
-    queryFn: () => timeOffApi.getDoctorTimeOff(doctorId),
+    queryFn: () => timeOffApi.getDoctorTimeOff(doctorId,hospitalId),
     enabled: !!doctorId,
   });
 }
 
 // Doctor calendar configuration hook
-export function useDoctorCalendarConfig(doctorId: string, startDate: string, days: number) {
+export function useDoctorCalendarConfig(doctorId: string, hospitalId: string, startDate: string, days: number) {
   return useQuery<DoctorCalendarConfigResponse>({
-    queryKey: calendarKeys.config(doctorId, startDate, days),
-    queryFn: async () => {
-      console.log('🔍 useDoctorCalendarConfig - Calling API with:', {
-        doctorId,
-        startDate,
-        days
-      });
-      
-      const result = await timeOffApi.getDoctorCalendarConfig(doctorId, startDate, days);
-      console.log('🔍 useDoctorCalendarConfig - API response:', result);
-      return result;
-    },
+    queryKey: calendarKeys.config(doctorId, hospitalId, startDate, days),
+    queryFn: async () => timeOffApi.getDoctorCalendarConfig(doctorId, hospitalId, startDate, days),
     enabled: !!doctorId && !!startDate && days > 0,
   });
 }
 
-export function useCalendarEvents(doctorId: string, fromISO: string, toISO: string, calendarConfig?: DoctorCalendarConfigResponse) {
+export function useCalendarEvents(doctorId: string,hospitalId:string, fromISO: string, toISO: string, calendarConfig?: DoctorCalendarConfigResponse) {
   return useQuery<CalendarEvent[]>({
     queryKey: calendarKeys.events(doctorId, fromISO, toISO),
     queryFn: async () => {
@@ -57,47 +44,15 @@ export function useCalendarEvents(doctorId: string, fromISO: string, toISO: stri
       // Fetch time-off data
       let timeOffData: GetTimeOffResponse | null = null;
       try {
-        timeOffData = await timeOffApi.getDoctorTimeOff(doctorId);
-        console.log('📅 Time-off data fetched:', timeOffData);
+        timeOffData = await timeOffApi.getDoctorTimeOff(doctorId,hospitalId);
       } catch (error) {
-        console.error('❌ Error fetching time-off data:', error);
-      }
-
-      console.log('🔍 useCalendarEvents - Input data:', {
-        doctorId,
-        fromISO,
-        toISO,
-        calendarConfig: calendarConfig ? 'present' : 'undefined',
-        shiftInfoCount: calendarConfig?.shiftInfo?.length || 0,
-        dateRange: {
-          from: new Date(fromISO).toISOString(),
-          to: new Date(toISO).toISOString()
-        }
-      });
-
-      // Log the entire calendarConfig structure for debugging
-      if (calendarConfig) {
-        console.log('🔍 Full calendarConfig structure:', JSON.stringify(calendarConfig, null, 2));
+        timeOffData = null;
       }
 
       // Handle new API response structure (shiftInfo array)
       if (calendarConfig?.shiftInfo) {
-        console.log('📅 Processing NEW API structure - shiftInfo array:', calendarConfig.shiftInfo.length);
-
         calendarConfig.shiftInfo.forEach((shiftInfo, shiftIndex) => {
-          console.log(`📅 Processing shiftInfo[${shiftIndex}]:`, {
-            shiftDate: shiftInfo.shiftDate,
-            shiftDayDetailsCount: shiftInfo.shiftDayDetails.length
-          });
-
           shiftInfo.shiftDayDetails.forEach((shiftDetail, detailIndex) => {
-            console.log(`📅 Processing shiftDetail[${detailIndex}]:`, {
-              shiftName: shiftDetail.shiftName,
-              startTime: shiftDetail.startTime,
-              endTime: shiftDetail.endTime,
-              slotDurationInMinutes: shiftDetail.slotDurationInMinutes
-            });
-
             // Parse date from string format "2025-08-26"
             const shiftDate = new Date(shiftInfo.shiftDate);
             
@@ -114,15 +69,7 @@ export function useCalendarEvents(doctorId: string, fromISO: string, toISO: stri
             
             const eventEnd = new Date(shiftDate);
             eventEnd.setHours(endHour, endMinute, endSecond);
-
-            console.log(`📅 Date calculation for event:`, {
-              shiftDate: shiftInfo.shiftDate,
-              startTimeStr,
-              endTimeStr,
-              eventStart: eventStart.toISOString(),
-              eventEnd: eventEnd.toISOString()
-            });
-
+           
             const shiftBlockEvent: CalendarEvent = {
               id: `shift-${shiftIndex}-${detailIndex}`,
               type: 'shift',
@@ -144,37 +91,16 @@ export function useCalendarEvents(doctorId: string, fromISO: string, toISO: stri
               }
             };
 
-            console.log(`📅 Created event:`, {
-              id: shiftBlockEvent.id,
-              title: shiftBlockEvent.title,
-              start: shiftBlockEvent.start,
-              end: shiftBlockEvent.end,
-              backgroundColor: shiftBlockEvent.backgroundColor
-            });
-
-            allEvents.push(shiftBlockEvent);
+    allEvents.push(shiftBlockEvent);
           });
         });
       } 
       // Handle legacy API response structure (days array)
       else if ((calendarConfig as any)?.days) {
-        console.log('📅 Processing LEGACY API structure - days array:', (calendarConfig as any).days.length);
-
         (calendarConfig as any).days.forEach((day: any, dayIndex: number) => {
-          console.log(`📅 Processing day[${dayIndex}]:`, {
-            date: day.date,
-            effectiveShiftsCount: day.effectiveShifts?.length || 0
-          });
-
+          
           if (day.effectiveShifts) {
             day.effectiveShifts.forEach((shift: any, shiftIndex: number) => {
-              console.log(`📅 Processing legacy shift[${shiftIndex}]:`, {
-                shiftName: shift.shiftName,
-                startTime: shift.startTime,
-                endTime: shift.endTime,
-                slotDurationMinutes: shift.slotDurationMinutes
-              });
-
               // Parse date from day.date
               const shiftDate = new Date(day.date);
               
@@ -208,36 +134,15 @@ export function useCalendarEvents(doctorId: string, fromISO: string, toISO: stri
                 }
               };
 
-              console.log(`📅 Created legacy event:`, {
-                id: shiftBlockEvent.id,
-                title: shiftBlockEvent.title,
-                start: shiftBlockEvent.start,
-                end: shiftBlockEvent.end,
-                backgroundColor: shiftBlockEvent.backgroundColor
-              });
-
               allEvents.push(shiftBlockEvent);
             });
           }
         });
-      } else {
-        console.log('⚠️ No shiftInfo or days found in calendarConfig');
-        console.log('⚠️ calendarConfig structure:', calendarConfig);
       }
 
       // Add time-off blocks
       if (timeOffData?.timeOffs) {
-        console.log('📅 Processing time-off data:', timeOffData.timeOffs.length, 'entries');
-        
         timeOffData.timeOffs.forEach((timeOff, index) => {
-          console.log(`📅 Processing timeOff[${index}]:`, {
-            timeOffId: timeOff.timeOffId,
-            fromDate: timeOff.fromDate,
-            toDate: timeOff.toDate,
-            reason: timeOff.reason,
-            isUpcoming: timeOff.isUpcoming
-          });
-
           // Parse dates
           const fromDate = new Date(timeOff.fromDate);
           const toDate = new Date(timeOff.toDate);
@@ -262,18 +167,8 @@ export function useCalendarEvents(doctorId: string, fromISO: string, toISO: stri
             }
           };
 
-          console.log(`📅 Created time-off event:`, {
-            id: timeOffEvent.id,
-            title: timeOffEvent.title,
-            start: timeOffEvent.start,
-            end: timeOffEvent.end,
-            allDay: timeOffEvent.allDay
-          });
-
           allEvents.push(timeOffEvent);
         });
-      } else {
-        console.log('📅 No time-off data available');
       }
 
       // Filter events to only include those within the visible date range
@@ -286,35 +181,7 @@ export function useCalendarEvents(doctorId: string, fromISO: string, toISO: stri
         // Event should be visible if it overlaps with the date range
         const isVisible = eventStart <= rangeEnd && eventEnd >= rangeStart;
         
-        if (!isVisible) {
-          console.log(`📅 Filtered out event outside range:`, {
-            id: event.id,
-            title: event.title,
-            eventStart: eventStart.toISOString(),
-            eventEnd: eventEnd.toISOString(),
-            rangeStart: rangeStart.toISOString(),
-            rangeEnd: rangeEnd.toISOString(),
-            isTimeOff: event.type === 'timeoff' || event.id?.startsWith('timeoff-')
-          });
-        }
-        
         return isVisible;
-      });
-
-      console.log('📅 Final generated events:', filteredEvents.length, 'out of', allEvents.length, 'total events');
-      
-      // Log time-off events specifically
-      const timeOffEvents = filteredEvents.filter(event => event.type === 'timeoff' || event.id?.startsWith('timeoff-'));
-      console.log('📅 Time-off events in final result:', timeOffEvents.length);
-      timeOffEvents.forEach((event, index) => {
-        console.log(`📅 Time-off event ${index + 1}:`, {
-          id: event.id,
-          type: event.type,
-          title: event.title,
-          start: event.start,
-          end: event.end,
-          extendedProps: event.extendedProps
-        });
       });
       
       return filteredEvents;
