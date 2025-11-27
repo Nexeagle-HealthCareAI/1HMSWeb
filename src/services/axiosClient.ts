@@ -1,6 +1,6 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError, InternalAxiosRequestConfig, AxiosHeaders } from 'axios';
 import { useAuthStore } from '@/store/authStore';
-import { API_BASE_URL, DEFAULT_HEADERS } from '@/app/api';
+import { API_BASE_URL, DEFAULT_HEADERS, API_ENDPOINTS } from '@/app/api';
 
 // API Configuration
 const API_TIMEOUT = 30000; // 30 seconds
@@ -32,8 +32,13 @@ axiosInstance.interceptors.request.use(
 
     // Add authentication token to requests
     const token = useAuthStore.getState().getToken();
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (token) {
+      const headers = config.headers instanceof AxiosHeaders
+        ? config.headers
+        : AxiosHeaders.from(config.headers || {});
+
+      headers.set('Authorization', `Bearer ${token}`);
+      config.headers = headers;
     }
     
     // Add CSRF token if available
@@ -48,6 +53,18 @@ axiosInstance.interceptors.request.use(
     return Promise.reject(error);
   }
 );
+
+const AUTH_EXEMPT_ENDPOINTS = new Set<string>([
+  API_ENDPOINTS.AUTH.LOGIN,
+  API_ENDPOINTS.AUTH.SIGN_UP,
+  API_ENDPOINTS.AUTH.SEND_OTP,
+  API_ENDPOINTS.AUTH.OTP_CHECKER,
+  API_ENDPOINTS.AUTH.SET_PASSWORD,
+  API_ENDPOINTS.AUTH.RESET_PASSWORD,
+  API_ENDPOINTS.AUTH.ONBOARDING_REGISTER,
+  API_ENDPOINTS.USER_MANAGEMENT.UPDATE_INVITED_USER,
+  API_ENDPOINTS.USER_MANAGEMENT.VALIDATE_TOKEN,
+]);
 
 // Response interceptor
 axiosInstance.interceptors.response.use(
@@ -69,12 +86,16 @@ axiosInstance.interceptors.response.use(
     // Handle different types of errors
     if (error.response) {
       const { status, data } = error.response;
+      const requestUrl = error.config?.url || '';
+      const isAuthExempt = AUTH_EXEMPT_ENDPOINTS.has(requestUrl);
       
       switch (status) {
         case 401:
-          // Unauthorized - clear auth and redirect to login
-          useAuthStore.getState().logout();
-          window.location.href = '/login';
+          if (!isAuthExempt) {
+            // Unauthorized - clear auth and redirect to login for protected endpoints
+            useAuthStore.getState().logout();
+            window.location.href = '/login';
+          }
           break;
           
         case 403:

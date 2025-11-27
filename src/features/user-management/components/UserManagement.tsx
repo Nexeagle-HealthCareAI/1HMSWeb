@@ -1,17 +1,15 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from 'react-i18next';
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   Users, 
   UserPlus, 
@@ -29,6 +27,7 @@ import {
   Mail,
   AlertCircle
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useUserManagementApi } from '../hooks/useUserManagementApi';
 import { Role as ApiRole, RolesResponse, InviteUserRequest } from '../services/userManagementApi';
 import { OnboardedUsers } from './OnboardedUsers';
@@ -38,6 +37,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useMutation } from '@tanstack/react-query';
 import { InviteUserResponse } from '../services/userManagementApi';
 import { ValidationUtils } from '@/utils/validation';
+import { cn } from '@/lib/utils';
 
 export const UserManagement: React.FC = () => {
   const { t } = useTranslation();
@@ -72,6 +72,26 @@ export const UserManagement: React.FC = () => {
     specialty: '',
     workingHours: ''
   });
+
+  const navigationItems: Array<{
+    value: 'onboarded' | 'invited';
+    title: string;
+    description: string;
+    Icon: LucideIcon;
+  }> = [
+    {
+      value: 'onboarded',
+      title: t('userManagement.onboardedUsers'),
+      description: t('userManagement.activeUsers'),
+      Icon: Users,
+    },
+    {
+      value: 'invited',
+      title: t('userManagement.invitedUsers'),
+      description: t('userManagement.pendingInvitations'),
+      Icon: Mail,
+    }
+  ];
 
 
 
@@ -144,105 +164,79 @@ export const UserManagement: React.FC = () => {
 
   return (
     <div className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-3xl font-bold text-foreground">{t('userManagement.title')}</h2>
-          <p className="text-muted-foreground mt-1">{t('userManagement.subtitle')}</p>
-        </div>
+      <div className="grid gap-6 lg:grid-cols-[280px,1fr]">
+        <aside className="hidden lg:flex">
+          <div className="w-full rounded-2xl border border-border/60 bg-card/60 p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">User areas</p>
+            <div className="mt-3 space-y-3">
+              {navigationItems.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setActiveTab(item.value)}
+                  className={cn(
+                    'w-full rounded-xl border px-3 py-3 text-left transition-all',
+                    activeTab === item.value
+                      ? 'border-primary/40 bg-primary/5 shadow-sm'
+                      : 'border-transparent hover:border-border'
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={cn(
+                        'flex h-10 w-10 items-center justify-center rounded-xl border text-primary',
+                        activeTab === item.value
+                          ? 'border-primary/40 bg-white'
+                          : 'border-border/60 bg-muted/40'
+                      )}
+                    >
+                      <item.Icon className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <p className="text-sm font-semibold">{item.title}</p>
+                      <p className="text-xs text-muted-foreground">{item.description}</p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </aside>
+
+        <section className="rounded-2xl border border-border/60 bg-card/70 p-4 sm:p-6 shadow-sm space-y-6">
+          <div className="flex justify-end">
+            <Button className="gap-2" onClick={() => setShowAddUser(true)}>
+              <Mail className="h-4 w-4" />
+              {t('userManagement.inviteUser')}
+            </Button>
+          </div>
+
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <div className="lg:hidden">
+              <TabsList className="flex gap-2 rounded-2xl bg-muted/40 p-1">
+                {navigationItems.map((item) => (
+                  <TabsTrigger
+                    key={item.value}
+                    value={item.value}
+                    className="group relative flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-medium"
+                  >
+                    <item.Icon className="h-4 w-4 text-muted-foreground group-data-[state=active]:text-primary" />
+                    <span>{item.title}</span>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
+
+            <TabsContent value="onboarded" className="space-y-6">
+              <OnboardedUsers />
+            </TabsContent>
+
+            <TabsContent value="invited" className="space-y-6">
+              <InvitedUsers initialScope={invitedUsersScope} />
+            </TabsContent>
+          </Tabs>
+        </section>
       </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        {/* Active Tab Indicator */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-full ${activeTab === 'onboarded' ? 'bg-primary/10 text-primary' : 'bg-primary/10 text-primary'}`}>
-              {activeTab === 'onboarded' ? <Users className="h-5 w-5" /> : <Mail className="h-5 w-5" />}
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold">
-                {activeTab === 'onboarded' ? t('userManagement.onboardedUsers') : t('userManagement.invitedUsers')}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {activeTab === 'onboarded' 
-                  ? t('userManagement.onboardedUsersSubtitle')
-                  : t('userManagement.invitedUsersSubtitle')
-                }
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <TabsList className="grid w-full grid-cols-2 h-auto p-2 bg-muted/30 gap-2">
-          <TabsTrigger 
-            value="onboarded" 
-            className="flex items-center gap-3 py-4 px-6 data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:border-2 data-[state=active]:border-primary/20 data-[state=active]:scale-105 transition-all duration-200 hover:bg-muted/50 rounded-lg"
-          >
-            <div className={`p-2 rounded-full ${activeTab === 'onboarded' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-              <Users className="h-5 w-5" />
-            </div>
-            <div className="text-left">
-              <div className="font-semibold">{t('userManagement.onboardedUsers')}</div>
-              <div className="text-xs text-muted-foreground">{t('userManagement.activeUsers')}</div>
-            </div>
-          </TabsTrigger>
-          <TabsTrigger 
-            value="invited" 
-            className="flex items-center gap-3 py-4 px-6 data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:border-2 data-[state=active]:border-primary/20 data-[state=active]:scale-105 transition-all duration-200 hover:bg-muted/50 rounded-lg"
-          >
-            <div className={`p-2 rounded-full ${activeTab === 'invited' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-              <Mail className="h-5 w-5" />
-            </div>
-            <div className="text-left">
-              <div className="font-semibold">{t('userManagement.invitedUsers')}</div>
-              <div className="text-xs text-muted-foreground">{t('userManagement.pendingInvitations')}</div>
-            </div>
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="onboarded" className="space-y-6">
-          {/* Header Actions */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h3 className="text-xl font-semibold">{t('userManagement.onboardedUsers')}</h3>
-              <p className="text-sm text-muted-foreground mt-1">{t('userManagement.onboardedUsersSubtitle')}</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
-                <DialogTrigger asChild>
-                  <Button className="gap-2">
-                    <Mail className="h-4 w-4" />
-                    {t('userManagement.inviteUser')}
-                  </Button>
-                </DialogTrigger>
-              </Dialog>
-            </div>
-          </div>
-
-          <OnboardedUsers />
-        </TabsContent>
-
-        <TabsContent value="invited" className="space-y-6">
-          {/* Header Actions */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h3 className="text-xl font-semibold">{t('userManagement.invitedUsers')}</h3>
-              <p className="text-sm text-muted-foreground mt-1">{t('userManagement.invitedUsersSubtitle')}</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
-                <DialogTrigger asChild>
-                  <Button className="gap-2">
-                    <Mail className="h-4 w-4" />
-                    {t('userManagement.inviteUser')}
-                  </Button>
-                </DialogTrigger>
-              </Dialog>
-            </div>
-          </div>
-
-          <InvitedUsers initialScope={invitedUsersScope} />
-        </TabsContent>
-      </Tabs>
 
       {/* Add User Dialog */}
       <Dialog open={showAddUser} onOpenChange={setShowAddUser}>

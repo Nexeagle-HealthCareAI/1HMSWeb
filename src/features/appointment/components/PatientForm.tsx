@@ -98,7 +98,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       case 'appointmentId':
         return 'Enter Appointment ID (e.g., APT001, APT123)';
       case 'contact':
-        return 'Enter Contact Number (e.g., +91 9876543210)';
+  return 'Enter contact number (e.g., 9876543210)';
       default:
         return 'Enter search term';
     }
@@ -145,8 +145,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       case 'contact':
         return (
           <>
-            <p>• Phone: +91 9876XXXXXX</p>
-            <p>• Mobile: +91 8074XXXXXX</p>
+            <p>• Phone: 9876XXXXXX</p>
+            <p>• Mobile: 8074XXXXXX</p>
           </>
         );
       default:
@@ -187,7 +187,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const handlePatientSelect = (patient: PatientSearchItem) => {
     setFormData({
       name: patient.fullName,
-      phone: patient.mobile,
+      phone: formatPhoneNumber(patient.mobile || ''),
       age: patient.age.toString(),
       gender: patient.sex,
       address: patient.address || '',
@@ -205,15 +205,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   };
 
   const formatPhoneNumber = (value: string) => {
-    // Remove all non-numeric characters except '+'
-    const cleaned = value.replace(/[^\d+]/g, '');
-    
-    // If it doesn't start with '+', add it
-    if (cleaned && !cleaned.startsWith('+')) {
-      return '+' + cleaned;
-    }
-    
-    return cleaned;
+    return value.replace(/\D/g, '');
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -231,14 +223,11 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required';
     } else {
-      // International phone number validation
-      const phoneRegex = /^\+\d{1,4}\d{4,14}$/;
-      const cleanPhone = formData.phone.replace(/[^\d+]/g, '');
-      
+      const cleanPhone = formatPhoneNumber(formData.phone);
+      const phoneRegex = /^\d{8,15}$/;
+
       if (!phoneRegex.test(cleanPhone)) {
-        newErrors.phone = 'Please enter a valid international phone number (e.g., +91 8074906808)';
-      } else if (cleanPhone.length < 8 || cleanPhone.length > 17) {
-        newErrors.phone = 'Phone number should be between 8-17 digits including country code';
+        newErrors.phone = 'Please enter a valid phone number (8-15 digits)';
       }
     }
 
@@ -492,7 +481,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                       id="phone"
                       value={formData.phone}
                       onChange={handlePhoneChange}
-                      placeholder="+91 8074906808"
+                      placeholder="Enter 10-digit mobile number"
                       className={`h-9 ${errors.phone ? "border-red-500" : ""}`}
                     />
                     {errors.phone && (

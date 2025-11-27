@@ -67,6 +67,7 @@ export interface CalendarEvent {
 // Updated CreateOverridePayload to match new API request model
 export interface CreateOverridePayload {
   doctorId: string;
+  hospitalId: string; // Include hospitalId in payload
   overrideDate: string; // ISO date string
   startDate: string; // ISO date string
   endDate: string; // ISO date string
@@ -124,6 +125,7 @@ export interface GetTimeOffResponse {
 
 export interface CreateTimeOffRequest {
   doctorId: string;
+  hospitalId:string;
   fromDate: string;
   toDate: string;
   reason: string;

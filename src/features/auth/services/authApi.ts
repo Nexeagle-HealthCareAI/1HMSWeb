@@ -172,19 +172,12 @@ export const fetchAndStoreUserPermissions = async (userId: string, token: string
       // Use the original role name from API
       authStore.setUserRole(perms.roleName);
       authStore.setPermissions(perms.permissionKeys || []);
-
-      console.log('✅ Permissions fetched and stored:', {
-        role: perms.roleName,
-        permissions: perms.permissionKeys || []
-      });
       
       return { success: true, message: 'ok', role: perms.roleName, permissions: perms.permissionKeys || [] } as any;
-    } else {
-      console.warn('❌ Failed to fetch permissions: empty response');
+    } else {     
       return { success: false, message: 'empty', role: '', permissions: [] } as any;
     }
-  } catch (error) {
-    console.warn('❌ Error fetching permissions:', error);
+  } catch (error) {    
     return { success: false, message: 'Failed to fetch permissions', role: '', permissions: [] } as any;
   }
 };

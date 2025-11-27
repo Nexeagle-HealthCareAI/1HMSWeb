@@ -68,8 +68,6 @@ export const AppointmentDashboard = () => {
   const [selectedPatientForProfile, setSelectedPatientForProfile] = useState<AppointmentDetail | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
-  const [isLiveUpdateEnabled, setIsLiveUpdateEnabled] = useState(true);
-  const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'online' | 'offline'>('online');
   const [compactMode, setCompactMode] = useState(true);
@@ -151,7 +149,6 @@ export const AppointmentDashboard = () => {
     setIsRefreshing(true);
     try {
       await refetch();
-      setLastUpdateTime(new Date());
     } catch (error) {
       console.error('Manual refresh failed:', error);
     } finally {
@@ -571,15 +568,14 @@ export const AppointmentDashboard = () => {
 
   // Live update functionality for current appointments
   useEffect(() => {
-    if (!isLiveUpdateEnabled || activeTab !== 'current' || !refetch || !hospitalId) {
+    if (activeTab !== 'current' || !refetch || !hospitalId) {
       return;
     }
 
     const interval = setInterval(async () => {
       setIsRefreshing(true);
       try {
-        await refetch();
-        setLastUpdateTime(new Date());
+  await refetch();
       } catch (error) {
         console.error('Live update failed:', error);
       } finally {
@@ -588,7 +584,7 @@ export const AppointmentDashboard = () => {
     }, 30000); // Refresh every 30 seconds
 
     return () => clearInterval(interval);
-  }, [isLiveUpdateEnabled, activeTab, refetch, hospitalId]);
+  }, [activeTab, refetch, hospitalId]);
 
   // Connection status monitoring
   useEffect(() => {
@@ -844,21 +840,15 @@ export const AppointmentDashboard = () => {
                        <span>{tab.label}</span>
                        {tab.key === 'current' && (
                          <div className="flex items-center gap-1">
-                           {isLiveUpdateEnabled ? (
-                             <div className="flex items-center gap-1">
-                               {isRefreshing ? (
-                                 <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />
-                               ) : (
-                                 <Activity className="h-3 w-3 text-green-500" />
-                               )}
-                               {connectionStatus === 'online' ? (
-                                 <Wifi className="h-3 w-3 text-green-500" />
-                               ) : (
-                                 <WifiOff className="h-3 w-3 text-red-500" />
-                               )}
-                             </div>
+                           {isRefreshing ? (
+                             <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />
                            ) : (
-                             <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                             <Activity className="h-3 w-3 text-green-500" />
+                           )}
+                           {connectionStatus === 'online' ? (
+                             <Wifi className="h-3 w-3 text-green-500" />
+                           ) : (
+                             <WifiOff className="h-3 w-3 text-red-500" />
                            )}
                          </div>
                        )}
@@ -868,56 +858,6 @@ export const AppointmentDashboard = () => {
           </div>
         </div>                
 
-            {/* Live Update Control Panel - Only for Current Appointments */}
-            {activeTab === 'current' && (
-              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1">
-                        {isRefreshing ? (
-                          <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />
-                        ) : (
-                          <Activity className="h-4 w-4 text-green-500" />
-                        )}
-                        {connectionStatus === 'online' ? (
-                          <Wifi className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <WifiOff className="h-4 w-4 text-red-500" />
-                        )}
-                      </div>
-                      <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                        {isLiveUpdateEnabled ? 'Live Updates Active' : 'Live Updates Disabled'}
-                      </span>
-                    </div>
-                    <div className="text-xs text-blue-600 dark:text-blue-400">
-                      Last updated: {lastUpdateTime.toLocaleTimeString()}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleManualRefresh}
-                      disabled={isRefreshing}
-                      className="h-8 px-3 text-xs"
-                    >
-                      <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
-                      Refresh Now
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsLiveUpdateEnabled(!isLiveUpdateEnabled)}
-                      className="h-8 px-3 text-xs"
-                    >
-                      {isLiveUpdateEnabled ? 'Disable' : 'Enable'} Auto-Refresh
-                    </Button>
-            </div>
-                    </div>
-              </div>
-            )}
-                    
             {/* Compact Search Bar */}
             <div className="mb-4">
               <div className="flex items-center gap-4">
@@ -986,7 +926,8 @@ export const AppointmentDashboard = () => {
                          {/* Status Navigation - Only show for Current tab */}
              {activeTab === 'current' && (
                <div className="mb-4">
-                 <div className="flex flex-wrap gap-2">
+                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                   <div className="flex flex-wrap gap-2">
                   {[
                     { key: 'all', label: 'All', color: 'bg-gray-100 text-gray-700 border-gray-200' },
                     { key: 'VITALS_REQUIRED', label: 'Vitals Required', color: 'bg-red-100 text-red-700 border-red-200' },
@@ -1052,9 +993,20 @@ export const AppointmentDashboard = () => {
                 </button>
                     );
                   })}
-                  </div>
-              </div>
-            )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleManualRefresh}
+                  disabled={isRefreshing}
+                  className="h-9 px-4 text-xs md:self-start"
+                >
+                  <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  Refresh Now
+                </Button>
+               </div>
+             </div>
+             )}
 
             {/* Loading State */}
             {isLoading && (

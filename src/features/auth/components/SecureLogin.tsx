@@ -327,7 +327,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
           if (hospitalResult === 'found') {
             try {
               const { doctorApi } = await import('@/features/doctor/services/doctorApi');
-              await doctorApi.getById(response.userId);
+              await doctorApi.getDoctorProfile(response.userId);
             } catch (doctorError: any) {
               if (doctorError?.response?.status === 404) {
                 console.warn('Doctor profile not found (404):', doctorError);
@@ -471,7 +471,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
           if (hospitalResult === 'found') {
             try {
               const { doctorApi } = await import('@/features/doctor/services/doctorApi');
-              await doctorApi.getById(storedUserId);
+              await doctorApi.getDoctorProfile(storedUserId);
             } catch (doctorError: any) {
               if (doctorError?.response?.status === 404) {
                 console.warn('Doctor profile not found (404):', doctorError);

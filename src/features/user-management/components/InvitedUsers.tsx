@@ -23,7 +23,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { 
-  Users, 
   Mail, 
   Clock, 
   CheckCircle, 
@@ -121,6 +120,37 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
     return allUsers.filter(user => user.status.toLowerCase() === status.toLowerCase()).length;
   };
 
+  const scopeFilters = [
+    {
+      value: 'ALL',
+      label: 'All',
+      count: allUsers.length,
+      badgeClass: 'bg-primary/10 text-primary',
+      dotClass: 'bg-primary/70'
+    },
+    {
+      value: 'Pending',
+      label: 'Pending',
+      count: getStatusCount('Pending'),
+      badgeClass: 'bg-amber-50 text-amber-700',
+      dotClass: 'bg-amber-500'
+    },
+    {
+      value: 'Accepted',
+      label: 'Accepted',
+      count: getStatusCount('Accepted'),
+      badgeClass: 'bg-emerald-50 text-emerald-700',
+      dotClass: 'bg-emerald-500'
+    },
+    {
+      value: 'Revoked',
+      label: 'Revoked',
+      count: getStatusCount('Revoked'),
+      badgeClass: 'bg-rose-50 text-rose-700',
+      dotClass: 'bg-rose-500'
+    }
+  ] as const;
+
   const getRoleColor = (roleName: string) => {
     switch (roleName.toLowerCase()) {
       case 'admin':
@@ -163,21 +193,6 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
         return <XCircle className="h-4 w-4" />;
       default:
         return <Clock className="h-4 w-4" />;
-    }
-  };
-
-  const getScopeIcon = (scope: string) => {
-    switch (scope) {
-      case 'ALL':
-        return <Users className="h-4 w-4" />;
-      case 'Pending':
-        return <Clock className="h-4 w-4" />;
-      case 'Accepted':
-        return <CheckCircle className="h-4 w-4" />;
-      case 'Revoked':
-        return <XCircle className="h-4 w-4" />;
-      default:
-        return <Users className="h-4 w-4" />;
     }
   };
 
@@ -283,89 +298,24 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
 
   return (
     <div className="space-y-6">
-      {/* Active Scope Indicator */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-full ${activeScope === 'ALL' ? 'bg-primary/10 text-primary' : activeScope === 'Pending' ? 'bg-yellow-100 text-yellow-700' : activeScope === 'Accepted' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-            {getScopeIcon(activeScope)}
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold capitalize">{activeScope} Invitations</h3>
-                         <p className="text-sm text-muted-foreground">
-               {activeScope === 'ALL' 
-                 ? `Showing all ${allUsers.length} invitations` 
-                 : `Showing ${getStatusCount(activeScope.toLowerCase())} ${activeScope.toLowerCase()} invitations`
-               }
-             </p>
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="text-2xl font-bold text-primary">{filteredUsers.length}</div>
-          <div className="text-xs text-muted-foreground">Filtered results</div>
-        </div>
-      </div>
-
       {/* Enhanced Scope Tabs */}
       <Card className="border-0 shadow-sm">
-        <CardContent className="p-0">
+        <CardContent className="p-4">
           <Tabs value={activeScope} onValueChange={(value) => setActiveScope(value as 'Pending' | 'Accepted' | 'Revoked' | 'ALL')}>
-            <TabsList className="grid w-full grid-cols-4 h-auto p-2 bg-muted/30 gap-2">
-              <TabsTrigger 
-                value="ALL" 
-                className="flex flex-col items-center gap-2 py-4 px-3 data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:border-2 data-[state=active]:border-primary/20 data-[state=active]:scale-105 transition-all duration-200 hover:bg-muted/50 rounded-lg"
-              >
-                <div className="flex items-center gap-2">
-                  <div className={`p-1.5 rounded-full ${activeScope === 'ALL' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                    {getScopeIcon('ALL')}
-                  </div>
-                  <span className="font-medium">All</span>
-                </div>
-                                 <Badge variant={activeScope === 'ALL' ? 'default' : 'secondary'} className="text-xs">
-                   {allUsers.length}
-                 </Badge>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="Pending" 
-                className="flex flex-col items-center gap-2 py-4 px-3 data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:border-2 data-[state=active]:border-yellow-200 data-[state=active]:scale-105 transition-all duration-200 hover:bg-muted/50 rounded-lg"
-              >
-                <div className="flex items-center gap-2">
-                  <div className={`p-1.5 rounded-full ${activeScope === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-muted text-muted-foreground'}`}>
-                    {getScopeIcon('Pending')}
-                  </div>
-                  <span className="font-medium">Pending</span>
-                </div>
-                <Badge variant={activeScope === 'Pending' ? 'default' : 'secondary'} className="text-xs">
-                  {getStatusCount('pending')}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="Accepted" 
-                className="flex flex-col items-center gap-2 py-4 px-3 data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:border-2 data-[state=active]:border-green-200 data-[state=active]:scale-105 transition-all duration-200 hover:bg-muted/50 rounded-lg"
-              >
-                <div className="flex items-center gap-2">
-                  <div className={`p-1.5 rounded-full ${activeScope === 'Accepted' ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}>
-                    {getScopeIcon('Accepted')}
-                  </div>
-                  <span className="font-medium">Accepted</span>
-                </div>
-                <Badge variant={activeScope === 'Accepted' ? 'default' : 'secondary'} className="text-xs">
-                  {getStatusCount('accepted')}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="Revoked" 
-                className="flex flex-col items-center gap-2 py-4 px-3 data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:border-2 data-[state=active]:border-red-200 data-[state=active]:scale-105 transition-all duration-200 hover:bg-muted/50 rounded-lg"
-              >
-                <div className="flex items-center gap-2">
-                  <div className={`p-1.5 rounded-full ${activeScope === 'Revoked' ? 'bg-red-100 text-red-700' : 'bg-muted text-muted-foreground'}`}>
-                    {getScopeIcon('Revoked')}
-                  </div>
-                  <span className="font-medium">Revoked</span>
-                </div>
-                <Badge variant={activeScope === 'Revoked' ? 'default' : 'secondary'} className="text-xs">
-                  {getStatusCount('revoked')}
-                </Badge>
-              </TabsTrigger>
+            <TabsList className="flex flex-wrap gap-2 bg-transparent p-0">
+              {scopeFilters.map(({ value, label, count, badgeClass, dotClass }) => (
+                <TabsTrigger
+                  key={value}
+                  value={value}
+                  className="group flex items-center gap-2 rounded-full border border-border/70 bg-white/80 px-3 py-2 text-xs font-semibold text-muted-foreground transition-all data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                >
+                  <span className={`h-2.5 w-2.5 rounded-full ${dotClass}`}></span>
+                  <span>{label}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${badgeClass} group-data-[state=active]:bg-primary group-data-[state=active]:text-white`}>
+                    {count}
+                  </span>
+                </TabsTrigger>
+              ))}
             </TabsList>
           </Tabs>
         </CardContent>

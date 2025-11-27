@@ -893,6 +893,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                     onSave={() => {
                       // Refresh profile completion data
                       queryClient.invalidateQueries({ queryKey: ['profile', 'completion'] });
+                      setIsEditing(false);
                     }}
                     onCancel={() => setIsEditing(false)}
                   />

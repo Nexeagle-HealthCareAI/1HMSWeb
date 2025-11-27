@@ -1,13 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import { doctorApi } from '../services/doctorApi';
-import type { Doctor } from '../services/doctorApi';
+import { doctorApi, DoctorProfileResponse } from '../services/doctorApi';
 import { useAuthStore } from '@/store/authStore';
 
 export const useDoctorProfile = (userId?: string) => {
   const { setDoctorId, setDoctorProfileRestriction } = useAuthStore();
   
-  const query = useQuery<Doctor>({
+  const query = useQuery<DoctorProfileResponse>({
     queryKey: ['doctor', 'profile', userId],
     queryFn: async () => {     
             
@@ -15,7 +14,7 @@ export const useDoctorProfile = (userId?: string) => {
         throw new Error('User ID is required to fetch doctor profile');
       }      
       try {        
-        const response = await doctorApi.getById(userId);      
+        const response = await doctorApi.getDoctorProfile(userId);      
         console.log('Response+useDoctorProfile:', response);
         // Check if response is empty or invalid
         const isEmptyResponse = !response || (typeof response === 'object' && Object.keys(response).length === 0);

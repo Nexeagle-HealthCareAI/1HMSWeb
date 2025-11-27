@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTranslation } from 'react-i18next';
 
 import { 
@@ -51,6 +50,12 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { SystemConfigModule } from './SystemConfigModule';
 
+type KPIMetric = {
+  value: number;
+  trend: 'up' | 'down';
+  change: number;
+};
+
 
 
 export const AdminDashboard = () => {
@@ -64,29 +69,39 @@ export const AdminDashboard = () => {
   const [showHospitalRegistrationDialog, setShowHospitalRegistrationDialog] = useState(false);
 
   // Fetch hospital profile status and compute completion from API
-  const authStoreRef = useAuthStore.getState();
-  const hospitalId = authStoreRef.getHospitalId() || '';
-  const { data: hospitalData } = useHospitalApi.getHospitalById(hospitalId);
+  const hospitalId = useAuthStore(state => state.hospitalId) ?? '';
+  const { 
+    data: hospitalData, 
+    isLoading: hospitalLoading, 
+    isFetching: hospitalFetching,
+    isError: hospitalError
+  } = useHospitalApi.getHospitalById(hospitalId);
   const hospitalScore = hospitalData?.profileStatus?.profileCompletionPercent ?? 0;
   const isBasicInfoComplete = hospitalData?.profileStatus?.isBasicInfoComplete ?? false;
   const isLocationInfoComplete = hospitalData?.profileStatus?.isLocationInfoComplete ?? false;
   const isContactInfoComplete = hospitalData?.profileStatus?.isContactInfoComplete ?? false;
   const accessUnlocked = isBasicInfoComplete && isLocationInfoComplete; // allow admin access if both true
+  const hasCompletedHospitalProfileFetch = !!hospitalId && !hospitalLoading && !hospitalFetching;
 
-  const authStore = useAuthStore.getState();
-  const userRole = authStore.getUserRole() || 'Admin';
+  const userRole = useAuthStore(state => state.userRole) ?? 'Admin';
   const hospitalAccessRestricted = useAuthStore(state => state.hospitalAccessRestricted);
   const hospitalAccessMessage = useAuthStore(state => state.hospitalAccessMessage);
   const setHospitalAccessRestriction = useAuthStore(state => state.setHospitalAccessRestriction);
+  const isAdminRole = userRole === 'Admin' || userRole === 'AdminDoctor';
+  const shouldShowPopupForIncompleteProfile = hasCompletedHospitalProfileFetch && hospitalScore < 100;
+  const shouldShowPopupForMissingHospital = isAdminRole && hospitalAccessRestricted && (!hospitalId || (!hospitalData && (hospitalError || hasCompletedHospitalProfileFetch)));
+  const shouldShowHospitalPopup = !bannerDismissed && (shouldShowPopupForIncompleteProfile || shouldShowPopupForMissingHospital);
+  const dashboardRootRef = useRef<HTMLDivElement | null>(null);
 
   // Show Hospital Registration Dialog when admin lands on admin board and hospital is not 100% complete
   useEffect(() => {
-    if (hospitalScore < 100 && !bannerDismissed) {
+    if (shouldShowHospitalPopup) {
       setShowHospitalRegistrationDialog(true);
     }
-  }, [hospitalScore, bannerDismissed]);
+  }, [shouldShowHospitalPopup]);
 
 useEffect(() => {
+  if (!hasCompletedHospitalProfileFetch) return;
   if (hospitalScore >= 100) {
     if (hospitalAccessRestricted) {
       setHospitalAccessRestriction(false, null);
@@ -98,7 +113,46 @@ useEffect(() => {
       setBannerDismissed(true);
     }
   }
-}, [hospitalScore, hospitalAccessRestricted, setHospitalAccessRestriction, showHospitalRegistrationDialog, bannerDismissed]);
+}, [hasCompletedHospitalProfileFetch, hospitalScore, hospitalAccessRestricted, setHospitalAccessRestriction, showHospitalRegistrationDialog, bannerDismissed]);
+
+  useEffect(() => {
+    if (!shouldShowPopupForIncompleteProfile && !shouldShowPopupForMissingHospital && showHospitalRegistrationDialog) {
+      setShowHospitalRegistrationDialog(false);
+    }
+  }, [shouldShowPopupForIncompleteProfile, shouldShowPopupForMissingHospital, showHospitalRegistrationDialog]);
+
+  useEffect(() => {
+    const handleDashboardNavigate = (event: Event) => {
+      const { view, focusTab, scrollToTop } = (event as CustomEvent<{
+        view?: string;
+        focusTab?: string;
+        scrollToTop?: boolean;
+      }>).detail || {};
+
+      if (focusTab) {
+        sessionStorage.setItem('admin-focus-tab', focusTab);
+      }
+
+      if (view) {
+        setCurrentView(view);
+      }
+
+      if (scrollToTop) {
+        requestAnimationFrame(() => {
+          if (dashboardRootRef.current) {
+            dashboardRootRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        });
+      }
+    };
+
+    window.addEventListener('dashboard:navigate', handleDashboardNavigate as EventListener);
+    return () => {
+      window.removeEventListener('dashboard:navigate', handleDashboardNavigate as EventListener);
+    };
+  }, []);
 
   // Auto-scroll to Hospital Branding section when navigating to hospital config
   useEffect(() => {
@@ -152,7 +206,7 @@ useEffect(() => {
     }
   };
 
-  const renderKPICard = (title: string, icon: React.ReactNode, data: any, isCurrency = false) => (
+  const renderKPICard = (title: string, icon: React.ReactNode, data: KPIMetric, isCurrency = false) => (
     <Card className="hover:shadow-lg transition-shadow">
       <CardContent className="p-4 lg:p-6">
         <div className="flex items-center justify-between">
@@ -192,10 +246,88 @@ useEffect(() => {
    // { id: 'audit-security', name: t('admin.auditSecurity'), icon: ShieldCheck, description: t('admin.logsSecurity') }
   ];
 
+  const profileChecklist = [
+    {
+      id: 'basic-info',
+      label: 'Basic Information',
+      helper: 'Legal entity & statutory details',
+      complete: isBasicInfoComplete
+    },
+    {
+      id: 'location',
+      label: 'Location & Infrastructure',
+      helper: 'Geo coverage, branches, beds',
+      complete: isLocationInfoComplete
+    },
+    {
+      id: 'contact',
+      label: 'Contact & Support',
+      helper: 'Hotlines, escalation, billing contacts',
+      complete: isContactInfoComplete
+    }
+  ];
+
+  const completedChecklist = profileChecklist.filter((item) => item.complete).length;
+  const pendingChecklist = profileChecklist.length - completedChecklist;
+
+  const executiveInsights = [
+    {
+      id: 'score',
+      label: 'Profile Score',
+      value: `${hospitalScore}%`,
+      helper: accessUnlocked ? 'Advanced modules unlocked' : 'Complete setup to unlock advanced modules',
+      accent: 'from-blue-500 via-indigo-500 to-purple-500',
+      Icon: Star
+    },
+    {
+      id: 'checklist',
+      label: 'Checklist Progress',
+      value: `${completedChecklist}/${profileChecklist.length}`,
+      helper: pendingChecklist === 0 ? 'All tasks done' : `${pendingChecklist} tasks pending`,
+      accent: 'from-emerald-500 via-teal-500 to-cyan-500',
+      Icon: CheckCircle2
+    },
+    {
+      id: 'access',
+      label: accessUnlocked ? 'Access Status' : 'Access Restricted',
+      value: accessUnlocked ? 'Unlocked' : 'Restricted',
+      helper: accessUnlocked ? 'Team can manage every module' : 'Complete basics + location to unlock',
+      accent: accessUnlocked ? 'from-purple-500 via-indigo-500 to-blue-500' : 'from-amber-500 via-orange-500 to-red-500',
+      Icon: ShieldCheck
+    }
+  ];
+
+  const quickActions = [
+    {
+      id: 'branding',
+      label: 'Tune Hospital Branding',
+      description: 'Update logo, colors, and patient-facing theme.',
+      Icon: Building2,
+      action: focusHospitalBranding,
+      disabled: false
+    },
+    {
+      id: 'systemConfig',
+      label: 'Review System Config',
+      description: 'Audit modules, templates, and integrations.',
+      Icon: Cog,
+      action: () => setCurrentView('system-config'),
+      disabled: false
+    },
+    {
+      id: 'userAccess',
+      label: 'Manage Roles & Access',
+      description: 'Invite admins, doctors, and finance partners.',
+      Icon: Shield,
+      action: () => setCurrentView('user-management'),
+      disabled: !accessUnlocked
+    }
+  ];
+
 
 
   return (
-    <div className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle relative z-0">
+  <div ref={dashboardRootRef} className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle relative z-0">
       {/* Hospital Registration Progress Dialog/Popup */}
       <Dialog 
         open={showHospitalRegistrationDialog} 
@@ -330,8 +462,54 @@ useEffect(() => {
         )}
       </div>
 
+      
+
+      {/* Desktop Module Grid */}
+      <div className="hidden lg:grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
+        {adminModules.map((module) => {
+          const isLocked = !accessUnlocked && module.id !== 'dashboard' && module.id !== 'system-config';
+          const isActive = currentView === module.id;
+          return (
+            <button
+              key={module.id}
+              onClick={() => {
+                if (!isLocked) {
+                  setCurrentView(module.id);
+                } else {
+                  toast({
+                    title: t('admin.featureLocked'),
+                    description: t('admin.completeHospitalRegistration'),
+                    variant: 'destructive'
+                  });
+                }
+              }}
+              disabled={isLocked}
+              className={`rounded-3xl border text-left p-4 transition-all duration-300 flex flex-col gap-3 shadow-sm ${
+                isActive
+                  ? 'border-blue-300 bg-blue-50/70 dark:border-blue-800 dark:bg-blue-950/40'
+                  : 'border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'
+              } ${isLocked ? 'opacity-60 cursor-not-allowed' : 'hover:-translate-y-1 hover:shadow-xl'}`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-2xl ${isActive ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-600'}`}>
+                  <module.icon className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">{module.name}</p>
+                  <p className="text-xs text-muted-foreground">{module.description}</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{isLocked ? t('admin.adminFeaturesLocked') : 'Open module'}</span>
+                <ArrowRight className="h-4 w-4" />
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Enhanced Navigation Tabs - Mobile Optimized */}
-      <div className="relative mb-4 sm:mb-6">
+      <div className="relative mb-4 sm:mb-6 lg:hidden">
         {/* Mobile: Horizontal Scrollable Tabs */}
         <div className="border-b border-border/60 bg-white/50 dark:bg-gray-950/50 backdrop-blur-sm rounded-t-lg sm:rounded-lg overflow-visible">
           <div 
