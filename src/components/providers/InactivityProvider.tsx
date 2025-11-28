@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/authStore';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Clock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface InactivityContextType {
   resetInactivityTimer: () => void;
@@ -28,6 +29,7 @@ interface InactivityProviderProps {
 export const InactivityProvider: React.FC<InactivityProviderProps> = ({ children }) => {
   const { t } = useTranslation();
   const { isAuthenticated, logout } = useAuthStore();
+  const navigate = useNavigate();
   
   // Debug log to verify auth store is working
   console.log('InactivityProvider: isAuthenticated =', isAuthenticated, 'logout function =', typeof logout);
@@ -99,6 +101,9 @@ export const InactivityProvider: React.FC<InactivityProviderProps> = ({ children
 
   // Handle logout
   const handleLogout = async () => {
+    if (isLoggingOut) {
+      return;
+    }
     console.log('handleLogout called - starting logout process');
     
     try {
@@ -125,30 +130,23 @@ export const InactivityProvider: React.FC<InactivityProviderProps> = ({ children
 
       // Perform logout
       console.log('Calling logout from auth store...');
-      
-      // Clear all localStorage items related to auth
-      localStorage.removeItem('auth-storage');
-      localStorage.removeItem('user-storage');
-      
-      // Call logout from store
+
       if (logout && typeof logout === 'function') {
         logout();
       } else {
         console.error('Logout function not available from auth store');
       }
-      
-      // Clear any other session data
+
+      // Clear any other session data persisted outside the store
+      localStorage.removeItem('auth-storage');
+      localStorage.removeItem('user-storage');
       sessionStorage.clear();
-      
-      // Force a page reload to ensure complete logout
-      console.log('Logout completed - redirecting to login');
-      
-      // Use replace to prevent going back with browser back button
-      window.location.replace('/login');
+
+      console.log('Logout completed - navigating to login');
+      navigate('/login', { replace: true });
     } catch (error) {
       console.error('Error during logout:', error);
-      // Even if there's an error, try to redirect to login
-      window.location.replace('/login');
+      navigate('/login', { replace: true });
     } finally {
       setIsLoggingOut(false);
     }

@@ -4,17 +4,20 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
   Users, 
-  Edit2, 
-  Trash2, 
   Search,
   Eye,
   MoreHorizontal,
-  UserX
+  UserX,
+  Mail,
+  Phone,
+  Shield,
+  Key
 } from 'lucide-react';
 import { useUserManagementApi } from '../hooks/useUserManagementApi';
-import { OnboardedUser, AllUsersResponse } from '../services/userManagementApi';
+import { AllUsersResponse } from '../services/userManagementApi';
 import { useAuthStore } from '@/store/authStore';
 import { DeactivateUserDialog } from './DeactivateUserDialog';
 
@@ -39,22 +42,31 @@ export const OnboardedUsers: React.FC = () => {
     fullName: string;
     email: string;
   } | null>(null);
-  
-  // Get unique roles for filter (using employeeID as role for now since roleName is not in the new API)
-  const uniqueRoles = Array.from(new Set(users.map(user => user.employeeID || 'Unknown')));
 
-  const filteredUsers = users.filter(user => {
+  // View user details state
+  const [viewUser, setViewUser] = useState<AllUsersResponse['users'][number] | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+
+  const getPrimaryRoleName = (user: AllUsersResponse['users'][number]) =>
+    user.roles?.[0]?.roleName || 'Unknown';
+
+  const getUserStatus = (statusId: number) => (statusId === 1 ? 'active' : 'inactive');
+  const isUserActive = (user: AllUsersResponse['users'][number]) => getUserStatus(user.usersStatusId) === 'active';
+
+  // Get unique roles for filter
+  const uniqueRoles = Array.from(new Set(users.map((user) => getPrimaryRoleName(user))));
+
+  const filteredUsers = users.filter((user) => {
     const matchesSearch = user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.mobileNumber.includes(searchTerm);
-    const matchesRole = roleFilter === 'all' || (user.employeeID || 'Unknown') === roleFilter;
-    const matchesStatus = statusFilter === 'all' || (user.isActive ? 'active' : 'inactive') === statusFilter;
-    
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.mobileNumber.includes(searchTerm);
+    const matchesRole = roleFilter === 'all' || getPrimaryRoleName(user) === roleFilter;
+    const matchesStatus = statusFilter === 'all' || getUserStatus(user.usersStatusId) === statusFilter;
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  const getRoleColor = (roleName: string) => {
-    switch (roleName.toLowerCase()) {
+  const getRoleColor = (roleName?: string) => {
+    switch ((roleName || 'unknown').toLowerCase()) {
       case 'admin':
         return 'bg-red-100 text-red-800';
       case 'admindoctor':
@@ -190,8 +202,8 @@ export const OnboardedUsers: React.FC = () => {
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                        user.isActive 
-                          ? 'bg-green-100 text-green-600' 
+                        isUserActive(user)
+                          ? 'bg-green-100 text-green-600'
                           : 'bg-gray-100 text-gray-400'
                       }`}>
                         <Users className="h-5 w-5" />
@@ -204,7 +216,7 @@ export const OnboardedUsers: React.FC = () => {
                     
                     {/* Status Indicator */}
                     <div className={`w-3 h-3 rounded-full ${
-                      user.isActive ? 'bg-green-500' : 'bg-gray-400'
+                      isUserActive(user) ? 'bg-green-500' : 'bg-gray-400'
                     }`} />
                   </div>
 
@@ -213,6 +225,10 @@ export const OnboardedUsers: React.FC = () => {
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span className="font-medium">Phone:</span>
                       <span>{user.mobileNumber}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="font-medium">Role:</span>
+                      <span>{getPrimaryRoleName(user)}</span>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span className="font-medium">ID:</span>
@@ -224,15 +240,15 @@ export const OnboardedUsers: React.FC = () => {
                   <div className="flex flex-wrap gap-1">
                     <Badge 
                       variant="secondary" 
-                      className={`text-xs ${getRoleColor(user.employeeID || 'Unknown')}`}
+                      className={`text-xs ${getRoleColor(getPrimaryRoleName(user))}`}
                     >
-                      {user.employeeID || 'Unknown'}
+                      {getPrimaryRoleName(user)}
                     </Badge>
                     <Badge 
-                      variant={user.isActive ? 'default' : 'secondary'}
-                      className={`text-xs ${getStatusColor(user.isActive ? 'active' : 'inactive')}`}
+                      variant={isUserActive(user) ? 'default' : 'secondary'}
+                      className={`text-xs ${getStatusColor(isUserActive(user) ? 'active' : 'inactive')}`}
                     >
-                      {user.isActive ? 'Active' : 'Inactive'}
+                      {isUserActive(user) ? 'Active' : 'Inactive'}
                     </Badge>
                     {user.isPrimary && (
                       <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
@@ -247,6 +263,10 @@ export const OnboardedUsers: React.FC = () => {
                       <Button 
                         variant="ghost" 
                         size="sm" 
+                        onClick={() => {
+                          setViewUser(user);
+                          setIsViewDialogOpen(true);
+                        }}
                         className="h-7 w-7 p-0 hover:bg-blue-50 hover:text-blue-600"
                         title="View Details"
                       >
@@ -254,32 +274,28 @@ export const OnboardedUsers: React.FC = () => {
                       </Button>
                       <Button 
                         variant="ghost" 
-                        size="sm" 
-                        className="h-7 w-7 p-0 hover:bg-orange-50 hover:text-orange-600"
-                        title="Edit User"
+                        size="sm"
+                        onClick={() => handleDeactivateUser({
+                          userId: user.userId,
+                          fullName: user.fullName,
+                          email: user.email
+                        })}
+                        className={`h-7 w-7 p-0 ${
+                          isUserActive(user) && user.userId !== currentUserId
+                            ? 'hover:bg-red-50 hover:text-red-600'
+                            : 'opacity-50 cursor-not-allowed'
+                        }`}
+                        title={
+                          user.userId === currentUserId
+                            ? 'Cannot deactivate yourself'
+                            : isUserActive(user)
+                              ? 'Deactivate User'
+                              : 'User already inactive'
+                        }
+                        disabled={!isUserActive(user) || user.userId === currentUserId}
                       >
-                        <Edit2 className="h-3.5 w-3.5" />
+                        <UserX className="h-3.5 w-3.5" />
                       </Button>
-                      {user.isActive && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleDeactivateUser({
-                            userId: user.userId,
-                            fullName: user.fullName,
-                            email: user.email
-                          })}
-                          className={`h-7 w-7 p-0 ${
-                            user.userId === currentUserId 
-                              ? 'opacity-50 cursor-not-allowed' 
-                              : 'hover:bg-red-50 hover:text-red-600'
-                          }`}
-                          title={user.userId === currentUserId ? "Cannot deactivate yourself" : "Deactivate User"}
-                          disabled={user.userId === currentUserId}
-                        >
-                          <UserX className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
                     </div>
                     
                     <Button 
@@ -310,6 +326,107 @@ export const OnboardedUsers: React.FC = () => {
          userEmail={selectedUser?.email || ''}
          isPending={deactivateUser.isPending}
        />
+
+       {/* View User Details Dialog */}
+       <Dialog open={isViewDialogOpen} onOpenChange={(open) => {
+         setIsViewDialogOpen(open);
+         if (!open) {
+           setViewUser(null);
+         }
+       }}>
+         <DialogContent className="sm:max-w-lg">
+           <DialogHeader>
+             <DialogTitle>User Details</DialogTitle>
+             <DialogDescription>Complete snapshot of the selected team member.</DialogDescription>
+           </DialogHeader>
+           {viewUser && (
+             <div className="space-y-6 text-sm">
+               <div className="flex items-center gap-4 rounded-xl border bg-muted/40 p-4">
+                 <div className={`h-12 w-12 rounded-full flex items-center justify-center ${
+                   isUserActive(viewUser) ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-500'
+                 }`}>
+                   <Users className="h-6 w-6" />
+                 </div>
+                 <div className="flex-1 min-w-0">
+                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Full Name</p>
+                   <p className="text-lg font-semibold truncate">{viewUser.fullName || 'Not provided'}</p>
+                   <div className="mt-2 flex flex-wrap gap-2">
+                     <Badge className={getRoleColor(getPrimaryRoleName(viewUser))}>{getPrimaryRoleName(viewUser)}</Badge>
+                     <Badge variant="outline" className={isUserActive(viewUser) ? 'border-emerald-200 text-emerald-700' : 'border-gray-200 text-gray-600'}>
+                       {isUserActive(viewUser) ? 'Active' : 'Inactive'}
+                     </Badge>
+                     {viewUser.isPrimary && (
+                       <Badge variant="outline" className="border-amber-200 text-amber-700 bg-amber-50">Primary</Badge>
+                     )}
+                   </div>
+                 </div>
+               </div>
+
+               <div className="grid gap-4 sm:grid-cols-2">
+                 <div className="rounded-lg border p-3 space-y-2">
+                   <p className="text-xs font-medium text-muted-foreground">Contact</p>
+                   <div className="flex items-center gap-2">
+                     <Mail className="h-4 w-4 text-muted-foreground" />
+                     <span className="truncate">{viewUser.email || '—'}</span>
+                   </div>
+                   <div className="flex items-center gap-2">
+                     <Phone className="h-4 w-4 text-muted-foreground" />
+                     <span>{viewUser.mobileNumber || '—'}</span>
+                   </div>
+                 </div>
+                 <div className="rounded-lg border p-3 space-y-2">
+                   <p className="text-xs font-medium text-muted-foreground">Identity</p>
+                   <div className="flex items-center justify-between">
+                     <span className="text-muted-foreground">Employee ID</span>
+                     <span className="font-medium">{viewUser.employeeID || '—'}</span>
+                   </div>
+                   <div className="flex items-center justify-between">
+                     <span className="text-muted-foreground">Primary User</span>
+                     <Badge variant="outline" className={viewUser.isPrimary ? 'border-emerald-200 text-emerald-700 bg-emerald-50' : 'border-gray-200 text-gray-600 bg-gray-50'}>
+                       {viewUser.isPrimary ? 'Yes' : 'No'}
+                     </Badge>
+                   </div>
+                 </div>
+               </div>
+
+               {viewUser.roles?.length ? (
+                 <div className="rounded-lg border p-3">
+                   <div className="flex items-center gap-2 mb-3">
+                     <Shield className="h-4 w-4 text-muted-foreground" />
+                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Roles</p>
+                   </div>
+                   <div className="flex flex-wrap gap-2">
+                     {viewUser.roles.map((role) => (
+                       <Badge key={role.roleId} variant="secondary" className={`text-xs ${getRoleColor(role.roleName)}`}>
+                         {role.roleName}
+                       </Badge>
+                     ))}
+                   </div>
+                 </div>
+               ) : null}
+
+               {viewUser.permissionKeys?.length ? (
+                 <div className="rounded-lg border p-3">
+                   <div className="flex items-center gap-2 mb-3">
+                     <Key className="h-4 w-4 text-muted-foreground" />
+                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Permissions</p>
+                   </div>
+                   <div className="flex flex-wrap gap-2">
+                     {viewUser.permissionKeys.map((permission) => (
+                       <Badge key={permission} variant="outline" className="text-xs">
+                         {permission}
+                       </Badge>
+                     ))}
+                   </div>
+                 </div>
+               ) : null}
+             </div>
+           )}
+           <DialogFooter>
+             <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>Close</Button>
+           </DialogFooter>
+         </DialogContent>
+       </Dialog>
      </div>
    );
  };
