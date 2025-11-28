@@ -78,7 +78,12 @@ export interface AllUsersResponse {
     email: string;
     employeeID: string;
     isPrimary: boolean;
-    isActive: boolean;
+    usersStatusId: number;
+    roles: {
+      roleId: string;
+      roleName: string;
+    }[];
+    permissionKeys: string[];
   }[];
 }
 
