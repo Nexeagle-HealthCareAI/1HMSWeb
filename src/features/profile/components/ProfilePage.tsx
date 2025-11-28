@@ -6,6 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -57,6 +66,8 @@ const genderOptions = [
   { value: 'prefer-not-to-say', label: 'Prefer not to say' }
 ];
 
+const genderValues = genderOptions.map((option) => option.value);
+
 // Indian Languages options
 const indianLanguages = [
   { value: 'hindi', label: 'Hindi' },
@@ -84,6 +95,8 @@ const indianLanguages = [
   { value: 'sindhi', label: 'Sindhi' }
 ];
 
+const languageValues = indianLanguages.map((option) => option.value);
+
 // Blood Group options
 const bloodGroupOptions = [
   { value: 'A+', label: 'A+' },
@@ -95,6 +108,12 @@ const bloodGroupOptions = [
   { value: 'O+', label: 'O+' },
   { value: 'O-', label: 'O-' }
 ];
+
+const bloodGroupValues = bloodGroupOptions.map((option) => option.value);
+
+const nameRegex = /^[a-zA-Z\s.'-]+$/;
+const cityStateRegex = /^[a-zA-Z\s.'-]+$/;
+const addressRegex = /^[a-zA-Z0-9\s,.'#/-]+$/;
 
 interface ProfilePageProps {
   onBack: () => void;
@@ -174,6 +193,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
   const [expanded, setExpanded] = useState<string[]>(['personal']);
   const [saving, setSaving] = useState<{ basic?: boolean; address?: boolean; employment?: boolean; doctor?: boolean }>({});
+  const [showCompletionDialog, setShowCompletionDialog] = useState(false);
   type FieldErrors = Record<string, string | undefined>;
   const [basicErrors, setBasicErrors] = useState<FieldErrors>({});
   const [addressErrors, setAddressErrors] = useState<FieldErrors>({});
@@ -182,30 +202,107 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
   // Validation schemas (Zod)
   const BasicInfoSchema = z.object({
-    fullName: z.string().min(1, 'Full name is required'),
-    gender: z.string().optional(),
-    language: z.string().optional(),
+    fullName: z
+      .string()
+      .trim()
+      .min(2, 'Full name is required')
+      .max(80, 'Full name must be under 80 characters')
+      .regex(nameRegex, 'Full name can only contain letters and spaces'),
+    email: z
+      .string()
+      .trim()
+      .min(1, 'Email is required')
+      .max(100, 'Email must be less than 100 characters')
+      .email('Please enter a valid email address'),
+    phone: z
+      .string()
+      .trim()
+      .min(1, 'Phone number is required')
+      .superRefine((value, ctx) => {
+        const error = ValidationUtils.validateMobileWithError(value);
+        if (error) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: error });
+        }
+      }),
+    gender: z
+      .string()
+      .optional()
+      .refine((value) => !value || genderValues.includes(value), {
+        message: 'Please select a valid gender option',
+      }),
+    language: z
+      .string()
+      .optional()
+      .refine((value) => !value || languageValues.includes(value), {
+        message: 'Please select a valid language',
+      }),
     dateOfBirth: z
       .string()
       .optional()
       .refine((v) => !v || new Date(v).getTime() <= new Date().setHours(0, 0, 0, 0), {
         message: 'Date of birth cannot be in the future',
       }),
-    bloodGroup: z.string().optional(),
+    bloodGroup: z
+      .string()
+      .optional()
+      .refine((value) => !value || bloodGroupValues.includes(value), {
+        message: 'Please select a valid blood group',
+      }),
   });
 
   const AddressSchema = z.object({
-    addressLine1: z.string().optional(),
-    addressLine2: z.string().optional(),
-    city: z.string().optional(),
-    state: z.string().optional(),
-    country: z.string().optional(),
+    addressLine1: z
+      .string()
+      .trim()
+      .min(5, 'Address line 1 is required')
+      .max(120, 'Address line 1 must be under 120 characters')
+      .regex(addressRegex, 'Address line 1 contains invalid characters'),
+    addressLine2: z
+      .string()
+      .trim()
+      .max(120, 'Address line 2 must be under 120 characters')
+      .regex(addressRegex, 'Address line 2 contains invalid characters')
+      .optional(),
+    city: z
+      .string()
+      .trim()
+      .min(2, 'City is required')
+      .max(60, 'City must be under 60 characters')
+      .regex(cityStateRegex, 'City can only contain letters and spaces'),
+    state: z
+      .string()
+      .trim()
+      .min(2, 'State is required')
+      .max(60, 'State must be under 60 characters')
+      .regex(cityStateRegex, 'State can only contain letters and spaces'),
+    country: z
+      .string()
+      .trim()
+      .min(2, 'Country is required')
+      .max(60, 'Country must be under 60 characters')
+      .regex(cityStateRegex, 'Country can only contain letters and spaces'),
     pincode: z
       .string()
-      .optional()
-      .refine((v) => !v || /^\d{4,10}$/.test(v), { message: 'Pincode must be 4-10 digits' }),
-    emergencyContactName: z.string().optional(),
-    emergencyContactNumber: z.string().optional(),
+      .trim()
+      .min(6, 'Pincode is required')
+      .max(6, 'Pincode must be exactly 6 digits')
+      .refine((v) => /^\d{6}$/.test(v), { message: 'Pincode must be exactly 6 digits' }),
+    emergencyContactName: z
+      .string()
+      .trim()
+      .min(2, 'Emergency contact name is required')
+      .max(60, 'Emergency contact name must be under 60 characters')
+      .regex(nameRegex, 'Emergency contact name can only contain letters and spaces'),
+    emergencyContactNumber: z
+      .string()
+      .trim()
+      .min(1, 'Emergency contact number is required')
+      .superRefine((value, ctx) => {
+        const error = ValidationUtils.validateMobileWithError(value);
+        if (error) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: error });
+        }
+      }),
   });
 
   const EmploymentSchema = z.object({
@@ -355,6 +452,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   const validateBasic = (): boolean => {
     const result = BasicInfoSchema.safeParse({
       fullName: profileData.personal.fullName,
+      email: profileData.personal.email,
+      phone: profileData.personal.phone,
       gender: profileData.personal.gender,
       language: profileData.personal.language,
       dateOfBirth: profileData.personal.dateOfBirth,
@@ -369,7 +468,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   const validateAddress = (): boolean => {
     const result = AddressSchema.safeParse({
       addressLine1: profileData.personal.addressLine1,
-      addressLine2: profileData.personal.addressLine2,
+      addressLine2: profileData.personal.addressLine2?.trim() ? profileData.personal.addressLine2 : undefined,
       city: profileData.personal.city,
       state: profileData.personal.state,
       country: profileData.personal.country,
@@ -391,9 +490,14 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
 
 
-  const saveBasic = async () => {
-    if (!validateBasic()) return;
-    setSaving((s) => ({ ...s, basic: true }));
+  const savePersonalInformation = async () => {
+    const basicValid = validateBasic();
+    const addressValid = validateAddress();
+    if (!basicValid || !addressValid) {
+      return;
+    }
+
+    setSaving((s) => ({ ...s, basic: true, address: true }));
     try {
       if (!userId) {
         toast({ title: 'Error', description: 'User ID not found.', variant: 'destructive' });
@@ -412,12 +516,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           if (uploadResponse.success && uploadResponse.profilePictureUrl) {
             profilePictureURL = uploadResponse.profilePictureUrl;
             // Update local state
-            setProfileData(prev => ({
+            setProfileData((prev) => ({
               ...prev,
               personal: {
                 ...prev.personal,
-                profilePicture: profilePictureURL
-              }
+                profilePicture: profilePictureURL,
+              },
             }));
             setOriginalProfilePicture(profilePictureURL);
           }
@@ -438,7 +542,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         fullName: profileData.personal.fullName,
         gender: profileData.personal.gender || '',
         language: profileData.personal.language || '',
-        profilePictureURL: profilePictureURL,
+        profilePictureURL,
         employeeID: profileData.personal.employeeId || '',
         dateOfBirth: profileData.personal.dateOfBirth ? new Date(profileData.personal.dateOfBirth).toISOString() : '',
         bloodGroup: profileData.personal.bloodGroup || '',
@@ -449,68 +553,26 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         country: profileData.personal.country || '',
         pincode: profileData.personal.pincode || '',
         emergencyContactName: profileData.personal.emergencyContactName || '',
-        emergencyContactNumber: profileData.personal.emergencyContactNumber || ''
+        emergencyContactNumber: profileData.personal.emergencyContactNumber || '',
       };
 
       await updateUserDetailsMutation.mutateAsync(updateData);
-      
+
       // Clear selected file and preview URL after successful save
       if (previewUrlToCleanup) {
         URL.revokeObjectURL(previewUrlToCleanup);
         setPreviewUrlToCleanup(null);
       }
       setSelectedProfilePictureFile(null);
-      
+
       // Refresh profile completion data
       queryClient.invalidateQueries({ queryKey: ['profile', 'completion'] });
       queryClient.invalidateQueries({ queryKey: ['userDetails', userId] });
-      
+      setShowCompletionDialog(true);
     } catch (error) {
-      console.error('Error saving basic info:', error);
+      console.error('Error saving personal info:', error);
     } finally {
-      setSaving((s) => ({ ...s, basic: false }));
-    }
-  };
-
-  const saveAddress = async () => {
-    if (!validateAddress()) return;
-    setSaving((s) => ({ ...s, address: true }));
-    try {
-      if (!userId) {
-        toast({ title: 'Error', description: 'User ID not found.', variant: 'destructive' });
-        return;
-      }
-
-      const updateData: UserProfileUpdateRequest = {
-        userId,
-        mobileNumber: ValidationUtils.cleanMobileNumber(profileData.personal.phone),
-        isActive: true,
-        fullName: profileData.personal.fullName,
-        gender: profileData.personal.gender || '',
-        language: profileData.personal.language || '',
-        profilePictureURL: profileData.personal.profilePicture || '',
-        employeeID: profileData.personal.employeeId || '',
-        dateOfBirth: profileData.personal.dateOfBirth ? new Date(profileData.personal.dateOfBirth).toISOString() : '',
-        bloodGroup: profileData.personal.bloodGroup || '',
-        addressLine1: profileData.personal.addressLine1 || '',
-        addressLine2: profileData.personal.addressLine2 || '',
-        city: profileData.personal.city || '',
-        state: profileData.personal.state || '',
-        country: profileData.personal.country || '',
-        pincode: profileData.personal.pincode || '',
-        emergencyContactName: profileData.personal.emergencyContactName || '',
-        emergencyContactNumber: profileData.personal.emergencyContactNumber || ''
-      };
-
-      await updateUserDetailsMutation.mutateAsync(updateData);
-      
-      // Refresh profile completion data
-      queryClient.invalidateQueries({ queryKey: ['profile', 'completion'] });
-      
-    } catch (error) {
-      console.error('Error saving address info:', error);
-    } finally {
-      setSaving((s) => ({ ...s, address: false }));
+      setSaving((s) => ({ ...s, basic: false, address: false }));
     }
   };
 
@@ -933,6 +995,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                      disabled={!isEditing}
                                      className="mt-1"
                                    />
+                                   {basicErrors.fullName && (
+                                     <p className="text-xs text-amber-600 mt-1">{basicErrors.fullName}</p>
+                                   )}
                                  </div>
                                  <div>
                                    <Label htmlFor="email">Email Address *</Label>
@@ -944,6 +1009,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                      disabled={!isEditing}
                                      className="mt-1"
                                    />
+                                   {basicErrors.email && (
+                                     <p className="text-xs text-amber-600 mt-1">{basicErrors.email}</p>
+                                   )}
                                  </div>
                                  <div>
                                    <Label htmlFor="phone">Phone Number *</Label>
@@ -954,6 +1022,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                      disabled={!isEditing}
                                      className="mt-1"
                                    />
+                                   {basicErrors.phone && (
+                                     <p className="text-xs text-amber-600 mt-1">{basicErrors.phone}</p>
+                                   )}
                                  </div>
                                  <div>
                                    <Label htmlFor="dateOfBirth">Date of Birth</Label>
@@ -965,6 +1036,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                      disabled={!isEditing}
                                      className="mt-1"
                                    />
+                                   {basicErrors.dateOfBirth && (
+                                     <p className="text-xs text-amber-600 mt-1">{basicErrors.dateOfBirth}</p>
+                                   )}
                                  </div>
                                  <div>
                                    <Label htmlFor="gender">Gender</Label>
@@ -984,6 +1058,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                        ))}
                                      </SelectContent>
                                    </Select>
+                                   {basicErrors.gender && (
+                                     <p className="text-xs text-amber-600 mt-1">{basicErrors.gender}</p>
+                                   )}
                                  </div>
                                  <div>
                                    <Label htmlFor="language">Language</Label>
@@ -1003,6 +1080,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                        ))}
                                      </SelectContent>
                                    </Select>
+                                   {basicErrors.language && (
+                                     <p className="text-xs text-amber-600 mt-1">{basicErrors.language}</p>
+                                   )}
                                  </div>
                                                                    <div>
                                     <Label htmlFor="bloodGroup">Blood Group</Label>
@@ -1022,6 +1102,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                         ))}
                                       </SelectContent>
                                     </Select>
+                                    {basicErrors.bloodGroup && (
+                                      <p className="text-xs text-amber-600 mt-1">{basicErrors.bloodGroup}</p>
+                                    )}
                                   </div>
                                </div>
                                {Object.entries(basicErrors).map(([k, v]) => v && (
@@ -1037,7 +1120,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                </h4>
                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                  <div>
-                                   <Label htmlFor="address1">Address Line 1</Label>
+                                   <Label htmlFor="address1">Address Line 1 *</Label>
                                    <Input
                                      id="address1"
                                      value={profileData.personal.addressLine1 || ''}
@@ -1045,6 +1128,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                      disabled={!isEditing}
                                      className="mt-1"
                                    />
+                                   {addressErrors.addressLine1 && (
+                                     <p className="text-xs text-amber-600 mt-1">{addressErrors.addressLine1}</p>
+                                   )}
                                  </div>
                                  <div>
                                    <Label htmlFor="address2">Address Line 2</Label>
@@ -1055,9 +1141,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                      disabled={!isEditing}
                                      className="mt-1"
                                    />
+                                   {addressErrors.addressLine2 && (
+                                     <p className="text-xs text-amber-600 mt-1">{addressErrors.addressLine2}</p>
+                                   )}
                                  </div>
                                  <div>
-                                   <Label htmlFor="city">City</Label>
+                                   <Label htmlFor="city">City *</Label>
                                    <Input 
                                      id="city" 
                                      value={profileData.personal.city || ''} 
@@ -1065,9 +1154,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                      disabled={!isEditing} 
                                      className="mt-1" 
                                    />
+                                   {addressErrors.city && (
+                                     <p className="text-xs text-amber-600 mt-1">{addressErrors.city}</p>
+                                   )}
                                  </div>
                                  <div>
-                                   <Label htmlFor="state">State</Label>
+                                   <Label htmlFor="state">State *</Label>
                                    <Input 
                                      id="state" 
                                      value={profileData.personal.state || ''} 
@@ -1075,9 +1167,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                      disabled={!isEditing} 
                                      className="mt-1" 
                                    />
+                                   {addressErrors.state && (
+                                     <p className="text-xs text-amber-600 mt-1">{addressErrors.state}</p>
+                                   )}
                                  </div>
                                  <div>
-                                   <Label htmlFor="country">Country</Label>
+                                   <Label htmlFor="country">Country *</Label>
                                    <Input 
                                      id="country" 
                                      value={profileData.personal.country || ''} 
@@ -1085,9 +1180,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                      disabled={!isEditing} 
                                      className="mt-1" 
                                    />
+                                   {addressErrors.country && (
+                                     <p className="text-xs text-amber-600 mt-1">{addressErrors.country}</p>
+                                   )}
                                  </div>
                                  <div>
-                                   <Label htmlFor="pincode">Pincode</Label>
+                                   <Label htmlFor="pincode">Pincode *</Label>
                                    <Input 
                                      id="pincode" 
                                      value={profileData.personal.pincode || ''} 
@@ -1095,11 +1193,14 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                      disabled={!isEditing} 
                                      className="mt-1" 
                                    />
+                                   {addressErrors.pincode && (
+                                     <p className="text-xs text-amber-600 mt-1">{addressErrors.pincode}</p>
+                                   )}
                                  </div>
                                </div>
                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                  <div>
-                                   <Label htmlFor="emergencyName">Emergency Contact Name</Label>
+                                   <Label htmlFor="emergencyName">Emergency Contact Name *</Label>
                                    <Input 
                                      id="emergencyName" 
                                      value={profileData.personal.emergencyContactName || ''} 
@@ -1107,9 +1208,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                      disabled={!isEditing} 
                                      className="mt-1" 
                                    />
+                                   {addressErrors.emergencyContactName && (
+                                     <p className="text-xs text-amber-600 mt-1">{addressErrors.emergencyContactName}</p>
+                                   )}
                                  </div>
                                  <div>
-                                   <Label htmlFor="emergencyNumber">Emergency Contact Number</Label>
+                                   <Label htmlFor="emergencyNumber">Emergency Contact Number *</Label>
                                    <Input 
                                      id="emergencyNumber" 
                                      value={profileData.personal.emergencyContactNumber || ''} 
@@ -1117,6 +1221,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                      disabled={!isEditing} 
                                      className="mt-1" 
                                    />
+                                   {addressErrors.emergencyContactNumber && (
+                                     <p className="text-xs text-amber-600 mt-1">{addressErrors.emergencyContactNumber}</p>
+                                   )}
                                  </div>
                                </div>
                                {Object.entries(addressErrors).map(([k, v]) => v && (
@@ -1134,14 +1241,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    Cancel
                                  </Button>
                                  <Button 
-                                   onClick={async () => {
-                                     const basicValid = validateBasic();
-                                     const addressValid = validateAddress();
-                                     if (basicValid && addressValid) {
-                                       await saveBasic();
-                                       await saveAddress();
-                                     }
-                                   }} 
+                                   onClick={savePersonalInformation}
                                    disabled={!!saving.basic || !!saving.address}
                                    className="flex items-center gap-2"
                                  >
@@ -1178,6 +1278,21 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       </div>    
       
   
+      <AlertDialog open={showCompletionDialog} onOpenChange={setShowCompletionDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Profile updated</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your profile completion is currently {completionPercentage}%.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowCompletionDialog(false)}>
+              OK, Close
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
