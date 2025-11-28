@@ -1,16 +1,17 @@
-import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { appointmentApi } from '@/features/appointment/services/appointmentApi';
 import { useToast } from '@/hooks/use-toast';
 
 export const useAppointmentCancel = () => {
-  const [isPending, setIsPending] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const cancelAppointmentMutation = useMutation({
-    mutationFn: ({ appointmentId, reason }: { appointmentId: string; reason?: string }) =>
-      appointmentApi.cancel(appointmentId, reason),
+    mutationFn: ({ appointmentId, patientId }: { appointmentId: string; patientId?: string }) =>
+      appointmentApi.cancelAppointment({
+        appointmentId,
+        patientId: patientId ?? '',
+      }),
     onSuccess: (data) => {
       toast({
         title: "Appointment Cancelled",
@@ -31,15 +32,11 @@ export const useAppointmentCancel = () => {
         variant: "destructive",
       });
     },
-    onSettled: () => {
-      setIsPending(false);
-    },
   });
 
-  const cancelAppointment = async (appointmentId: string, reason?: string) => {
-    setIsPending(true);
+  const cancelAppointment = async (appointmentId: string, patientId?: string) => {
     try {
-      await cancelAppointmentMutation.mutateAsync({ appointmentId, reason });
+      await cancelAppointmentMutation.mutateAsync({ appointmentId, patientId });
       return true;
     } catch (error) {
       return false;
@@ -48,6 +45,6 @@ export const useAppointmentCancel = () => {
 
   return {
     cancelAppointment,
-    isPending: isPending || cancelAppointmentMutation.isPending,
+    isPending: cancelAppointmentMutation.isPending,
   };
 };

@@ -439,26 +439,37 @@ useEffect(() => {
       </Dialog>
 
       {/* Compact Top Navigation */}
-      <div className="flex items-center gap-2 sm:gap-3 mb-4">
-        <h1 className="text-xl lg:text-2xl font-bold text-foreground">{t('admin.adminBoard')}</h1>
-        {hospitalAccessRestricted && (
-          <button
-            type="button"
-            onClick={focusHospitalBranding}
-            className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[10px] sm:text-xs font-semibold text-primary shadow-sm transition-colors hover:bg-primary/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-          >
-            <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-primary/20 text-[9px] font-bold text-primary">
-              {Math.round(hospitalScore)}
-            </span>
-            <span className="hidden sm:inline">{hospitalAccessMessage || 'Complete hospital information to unlock full access.'}</span>
-            <span className="sm:hidden">{Math.round(hospitalScore)}%</span>
-          </button>
-        )}
-        {hospitalScore === 100 && (
-          <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">
-            <CheckCircle2 className="h-3 w-3 mr-1" />
-            {t('admin.hospitalSetup100')}
-          </Badge>
+      <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 mb-4">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <h1 className="text-xl lg:text-2xl font-bold text-foreground">{t('admin.adminBoard')}</h1>
+          {hospitalAccessRestricted && (
+            <button
+              type="button"
+              onClick={focusHospitalBranding}
+              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[10px] sm:text-xs font-semibold text-primary shadow-sm transition-colors hover:bg-primary/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            >
+              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-primary/20 text-[9px] font-bold text-primary">
+                {Math.round(hospitalScore)}
+              </span>
+              <span className="hidden sm:inline">{hospitalAccessMessage || 'Complete hospital information to unlock full access.'}</span>
+              <span className="sm:hidden">{Math.round(hospitalScore)}%</span>
+            </button>
+          )}
+          {hospitalScore === 100 && (
+            <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">
+              <CheckCircle2 className="h-3 w-3 mr-1" />
+              {t('admin.hospitalSetup100')}
+            </Badge>
+          )}
+        </div>
+
+        {hospitalId && (
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground ml-auto">
+            <span className="font-medium text-foreground">Hospital ID:</span>
+            <Badge variant="outline" className="font-mono text-primary border-primary/40 bg-primary/5 max-w-[180px] sm:max-w-none truncate">
+              {hospitalId}
+            </Badge>
+          </div>
         )}
       </div>
 
