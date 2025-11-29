@@ -248,7 +248,7 @@ export const UserManagement: React.FC = () => {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">{t('userManagement.fullName')} *</Label>
                 <Input
@@ -298,7 +298,7 @@ export const UserManagement: React.FC = () => {
                   onValueChange={(value) => setNewUser({...newUser, selectedRole: value})}
                   className="space-y-3"
                 >
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {typedRolesResponse?.allRoles?.map(role => (
                       <div key={role.roleId} className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                         <RadioGroupItem value={role.roleId} id={role.roleId} />

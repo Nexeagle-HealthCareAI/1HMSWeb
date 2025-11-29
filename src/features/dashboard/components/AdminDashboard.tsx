@@ -37,7 +37,8 @@ import {
   User,
   CheckCircle2,
   ArrowRight,
-  MessageSquare
+  MessageSquare,
+  Copy
 } from 'lucide-react';
 import { 
   DashboardOverview,
@@ -154,14 +155,14 @@ useEffect(() => {
     };
   }, []);
 
-  // Auto-scroll to Hospital Branding section when navigating to hospital config
+  // Auto-scroll to Hospital Info section when navigating to hospital config
   useEffect(() => {
     if (currentView === 'system-config-hospital') {
       // Use a timeout to ensure the component has rendered and tab has switched
       const timer = setTimeout(() => {
-        // Try to find the Hospital Branding content first (since the tab should be active)
-        const hospitalBrandingContent = document.querySelector('[data-testid="hospital-branding-content"]');
-        const hospitalBrandingTab = document.querySelector('[data-testid="hospital-branding-tab"]');
+        // Try to find the Hospital Info content first (since the tab should be active)
+        const hospitalBrandingContent = document.querySelector('[data-testid="hospital-info-content"]');
+        const hospitalBrandingTab = document.querySelector('[data-testid="hospital-info-tab"]');
         const systemConfigModule = document.querySelector('[data-module="system-config-hospital"]');
         
         // Priority order: content section, then tab, then module
@@ -297,11 +298,48 @@ useEffect(() => {
     }
   ];
 
+  const handleCopyHospitalId = useCallback(async () => {
+    if (!hospitalId) {
+      return;
+    }
+
+    const copyFallback = () => {
+      const textArea = document.createElement('textarea');
+      textArea.value = hospitalId;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    };
+
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(hospitalId);
+      } else {
+        copyFallback();
+      }
+      toast({
+        title: t('admin.copied'),
+        description: t('admin.hospitalIdCopied') || 'Hospital ID copied to clipboard.'
+      });
+    } catch (error) {
+      console.error('Unable to copy hospital ID:', error);
+      toast({
+        title: t('admin.copyFailed') || 'Copy failed',
+        description: t('admin.copyFailedDescription') || 'Please copy the hospital ID manually.',
+        variant: 'destructive'
+      });
+    }
+  }, [hospitalId, toast, t]);
+
   const quickActions = [
     {
       id: 'branding',
-      label: 'Tune Hospital Branding',
-      description: 'Update logo, colors, and patient-facing theme.',
+      label: 'Update Hospital Info',
+      description: 'Complete hospital profile, branding, and compliance details.',
       Icon: Building2,
       action: focusHospitalBranding,
       disabled: false
@@ -466,9 +504,22 @@ useEffect(() => {
         {hospitalId && (
           <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground ml-auto">
             <span className="font-medium text-foreground">Hospital ID:</span>
-            <Badge variant="outline" className="font-mono text-primary border-primary/40 bg-primary/5 max-w-[180px] sm:max-w-none truncate">
-              {hospitalId}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="font-mono text-primary border-primary/40 bg-primary/5 max-w-[180px] sm:max-w-none truncate">
+                {hospitalId}
+              </Badge>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7"
+                onClick={handleCopyHospitalId}
+                aria-label={t('admin.copyHospitalId') || 'Copy Hospital ID'}
+              >
+                <Copy className="h-4 w-4" />
+                <span className="sr-only">Copy Hospital ID</span>
+              </Button>
+            </div>
           </div>
         )}
       </div>

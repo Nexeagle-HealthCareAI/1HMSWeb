@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/store/authStore';
 import { useAuthApi } from '@/hooks/useApi';
 import { fetchAndStoreUserPermissions } from '@/features/auth/services/authApi';
 import { ValidationUtils } from '@/utils/validation';
+import { useHospitalUser } from '@/features/appointment/hooks/useHospitalUser';
 import {
   RegistrationLayout,
   UserTypeSelection,
@@ -24,7 +25,9 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
   const setPasswordMutation = useAuthApi.setPassword();
   
   // Auth store actions
-  const { setToken, setUserId, setUserRole, getUserId, getToken, setAuthenticatedUser } = useAuthStore();
+  const { setToken, setUserId, setUserRole, getUserId, getToken, setAuthenticatedUser, setHospitalId, setEmployeeId } = useAuthStore();
+  const currentUserId = getUserId();
+  const { refetch: refetchHospitalUser } = useHospitalUser(currentUserId || '');
   
   const [step, setStep] = useState(1);
   const [userType, setUserType] = useState('');
@@ -56,6 +59,35 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
       setAllowSendOTP(true);
     }
   };
+
+  const fetchAndStoreHospitalDetails = useCallback(async () => {
+    if (!currentUserId) {
+      return null;
+    }
+
+    try {
+      const result = await refetchHospitalUser();
+      const hospitalUser = result.data;
+
+      if (hospitalUser?.hospitalId) {
+        setHospitalId(hospitalUser.hospitalId);
+      }
+
+      if (hospitalUser?.employeeID) {
+        setEmployeeId(hospitalUser.employeeID);
+      }
+
+      return hospitalUser;
+    } catch (error) {
+      console.error('Failed to fetch hospital details:', error);
+      toast({
+        title: "Hospital lookup failed",
+        description: "We couldn't fetch your hospital information. Please try again later.",
+        variant: "destructive"
+      });
+      return null;
+    }
+  }, [currentUserId, refetchHospitalUser, setHospitalId, setEmployeeId]);
 
   // Helper function to get user-friendly error messages
   const getErrorMessage = (error: any): string => {
@@ -463,6 +495,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
         const token = getToken();
         if (userId && token) {
           setAuthenticatedUser(userId, token);
+          await fetchAndStoreHospitalDetails();
           
           // Fetch and store user permissions
           try {
@@ -498,6 +531,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
     const token = getToken();
     if (userId && token) {
       setAuthenticatedUser(userId, token);
+      await fetchAndStoreHospitalDetails();
       
       // Fetch and store user permissions
       try {
