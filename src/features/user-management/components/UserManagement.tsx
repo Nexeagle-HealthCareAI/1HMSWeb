@@ -73,6 +73,29 @@ export const UserManagement: React.FC = () => {
     workingHours: ''
   });
 
+  // Real-time validation states
+  const [emailError, setEmailError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+
+  const isFormValid =
+    Boolean(newUser.name && newUser.phone && newUser.selectedRole && !phoneError && !emailError);
+
+  // Validation helpers
+  const validateEmail = (email: string) => {
+    if (!email) return '';
+    // Simple email regex
+    return /^[\w-.]+@[\w-]+\.[a-zA-Z]{2,}$/.test(email)
+      ? ''
+      : 'Please enter a valid email address.';
+  };
+  const validatePhone = (phone: string) => {
+    if (!phone) return '';
+    // Accepts 10 digit numbers only
+    return /^\d{10}$/.test(phone)
+      ? ''
+      : 'Please enter a valid 10-digit phone number.';
+  };
+
   const navigationItems: Array<{
     value: 'onboarded' | 'invited';
     title: string;
@@ -96,9 +119,13 @@ export const UserManagement: React.FC = () => {
 
 
   const handleAddUser = async () => {
+    const emailErr = validateEmail(newUser.email);
+    const phoneErr = validatePhone(newUser.phone);
+    setEmailError(emailErr);
+    setPhoneError(phoneErr);
+    if (emailErr || phoneErr) return;
     if (newUser.name && newUser.phone && newUser.selectedRole && currentUserId && hospitalId) {
       const selectedRole = typedRolesResponse?.allRoles.find(r => r.roleId === newUser.selectedRole);
-      
       const inviteData: InviteUserRequest = {
         hospitalId: hospitalId,
         roleId: newUser.selectedRole,
@@ -107,25 +134,17 @@ export const UserManagement: React.FC = () => {
         email: newUser.email,
         invitedByUserId: currentUserId
       };
-
       try {
         await inviteUser.mutateAsync(inviteData);
-        
-        // Set invited user info for success modal
         setInvitedUserInfo({
           name: newUser.name,
           email: newUser.email,
           role: selectedRole?.roleName || newUser.selectedRole
         });
-        
-        // Reset form and close dialog
         setNewUser({ name: '', email: '', phone: '', selectedRole: '', specialty: '', workingHours: '' });
         setShowAddUser(false);
-        
-        // Show success modal
         setShowSuccessModal(true);
       } catch (error) {
-        // Error handling is done in the mutation hook
         console.error('Error inviting user:', error);
       }
     }
@@ -250,7 +269,9 @@ export const UserManagement: React.FC = () => {
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">{t('userManagement.fullName')} *</Label>
+                <Label htmlFor="name">
+                  {t('userManagement.fullName')} <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="name"
                   value={newUser.name}
@@ -260,14 +281,22 @@ export const UserManagement: React.FC = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">{t('userManagement.phone')} *</Label>
+                <Label htmlFor="phone">
+                  {t('userManagement.phone')} <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="phone"
                   value={newUser.phone}
-                  onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
+                  onChange={(e) => {
+                    setNewUser({...newUser, phone: e.target.value});
+                    setPhoneError(validatePhone(e.target.value));
+                  }}
                   placeholder={t('userManagement.enterPhoneNumber')}
                   required
                 />
+                {phoneError && (
+                  <p className="text-xs text-red-600 mt-1">{phoneError}</p>
+                )}
               </div>
             </div>
             <div className="space-y-2">
@@ -276,12 +305,20 @@ export const UserManagement: React.FC = () => {
                 id="email"
                 type="email"
                 value={newUser.email}
-                onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                onChange={(e) => {
+                  setNewUser({...newUser, email: e.target.value});
+                  setEmailError(validateEmail(e.target.value));
+                }}
                 placeholder={t('userManagement.enterEmailAddress')}
               />
+              {emailError && (
+                <p className="text-xs text-red-600 mt-1">{emailError}</p>
+              )}
             </div>
             <div className="space-y-3">
-              <Label>{t('userManagement.selectRole')} *</Label>
+              <Label>
+                {t('userManagement.selectRole')} <span className="text-red-500">*</span>
+              </Label>
               {rolesLoading ? (
                 <div className="p-6 text-center text-muted-foreground border rounded-lg">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
@@ -299,14 +336,18 @@ export const UserManagement: React.FC = () => {
                   className="space-y-3"
                 >
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {typedRolesResponse?.allRoles?.map(role => (
-                      <div key={role.roleId} className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                        <RadioGroupItem value={role.roleId} id={role.roleId} />
-                        <Label htmlFor={role.roleId} className="flex items-center gap-2 cursor-pointer flex-1">
-                          <Badge className={getRoleColor(role.roleName)}>{role.roleName}</Badge>
-                        </Label>
-                      </div>
-                    ))}
+                    {typedRolesResponse?.allRoles
+                      ?.filter((role, idx, arr) =>
+                        arr.findIndex(r => r.roleName.toLowerCase() === role.roleName.toLowerCase()) === idx
+                      )
+                      .map(role => (
+                        <div key={role.roleId} className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                          <RadioGroupItem value={role.roleId} id={role.roleId} />
+                          <Label htmlFor={role.roleId} className="flex items-center gap-2 cursor-pointer flex-1">
+                            <Badge className={getRoleColor(role.roleName)}>{role.roleName}</Badge>
+                          </Label>
+                        </div>
+                      ))}
                   </div>
                 </RadioGroup>
               )}
@@ -317,7 +358,7 @@ export const UserManagement: React.FC = () => {
               </Button>
               <Button 
                 onClick={handleAddUser}
-                disabled={!newUser.name || !newUser.phone || !newUser.selectedRole || inviteUser.isPending}
+                disabled={!isFormValid || inviteUser.isPending}
                 className="gap-2"
               >
                 {inviteUser.isPending ? (

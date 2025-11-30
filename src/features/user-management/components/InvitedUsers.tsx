@@ -489,29 +489,7 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
                           </Button>
                         )}
                         
-                        {/* Additional Actions Dropdown */}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem>
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Calendar className="h-4 w-4 mr-2" />
-                              View Timeline
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-orange-600 focus:text-orange-600">
-                              <RefreshCw className="h-4 w-4 mr-2" />
-                              Refresh Status
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        
                       </div>
                       
                       {/* Action Status Indicator */}
