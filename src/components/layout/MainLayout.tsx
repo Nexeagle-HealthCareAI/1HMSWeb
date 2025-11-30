@@ -466,15 +466,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     <User className="mr-2 h-4 w-4 text-gray-600 dark:text-gray-300" />
                     <span>{t('header.profile')}</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/settings')} className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700">
-                    <Settings className="mr-2 h-4 w-4 text-gray-600 dark:text-gray-300" />
-                    <span>{t('header.settings')}</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-600" />
-                  <DropdownMenuItem onClick={handleLogout} className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700">
-                    <LogOut className="mr-2 h-4 w-4 text-gray-600 dark:text-gray-300" />
-                    <span>Logout</span>
-                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
