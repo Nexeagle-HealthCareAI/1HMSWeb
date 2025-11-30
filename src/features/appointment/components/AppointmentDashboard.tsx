@@ -167,60 +167,26 @@ export const AppointmentDashboard = () => {
 
   const appointments = appointmentData?.items || [];
 
-  // Debug logging
-  console.log('AppointmentDashboard Debug:', {
-    hospitalId,
-    startDate,
-    endDate,
-    activeTab,
-    appointmentData,
-    appointments: appointments.length,
-    isLoading,
-    error,
-    // Log first few appointments to see data structure
-    sampleAppointments: appointments.slice(0, 3).map(apt => ({
-      id: apt.appointmentId,
-      patientName: apt.patientFullName,
-      startAt: apt.startAt,
-      appointmentDate: apt.appointmentDate,
-      finalStatusCode: apt.finalStatusCode
-    }))
-  });
-
-  const filteredAppointments = useMemo(() => {
-    console.log('🔄 FILTERING STARTED - useMemo triggered');
-    console.log('Filter parameters:', { selectedStatus, activeTab, searchTerm, selectedDoctor });
-    
-    if (!appointments || appointments.length === 0) return [];
-    
+  const filteredAppointments = useMemo(() => {    
+    if (!appointments || appointments.length === 0) return [];    
     const today = new Date(); // Use actual current date
     
     // If no appointments, return empty array
-    if (appointments.length === 0) {
-      console.log('No appointments to filter');
+    if (appointments.length === 0) {      
       return [];
     }
-    
-    console.log('Filtering appointments:', {
-      totalAppointments: appointments.length,
-      activeTab,
-      selectedStatus,
-      searchTerm,
-      selectedDoctor,
-      startDate,
-      endDate,
-      today: today.toDateString()
-    });
     
     console.log('Current selectedStatus in filter:', selectedStatus, 'Type:', typeof selectedStatus);
     
     const filtered = appointments.filter(appointment => {
       const searchLower = searchTerm.toLowerCase();
+      const nameLower = appointment.patientFullName?.toLowerCase() || '';
       const matchesSearch = (
-        appointment.patientFullName.toLowerCase().includes(searchLower) ||
-        appointment.patientId.toLowerCase().includes(searchLower) ||
+        nameLower.includes(searchLower) ||
+        appointment.patientId?.toLowerCase().includes(searchLower) ||
         (appointment.doctorName && appointment.doctorName.toLowerCase().includes(searchLower)) ||
-        appointment.patientMobile.includes(searchTerm)
+        appointment.patientMobile?.toLowerCase().includes(searchLower) ||
+        (appointment.appointmentDate && appointment.appointmentDate.toLowerCase().includes(searchLower))
       );
       
       const matchesDoctor = selectedDoctor === 'all' || appointment.doctorName === selectedDoctor;
@@ -487,6 +453,7 @@ export const AppointmentDashboard = () => {
 
     // Sort by appointment time in increasing order
     const sortedFiltered = filtered.sort((a, b) => {
+      // Sort only by appointment time
       const timeA = new Date(a.startAt).getTime();
       const timeB = new Date(b.startAt).getTime();
       return timeA - timeB;
@@ -865,10 +832,10 @@ export const AppointmentDashboard = () => {
                 <div className="relative max-w-md">
                           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                           <Input
-                    placeholder="Search patients, ID, or doctor..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-10"
+                        placeholder="Search patients, ID, doctor, token..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 h-10"
                           />
                       </div>
                       

@@ -15,6 +15,7 @@ import { Clock, Calendar, Repeat, Sun, Moon, Sunrise, Sunset, Info, AlertCircle,
 import { CalendarService, CalendarViewType, DateRange } from '../services/calendarService';
 import { DateRangeSelectionPopup } from './DateRangeSelectionPopup';
 import { useTranslation } from 'react-i18next';
+import { useAuthStore } from '@/store/authStore';
 
 interface PersonalizedScheduleModalProps {
   open: boolean;
@@ -218,6 +219,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
       // Single day schedule
       const payload: CreateOverridePayload = {
         doctorId,
+        hospitalId: useAuthStore.getState().getHospitalId(),
         overrideDate: startDate,
         startDate,
         endDate,
@@ -248,6 +250,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
           const dateStr = format(currentDate, 'yyyy-MM-dd');
           const payload: CreateOverridePayload = {
             doctorId,
+            hospitalId: useAuthStore.getState().getHospitalId(),
             overrideDate: dateStr,
             startDate: dateStr,
             endDate: dateStr,
@@ -501,7 +504,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[900px] max-h-[85vh] overflow-hidden">
+        <DialogContent className="sm:max-w-[900px] max-h-[85vh] overflow-auto">
           <DialogHeader className="pb-4">
             <DialogTitle className="flex items-center gap-2 text-lg">
               <Calendar className="h-5 w-5" />
@@ -524,7 +527,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                   </TabsTrigger>
                 </TabsList>
                 
-                <div className="mt-4 h-[calc(85vh-200px)] overflow-y-auto">
+                <div className="mt-4">
                   <TabsContent value="schedule" className="space-y-4 h-full">
                     {/* Schedule Mode Selection */}
                     <div className="space-y-3">

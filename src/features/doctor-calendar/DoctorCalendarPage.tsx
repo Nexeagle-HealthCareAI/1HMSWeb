@@ -15,6 +15,8 @@ import {
   AppointmentCancelDialog
 } from './components';
 import { useCalendarEvents, useCreateOverride, useDeleteOverride, useTimeOff, useCreateTimeOff, useDeleteTimeOff, useDoctorCalendarConfig, useAppointmentCancel } from './hooks/useCalendar';
+import { useQueryClient } from '@tanstack/react-query';
+import { calendarKeys } from './hooks/useCalendar';
 import { CalendarEvent, CreateOverridePayload, CreateBlockPayload, ShiftName, CreateTimeOffRequest } from './api/types';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -26,6 +28,7 @@ import { useUserDetails } from '@/hooks/useUserProfileApi';
 import { useDoctorProfile } from '@/features/doctor/hooks/useDoctorProfile';
 
 export const DoctorCalendarPage: React.FC = () => {
+    const queryClient = useQueryClient();
   const { t } = useTranslation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'>('timeGridDay');
@@ -129,8 +132,7 @@ export const DoctorCalendarPage: React.FC = () => {
     }
   }, [doctorProfileError, userId]);
   const { data: userDetailsResponse } = useUserDetails(userId);
-  
-  // Use doctorId from doctor profile response - wait for it to load
+
   const doctorId = doctorProfile?.doctorId;
   const authStore = useAuthStore();
   const hospitalId = authStore.getHospitalId();
@@ -192,7 +194,7 @@ export const DoctorCalendarPage: React.FC = () => {
   
   // Queries - Use the same startDate for both hooks to ensure consistency
   const { data: calendarConfig, isLoading: configLoading } = useDoctorCalendarConfig(doctorId,hospitalId, fromISO, daysCount);
-  const { data: events = [], isLoading: eventsLoading } = useCalendarEvents(doctorId,hospitalId, fromISO, toISO, calendarConfig);
+  const { data: events = [], isLoading: eventsLoading, refetch: refetchCalendarEvents } = useCalendarEvents(doctorId, hospitalId, fromISO, toISO, calendarConfig);
   const { data: timeOffData, isLoading: timeOffLoading } = useTimeOff(doctorId,hospitalId);
   
   // Use real events directly
@@ -963,11 +965,8 @@ export const DoctorCalendarPage: React.FC = () => {
       }
       
       setPersonalizedScheduleModal(prev => ({ ...prev, open: false }));
-      
-      // Reload page after successful personalized schedule creation
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+        refetchCalendarEvents();
+      // TODO: Refetch calendar events here if needed
     };
     
     processPayloads();
@@ -1009,11 +1008,8 @@ export const DoctorCalendarPage: React.FC = () => {
           ]
         });
         setPersonalizedScheduleModal(prev => ({ ...prev, open: false }));
-        
-        // Reload page after successful time off creation
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
+          refetchCalendarEvents();
+        // TODO: Refetch calendar events here if needed
       },
       onError: (error) => {
         toast({
@@ -1044,11 +1040,9 @@ export const DoctorCalendarPage: React.FC = () => {
           description: data.message || t('doctorCalendar.timeOffDeleted'),
         });
         setDeleteTimeOffModal({ open: false, timeOffData: undefined });
+          refetchCalendarEvents();
         
-        // Reload page after successful time off deletion
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
+        // TODO: Refetch calendar events here if needed
       },
       onError: (error) => {
         toast({
@@ -1083,11 +1077,9 @@ export const DoctorCalendarPage: React.FC = () => {
           description: data.message || t('doctorCalendar.shiftOverrideCanceled'),
         });
         setCancelOverrideModal({ open: false, overrideData: undefined });
+          refetchCalendarEvents();
         
-        // Reload page after successful override cancellation
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
+        // TODO: Refetch calendar events here if needed
       },
       onError: (error) => {
         console.error('Failed to cancel override:', error);
@@ -1123,11 +1115,9 @@ export const DoctorCalendarPage: React.FC = () => {
           description: data.message || t('doctorCalendar.shiftOverrideCanceled'),
         });
         setOverrideActionModal({ open: false, overrideData: undefined });
+          refetchCalendarEvents();
         
-        // Reload page after successful override cancellation
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
+        // TODO: Refetch calendar events here if needed
       },
       onError: (error) => {
         console.error('Failed to cancel override:', error);
@@ -1187,10 +1177,8 @@ export const DoctorCalendarPage: React.FC = () => {
     
     if (success) {
       setAppointmentCancelModal({ open: false, appointmentData: undefined });
-      // Reload page after successful appointment cancellation
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+        refetchCalendarEvents();
+      // TODO: Refetch calendar events here if needed
     }
   };
 
@@ -1225,7 +1213,7 @@ export const DoctorCalendarPage: React.FC = () => {
                               <p className="font-medium">{t('errors.doctorProfileError')}:</p>
               <p>{doctorProfileError.message || 'Failed to load doctor profile'}</p>
               <button 
-                onClick={() => window.location.reload()} 
+                onClick={() => {/* TODO: Refetch doctor profile or calendar data here if needed */}} 
                 className="mt-2 px-3 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
               >
                 {t('doctorCalendar.retry')}
@@ -1670,13 +1658,6 @@ export const DoctorCalendarPage: React.FC = () => {
             transform: translateY(-1px) !important;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
             opacity: 0.9 !important;
-          }
-          
-          .fc-event[data-override="true"]:hover {
-            cursor: default !important;
-            transform: none !important;
-            box-shadow: none !important;
-            opacity: 0.8 !important;
           }
           
           /* Ensure block events are visible above override events */
