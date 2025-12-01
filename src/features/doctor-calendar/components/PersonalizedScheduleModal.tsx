@@ -86,13 +86,13 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
   const [shiftConfigs, setShiftConfigs] = useState<Record<ShiftName, {
     startTime: string;
     endTime: string;
-    slotDuration: number;
+    slotDuration: string; // keep as string so users can edit freely
     maxPatients: string;
     enabled: boolean;
   }>>({
-    Morning: { startTime: '09:00', endTime: '12:00', slotDuration: 15, maxPatients: '', enabled: false },
-    Afternoon: { startTime: '14:00', endTime: '17:00', slotDuration: 15, maxPatients: '', enabled: false },
-    Evening: { startTime: '18:00', endTime: '21:00', slotDuration: 15, maxPatients: '', enabled: false }
+    Morning: { startTime: '09:00', endTime: '12:00', slotDuration: '15', maxPatients: '', enabled: false },
+    Afternoon: { startTime: '14:00', endTime: '17:00', slotDuration: '15', maxPatients: '', enabled: false },
+    Evening: { startTime: '18:00', endTime: '21:00', slotDuration: '15', maxPatients: '', enabled: false }
   });
 
   const [scheduleType, setScheduleType] = useState<'schedule' | 'block'>(
@@ -225,11 +225,12 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
         endDate,
         shiftDetails: Array.from(selectedShifts).map(shiftName => {
           const config = shiftConfigs[shiftName];
+          const slotDuration = Math.max(1, Number(config.slotDuration) || 15);
           return {
             shiftName,
             startTime: config.startTime,
             endTime: config.endTime,
-            slotDurationInMinutes: config.slotDuration,
+            slotDurationInMinutes: slotDuration,
             recurringDays: []
           };
         })
@@ -256,11 +257,12 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
             endDate: dateStr,
             shiftDetails: Array.from(selectedShifts).map(shiftName => {
               const config = shiftConfigs[shiftName];
+              const slotDuration = Math.max(1, Number(config.slotDuration) || 15);
               return {
                 shiftName,
                 startTime: config.startTime,
                 endTime: config.endTime,
-                slotDurationInMinutes: config.slotDuration,
+                slotDurationInMinutes: slotDuration,
                 recurringDays: days.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d - 1])
               };
             })
@@ -641,102 +643,86 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                     <div className="space-y-3">
                       <Label className="text-sm font-semibold">Select Shifts</Label>
                       <div className="grid grid-cols-2 gap-2">
-                        {SHIFT_TEMPLATES.map((template) => (
-                          <Card
-                            key={template.name}
-                            className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
-                              selectedShifts.has(template.name)
-                                ? 'ring-2 ring-blue-500 bg-blue-50'
-                                : 'hover:bg-gray-50'
-                            }`}
-                            onClick={() => handleShiftToggle(template.name)}
-                          >
-                            <CardContent className="p-3">
-                              <div className="flex items-center gap-2">
-                                <div className={`p-1 rounded ${template.color}`}>
-                                  {template.icon}
-                                </div>
-                                <div className="flex-1">
-                                  <h4 className="font-medium text-sm">{template.name}</h4>
-                                  <p className="text-xs text-gray-600">{template.description}</p>
-                                </div>
-                                <Switch
-                                  checked={selectedShifts.has(template.name)}
-                                  onCheckedChange={() => handleShiftToggle(template.name)}
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    </div>
+                        {SHIFT_TEMPLATES.map((template) => {
+                          const isSelected = selectedShifts.has(template.name);
+                          const config = shiftConfigs[template.name];
 
-                    {/* Shift Configuration */}
-                    {selectedShifts.size > 0 && (
-                      <div className="space-y-3">
-                        <Label className="text-sm font-semibold">Shift Configuration</Label>
-                        <div className="space-y-2">
-                          {Array.from(selectedShifts).map((shiftName) => {
-                            const config = shiftConfigs[shiftName];
-                            const template = SHIFT_TEMPLATES.find(t => t.name === shiftName);
-                            
-                            return (
-                              <Card key={shiftName} className="p-3">
-                                <div className="flex items-center gap-3">
-                                  <div className={`p-2 rounded ${template?.color}`}>
-                                    {template?.icon}
+                          return (
+                            <Card
+                              key={template.name}
+                              className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
+                                isSelected
+                                  ? 'ring-2 ring-blue-500 bg-blue-50'
+                                  : 'hover:bg-gray-50'
+                              }`}
+                              onClick={() => handleShiftToggle(template.name)}
+                            >
+                              <CardContent className="p-3 space-y-3">
+                                <div className="flex items-center gap-2">
+                                  <div className={`p-1 rounded ${template.color}`}>
+                                    {template.icon}
                                   </div>
                                   <div className="flex-1">
-                                    <h4 className="font-medium text-sm">{shiftName}</h4>
-                                    <div className="grid grid-cols-3 gap-2 mt-2">
-                                      <div>
-                                        <Label className="text-xs">Start Time</Label>
-                                        <Input
-                                          type="time"
-                                          value={config.startTime}
-                                          onChange={(e) => setShiftConfigs(prev => ({
-                                            ...prev,
-                                            [shiftName]: { ...prev[shiftName], startTime: e.target.value }
-                                          }))}
-                                          className="h-8 text-xs"
-                                        />
-                                      </div>
-                                      <div>
-                                        <Label className="text-xs">End Time</Label>
-                                        <Input
-                                          type="time"
-                                          value={config.endTime}
-                                          onChange={(e) => setShiftConfigs(prev => ({
-                                            ...prev,
-                                            [shiftName]: { ...prev[shiftName], endTime: e.target.value }
-                                          }))}
-                                          className="h-8 text-xs"
-                                        />
-                                      </div>
-                                      <div>
-                                        <Label className="text-xs">Duration (min)</Label>
-                                        <Input
-                                          type="number"
-                                          value={config.slotDuration}
-                                          onChange={(e) => setShiftConfigs(prev => ({
-                                            ...prev,
-                                            [shiftName]: { ...prev[shiftName], slotDuration: parseInt(e.target.value) || 15 }
-                                          }))}
-                                          className="h-8 text-xs"
-                                          min="5"
-                                          max="60"
-                                        />
-                                      </div>
+                                    <h4 className="font-medium text-sm">{template.name}</h4>
+                                    <p className="text-xs text-gray-600">{template.description}</p>
+                                  </div>
+                                  <Switch
+                                    checked={isSelected}
+                                    onCheckedChange={() => handleShiftToggle(template.name)}
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                </div>
+
+                                {isSelected && (
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                    <div>
+                                      <Label className="text-xs">Start Time</Label>
+                                      <Input
+                                        type="time"
+                                        value={config.startTime}
+                                        onChange={(e) => setShiftConfigs(prev => ({
+                                          ...prev,
+                                          [template.name]: { ...prev[template.name], startTime: e.target.value }
+                                        }))}
+                                        className="h-8 text-xs"
+                                        onClick={(e) => e.stopPropagation()}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs">End Time</Label>
+                                      <Input
+                                        type="time"
+                                        value={config.endTime}
+                                        onChange={(e) => setShiftConfigs(prev => ({
+                                          ...prev,
+                                          [template.name]: { ...prev[template.name], endTime: e.target.value }
+                                        }))}
+                                        className="h-8 text-xs"
+                                        onClick={(e) => e.stopPropagation()}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs">Duration (min)</Label>
+                                      <Input
+                                        type="number"
+                                        value={config.slotDuration}
+                                        onChange={(e) => setShiftConfigs(prev => ({
+                                          ...prev,
+                                          [template.name]: { ...prev[template.name], slotDuration: e.target.value }
+                                        }))}
+                                        className="h-8 text-xs"
+                                        min="1"
+                                        onClick={(e) => e.stopPropagation()}
+                                      />
                                     </div>
                                   </div>
-                                </div>
-                              </Card>
-                            );
-                          })}
-                        </div>
+                                )}
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
                       </div>
-                    )}
+                    </div>
                   </TabsContent>
 
                   <TabsContent value="block" className="space-y-4 h-full">

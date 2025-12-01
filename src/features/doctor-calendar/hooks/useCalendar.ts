@@ -230,14 +230,15 @@ export function useDeleteTimeOff() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: timeOffApi.deleteDoctorTimeOff,
-    onSuccess: (data) => {
-      // Invalidate all time-off queries
+    mutationFn: ({ doctorId, hospitalId, timeOffId }: { doctorId: string; hospitalId: string; timeOffId: string }) =>
+      timeOffApi.deleteDoctorTimeOff(doctorId, hospitalId, timeOffId),
+    onSuccess: (data, variables) => {
+      // Invalidate time-off data for this doctor
       queryClient.invalidateQueries({
-        queryKey: [...calendarKeys.all, 'timeOff']
+        queryKey: calendarKeys.timeOff(variables.doctorId)
       });
       
-      // Invalidate all calendar events
+      // Invalidate all calendar events (partial key match)
       queryClient.invalidateQueries({
         queryKey: [...calendarKeys.all, 'events']
       });

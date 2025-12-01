@@ -60,12 +60,13 @@ export interface UpdatePrescriptionFieldPreferenceRequest {
 }
 
 export const usePrescriptionFieldConfig = () => {
-  const { getDoctorId } = useAuthStore();
+  const { getDoctorId, hospitalId: storedHospitalId, getHospitalId } = useAuthStore();
   const queryClient = useQueryClient();
   const [fields, setFields] = useState<FieldConfig[]>([]);
 
   // Get doctor ID from auth store
   const doctorId = getDoctorId() || '';
+  const hospitalId = storedHospitalId || getHospitalId?.() || '';
 
   // Create fields from API preferences
   const updateFieldsFromPreferences = useCallback((preferences: PrescriptionFieldPreference) => {   
@@ -123,10 +124,10 @@ export const usePrescriptionFieldConfig = () => {
     error: preferencesError,
     refetch: refetchPreferences
   } = useQuery({
-    queryKey: ['prescriptionFieldPreferences', doctorId],
+    queryKey: ['prescriptionFieldPreferences', doctorId, hospitalId],
     queryFn: async () => {      
       try {
-        const result = await prescriptionFieldConfigApi.getFieldPreferences(doctorId);     
+        const result = await prescriptionFieldConfigApi.getFieldPreferences(doctorId, hospitalId);     
         return result;
       } catch (error) {       
         return {
@@ -136,7 +137,7 @@ export const usePrescriptionFieldConfig = () => {
         };
       }
     },
-    enabled: !!doctorId && doctorId.length > 0,
+    enabled: !!doctorId && doctorId.length > 0 && !!hospitalId && hospitalId.length > 0,
     retry: 1,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
@@ -158,7 +159,10 @@ export const usePrescriptionFieldConfig = () => {
   // Mutation for updating preferences
   const updatePreferencesMutation = useMutation({
     mutationFn: async (data: UpdatePrescriptionFieldPreferenceRequest) => {
-      return await prescriptionFieldConfigApi.updateFieldPreferences(doctorId, data);
+      if (!doctorId || !hospitalId) {
+        throw new Error('Missing identifiers for updating field preferences');
+      }
+      return await prescriptionFieldConfigApi.updateFieldPreferences(doctorId, hospitalId, data);
     },
     onSuccess: (response) => {
       if (response.success) {

@@ -63,35 +63,6 @@ const genderOptions = [
 
 const genderValues = genderOptions.map((option) => option.value);
 
-// Indian Languages options
-const indianLanguages = [
-  { value: 'hindi', label: 'Hindi' },
-  { value: 'english', label: 'English' },
-  { value: 'bengali', label: 'Bengali' },
-  { value: 'telugu', label: 'Telugu' },
-  { value: 'marathi', label: 'Marathi' },
-  { value: 'tamil', label: 'Tamil' },
-  { value: 'urdu', label: 'Urdu' },
-  { value: 'gujarati', label: 'Gujarati' },
-  { value: 'kannada', label: 'Kannada' },
-  { value: 'odia', label: 'Odia' },
-  { value: 'punjabi', label: 'Punjabi' },
-  { value: 'malayalam', label: 'Malayalam' },
-  { value: 'assamese', label: 'Assamese' },
-  { value: 'sanskrit', label: 'Sanskrit' },
-  { value: 'konkani', label: 'Konkani' },
-  { value: 'manipuri', label: 'Manipuri' },
-  { value: 'nepali', label: 'Nepali' },
-  { value: 'bodo', label: 'Bodo' },
-  { value: 'dogri', label: 'Dogri' },
-  { value: 'kashmiri', label: 'Kashmiri' },
-  { value: 'maithili', label: 'Maithili' },
-  { value: 'santali', label: 'Santali' },
-  { value: 'sindhi', label: 'Sindhi' }
-];
-
-const languageValues = indianLanguages.map((option) => option.value);
-
 // Blood Group options
 const bloodGroupOptions = [
   { value: 'A+', label: 'A+' },
@@ -110,6 +81,14 @@ const nameRegex = /^[a-zA-Z\s.'-]+$/;
 const cityStateRegex = /^[a-zA-Z\s.'-]+$/;
 const addressRegex = /^[a-zA-Z0-9\s,.'#/-]+$/;
 
+const sanitizeOptionalText = (value?: string | null) => {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : undefined;
+};
+
 interface ProfilePageProps {
   onBack: () => void;
   userType?: 'AdminDoctor' | 'Admin' | 'Doctor' | 'Staff';
@@ -124,7 +103,6 @@ interface ProfileData {
     dateOfBirth?: string;
     // Extended generic fields
     gender?: string;
-    language?: string;
     bloodGroup?: string;
     addressLine1?: string;
     addressLine2?: string;
@@ -226,12 +204,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       .refine((value) => !value || genderValues.includes(value), {
         message: 'Please select a valid gender option',
       }),
-    language: z
-      .string()
-      .optional()
-      .refine((value) => !value || languageValues.includes(value), {
-        message: 'Please select a valid language',
-      }),
     dateOfBirth: z
       .string()
       .optional()
@@ -252,7 +224,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       .trim()
       .min(5, 'Address line 1 is required')
       .max(120, 'Address line 1 must be under 120 characters')
-      .regex(addressRegex, 'Address line 1 contains invalid characters'),
+      .regex(addressRegex, 'Address line is required '),
     addressLine2: z
       .string()
       .trim()
@@ -288,12 +260,16 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       .trim()
       .min(2, 'Emergency contact name is required')
       .max(60, 'Emergency contact name must be under 60 characters')
-      .regex(nameRegex, 'Emergency contact name can only contain letters and spaces'),
+      .regex(nameRegex, 'Emergency contact name can only contain letters and spaces')
+      .optional(),
     emergencyContactNumber: z
       .string()
       .trim()
-      .min(1, 'Emergency contact number is required')
+      .optional()
       .superRefine((value, ctx) => {
+        if (!value) {
+          return;
+        }
         const error = ValidationUtils.validateMobileWithError(value);
         if (error) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, message: error });
@@ -323,7 +299,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       profilePicture: '',
       dateOfBirth: '',
       gender: '',
-      language: '',
       bloodGroup: '',
       addressLine1: '',
       addressLine2: '',
@@ -374,7 +349,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           profilePicture: profilePictureURL,
           dateOfBirth: userProfile.dateOfBirth ? new Date(userProfile.dateOfBirth).toISOString().split('T')[0] : '',
           gender: userProfile.gender || '',
-          language: userProfile.language || '',
           bloodGroup: userProfile.bloodGroup || '',
           addressLine1: userProfile.addressLine1 || '',
           addressLine2: userProfile.addressLine2 || '',
@@ -439,12 +413,13 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       }
     }));
 
-    if (section === 'personal' && (field === 'email' || field === 'phone')) {
-      setBasicErrors((prev) => ({ ...prev, [field]: undefined }));
-    }
-
-    if (section === 'personal' && field === 'emergencyContactNumber') {
-      setAddressErrors((prev) => ({ ...prev, emergencyContactNumber: undefined }));
+    if (section === 'personal') {
+      if (basicErrors[field]) {
+        setBasicErrors((prev) => ({ ...prev, [field]: undefined }));
+      }
+      if (addressErrors[field]) {
+        setAddressErrors((prev) => ({ ...prev, [field]: undefined }));
+      }
     }
   };
 
@@ -461,7 +436,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   const validateAddressField = (field: keyof typeof addressFieldSchemas) => {
     const schema = addressFieldSchemas[field];
     if (!schema) return;
-    const result = schema.safeParse(profileData.personal[field] ?? '');
+    const rawValue = profileData.personal[field as keyof ProfileData['personal']];
+    const normalizedValue = typeof rawValue === 'string' ? sanitizeOptionalText(rawValue) : rawValue;
+    const result = schema.safeParse(normalizedValue);
     setAddressErrors((prev) => ({
       ...prev,
       [field]: result.success ? undefined : result.error.issues[0]?.message,
@@ -483,15 +460,16 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
   // Section validators and savers
   const validateBasic = (): boolean => {
-    const result = BasicInfoSchema.safeParse({
-      fullName: profileData.personal.fullName,
-      email: profileData.personal.email,
-      phone: profileData.personal.phone,
-      gender: profileData.personal.gender,
-      language: profileData.personal.language,
-      dateOfBirth: profileData.personal.dateOfBirth,
-      bloodGroup: profileData.personal.bloodGroup,
-    });
+    const basicPayload = {
+      fullName: profileData.personal.fullName?.trim() || '',
+      email: profileData.personal.email?.trim() || '',
+      phone: profileData.personal.phone?.trim() || '',
+      gender: sanitizeOptionalText(profileData.personal.gender),
+      dateOfBirth: sanitizeOptionalText(profileData.personal.dateOfBirth),
+      bloodGroup: sanitizeOptionalText(profileData.personal.bloodGroup),
+    };
+
+    const result = BasicInfoSchema.safeParse(basicPayload);
     const errs: FieldErrors = {};
     if (!result.success) result.error.issues.forEach((i) => (errs[i.path[0] as string] = i.message));
     setBasicErrors(errs);
@@ -499,16 +477,18 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   };
 
   const validateAddress = (): boolean => {
-    const result = AddressSchema.safeParse({
-      addressLine1: profileData.personal.addressLine1,
-      addressLine2: profileData.personal.addressLine2?.trim() ? profileData.personal.addressLine2 : undefined,
-      city: profileData.personal.city,
-      state: profileData.personal.state,
-      country: profileData.personal.country,
-      pincode: profileData.personal.pincode,
-      emergencyContactName: profileData.personal.emergencyContactName,
-      emergencyContactNumber: profileData.personal.emergencyContactNumber,
-    });
+    const addressPayload = {
+      addressLine1: profileData.personal.addressLine1?.trim() || '',
+      addressLine2: sanitizeOptionalText(profileData.personal.addressLine2),
+      city: profileData.personal.city?.trim() || '',
+      state: profileData.personal.state?.trim() || '',
+      country: profileData.personal.country?.trim() || '',
+      pincode: profileData.personal.pincode?.trim() || '',
+      emergencyContactName: sanitizeOptionalText(profileData.personal.emergencyContactName),
+      emergencyContactNumber: sanitizeOptionalText(profileData.personal.emergencyContactNumber),
+    };
+
+    const result = AddressSchema.safeParse(addressPayload);
     const errs: FieldErrors = {};
     if (!result.success) result.error.issues.forEach((i) => (errs[i.path[0] as string] = i.message));
     setAddressErrors(errs);
@@ -568,25 +548,33 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         }
       }
 
+      const normalizedGender = sanitizeOptionalText(profileData.personal.gender) || '';
+      const normalizedEmployeeId = sanitizeOptionalText(profileData.personal.employeeId) || '';
+      const normalizedBloodGroup = sanitizeOptionalText(profileData.personal.bloodGroup) || '';
+      const normalizedAddressLine2 = sanitizeOptionalText(profileData.personal.addressLine2) || '';
+      const normalizedDateOfBirth = sanitizeOptionalText(profileData.personal.dateOfBirth);
+      const formattedDateOfBirth = normalizedDateOfBirth ? new Date(normalizedDateOfBirth).toISOString() : '';
+      const normalizedEmergencyContactName = sanitizeOptionalText(profileData.personal.emergencyContactName) || '';
+      const normalizedEmergencyContactNumber = sanitizeOptionalText(profileData.personal.emergencyContactNumber) || '';
+
       const updateData: UserProfileUpdateRequest = {
         userId,
         mobileNumber: ValidationUtils.cleanMobileNumber(profileData.personal.phone),
         isActive: true,
         fullName: profileData.personal.fullName,
-        gender: profileData.personal.gender || '',
-        language: profileData.personal.language || '',
+        gender: normalizedGender,
         profilePictureURL,
-        employeeID: profileData.personal.employeeId || '',
-        dateOfBirth: profileData.personal.dateOfBirth ? new Date(profileData.personal.dateOfBirth).toISOString() : '',
-        bloodGroup: profileData.personal.bloodGroup || '',
+        employeeID: normalizedEmployeeId,
+        dateOfBirth: formattedDateOfBirth,
+        bloodGroup: normalizedBloodGroup,
         addressLine1: profileData.personal.addressLine1 || '',
-        addressLine2: profileData.personal.addressLine2 || '',
+        addressLine2: normalizedAddressLine2,
         city: profileData.personal.city || '',
         state: profileData.personal.state || '',
         country: profileData.personal.country || '',
         pincode: profileData.personal.pincode || '',
-        emergencyContactName: profileData.personal.emergencyContactName || '',
-        emergencyContactNumber: profileData.personal.emergencyContactNumber || '',
+        emergencyContactName: normalizedEmergencyContactName,
+        emergencyContactNumber: normalizedEmergencyContactNumber,
       };
 
       await updateUserDetailsMutation.mutateAsync(updateData);
@@ -745,7 +733,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                         isActive: true,
                         fullName: profileData.personal.fullName,
                         gender: profileData.personal.gender || '',
-                        language: profileData.personal.language || '',
                         profilePictureURL: '',
                         employeeID: profileData.personal.employeeId || '',
                         dateOfBirth: profileData.personal.dateOfBirth ? new Date(profileData.personal.dateOfBirth).toISOString() : '',
@@ -824,7 +811,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                           isActive: true,
                           fullName: profileData.personal.fullName,
                           gender: profileData.personal.gender || '',
-                          language: profileData.personal.language || '',
                           profilePictureURL: profilePictureURL,
                           employeeID: profileData.personal.employeeId || '',
                           dateOfBirth: profileData.personal.dateOfBirth ? new Date(profileData.personal.dateOfBirth).toISOString() : '',
@@ -1056,28 +1042,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                      <p className="text-xs text-amber-600 mt-1">{basicErrors.gender}</p>
                                    )}
                                  </div>
-                                 <div>
-                                   <Label htmlFor="language">Language</Label>
-                                   <Select
-                                     value={profileData.personal.language || ''}
-                                     onValueChange={(value) => handleInputChange('personal', 'language', value)}
-                                     disabled={!isEditing}
-                                   >
-                                     <SelectTrigger className="mt-1">
-                                       <SelectValue placeholder="Select a language" />
-                                     </SelectTrigger>
-                                     <SelectContent className="max-h-60 overflow-y-auto">
-                                       {indianLanguages.map((option) => (
-                                         <SelectItem key={option.value} value={option.value}>
-                                           {option.label}
-                                         </SelectItem>
-                                       ))}
-                                     </SelectContent>
-                                   </Select>
-                                   {basicErrors.language && (
-                                     <p className="text-xs text-amber-600 mt-1">{basicErrors.language}</p>
-                                   )}
-                                 </div>
                                                                    <div>
                                     <Label htmlFor="bloodGroup">Blood Group</Label>
                                     <Select
@@ -1202,7 +1166,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                  <div>
                                    <Label htmlFor="emergencyName">
-                                     Emergency Contact Name <span className="text-red-500" aria-hidden="true">*</span>
+                                     Emergency Contact Name
                                    </Label>
                                    <Input 
                                      id="emergencyName" 
@@ -1217,7 +1181,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                  </div>
                                  <div>
                                    <Label htmlFor="emergencyNumber">
-                                     Emergency Contact Number <span className="text-red-500" aria-hidden="true">*</span>
+                                     Emergency Contact Number
                                    </Label>
                                    <Input 
                                      id="emergencyNumber" 

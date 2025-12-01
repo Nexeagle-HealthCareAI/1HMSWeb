@@ -143,7 +143,7 @@ interface EPrescriptionPadProps {
 
 const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPreferences }) => {
   const { patientId } = useParams<{ patientId: string }>();
-  const { getDoctorId } = useAuthStore();
+  const { getDoctorId, getHospitalId } = useAuthStore();
   const [apiPreferences, setApiPreferences] = useState<any>(null);
   const [isLoadingApiPreferences, setIsLoadingApiPreferences] = useState(false);
   const [prescriptionData, setPrescriptionData] = useState<EPrescriptionData>({
@@ -184,13 +184,14 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
       try {
         setIsLoadingApiPreferences(true);
         const doctorId = getDoctorId() || '';
+        const hospitalId = getHospitalId?.() || '';
         
-        if (!doctorId) {
-          console.warn('No doctor ID available for prescription preferences');
+        if (!doctorId || !hospitalId) {
+          console.warn('Missing identifiers for prescription preferences', { doctorId, hospitalId });
           return;
         }
 
-        const response = await prescriptionFieldConfigApi.getFieldPreferences(doctorId);
+        const response = await prescriptionFieldConfigApi.getFieldPreferences(doctorId, hospitalId);
         
         if (response.success && response.preference) {
           setApiPreferences(response.preference);
@@ -208,7 +209,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
     };
 
     loadPrescriptionPreferences();
-  }, [getDoctorId]);
+  }, [getDoctorId, getHospitalId]);
 
   // Get field preferences from API or passed props
   const { fields: fieldConfigs, isLoadingPreferences } = usePrescriptionFieldConfig();

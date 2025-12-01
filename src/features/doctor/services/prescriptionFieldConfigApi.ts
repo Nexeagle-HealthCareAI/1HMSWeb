@@ -26,7 +26,7 @@ export interface PrescriptionFieldPreference {
 }
 
 export interface PrescriptionFieldPreferenceResponse {
-  preference: PrescriptionFieldPreference;
+  preference: PrescriptionFieldPreference | null;
   success: boolean;
   message: string;
 }
@@ -58,10 +58,10 @@ export const prescriptionFieldConfigApi = {
   /**
    * Get doctor's prescription field preferences
    */
-  async getFieldPreferences(doctorId: string): Promise<PrescriptionFieldPreferenceResponse> {
+  async getFieldPreferences(doctorId: string, hospitalId?: string): Promise<PrescriptionFieldPreferenceResponse> {
     try {
       const response = await apiClient.get(
-        API_ENDPOINTS.E_PRESCRIPTION.GET_FIELD_PREFERENCES(doctorId)
+        API_ENDPOINTS.E_PRESCRIPTION.GET_FIELD_PREFERENCES(doctorId, hospitalId)
       );
       return response;
     } catch (error) {
@@ -78,11 +78,12 @@ export const prescriptionFieldConfigApi = {
    */
   async updateFieldPreferences(
     doctorId: string,
+    hospitalId: string | undefined,
     preferences: UpdatePrescriptionFieldPreferenceRequest
   ): Promise<UpdatePrescriptionFieldPreferenceResponse> {
     try {      
       const response = await apiClient.put(
-        API_ENDPOINTS.E_PRESCRIPTION.UPDATE_FIELD_PREFERENCES(doctorId),
+        API_ENDPOINTS.E_PRESCRIPTION.UPDATE_FIELD_PREFERENCES(doctorId, hospitalId),
         preferences
       );
      

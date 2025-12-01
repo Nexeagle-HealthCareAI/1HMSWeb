@@ -222,41 +222,7 @@ export const DoctorCalendarPage: React.FC = () => {
     });
   }, [timeOffData, timeOffLoading, doctorId]);
   
-  // Debug logging
-  console.log('🔍 DoctorCalendarPage - Data:', {
-    doctorId,
-    fromISO,
-    toISO,
-    daysCount,
-    calendarConfig: calendarConfig ? 'present' : 'undefined',
-    eventsCount: events.length,
-    eventsLoading,
-    configLoading,
-    currentDate: currentDate.toISOString(),
-    view,
-    dateRange: getDateRange(),
-    apiCallInfo: {
-      startDate: fromISO,
-      daysCount: daysCount,
-      expectedUrl: `/calendar/doctor/config?doctorId=${doctorId}&startDate=${encodeURIComponent(fromISO)}&daysCount=${daysCount}`
-    }
-  });
 
-  // Debug date range calculation for different views
-  console.log('📅 Date Range Calculation:', {
-    view,
-    currentDate: currentDate.toISOString(),
-    calculatedRange: {
-      fromISO,
-      toISO,
-      daysCount,
-      fromDate: new Date(fromISO).toLocaleDateString(),
-      toDate: new Date(toISO).toLocaleDateString(),
-      isMonday: new Date(fromISO).getDay() === 1, // Monday = 1
-      isFirstOfMonth: new Date(fromISO).getDate() === 1,
-      totalDays: Math.ceil((new Date(toISO).getTime() - new Date(fromISO).getTime()) / (1000 * 60 * 60 * 24)) + 1
-    }
-  });
 
   // Debug time-off events specifically
   const timeOffEvents = events.filter(event => event.type === 'timeoff' || event.id?.startsWith('timeoff-'));
@@ -327,40 +293,97 @@ export const DoctorCalendarPage: React.FC = () => {
 
   
   // Calendar event handlers
+  const openTimeOffDeleteModal = useCallback((event: any, fallbackReason?: string) => {
+    const toIsoString = (date?: Date | null) => {
+      if (!date) return undefined;
+      try {
+        return date.toISOString();
+      } catch (error) {
+        console.warn('Invalid date when preparing time-off modal', { date, eventId: event?.id, error });
+        return undefined;
+      }
+    };
+
+    const normalizeId = (value?: string | number | null) => {
+      if (value === undefined || value === null) return undefined;
+      const stringValue = String(value);
+      return stringValue.startsWith('timeoff-') ? stringValue.replace('timeoff-', '') : stringValue;
+    };
+
+    const possibleTimeOffIds = [
+      event.extendedProps?.timeOffId,
+      event.extendedProps?.sourceId,
+      event.extendedProps?.blockId,
+      event.extendedProps?.id,
+      event.id
+    ];
+
+    const timeOffId = possibleTimeOffIds
+      .map(normalizeId)
+      .find(Boolean);
+
+    const reason = fallbackReason || event.extendedProps?.reason || event.title || t('doctorCalendar.timeOff');
+
+    const resolvedFromDate =
+      event.extendedProps?.fromDate ||
+      event.extendedProps?.startDate ||
+      toIsoString(event.start) ||
+      event.startStr ||
+      event.extendedProps?.start ||
+      toIsoString(event._instance?.range?.start);
+
+    const resolvedToDate =
+      event.extendedProps?.toDate ||
+      event.extendedProps?.endDate ||
+      toIsoString(event.end) ||
+      event.endStr ||
+      event.extendedProps?.end ||
+      toIsoString(event._instance?.range?.end) ||
+      resolvedFromDate; // fallback to start if end missing
+
+    if (timeOffId && resolvedFromDate && resolvedToDate) {
+      setDeleteTimeOffModal({
+        open: true,
+        timeOffData: {
+          timeOffId,
+          reason,
+          fromDate: resolvedFromDate,
+          toDate: resolvedToDate
+        }
+      });
+      return true;
+    }
+
+    console.warn('Unable to open time-off delete modal: missing data', {
+      eventId: event.id,
+      timeOffId,
+      fromDate: resolvedFromDate,
+      toDate: resolvedToDate,
+      event
+    });
+    toast({
+      title: t('doctorCalendar.error'),
+      description: t('doctorCalendar.failedToDeleteTimeOff'),
+      variant: 'destructive'
+    });
+    return false;
+  }, [t, toast, setDeleteTimeOffModal]);
+
   const handleEventClick = useCallback((info: any) => {
     const event = info.event;
     const eventType = event.extendedProps?.type;
     const shiftName = event.extendedProps?.shiftName;
+    const isTimeOffEvent =
+      eventType === 'timeoff' ||
+      event.id?.startsWith('timeoff-') ||
+      event.extendedProps?.isTimeOff ||
+      event.extendedProps?.source === 'timeoff';
     
-    console.log('🔍 Event clicked:', {
-      eventId: event.id,
-      eventType,
-      title: event.title,
-      extendedProps: event.extendedProps,
-      start: event.start,
-      end: event.end
-    });
+   
     
     // Handle time-off events
-    if (eventType === 'timeoff' || event.id?.startsWith('timeoff-')) {
-      const timeOffId = event.extendedProps?.timeOffId || event.id?.replace('timeoff-', '');
-      const reason = event.extendedProps?.reason || event.title;
-      const fromDate = event.start?.toISOString();
-      const toDate = event.end?.toISOString();
-      
-      if (timeOffId && fromDate && toDate) {
-        setDeleteTimeOffModal({
-          open: true,
-          timeOffData: {
-            timeOffId,
-            reason,
-            fromDate,
-            toDate
-          }
-        });
-      } else {
-        console.warn('Missing data for time-off deletion:', { timeOffId, fromDate, toDate });
-      }
+    if (isTimeOffEvent) {
+      openTimeOffDeleteModal(event);
       return; // Stop processing for time-off events
     }
     
@@ -407,22 +430,8 @@ export const DoctorCalendarPage: React.FC = () => {
     
     // Check for cancel time-off button click
     if (target && target.classList?.contains('cancel-timeoff-btn')) {
-      const timeOffId = target.getAttribute('data-timeoff-id');
       const reason = target.getAttribute('data-reason');
-      const fromDate = event.start?.toISOString();
-      const toDate = event.end?.toISOString();
-      
-      if (timeOffId && fromDate && toDate) {
-        setDeleteTimeOffModal({
-          open: true,
-          timeOffData: {
-            timeOffId,
-            reason: reason || event.title,
-            fromDate,
-            toDate
-          }
-        });
-      }
+      openTimeOffDeleteModal(event, reason || event.title || undefined);
       return; // Stop processing the regular event click
     }
     
@@ -489,22 +498,7 @@ export const DoctorCalendarPage: React.FC = () => {
        const isTimeOff = event.extendedProps?.isTimeOff;
        if (isTimeOff) {
          // Open delete dialog for time-off events
-         const timeOffId = event.extendedProps?.timeOffId;
-         const reason = event.extendedProps?.reason || event.title;
-         const fromDate = event.start?.toISOString();
-         const toDate = event.end?.toISOString();
-         
-         if (timeOffId && fromDate && toDate) {
-           setDeleteTimeOffModal({
-             open: true,
-             timeOffData: {
-               timeOffId,
-               reason,
-               fromDate,
-               toDate
-             }
-           });
-         }
+          openTimeOffDeleteModal(event);
        } else {
          toast({
            title: "Block Details",
@@ -512,7 +506,7 @@ export const DoctorCalendarPage: React.FC = () => {
          });
        }
      }
-  }, [toast]);
+    }, [toast, openTimeOffDeleteModal]);
   
      const handleDateSelect = useCallback((selectInfo: any) => {
      
@@ -1032,8 +1026,20 @@ export const DoctorCalendarPage: React.FC = () => {
 
   const handleDeleteTimeOff = () => {
     if (!deleteTimeOffModal.timeOffData?.timeOffId) return;
+    if (!doctorId || !hospitalId) {
+      toast({
+        title: t('doctorCalendar.error'),
+        description: t('doctorCalendar.hospitalContextMissing', 'Hospital context is missing. Please refresh and try again.'),
+        variant: 'destructive'
+      });
+      return;
+    }
     
-    deleteTimeOffMutation.mutate(deleteTimeOffModal.timeOffData.timeOffId, {
+    deleteTimeOffMutation.mutate({
+      doctorId,
+      hospitalId,
+      timeOffId: deleteTimeOffModal.timeOffData.timeOffId
+    }, {
       onSuccess: (data) => {
         toast({
           title: t('doctorCalendar.success'),
@@ -1105,29 +1111,11 @@ export const DoctorCalendarPage: React.FC = () => {
       return;
     }
     
-    console.log('Canceling override from action dialog:', overrideData);
-    
-    deleteOverrideMutation.mutate(overrideData.overrideId, {
-      onSuccess: (data) => {
-        console.log('Override canceled successfully:', data);
-        toast({
-          title: t('doctorCalendar.success'),
-          description: data.message || t('doctorCalendar.shiftOverrideCanceled'),
-        });
-        setOverrideActionModal({ open: false, overrideData: undefined });
-          refetchCalendarEvents();
-        
-        // TODO: Refetch calendar events here if needed
-      },
-      onError: (error) => {
-        console.error('Failed to cancel override:', error);
-        toast({
-          title: t('doctorCalendar.error'),
-          description: t('doctorCalendar.failedToCancelOverride'),
-          variant: "destructive",
-        });
-      }
-    });
+    console.log('Launching cancel confirmation for override:', overrideData);
+
+    // Close the action dialog and open the dedicated cancel confirmation dialog
+    setOverrideActionModal({ open: false, overrideData: undefined });
+    setCancelOverrideModal({ open: true, overrideData });
   };
   
   const handleOverrideActionUpdate = () => {
