@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
   AlertDialog,
@@ -36,10 +35,6 @@ import {
   Phone, 
   MapPin, 
   Calendar,
-  Star,
-  Trophy,
-  Target,
-  Zap,
   ArrowLeft,
   Save,
   Upload,
@@ -184,7 +179,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   const removeMutation = removeProfilePicture();
   
   // Profile completion hook
-  const { completionPercentage } = useProfileCompletion();
+  const { completionPercentage, doctorProfileCompletion } = useProfileCompletion();
+  const professionalCompletion = Math.max(0, Math.min(100, Math.round(doctorProfileCompletion ?? 0)));
   
   // User profile API hooks
   const { data: userDetailsResponse, isLoading: userDetailsLoading } = useUserDetails(userId || '');
@@ -309,6 +305,15 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     employeeId: z.string().max(50, 'Employee ID too long').optional(),
   });
 
+  const basicFieldSchemas = {
+    email: BasicInfoSchema.shape.email,
+    phone: BasicInfoSchema.shape.phone,
+  } as const;
+
+  const addressFieldSchemas = {
+    emergencyContactNumber: AddressSchema.shape.emergencyContactNumber,
+  } as const;
+
 
   const [profileData, setProfileData] = useState<ProfileData>({
     personal: {
@@ -432,6 +437,34 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         ...prev[section],
         [field]: value
       }
+    }));
+
+    if (section === 'personal' && (field === 'email' || field === 'phone')) {
+      setBasicErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+
+    if (section === 'personal' && field === 'emergencyContactNumber') {
+      setAddressErrors((prev) => ({ ...prev, emergencyContactNumber: undefined }));
+    }
+  };
+
+  const validateBasicField = (field: keyof typeof basicFieldSchemas) => {
+    const schema = basicFieldSchemas[field];
+    if (!schema) return;
+    const result = schema.safeParse(profileData.personal[field] ?? '');
+    setBasicErrors((prev) => ({
+      ...prev,
+      [field]: result.success ? undefined : result.error.issues[0]?.message,
+    }));
+  };
+
+  const validateAddressField = (field: keyof typeof addressFieldSchemas) => {
+    const schema = addressFieldSchemas[field];
+    if (!schema) return;
+    const result = schema.safeParse(profileData.personal[field] ?? '');
+    setAddressErrors((prev) => ({
+      ...prev,
+      [field]: result.success ? undefined : result.error.issues[0]?.message,
     }));
   };
 
@@ -588,30 +621,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
 
 
-  // Gamification elements
-  const getProgressColor = (percentage: number) => {
-    if (percentage >= 90) return 'text-green-600';
-    if (percentage >= 70) return 'text-blue-600';
-    if (percentage >= 50) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
-  const getProgressMessage = (percentage: number) => {
-    if (percentage >= 90) return "🎉 Profile Master! You're all set!";
-    if (percentage >= 70) return "🌟 Almost there! Just a few more details.";
-    if (percentage >= 50) return "⚡ Good progress! Keep going!";
-    return "🚀 Let's complete your profile journey!";
-  };
-
-  const getBadgeForCompletion = (percentage: number) => {
-    if (percentage >= 90) return { icon: Trophy, text: "Profile Master", color: "bg-yellow-100 text-yellow-800" };
-    if (percentage >= 70) return { icon: Star, text: "Profile Expert", color: "bg-blue-100 text-blue-800" };
-    if (percentage >= 50) return { icon: Target, text: "Profile Builder", color: "bg-green-100 text-green-800" };
-    return { icon: Zap, text: "Profile Starter", color: "bg-purple-100 text-purple-800" };
-  };
-
-  const badge = getBadgeForCompletion(completionPercentage);
-
   // Show loading state while fetching user details
   if (userDetailsLoading) {
     return (
@@ -672,35 +681,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           </Button>
         </div>
       </div>
-
-      {/* Profile Completion Card */}
-      <Card className="mb-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 border-2 border-primary/20">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-primary/10 rounded-full">
-                <badge.icon className="h-8 w-8 text-primary" />
-              </div>
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-lg font-semibold">Profile Completion</h3>
-                  <Badge className={badge.color}>
-                    <badge.icon className="h-3 w-3 mr-1" />
-                    {badge.text}
-                  </Badge>
-                </div>
-                <p className={`text-sm ${getProgressColor(completionPercentage)} font-medium`}>
-                  {getProgressMessage(completionPercentage)}
-                </p>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold text-primary mb-1">{completionPercentage}%</div>
-              <Progress value={completionPercentage} className="w-32 h-3" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Profile Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -964,15 +944,18 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
                              {/* Personal Information */}
                <div className="mb-4">
-                 <Card>
+                 <Card className="transition-colors dark:border-border">
                    <CardContent className="p-6">
                      <Accordion type="single" collapsible defaultValue="personal">
                        <AccordionItem value="personal">
-                         <AccordionTrigger>
+                         <AccordionTrigger className="transition-colors dark:hover:bg-muted/30 hover:no-underline focus:no-underline">
                            <div className="flex items-center gap-2">
-                             <User className="h-4 w-4" />
-                             <span>Personal Information</span>
-                             <span className={`text-xs ml-2 ${Object.keys(basicErrors).length || Object.keys(addressErrors).length ? 'text-amber-600' : 'text-green-600'}`}>
+                             <User className="h-4 w-4 text-muted-foreground" />
+                             <span className="text-foreground">Personal Information</span>
+                            <span className="ml-2 inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary dark:bg-primary/20 dark:text-primary-100">
+                              Profile completion {completionPercentage}%
+                            </span>
+                             <span className={`text-xs ml-2 ${Object.keys(basicErrors).length || Object.keys(addressErrors).length ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-300'}`}>
                                {Object.keys(basicErrors).length || Object.keys(addressErrors).length ? '⚠︎' : '✓'}
                              </span>
                            </div>
@@ -982,7 +965,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                              {/* Basic Info Section */}
                              <div>
                                <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                                 <User className="h-4 w-4" />
+                                 <User className="h-4 w-4 text-muted-foreground" />
                                  Basic Information
                                </h4>
                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1006,6 +989,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                      type="email"
                                      value={profileData.personal.email}
                                      onChange={(e) => handleInputChange('personal', 'email', e.target.value)}
+                                       onBlur={() => validateBasicField('email')}
                                      disabled={!isEditing}
                                      className="mt-1"
                                    />
@@ -1017,8 +1001,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    <Label htmlFor="phone">Phone Number *</Label>
                                    <Input
                                      id="phone"
+                                     type="tel"
+                                     inputMode="numeric"
+                                     pattern="[0-9]*"
                                      value={profileData.personal.phone}
                                      onChange={(e) => handleInputChange('personal', 'phone', e.target.value)}
+                                     onBlur={() => validateBasicField('phone')}
                                      disabled={!isEditing}
                                      className="mt-1"
                                    />
@@ -1216,8 +1204,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    <Label htmlFor="emergencyNumber">Emergency Contact Number *</Label>
                                    <Input 
                                      id="emergencyNumber" 
+                                     type="tel"
+                                     inputMode="numeric"
+                                     pattern="[0-9]*"
                                      value={profileData.personal.emergencyContactNumber || ''} 
                                      onChange={(e) => handleInputChange('personal', 'emergencyContactNumber' as any, e.target.value)} 
+                                     onBlur={() => validateAddressField('emergencyContactNumber')}
                                      disabled={!isEditing} 
                                      className="mt-1" 
                                    />

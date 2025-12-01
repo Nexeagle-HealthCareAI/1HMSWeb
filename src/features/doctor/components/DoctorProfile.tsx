@@ -369,22 +369,25 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
 
   return (
     <>
-      <Card className={isProfileComplete ? 'border-green-200 bg-green-50/30' : ''}>
+      <Card className={`transition-colors ${isProfileComplete ? 'border-green-200 bg-green-50/30 dark:border-green-700/60 dark:bg-green-950/30' : 'dark:border-border'}`}>
         <CardContent className="p-6">
         
         <Accordion type="single" collapsible defaultValue="doctor">
           <AccordionItem value="doctor">
-            <AccordionTrigger className={isProfileComplete ? 'hover:bg-green-100/50' : ''}>
+            <AccordionTrigger className={`${isProfileComplete ? 'hover:bg-green-100/50 dark:hover:bg-green-900/30' : ''} transition-colors hover:no-underline focus:no-underline`}>
               <div className="flex items-center gap-2">
-                <Stethoscope className={`h-4 w-4 ${isProfileComplete ? 'text-green-600' : ''}`} />
-                <span className={isProfileComplete ? 'text-green-800 font-medium' : ''}>Doctor Professional</span>
+                <Stethoscope className={`h-4 w-4 ${isProfileComplete ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`} />
+                <span className={`${isProfileComplete ? 'text-green-800 font-medium dark:text-green-200' : 'text-foreground'}`}>Doctor Professional</span>
+                <span className="ml-2 inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary dark:bg-primary/20 dark:text-primary-100">
+                  Professional completion {clampedProfileCompletion}%
+                </span>
                 {isProfileComplete ? (
                   <div className="flex items-center gap-1 ml-2">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span className="text-xs text-green-600 font-medium">Complete</span>
+                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-300" />
+                    <span className="text-xs text-green-600 font-medium dark:text-green-200">Complete</span>
                   </div>
                 ) : (
-                  <span className={`text-xs ml-2 ${Object.keys(doctorErrors).length ? 'text-amber-600' : 'text-green-600'}`}>
+                  <span className={`text-xs ml-2 ${Object.keys(doctorErrors).length ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-300'}`}>
                     {Object.keys(doctorErrors).length ? '⚠︎' : '✓'}
                   </span>
                 )}

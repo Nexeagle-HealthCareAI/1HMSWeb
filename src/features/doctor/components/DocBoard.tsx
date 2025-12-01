@@ -590,7 +590,10 @@ export const ClinicalDashboard: React.FC = () => {
 
   return (
     <div className="h-screen bg-gray-50 dark:bg-gray-950 flex flex-col overflow-hidden">
-  <div style={{ pointerEvents: isDoctorExperienceLocked ? 'none' : 'auto', opacity: isDoctorExperienceLocked ? 0.5 : 1, height: '100%' }}>
+      <div
+        className="flex flex-col h-full overflow-hidden"
+        style={{ pointerEvents: isDoctorExperienceLocked ? 'none' : 'auto', opacity: isDoctorExperienceLocked ? 0.5 : 1 }}
+      >
       {/* Header - Mobile Responsive */}
       <div className="bg-gradient-to-br from-white via-blue-50/60 to-indigo-50 dark:from-slate-900 dark:via-slate-900/80 dark:to-slate-900 border-b border-white/70 dark:border-slate-800 px-3 sm:px-6 py-4 shadow-lg flex-shrink-0 sticky top-0 z-30 backdrop-blur">
         <div className="w-full mx-auto">
@@ -676,8 +679,8 @@ export const ClinicalDashboard: React.FC = () => {
 
       {/* Main Content - Mobile Responsive */}
       {activeNavButton === 'appointments' && (
-        <div className="flex-1 overflow-hidden">
-          <div className="w-full mx-auto p-2 sm:p-4 h-full overflow-y-auto">
+        <div className="flex-1 overflow-auto">
+          <div className="w-full mx-auto p-2 sm:p-4">
           {/* Loading - Mobile Responsive */}
           {isDataLoading && (
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 sm:p-12 text-center shadow-lg">
@@ -849,7 +852,7 @@ export const ClinicalDashboard: React.FC = () => {
                 setSelectedStatus('all'); // ✅ reset status when switching tabs
                 setCurrentPage(1);
               }}
-              className="h-full flex flex-col"
+              className="flex flex-col gap-3"
             >
               <div className="bg-white/80 dark:bg-gray-900/70 rounded-2xl p-2 shadow-xl border border-white/60 dark:border-gray-800 mb-2 sm:mb-3 backdrop-blur">
                 <TabsList className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3 w-full bg-transparent h-auto">
@@ -900,7 +903,7 @@ export const ClinicalDashboard: React.FC = () => {
 
 
               {/* Current - Mobile Responsive */}
-              <TabsContent value="current" className="p-2 sm:p-4 flex-1 overflow-auto">
+              <TabsContent value="current" className="p-2 sm:p-4 space-y-4">
                 {/* Status Filters & Sync Controls */}
                 <div className="mb-2 sm:mb-3">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -1225,7 +1228,7 @@ export const ClinicalDashboard: React.FC = () => {
                 {/* Past - Mobile Responsive */}
                 </TabsContent>
 
-                <TabsContent value="past" className="p-2 sm:p-4 flex-1 overflow-auto">
+                <TabsContent value="past" className="p-2 sm:p-4 space-y-4">
                   <div className="space-y-4">
                   <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-700/50 p-3 md:p-4 shadow-sm">
                     <div className="flex flex-wrap items-end gap-3">
@@ -1395,7 +1398,7 @@ export const ClinicalDashboard: React.FC = () => {
               </TabsContent>
 
               {/* Future - Mobile Responsive */}
-              <TabsContent value="future" className="p-2 sm:p-4 flex-1 overflow-auto">
+              <TabsContent value="future" className="p-2 sm:p-4 space-y-4">
                 <div className="space-y-4">
                   <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-700/50 p-3 md:p-4 shadow-sm">
                     <div className="flex flex-wrap items-end gap-3">
@@ -1575,9 +1578,9 @@ export const ClinicalDashboard: React.FC = () => {
       )}
 
       {/* Doctor Calendar - embedded in DocBoard */}
-      {activeNavButton === 'calendar' && (
-        <div className="flex-1 overflow-hidden">
-          <div className="w-full mx-auto p-2 sm:p-4 h-full overflow-y-auto">
+          {activeNavButton === 'calendar' && (
+        <div className="flex-1 overflow-auto">
+          <div className="w-full mx-auto p-2 sm:p-4">
             <Suspense fallback={<div className="p-6 text-center">Loading calendar...</div>}>
               <DoctorCalendar />
             </Suspense>
@@ -1587,8 +1590,8 @@ export const ClinicalDashboard: React.FC = () => {
 
       {/* AI Assistant - embedded in DocBoard */}
       {activeNavButton === 'assistant' && (
-        <div className="flex-1 overflow-hidden">
-          <div className="w-full mx-auto p-2 sm:p-4 h-full overflow-y-auto">
+        <div className="flex-1 overflow-auto">
+          <div className="w-full mx-auto p-2 sm:p-4">
             <Suspense fallback={<div className="p-6 text-center">Loading assistant...</div>}>
               <DocAI />
             </Suspense>
