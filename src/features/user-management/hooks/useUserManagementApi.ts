@@ -53,12 +53,13 @@ export const useUserManagementApi = () => {
   const inviteUser = useMutation<InviteUserResponse, Error, InviteUserRequest>({
     mutationFn: userManagementApi.inviteUser,
     onSuccess: (data) => {
-      toast({
-        title: "Invitation Sent Successfully!",
-        description: "The user has been invited. They will receive an email with registration instructions.",
-      });
-      // Invalidate and refetch invited users
-      queryClient.invalidateQueries({ queryKey: ['user-management', 'invited-users'] });
+      if (data.success) {
+        toast({
+          title: "Invitation Sent Successfully!",
+          description: data.message || "The user has been invited. They will receive an email with registration instructions.",
+        });
+        queryClient.invalidateQueries({ queryKey: ['user-management', 'invited-users'] });
+      }
     },
     onError: (error) => {
       toast({

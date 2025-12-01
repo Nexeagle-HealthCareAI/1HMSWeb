@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -62,6 +62,7 @@ export const UserManagement: React.FC = () => {
     email: '',
     role: ''
   });
+  const [inviteErrorModal, setInviteErrorModal] = useState({ open: false, message: '' });
   
   // Form states
   const [newUser, setNewUser] = useState({
@@ -135,7 +136,11 @@ export const UserManagement: React.FC = () => {
         invitedByUserId: currentUserId
       };
       try {
-        await inviteUser.mutateAsync(inviteData);
+        const response = await inviteUser.mutateAsync(inviteData);
+        if (!response.success) {
+          setInviteErrorModal({ open: true, message: response.message || 'We could not send the invitation. Please check the details and try again.' });
+          return;
+        }
         setInvitedUserInfo({
           name: newUser.name,
           email: newUser.email,
@@ -375,6 +380,26 @@ export const UserManagement: React.FC = () => {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invite Error Modal */}
+      <Dialog open={inviteErrorModal.open} onOpenChange={(open) => setInviteErrorModal((prev) => ({ ...prev, open }))}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-500" />
+              Invitation could not be sent
+            </DialogTitle>
+            <DialogDescription>
+              {inviteErrorModal.message}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setInviteErrorModal({ open: false, message: '' })}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

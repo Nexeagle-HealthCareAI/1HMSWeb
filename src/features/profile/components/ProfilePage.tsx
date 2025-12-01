@@ -637,20 +637,20 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     <div className="min-h-screen bg-gradient-subtle p-4 lg:p-6 transition-all duration-300">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             <Button 
               variant="outline" 
               size="sm" 
               onClick={onBack}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 w-full sm:w-auto justify-center"
             >
               <ArrowLeft className="h-4 w-4" />
               Back
             </Button>
-            <div>
+            <div className="text-center sm:text-left">
               <h1 className="text-2xl lg:text-3xl font-bold text-foreground">My Profile</h1>
-              <p className="text-muted-foreground">Manage your personal and professional information</p>
+              <p className="text-muted-foreground text-sm sm:text-base">Manage your personal and professional information</p>
             </div>
           </div>
           <Button
@@ -674,7 +674,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
               setIsEditing(!isEditing);
             }}
             variant={isEditing ? "outline" : "default"}
-            className="flex items-center gap-2"
+            className="flex items-center justify-center gap-2 w-full sm:w-auto"
           >
             <Edit3 className="h-4 w-4" />
             {isEditing ? 'Cancel' : 'Edit Profile'}
@@ -683,10 +683,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       </div>
 
       {/* Profile Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-start">
         {/* Profile Summary Card */}
         <Card className="lg:col-span-1">
-          <CardContent className="p-6 text-center">
+          <CardContent className="p-4 sm:p-6 text-center lg:text-left">
             <div className="mb-4 flex flex-col items-center gap-3">
               {isEditing && (
                 <Badge variant="secondary" className="mb-2">
@@ -925,7 +925,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
         {/* Profile Details */}
         <Card className="lg:col-span-2">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <Accordion type="multiple" value={expanded} onValueChange={(v) => setExpanded(v as string[])}>
               {/* Doctor Professional at top */}
               {isDoctorUser && (
@@ -945,17 +945,17 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                              {/* Personal Information */}
                <div className="mb-4">
                  <Card className="transition-colors dark:border-border">
-                   <CardContent className="p-6">
+                   <CardContent className="p-4 sm:p-6">
                      <Accordion type="single" collapsible defaultValue="personal">
                        <AccordionItem value="personal">
                          <AccordionTrigger className="transition-colors dark:hover:bg-muted/30 hover:no-underline focus:no-underline">
-                           <div className="flex items-center gap-2">
+                           <div className="flex flex-wrap items-center gap-2 text-left">
                              <User className="h-4 w-4 text-muted-foreground" />
                              <span className="text-foreground">Personal Information</span>
-                            <span className="ml-2 inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary dark:bg-primary/20 dark:text-primary-100">
+                           <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary dark:bg-primary/20 dark:text-primary-100">
                               Profile completion {completionPercentage}%
                             </span>
-                             <span className={`text-xs ml-2 ${Object.keys(basicErrors).length || Object.keys(addressErrors).length ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-300'}`}>
+                             <span className={`text-xs ${Object.keys(basicErrors).length || Object.keys(addressErrors).length ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-300'}`}>
                                {Object.keys(basicErrors).length || Object.keys(addressErrors).length ? '⚠︎' : '✓'}
                              </span>
                            </div>
@@ -970,7 +970,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                </h4>
                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                  <div>
-                                   <Label htmlFor="fullName">Full Name *</Label>
+                                   <Label htmlFor="fullName">
+                                     Full Name <span className="text-red-500" aria-hidden="true">*</span>
+                                   </Label>
                                    <Input
                                      id="fullName"
                                      value={profileData.personal.fullName}
@@ -983,7 +985,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    )}
                                  </div>
                                  <div>
-                                   <Label htmlFor="email">Email Address *</Label>
+                                   <Label htmlFor="email">
+                                     Email Address <span className="text-red-500" aria-hidden="true">*</span>
+                                   </Label>
                                    <Input
                                      id="email"
                                      type="email"
@@ -998,7 +1002,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    )}
                                  </div>
                                  <div>
-                                   <Label htmlFor="phone">Phone Number *</Label>
+                                   <Label htmlFor="phone">
+                                     Phone Number <span className="text-red-500" aria-hidden="true">*</span>
+                                   </Label>
                                    <Input
                                      id="phone"
                                      type="tel"
@@ -1095,9 +1101,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                     )}
                                   </div>
                                </div>
-                               {Object.entries(basicErrors).map(([k, v]) => v && (
-                                 <p key={k} className="text-xs text-amber-600 mt-2">{v}</p>
-                               ))}
                              </div>
 
                              {/* Address & Contact Section */}
@@ -1108,7 +1111,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                </h4>
                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                  <div>
-                                   <Label htmlFor="address1">Address Line 1 *</Label>
+                                   <Label htmlFor="address1">
+                                     Address Line 1 <span className="text-red-500" aria-hidden="true">*</span>
+                                   </Label>
                                    <Input
                                      id="address1"
                                      value={profileData.personal.addressLine1 || ''}
@@ -1134,7 +1139,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    )}
                                  </div>
                                  <div>
-                                   <Label htmlFor="city">City *</Label>
+                                   <Label htmlFor="city">
+                                     City <span className="text-red-500" aria-hidden="true">*</span>
+                                   </Label>
                                    <Input 
                                      id="city" 
                                      value={profileData.personal.city || ''} 
@@ -1147,7 +1154,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    )}
                                  </div>
                                  <div>
-                                   <Label htmlFor="state">State *</Label>
+                                   <Label htmlFor="state">
+                                     State <span className="text-red-500" aria-hidden="true">*</span>
+                                   </Label>
                                    <Input 
                                      id="state" 
                                      value={profileData.personal.state || ''} 
@@ -1160,7 +1169,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    )}
                                  </div>
                                  <div>
-                                   <Label htmlFor="country">Country *</Label>
+                                   <Label htmlFor="country">
+                                     Country <span className="text-red-500" aria-hidden="true">*</span>
+                                   </Label>
                                    <Input 
                                      id="country" 
                                      value={profileData.personal.country || ''} 
@@ -1173,7 +1184,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    )}
                                  </div>
                                  <div>
-                                   <Label htmlFor="pincode">Pincode *</Label>
+                                   <Label htmlFor="pincode">
+                                     Pincode <span className="text-red-500" aria-hidden="true">*</span>
+                                   </Label>
                                    <Input 
                                      id="pincode" 
                                      value={profileData.personal.pincode || ''} 
@@ -1188,7 +1201,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                </div>
                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                  <div>
-                                   <Label htmlFor="emergencyName">Emergency Contact Name *</Label>
+                                   <Label htmlFor="emergencyName">
+                                     Emergency Contact Name <span className="text-red-500" aria-hidden="true">*</span>
+                                   </Label>
                                    <Input 
                                      id="emergencyName" 
                                      value={profileData.personal.emergencyContactName || ''} 
@@ -1201,7 +1216,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    )}
                                  </div>
                                  <div>
-                                   <Label htmlFor="emergencyNumber">Emergency Contact Number *</Label>
+                                   <Label htmlFor="emergencyNumber">
+                                     Emergency Contact Number <span className="text-red-500" aria-hidden="true">*</span>
+                                   </Label>
                                    <Input 
                                      id="emergencyNumber" 
                                      type="tel"
@@ -1218,24 +1235,22 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    )}
                                  </div>
                                </div>
-                               {Object.entries(addressErrors).map(([k, v]) => v && (
-                                 <p key={k} className="text-xs text-amber-600 mt-2">{v}</p>
-                               ))}
                              </div>
 
                              {/* Save Button */}
                              {isEditing && (
-                               <div className="flex justify-end gap-2 pt-4 border-t">
+                               <div className="flex flex-col gap-2 pt-4 border-t sm:flex-row sm:justify-end">
                                  <Button 
                                    variant="outline" 
                                    onClick={() => setIsEditing(false)}
+                                   className="w-full sm:w-auto"
                                  >
                                    Cancel
                                  </Button>
                                  <Button 
                                    onClick={savePersonalInformation}
                                    disabled={!!saving.basic || !!saving.address}
-                                   className="flex items-center gap-2"
+                                   className="flex items-center justify-center gap-2 w-full sm:w-auto"
                                  >
                                    {saving.basic || saving.address ? (
                                      <>

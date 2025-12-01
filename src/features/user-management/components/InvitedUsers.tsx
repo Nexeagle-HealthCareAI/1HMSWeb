@@ -298,36 +298,13 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
 
   return (
     <div className="space-y-6">
-      {/* Enhanced Scope Tabs */}
-      <Card className="border-0 shadow-sm">
-        <CardContent className="p-4">
-          <Tabs value={activeScope} onValueChange={(value) => setActiveScope(value as 'Pending' | 'Accepted' | 'Revoked' | 'ALL')}>
-            <TabsList className="flex flex-wrap gap-2 bg-transparent p-0">
-              {scopeFilters.map(({ value, label, count, badgeClass, dotClass }) => (
-                <TabsTrigger
-                  key={value}
-                  value={value}
-                  className="group flex items-center gap-2 rounded-full border border-border/70 bg-white/80 px-3 py-2 text-xs font-semibold text-muted-foreground transition-all data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-                >
-                  <span className={`h-2.5 w-2.5 rounded-full ${dotClass}`}></span>
-                  <span>{label}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${badgeClass} group-data-[state=active]:bg-primary group-data-[state=active]:text-white`}>
-                    {count}
-                  </span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        </CardContent>
-      </Card>
-
-      {/* Enhanced Filters */}
+      {/* Filters */}
       <Card className="border-0 shadow-sm">
         <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center">
+            <div className="flex-1 w-full">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   placeholder="Search invitations by name, email, or phone..."
                   value={searchTerm}
@@ -336,17 +313,36 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
                 />
               </div>
             </div>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-[180px] h-11">
-                <SelectValue placeholder="Filter by role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                {uniqueRoles.map(role => (
-                  <SelectItem key={role} value={role}>{role}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="h-11 sm:w-[180px]">
+                  <SelectValue placeholder="Filter by role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  {uniqueRoles.map(role => (
+                    <SelectItem key={role} value={role}>{role}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={activeScope} onValueChange={(value) => setActiveScope(value as 'Pending' | 'Accepted' | 'Revoked' | 'ALL')}>
+                <SelectTrigger className="h-11 sm:w-[200px]">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {scopeFilters.map(({ value, label, count }) => (
+                    <SelectItem key={value} value={value} className="flex items-center justify-between gap-2">
+                      <div className="flex w-full items-center justify-between">
+                        <span>{label}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {count}
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
