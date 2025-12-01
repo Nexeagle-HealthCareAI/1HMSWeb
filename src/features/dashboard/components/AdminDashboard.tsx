@@ -365,7 +365,7 @@ useEffect(() => {
 
 
   return (
-  <div ref={dashboardRootRef} className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle relative z-0">
+  <div ref={dashboardRootRef} className="min-h-screen w-full p-3 sm:p-4 lg:p-6 space-y-5 sm:space-y-6 bg-gradient-subtle relative z-0">
       {/* Hospital Registration Progress Dialog/Popup */}
       <Dialog 
         open={showHospitalRegistrationDialog} 
@@ -463,8 +463,8 @@ useEffect(() => {
 
       {/* Setup Dialog */}
       <Dialog open={showSetupDialog} onOpenChange={setShowSetupDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
-          <div className="text-center py-8">
+        <DialogContent className="w-[92vw] sm:w-full sm:max-w-4xl max-h-[90vh] overflow-auto px-2 sm:px-0">
+          <div className="text-center py-6 sm:py-8 px-1 sm:px-0">
             <h2 className="text-2xl font-bold mb-4">{t('admin.setupComplete')}</h2>
             <p className="text-muted-foreground mb-6">
               {t('admin.welcomeToNexEagle')}
@@ -477,7 +477,7 @@ useEffect(() => {
       </Dialog>
 
       {/* Compact Top Navigation */}
-      <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 mb-4">
+      <div className="flex flex-col gap-2 sm:gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between mb-4">
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <h1 className="text-xl lg:text-2xl font-bold text-foreground">{t('admin.adminBoard')}</h1>
           {hospitalAccessRestricted && (
@@ -502,10 +502,10 @@ useEffect(() => {
         </div>
 
         {hospitalId && (
-          <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground ml-auto">
+          <div className="flex w-full sm:w-auto items-center gap-2 text-xs sm:text-sm text-muted-foreground justify-between sm:justify-end sm:ml-auto">
             <span className="font-medium text-foreground">Hospital ID:</span>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="font-mono text-primary border-primary/40 bg-primary/5 max-w-[180px] sm:max-w-none truncate">
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              <Badge variant="outline" className="font-mono text-primary border-primary/40 bg-primary/5 max-w-full sm:max-w-none truncate">
                 {hospitalId}
               </Badge>
               <Button
