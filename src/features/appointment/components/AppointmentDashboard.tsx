@@ -184,7 +184,6 @@ export const AppointmentDashboard = () => {
       const matchesSearch = (
         nameLower.includes(searchLower) ||
         appointment.patientId?.toLowerCase().includes(searchLower) ||
-        (appointment.doctorName && appointment.doctorName.toLowerCase().includes(searchLower)) ||
         appointment.patientMobile?.toLowerCase().includes(searchLower) ||
         (appointment.appointmentDate && appointment.appointmentDate.toLowerCase().includes(searchLower))
       );
