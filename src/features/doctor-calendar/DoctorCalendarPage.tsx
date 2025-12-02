@@ -193,7 +193,7 @@ export const DoctorCalendarPage: React.FC = () => {
   const daysCount = getDaysCount();
   
   // Queries - Use the same startDate for both hooks to ensure consistency
-  const { data: calendarConfig, isLoading: configLoading } = useDoctorCalendarConfig(doctorId,hospitalId, fromISO, daysCount);
+  const { data: calendarConfig, isLoading: configLoading, refetch: refetchCalendarConfig } = useDoctorCalendarConfig(doctorId,hospitalId, fromISO, daysCount);
   const { data: events = [], isLoading: eventsLoading, refetch: refetchCalendarEvents } = useCalendarEvents(doctorId, hospitalId, fromISO, toISO, calendarConfig);
   const { data: timeOffData, isLoading: timeOffLoading } = useTimeOff(doctorId,hospitalId);
   
@@ -878,6 +878,13 @@ export const DoctorCalendarPage: React.FC = () => {
 
   
   // Modal handlers
+  const refreshCalendarData = React.useCallback(async () => {
+    await Promise.allSettled([
+      refetchCalendarConfig(),
+      refetchCalendarEvents()
+    ]);
+  }, [refetchCalendarConfig, refetchCalendarEvents]);
+
   const handleSaveOverride = (payload: CreateOverridePayload) => {
     // Ensure hospitalId is present in payload
     const finalPayload: CreateOverridePayload = {
@@ -885,16 +892,14 @@ export const DoctorCalendarPage: React.FC = () => {
       hospitalId: hospitalId || payload.hospitalId,
     };
     createOverrideMutation.mutate(finalPayload, {
-      onSuccess: (data) => {
+      onSuccess: async (data) => {
     toast({
           title: "Success",
           description: data.message || "Shift override created successfully",
     });
     setEditShiftModal(prev => ({ ...prev, open: false }));
-        // Reload page after successful override creation
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
+        // Refresh calendar data without reloading the entire page
+        await refreshCalendarData();
       },
       onError: (error) => {
         toast({
@@ -959,7 +964,7 @@ export const DoctorCalendarPage: React.FC = () => {
       }
       
       setPersonalizedScheduleModal(prev => ({ ...prev, open: false }));
-        refetchCalendarEvents();
+        await refreshCalendarData();
       // TODO: Refetch calendar events here if needed
     };
     
@@ -989,7 +994,7 @@ export const DoctorCalendarPage: React.FC = () => {
     };
     
     createTimeOffMutation.mutate(timeOffRequest, {
-      onSuccess: (data) => {
+      onSuccess: async (data) => {
         setSuccessDialog({
           open: true,
           title: t('doctorCalendar.timeOffScheduled'),
@@ -1002,7 +1007,7 @@ export const DoctorCalendarPage: React.FC = () => {
           ]
         });
         setPersonalizedScheduleModal(prev => ({ ...prev, open: false }));
-          refetchCalendarEvents();
+          await refreshCalendarData();
         // TODO: Refetch calendar events here if needed
       },
       onError: (error) => {
@@ -1076,14 +1081,14 @@ export const DoctorCalendarPage: React.FC = () => {
     console.log('Canceling override with data:', overrideData);
     
     deleteOverrideMutation.mutate(overrideData.overrideId, {
-      onSuccess: (data) => {
+      onSuccess: async (data) => {
         console.log('Override canceled successfully:', data);
         toast({
           title: t('doctorCalendar.success'),
           description: data.message || t('doctorCalendar.shiftOverrideCanceled'),
         });
         setCancelOverrideModal({ open: false, overrideData: undefined });
-          refetchCalendarEvents();
+          await refreshCalendarData();
         
         // TODO: Refetch calendar events here if needed
       },
@@ -1889,12 +1894,9 @@ export const DoctorCalendarPage: React.FC = () => {
 
             <DialogFooter>
               <Button
-                onClick={() => {
+                onClick={async () => {
                   setSuccessDialog(prev => ({ ...prev, open: false }));
-                  // Reload page after success dialog is closed
-                  setTimeout(() => {
-                    window.location.reload();
-                  }, 500);
+                  await refreshCalendarData();
                 }}
                 className="bg-green-600 hover:bg-green-700 text-white"
               >

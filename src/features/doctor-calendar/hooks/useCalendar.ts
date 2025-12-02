@@ -231,7 +231,7 @@ export function useDeleteTimeOff() {
   
   return useMutation({
     mutationFn: ({ doctorId, hospitalId, timeOffId }: { doctorId: string; hospitalId: string; timeOffId: string }) =>
-      timeOffApi.deleteDoctorTimeOff(doctorId, hospitalId, timeOffId),
+      timeOffApi.deleteDoctorTimeOff(timeOffId),
     onSuccess: (data, variables) => {
       // Invalidate time-off data for this doctor
       queryClient.invalidateQueries({

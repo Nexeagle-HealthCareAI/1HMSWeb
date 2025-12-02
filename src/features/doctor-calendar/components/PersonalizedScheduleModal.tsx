@@ -7,8 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
 import { ShiftName, CreateOverridePayload, BlockType, CreateBlockPayload } from '../api/types';
 import { format, parseISO, addDays, addWeeks, addMonths } from 'date-fns';
 import { Clock, Calendar, Repeat, Sun, Moon, Sunrise, Sunset, Info, AlertCircle, CheckCircle } from 'lucide-react';
@@ -54,6 +53,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
   isLoading = false
 }) => {
   const { t } = useTranslation();
+  const { toast } = useToast();
   
   const SHIFT_TEMPLATES: ShiftTemplate[] = [
     {
@@ -98,6 +98,12 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
   const [scheduleType, setScheduleType] = useState<'schedule' | 'block'>(
     initialStartDateTime && initialEndDateTime ? 'block' : 'schedule'
   );
+
+  useEffect(() => {
+    if (!open) return;
+    const desiredType: 'schedule' | 'block' = initialStartDateTime && initialEndDateTime ? 'block' : 'schedule';
+    setScheduleType(prev => (prev === desiredType ? prev : desiredType));
+  }, [open, initialStartDateTime, initialEndDateTime]);
   const [startDate, setStartDate] = useState(initialDate || '');
   const [endDate, setEndDate] = useState(initialDate || '');
   
@@ -313,20 +319,35 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
      
      // Enhanced validation
      if (selectedShifts.size === 0) {
+       toast({
+         title: t('doctorCalendar.selectShift', 'Select at least one shift'),
+         description: t('doctorCalendar.selectShiftMessage', 'Turn on Morning, Afternoon, or Evening before saving.'),
+         variant: 'destructive'
+       });
        return; // No shifts selected
      }
 
      // Validate recurring schedule settings
-     if (scheduleMode === 'recurring') {
-       if (recurringDays.size === 0) {
-         return; // No days selected for recurring schedule
-       }
-       
-       const start = parseISO(startDate);
-       const end = parseISO(recurringEndDate);
-       if (start >= end) {
-         return; // End date must be after start date
-       }
+    if (scheduleMode === 'recurring') {
+      if (recurringDays.size === 0) {
+        toast({
+          title: t('doctorCalendar.selectRecurringDays', 'Pick recurring days'),
+          description: t('doctorCalendar.selectRecurringDaysMessage', 'Choose at least one day of the week for the recurring schedule.'),
+          variant: 'destructive'
+        });
+        return; // No days selected for recurring schedule
+      }
+      
+      const start = parseISO(startDate);
+      const end = parseISO(recurringEndDate);
+      if (!(start instanceof Date) || isNaN(start.getTime()) || !(end instanceof Date) || isNaN(end.getTime()) || start >= end) {
+        toast({
+          title: t('doctorCalendar.invalidDateRange', 'Fix the recurring date range'),
+          description: t('doctorCalendar.invalidDateRangeMessage', 'End date must be after the start date for recurring schedules.'),
+          variant: 'destructive'
+        });
+        return; // End date must be after start date
+      }
      }
 
      // Validate shift configurations
@@ -348,6 +369,11 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
      });
 
      if (!hasValidConfigs) {
+      toast({
+        title: t('doctorCalendar.adjustShiftTimes', 'Check the shift timings'),
+        description: t('doctorCalendar.adjustShiftTimesMessage', 'Each selected shift needs a valid start and end time (end must be after start).'),
+        variant: 'destructive'
+      });
        return; // Invalid shift configurations
      }
 
@@ -355,6 +381,12 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
     if (payloads.length > 0) {
       onSave(payloads);
       onOpenChange(false);
+    } else {
+      toast({
+        title: t('doctorCalendar.noSchedulePayload', 'Nothing to save yet'),
+        description: t('doctorCalendar.noSchedulePayloadMessage', 'Select at least one shift and provide valid times before saving.'),
+        variant: 'destructive'
+      });
     }
    };
 
@@ -517,20 +549,36 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
           <form onSubmit={scheduleType === 'block' ? handleBlockSubmit : handleSubmit} className="h-full flex flex-col">
             {/* Schedule Type Selection */}
             <div className="mb-4">
-              <Tabs value={scheduleType} onValueChange={(value) => setScheduleType(value as 'schedule' | 'block')}>
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="schedule" className="flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    Schedule
-                  </TabsTrigger>
-                  <TabsTrigger value="block" className="flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    Time Off
-                  </TabsTrigger>
-                </TabsList>
-                
-                <div className="mt-4">
-                  <TabsContent value="schedule" className="space-y-4 h-full">
+              <div className="grid w-full grid-cols-2 rounded-md bg-muted p-1">
+                <button
+                  type="button"
+                  className={`flex items-center justify-center gap-2 rounded-sm px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
+                    scheduleType === 'schedule'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground'
+                  }`}
+                  onClick={() => setScheduleType('schedule')}
+                >
+                  <Clock className="h-4 w-4" />
+                  Schedule
+                </button>
+                <button
+                  type="button"
+                  className={`flex items-center justify-center gap-2 rounded-sm px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
+                    scheduleType === 'block'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground'
+                  }`}
+                  onClick={() => setScheduleType('block')}
+                >
+                  <AlertCircle className="h-4 w-4" />
+                  Time Off
+                </button>
+              </div>
+
+              <div className="mt-4">
+                {scheduleType === 'schedule' && (
+                  <div className="space-y-4 h-full">
                     {/* Schedule Mode Selection */}
                     <div className="space-y-3">
                       <Label className="text-sm font-semibold flex items-center gap-2">
@@ -666,11 +714,26 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                                     <h4 className="font-medium text-sm">{template.name}</h4>
                                     <p className="text-xs text-gray-600">{template.description}</p>
                                   </div>
-                                  <Switch
-                                    checked={isSelected}
-                                    onCheckedChange={() => handleShiftToggle(template.name)}
-                                    onClick={(e) => e.stopPropagation()}
-                                  />
+                                  <button
+                                    type="button"
+                                    aria-pressed={isSelected}
+                                    className={`ml-auto h-6 w-11 rounded-full border border-transparent transition-colors ${
+                                      isSelected
+                                        ? 'bg-blue-500'
+                                        : 'bg-gray-200'
+                                    }`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleShiftToggle(template.name);
+                                    }}
+                                  >
+                                    <span
+                                      className={`block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                                        isSelected ? 'translate-x-5' : 'translate-x-0'
+                                      }`}
+                                      aria-hidden="true"
+                                    />
+                                  </button>
                                 </div>
 
                                 {isSelected && (
@@ -723,9 +786,11 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                         })}
                       </div>
                     </div>
-                  </TabsContent>
+                  </div>
+                )}
 
-                  <TabsContent value="block" className="space-y-4 h-full">
+                {scheduleType === 'block' && (
+                  <div className="space-y-4 h-full">
                     <div className="space-y-4">
                       {/* Block Type Selection */}
                       <div>
@@ -868,9 +933,9 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                         </div>
                       </Card>
                     </div>
-                  </TabsContent>
-                </div>
-              </Tabs>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Footer */}
