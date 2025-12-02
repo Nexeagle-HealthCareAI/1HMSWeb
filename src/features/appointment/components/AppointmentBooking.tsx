@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Calendar, Clock, User, Phone, Users, Stethoscope, ChevronDown, CalendarIcon } from 'lucide-react';
 import { DepartmentSidebar } from './DepartmentSidebar';
@@ -23,7 +23,7 @@ import { useHospitalUser } from '../hooks/useHospitalUser';
 import { useDoctorsByDepartment } from '../hooks/useDoctorsByDepartment';
 import { useDoctorSlots } from '../hooks/useDoctorSlots';
 import { useBookedSlots } from '../hooks/useBookedSlots';
-import { Department as ApiDepartment, ApiDoctor, BookedSlotsResponse } from '../services/appointmentApi';
+import { Department as ApiDepartment, ApiDoctor } from '../services/appointmentApi';
 import { useQueryClient } from '@tanstack/react-query';
 import { generateTimeSlotsFromShiftInfo } from '../utils/slotGenerator';
 import { useAuthStore } from '@/store/authStore';
@@ -57,6 +57,10 @@ export interface Department {
   name: string;
   icon: any;
   doctors: Doctor[];
+}
+
+interface AppointmentBookingProps {
+  refreshToken?: number;
 }
 
 // Default icons for departments
@@ -126,7 +130,7 @@ const generateTimeSlots = (doctorId: string, date: string): TimeSlot[] => {
   }));
 };
 
-export const AppointmentBooking: React.FC = () => {
+export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshToken }) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   // Get userId and authentication status from Zustand auth store
@@ -138,7 +142,8 @@ export const AppointmentBooking: React.FC = () => {
   const { 
     data: hospitalUserResponse, 
     isLoading: hospitalUserLoading, 
-    error: hospitalUserError 
+    error: hospitalUserError,
+    refetch: refetchHospitalUser
   } = useHospitalUser(userId || '');
   
   // Get hospital ID from the response
@@ -148,7 +153,8 @@ export const AppointmentBooking: React.FC = () => {
   // Finally, fetch departments using the hospital ID
   const { data: departmentsResponse, 
     isLoading: departmentsLoading, 
-    error: departmentsError } = useDepartments(hospitalId || '');
+    error: departmentsError,
+    refetch: refetchDepartments } = useDepartments(hospitalId || '');
   
   // State declarations
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
@@ -164,11 +170,13 @@ export const AppointmentBooking: React.FC = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [patientData, setPatientData] = useState<any>(null);
   const [showTimeSlotsLoading, setShowTimeSlotsLoading] = useState(false);
+  const lastRefreshTokenRef = useRef<number | null>(null);
   
   // Fetch doctors for the selected department
   const { data: doctorsResponse, 
     isLoading: doctorsLoading, 
-    error: doctorsError } = useDoctorsByDepartment(selectedDepartment, hospitalId);
+    error: doctorsError,
+    refetch: refetchDoctors } = useDoctorsByDepartment(selectedDepartment, hospitalId);
   
   // Format selected date for API
   const formattedDate = selectedDate.toISOString().split('T')[0]; // YYYY-MM-DD format
@@ -176,16 +184,80 @@ export const AppointmentBooking: React.FC = () => {
   // Fetch doctor slots for the selected doctor and date
   const { data: doctorSlotsResponse, 
     isLoading: doctorSlotsLoading, 
-    error: doctorSlotsError } = useDoctorSlots(selectedDoctor?.id || '', hospitalId, formattedDate);
+    error: doctorSlotsError,
+    refetch: refetchDoctorSlots } = useDoctorSlots(selectedDoctor?.id || '', hospitalId, formattedDate);
 
   // Fetch booked slots for the selected doctor and date
   const { data: bookedSlotsResponse, 
     isLoading: bookedSlotsLoading, 
-    error: bookedSlotsError } = useBookedSlots(selectedDoctor?.id || '', hospitalId, formattedDate) as {
-    data: BookedSlotsResponse | undefined;
-    isLoading: boolean;
-    error: Error | null;
-  };
+    error: bookedSlotsError,
+    refetch: refetchBookedSlots } = useBookedSlots(selectedDoctor?.id || '', hospitalId, formattedDate);
+
+  useEffect(() => {
+    if (!refreshToken) return;
+    if (lastRefreshTokenRef.current === refreshToken) return;
+    lastRefreshTokenRef.current = refreshToken;
+
+    if (userId) {
+      refetchHospitalUser();
+    }
+
+    if (hospitalId) {
+      refetchDepartments();
+    }
+
+    if (selectedDepartment && hospitalId) {
+      refetchDoctors();
+    }
+
+    if (selectedDoctor?.id && hospitalId && formattedDate) {
+      refetchDoctorSlots();
+      refetchBookedSlots();
+    }
+  }, [
+    refreshToken,
+    userId,
+    hospitalId,
+    selectedDepartment,
+    selectedDoctor?.id,
+    formattedDate,
+    refetchHospitalUser,
+    refetchDepartments,
+    refetchDoctors,
+    refetchDoctorSlots,
+    refetchBookedSlots,
+  ]);
+
+  useEffect(() => {
+    if (!selectedDepartment || !hospitalId) {
+      return;
+    }
+
+    refetchHospitalUser();
+    refetchDepartments();
+    refetchDoctors();
+  }, [
+    selectedDepartment,
+    hospitalId,
+    refetchHospitalUser,
+    refetchDepartments,
+    refetchDoctors,
+  ]);
+
+  useEffect(() => {
+    if (!selectedDoctor?.id || !hospitalId || !formattedDate) {
+      return;
+    }
+
+    refetchDoctorSlots();
+    refetchBookedSlots();
+  }, [
+    selectedDoctor?.id,
+    hospitalId,
+    formattedDate,
+    refetchDoctorSlots,
+    refetchBookedSlots,
+  ]);
   
   // Transform API departments to match the component interface
   const departments: Department[] = React.useMemo(() => {

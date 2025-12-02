@@ -60,6 +60,7 @@ export const AppointmentDashboard = () => {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [showBooking, setShowBooking] = useState(false);
+  const [bookingRefreshToken, setBookingRefreshToken] = useState(0);
   const [showVitalsForm, setShowVitalsForm] = useState(false);
   const [showTokenPrint, setShowTokenPrint] = useState(false);
   const [showPatientProfile, setShowPatientProfile] = useState(false);
@@ -140,6 +141,11 @@ export const AppointmentDashboard = () => {
   const handleTokenPrintClose = () => {
     setShowTokenPrint(false);
     setSelectedAppointmentForToken(null);
+  };
+
+  const handleBookingClick = () => {
+    setBookingRefreshToken((prev) => prev + 1);
+    setShowBooking(true);
   };
 
   // Manual refresh function
@@ -757,7 +763,7 @@ export const AppointmentDashboard = () => {
             <h1 className="text-lg font-semibold text-gray-900 dark:text-white">Book New Appointment</h1>
           </div>
         </div>
-        <AppointmentBooking />
+        <AppointmentBooking refreshToken={bookingRefreshToken} />
       </div>
     );
   }
@@ -770,7 +776,7 @@ export const AppointmentDashboard = () => {
           <h1 className="text-lg font-semibold text-gray-900 dark:text-white">Appointment Dashboard</h1>
               <Button 
             variant="outline"
-                onClick={() => setShowBooking(true)} 
+                onClick={handleBookingClick} 
             className="group flex items-center gap-2 border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
               >
             <Plus className="h-4 w-4 text-gray-600 dark:text-gray-300 transition-transform group-hover:translate-x-1" />
