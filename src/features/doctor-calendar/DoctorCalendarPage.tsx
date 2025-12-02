@@ -109,6 +109,14 @@ export const DoctorCalendarPage: React.FC = () => {
     message: '',
     details: [] as string[]
   });
+  const [deleteOverrideConfirm, setDeleteOverrideConfirm] = useState({
+    open: false,
+    overrideId: undefined as string | undefined,
+    shiftName: undefined as string | undefined,
+    shiftDate: undefined as string | undefined,
+    startTime: undefined as string | undefined,
+    endTime: undefined as string | undefined,
+  });
   
   const { toast } = useToast();
   const { getUserId } = useAuthStore();
@@ -1010,12 +1018,30 @@ export const DoctorCalendarPage: React.FC = () => {
       return;
     }
 
+    setDeleteOverrideConfirm({
+      open: true,
+      overrideId,
+      shiftName: editShiftModal.shiftName,
+      shiftDate: editShiftModal.shiftDate,
+      startTime: editShiftModal.initialData?.startTime,
+      endTime: editShiftModal.initialData?.endTime,
+    });
+  };
+
+  const confirmDeleteOverride = () => {
+    const overrideId = deleteOverrideConfirm.overrideId;
+    if (!overrideId) {
+      setDeleteOverrideConfirm(prev => ({ ...prev, open: false }));
+      return;
+    }
+
     deleteOverrideMutation.mutate(overrideId, {
       onSuccess: async (data) => {
         toast({
           title: t('doctorCalendar.success'),
           description: data.message || t('doctorCalendar.shiftOverrideCanceled'),
         });
+        setDeleteOverrideConfirm({ open: false, overrideId: undefined, shiftName: undefined, shiftDate: undefined, startTime: undefined, endTime: undefined });
         setEditShiftModal(prev => ({ ...prev, open: false }));
         await refreshCalendarData();
       },
@@ -1914,6 +1940,35 @@ export const DoctorCalendarPage: React.FC = () => {
                 className="bg-green-600 hover:bg-green-700 text-white"
               >
                 Great! Continue
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={deleteOverrideConfirm.open} onOpenChange={(open) => setDeleteOverrideConfirm(prev => ({ ...prev, open }))}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t('doctorCalendar.confirmDeleteOverride', 'Delete override shift?')}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2 text-sm text-gray-700 dark:text-gray-200">
+              <p>{t('doctorCalendar.confirmDeleteOverrideMessage', 'This will remove the override and revert to your default schedule for:')}</p>
+              <ul className="text-sm list-disc pl-5">
+                <li>{deleteOverrideConfirm.shiftName || t('doctorCalendar.shiftDetails.untitledShift')}</li>
+                <li>{deleteOverrideConfirm.shiftDate}</li>
+                {deleteOverrideConfirm.startTime && deleteOverrideConfirm.endTime && (
+                  <li>{`${deleteOverrideConfirm.startTime} – ${deleteOverrideConfirm.endTime}`}</li>
+                )}
+              </ul>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t('doctorCalendar.deleteOverrideIrreversible', 'This action cannot be undone.')}
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteOverrideConfirm(prev => ({ ...prev, open: false }))}>
+                {t('doctorCalendar.cancel', 'Cancel')}
+              </Button>
+              <Button variant="destructive" onClick={confirmDeleteOverride} disabled={deleteOverrideMutation.isPending}>
+                {deleteOverrideMutation.isPending ? t('doctorCalendar.deleting', 'Deleting...') : t('doctorCalendar.deleteOverride', 'Delete override')}
               </Button>
             </DialogFooter>
           </DialogContent>
