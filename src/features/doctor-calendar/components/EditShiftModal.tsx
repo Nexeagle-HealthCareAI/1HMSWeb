@@ -3,8 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { ShiftName, CreateOverridePayload } from '../api/types';
 import { format, parseISO } from 'date-fns';
 
@@ -40,9 +38,7 @@ export const EditShiftModal: React.FC<EditShiftModalProps> = ({
   const [formData, setFormData] = useState({
     startTime: '09:00',
     endTime: '12:00',
-    slotMinutes: 15,
-    maxPatients: '',
-    reason: ''
+    slotMinutes: '15'
   });
 
   useEffect(() => {
@@ -50,12 +46,27 @@ export const EditShiftModal: React.FC<EditShiftModalProps> = ({
       setFormData({
         startTime: initialData.startTime,
         endTime: initialData.endTime,
-        slotMinutes: initialData.slotMinutes,
-        maxPatients: initialData.maxPatients?.toString() || '',
-        reason: initialData.reason || ''
+        slotMinutes: initialData.slotMinutes.toString()
       });
     }
   }, [initialData]);
+
+  const normalizedShiftDate = React.useMemo(() => {
+    if (!shiftDate) return new Date();
+    const parsed = shiftDate.includes('T') ? new Date(shiftDate) : new Date(`${shiftDate}T00:00:00`);
+    return isNaN(parsed.getTime()) ? new Date() : parsed;
+  }, [shiftDate]);
+
+  const getUTCDateISO = React.useCallback((date: Date) => {
+    return new Date(Date.UTC(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      0,
+      0,
+      0
+    )).toISOString();
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,13 +76,17 @@ export const EditShiftModal: React.FC<EditShiftModalProps> = ({
       return;
     }
     
-    // Convert shiftDate to ISO format
-    const overrideDate = new Date(shiftDate + 'T00:00:00').toISOString();
-    const startDate = overrideDate;
-    const endDate = overrideDate;
+    const overrideDate = new Date().toISOString();
+    const shiftDateISO = getUTCDateISO(normalizedShiftDate);
+    const startDate = shiftDateISO;
+    const endDate = shiftDateISO;
+    const hospitalId = ''; // Assume hospitalId is obtained from context or props
     
+    const slotMinutesValue = Math.max(0, parseInt(formData.slotMinutes, 10) || 0);
+
     const payload: CreateOverridePayload = {
       doctorId,
+      hospitalId,
       overrideDate,
       startDate,
       endDate,
@@ -79,7 +94,7 @@ export const EditShiftModal: React.FC<EditShiftModalProps> = ({
         shiftName,
         startTime: formData.startTime,
         endTime: formData.endTime,
-        slotDurationInMinutes: formData.slotMinutes,
+        slotDurationInMinutes: slotMinutesValue,
         recurringDays: []
       }]
     };
@@ -128,7 +143,9 @@ export const EditShiftModal: React.FC<EditShiftModalProps> = ({
         return false;
       }
       
-      return start < end && formData.slotMinutes > 0;
+      const slotMinutesValue = parseInt(formData.slotMinutes, 10);
+      const isSlotValid = Number.isInteger(slotMinutesValue) && slotMinutesValue >= 0;
+      return start < end && isSlotValid;
     } catch (error) {
       return false;
     }
@@ -136,14 +153,51 @@ export const EditShiftModal: React.FC<EditShiftModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[640px]">
         <DialogHeader>
           <DialogTitle>
             Edit {shiftName} Shift - {formatDate(shiftDate || new Date().toISOString().split('T')[0])}
           </DialogTitle>
         </DialogHeader>
         
+        <div className="rounded-md bg-blue-50 border border-blue-200 text-sm text-blue-700 px-4 py-3 mb-4">
+          Changes apply only to this specific shift on the selected date. Your default weekly schedule remains unchanged.
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="overrideDate">Override Date</Label>
+              <Input
+                id="overrideDate"
+                value={formatDate(new Date().toISOString())}
+                readOnly
+                disabled
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="startDate">Start Date</Label>
+              <Input
+                id="startDate"
+                value={formatDate(normalizedShiftDate.toISOString())}
+                readOnly
+                disabled
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="endDate">End Date</Label>
+              <Input
+                id="endDate"
+                value={formatDate(normalizedShiftDate.toISOString())}
+                readOnly
+                disabled
+              />
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="startTime">Start Time</Label>
@@ -170,44 +224,20 @@ export const EditShiftModal: React.FC<EditShiftModalProps> = ({
           
           <div className="space-y-2">
             <Label htmlFor="slotMinutes">Slot Duration (minutes)</Label>
-            <Select
-              value={formData.slotMinutes.toString()}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, slotMinutes: parseInt(value) }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10 minutes</SelectItem>
-                <SelectItem value="15">15 minutes</SelectItem>
-                <SelectItem value="20">20 minutes</SelectItem>
-                <SelectItem value="30">30 minutes</SelectItem>
-                <SelectItem value="45">45 minutes</SelectItem>
-                <SelectItem value="60">60 minutes</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="maxPatients">Max Patients (optional)</Label>
             <Input
-              id="maxPatients"
+              id="slotMinutes"
               type="number"
-              min="1"
-              value={formData.maxPatients}
-              onChange={(e) => setFormData(prev => ({ ...prev, maxPatients: e.target.value }))}
-              placeholder="Leave empty for unlimited"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="reason">Reason (optional)</Label>
-            <Textarea
-              id="reason"
-              value={formData.reason}
-              onChange={(e) => setFormData(prev => ({ ...prev, reason: e.target.value }))}
-              placeholder="e.g., Emergency meeting, Conference, etc."
-              rows={3}
+              min="0"
+              step="1"
+              value={formData.slotMinutes}
+              onChange={(e) => {
+                const value = e.target.value;
+                // Allow empty input, but ensure only digits are stored
+                if (value === '' || /^\d+$/.test(value)) {
+                  setFormData(prev => ({ ...prev, slotMinutes: value }));
+                }
+              }}
+              placeholder="Enter any integer"
             />
           </div>
           

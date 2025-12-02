@@ -196,10 +196,12 @@ export interface ShiftDayDetail {
   endTime: string;   // Changed from TimeSpan to string (e.g., "17:00:00")
   slotDurationInMinutes: number;
   recurringDays: string;
+  dataSource?: 'Default' | 'Override';
 }
 
 export interface ShiftInfo {
   shiftDate: string; // Changed from DateInfo to string (e.g., "2025-08-26")
+  dataSource?: 'Default' | 'Override';
   shiftDayDetails: ShiftDayDetail[];
 }
 

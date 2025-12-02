@@ -14,9 +14,7 @@ import {
   ShiftDetailsCard,
   AppointmentCancelDialog
 } from './components';
-import { useCalendarEvents, useCreateOverride, useDeleteOverride, useTimeOff, useCreateTimeOff, useDeleteTimeOff, useDoctorCalendarConfig, useAppointmentCancel } from './hooks/useCalendar';
-import { useQueryClient } from '@tanstack/react-query';
-import { calendarKeys } from './hooks/useCalendar';
+import { useCalendarEvents, useCreateOverride, useDeleteOverride, useCreateTimeOff, useDeleteTimeOff, useDoctorCalendarConfig, useAppointmentCancel } from './hooks/useCalendar';
 import { CalendarEvent, CreateOverridePayload, CreateBlockPayload, ShiftName, CreateTimeOffRequest } from './api/types';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -28,7 +26,6 @@ import { useUserDetails } from '@/hooks/useUserProfileApi';
 import { useDoctorProfile } from '@/features/doctor/hooks/useDoctorProfile';
 
 export const DoctorCalendarPage: React.FC = () => {
-    const queryClient = useQueryClient();
   const { t } = useTranslation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'>('timeGridDay');
@@ -195,7 +192,6 @@ export const DoctorCalendarPage: React.FC = () => {
   // Queries - Use the same startDate for both hooks to ensure consistency
   const { data: calendarConfig, isLoading: configLoading, refetch: refetchCalendarConfig } = useDoctorCalendarConfig(doctorId,hospitalId, fromISO, daysCount);
   const { data: events = [], isLoading: eventsLoading, refetch: refetchCalendarEvents } = useCalendarEvents(doctorId, hospitalId, fromISO, toISO, calendarConfig);
-  const { data: timeOffData, isLoading: timeOffLoading } = useTimeOff(doctorId,hospitalId);
   
   // Use real events directly
   const allEvents = events;
@@ -214,36 +210,14 @@ export const DoctorCalendarPage: React.FC = () => {
 
   
   // Debug time-off data
+  // Log the inputs driving event hydration for easier debugging
   React.useEffect(() => {
-    console.log('🔍 Time-off data from API:', {
-      timeOffData,
-      timeOffLoading,
-      doctorId
-    });
-  }, [timeOffData, timeOffLoading, doctorId]);
+  }, [doctorId, hospitalId, fromISO, toISO, daysCount]);
   
 
 
   // Debug time-off events specifically
   const timeOffEvents = events.filter(event => event.type === 'timeoff' || event.id?.startsWith('timeoff-'));
-  console.log('🔍 Time-off events in current view:', {
-    totalEvents: events.length,
-    timeOffEvents: timeOffEvents.length,
-    timeOffEventDetails: timeOffEvents.map(event => ({
-      id: event.id,
-      title: event.title,
-      start: event.start,
-      end: event.end,
-      type: event.type,
-      extendedProps: event.extendedProps
-    }))
-  });
-  
-
-
-
-
-
   
   // Mutations
   const createOverrideMutation = useCreateOverride();
@@ -778,6 +752,7 @@ export const DoctorCalendarPage: React.FC = () => {
         const isTimeOff = arg.event.extendedProps?.isTimeOff;
         const isWorkingShift = arg.event.extendedProps?.isWorkingShift;
         const isBackground = arg.event.display === 'background';
+        const dataSource = arg.event.extendedProps?.dataSource;
         
         const classes = [];
         
@@ -788,6 +763,9 @@ export const DoctorCalendarPage: React.FC = () => {
           } else {
             // Regular shift events
             classes.push('shift-event');
+            if (!isBackground) {
+              classes.push(dataSource === 'Override' ? 'shift-event-override' : 'shift-event-default');
+            }
                     if (shiftName === t('doctorCalendar.shifts.morning')) classes.push('shift-morning');
         else if (shiftName === t('doctorCalendar.shifts.afternoon')) classes.push('shift-afternoon');
         else if (shiftName === t('doctorCalendar.shifts.evening')) classes.push('shift-evening');
@@ -1078,11 +1056,8 @@ export const DoctorCalendarPage: React.FC = () => {
       return;
     }
     
-    console.log('Canceling override with data:', overrideData);
-    
     deleteOverrideMutation.mutate(overrideData.overrideId, {
       onSuccess: async (data) => {
-        console.log('Override canceled successfully:', data);
         toast({
           title: t('doctorCalendar.success'),
           description: data.message || t('doctorCalendar.shiftOverrideCanceled'),
@@ -1093,7 +1068,7 @@ export const DoctorCalendarPage: React.FC = () => {
         // TODO: Refetch calendar events here if needed
       },
       onError: (error) => {
-        console.error('Failed to cancel override:', error);
+        
         toast({
           title: t('doctorCalendar.error'),
           description: t('doctorCalendar.failedToCancelOverride'),
@@ -1106,8 +1081,7 @@ export const DoctorCalendarPage: React.FC = () => {
   const handleOverrideActionCancel = () => {
     const overrideData = overrideActionModal.overrideData;
     
-    if (!overrideData?.overrideId) {
-      console.error('No override data available for cancellation');
+    if (!overrideData?.overrideId) {      
       toast({
         title: t('doctorCalendar.error'),
         description: t('doctorCalendar.noOverrideData'),
@@ -1115,8 +1089,6 @@ export const DoctorCalendarPage: React.FC = () => {
       });
       return;
     }
-    
-    console.log('Launching cancel confirmation for override:', overrideData);
 
     // Close the action dialog and open the dedicated cancel confirmation dialog
     setOverrideActionModal({ open: false, overrideData: undefined });
@@ -1126,8 +1098,7 @@ export const DoctorCalendarPage: React.FC = () => {
   const handleOverrideActionUpdate = () => {
     const overrideData = overrideActionModal.overrideData;
     
-    if (!overrideData) {
-      console.error('No override data available for update');
+    if (!overrideData) {      
       toast({
         title: t('doctorCalendar.error'),
         description: t('doctorCalendar.noOverrideData'),
@@ -1440,7 +1411,6 @@ export const DoctorCalendarPage: React.FC = () => {
           .shift-morning {
             background-color: #ccfbf1 !important;
             border-color: #5eead4 !important;
-            color: #134e4a !important;
           }
           
           .shift-afternoon {
@@ -1448,14 +1418,22 @@ export const DoctorCalendarPage: React.FC = () => {
             border-color: #fbbf24 !important;
             color: #92400e !important;
           }
-          
           .shift-evening {
             background-color: #f3e8ff !important;
             border-color: #a78bfa !important;
             color: #581c87 !important;
           }
-          
 
+
+          .fc-event.shift-event,
+          .fc-event.shift-event * {
+            color: #0b1526 !important;
+          }
+
+          .fc-event.shift-event-override,
+          .fc-event.shift-event-override * {
+            color: #064e3b !important;
+          }
           
                      .block-event {
              background-color: #ef4444 !important;
@@ -1523,6 +1501,18 @@ export const DoctorCalendarPage: React.FC = () => {
               font-weight: 600 !important;
               border-width: 1px !important;
             }
+
+          .shift-event-default {
+            background-color: #bfdbfe !important;
+            border-color: #1d4ed8 !important;
+            color: #0f172a !important;
+          }
+
+          .shift-event-override {
+            background-color: #bbf7d0 !important;
+            border-color: #15803d !important;
+            color: #064e3b !important;
+          }
             
                      /* Enhanced Shift block events */
            .shift-block-event {
