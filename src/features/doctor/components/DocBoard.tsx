@@ -30,6 +30,7 @@ import {
   CalendarCheck,
   ClipboardCheck,
   CircleCheck,
+  Expand,
   LucideIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -47,6 +48,7 @@ import {
   PaginationPrevious
 } from '@/components/ui/pagination';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { PrescriptionCustomizePanel } from '@/components/prescription/PrescriptionCustomizePanel';
 import { format, subDays, addDays } from 'date-fns';
@@ -108,6 +110,7 @@ export const ClinicalDashboard: React.FC = () => {
   const headerRef = useRef<HTMLDivElement>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
   const [windowWidth, setWindowWidth] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1920));
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Live update states
   const [isLiveUpdateEnabled, setIsLiveUpdateEnabled] = useState(true);
@@ -493,6 +496,8 @@ export const ClinicalDashboard: React.FC = () => {
     }
   ];
 
+  const activeAppointmentTab = appointmentTabsConfig.find((tab) => tab.value === activeTab);
+
   // Pagination slices
   const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -609,6 +614,12 @@ export const ClinicalDashboard: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    if (windowWidth < 1024 && isSidebarCollapsed) {
+      setIsSidebarCollapsed(false);
+    }
+  }, [windowWidth, isSidebarCollapsed]);
+
   const tabBarStickyOffset = Math.max(headerHeight, 0) + 16;
   const computeScale = (width: number) => {
     if (width < 1024) return 1;
@@ -652,7 +663,7 @@ export const ClinicalDashboard: React.FC = () => {
                   <Calendar className="h-4 w-4 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">Doctor Dashboard</h1>
+                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight"> Dashboard</h1>
                   {clampedProfileCompletion < 100 && (
                     <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2 text-[11px] sm:text-xs">
                       <button
@@ -906,55 +917,123 @@ export const ClinicalDashboard: React.FC = () => {
               className="flex flex-col lg:flex-row gap-3 lg:gap-6 items-start"
             >
               <div
-                className="w-full lg:w-72 xl:w-80 lg:sticky lg:self-start"
+                className={`w-full ${isSidebarCollapsed ? 'lg:w-[4.5rem] xl:w-20' : 'lg:w-64 xl:w-72'} lg:sticky lg:self-start transition-all duration-300`}
                 style={{ top: `${tabBarStickyOffset}px` }}
               >
-                <div className="bg-white dark:bg-gray-900 rounded-2xl p-3 shadow-xl border border-gray-200 dark:border-gray-800">
-                  <div className="mb-2 px-1 flex items-center justify-between gap-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Appointment views</p>
-                    <span className="text-[10px] text-gray-400 lg:hidden">Swipe to explore</span>
+                <div className="bg-white dark:bg-gray-900 rounded-2xl p-3 shadow-xl border border-gray-200 dark:border-gray-800 h-full lg:min-h-[calc(100vh-160px)] flex flex-col">
+                  <div className={`mb-2 px-1 flex items-center justify-end gap-2 ${isSidebarCollapsed ? 'lg:flex-col lg:items-center lg:gap-1.5' : ''}`}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-gray-400 lg:hidden">Swipe to explore</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsSidebarCollapsed((prev) => !prev)}
+                        className="hidden lg:inline-flex items-center justify-center rounded-full border border-gray-200 dark:border-gray-800 p-1.5 text-gray-500 dark:text-gray-300 hover:text-blue-600 hover:border-blue-200 dark:hover:text-blue-300 transition-colors"
+                        aria-pressed={isSidebarCollapsed}
+                        aria-expanded={!isSidebarCollapsed}
+                        aria-controls="appointment-views-nav"
+                        aria-label={isSidebarCollapsed ? 'Expand appointment sidebar' : 'Collapse appointment sidebar'}
+                      >
+                        {isSidebarCollapsed ? (
+                          <Expand className="h-3.5 w-3.5" aria-hidden />
+                        ) : (
+                          <X className="h-3.5 w-3.5" aria-hidden />
+                        )}
+                        <span className="sr-only">{isSidebarCollapsed ? 'Expand appointment sidebar' : 'Collapse appointment sidebar'}</span>
+                      </button>
+                    </div>
                   </div>
-                  <TabsList className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 w-full bg-transparent h-auto lg:flex lg:flex-col lg:gap-1.5 lg:overflow-visible">
-                    {appointmentTabsConfig.map(({ value, label, subLabel, count }) => {
-                      const isActive = activeTab === value;
-                      const isCurrentTab = value === 'current';
-                      return (
-                        <TabsTrigger
-                          key={value}
-                          value={value}
-                          disabled={isDoctorExperienceLocked}
-                          className={`group relative flex flex-col gap-1 rounded-xl border text-left px-3 py-2.5 sm:px-3.5 sm:py-3 text-[13px] ${
-                            isCurrentTab ? 'text-[12px] sm:text-[13px]' : 'text-[13px] sm:text-sm'
-                          } transition-all duration-200 focus-visible:ring-2 focus-visible:ring-offset-2 ${
-                            isActive
-                              ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 text-gray-900 dark:text-white shadow-sm'
-                              : 'bg-transparent border-gray-200/0 dark:border-gray-800/0 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                          } ${isDoctorExperienceLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          style={{ borderLeftWidth: 4, borderLeftColor: isActive ? '#2563eb' : 'transparent' }}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex flex-col flex-1 text-left">
-                              <p className="text-sm font-semibold leading-tight">{label}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 leading-snug">{subLabel}</p>
+                  <TooltipProvider delayDuration={150}>
+                    <TabsList
+                      id="appointment-views-nav"
+                      className={`grid grid-cols-1 sm:grid-cols-2 gap-1.5 w-full bg-transparent h-auto lg:flex lg:flex-col ${
+                        isSidebarCollapsed ? 'lg:items-stretch lg:gap-1.5' : 'lg:gap-2'
+                      } lg:overflow-visible lg:justify-start`}
+                    >
+                      {appointmentTabsConfig.map(({ value, label, subLabel, Icon, accent, iconColor }) => {
+                        const isActive = activeTab === value;
+                        const iconChip = (
+                          <div
+                            className={`relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border bg-white/90 dark:bg-gray-900/70 shadow-sm transition-colors ${
+                              isActive
+                                ? 'border-blue-200 text-blue-600 dark:text-blue-300'
+                                : `border-gray-100/80 dark:border-gray-800/70 ${iconColor}`
+                            }`}
+                          >
+                            <Icon className="h-4 w-4" aria-hidden />
+                            {isSidebarCollapsed && <span className="sr-only">{label}</span>}
+                          </div>
+                        );
+
+                        const triggerBody = isSidebarCollapsed ? (
+                          iconChip
+                        ) : (
+                          <div className="flex items-center gap-2 w-full">
+                            {iconChip}
+                            <div className="flex flex-col flex-1 min-w-0 text-left">
+                              <p className="font-semibold leading-tight text-[13px]">{label}</p>
+                              <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{subLabel}</p>
                             </div>
                             <span
-                              className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors ${
-                                isActive
-                                  ? 'border-blue-200 text-blue-700 dark:border-blue-800 dark:text-blue-200'
-                                  : 'border-gray-200 text-gray-500 dark:border-gray-700 dark:text-gray-300'
-                              }`}
-                            >
-                              {count} appt{count === 1 ? '' : 's'}
-                            </span>
+                              className={`absolute inset-x-4 top-1 h-1 rounded-full opacity-0 transition-opacity duration-300 ${
+                                isActive ? 'opacity-100' : 'group-hover:opacity-70'
+                              } bg-gradient-to-r ${accent}`}
+                            />
                           </div>
-                        </TabsTrigger>
-                      );
-                    })}
-                  </TabsList>
+                        );
+
+                        if (isSidebarCollapsed) {
+                          return (
+                            <Tooltip key={value} delayDuration={150}>
+                              <TooltipTrigger asChild>
+                                <TabsTrigger
+                                  value={value}
+                                  disabled={isDoctorExperienceLocked}
+                                  className={`group relative flex items-center justify-center px-1.5 py-1.5 rounded-xl border transition-all duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 ${
+                                    isActive
+                                      ? 'bg-white text-gray-900 dark:bg-gray-800/80 dark:text-white border-blue-200 shadow-lg shadow-blue-100/60 dark:shadow-none'
+                                      : 'bg-white/70 dark:bg-gray-900/20 border-transparent text-gray-600 dark:text-gray-400 hover:border-gray-200 hover:bg-white/90 dark:hover:border-gray-800 dark:hover:bg-gray-900/40'
+                                  } ${isDoctorExperienceLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                  {triggerBody}
+                                </TabsTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="max-w-[220px] text-xs">
+                                <p className="font-semibold text-gray-900 dark:text-gray-100">{label}</p>
+                                <p className="text-gray-500 dark:text-gray-400">{subLabel}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        }
+
+                        return (
+                          <TabsTrigger
+                            key={value}
+                            value={value}
+                            disabled={isDoctorExperienceLocked}
+                            className={`group relative flex w-full items-center gap-2 px-3 py-2.5 rounded-xl border text-left text-sm transition-all duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 ${
+                              isActive
+                                ? 'bg-white text-gray-900 dark:bg-gray-800/80 dark:text-white border-blue-200 shadow-lg shadow-blue-100/60 dark:shadow-none'
+                                : 'bg-white/60 dark:bg-gray-900/20 border-transparent text-gray-600 dark:text-gray-400 hover:border-gray-200 hover:bg-white/90 dark:hover:border-gray-800 dark:hover:bg-gray-900/40'
+                            } ${isDoctorExperienceLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          >
+                            {triggerBody}
+                          </TabsTrigger>
+                        );
+                      })}
+                    </TabsList>
+                  </TooltipProvider>
                 </div>
               </div>
 
               <div className="flex-1 w-full lg:pl-4 xl:pl-6">
+                {activeAppointmentTab && (
+                  <div className="mb-3">
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{activeAppointmentTab.label}</h2>
+                    {activeAppointmentTab.subLabel && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{activeAppointmentTab.subLabel}</p>
+                    )}
+                  </div>
+                )}
 
               {/* Current - Mobile Responsive */}
               <TabsContent value="current" className="space-y-4 pt-2">
