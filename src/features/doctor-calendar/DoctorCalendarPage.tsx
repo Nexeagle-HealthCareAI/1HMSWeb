@@ -433,7 +433,8 @@ export const DoctorCalendarPage: React.FC = () => {
           endTime: event.extendedProps?.endTime || '12:00',
           slotMinutes: event.extendedProps?.slotMinutes || 15,
           maxPatients: event.extendedProps?.maxPatients || null,
-          reason: event.extendedProps?.reason || null
+          reason: event.extendedProps?.reason || null,
+          overrideId: event.extendedProps?.overrideId
         }
       });
     } else if (eventType === 'appointment') {
@@ -999,12 +1000,33 @@ export const DoctorCalendarPage: React.FC = () => {
   };
   
   const handleDeleteOverride = () => {
-    // TODO: Implement when override API is available
-    toast({
-      title: t('doctorCalendar.info'),
-      description: t('doctorCalendar.deleteOverrideNotImplemented'),
+    const overrideId = editShiftModal.initialData?.overrideId;
+    if (!overrideId) {
+      toast({
+        title: t('doctorCalendar.error'),
+        description: t('doctorCalendar.noOverrideData'),
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    deleteOverrideMutation.mutate(overrideId, {
+      onSuccess: async (data) => {
+        toast({
+          title: t('doctorCalendar.success'),
+          description: data.message || t('doctorCalendar.shiftOverrideCanceled'),
+        });
+        setEditShiftModal(prev => ({ ...prev, open: false }));
+        await refreshCalendarData();
+      },
+      onError: () => {
+        toast({
+          title: t('doctorCalendar.error'),
+          description: t('doctorCalendar.failedToCancelOverride'),
+          variant: 'destructive'
+        });
+      }
     });
-    setEditShiftModal(prev => ({ ...prev, open: false }));
   };
 
   const handleDeleteTimeOff = () => {
@@ -1122,7 +1144,8 @@ export const DoctorCalendarPage: React.FC = () => {
         endTime: overrideData.endTime,
         slotMinutes: 15, // Default value
         maxPatients: null,
-        reason: null
+        reason: null,
+        overrideId: overrideData.overrideId
       }
     });
   };
@@ -1790,7 +1813,7 @@ export const DoctorCalendarPage: React.FC = () => {
          shiftName={editShiftModal.shiftName}
          initialData={editShiftModal.initialData}
          onSave={handleSaveOverride}
-         onDelete={editShiftModal.initialData ? handleDeleteOverride : undefined}
+         onDelete={editShiftModal.initialData?.overrideId ? handleDeleteOverride : undefined}
          isLoading={createOverrideMutation.isPending || deleteOverrideMutation.isPending}
        />
        

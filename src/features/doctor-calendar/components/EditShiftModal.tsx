@@ -18,6 +18,7 @@ interface EditShiftModalProps {
     slotMinutes: number;
     maxPatients?: number | null;
     reason?: string | null;
+    overrideId?: string;
   };
   onSave: (payload: CreateOverridePayload) => void;
   onDelete?: () => void;

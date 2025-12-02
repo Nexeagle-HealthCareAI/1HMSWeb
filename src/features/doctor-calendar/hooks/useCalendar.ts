@@ -91,8 +91,8 @@ export function useCalendarEvents(
             const startTimeStr = shiftDetail.startTime;
             const endTimeStr = shiftDetail.endTime;
 
-            const eventStart = new Date(`${shiftInfo.shiftDate}T${startTimeStr}`);
-            const eventEnd = new Date(`${shiftInfo.shiftDate}T${endTimeStr}`);
+            const eventStart = buildShiftDate(shiftInfo.shiftDate, startTimeStr);
+            const eventEnd = buildShiftDate(shiftInfo.shiftDate, endTimeStr);
            
             const dataSource = resolveShiftDataSource({
               explicitSource: shiftDetail.dataSource || shiftInfo.dataSource || calendarConfig.dataSource,
@@ -131,8 +131,8 @@ export function useCalendarEvents(
           
           if (day.effectiveShifts) {
             day.effectiveShifts.forEach((shift: any, shiftIndex: number) => {
-              const eventStart = new Date(`${day.date}T${shift.startTime}`);
-              const eventEnd = new Date(`${day.date}T${shift.endTime}`);
+              const eventStart = buildShiftDate(day.date, shift.startTime);
+              const eventEnd = buildShiftDate(day.date, shift.endTime);
 
               const dataSource = resolveShiftDataSource({
                 explicitSource: shift.sourceType || shift.source,
@@ -236,6 +236,13 @@ function resolveShiftDataSource({
   if (normalized === 'default') return 'Default';
   if (overrideId) return 'Override';
   return 'Default';
+}
+
+function buildShiftDate(dateStr: string, timeStr: string) {
+  const [hourStr = '0', minuteStr = '0', secondStr = '0'] = timeStr.split(':');
+  const date = new Date(dateStr);
+  date.setHours(Number(hourStr) || 0, Number(minuteStr) || 0, Number(secondStr) || 0, 0);
+  return date;
 }
 
 // Time-off mutations
