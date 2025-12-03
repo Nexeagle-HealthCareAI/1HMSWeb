@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuthStore, useAppStore, useUserStore, useThemeStore } from '@/store';
-import { useQueryClient } from '@tanstack/react-query';
+import { useAuthStore, useAppStore } from '@/store';
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { useUserDetails } from '@/hooks/useUserProfileApi';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useTranslation } from 'react-i18next';
+import { useLogout } from '@/hooks/useLogout';
 import { 
   Calendar, 
   Users, 
@@ -71,13 +71,10 @@ interface NavigationItem {
 export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAuthStore();
   const hospitalAccessRestricted = useAuthStore(state => state.hospitalAccessRestricted);
   const hospitalAccessMessage = useAuthStore(state => state.hospitalAccessMessage);
-  const { resetAppState, sidebarCollapsed, setSidebarCollapsed } = useAppStore();
-  const { resetUserState } = useUserStore();
-  const { resetColors } = useThemeStore();
-  const queryClient = useQueryClient();
+  const { sidebarCollapsed, setSidebarCollapsed } = useAppStore();
+  const triggerLogout = useLogout();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState('dashboard');
   const { currentLanguage, isRTL } = useLanguage();
@@ -167,34 +164,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     navigate(item.path);
   };
 
-  const handleLogout = () => {
-    // Clear React Query cache
-    queryClient.clear();
-    
-    // Clear all localStorage items
-    localStorage.clear();
-    
-    // Clear sessionStorage
-    sessionStorage.clear();
-    
-    // Clear any account lockout data
-    localStorage.removeItem('accountLockout');
-    
-    // Clear any rate limiting data
-    Object.keys(localStorage).forEach(key => {
-      if (key.includes('rate_limit') || key.includes('otp_')) {
-        localStorage.removeItem(key);
-      }
-    });
-    
-    // Clear all stores
-    logout();
-    resetAppState();
-    resetUserState();  
-    resetColors();
-    
-    // Navigate to home page
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      await triggerLogout({ redirectTo: '/login' });
+    } catch (error) {
+      console.error('Failed to logout cleanly', error);
+    }
   };
 
   return (
