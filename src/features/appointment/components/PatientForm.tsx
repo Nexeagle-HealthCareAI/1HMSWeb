@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Shield, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RegisterAppointmentRequest, generatePatientId } from '../services/appointmentApi';
@@ -31,6 +31,90 @@ interface TimeSlot {
   slotDurationInMinutes?: number;
   shiftName?: string;
 }
+
+type PatientFormState = {
+  name: string;
+  phone: string;
+  age: string;
+  gender: string;
+  address: string;
+  city: string;
+  pincode: string;
+  reason: string;
+  isPaid: boolean;
+  paymentMode: string;
+  hasInsurance: boolean;
+  insuranceId: string;
+  insuranceType: string;
+};
+
+const PHONE_REGEX = /^\d{10}$/;
+
+const createInitialFormState = (): PatientFormState => ({
+  name: '',
+  phone: '',
+  age: '',
+  gender: '',
+  address: '',
+  city: '',
+  pincode: '',
+  reason: 'General consultation',
+  isPaid: false,
+  paymentMode: '',
+  hasInsurance: false,
+  insuranceId: '',
+  insuranceType: ''
+});
+
+const formatPhoneNumber = (value: string) => value.replace(/\D/g, '').slice(0, 10);
+
+const collectValidationErrors = (data: PatientFormState) => {
+  const newErrors: Record<string, string> = {};
+
+  if (!data.name.trim()) {
+    newErrors.name = 'Patient name is required';
+  }
+
+  const cleanPhone = formatPhoneNumber(data.phone);
+  if (!cleanPhone) {
+    newErrors.phone = 'Phone number is required';
+  } else if (!PHONE_REGEX.test(cleanPhone)) {
+    newErrors.phone = 'Please enter a valid 10-digit mobile number';
+  }
+
+  if (!data.age.trim()) {
+    newErrors.age = 'Age is required';
+  } else {
+    const ageValue = parseInt(data.age, 10);
+    if (Number.isNaN(ageValue) || ageValue < 1 || ageValue > 120) {
+      newErrors.age = 'Please enter a valid age';
+    }
+  }
+
+  if (!data.gender) {
+    newErrors.gender = 'Gender is required';
+  }
+
+  if (!data.address.trim()) {
+    newErrors.address = 'Address is required';
+  }
+
+  if (!data.city.trim()) {
+    newErrors.city = 'City is required';
+  }
+
+  if (!data.pincode.trim()) {
+    newErrors.pincode = 'Pincode is required';
+  } else if (!/^\d{6}$/.test(data.pincode)) {
+    newErrors.pincode = 'Pincode must be exactly 6 digits';
+  }
+
+  if (data.isPaid && !data.paymentMode) {
+    newErrors.paymentMode = 'Payment mode is required when paid';
+  }
+
+  return newErrors;
+};
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -54,21 +138,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   onSubmit,
   onCancel
 }) => {
-  const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    age: '',
-    gender: '',
-    address: '',
-    city: '',
-    pincode: '',
-    reason: 'General consultation',
-    isPaid: false,
-    paymentMode: '',
-    hasInsurance: false,
-    insuranceId: '',
-    insuranceType: ''
-  });
+  const [formData, setFormData] = useState<PatientFormState>(createInitialFormState());
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<PatientSearchItem[]>([]);
@@ -79,6 +149,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const { bookAppointment, isLoading: isBookingLoading, error: bookingError, clearError } = useAppointmentBooking();
   const { searchPatients, isLoading: isSearchLoading, error: searchError, clearError: clearSearchError } = usePatientSearch();
   const { getUserId } = useAuthStore();
+  const pendingValidationErrors = useMemo(() => collectValidationErrors(formData), [formData]);
+  const isFormReady = Object.keys(pendingValidationErrors).length === 0;
 
   const formatTime = (time: string) => {
     const [hour, minute] = time.split(':');
@@ -204,65 +276,25 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     setSearchQuery('');
   };
 
-  const formatPhoneNumber = (value: string) => {
-    return value.replace(/\D/g, '');
-  };
-
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhoneNumber(e.target.value);
     setFormData(prev => ({ ...prev, phone: formatted }));
+    setErrors(prev => {
+      const nextErrors = { ...prev };
+      const phoneError = collectValidationErrors({ ...formData, phone: formatted }).phone;
+      if (phoneError) {
+        nextErrors.phone = phoneError;
+      } else {
+        delete nextErrors.phone;
+      }
+      return nextErrors;
+    });
   };
 
   const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.name.trim()) {
-      newErrors.name = 'Patient name is required';
-    }
-
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
-    } else {
-      const cleanPhone = formatPhoneNumber(formData.phone);
-      const phoneRegex = /^\d{8,15}$/;
-
-      if (!phoneRegex.test(cleanPhone)) {
-        newErrors.phone = 'Please enter a valid phone number (8-15 digits)';
-      }
-    }
-
-    if (!formData.age.trim()) {
-      newErrors.age = 'Age is required';
-    } else if (parseInt(formData.age) < 1 || parseInt(formData.age) > 120) {
-      newErrors.age = 'Please enter a valid age';
-    }
-
-    if (!formData.gender) {
-      newErrors.gender = 'Gender is required';
-    }
-
-    if (!formData.address.trim()) {
-      newErrors.address = 'Address is required';
-    }
-
-    if (!formData.city.trim()) {
-      newErrors.city = 'City is required';
-    }
-
-
-
-    if (!formData.pincode.trim()) {
-      newErrors.pincode = 'Pincode is required';
-    } else if (!/^\d{6}$/.test(formData.pincode)) {
-      newErrors.pincode = 'Pincode must be exactly 6 digits';
-    }
-
-    if (formData.isPaid && !formData.paymentMode) {
-      newErrors.paymentMode = 'Payment mode is required when paid';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const validationErrors = collectValidationErrors(formData);
+    setErrors(validationErrors);
+    return Object.keys(validationErrors).length === 0;
   };
 
 
@@ -388,7 +420,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                   {/* Search Field Dropdown */}
                   <div className="flex gap-2">
                     <Select value={searchField} onValueChange={(value: string) => setSearchField(value as 'patientId' | 'name' | 'appointmentId' | 'contact')}>
-                      <SelectTrigger className="text-xs h-8 flex-1">
+                      <SelectTrigger className="text-xs h-8 flex-1 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
                         <SelectValue placeholder="Select search field" />
                       </SelectTrigger>
                       <SelectContent>
@@ -405,7 +437,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={getSearchPlaceholder(searchField)}
-                    className="text-xs h-8"
+                    className="text-xs h-8 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm"
                   />
                   
                   {/* Search Help Text */}
@@ -683,7 +715,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 </Button>
                 <Button
                   type="submit"
-                  disabled={isSubmitting || isBookingLoading}
+                  disabled={isSubmitting || isBookingLoading || !isFormReady}
                   className="flex-1 bg-healthcare-primary hover:bg-healthcare-primary/90 h-10"
                 >
                   {isSubmitting || isBookingLoading ? 'Booking Appointment...' : 'Book Appointment'}

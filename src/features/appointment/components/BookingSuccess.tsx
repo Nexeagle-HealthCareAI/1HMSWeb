@@ -135,95 +135,90 @@ export const BookingSuccess: React.FC<BookingSuccessProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg dark:bg-gray-900">
-        <DialogHeader className="relative pb-4">
-          <DialogTitle className="text-center text-2xl font-bold text-green-600 dark:text-green-400">
-            Appointment Booked Successfully!
+      <DialogContent className="max-w-xs w-full p-4 rounded-xl dark:bg-gray-900" style={{ minWidth: 340, minHeight: 420 }}>
+        <DialogHeader className="relative pb-2">
+          <DialogTitle className="text-center text-lg font-bold text-green-600 dark:text-green-400">
+            Appointment Booked!
           </DialogTitle>
         </DialogHeader>
 
-        <div className="text-center">
+        <div className="text-center flex flex-col items-center justify-center">
           {/* Success Icon */}
-          <div className="mb-6">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full mb-4">
-              <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+          <div className="mb-3">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full mb-2">
+              <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
             </div>
-            <p className="text-sm text-muted-foreground dark:text-gray-400">
-              Your appointment has been confirmed and scheduled
+            <p className="text-xs text-muted-foreground dark:text-gray-400">
+              Your appointment is confirmed
             </p>
           </div>
 
           {/* Appointment Details */}
-          <Card className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800 mb-5">
-            <div className="space-y-4">
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <span className="text-xs font-medium text-blue-600 dark:text-blue-400">Appointment ID:</span>
-                <div className="flex items-center gap-2 bg-white dark:bg-gray-800 rounded-lg px-3 py-2 border border-blue-200 dark:border-blue-700">
-                  <span className="font-mono font-bold text-sm text-blue-700 dark:text-blue-300">{appointmentId}</span>
+          <Card className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800 mb-3">
+            <div className="space-y-2">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <span className="text-xs font-medium text-blue-600 dark:text-blue-400">ID:</span>
+                <div className="flex items-center gap-1 bg-white dark:bg-gray-800 rounded px-2 py-1 border border-blue-200 dark:border-blue-700">
+                  <span className="font-mono font-bold text-xs text-blue-700 dark:text-blue-300">{appointmentId}</span>
                   <Button
-                    size="sm"
+                    size="icon"
                     variant="ghost"
-                    className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                    className="h-5 w-5 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/30"
                     onClick={copyAppointmentId}
                   >
                     <Copy className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                   </Button>
                 </div>
               </div>
-              
               {tokenNumber && (
-                <div className="flex items-center justify-center gap-2 mb-4">
-                  <span className="text-xs font-medium text-green-600 dark:text-green-400">Token Number:</span>
-                  <div className="bg-white dark:bg-gray-800 rounded-lg px-3 py-2 border border-green-200 dark:border-green-700">
-                    <span className="font-mono font-bold text-sm text-green-700 dark:text-green-300">{tokenNumber}</span>
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <span className="text-xs font-medium text-green-600 dark:text-green-400">Token:</span>
+                  <div className="bg-white dark:bg-gray-800 rounded px-2 py-1 border border-green-200 dark:border-green-700">
+                    <span className="font-mono font-bold text-xs text-green-700 dark:text-green-300">{tokenNumber}</span>
                   </div>
                 </div>
               )}
-
-              <div className="grid grid-cols-1 gap-3 text-left">
-                <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <div className="grid grid-cols-1 gap-2 text-left">
+                <div className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                  <div className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded">
                     <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Doctor</p>
-                    <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">{doctor.name}</p>
+                    <p className="font-semibold text-xs text-gray-900 dark:text-gray-100">{doctor.name}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{doctor.specialization}</p>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <div className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                  <div className="p-1 bg-green-100 dark:bg-green-900/30 rounded">
                     <Calendar className="h-4 w-4 text-green-600 dark:text-green-400" />
                   </div>
                   <div>
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Date</p>
-                    <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">
-                      {format(date, 'EEEE, MMMM dd, yyyy')}
+                    <p className="font-semibold text-xs text-gray-900 dark:text-gray-100">
+                      {format(date, 'EEE, MMM dd, yyyy')}
                     </p>
                   </div>
                 </div>
-
                 {timeSlot && (
-                  <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                  <div className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                    <div className="p-1 bg-purple-100 dark:bg-purple-900/30 rounded">
                       <Clock className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                     </div>
                     <div>
                       <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Time</p>
-                      <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">{formatTime(timeSlot.time)}</p>
+                      <p className="font-semibold text-xs text-gray-900 dark:text-gray-100">{formatTime(timeSlot.time)}</p>
                     </div>
                   </div>
                 )}
-
                 {timeSlot?.patientInfo && (
-                  <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                  <div className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                    <div className="p-1 bg-orange-100 dark:bg-orange-900/30 rounded">
                       <Phone className="h-4 w-4 text-orange-600 dark:text-orange-400" />
                     </div>
                     <div>
                       <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Patient</p>
-                      <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">{timeSlot.patientInfo.name}</p>
+                      <p className="font-semibold text-xs text-gray-900 dark:text-gray-100">{timeSlot.patientInfo.name}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{timeSlot.patientInfo.phone}</p>
                     </div>
                   </div>
@@ -232,36 +227,32 @@ export const BookingSuccess: React.FC<BookingSuccessProps> = ({
             </div>
           </Card>
 
-
-
           {/* Actions */}
-          <div className="space-y-3 mt-4">            
+          <div className="space-y-2 mt-2 w-full">            
             <Button
               onClick={handleDone}
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 text-sm"
             >
               <Check className="h-4 w-4 mr-2" />
               Done
             </Button>
-            
             <Button
               onClick={() => {
                 onClose();
                 onBookAnother();
               }}
               variant="outline"
-              className="w-full border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
+              className="w-full border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm"
             >
-              Book Another Appointment
+              Book Another
             </Button>
-            
             <Button
               variant="outline"
-              className="w-full border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
+              className="w-full border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm"
               onClick={handlePrint}
             >
               <Printer className="h-4 w-4 mr-2" />
-              Print Confirmation
+              Print
             </Button>
           </div>
         </div>

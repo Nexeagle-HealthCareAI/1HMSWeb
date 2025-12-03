@@ -60,6 +60,7 @@ export const AppointmentDashboard = () => {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [showBooking, setShowBooking] = useState(false);
+  const [bookingRefreshToken, setBookingRefreshToken] = useState(0);
   const [showVitalsForm, setShowVitalsForm] = useState(false);
   const [showTokenPrint, setShowTokenPrint] = useState(false);
   const [showPatientProfile, setShowPatientProfile] = useState(false);
@@ -142,6 +143,11 @@ export const AppointmentDashboard = () => {
     setSelectedAppointmentForToken(null);
   };
 
+  const handleBookingClick = () => {
+    setBookingRefreshToken((prev) => prev + 1);
+    setShowBooking(true);
+  };
+
   // Manual refresh function
   const handleManualRefresh = async () => {
     if (!refetch) return;
@@ -167,63 +173,95 @@ export const AppointmentDashboard = () => {
 
   const appointments = appointmentData?.items || [];
 
-  // Debug logging
-  console.log('AppointmentDashboard Debug:', {
-    hospitalId,
-    startDate,
-    endDate,
-    activeTab,
-    appointmentData,
-    appointments: appointments.length,
-    isLoading,
-    error,
-    // Log first few appointments to see data structure
-    sampleAppointments: appointments.slice(0, 3).map(apt => ({
-      id: apt.appointmentId,
-      patientName: apt.patientFullName,
-      startAt: apt.startAt,
-      appointmentDate: apt.appointmentDate,
-      finalStatusCode: apt.finalStatusCode
-    }))
-  });
+  const getDoctorFilterValue = (doctorId?: string, doctorName?: string | null) => {
+    if (doctorId) {
+      return doctorId;
+    }
+    if (doctorName) {
+      return doctorName.trim().toLowerCase();
+    }
+    return '';
+  };
 
-  const filteredAppointments = useMemo(() => {
-    console.log('🔄 FILTERING STARTED - useMemo triggered');
-    console.log('Filter parameters:', { selectedStatus, activeTab, searchTerm, selectedDoctor });
-    
-    if (!appointments || appointments.length === 0) return [];
-    
+  const formatDateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const toDayDate = (dateKey?: string | null) => {
+    if (!dateKey) {
+      return null;
+    }
+    const [year, month, day] = dateKey.split('-').map(Number);
+    if (!year || !month || !day) {
+      return null;
+    }
+    return new Date(year, month - 1, day);
+  };
+
+  const getAppointmentDateKey = (appointment: AppointmentDetail) => {
+    if (appointment.startAt) {
+      const startDate = new Date(appointment.startAt);
+      if (!Number.isNaN(startDate.getTime())) {
+        return formatDateKey(startDate);
+      }
+    }
+    if (appointment.appointmentDate) {
+      return appointment.appointmentDate.slice(0, 10);
+    }
+    return '';
+  };
+
+  const doctorOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    appointments.forEach((appointment) => {
+      const key = getDoctorFilterValue(appointment.doctorId, appointment.doctorName);
+      if (!key) {
+        return;
+      }
+      if (!map.has(key)) {
+        map.set(key, appointment.doctorName || 'Unknown Doctor');
+      }
+    });
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+  }, [appointments]);
+
+  const isDefaultFilterState =
+    !searchTerm.trim() &&
+    selectedDoctor === 'all' &&
+    selectedStatus === 'all' &&
+    !startDate &&
+    !endDate;
+
+  const filteredAppointments = useMemo(() => {    
+    if (!appointments || appointments.length === 0) return [];    
     const today = new Date(); // Use actual current date
+    const todayKey = formatDateKey(today);
+    const todayDay = toDayDate(todayKey);
     
     // If no appointments, return empty array
-    if (appointments.length === 0) {
-      console.log('No appointments to filter');
+    if (appointments.length === 0) {      
       return [];
     }
-    
-    console.log('Filtering appointments:', {
-      totalAppointments: appointments.length,
-      activeTab,
-      selectedStatus,
-      searchTerm,
-      selectedDoctor,
-      startDate,
-      endDate,
-      today: today.toDateString()
-    });
     
     console.log('Current selectedStatus in filter:', selectedStatus, 'Type:', typeof selectedStatus);
     
     const filtered = appointments.filter(appointment => {
       const searchLower = searchTerm.toLowerCase();
+      const nameLower = appointment.patientFullName?.toLowerCase() || '';
+      const tokenNumber = String(appointment.token?.tokenNumber ?? '').toLowerCase();
       const matchesSearch = (
-        appointment.patientFullName.toLowerCase().includes(searchLower) ||
-        appointment.patientId.toLowerCase().includes(searchLower) ||
-        (appointment.doctorName && appointment.doctorName.toLowerCase().includes(searchLower)) ||
-        appointment.patientMobile.includes(searchTerm)
+        nameLower.includes(searchLower) ||
+        appointment.patientId?.toLowerCase().includes(searchLower) ||
+        appointment.patientMobile?.toLowerCase().includes(searchLower) ||
+        (appointment.appointmentDate && appointment.appointmentDate.toLowerCase().includes(searchLower)) ||
+        (tokenNumber && tokenNumber.includes(searchLower))
       );
       
-      const matchesDoctor = selectedDoctor === 'all' || appointment.doctorName === selectedDoctor;
+      const doctorValue = getDoctorFilterValue(appointment.doctorId, appointment.doctorName);
+      const matchesDoctor = selectedDoctor === 'all' || (!!doctorValue && doctorValue === selectedDoctor);
       
              // Filter by status if on current tab
        let matchesStatus = true;
@@ -254,50 +292,43 @@ export const AppointmentDashboard = () => {
          }
        }
       
+      const appointmentDateKey = getAppointmentDateKey(appointment);
+      const appointmentDay = toDayDate(appointmentDateKey);
+      
       // Filter by date range if on past or future tab
       let matchesDateRange = true;
-      if (activeTab === 'past' || activeTab === 'future') {
-        const appointmentStartDate = new Date(appointment.startAt);
-        // Reset time to start of day for accurate date comparison
-        const appointmentDay = new Date(appointmentStartDate.getFullYear(), appointmentStartDate.getMonth(), appointmentStartDate.getDate());
-        
+      if ((activeTab === 'past' || activeTab === 'future') && appointmentDay) {
         if (startDate) {
-          const startDateObj = new Date(startDate);
-          const startDay = new Date(startDateObj.getFullYear(), startDateObj.getMonth(), startDateObj.getDate());
-          if (startDay > appointmentDay) {
+          const startDay = toDayDate(startDate);
+          if (startDay && startDay > appointmentDay) {
             matchesDateRange = false;
           }
         }
         if (endDate) {
-          const endDateObj = new Date(endDate);
-          const endDay = new Date(endDateObj.getFullYear(), endDateObj.getMonth(), endDateObj.getDate());
-          if (endDay < appointmentDay) {
+          const endDay = toDayDate(endDate);
+          if (endDay && endDay < appointmentDay) {
             matchesDateRange = false;
           }
         }
       }
       
       // Filter by appointment type based on active tab
-      // Use startAt for more accurate date comparison since it includes time
-      const appointmentStartDate = new Date(appointment.startAt);
-      let matchesType = false;
+      let matchesType = true;
       
-      // Reset time to start of day for accurate date comparison
-      const appointmentDay = new Date(appointmentStartDate.getFullYear(), appointmentStartDate.getMonth(), appointmentStartDate.getDate());
-      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      
-      switch (activeTab) {
-      case 'current':
-          matchesType = appointmentDay.getTime() === todayStart.getTime();
-          break;
-      case 'past':
-          matchesType = appointmentDay < todayStart;
-          break;
-      case 'future':
-          matchesType = appointmentDay > todayStart;
-          break;
-      default:
-          matchesType = true;
+      if (isDefaultFilterState) {
+        switch (activeTab) {
+          case 'current':
+            matchesType = appointmentDateKey === todayKey;
+            break;
+          case 'past':
+            matchesType = !!appointmentDay && !!todayDay && appointmentDay < todayDay;
+            break;
+          case 'future':
+            matchesType = !!appointmentDay && !!todayDay && appointmentDay > todayDay;
+            break;
+          default:
+            matchesType = true;
+        }
       }
       
              const result = matchesSearch && matchesDoctor && matchesStatus && matchesDateRange && matchesType;
@@ -440,71 +471,25 @@ export const AppointmentDashboard = () => {
      }
 
          // If filtering is too restrictive and no results, show all appointments for debugging
-     if (filtered.length === 0 && appointments.length > 0) {
-       console.warn('No appointments match current filters, showing all appointments for debugging');
-       console.log('Filter debug info:', {
-         activeTab,
-         selectedStatus,
-         searchTerm,
-         selectedDoctor,
-         startDate,
-         endDate,
-         totalAppointments: appointments.length,
-         sampleAppointments: appointments.slice(0, 3).map(a => ({
-           patientName: a.patientFullName,
-           status: a.finalStatusCode,
-           startAt: a.startAt
-         }))
-       });
-       
-       // Additional debug: Check what appointments exist with the selected status
-       if (activeTab === 'current' && selectedStatus !== 'all') {
-         const appointmentsWithStatus = appointments.filter(a => {
-           const appointmentStartDate = new Date(a.startAt);
-           const appointmentDay = new Date(appointmentStartDate.getFullYear(), appointmentStartDate.getMonth(), appointmentStartDate.getDate());
-           const todayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
-           return appointmentDay.getTime() === todayStart.getTime() && 
-                  String(a.finalStatusCode || '').toUpperCase() === String(selectedStatus || '').toUpperCase();
-         });
-         
-         console.log('Appointments with selected status:', {
-           selectedStatus,
-           count: appointmentsWithStatus.length,
-           appointments: appointmentsWithStatus.map(a => ({
-             patientName: a.patientFullName,
-             status: a.finalStatusCode,
-             startAt: a.startAt
-           }))
-         });
-       }
-       
-       return appointments.sort((a, b) => {
-         const timeA = new Date(a.startAt).getTime();
-         const timeB = new Date(b.startAt).getTime();
-         return timeA - timeB;
-       });
-     }
-
     // Sort by appointment time in increasing order
     const sortedFiltered = filtered.sort((a, b) => {
+      // Sort only by appointment time
       const timeA = new Date(a.startAt).getTime();
       const timeB = new Date(b.startAt).getTime();
       return timeA - timeB;
     });
     
-    console.log('✅ FILTERING COMPLETED');
-    console.log('Final filtered result:', {
-      totalFiltered: sortedFiltered.length,
-      selectedStatus,
-      activeTab,
-      filteredAppointments: sortedFiltered.map(a => ({
-        patientName: a.patientFullName,
-        finalStatusCode: a.finalStatusCode
-      }))
-    });
-    
+    if (
+      sortedFiltered.length === 0 &&
+      appointments.length > 0 &&
+      activeTab === 'current' &&
+      isDefaultFilterState
+    ) {
+      return [...appointments].sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+    }
+
     return sortedFiltered;
-  }, [searchTerm, selectedDoctor, selectedStatus, startDate, endDate, activeTab, appointments]);
+  }, [searchTerm, selectedDoctor, selectedStatus, startDate, endDate, activeTab, appointments, isDefaultFilterState]);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage);
@@ -791,7 +776,7 @@ export const AppointmentDashboard = () => {
             <h1 className="text-lg font-semibold text-gray-900 dark:text-white">Book New Appointment</h1>
           </div>
         </div>
-        <AppointmentBooking />
+        <AppointmentBooking refreshToken={bookingRefreshToken} />
       </div>
     );
   }
@@ -804,7 +789,7 @@ export const AppointmentDashboard = () => {
           <h1 className="text-lg font-semibold text-gray-900 dark:text-white">Appointment Dashboard</h1>
               <Button 
             variant="outline"
-                onClick={() => setShowBooking(true)} 
+                onClick={handleBookingClick} 
             className="group flex items-center gap-2 border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
               >
             <Plus className="h-4 w-4 text-gray-600 dark:text-gray-300 transition-transform group-hover:translate-x-1" />
@@ -865,10 +850,10 @@ export const AppointmentDashboard = () => {
                 <div className="relative max-w-md">
                           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                           <Input
-                    placeholder="Search patients, ID, or doctor..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-10"
+                        placeholder="Search by patient ID or name"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 h-10"
                           />
                       </div>
                       
@@ -877,18 +862,18 @@ export const AppointmentDashboard = () => {
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Doctor:</label>
                   <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
                     <SelectTrigger className="w-48 h-10">
-                            <SelectValue placeholder="All Doctors" />
-                          </SelectTrigger>
-                          <SelectContent>
+                      <SelectValue placeholder="All Doctors" />
+                    </SelectTrigger>
+                    <SelectContent>
                       <SelectItem value="all">All Doctors</SelectItem>
-                      {Array.from(new Set(appointments.map(a => a.doctorName).filter(Boolean))).map((doctor) => (
-                        <SelectItem key={doctor} value={doctor || ''}>
-                          {doctor}
+                      {doctorOptions.map((doctor) => (
+                        <SelectItem key={doctor.value} value={doctor.value}>
+                          {doctor.label}
                         </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                  </div>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
                 {/* Date Range Filter - Only show for Past and Future tabs */}
                 {(activeTab === 'past' || activeTab === 'future') && (

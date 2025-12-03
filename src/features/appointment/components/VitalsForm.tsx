@@ -92,20 +92,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
       newErrors.heartRate = 'Heart rate should be between 30-220 bpm';
     }
 
-    // Respiratory Rate validation
-    if (vitalsData.respiratoryRate && (parseInt(vitalsData.respiratoryRate) < 8 || parseInt(vitalsData.respiratoryRate) > 40)) {
-      newErrors.respiratoryRate = 'Respiratory rate should be between 8-40 breaths/min';
-    }
-
-    // Temperature validation
-    if (vitalsData.temperature) {
-      const temp = parseFloat(vitalsData.temperature);
-      if (vitalsData.temperatureUnit === 'C' && (temp < 30 || temp > 45)) {
-        newErrors.temperature = 'Temperature should be between 30-45°C';
-      } else if (vitalsData.temperatureUnit === 'F' && (temp < 86 || temp > 113)) {
-        newErrors.temperature = 'Temperature should be between 86-113°F';
-      }
-    }
+    // Removed Respiratory Rate and Temperature validation as requested
 
     // Oxygen Saturation validation
     if (vitalsData.oxygenSaturation && (parseInt(vitalsData.oxygenSaturation) < 50 || parseInt(vitalsData.oxygenSaturation) > 100)) {

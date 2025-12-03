@@ -8,7 +8,7 @@ export interface UserProfileUpdateRequest {
   isActive: boolean;
   fullName: string;
   gender: string;
-  language: string;
+  language?: string;
   profilePictureURL: string;
   employeeID: string;
   dateOfBirth: string;

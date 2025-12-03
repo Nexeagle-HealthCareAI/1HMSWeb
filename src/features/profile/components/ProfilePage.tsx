@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
   AlertDialog,
@@ -36,10 +35,6 @@ import {
   Phone, 
   MapPin, 
   Calendar,
-  Star,
-  Trophy,
-  Target,
-  Zap,
   ArrowLeft,
   Save,
   Upload,
@@ -68,35 +63,6 @@ const genderOptions = [
 
 const genderValues = genderOptions.map((option) => option.value);
 
-// Indian Languages options
-const indianLanguages = [
-  { value: 'hindi', label: 'Hindi' },
-  { value: 'english', label: 'English' },
-  { value: 'bengali', label: 'Bengali' },
-  { value: 'telugu', label: 'Telugu' },
-  { value: 'marathi', label: 'Marathi' },
-  { value: 'tamil', label: 'Tamil' },
-  { value: 'urdu', label: 'Urdu' },
-  { value: 'gujarati', label: 'Gujarati' },
-  { value: 'kannada', label: 'Kannada' },
-  { value: 'odia', label: 'Odia' },
-  { value: 'punjabi', label: 'Punjabi' },
-  { value: 'malayalam', label: 'Malayalam' },
-  { value: 'assamese', label: 'Assamese' },
-  { value: 'sanskrit', label: 'Sanskrit' },
-  { value: 'konkani', label: 'Konkani' },
-  { value: 'manipuri', label: 'Manipuri' },
-  { value: 'nepali', label: 'Nepali' },
-  { value: 'bodo', label: 'Bodo' },
-  { value: 'dogri', label: 'Dogri' },
-  { value: 'kashmiri', label: 'Kashmiri' },
-  { value: 'maithili', label: 'Maithili' },
-  { value: 'santali', label: 'Santali' },
-  { value: 'sindhi', label: 'Sindhi' }
-];
-
-const languageValues = indianLanguages.map((option) => option.value);
-
 // Blood Group options
 const bloodGroupOptions = [
   { value: 'A+', label: 'A+' },
@@ -115,6 +81,14 @@ const nameRegex = /^[a-zA-Z\s.'-]+$/;
 const cityStateRegex = /^[a-zA-Z\s.'-]+$/;
 const addressRegex = /^[a-zA-Z0-9\s,.'#/-]+$/;
 
+const sanitizeOptionalText = (value?: string | null) => {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : undefined;
+};
+
 interface ProfilePageProps {
   onBack: () => void;
   userType?: 'AdminDoctor' | 'Admin' | 'Doctor' | 'Staff';
@@ -129,7 +103,6 @@ interface ProfileData {
     dateOfBirth?: string;
     // Extended generic fields
     gender?: string;
-    language?: string;
     bloodGroup?: string;
     addressLine1?: string;
     addressLine2?: string;
@@ -184,7 +157,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   const removeMutation = removeProfilePicture();
   
   // Profile completion hook
-  const { completionPercentage } = useProfileCompletion();
+  const { completionPercentage, doctorProfileCompletion } = useProfileCompletion();
+  const professionalCompletion = Math.max(0, Math.min(100, Math.round(doctorProfileCompletion ?? 0)));
   
   // User profile API hooks
   const { data: userDetailsResponse, isLoading: userDetailsLoading } = useUserDetails(userId || '');
@@ -230,12 +204,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       .refine((value) => !value || genderValues.includes(value), {
         message: 'Please select a valid gender option',
       }),
-    language: z
-      .string()
-      .optional()
-      .refine((value) => !value || languageValues.includes(value), {
-        message: 'Please select a valid language',
-      }),
     dateOfBirth: z
       .string()
       .optional()
@@ -256,7 +224,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       .trim()
       .min(5, 'Address line 1 is required')
       .max(120, 'Address line 1 must be under 120 characters')
-      .regex(addressRegex, 'Address line 1 contains invalid characters'),
+      .regex(addressRegex, 'Address line is required '),
     addressLine2: z
       .string()
       .trim()
@@ -292,12 +260,16 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       .trim()
       .min(2, 'Emergency contact name is required')
       .max(60, 'Emergency contact name must be under 60 characters')
-      .regex(nameRegex, 'Emergency contact name can only contain letters and spaces'),
+      .regex(nameRegex, 'Emergency contact name can only contain letters and spaces')
+      .optional(),
     emergencyContactNumber: z
       .string()
       .trim()
-      .min(1, 'Emergency contact number is required')
+      .optional()
       .superRefine((value, ctx) => {
+        if (!value) {
+          return;
+        }
         const error = ValidationUtils.validateMobileWithError(value);
         if (error) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, message: error });
@@ -309,6 +281,15 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     employeeId: z.string().max(50, 'Employee ID too long').optional(),
   });
 
+  const basicFieldSchemas = {
+    email: BasicInfoSchema.shape.email,
+    phone: BasicInfoSchema.shape.phone,
+  } as const;
+
+  const addressFieldSchemas = {
+    emergencyContactNumber: AddressSchema.shape.emergencyContactNumber,
+  } as const;
+
 
   const [profileData, setProfileData] = useState<ProfileData>({
     personal: {
@@ -318,7 +299,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       profilePicture: '',
       dateOfBirth: '',
       gender: '',
-      language: '',
       bloodGroup: '',
       addressLine1: '',
       addressLine2: '',
@@ -369,7 +349,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           profilePicture: profilePictureURL,
           dateOfBirth: userProfile.dateOfBirth ? new Date(userProfile.dateOfBirth).toISOString().split('T')[0] : '',
           gender: userProfile.gender || '',
-          language: userProfile.language || '',
           bloodGroup: userProfile.bloodGroup || '',
           addressLine1: userProfile.addressLine1 || '',
           addressLine2: userProfile.addressLine2 || '',
@@ -433,6 +412,37 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         [field]: value
       }
     }));
+
+    if (section === 'personal') {
+      if (basicErrors[field]) {
+        setBasicErrors((prev) => ({ ...prev, [field]: undefined }));
+      }
+      if (addressErrors[field]) {
+        setAddressErrors((prev) => ({ ...prev, [field]: undefined }));
+      }
+    }
+  };
+
+  const validateBasicField = (field: keyof typeof basicFieldSchemas) => {
+    const schema = basicFieldSchemas[field];
+    if (!schema) return;
+    const result = schema.safeParse(profileData.personal[field] ?? '');
+    setBasicErrors((prev) => ({
+      ...prev,
+      [field]: result.success ? undefined : result.error.issues[0]?.message,
+    }));
+  };
+
+  const validateAddressField = (field: keyof typeof addressFieldSchemas) => {
+    const schema = addressFieldSchemas[field];
+    if (!schema) return;
+    const rawValue = profileData.personal[field as keyof ProfileData['personal']];
+    const normalizedValue = typeof rawValue === 'string' ? sanitizeOptionalText(rawValue) : rawValue;
+    const result = schema.safeParse(normalizedValue);
+    setAddressErrors((prev) => ({
+      ...prev,
+      [field]: result.success ? undefined : result.error.issues[0]?.message,
+    }));
   };
 
 
@@ -450,15 +460,16 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
   // Section validators and savers
   const validateBasic = (): boolean => {
-    const result = BasicInfoSchema.safeParse({
-      fullName: profileData.personal.fullName,
-      email: profileData.personal.email,
-      phone: profileData.personal.phone,
-      gender: profileData.personal.gender,
-      language: profileData.personal.language,
-      dateOfBirth: profileData.personal.dateOfBirth,
-      bloodGroup: profileData.personal.bloodGroup,
-    });
+    const basicPayload = {
+      fullName: profileData.personal.fullName?.trim() || '',
+      email: profileData.personal.email?.trim() || '',
+      phone: profileData.personal.phone?.trim() || '',
+      gender: sanitizeOptionalText(profileData.personal.gender),
+      dateOfBirth: sanitizeOptionalText(profileData.personal.dateOfBirth),
+      bloodGroup: sanitizeOptionalText(profileData.personal.bloodGroup),
+    };
+
+    const result = BasicInfoSchema.safeParse(basicPayload);
     const errs: FieldErrors = {};
     if (!result.success) result.error.issues.forEach((i) => (errs[i.path[0] as string] = i.message));
     setBasicErrors(errs);
@@ -466,16 +477,18 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   };
 
   const validateAddress = (): boolean => {
-    const result = AddressSchema.safeParse({
-      addressLine1: profileData.personal.addressLine1,
-      addressLine2: profileData.personal.addressLine2?.trim() ? profileData.personal.addressLine2 : undefined,
-      city: profileData.personal.city,
-      state: profileData.personal.state,
-      country: profileData.personal.country,
-      pincode: profileData.personal.pincode,
-      emergencyContactName: profileData.personal.emergencyContactName,
-      emergencyContactNumber: profileData.personal.emergencyContactNumber,
-    });
+    const addressPayload = {
+      addressLine1: profileData.personal.addressLine1?.trim() || '',
+      addressLine2: sanitizeOptionalText(profileData.personal.addressLine2),
+      city: profileData.personal.city?.trim() || '',
+      state: profileData.personal.state?.trim() || '',
+      country: profileData.personal.country?.trim() || '',
+      pincode: profileData.personal.pincode?.trim() || '',
+      emergencyContactName: sanitizeOptionalText(profileData.personal.emergencyContactName),
+      emergencyContactNumber: sanitizeOptionalText(profileData.personal.emergencyContactNumber),
+    };
+
+    const result = AddressSchema.safeParse(addressPayload);
     const errs: FieldErrors = {};
     if (!result.success) result.error.issues.forEach((i) => (errs[i.path[0] as string] = i.message));
     setAddressErrors(errs);
@@ -535,25 +548,33 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         }
       }
 
+      const normalizedGender = sanitizeOptionalText(profileData.personal.gender) || '';
+      const normalizedEmployeeId = sanitizeOptionalText(profileData.personal.employeeId) || '';
+      const normalizedBloodGroup = sanitizeOptionalText(profileData.personal.bloodGroup) || '';
+      const normalizedAddressLine2 = sanitizeOptionalText(profileData.personal.addressLine2) || '';
+      const normalizedDateOfBirth = sanitizeOptionalText(profileData.personal.dateOfBirth);
+      const formattedDateOfBirth = normalizedDateOfBirth ? new Date(normalizedDateOfBirth).toISOString() : '';
+      const normalizedEmergencyContactName = sanitizeOptionalText(profileData.personal.emergencyContactName) || '';
+      const normalizedEmergencyContactNumber = sanitizeOptionalText(profileData.personal.emergencyContactNumber) || '';
+
       const updateData: UserProfileUpdateRequest = {
         userId,
         mobileNumber: ValidationUtils.cleanMobileNumber(profileData.personal.phone),
         isActive: true,
         fullName: profileData.personal.fullName,
-        gender: profileData.personal.gender || '',
-        language: profileData.personal.language || '',
+        gender: normalizedGender,
         profilePictureURL,
-        employeeID: profileData.personal.employeeId || '',
-        dateOfBirth: profileData.personal.dateOfBirth ? new Date(profileData.personal.dateOfBirth).toISOString() : '',
-        bloodGroup: profileData.personal.bloodGroup || '',
+        employeeID: normalizedEmployeeId,
+        dateOfBirth: formattedDateOfBirth,
+        bloodGroup: normalizedBloodGroup,
         addressLine1: profileData.personal.addressLine1 || '',
-        addressLine2: profileData.personal.addressLine2 || '',
+        addressLine2: normalizedAddressLine2,
         city: profileData.personal.city || '',
         state: profileData.personal.state || '',
         country: profileData.personal.country || '',
         pincode: profileData.personal.pincode || '',
-        emergencyContactName: profileData.personal.emergencyContactName || '',
-        emergencyContactNumber: profileData.personal.emergencyContactNumber || '',
+        emergencyContactName: normalizedEmergencyContactName,
+        emergencyContactNumber: normalizedEmergencyContactNumber,
       };
 
       await updateUserDetailsMutation.mutateAsync(updateData);
@@ -588,30 +609,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
 
 
-  // Gamification elements
-  const getProgressColor = (percentage: number) => {
-    if (percentage >= 90) return 'text-green-600';
-    if (percentage >= 70) return 'text-blue-600';
-    if (percentage >= 50) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
-  const getProgressMessage = (percentage: number) => {
-    if (percentage >= 90) return "🎉 Profile Master! You're all set!";
-    if (percentage >= 70) return "🌟 Almost there! Just a few more details.";
-    if (percentage >= 50) return "⚡ Good progress! Keep going!";
-    return "🚀 Let's complete your profile journey!";
-  };
-
-  const getBadgeForCompletion = (percentage: number) => {
-    if (percentage >= 90) return { icon: Trophy, text: "Profile Master", color: "bg-yellow-100 text-yellow-800" };
-    if (percentage >= 70) return { icon: Star, text: "Profile Expert", color: "bg-blue-100 text-blue-800" };
-    if (percentage >= 50) return { icon: Target, text: "Profile Builder", color: "bg-green-100 text-green-800" };
-    return { icon: Zap, text: "Profile Starter", color: "bg-purple-100 text-purple-800" };
-  };
-
-  const badge = getBadgeForCompletion(completionPercentage);
-
   // Show loading state while fetching user details
   if (userDetailsLoading) {
     return (
@@ -628,20 +625,20 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     <div className="min-h-screen bg-gradient-subtle p-4 lg:p-6 transition-all duration-300">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             <Button 
               variant="outline" 
               size="sm" 
               onClick={onBack}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 w-full sm:w-auto justify-center"
             >
               <ArrowLeft className="h-4 w-4" />
               Back
             </Button>
-            <div>
+            <div className="text-center sm:text-left">
               <h1 className="text-2xl lg:text-3xl font-bold text-foreground">My Profile</h1>
-              <p className="text-muted-foreground">Manage your personal and professional information</p>
+              <p className="text-muted-foreground text-sm sm:text-base">Manage your personal and professional information</p>
             </div>
           </div>
           <Button
@@ -665,7 +662,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
               setIsEditing(!isEditing);
             }}
             variant={isEditing ? "outline" : "default"}
-            className="flex items-center gap-2"
+            className="flex items-center justify-center gap-2 w-full sm:w-auto"
           >
             <Edit3 className="h-4 w-4" />
             {isEditing ? 'Cancel' : 'Edit Profile'}
@@ -673,40 +670,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         </div>
       </div>
 
-      {/* Profile Completion Card */}
-      <Card className="mb-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 border-2 border-primary/20">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-primary/10 rounded-full">
-                <badge.icon className="h-8 w-8 text-primary" />
-              </div>
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-lg font-semibold">Profile Completion</h3>
-                  <Badge className={badge.color}>
-                    <badge.icon className="h-3 w-3 mr-1" />
-                    {badge.text}
-                  </Badge>
-                </div>
-                <p className={`text-sm ${getProgressColor(completionPercentage)} font-medium`}>
-                  {getProgressMessage(completionPercentage)}
-                </p>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold text-primary mb-1">{completionPercentage}%</div>
-              <Progress value={completionPercentage} className="w-32 h-3" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Profile Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-start">
         {/* Profile Summary Card */}
         <Card className="lg:col-span-1">
-          <CardContent className="p-6 text-center">
+          <CardContent className="p-4 sm:p-6 text-center lg:text-left">
             <div className="mb-4 flex flex-col items-center gap-3">
               {isEditing && (
                 <Badge variant="secondary" className="mb-2">
@@ -765,7 +733,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                         isActive: true,
                         fullName: profileData.personal.fullName,
                         gender: profileData.personal.gender || '',
-                        language: profileData.personal.language || '',
                         profilePictureURL: '',
                         employeeID: profileData.personal.employeeId || '',
                         dateOfBirth: profileData.personal.dateOfBirth ? new Date(profileData.personal.dateOfBirth).toISOString() : '',
@@ -844,7 +811,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                           isActive: true,
                           fullName: profileData.personal.fullName,
                           gender: profileData.personal.gender || '',
-                          language: profileData.personal.language || '',
                           profilePictureURL: profilePictureURL,
                           employeeID: profileData.personal.employeeId || '',
                           dateOfBirth: profileData.personal.dateOfBirth ? new Date(profileData.personal.dateOfBirth).toISOString() : '',
@@ -945,7 +911,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
         {/* Profile Details */}
         <Card className="lg:col-span-2">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <Accordion type="multiple" value={expanded} onValueChange={(v) => setExpanded(v as string[])}>
               {/* Doctor Professional at top */}
               {isDoctorUser && (
@@ -964,15 +930,18 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
                              {/* Personal Information */}
                <div className="mb-4">
-                 <Card>
-                   <CardContent className="p-6">
+                 <Card className="transition-colors dark:border-border">
+                   <CardContent className="p-4 sm:p-6">
                      <Accordion type="single" collapsible defaultValue="personal">
                        <AccordionItem value="personal">
-                         <AccordionTrigger>
-                           <div className="flex items-center gap-2">
-                             <User className="h-4 w-4" />
-                             <span>Personal Information</span>
-                             <span className={`text-xs ml-2 ${Object.keys(basicErrors).length || Object.keys(addressErrors).length ? 'text-amber-600' : 'text-green-600'}`}>
+                         <AccordionTrigger className="transition-colors dark:hover:bg-muted/30 hover:no-underline focus:no-underline">
+                           <div className="flex flex-wrap items-center gap-2 text-left">
+                             <User className="h-4 w-4 text-muted-foreground" />
+                             <span className="text-foreground">Personal Information</span>
+                           <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary dark:bg-primary/20 dark:text-primary-100">
+                              Profile completion {completionPercentage}%
+                            </span>
+                             <span className={`text-xs ${Object.keys(basicErrors).length || Object.keys(addressErrors).length ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-300'}`}>
                                {Object.keys(basicErrors).length || Object.keys(addressErrors).length ? '⚠︎' : '✓'}
                              </span>
                            </div>
@@ -982,12 +951,14 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                              {/* Basic Info Section */}
                              <div>
                                <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                                 <User className="h-4 w-4" />
+                                 <User className="h-4 w-4 text-muted-foreground" />
                                  Basic Information
                                </h4>
                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                  <div>
-                                   <Label htmlFor="fullName">Full Name *</Label>
+                                   <Label htmlFor="fullName">
+                                     Full Name <span className="text-red-500" aria-hidden="true">*</span>
+                                   </Label>
                                    <Input
                                      id="fullName"
                                      value={profileData.personal.fullName}
@@ -1000,12 +971,15 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    )}
                                  </div>
                                  <div>
-                                   <Label htmlFor="email">Email Address *</Label>
+                                   <Label htmlFor="email">
+                                     Email Address <span className="text-red-500" aria-hidden="true">*</span>
+                                   </Label>
                                    <Input
                                      id="email"
                                      type="email"
                                      value={profileData.personal.email}
                                      onChange={(e) => handleInputChange('personal', 'email', e.target.value)}
+                                       onBlur={() => validateBasicField('email')}
                                      disabled={!isEditing}
                                      className="mt-1"
                                    />
@@ -1014,11 +988,17 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    )}
                                  </div>
                                  <div>
-                                   <Label htmlFor="phone">Phone Number *</Label>
+                                   <Label htmlFor="phone">
+                                     Phone Number <span className="text-red-500" aria-hidden="true">*</span>
+                                   </Label>
                                    <Input
                                      id="phone"
+                                     type="tel"
+                                     inputMode="numeric"
+                                     pattern="[0-9]*"
                                      value={profileData.personal.phone}
                                      onChange={(e) => handleInputChange('personal', 'phone', e.target.value)}
+                                     onBlur={() => validateBasicField('phone')}
                                      disabled={!isEditing}
                                      className="mt-1"
                                    />
@@ -1062,28 +1042,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                      <p className="text-xs text-amber-600 mt-1">{basicErrors.gender}</p>
                                    )}
                                  </div>
-                                 <div>
-                                   <Label htmlFor="language">Language</Label>
-                                   <Select
-                                     value={profileData.personal.language || ''}
-                                     onValueChange={(value) => handleInputChange('personal', 'language', value)}
-                                     disabled={!isEditing}
-                                   >
-                                     <SelectTrigger className="mt-1">
-                                       <SelectValue placeholder="Select a language" />
-                                     </SelectTrigger>
-                                     <SelectContent className="max-h-60 overflow-y-auto">
-                                       {indianLanguages.map((option) => (
-                                         <SelectItem key={option.value} value={option.value}>
-                                           {option.label}
-                                         </SelectItem>
-                                       ))}
-                                     </SelectContent>
-                                   </Select>
-                                   {basicErrors.language && (
-                                     <p className="text-xs text-amber-600 mt-1">{basicErrors.language}</p>
-                                   )}
-                                 </div>
                                                                    <div>
                                     <Label htmlFor="bloodGroup">Blood Group</Label>
                                     <Select
@@ -1107,9 +1065,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                     )}
                                   </div>
                                </div>
-                               {Object.entries(basicErrors).map(([k, v]) => v && (
-                                 <p key={k} className="text-xs text-amber-600 mt-2">{v}</p>
-                               ))}
                              </div>
 
                              {/* Address & Contact Section */}
@@ -1120,7 +1075,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                </h4>
                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                  <div>
-                                   <Label htmlFor="address1">Address Line 1 *</Label>
+                                   <Label htmlFor="address1">
+                                     Address Line 1 <span className="text-red-500" aria-hidden="true">*</span>
+                                   </Label>
                                    <Input
                                      id="address1"
                                      value={profileData.personal.addressLine1 || ''}
@@ -1146,7 +1103,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    )}
                                  </div>
                                  <div>
-                                   <Label htmlFor="city">City *</Label>
+                                   <Label htmlFor="city">
+                                     City <span className="text-red-500" aria-hidden="true">*</span>
+                                   </Label>
                                    <Input 
                                      id="city" 
                                      value={profileData.personal.city || ''} 
@@ -1159,7 +1118,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    )}
                                  </div>
                                  <div>
-                                   <Label htmlFor="state">State *</Label>
+                                   <Label htmlFor="state">
+                                     State <span className="text-red-500" aria-hidden="true">*</span>
+                                   </Label>
                                    <Input 
                                      id="state" 
                                      value={profileData.personal.state || ''} 
@@ -1172,7 +1133,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    )}
                                  </div>
                                  <div>
-                                   <Label htmlFor="country">Country *</Label>
+                                   <Label htmlFor="country">
+                                     Country <span className="text-red-500" aria-hidden="true">*</span>
+                                   </Label>
                                    <Input 
                                      id="country" 
                                      value={profileData.personal.country || ''} 
@@ -1185,7 +1148,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    )}
                                  </div>
                                  <div>
-                                   <Label htmlFor="pincode">Pincode *</Label>
+                                   <Label htmlFor="pincode">
+                                     Pincode <span className="text-red-500" aria-hidden="true">*</span>
+                                   </Label>
                                    <Input 
                                      id="pincode" 
                                      value={profileData.personal.pincode || ''} 
@@ -1200,7 +1165,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                </div>
                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                  <div>
-                                   <Label htmlFor="emergencyName">Emergency Contact Name *</Label>
+                                   <Label htmlFor="emergencyName">
+                                     Emergency Contact Name
+                                   </Label>
                                    <Input 
                                      id="emergencyName" 
                                      value={profileData.personal.emergencyContactName || ''} 
@@ -1213,11 +1180,17 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    )}
                                  </div>
                                  <div>
-                                   <Label htmlFor="emergencyNumber">Emergency Contact Number *</Label>
+                                   <Label htmlFor="emergencyNumber">
+                                     Emergency Contact Number
+                                   </Label>
                                    <Input 
                                      id="emergencyNumber" 
+                                     type="tel"
+                                     inputMode="numeric"
+                                     pattern="[0-9]*"
                                      value={profileData.personal.emergencyContactNumber || ''} 
                                      onChange={(e) => handleInputChange('personal', 'emergencyContactNumber' as any, e.target.value)} 
+                                     onBlur={() => validateAddressField('emergencyContactNumber')}
                                      disabled={!isEditing} 
                                      className="mt-1" 
                                    />
@@ -1226,24 +1199,22 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    )}
                                  </div>
                                </div>
-                               {Object.entries(addressErrors).map(([k, v]) => v && (
-                                 <p key={k} className="text-xs text-amber-600 mt-2">{v}</p>
-                               ))}
                              </div>
 
                              {/* Save Button */}
                              {isEditing && (
-                               <div className="flex justify-end gap-2 pt-4 border-t">
+                               <div className="flex flex-col gap-2 pt-4 border-t sm:flex-row sm:justify-end">
                                  <Button 
                                    variant="outline" 
                                    onClick={() => setIsEditing(false)}
+                                   className="w-full sm:w-auto"
                                  >
                                    Cancel
                                  </Button>
                                  <Button 
                                    onClick={savePersonalInformation}
                                    disabled={!!saving.basic || !!saving.address}
-                                   className="flex items-center gap-2"
+                                   className="flex items-center justify-center gap-2 w-full sm:w-auto"
                                  >
                                    {saving.basic || saving.address ? (
                                      <>

@@ -7,14 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
 import { ShiftName, CreateOverridePayload, BlockType, CreateBlockPayload } from '../api/types';
 import { format, parseISO, addDays, addWeeks, addMonths } from 'date-fns';
 import { Clock, Calendar, Repeat, Sun, Moon, Sunrise, Sunset, Info, AlertCircle, CheckCircle } from 'lucide-react';
 import { CalendarService, CalendarViewType, DateRange } from '../services/calendarService';
 import { DateRangeSelectionPopup } from './DateRangeSelectionPopup';
 import { useTranslation } from 'react-i18next';
+import { useAuthStore } from '@/store/authStore';
 
 interface PersonalizedScheduleModalProps {
   open: boolean;
@@ -53,6 +53,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
   isLoading = false
 }) => {
   const { t } = useTranslation();
+  const { toast } = useToast();
   
   const SHIFT_TEMPLATES: ShiftTemplate[] = [
     {
@@ -85,18 +86,24 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
   const [shiftConfigs, setShiftConfigs] = useState<Record<ShiftName, {
     startTime: string;
     endTime: string;
-    slotDuration: number;
+    slotDuration: string; // keep as string so users can edit freely
     maxPatients: string;
     enabled: boolean;
   }>>({
-    Morning: { startTime: '09:00', endTime: '12:00', slotDuration: 15, maxPatients: '', enabled: false },
-    Afternoon: { startTime: '14:00', endTime: '17:00', slotDuration: 15, maxPatients: '', enabled: false },
-    Evening: { startTime: '18:00', endTime: '21:00', slotDuration: 15, maxPatients: '', enabled: false }
+    Morning: { startTime: '09:00', endTime: '12:00', slotDuration: '15', maxPatients: '', enabled: false },
+    Afternoon: { startTime: '14:00', endTime: '17:00', slotDuration: '15', maxPatients: '', enabled: false },
+    Evening: { startTime: '18:00', endTime: '21:00', slotDuration: '15', maxPatients: '', enabled: false }
   });
 
   const [scheduleType, setScheduleType] = useState<'schedule' | 'block'>(
     initialStartDateTime && initialEndDateTime ? 'block' : 'schedule'
   );
+
+  useEffect(() => {
+    if (!open) return;
+    const desiredType: 'schedule' | 'block' = initialStartDateTime && initialEndDateTime ? 'block' : 'schedule';
+    setScheduleType(prev => (prev === desiredType ? prev : desiredType));
+  }, [open, initialStartDateTime, initialEndDateTime]);
   const [startDate, setStartDate] = useState(initialDate || '');
   const [endDate, setEndDate] = useState(initialDate || '');
   
@@ -218,16 +225,18 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
       // Single day schedule
       const payload: CreateOverridePayload = {
         doctorId,
+        hospitalId: useAuthStore.getState().getHospitalId(),
         overrideDate: startDate,
         startDate,
         endDate,
         shiftDetails: Array.from(selectedShifts).map(shiftName => {
           const config = shiftConfigs[shiftName];
+          const slotDuration = Math.max(1, Number(config.slotDuration) || 15);
           return {
             shiftName,
             startTime: config.startTime,
             endTime: config.endTime,
-            slotDurationInMinutes: config.slotDuration,
+            slotDurationInMinutes: slotDuration,
             recurringDays: []
           };
         })
@@ -248,16 +257,18 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
           const dateStr = format(currentDate, 'yyyy-MM-dd');
           const payload: CreateOverridePayload = {
             doctorId,
+            hospitalId: useAuthStore.getState().getHospitalId(),
             overrideDate: dateStr,
             startDate: dateStr,
             endDate: dateStr,
             shiftDetails: Array.from(selectedShifts).map(shiftName => {
               const config = shiftConfigs[shiftName];
+              const slotDuration = Math.max(1, Number(config.slotDuration) || 15);
               return {
                 shiftName,
                 startTime: config.startTime,
                 endTime: config.endTime,
-                slotDurationInMinutes: config.slotDuration,
+                slotDurationInMinutes: slotDuration,
                 recurringDays: days.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d - 1])
               };
             })
@@ -308,20 +319,35 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
      
      // Enhanced validation
      if (selectedShifts.size === 0) {
+       toast({
+         title: t('doctorCalendar.selectShift', 'Select at least one shift'),
+         description: t('doctorCalendar.selectShiftMessage', 'Turn on Morning, Afternoon, or Evening before saving.'),
+         variant: 'destructive'
+       });
        return; // No shifts selected
      }
 
      // Validate recurring schedule settings
-     if (scheduleMode === 'recurring') {
-       if (recurringDays.size === 0) {
-         return; // No days selected for recurring schedule
-       }
-       
-       const start = parseISO(startDate);
-       const end = parseISO(recurringEndDate);
-       if (start >= end) {
-         return; // End date must be after start date
-       }
+    if (scheduleMode === 'recurring') {
+      if (recurringDays.size === 0) {
+        toast({
+          title: t('doctorCalendar.selectRecurringDays', 'Pick recurring days'),
+          description: t('doctorCalendar.selectRecurringDaysMessage', 'Choose at least one day of the week for the recurring schedule.'),
+          variant: 'destructive'
+        });
+        return; // No days selected for recurring schedule
+      }
+      
+      const start = parseISO(startDate);
+      const end = parseISO(recurringEndDate);
+      if (!(start instanceof Date) || isNaN(start.getTime()) || !(end instanceof Date) || isNaN(end.getTime()) || start >= end) {
+        toast({
+          title: t('doctorCalendar.invalidDateRange', 'Fix the recurring date range'),
+          description: t('doctorCalendar.invalidDateRangeMessage', 'End date must be after the start date for recurring schedules.'),
+          variant: 'destructive'
+        });
+        return; // End date must be after start date
+      }
      }
 
      // Validate shift configurations
@@ -343,6 +369,11 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
      });
 
      if (!hasValidConfigs) {
+      toast({
+        title: t('doctorCalendar.adjustShiftTimes', 'Check the shift timings'),
+        description: t('doctorCalendar.adjustShiftTimesMessage', 'Each selected shift needs a valid start and end time (end must be after start).'),
+        variant: 'destructive'
+      });
        return; // Invalid shift configurations
      }
 
@@ -350,6 +381,12 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
     if (payloads.length > 0) {
       onSave(payloads);
       onOpenChange(false);
+    } else {
+      toast({
+        title: t('doctorCalendar.noSchedulePayload', 'Nothing to save yet'),
+        description: t('doctorCalendar.noSchedulePayloadMessage', 'Select at least one shift and provide valid times before saving.'),
+        variant: 'destructive'
+      });
     }
    };
 
@@ -501,7 +538,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[900px] max-h-[85vh] overflow-hidden">
+        <DialogContent className="sm:max-w-[900px] max-h-[85vh] overflow-auto">
           <DialogHeader className="pb-4">
             <DialogTitle className="flex items-center gap-2 text-lg">
               <Calendar className="h-5 w-5" />
@@ -512,20 +549,36 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
           <form onSubmit={scheduleType === 'block' ? handleBlockSubmit : handleSubmit} className="h-full flex flex-col">
             {/* Schedule Type Selection */}
             <div className="mb-4">
-              <Tabs value={scheduleType} onValueChange={(value) => setScheduleType(value as 'schedule' | 'block')}>
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="schedule" className="flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    Schedule
-                  </TabsTrigger>
-                  <TabsTrigger value="block" className="flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    Time Off
-                  </TabsTrigger>
-                </TabsList>
-                
-                <div className="mt-4 h-[calc(85vh-200px)] overflow-y-auto">
-                  <TabsContent value="schedule" className="space-y-4 h-full">
+              <div className="grid w-full grid-cols-2 rounded-md bg-muted p-1">
+                <button
+                  type="button"
+                  className={`flex items-center justify-center gap-2 rounded-sm px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
+                    scheduleType === 'schedule'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground'
+                  }`}
+                  onClick={() => setScheduleType('schedule')}
+                >
+                  <Clock className="h-4 w-4" />
+                  Schedule
+                </button>
+                <button
+                  type="button"
+                  className={`flex items-center justify-center gap-2 rounded-sm px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
+                    scheduleType === 'block'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground'
+                  }`}
+                  onClick={() => setScheduleType('block')}
+                >
+                  <AlertCircle className="h-4 w-4" />
+                  Time Off
+                </button>
+              </div>
+
+              <div className="mt-4">
+                {scheduleType === 'schedule' && (
+                  <div className="space-y-4 h-full">
                     {/* Schedule Mode Selection */}
                     <div className="space-y-3">
                       <Label className="text-sm font-semibold flex items-center gap-2">
@@ -638,105 +691,106 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                     <div className="space-y-3">
                       <Label className="text-sm font-semibold">Select Shifts</Label>
                       <div className="grid grid-cols-2 gap-2">
-                        {SHIFT_TEMPLATES.map((template) => (
-                          <Card
-                            key={template.name}
-                            className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
-                              selectedShifts.has(template.name)
-                                ? 'ring-2 ring-blue-500 bg-blue-50'
-                                : 'hover:bg-gray-50'
-                            }`}
-                            onClick={() => handleShiftToggle(template.name)}
-                          >
-                            <CardContent className="p-3">
-                              <div className="flex items-center gap-2">
-                                <div className={`p-1 rounded ${template.color}`}>
-                                  {template.icon}
-                                </div>
-                                <div className="flex-1">
-                                  <h4 className="font-medium text-sm">{template.name}</h4>
-                                  <p className="text-xs text-gray-600">{template.description}</p>
-                                </div>
-                                <Switch
-                                  checked={selectedShifts.has(template.name)}
-                                  onCheckedChange={() => handleShiftToggle(template.name)}
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    </div>
+                        {SHIFT_TEMPLATES.map((template) => {
+                          const isSelected = selectedShifts.has(template.name);
+                          const config = shiftConfigs[template.name];
 
-                    {/* Shift Configuration */}
-                    {selectedShifts.size > 0 && (
-                      <div className="space-y-3">
-                        <Label className="text-sm font-semibold">Shift Configuration</Label>
-                        <div className="space-y-2">
-                          {Array.from(selectedShifts).map((shiftName) => {
-                            const config = shiftConfigs[shiftName];
-                            const template = SHIFT_TEMPLATES.find(t => t.name === shiftName);
-                            
-                            return (
-                              <Card key={shiftName} className="p-3">
-                                <div className="flex items-center gap-3">
-                                  <div className={`p-2 rounded ${template?.color}`}>
-                                    {template?.icon}
+                          return (
+                            <Card
+                              key={template.name}
+                              className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
+                                isSelected
+                                  ? 'ring-2 ring-blue-500 bg-blue-50'
+                                  : 'hover:bg-gray-50'
+                              }`}
+                              onClick={() => handleShiftToggle(template.name)}
+                            >
+                              <CardContent className="p-3 space-y-3">
+                                <div className="flex items-center gap-2">
+                                  <div className={`p-1 rounded ${template.color}`}>
+                                    {template.icon}
                                   </div>
                                   <div className="flex-1">
-                                    <h4 className="font-medium text-sm">{shiftName}</h4>
-                                    <div className="grid grid-cols-3 gap-2 mt-2">
-                                      <div>
-                                        <Label className="text-xs">Start Time</Label>
-                                        <Input
-                                          type="time"
-                                          value={config.startTime}
-                                          onChange={(e) => setShiftConfigs(prev => ({
-                                            ...prev,
-                                            [shiftName]: { ...prev[shiftName], startTime: e.target.value }
-                                          }))}
-                                          className="h-8 text-xs"
-                                        />
-                                      </div>
-                                      <div>
-                                        <Label className="text-xs">End Time</Label>
-                                        <Input
-                                          type="time"
-                                          value={config.endTime}
-                                          onChange={(e) => setShiftConfigs(prev => ({
-                                            ...prev,
-                                            [shiftName]: { ...prev[shiftName], endTime: e.target.value }
-                                          }))}
-                                          className="h-8 text-xs"
-                                        />
-                                      </div>
-                                      <div>
-                                        <Label className="text-xs">Duration (min)</Label>
-                                        <Input
-                                          type="number"
-                                          value={config.slotDuration}
-                                          onChange={(e) => setShiftConfigs(prev => ({
-                                            ...prev,
-                                            [shiftName]: { ...prev[shiftName], slotDuration: parseInt(e.target.value) || 15 }
-                                          }))}
-                                          className="h-8 text-xs"
-                                          min="5"
-                                          max="60"
-                                        />
-                                      </div>
+                                    <h4 className="font-medium text-sm">{template.name}</h4>
+                                    <p className="text-xs text-gray-600">{template.description}</p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    aria-pressed={isSelected}
+                                    className={`ml-auto h-6 w-11 rounded-full border border-transparent transition-colors ${
+                                      isSelected
+                                        ? 'bg-blue-500'
+                                        : 'bg-gray-200'
+                                    }`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleShiftToggle(template.name);
+                                    }}
+                                  >
+                                    <span
+                                      className={`block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                                        isSelected ? 'translate-x-5' : 'translate-x-0'
+                                      }`}
+                                      aria-hidden="true"
+                                    />
+                                  </button>
+                                </div>
+
+                                {isSelected && (
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                    <div>
+                                      <Label className="text-xs">Start Time</Label>
+                                      <Input
+                                        type="time"
+                                        value={config.startTime}
+                                        onChange={(e) => setShiftConfigs(prev => ({
+                                          ...prev,
+                                          [template.name]: { ...prev[template.name], startTime: e.target.value }
+                                        }))}
+                                        className="h-8 text-xs"
+                                        onClick={(e) => e.stopPropagation()}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs">End Time</Label>
+                                      <Input
+                                        type="time"
+                                        value={config.endTime}
+                                        onChange={(e) => setShiftConfigs(prev => ({
+                                          ...prev,
+                                          [template.name]: { ...prev[template.name], endTime: e.target.value }
+                                        }))}
+                                        className="h-8 text-xs"
+                                        onClick={(e) => e.stopPropagation()}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs">Duration (min)</Label>
+                                      <Input
+                                        type="number"
+                                        value={config.slotDuration}
+                                        onChange={(e) => setShiftConfigs(prev => ({
+                                          ...prev,
+                                          [template.name]: { ...prev[template.name], slotDuration: e.target.value }
+                                        }))}
+                                        className="h-8 text-xs"
+                                        min="1"
+                                        onClick={(e) => e.stopPropagation()}
+                                      />
                                     </div>
                                   </div>
-                                </div>
-                              </Card>
-                            );
-                          })}
-                        </div>
+                                )}
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
                       </div>
-                    )}
-                  </TabsContent>
+                    </div>
+                  </div>
+                )}
 
-                  <TabsContent value="block" className="space-y-4 h-full">
+                {scheduleType === 'block' && (
+                  <div className="space-y-4 h-full">
                     <div className="space-y-4">
                       {/* Block Type Selection */}
                       <div>
@@ -879,9 +933,9 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                         </div>
                       </Card>
                     </div>
-                  </TabsContent>
-                </div>
-              </Tabs>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Footer */}

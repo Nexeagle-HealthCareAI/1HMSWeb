@@ -85,8 +85,18 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
           event.extendedProps?.shiftName || t('doctorCalendar.shiftDetails.untitledShift', { defaultValue: 'Shift' });
         const startDate = event.start ? new Date(event.start) : null;
         const endDate = event.end ? new Date(event.end) : startDate;
-        const startTime = event.extendedProps?.startTime || (startDate ? format(startDate, 'HH:mm') : '');
-        const endTime = event.extendedProps?.endTime || (endDate ? format(endDate, 'HH:mm') : '');
+        const deriveTime = (fallbackDate: Date | null, explicit?: string) => {
+          if (explicit) return explicit;
+          if (!fallbackDate) return '';
+          try {
+            return format(fallbackDate, 'HH:mm');
+          } catch (error) {
+            console.warn('Failed to format shift time', { fallbackDate, eventId: event.id, error });
+            return '';
+          }
+        };
+        const startTime = deriveTime(startDate, event.extendedProps?.startTime);
+        const endTime = deriveTime(endDate, event.extendedProps?.endTime);
         const timeRange = startTime && endTime ? `${startTime} - ${endTime}` : t('doctorCalendar.shiftDetails.customTiming', { defaultValue: 'Custom timing' });
         const slotMinutes = extractSlotMinutes(event);
         const maxPatients = event.extendedProps?.maxPatients ?? event.extendedProps?.patientLimit;
@@ -258,16 +268,17 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
             <div className="space-y-1">
               {uniqueShifts.map((shift, index) => {
                 const shiftHasTimeOffConflict = false;
+                const cardStyle = shiftHasTimeOffConflict
+                  ? { backgroundColor: '#fef2f2', borderColor: '#fecaca' }
+                  : { backgroundColor: `${shift.color}10`, borderColor: `${shift.color}35` };
+
                 return (
                   <div
                     key={index}
                     className={`space-y-1.5 rounded-md border p-1.5 ${
                       shiftHasTimeOffConflict ? 'border-red-300 bg-red-50 dark:bg-red-900/20' : ''
                     }`}
-                    style={{
-                      backgroundColor: shiftHasTimeOffConflict ? '#fef2f2' : `${shift.color}10`,
-                      borderColor: shiftHasTimeOffConflict ? '#fecaca' : `${shift.color}35`
-                    }}
+                    style={cardStyle}
                   >
                     <div className="flex items-center gap-1.5">
                       <div
@@ -278,7 +289,7 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
                         className={`text-xs font-semibold flex-1 ${
                           shiftHasTimeOffConflict ? 'text-red-700 dark:text-red-300' : ''
                         }`}
-                        style={!shiftHasTimeOffConflict ? { color: shift.color } : {}}
+                        style={{ color: shiftHasTimeOffConflict ? '#b91c1c' : '#0f172a' }}
                       >
                         {shift.name}
                         {shiftHasTimeOffConflict && (
@@ -290,11 +301,15 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
                         className={`text-[10px] px-1 py-0 ${
                           shiftHasTimeOffConflict ? 'border-red-300 text-red-600' : ''
                         }`}
-                        style={!shiftHasTimeOffConflict ? {
-                          backgroundColor: `${shift.color}15`,
-                          borderColor: `${shift.color}35`,
-                          color: shift.color
-                        } : {}}
+                        style={
+                          shiftHasTimeOffConflict
+                            ? undefined
+                            : {
+                                backgroundColor: `${shift.color}15`,
+                                borderColor: `${shift.color}35`,
+                                color: '#0f172a'
+                              }
+                        }
                       >
                         {shift.instances.length} {t('doctorCalendar.shiftDetails.timeRanges', { defaultValue: 'slots' })}
                       </Badge>
@@ -306,7 +321,7 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
                           <Badge
                             key={`${shift.name}-${idx}`}
                             variant="secondary"
-                            className="text-[10px] px-2 py-0.5 bg-white/70 dark:bg-white/10 text-gray-700 dark:text-gray-200 border border-white/40"
+                            className="text-[10px] px-2 py-0.5 bg-white/90 dark:bg-white/10 text-slate-700 dark:text-gray-200 border border-white/70"
                           >
                             {instance.timeRange}
                             {(() => {
@@ -343,6 +358,14 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
                     ) : (
                       <p className="text-[11px] text-gray-500 dark:text-gray-400">
                         {t('doctorCalendar.shiftDetails.noTimeRanges', { defaultValue: 'No time ranges configured' })}
+                      </p>
+                    )}
+
+                    {shift.dataSource === 'Default' && (
+                      <p className="text-[11px] text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/40 border border-slate-200/70 dark:border-slate-700/50 rounded px-2 py-1">
+                        {t('doctorCalendar.shiftDetails.defaultShiftNotice', {
+                          defaultValue: 'This is part of your default schedule and cannot be deleted.'
+                        })}
                       </p>
                     )}
                   </div>

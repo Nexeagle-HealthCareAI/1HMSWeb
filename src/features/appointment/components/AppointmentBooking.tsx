@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Calendar, Clock, User, Phone, Users, Stethoscope, ChevronDown, CalendarIcon } from 'lucide-react';
 import { DepartmentSidebar } from './DepartmentSidebar';
@@ -23,7 +23,7 @@ import { useHospitalUser } from '../hooks/useHospitalUser';
 import { useDoctorsByDepartment } from '../hooks/useDoctorsByDepartment';
 import { useDoctorSlots } from '../hooks/useDoctorSlots';
 import { useBookedSlots } from '../hooks/useBookedSlots';
-import { Department as ApiDepartment, ApiDoctor, BookedSlotsResponse } from '../services/appointmentApi';
+import { Department as ApiDepartment, ApiDoctor } from '../services/appointmentApi';
 import { useQueryClient } from '@tanstack/react-query';
 import { generateTimeSlotsFromShiftInfo } from '../utils/slotGenerator';
 import { useAuthStore } from '@/store/authStore';
@@ -57,6 +57,10 @@ export interface Department {
   name: string;
   icon: any;
   doctors: Doctor[];
+}
+
+interface AppointmentBookingProps {
+  refreshToken?: number;
 }
 
 // Default icons for departments
@@ -126,7 +130,7 @@ const generateTimeSlots = (doctorId: string, date: string): TimeSlot[] => {
   }));
 };
 
-export const AppointmentBooking: React.FC = () => {
+export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshToken }) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   // Get userId and authentication status from Zustand auth store
@@ -138,7 +142,8 @@ export const AppointmentBooking: React.FC = () => {
   const { 
     data: hospitalUserResponse, 
     isLoading: hospitalUserLoading, 
-    error: hospitalUserError 
+    error: hospitalUserError,
+    refetch: refetchHospitalUser
   } = useHospitalUser(userId || '');
   
   // Get hospital ID from the response
@@ -148,7 +153,8 @@ export const AppointmentBooking: React.FC = () => {
   // Finally, fetch departments using the hospital ID
   const { data: departmentsResponse, 
     isLoading: departmentsLoading, 
-    error: departmentsError } = useDepartments(hospitalId || '');
+    error: departmentsError,
+    refetch: refetchDepartments } = useDepartments(hospitalId || '');
   
   // State declarations
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
@@ -163,11 +169,14 @@ export const AppointmentBooking: React.FC = () => {
   const [tokenNumber, setTokenNumber] = useState('');
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [patientData, setPatientData] = useState<any>(null);
+  const [showTimeSlotsLoading, setShowTimeSlotsLoading] = useState(false);
+  const lastRefreshTokenRef = useRef<number | null>(null);
   
   // Fetch doctors for the selected department
   const { data: doctorsResponse, 
     isLoading: doctorsLoading, 
-    error: doctorsError } = useDoctorsByDepartment(selectedDepartment, hospitalId);
+    error: doctorsError,
+    refetch: refetchDoctors } = useDoctorsByDepartment(selectedDepartment, hospitalId);
   
   // Format selected date for API
   const formattedDate = selectedDate.toISOString().split('T')[0]; // YYYY-MM-DD format
@@ -175,16 +184,80 @@ export const AppointmentBooking: React.FC = () => {
   // Fetch doctor slots for the selected doctor and date
   const { data: doctorSlotsResponse, 
     isLoading: doctorSlotsLoading, 
-    error: doctorSlotsError } = useDoctorSlots(selectedDoctor?.id || '', hospitalId, formattedDate);
+    error: doctorSlotsError,
+    refetch: refetchDoctorSlots } = useDoctorSlots(selectedDoctor?.id || '', hospitalId, formattedDate);
 
   // Fetch booked slots for the selected doctor and date
   const { data: bookedSlotsResponse, 
     isLoading: bookedSlotsLoading, 
-    error: bookedSlotsError } = useBookedSlots(selectedDoctor?.id || '', hospitalId, formattedDate) as {
-    data: BookedSlotsResponse | undefined;
-    isLoading: boolean;
-    error: Error | null;
-  };
+    error: bookedSlotsError,
+    refetch: refetchBookedSlots } = useBookedSlots(selectedDoctor?.id || '', hospitalId, formattedDate);
+
+  useEffect(() => {
+    if (!refreshToken) return;
+    if (lastRefreshTokenRef.current === refreshToken) return;
+    lastRefreshTokenRef.current = refreshToken;
+
+    if (userId) {
+      refetchHospitalUser();
+    }
+
+    if (hospitalId) {
+      refetchDepartments();
+    }
+
+    if (selectedDepartment && hospitalId) {
+      refetchDoctors();
+    }
+
+    if (selectedDoctor?.id && hospitalId && formattedDate) {
+      refetchDoctorSlots();
+      refetchBookedSlots();
+    }
+  }, [
+    refreshToken,
+    userId,
+    hospitalId,
+    selectedDepartment,
+    selectedDoctor?.id,
+    formattedDate,
+    refetchHospitalUser,
+    refetchDepartments,
+    refetchDoctors,
+    refetchDoctorSlots,
+    refetchBookedSlots,
+  ]);
+
+  useEffect(() => {
+    if (!selectedDepartment || !hospitalId) {
+      return;
+    }
+
+    refetchHospitalUser();
+    refetchDepartments();
+    refetchDoctors();
+  }, [
+    selectedDepartment,
+    hospitalId,
+    refetchHospitalUser,
+    refetchDepartments,
+    refetchDoctors,
+  ]);
+
+  useEffect(() => {
+    if (!selectedDoctor?.id || !hospitalId || !formattedDate) {
+      return;
+    }
+
+    refetchDoctorSlots();
+    refetchBookedSlots();
+  }, [
+    selectedDoctor?.id,
+    hospitalId,
+    formattedDate,
+    refetchDoctorSlots,
+    refetchBookedSlots,
+  ]);
   
   // Transform API departments to match the component interface
   const departments: Department[] = React.useMemo(() => {
@@ -254,20 +327,20 @@ export const AppointmentBooking: React.FC = () => {
 
   // Generate time slots from API response
   React.useEffect(() => {
+    let timer: NodeJS.Timeout;
     if (selectedDoctor && doctorSlotsResponse) {
+      setShowTimeSlotsLoading(true);
+      timer = setTimeout(() => {
+        setShowTimeSlotsLoading(false);
+      }, 1000);
       // Check if doctor is on time-off
       if (doctorSlotsResponse.isTimeOff) {
-        // Clear time slots when doctor is on time-off
         setTimeSlots([]);
         return;
       }
-      
-      // Generate slots if doctor is available and has shift info
       if (doctorSlotsResponse.shiftInfo?.[0]?.shiftDayDetails) {
         const shiftDayDetails = doctorSlotsResponse.shiftInfo[0].shiftDayDetails;
         const generatedSlots = generateTimeSlotsFromShiftInfo(shiftDayDetails, selectedDoctor.id, formattedDate);
-        
-        // Convert GeneratedTimeSlot to TimeSlot with slot duration
         let timeSlotsWithDuration: TimeSlot[] = generatedSlots.map(slot => {
           const shiftDetail = shiftDayDetails.find(shift => shift.shiftName === slot.shiftName);
           return {
@@ -276,33 +349,26 @@ export const AppointmentBooking: React.FC = () => {
             shiftName: slot.shiftName
           };
         });
-        
-        // Mark booked slots as unavailable if booked slots data is available
         if (bookedSlotsResponse?.bookedSlots) {
           timeSlotsWithDuration = timeSlotsWithDuration.map(slot => {
-            const slotTime = slot.time + ':00'; // Convert "08:30" to "08:30:00" to match API format
+            const slotTime = slot.time + ':00';
             const isBooked = bookedSlotsResponse.bookedSlots.includes(slotTime);
             return {
               ...slot,
-              isBooked: isBooked || slot.isBooked, // Mark as booked if API shows it's booked OR if it was already locally booked
+              isBooked: isBooked || slot.isBooked,
               is_available: !(isBooked || slot.isBooked)
             };
           });
         }
-        
-        console.log('Generated time slots:', timeSlotsWithDuration.map(slot => ({
-          id: slot.id,
-          time: slot.time,
-          date: slot.date,
-          shiftName: slot.shiftName
-        })));
         setTimeSlots(timeSlotsWithDuration);
       } else {
-        // Fallback to old generation method if no API data
         const dateStr = selectedDate.toISOString().split('T')[0];
         setTimeSlots(generateTimeSlots(selectedDoctor.id, dateStr));
       }
     }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [selectedDoctor, selectedDate, doctorSlotsResponse, bookedSlotsResponse, formattedDate]);
 
   // Show authentication required message if user is not authenticated
@@ -935,146 +1001,146 @@ export const AppointmentBooking: React.FC = () => {
                       {timeSlots.filter(slot => {
                         const selectedShiftData = availableShifts.find(s => s.id === selectedShift);
                         if (!selectedShiftData) return true;
-                        
                         const slotHour = parseInt(slot.time.split(':')[0]);
                         const startHour = parseInt(selectedShiftData.startTime.split(':')[0]);
                         const endHour = parseInt(selectedShiftData.endTime.split(':')[0]);
-                        
                         return slotHour >= startHour && slotHour < endHour;
                       }).filter(slot => !slot.isBooked).length} Available
                     </span>
                   </h2>
-                  
-                  <div className="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-9 lg:grid-cols-11 xl:grid-cols-13 gap-1.5">
-                    {timeSlots.length === 0 && doctorSlotsResponse?.isTimeOff ? (
-                      <div className="col-span-full text-center py-8">
-                        <div className="text-red-500 text-4xl mb-3">🚫</div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                          No time slots available - Doctor is on time off
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-500">
-                          Please select a different date or doctor
-                        </p>
-                      </div>
-                    ) : timeSlots
-                      .filter(slot => {
-                        const selectedShiftData = availableShifts.find(s => s.id === selectedShift);
-                        if (!selectedShiftData) return true;
-                        
-                        const slotHour = parseInt(slot.time.split(':')[0]);
-                        const startHour = parseInt(selectedShiftData.startTime.split(':')[0]);
-                        const endHour = parseInt(selectedShiftData.endTime.split(':')[0]);
-                        
-                        return slotHour >= startHour && slotHour < endHour;
-                      })
-                      .map((slot) => (
-                      <button
-                        key={slot.id}
-                        onClick={() => !slot.isBooked && handleSlotSelect(slot)}
-                        disabled={slot.isBooked}
-                        className={`p-1.5 rounded-md border text-center transition-all text-xs min-h-[45px] flex flex-col justify-center shadow-sm hover:shadow-md animate-fade-in ${
-                          slot.isBooked
-                            ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-200 cursor-not-allowed opacity-60'
-                            : selectedSlot?.id === slot.id
-                            ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-blue-500 text-white shadow-lg scale-105'
-                            : 'bg-gradient-to-br from-teal-50 to-emerald-100 border-teal-200 hover:from-teal-100 hover:to-emerald-200 hover:border-teal-300 hover-scale'
-                        }`}
-                      >
-                        <div className={`font-bold text-xs mb-0.5 ${
-                          selectedSlot?.id === slot.id ? 'text-white' : slot.isBooked ? 'text-red-700' : 'text-teal-700'
-                        }`}>
-                          {slot.time}
-                        </div>
-                        <div className={`text-xs px-1 py-0.5 rounded-full font-medium ${
-                          slot.isBooked
-                            ? 'bg-red-200 text-red-800'
-                            : selectedSlot?.id === slot.id
-                            ? 'bg-white/20 text-white'
-                            : 'bg-teal-200 text-teal-800'
-                        }`}>
-                          {slot.isBooked ? '❌' : selectedSlot?.id === slot.id ? '✅' : '✓'}
-                        </div>
-                        {slot.isBooked && (
-                          <div className="flex justify-center gap-0.5 mt-0.5 opacity-60">
-                            <span className="text-xs">📋</span>
-                            <span className="text-xs">✏️</span>
+                  {/* Custom loading spinner for time slots */}
+                  {showTimeSlotsLoading ? (
+                    <div className="col-span-full text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
+                      <p className="text-sm text-blue-600 dark:text-blue-300 mb-2">Loading available time slots...</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Please wait while we fetch the latest slot information.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-9 lg:grid-cols-11 xl:grid-cols-13 gap-1.5">
+                        {timeSlots.length === 0 && doctorSlotsResponse?.isTimeOff ? (
+                          <div className="col-span-full text-center py-8">
+                            <div className="text-red-500 text-4xl mb-3">🚫</div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                              No time slots available - Doctor is on time off
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-500">
+                              Please select a different date or doctor
+                            </p>
                           </div>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                  
-                  {/* Time-Off Message */}
-                  {doctorSlotsResponse?.isTimeOff && (
-                    <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0">
-                          <div className="w-8 h-8 bg-red-100 dark:bg-red-800 rounded-full flex items-center justify-center">
-                            <span className="text-red-600 dark:text-red-400 text-lg">🚫</span>
+                        ) : timeSlots
+                          .filter(slot => {
+                            const selectedShiftData = availableShifts.find(s => s.id === selectedShift);
+                            if (!selectedShiftData) return true;
+                            const slotHour = parseInt(slot.time.split(':')[0]);
+                            const startHour = parseInt(selectedShiftData.startTime.split(':')[0]);
+                            const endHour = parseInt(selectedShiftData.endTime.split(':')[0]);
+                            return slotHour >= startHour && slotHour < endHour;
+                          })
+                          .map((slot) => (
+                          <button
+                            key={slot.id}
+                            onClick={() => !slot.isBooked && handleSlotSelect(slot)}
+                            disabled={slot.isBooked}
+                            className={`p-1.5 rounded-md border text-center transition-all text-xs min-h-[45px] flex flex-col justify-center shadow-sm hover:shadow-md animate-fade-in ${
+                              slot.isBooked
+                                ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-200 cursor-not-allowed opacity-60'
+                                : selectedSlot?.id === slot.id
+                                ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-blue-500 text-white shadow-lg scale-105'
+                                : 'bg-gradient-to-br from-teal-50 to-emerald-100 border-teal-200 hover:from-teal-100 hover:to-emerald-200 hover:border-teal-300 hover-scale'
+                            }`}
+                          >
+                            <div className={`font-bold text-xs mb-0.5 ${
+                              selectedSlot?.id === slot.id ? 'text-white' : slot.isBooked ? 'text-red-700' : 'text-teal-700'
+                            }`}>
+                              {slot.time}
+                            </div>
+                            <div className={`text-xs px-1 py-0.5 rounded-full font-medium ${
+                              slot.isBooked
+                                ? 'bg-red-200 text-red-800'
+                                : selectedSlot?.id === slot.id
+                                ? 'bg-white/20 text-white'
+                                : 'bg-teal-200 text-teal-800'
+                            }`}>
+                              {slot.isBooked ? '❌' : selectedSlot?.id === slot.id ? '✅' : '✓'}
+                            </div>
+                            {slot.isBooked && (
+                              <div className="flex justify-center gap-0.5 mt-0.5 opacity-60">
+                                <span className="text-xs">📋</span>
+                                <span className="text-xs">✏️</span>
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                      {/* Time-Off Message */}
+                      {doctorSlotsResponse?.isTimeOff && (
+                        <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0">
+                              <div className="w-8 h-8 bg-red-100 dark:bg-red-800 rounded-full flex items-center justify-center">
+                                <span className="text-red-600 dark:text-red-400 text-lg">🚫</span>
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="text-sm font-semibold text-red-800 dark:text-red-200 mb-1">
+                                Doctor Unavailable - Time Off
+                              </h3>
+                              <p className="text-sm text-red-700 dark:text-red-300 mb-2">
+                                {doctorSlotsResponse.timeOffReason || "The doctor is not available on this date."}
+                              </p>
+                              <div className="text-xs text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-800/30 p-2 rounded border border-red-200 dark:border-red-700">
+                                <strong>What you can do:</strong>
+                                <ul className="mt-1 space-y-1">
+                                  <li>• Select a different date</li>
+                                  <li>• Choose another doctor from the same department</li>
+                                  <li>• Contact the hospital for emergency appointments</li>
+                                </ul>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex-1">
-                          <h3 className="text-sm font-semibold text-red-800 dark:text-red-200 mb-1">
-                            Doctor Unavailable - Time Off
-                          </h3>
-                          <p className="text-sm text-red-700 dark:text-red-300 mb-2">
-                            {doctorSlotsResponse.timeOffReason || "The doctor is not available on this date."}
-                          </p>
-                          <div className="text-xs text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-800/30 p-2 rounded border border-red-200 dark:border-red-700">
-                            <strong>What you can do:</strong>
-                            <ul className="mt-1 space-y-1">
-                              <li>• Select a different date</li>
-                              <li>• Choose another doctor from the same department</li>
-                              <li>• Contact the hospital for emergency appointments</li>
-                            </ul>
+                      )}
+                      {/* Booked Slots Loading/Error Messages */}
+                      {bookedSlotsLoading && (
+                        <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                          <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                            <span className="text-sm">Loading booked slots information...</span>
                           </div>
                         </div>
+                      )}
+                      {bookedSlotsError && (
+                        <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                          <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-300">
+                            <span className="text-lg">⚠️</span>
+                            <span className="text-sm">Unable to load external booking information. Some slots may appear available but could be booked externally.</span>
+                          </div>
+                        </div>
+                      )}
+                      {/* Legend - Compact */}
+                      <div className="mt-2 p-2 bg-white/50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
+                        <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Slot Types:</div>
+                        <div className="grid grid-cols-3 gap-1 text-xs">
+                          <div className="flex items-center gap-1">
+                            <div className="w-2 h-2 bg-teal-200 rounded border border-teal-300"></div>
+                            <span className="text-gray-600 dark:text-gray-400">Available</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="w-2 h-2 bg-red-200 rounded border border-red-300"></div>
+                            <span className="text-gray-600 dark:text-gray-400">Booked</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="w-2 h-2 bg-blue-500 rounded border border-blue-600"></div>
+                            <span className="text-gray-600 dark:text-gray-400">Selected</span>
+                          </div>
+                        </div>
+                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                          💡 Tap any available slot to book an appointment.
+                        </div>
                       </div>
-                    </div>
+                    </>
                   )}
-
-                  {/* Booked Slots Loading/Error Messages */}
-                  {bookedSlotsLoading && (
-                    <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                      <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                        <span className="text-sm">Loading booked slots information...</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {bookedSlotsError && (
-                    <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                      <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-300">
-                        <span className="text-lg">⚠️</span>
-                        <span className="text-sm">Unable to load external booking information. Some slots may appear available but could be booked externally.</span>
-                      </div>
-                    </div>
-                  )}
-
-
-
-                  {/* Legend - Compact */}
-                  <div className="mt-2 p-2 bg-white/50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
-                    <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Slot Types:</div>
-                    <div className="grid grid-cols-3 gap-1 text-xs">
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-teal-200 rounded border border-teal-300"></div>
-                        <span className="text-gray-600 dark:text-gray-400">Available</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-red-200 rounded border border-red-300"></div>
-                        <span className="text-gray-600 dark:text-gray-400">Booked</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-blue-500 rounded border border-blue-600"></div>
-                        <span className="text-gray-600 dark:text-gray-400">Selected</span>
-                      </div>
-                    </div>
-                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-500">
-                      💡 Tap any available slot to book an appointment.
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>

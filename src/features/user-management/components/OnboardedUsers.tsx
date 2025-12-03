@@ -1,3 +1,4 @@
+  // ...validation helpers removed...
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -139,39 +140,48 @@ export const OnboardedUsers: React.FC = () => {
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:gap-6">
             <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Search users by name, email, or phone..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+              <div className="relative flex flex-col">
+                <label className="block text-sm font-medium mb-1">Search</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder="Search users by name, email, or phone..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
               </div>
             </div>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                {uniqueRoles.map(role => (
-                  <SelectItem key={role} value={role}>{role}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="w-full md:w-[200px] flex flex-col">
+              <label className="block text-sm font-medium mb-1">Role</label>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Filter by role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  {uniqueRoles.map(role => (
+                    <SelectItem key={role} value={role}>{role}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-full md:w-[200px] flex flex-col">
+              <label className="block text-sm font-medium mb-1">Status</label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -194,123 +204,123 @@ export const OnboardedUsers: React.FC = () => {
             </Card>
           </div>
         ) : (
-          filteredUsers.map(user => (
-            <Card key={user.userId} className="hover:shadow-md transition-shadow duration-200">
-              <CardContent className="p-4">
-                <div className="space-y-3">
-                  {/* Header with Avatar and Status */}
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                        isUserActive(user)
-                          ? 'bg-green-100 text-green-600'
-                          : 'bg-gray-100 text-gray-400'
-                      }`}>
-                        <Users className="h-5 w-5" />
+          filteredUsers.map(user => {
+            return (
+              <Card key={user.userId} className="hover:shadow-md transition-shadow duration-200">
+                <CardContent className="p-4">
+                  <div className="space-y-3">
+                    {/* Header with Avatar and Status */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          isUserActive(user)
+                            ? 'bg-green-100 text-green-600'
+                            : 'bg-gray-100 text-gray-400'
+                        }`}>
+                          <Users className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-semibold text-sm truncate">{user.fullName}</h3>
+                          <p className="text-xs truncate text-muted-foreground">{user.email}</p>
+                        </div>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold text-sm truncate">{user.fullName}</h3>
-                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                      {/* Status Indicator */}
+                      <div className={`w-3 h-3 rounded-full ${
+                        isUserActive(user) ? 'bg-green-500' : 'bg-gray-400'
+                      }`} />
+                    </div>
+
+                    {/* Contact Info */}
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span className="font-medium">Phone:</span>
+                        <span>{user.mobileNumber}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span className="font-medium">Role:</span>
+                        <span>{getPrimaryRoleName(user)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span className="font-medium">ID:</span>
+                        <span>{user.employeeID || 'N/A'}</span>
                       </div>
                     </div>
-                    
-                    {/* Status Indicator */}
-                    <div className={`w-3 h-3 rounded-full ${
-                      isUserActive(user) ? 'bg-green-500' : 'bg-gray-400'
-                    }`} />
-                  </div>
 
-                  {/* Contact Info */}
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="font-medium">Phone:</span>
-                      <span>{user.mobileNumber}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="font-medium">Role:</span>
-                      <span>{getPrimaryRoleName(user)}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="font-medium">ID:</span>
-                      <span>{user.employeeID || 'N/A'}</span>
-                    </div>
-                  </div>
-
-                  {/* Badges */}
-                  <div className="flex flex-wrap gap-1">
-                    <Badge 
-                      variant="secondary" 
-                      className={`text-xs ${getRoleColor(getPrimaryRoleName(user))}`}
-                    >
-                      {getPrimaryRoleName(user)}
-                    </Badge>
-                    <Badge 
-                      variant={isUserActive(user) ? 'default' : 'secondary'}
-                      className={`text-xs ${getStatusColor(isUserActive(user) ? 'active' : 'inactive')}`}
-                    >
-                      {isUserActive(user) ? 'Active' : 'Inactive'}
-                    </Badge>
-                    {user.isPrimary && (
-                      <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
-                        Primary
+                    {/* Badges */}
+                    <div className="flex flex-wrap gap-1">
+                      <Badge 
+                        variant="secondary" 
+                        className={`text-xs ${getRoleColor(getPrimaryRoleName(user))}`}
+                      >
+                        {getPrimaryRoleName(user)}
                       </Badge>
-                    )}
-                  </div>
+                      <Badge 
+                        variant={isUserActive(user) ? 'default' : 'secondary'}
+                        className={`text-xs ${getStatusColor(isUserActive(user) ? 'active' : 'inactive')}`}
+                      >
+                        {isUserActive(user) ? 'Active' : 'Inactive'}
+                      </Badge>
+                      {user.isPrimary && (
+                        <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+                          Primary
+                        </Badge>
+                      )}
+                    </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <div className="flex gap-1">
+                    {/* Action Buttons */}
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      <div className="flex gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => {
+                            setViewUser(user);
+                            setIsViewDialogOpen(true);
+                          }}
+                          className="h-7 w-7 p-0 hover:bg-blue-50 hover:text-blue-600"
+                          title="View Details"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleDeactivateUser({
+                            userId: user.userId,
+                            fullName: user.fullName,
+                            email: user.email
+                          })}
+                          className={`h-7 w-7 p-0 ${
+                            isUserActive(user) && user.userId !== currentUserId
+                              ? 'hover:bg-red-50 hover:text-red-600'
+                              : 'opacity-50 cursor-not-allowed'
+                          }`}
+                          title={
+                            user.userId === currentUserId
+                              ? 'Cannot deactivate yourself'
+                              : isUserActive(user)
+                                ? 'Deactivate User'
+                                : 'User already inactive'
+                          }
+                          disabled={!isUserActive(user) || user.userId === currentUserId}
+                        >
+                          <UserX className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        onClick={() => {
-                          setViewUser(user);
-                          setIsViewDialogOpen(true);
-                        }}
-                        className="h-7 w-7 p-0 hover:bg-blue-50 hover:text-blue-600"
-                        title="View Details"
+                        className="h-7 w-7 p-0 hover:bg-gray-50"
+                        title="More Options"
                       >
-                        <Eye className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleDeactivateUser({
-                          userId: user.userId,
-                          fullName: user.fullName,
-                          email: user.email
-                        })}
-                        className={`h-7 w-7 p-0 ${
-                          isUserActive(user) && user.userId !== currentUserId
-                            ? 'hover:bg-red-50 hover:text-red-600'
-                            : 'opacity-50 cursor-not-allowed'
-                        }`}
-                        title={
-                          user.userId === currentUserId
-                            ? 'Cannot deactivate yourself'
-                            : isUserActive(user)
-                              ? 'Deactivate User'
-                              : 'User already inactive'
-                        }
-                        disabled={!isUserActive(user) || user.userId === currentUserId}
-                      >
-                        <UserX className="h-3.5 w-3.5" />
+                        <MoreHorizontal className="h-3.5 w-3.5" />
                       </Button>
                     </div>
-                    
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-7 w-7 p-0 hover:bg-gray-50"
-                      title="More Options"
-                    >
-                      <MoreHorizontal className="h-3.5 w-3.5" />
-                    </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            );
+          })
         )}
        </div>
 

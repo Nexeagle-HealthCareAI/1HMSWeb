@@ -13,8 +13,20 @@ export const API_BASE_URL = ensureProtocol(rawApiUrl);
 // API Endpoints
 export const API_ENDPOINTS = {
   E_PRESCRIPTION: {
-    GET_FIELD_PREFERENCES: (doctorId: string) => `/e-prescription/configuration/preference-setting/doctorId=${doctorId}`,
-    UPDATE_FIELD_PREFERENCES: (doctorId: string) => `/e-prescription/configuration/update-preference-setting/doctorId=${doctorId}`,
+    GET_FIELD_PREFERENCES: (doctorId: string, hospitalId?: string) => {
+      const params = [`doctorId=${encodeURIComponent(doctorId)}`];
+      if (hospitalId) {
+        params.push(`hospitalId=${encodeURIComponent(hospitalId)}`);
+      }
+      return `/e-prescription/configuration/preference-setting/${params.join('&')}`;
+    },
+    UPDATE_FIELD_PREFERENCES: (doctorId: string, hospitalId?: string) => {
+      const params = [`doctorId=${encodeURIComponent(doctorId)}`];
+      if (hospitalId) {
+        params.push(`hospitalId=${encodeURIComponent(hospitalId)}`);
+      }
+      return `/e-prescription/configuration/update-preference-setting/${params.join('&')}`;
+    },
   },
   AUTH: {
     LOGIN: 'auth/user/login',

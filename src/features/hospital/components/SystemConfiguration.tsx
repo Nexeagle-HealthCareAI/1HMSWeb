@@ -34,7 +34,7 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
     },
     {
       id: 'branding',
-      label: 'Hospital Branding',
+      label: 'Hospital Info',
       description: 'Identity, contact, compliance',
       icon: Palette,
     },
@@ -86,7 +86,7 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
                     key={item.id}
                     value={item.id}
                     className="group relative flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-medium"
-                    data-testid={item.id === 'branding' ? 'hospital-branding-tab' : undefined}
+                    data-testid={item.id === 'branding' ? 'hospital-info-tab' : undefined}
                   >
                     <item.icon className="h-4 w-4 text-muted-foreground group-data-[state=active]:text-primary" />
                     <span>{item.label}</span>
@@ -153,7 +153,7 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
               </div>
             </TabsContent>
 
-            <TabsContent value="branding" data-testid="hospital-branding-content">
+            <TabsContent value="branding" data-testid="hospital-info-content">
               <HospitalBrandingConfig
                 branding={hospitalBranding}
                 onBrandingChange={handleBrandingChange}

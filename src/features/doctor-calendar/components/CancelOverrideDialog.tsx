@@ -33,7 +33,9 @@ export const CancelOverrideDialog: React.FC<CancelOverrideDialogProps> = ({
   }, [isOpen, overrideData]);
   
   if (!overrideData) {
-    console.warn('CancelOverrideDialog: No override data provided');
+    if (isOpen) {
+      console.warn('CancelOverrideDialog: No override data provided');
+    }
     return null;
   }
 

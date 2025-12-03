@@ -2,6 +2,7 @@ export { useInactivityReset } from './useInactivityReset';
 export { useLanguage } from './useLanguage';
 export { useProfileCompletion } from './useProfileCompletion';
 export { useRouteGuard, usePermissions, useRoleGuard } from './useRouteGuard';
+export { useLogout } from './useLogout';
 export { useUserDetails, useUpdateUserDetails } from './useUserProfileApi';
 export { useLazyData, useLazyFetch } from './useLazyData';
 export { createApiHook, createMutationHook, useAuthApi, useHospitalApi, useDepartmentApi, useSpecializationApi, useDoctorApi, useMediaUploadApi, useInvalidateQueries } from './useApi';

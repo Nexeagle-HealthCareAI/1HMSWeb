@@ -5,7 +5,7 @@ import { useAuthStore } from '@/store/authStore';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Clock } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLogout } from '@/hooks/useLogout';
 
 interface InactivityContextType {
   resetInactivityTimer: () => void;
@@ -28,11 +28,11 @@ interface InactivityProviderProps {
 
 export const InactivityProvider: React.FC<InactivityProviderProps> = ({ children }) => {
   const { t } = useTranslation();
-  const { isAuthenticated, logout } = useAuthStore();
-  const navigate = useNavigate();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const triggerLogout = useLogout();
   
   // Debug log to verify auth store is working
-  console.log('InactivityProvider: isAuthenticated =', isAuthenticated, 'logout function =', typeof logout);
+  console.log('InactivityProvider: isAuthenticated =', isAuthenticated);
   const [isInactivityDialogOpen, setIsInactivityDialogOpen] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(120); // 2 minutes in seconds
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -104,7 +104,6 @@ export const InactivityProvider: React.FC<InactivityProviderProps> = ({ children
     if (isLoggingOut) {
       return;
     }
-    console.log('handleLogout called - starting logout process');
     
     try {
       // Set loading state
@@ -128,25 +127,10 @@ export const InactivityProvider: React.FC<InactivityProviderProps> = ({ children
       setIsInactivityDialogOpen(false);
       setTimeRemaining(120);
 
-      // Perform logout
-      console.log('Calling logout from auth store...');
 
-      if (logout && typeof logout === 'function') {
-        logout();
-      } else {
-        console.error('Logout function not available from auth store');
-      }
-
-      // Clear any other session data persisted outside the store
-      localStorage.removeItem('auth-storage');
-      localStorage.removeItem('user-storage');
-      sessionStorage.clear();
-
-      console.log('Logout completed - navigating to login');
-      navigate('/login', { replace: true });
+      await triggerLogout({ redirectTo: '/login' });
     } catch (error) {
       console.error('Error during logout:', error);
-      navigate('/login', { replace: true });
     } finally {
       setIsLoggingOut(false);
     }

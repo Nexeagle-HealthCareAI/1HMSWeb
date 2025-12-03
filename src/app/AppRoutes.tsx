@@ -41,8 +41,6 @@ const NotFoundPage = lazy(() => import('@/components/shared/NotFoundPage').then(
 const PatientsPage = lazy(() => import('@/features/patient/components/PatientsPage').then(module => ({ default: module.PatientsPage })));
 const PatientProfilePage = lazy(() => import('@/features/patient/pages/PatientProfilePage').then(module => ({ default: module.PatientProfilePage })));
 
-// Settings route
-const SettingsPage = lazy(() => import('@/pages/SettingsPage').then(module => ({ default: module.SettingsPage })));
 
 // Loading component for lazy routes
 const RouteLoadingSpinner = () => (
@@ -254,17 +252,6 @@ export const AppRoutes: React.FC = () => {
               }
             />
 
-            {/* Settings Routes - Available to all authenticated users */}
-            <Route
-              path="/settings"
-              element={
-                <RouteGuard>
-                  <MainLayout>
-                    <SettingsPage />
-                  </MainLayout>
-                </RouteGuard>
-              }
-            />
           </>
         ) : null}
 

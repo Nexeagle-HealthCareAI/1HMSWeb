@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuthStore, useAppStore, useUserStore, useThemeStore } from '@/store';
-import { useQueryClient } from '@tanstack/react-query';
+import { useAuthStore, useAppStore } from '@/store';
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { useUserDetails } from '@/hooks/useUserProfileApi';
 import { useLanguage } from '@/hooks/useLanguage';
 import { useTranslation } from 'react-i18next';
+import { useLogout } from '@/hooks/useLogout';
 import { 
   Calendar, 
   Users, 
@@ -71,13 +71,10 @@ interface NavigationItem {
 export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAuthStore();
   const hospitalAccessRestricted = useAuthStore(state => state.hospitalAccessRestricted);
   const hospitalAccessMessage = useAuthStore(state => state.hospitalAccessMessage);
-  const { resetAppState, sidebarCollapsed, setSidebarCollapsed } = useAppStore();
-  const { resetUserState } = useUserStore();
-  const { resetColors } = useThemeStore();
-  const queryClient = useQueryClient();
+  const { sidebarCollapsed, setSidebarCollapsed } = useAppStore();
+  const triggerLogout = useLogout();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState('dashboard');
   const { currentLanguage, isRTL } = useLanguage();
@@ -91,6 +88,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const userRole = authStore.getUserRole() || 'Doctor';
   const userId = authStore.getUserId();
   const profileTarget = (userRole === 'Doctor' || userRole === 'AdminDoctor') ? '/profile?tab=professional' : '/profile';
+  const personalProfileLabel = t('header.personalProfile', { defaultValue: 'Personal Profile' });
 
   // Keyboard shortcut for sidebar toggle
   useEffect(() => {
@@ -166,34 +164,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     navigate(item.path);
   };
 
-  const handleLogout = () => {
-    // Clear React Query cache
-    queryClient.clear();
-    
-    // Clear all localStorage items
-    localStorage.clear();
-    
-    // Clear sessionStorage
-    sessionStorage.clear();
-    
-    // Clear any account lockout data
-    localStorage.removeItem('accountLockout');
-    
-    // Clear any rate limiting data
-    Object.keys(localStorage).forEach(key => {
-      if (key.includes('rate_limit') || key.includes('otp_')) {
-        localStorage.removeItem(key);
-      }
-    });
-    
-    // Clear all stores
-    logout();
-    resetAppState();
-    resetUserState();  
-    resetColors();
-    
-    // Navigate to home page
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      await triggerLogout({ redirectTo: '/login' });
+    } catch (error) {
+      console.error('Failed to logout cleanly', error);
+    }
   };
 
   return (
@@ -424,7 +400,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 className="hidden md:flex items-center gap-2 border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:border-amber-300 dark:hover:border-amber-600"
               >
                   <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-medium">{t('header.completeProfile')} ({profileScore}%)</span>
+                  <span className="text-sm font-medium">{personalProfileLabel} ({profileScore}%)</span>
                 </Button>
               )}
 
@@ -465,15 +441,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   <DropdownMenuItem onClick={() => navigate(profileTarget)} className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700">
                     <User className="mr-2 h-4 w-4 text-gray-600 dark:text-gray-300" />
                     <span>{t('header.profile')}</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/settings')} className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700">
-                    <Settings className="mr-2 h-4 w-4 text-gray-600 dark:text-gray-300" />
-                    <span>{t('header.settings')}</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-600" />
-                  <DropdownMenuItem onClick={handleLogout} className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700">
-                    <LogOut className="mr-2 h-4 w-4 text-gray-600 dark:text-gray-300" />
-                    <span>Logout</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

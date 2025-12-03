@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useMemo, useEffect, useLayoutEffect, useRef, lazy, Suspense } from 'react';
 import type { AxiosError } from 'axios';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -30,6 +30,7 @@ import {
   CalendarCheck,
   ClipboardCheck,
   CircleCheck,
+  Expand,
   LucideIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -47,6 +48,7 @@ import {
   PaginationPrevious
 } from '@/components/ui/pagination';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { PrescriptionCustomizePanel } from '@/components/prescription/PrescriptionCustomizePanel';
 import { format, subDays, addDays } from 'date-fns';
@@ -105,6 +107,10 @@ export const ClinicalDashboard: React.FC = () => {
   const [isCancelling, setIsCancelling] = useState(false);
   const [activeNavButton, setActiveNavButton] = useState<'appointments' | 'settings' | 'calendar' | 'assistant'>('appointments');
   const [settingsTab, setSettingsTab] = useState<'fields' | 'personalized'>('fields');
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const [windowWidth, setWindowWidth] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1920));
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Live update states
   const [isLiveUpdateEnabled, setIsLiveUpdateEnabled] = useState(true);
@@ -490,6 +496,8 @@ export const ClinicalDashboard: React.FC = () => {
     }
   ];
 
+  const activeAppointmentTab = appointmentTabsConfig.find((tab) => tab.value === activeTab);
+
   // Pagination slices
   const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -588,11 +596,65 @@ export const ClinicalDashboard: React.FC = () => {
     }
   };
 
+  useLayoutEffect(() => {
+    const updateHeaderHeight = () => {
+      if (headerRef.current) {
+        setHeaderHeight(headerRef.current.offsetHeight);
+      }
+    };
+
+    updateHeaderHeight();
+    window.addEventListener('resize', updateHeaderHeight);
+    return () => window.removeEventListener('resize', updateHeaderHeight);
+  }, [activeNavButton, doctorProfileRestricted, profileCompletionPercentage]);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (windowWidth < 1024 && isSidebarCollapsed) {
+      setIsSidebarCollapsed(false);
+    }
+  }, [windowWidth, isSidebarCollapsed]);
+
+  const tabBarStickyOffset = Math.max(headerHeight, 0) + 16;
+  const computeScale = (width: number) => {
+    if (width < 1024) return 1;
+    if (width >= 1600) return 1;
+    if (width >= 1440) return 0.95;
+    if (width >= 1280) return 0.9;
+    if (width >= 1024) return 0.87;
+    return 1;
+  };
+  const uiScale = computeScale(windowWidth);
+  const shouldApplyScale = uiScale !== 1;
+  const scaledStyle = useMemo(
+    () => ({
+      transform: `scale(${uiScale})`,
+      transformOrigin: 'top left',
+      width: `${100 / uiScale}%`,
+      minHeight: `${100 / uiScale}vh`
+    }),
+    [uiScale]
+  );
+
   return (
-    <div className="h-screen bg-gray-50 dark:bg-gray-950 flex flex-col overflow-hidden">
-  <div style={{ pointerEvents: isDoctorExperienceLocked ? 'none' : 'auto', opacity: isDoctorExperienceLocked ? 0.5 : 1, height: '100%' }}>
-      {/* Header - Mobile Responsive */}
-      <div className="bg-gradient-to-br from-white via-blue-50/60 to-indigo-50 dark:from-slate-900 dark:via-slate-900/80 dark:to-slate-900 border-b border-white/70 dark:border-slate-800 px-3 sm:px-6 py-4 shadow-lg flex-shrink-0 sticky top-0 z-30 backdrop-blur">
+    <div
+      className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col"
+      style={shouldApplyScale ? scaledStyle : undefined}
+    >
+      <div
+        className="flex flex-col flex-1 w-full"
+        style={{ pointerEvents: isDoctorExperienceLocked ? 'none' : 'auto', opacity: isDoctorExperienceLocked ? 0.5 : 1 }}
+      >
+        {/* Header - Mobile Responsive */}
+        <div
+          ref={headerRef}
+          className="bg-gradient-to-br from-white via-blue-50/60 to-indigo-50 dark:from-slate-900 dark:via-slate-900/80 dark:to-slate-900 border-b border-white/70 dark:border-slate-800 px-3 sm:px-6 py-4 shadow-lg flex-shrink-0 sticky top-0 z-30 backdrop-blur"
+        >
         <div className="w-full mx-auto">
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
             <div className="space-y-1">
@@ -601,29 +663,30 @@ export const ClinicalDashboard: React.FC = () => {
                   <Calendar className="h-4 w-4 text-white" />
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-blue-600 dark:text-blue-300">Clinical HQ</p>
-                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">Doctor Dashboard</h1>
-                  <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2 text-[11px] sm:text-xs">
-                    <button
-                      type="button"
-                      onClick={() => navigate('/profile?tab=professional')}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white/80 dark:bg-slate-900/70 border border-blue-100 dark:border-slate-800 shadow-inner transition-transform hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
-                      title="View professional profile"
-                    >
-                      <span className="uppercase tracking-wide text-blue-600 dark:text-blue-300 font-semibold">Professional profile</span>
-                      <div className="flex items-center gap-1 text-gray-900 dark:text-white font-bold">
-                        {clampedProfileCompletion}%
-                        {clampedProfileCompletion === 100 && <CircleCheck className="h-3.5 w-3.5 text-emerald-500" />}
+                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight"> Dashboard</h1>
+                  {clampedProfileCompletion < 100 && (
+                    <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2 text-[11px] sm:text-xs">
+                      <button
+                        type="button"
+                        onClick={() => navigate('/profile?tab=professional')}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white/80 dark:bg-slate-900/70 border border-blue-100 dark:border-slate-800 shadow-inner transition-transform hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                        title="View professional profile"
+                      >
+                        <span className="uppercase tracking-wide text-blue-600 dark:text-blue-300 font-semibold">Professional profile</span>
+                        <div className="flex items-center gap-1 text-gray-900 dark:text-white font-bold">
+                          {clampedProfileCompletion}%
+                          {clampedProfileCompletion === 100 && <CircleCheck className="h-3.5 w-3.5 text-emerald-500" />}
+                        </div>
+                      </button>
+                      <div className="h-1.5 w-full sm:w-48 bg-blue-100/70 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full transition-all duration-500"
+                          style={{ width: `${clampedProfileCompletion}%` }}
+                          aria-label={`Professional profile completion ${clampedProfileCompletion}%`}
+                        />
                       </div>
-                    </button>
-                    <div className="h-1.5 w-full sm:w-48 bg-blue-100/70 dark:bg-slate-800 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full transition-all duration-500"
-                        style={{ width: `${clampedProfileCompletion}%` }}
-                        aria-label={`Professional profile completion ${clampedProfileCompletion}%`}
-                      />
                     </div>
-                  </div>
+                  )}
                 </div>
                 {!doctorProfileRestricted && profileCompletionPercentage === 100 && (
                   <Badge className="ml-2 bg-white/80 dark:bg-slate-800/80 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-500/40 flex items-center gap-1 px-2.5 py-1 text-xs font-semibold shadow-sm">
@@ -634,7 +697,7 @@ export const ClinicalDashboard: React.FC = () => {
               </div>
             </div>
             <div className="w-full lg:w-auto">
-              <div className="flex flex-wrap gap-2 bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-1.5 shadow-inner shadow-white/60 dark:shadow-black/40">
+              <div className="flex flex-wrap gap-1.5 bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-1 shadow-inner shadow-white/60 dark:shadow-black/40">
                 {navButtons.map(({ key, label, shortLabel, Icon, requiresProfile, description }) => {
                   const isActive = activeNavButton === key;
                   const locked = requiresProfile && doctorProfileRestricted;
@@ -649,20 +712,23 @@ export const ClinicalDashboard: React.FC = () => {
                       aria-pressed={isActive}
                       tabIndex={locked ? -1 : 0}
                       title={locked ? (doctorProfileMessage || 'Complete your profile to unlock this section') : description}
-                      className={`group flex-1 lg:flex-none min-w-[120px] flex flex-col items-start gap-1 rounded-xl px-3 py-2 border transition-all duration-300 ${
+                      className={`group flex-1 lg:flex-none min-w-[96px] flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-2.5 py-1.5 border transition-all duration-300 text-[12px] ${
                         isActive
                           ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white border-transparent shadow-xl shadow-blue-500/30'
                           : 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800/70'
                       } ${locked ? 'opacity-40 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
                     >
-                      <div className="flex items-center gap-2 text-sm font-semibold">
-                        <span className={`p-1.5 rounded-lg ${isActive ? 'bg-white/20' : 'bg-gray-100 dark:bg-slate-800'}`}>
-                          <Icon className={`h-4 w-4 ${isActive ? 'text-white' : 'text-blue-500 dark:text-blue-400'}`} />
+                      <div className="flex items-center gap-1.5 text-[12px] font-semibold">
+                        <span className={`p-1 rounded-lg ${isActive ? 'bg-white/20' : 'bg-gray-100 dark:bg-slate-800'}`}>
+                          <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-blue-500 dark:text-blue-400'}`} />
                         </span>
                         <span className="hidden sm:inline">{label}</span>
                         <span className="sm:hidden">{shortLabel}</span>
                       </div>
-                      <span className={`text-[11px] leading-snug ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'}`}>
+                      <span className={`hidden sm:block text-[10px] leading-snug ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'}`}>
+                        {description}
+                      </span>
+                      <span className={`block text-[10px] leading-snug truncate w-full ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'} sm:hidden`}>
                         {description}
                       </span>
                     </button>
@@ -676,8 +742,7 @@ export const ClinicalDashboard: React.FC = () => {
 
       {/* Main Content - Mobile Responsive */}
       {activeNavButton === 'appointments' && (
-        <div className="flex-1 overflow-hidden">
-          <div className="w-full mx-auto p-2 sm:p-4 h-full overflow-y-auto">
+        <div className="w-full mx-auto px-3 sm:px-6 py-2 sm:py-4">
           {/* Loading - Mobile Responsive */}
           {isDataLoading && (
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 sm:p-12 text-center shadow-lg">
@@ -849,58 +914,129 @@ export const ClinicalDashboard: React.FC = () => {
                 setSelectedStatus('all'); // ✅ reset status when switching tabs
                 setCurrentPage(1);
               }}
-              className="h-full flex flex-col"
+              className="flex flex-col lg:flex-row gap-3 lg:gap-6 items-start"
             >
-              <div className="bg-white/80 dark:bg-gray-900/70 rounded-2xl p-2 shadow-xl border border-white/60 dark:border-gray-800 mb-2 sm:mb-3 backdrop-blur">
-                <TabsList className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3 w-full bg-transparent h-auto">
-                  {appointmentTabsConfig.map(({ value, label, subLabel, Icon, accent, iconColor, count }) => {
-                    const isActive = activeTab === value;
-                    return (
-                      <TabsTrigger
-                        key={value}
-                        value={value}
-                        disabled={isDoctorExperienceLocked}
-                        className={`group relative overflow-hidden rounded-2xl border text-left px-4 py-3 sm:px-5 sm:py-4 transition-all duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 ${
-                          isActive
-                            ? 'bg-white dark:bg-gray-900 border-blue-200 dark:border-blue-900 shadow-xl shadow-blue-200/60 dark:shadow-blue-900/30 text-gray-900 dark:text-white'
-                            : 'bg-white/70 dark:bg-gray-900/60 border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-900'
-                        } ${isDoctorExperienceLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+              <div
+                className={`w-full ${isSidebarCollapsed ? 'lg:w-[4.5rem] xl:w-20' : 'lg:w-64 xl:w-72'} lg:sticky lg:self-start transition-all duration-300`}
+                style={{ top: `${tabBarStickyOffset}px` }}
+              >
+                <div className="bg-white dark:bg-gray-900 rounded-2xl p-3 shadow-xl border border-gray-200 dark:border-gray-800 h-full lg:min-h-[calc(100vh-160px)] flex flex-col">
+                  <div className={`mb-2 px-1 flex items-center justify-end gap-2 ${isSidebarCollapsed ? 'lg:flex-col lg:items-center lg:gap-1.5' : ''}`}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-gray-400 lg:hidden">Swipe to explore</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsSidebarCollapsed((prev) => !prev)}
+                        className="hidden lg:inline-flex items-center justify-center rounded-full border border-gray-200 dark:border-gray-800 p-1.5 text-gray-500 dark:text-gray-300 hover:text-blue-600 hover:border-blue-200 dark:hover:text-blue-300 transition-colors"
+                        aria-pressed={isSidebarCollapsed}
+                        aria-expanded={!isSidebarCollapsed}
+                        aria-controls="appointment-views-nav"
+                        aria-label={isSidebarCollapsed ? 'Expand appointment sidebar' : 'Collapse appointment sidebar'}
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`rounded-xl p-2 transition-all duration-300 ${
-                                isActive
-                                  ? `bg-gradient-to-br ${accent} text-white shadow-lg shadow-blue-500/30`
-                                  : `bg-gray-100 dark:bg-gray-800 ${iconColor}`
-                              }`}
-                            >
-                              <Icon className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-semibold leading-tight">{label}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">{subLabel}</p>
-                            </div>
-                          </div>
-                          <span
-                            className={`text-[11px] font-semibold px-2 py-1 rounded-full transition-colors duration-300 ${
+                        {isSidebarCollapsed ? (
+                          <Expand className="h-3.5 w-3.5" aria-hidden />
+                        ) : (
+                          <X className="h-3.5 w-3.5" aria-hidden />
+                        )}
+                        <span className="sr-only">{isSidebarCollapsed ? 'Expand appointment sidebar' : 'Collapse appointment sidebar'}</span>
+                      </button>
+                    </div>
+                  </div>
+                  <TooltipProvider delayDuration={150}>
+                    <TabsList
+                      id="appointment-views-nav"
+                      className={`grid grid-cols-1 sm:grid-cols-2 gap-1.5 w-full bg-transparent h-auto lg:flex lg:flex-col ${
+                        isSidebarCollapsed ? 'lg:items-stretch lg:gap-1.5' : 'lg:gap-2'
+                      } lg:overflow-visible lg:justify-start`}
+                    >
+                      {appointmentTabsConfig.map(({ value, label, subLabel, Icon, accent, iconColor }) => {
+                        const isActive = activeTab === value;
+                        const iconChip = (
+                          <div
+                            className={`relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border bg-white/90 dark:bg-gray-900/70 shadow-sm transition-colors ${
                               isActive
-                                ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/60 dark:text-blue-100'
-                                : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
+                                ? 'border-blue-200 text-blue-600 dark:text-blue-300'
+                                : `border-gray-100/80 dark:border-gray-800/70 ${iconColor}`
                             }`}
                           >
-                            {count} appt{count === 1 ? '' : 's'}
-                          </span>
-                        </div>
-                      </TabsTrigger>
-                    );
-                  })}
-                </TabsList>
+                            <Icon className="h-4 w-4" aria-hidden />
+                            {isSidebarCollapsed && <span className="sr-only">{label}</span>}
+                          </div>
+                        );
+
+                        const triggerBody = isSidebarCollapsed ? (
+                          iconChip
+                        ) : (
+                          <div className="flex items-center gap-2 w-full">
+                            {iconChip}
+                            <div className="flex flex-col flex-1 min-w-0 text-left">
+                              <p className="font-semibold leading-tight text-[13px]">{label}</p>
+                              <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{subLabel}</p>
+                            </div>
+                            <span
+                              className={`absolute inset-x-4 top-1 h-1 rounded-full opacity-0 transition-opacity duration-300 ${
+                                isActive ? 'opacity-100' : 'group-hover:opacity-70'
+                              } bg-gradient-to-r ${accent}`}
+                            />
+                          </div>
+                        );
+
+                        if (isSidebarCollapsed) {
+                          return (
+                            <Tooltip key={value} delayDuration={150}>
+                              <TooltipTrigger asChild>
+                                <TabsTrigger
+                                  value={value}
+                                  disabled={isDoctorExperienceLocked}
+                                  className={`group relative flex items-center justify-center px-1.5 py-1.5 rounded-xl border transition-all duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 ${
+                                    isActive
+                                      ? 'bg-white text-gray-900 dark:bg-gray-800/80 dark:text-white border-blue-200 shadow-lg shadow-blue-100/60 dark:shadow-none'
+                                      : 'bg-white/70 dark:bg-gray-900/20 border-transparent text-gray-600 dark:text-gray-400 hover:border-gray-200 hover:bg-white/90 dark:hover:border-gray-800 dark:hover:bg-gray-900/40'
+                                  } ${isDoctorExperienceLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                  {triggerBody}
+                                </TabsTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="max-w-[220px] text-xs">
+                                <p className="font-semibold text-gray-900 dark:text-gray-100">{label}</p>
+                                <p className="text-gray-500 dark:text-gray-400">{subLabel}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        }
+
+                        return (
+                          <TabsTrigger
+                            key={value}
+                            value={value}
+                            disabled={isDoctorExperienceLocked}
+                            className={`group relative flex w-full items-center gap-2 px-3 py-2.5 rounded-xl border text-left text-sm transition-all duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 ${
+                              isActive
+                                ? 'bg-white text-gray-900 dark:bg-gray-800/80 dark:text-white border-blue-200 shadow-lg shadow-blue-100/60 dark:shadow-none'
+                                : 'bg-white/60 dark:bg-gray-900/20 border-transparent text-gray-600 dark:text-gray-400 hover:border-gray-200 hover:bg-white/90 dark:hover:border-gray-800 dark:hover:bg-gray-900/40'
+                            } ${isDoctorExperienceLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          >
+                            {triggerBody}
+                          </TabsTrigger>
+                        );
+                      })}
+                    </TabsList>
+                  </TooltipProvider>
+                </div>
               </div>
 
+              <div className="flex-1 w-full lg:pl-4 xl:pl-6">
+                {activeAppointmentTab && (
+                  <div className="mb-3">
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{activeAppointmentTab.label}</h2>
+                    {activeAppointmentTab.subLabel && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{activeAppointmentTab.subLabel}</p>
+                    )}
+                  </div>
+                )}
 
               {/* Current - Mobile Responsive */}
-              <TabsContent value="current" className="p-2 sm:p-4 flex-1 overflow-auto">
+              <TabsContent value="current" className="space-y-4 pt-2">
                 {/* Status Filters & Sync Controls */}
                 <div className="mb-2 sm:mb-3">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -1043,13 +1179,13 @@ export const ClinicalDashboard: React.FC = () => {
                       </div>
                       <Button
                         variant="outline"
-                        size="sm"
+                        size="icon"
                         onClick={handleManualRefresh}
                         disabled={isRefreshing}
-                        className="h-8 sm:h-9 border-gray-200 dark:border-gray-700 text-blue-600 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-gray-800"
+                        className="h-7 w-7 sm:h-8 sm:w-8 border-gray-200 dark:border-gray-700 text-blue-600 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-gray-800"
                       >
-                        <RefreshCw className={`h-3.5 w-3.5 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                        {isRefreshing ? 'Refreshing' : 'Refresh'}
+                        <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        <span className="sr-only">Refresh</span>
                       </Button>
                     </div>
                   </div>
@@ -1225,7 +1361,7 @@ export const ClinicalDashboard: React.FC = () => {
                 {/* Past - Mobile Responsive */}
                 </TabsContent>
 
-                <TabsContent value="past" className="p-2 sm:p-4 flex-1 overflow-auto">
+                <TabsContent value="past" className="space-y-4 pt-2">
                   <div className="space-y-4">
                   <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-700/50 p-3 md:p-4 shadow-sm">
                     <div className="flex flex-wrap items-end gap-3">
@@ -1395,7 +1531,7 @@ export const ClinicalDashboard: React.FC = () => {
               </TabsContent>
 
               {/* Future - Mobile Responsive */}
-              <TabsContent value="future" className="p-2 sm:p-4 flex-1 overflow-auto">
+              <TabsContent value="future" className="space-y-4 pt-2">
                 <div className="space-y-4">
                   <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-700/50 p-3 md:p-4 shadow-sm">
                     <div className="flex flex-wrap items-end gap-3">
@@ -1568,90 +1704,82 @@ export const ClinicalDashboard: React.FC = () => {
                   </div>
                 </div>
               </TabsContent>
+              </div>
             </Tabs>
             )}
-          </div>
         </div>
       )}
 
-      {/* Doctor Calendar - embedded in DocBoard */}
-      {activeNavButton === 'calendar' && (
-        <div className="flex-1 overflow-hidden">
-          <div className="w-full mx-auto p-2 sm:p-4 h-full overflow-y-auto">
-            <Suspense fallback={<div className="p-6 text-center">Loading calendar...</div>}>
-              <DoctorCalendar />
-            </Suspense>
-          </div>
-        </div>
-      )}
-
-      {/* AI Assistant - embedded in DocBoard */}
-      {activeNavButton === 'assistant' && (
-        <div className="flex-1 overflow-hidden">
-          <div className="w-full mx-auto p-2 sm:p-4 h-full overflow-y-auto">
-            <Suspense fallback={<div className="p-6 text-center">Loading assistant...</div>}>
-              <DocAI />
-            </Suspense>
-          </div>
-        </div>
-      )}
-
-      {/* Prescription Settings */}
-      {activeNavButton === 'settings'  && (
-        <div className="flex-1 min-h-0 overflow-hidden">
-          <div className="h-full flex flex-col">
-            {/* Prescription Settings Header */}
-            <div className="flex-shrink-0 p-2 sm:p-4 border-b border-gray-200 bg-white">
+          {/* Doctor Calendar - embedded in DocBoard */}
+          {activeNavButton === 'calendar' && (
+            <div className="w-full mx-auto px-3 sm:px-6 py-2 sm:py-4">
+              <Suspense fallback={<div className="p-6 text-center">Loading calendar...</div>}>
+                <DoctorCalendar />
+              </Suspense>
             </div>
+          )}
 
-            {/* Unified Prescription Settings Navigation - Mobile Responsive */}
-            <div className="flex-shrink-0 p-2 sm:p-3 border-b border-gray-200">
-              <Tabs value={settingsTab} onValueChange={(value) => setSettingsTab(value as 'fields' | 'personalized')}>
-                <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-gray-700 h-auto">
-                  <TabsTrigger 
-                    value="fields" 
-                    className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-green-50 dark:hover:bg-green-900/20"
-                  >
-                    <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span className="font-medium hidden sm:inline">Fields</span>
-                    <span className="font-medium sm:hidden">Fields</span>
-                    {settingsTab === 'fields' && (
-                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
-                    )}
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="personalized" 
-                    className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-purple-50 dark:hover:bg-purple-900/20"
-                  >
-                    <Database className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span className="font-medium hidden sm:inline">Personal Data</span>
-                    <span className="font-medium sm:hidden">Personal</span>
-                    {settingsTab === 'personalized' && (
-                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
-                    )}
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+          {/* AI Assistant - embedded in DocBoard */}
+          {activeNavButton === 'assistant' && (
+            <div className="w-full mx-auto px-3 sm:px-6 py-2 sm:py-4">
+              <Suspense fallback={<div className="p-6 text-center">Loading assistant...</div>}>
+                <DocAI />
+              </Suspense>
             </div>
+          )}
 
-            {/* Prescription Settings Content - Mobile Responsive */}
-            <div className="flex-1 min-h-0 overflow-y-auto">
-              <Tabs value={settingsTab} onValueChange={(value) => setSettingsTab(value as 'fields' | 'personalized')}>
-                <TabsContent value="fields" className="h-full m-0">
-                  <div className="p-2 sm:p-4 max-h-[calc(100vh-220px)] overflow-y-auto">
-                    <PrescriptionCustomizePanel showCloseButton={false} defaultTab="fields" />
-                  </div>
-                </TabsContent>
-                <TabsContent value="personalized" className="h-full m-0">
-                  <div className="p-2 sm:p-4 max-h-[calc(100vh-220px)] overflow-y-auto">
-                    <PrescriptionCustomizePanel showCloseButton={false} defaultTab="personalized" />
-                  </div>
-                </TabsContent>
-              </Tabs>
+          {/* Prescription Settings */}
+          {activeNavButton === 'settings'  && (
+            <div className="w-full mx-auto px-3 sm:px-6 py-2 sm:py-4 space-y-4">
+              {/* Unified Prescription Settings Navigation - Mobile Responsive */}
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-2 sm:p-3 shadow-sm">
+                <Tabs value={settingsTab} onValueChange={(value) => setSettingsTab(value as 'fields' | 'personalized')}>
+                  <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-gray-700 h-auto">
+                <TabsTrigger 
+                  value="fields" 
+                  className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-green-50 dark:hover:bg-green-900/20"
+                >
+                  <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="font-medium hidden sm:inline">Fields</span>
+                  <span className="font-medium sm:hidden">Fields</span>
+                  {settingsTab === 'fields' && (
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="personalized" 
+                  className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                >
+                  <Database className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="font-medium hidden sm:inline">Personal Data</span>
+                  <span className="font-medium sm:hidden">Personal</span>
+                  {settingsTab === 'personalized' && (
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
+                  )}
+                </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+
+              {/* Prescription Settings Content - Mobile Responsive */}
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+                <Tabs value={settingsTab} onValueChange={(value) => setSettingsTab(value as 'fields' | 'personalized')}>
+                  <TabsContent value="fields" className="m-0">
+                    <div className="p-2 sm:p-4">
+                      <PrescriptionCustomizePanel showCloseButton={false} defaultTab="fields" />
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="personalized" className="m-0">
+                    <div className="p-2 sm:p-4">
+                      <PrescriptionCustomizePanel showCloseButton={false} defaultTab="personalized" />
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
+
+      </div>
 
       {/* Cancel Confirmation Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
@@ -1690,7 +1818,6 @@ export const ClinicalDashboard: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      </div>
     </div>
   );
 }; 

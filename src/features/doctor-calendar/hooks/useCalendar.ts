@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { timeOffApi } from '../api/timeOffApi';
 import { overrideApi } from '../api/overrideApi';
@@ -10,8 +11,13 @@ import {
 // Query keys
 export const calendarKeys = {
   all: ['doctor-calendar'] as const,
-  events: (doctorId: string, fromISO: string, toISO: string) => 
-    [...calendarKeys.all, 'events', doctorId, fromISO, toISO] as const,
+  events: (
+    doctorId: string,
+    hospitalId: string,
+    fromISO: string,
+    toISO: string,
+    configFingerprint: string
+  ) => [...calendarKeys.all, 'events', doctorId, hospitalId, fromISO, toISO, configFingerprint] as const,
   timeOff: (doctorId: string) => [...calendarKeys.all, 'timeOff', doctorId] as const,
   config: (doctorId: string, hospitalId: string, startDate: string, days: number) => 
     [...calendarKeys.all, 'config', doctorId, hospitalId, startDate, days] as const,
@@ -35,9 +41,38 @@ export function useDoctorCalendarConfig(doctorId: string, hospitalId: string, st
   });
 }
 
-export function useCalendarEvents(doctorId: string,hospitalId:string, fromISO: string, toISO: string, calendarConfig?: DoctorCalendarConfigResponse) {
+export function useCalendarEvents(
+  doctorId: string,
+  hospitalId: string,
+  fromISO: string,
+  toISO: string,
+  calendarConfig?: DoctorCalendarConfigResponse
+) {
+  const configFingerprint = useMemo(() => {
+    if (!calendarConfig?.shiftInfo) return 'no-config';
+
+    try {
+      return JSON.stringify(
+        calendarConfig.shiftInfo.map(info => ({
+          shiftDate: info.shiftDate,
+          details: info.shiftDayDetails.map(detail => ({
+            overrideId: detail.overrideId,
+            shiftName: detail.shiftName,
+            startTime: detail.startTime,
+            endTime: detail.endTime,
+            slotDurationInMinutes: detail.slotDurationInMinutes,
+            recurringDays: detail.recurringDays,
+          }))
+        }))
+      );
+    } catch (error) {
+      console.warn('Failed to fingerprint calendarConfig.shiftInfo', error);
+      return `config-${calendarConfig.shiftInfo.length}`;
+    }
+  }, [calendarConfig]);
+
   return useQuery<CalendarEvent[]>({
-    queryKey: calendarKeys.events(doctorId, fromISO, toISO),
+    queryKey: calendarKeys.events(doctorId, hospitalId, fromISO, toISO, configFingerprint),
     queryFn: async () => {
       const allEvents: CalendarEvent[] = [];
 
@@ -53,38 +88,33 @@ export function useCalendarEvents(doctorId: string,hospitalId:string, fromISO: s
       if (calendarConfig?.shiftInfo) {
         calendarConfig.shiftInfo.forEach((shiftInfo, shiftIndex) => {
           shiftInfo.shiftDayDetails.forEach((shiftDetail, detailIndex) => {
-            // Parse date from string format "2025-08-26"
-            const shiftDate = new Date(shiftInfo.shiftDate);
-            
-            // Parse time strings (format: "14:00:00")
             const startTimeStr = shiftDetail.startTime;
             const endTimeStr = shiftDetail.endTime;
-            
-            const [startHour, startMinute, startSecond = 0] = startTimeStr.split(':').map(Number);
-            const [endHour, endMinute, endSecond = 0] = endTimeStr.split(':').map(Number);
 
-            // Create event start and end times
-            const eventStart = new Date(shiftDate);
-            eventStart.setHours(startHour, startMinute, startSecond);
-            
-            const eventEnd = new Date(shiftDate);
-            eventEnd.setHours(endHour, endMinute, endSecond);
+            const eventStart = buildShiftDate(shiftInfo.shiftDate, startTimeStr);
+            const eventEnd = buildShiftDate(shiftInfo.shiftDate, endTimeStr);
            
+            const dataSource = resolveShiftDataSource({
+              explicitSource: shiftDetail.dataSource || shiftInfo.dataSource || calendarConfig.dataSource,
+              overrideId: shiftDetail.overrideId,
+            });
+            const colors = getShiftColors(dataSource);
             const shiftBlockEvent: CalendarEvent = {
               id: `shift-${shiftIndex}-${detailIndex}`,
               type: 'shift',
               title: `${shiftDetail.shiftName} Shift`,
               start: eventStart.toISOString(),
               end: eventEnd.toISOString(),
-              backgroundColor: getShiftColor(shiftDetail.shiftName),
-              borderColor: getShiftColor(shiftDetail.shiftName),
+              backgroundColor: colors.background,
+              borderColor: colors.border,
               extendedProps: {
                 shiftName: shiftDetail.shiftName,
                 slotDuration: shiftDetail.slotDurationInMinutes,
                 overrideId: shiftDetail.overrideId,
                 recurringDays: shiftDetail.recurringDays,
-                source: 'override',
-                isOverride: true,
+                source: dataSource,
+                dataSource,
+                isOverride: dataSource === 'Override',
                 sourceId: shiftDetail.overrideId,
                 startTime: shiftDetail.startTime,
                 endTime: shiftDetail.endTime
@@ -101,35 +131,30 @@ export function useCalendarEvents(doctorId: string,hospitalId:string, fromISO: s
           
           if (day.effectiveShifts) {
             day.effectiveShifts.forEach((shift: any, shiftIndex: number) => {
-              // Parse date from day.date
-              const shiftDate = new Date(day.date);
-              
-              // Parse time strings (assuming format like "09:00")
-              const [startHour, startMinute] = shift.startTime.split(':').map(Number);
-              const [endHour, endMinute] = shift.endTime.split(':').map(Number);
+              const eventStart = buildShiftDate(day.date, shift.startTime);
+              const eventEnd = buildShiftDate(day.date, shift.endTime);
 
-              // Create event start and end times
-              const eventStart = new Date(shiftDate);
-              eventStart.setHours(startHour, startMinute, 0);
-              
-              const eventEnd = new Date(shiftDate);
-              eventEnd.setHours(endHour, endMinute, 0);
-
+              const dataSource = resolveShiftDataSource({
+                explicitSource: shift.sourceType || shift.source,
+                overrideId: shift.sourceId,
+              });
+              const colors = getShiftColors(dataSource);
               const shiftBlockEvent: CalendarEvent = {
                 id: `legacy-shift-${dayIndex}-${shiftIndex}`,
                 type: 'shift',
                 title: `${shift.shiftName} Shift`,
                 start: eventStart.toISOString(),
                 end: eventEnd.toISOString(),
-                backgroundColor: getShiftColor(shift.shiftName),
-                borderColor: getShiftColor(shift.shiftName),
+                backgroundColor: colors.background,
+                borderColor: colors.border,
                 extendedProps: {
                   shiftName: shift.shiftName,
                   slotDuration: shift.slotDurationMinutes,
                   overrideId: shift.sourceId,
                   recurringDays: [],
-                  source: 'override',
-                  isOverride: true,
+                  source: dataSource,
+                  dataSource,
+                  isOverride: dataSource === 'Override',
                   sourceId: shift.sourceId
                 }
               };
@@ -186,24 +211,38 @@ export function useCalendarEvents(doctorId: string,hospitalId:string, fromISO: s
       
       return filteredEvents;
     },
-    enabled: !!doctorId && !!fromISO && !!toISO && (calendarConfig !== undefined),
+    enabled: !!doctorId && !!hospitalId && !!fromISO && !!toISO && (calendarConfig !== undefined),
   });
 }
 
-// Helper function to get shift colors
-function getShiftColor(shiftName: string): string {
-  switch (shiftName.toLowerCase()) {
-    case 'morning':
-      return '#4ade80'; // green
-    case 'afternoon':
-      return '#fbbf24'; // yellow
-    case 'evening':
-      return '#f97316'; // orange
-    case 'night':
-      return '#6366f1'; // indigo
-    default:
-      return '#6b7280'; // gray
-  }
+const SHIFT_COLOR_MAP = {
+  Default: { background: '#bfdbfe', border: '#1d4ed8' },
+  Override: { background: '#bbf7d0', border: '#15803d' }
+} as const;
+
+function getShiftColors(dataSource: 'Default' | 'Override') {
+  return SHIFT_COLOR_MAP[dataSource] || SHIFT_COLOR_MAP.Default;
+}
+
+function resolveShiftDataSource({
+  explicitSource,
+  overrideId,
+}: {
+  explicitSource?: string;
+  overrideId?: string | null;
+}): 'Default' | 'Override' {
+  const normalized = explicitSource?.toLowerCase();
+  if (normalized === 'override') return 'Override';
+  if (normalized === 'default') return 'Default';
+  if (overrideId) return 'Override';
+  return 'Default';
+}
+
+function buildShiftDate(dateStr: string, timeStr: string) {
+  const [hourStr = '0', minuteStr = '0', secondStr = '0'] = timeStr.split(':');
+  const date = new Date(dateStr);
+  date.setHours(Number(hourStr) || 0, Number(minuteStr) || 0, Number(secondStr) || 0, 0);
+  return date;
 }
 
 // Time-off mutations
@@ -230,14 +269,15 @@ export function useDeleteTimeOff() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: timeOffApi.deleteDoctorTimeOff,
-    onSuccess: (data) => {
-      // Invalidate all time-off queries
+    mutationFn: ({ doctorId, hospitalId, timeOffId }: { doctorId: string; hospitalId: string; timeOffId: string }) =>
+      timeOffApi.deleteDoctorTimeOff(timeOffId),
+    onSuccess: (data, variables) => {
+      // Invalidate time-off data for this doctor
       queryClient.invalidateQueries({
-        queryKey: [...calendarKeys.all, 'timeOff']
+        queryKey: calendarKeys.timeOff(variables.doctorId)
       });
       
-      // Invalidate all calendar events
+      // Invalidate all calendar events (partial key match)
       queryClient.invalidateQueries({
         queryKey: [...calendarKeys.all, 'events']
       });
@@ -247,40 +287,14 @@ export function useDeleteTimeOff() {
 
 // Override mutations
 export function useCreateOverride() {
-  const queryClient = useQueryClient();
-  
   return useMutation({
     mutationFn: overrideApi.createDoctorOverride,
-    onSuccess: (data, variables) => {
-      // Invalidate calendar config for the doctor
-      queryClient.invalidateQueries({
-        queryKey: [...calendarKeys.all, 'config', variables.doctorId]
-      });
-      
-      // Invalidate calendar events
-      queryClient.invalidateQueries({
-        queryKey: [...calendarKeys.all, 'events', variables.doctorId]
-      });
-    },
   });
 }
 
 export function useDeleteOverride() {
-  const queryClient = useQueryClient();
-  
   return useMutation({
     mutationFn: overrideApi.deleteDoctorOverride,
-    onSuccess: (data) => {
-      // Invalidate all calendar config queries
-      queryClient.invalidateQueries({
-        queryKey: [...calendarKeys.all, 'config']
-      });
-      
-      // Invalidate all calendar events
-      queryClient.invalidateQueries({
-        queryKey: [...calendarKeys.all, 'events']
-      });
-    },
   });
 }
 
