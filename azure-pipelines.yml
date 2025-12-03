@@ -1,6 +1,13 @@
 # azure-pipelines-swa.yml
 trigger:
-  - main
+  branches:
+    include:
+      - 'release-*'  # only release branches
+
+pr:
+  branches:
+    include:
+      - 'release-*'  # only PRs from release branches
 
 pool:
   vmImage: 'ubuntu-latest'
