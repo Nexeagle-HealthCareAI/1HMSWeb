@@ -420,7 +420,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                   {/* Search Field Dropdown */}
                   <div className="flex gap-2">
                     <Select value={searchField} onValueChange={(value: string) => setSearchField(value as 'patientId' | 'name' | 'appointmentId' | 'contact')}>
-                      <SelectTrigger className="text-xs h-8 flex-1">
+                      <SelectTrigger className="text-xs h-8 flex-1 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
                         <SelectValue placeholder="Select search field" />
                       </SelectTrigger>
                       <SelectContent>
@@ -437,7 +437,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={getSearchPlaceholder(searchField)}
-                    className="text-xs h-8"
+                    className="text-xs h-8 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm"
                   />
                   
                   {/* Search Help Text */}
