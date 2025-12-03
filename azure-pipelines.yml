@@ -75,3 +75,57 @@ stages:
         azure_static_web_apps_api_token: $(SWA_DEPLOYMENT_TOKEN_WEB_QA)
       env:
         VITE_API_BASE_URL: $(VITE_API_BASE_URL)
+
+# ============ PROD (build + deploy, gated) ============
+- stage: Deploy_Prod
+  displayName: Deploy to PROD
+  dependsOn: Deploy_QA
+  # Only for release-* and when deployProd==true
+  condition: >
+    and(
+      succeeded(),
+      startsWith(variables['Build.SourceBranch'], 'refs/heads/release-'),
+      eq(${{ parameters.deployProd }}, true)
+    )
+  variables:
+  - group: swa-secrets-prod  # contains: SWA_DEPLOYMENT_TOKEN_WEB_PROD, VITE_API_BASE_URL
+  jobs:
+  # Use a deployment job so we can attach an Environment with approvals
+  - deployment: Prod
+    displayName: Deploy (PROD) via SWA build
+    environment: 'PROD'   # <-- Create this Environment in DevOps and add approvals/checks
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+
+          # Gate: enforce explicit PROD release date (UTC)
+          - bash: |
+              set -euo pipefail
+              REL='${{ parameters.prodReleaseDateUtc }}'
+              if [ -z "$REL" ]; then
+                echo "Parameter prodReleaseDateUtc is required for PROD."; exit 1
+              fi
+              now=$(date -u +%s)
+              rel=$(date -u -d "$REL" +%s || true)
+              if [ -z "$rel" ]; then
+                echo "Invalid prodReleaseDateUtc format: $REL"
+                echo "Use e.g. '2025-12-05 10:30:00' (UTC)"; exit 1
+              fi
+              if [ $now -lt $rel ]; then
+                echo "Release blocked until $REL UTC"; exit 2
+              fi
+              echo "Release date gate passed (now >= $REL UTC)."
+            displayName: 'Gate: PROD release date (UTC)'
+
+          - task: AzureStaticWebApp@0
+            displayName: 'Deploy to Azure Static Web App (PROD)'
+            inputs:
+              app_location: '$(appLocation)'
+              api_location: ''
+              output_location: '$(buildDir)'
+              skip_app_build: false
+              azure_static_web_apps_api_token: $(SWA_DEPLOYMENT_TOKEN_WEB_PROD)
+            env:
+              VITE_API_BASE_URL: $(VITE_API_BASE_URL)
