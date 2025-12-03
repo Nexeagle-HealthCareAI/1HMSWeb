@@ -15,11 +15,11 @@ parameters:
   default: ''             # e.g. '2025-12-05 21:30:00' (IST, 24h, no timezone suffix)
 
 variables:
-  appLocation: '.'        # if your Vite app is in a subfolder, e.g. 'site'
-  buildDir: 'dist'        # Vite output
+  appLocation: '.'
+  buildDir: 'dist'
 
 stages:
-# ============ DEV (build + deploy) ============
+# ============ DEV ============
 - stage: Deploy_Dev
   displayName: Deploy to Dev
   variables:
@@ -29,7 +29,6 @@ stages:
     displayName: Deploy (Dev) via SWA build
     steps:
     - checkout: self
-
     - task: AzureStaticWebApp@0
       displayName: 'Deploy to Azure Static Web App (Dev)'
       inputs:
@@ -41,7 +40,7 @@ stages:
       env:
         VITE_API_BASE_URL: $(VITE_API_BASE_URL)
 
-# ============ QA (build + deploy) ============
+# ============ QA ============
 - stage: Deploy_QA
   displayName: Deploy to QA
   dependsOn: Deploy_Dev
@@ -53,7 +52,6 @@ stages:
     displayName: Deploy (QA) via SWA build
     steps:
     - checkout: self
-
     - task: AzureStaticWebApp@0
       displayName: 'Deploy to Azure Static Web App (QA)'
       inputs:
@@ -65,24 +63,47 @@ stages:
       env:
         VITE_API_BASE_URL: $(VITE_API_BASE_URL)
 
-# ============ PROD (time-gated + approval) ============
+# ============ PROD GATE (agentless manual approval) ============
+- stage: Prod_Gate
+  displayName: "Prod Gate (Manual Approval)"
+  dependsOn: Deploy_QA
+  condition: and(succeeded(), eq('${{ parameters.deployProd }}','true'))
+  jobs:
+  - job: ManualApproval
+    displayName: "Manual approval for Prod"
+    pool: server   # <-- required for ManualValidation
+    steps:
+    - task: ManualValidation@0
+      displayName: "Approve Prod SWA deploy"
+      timeoutInMinutes: 1440
+      inputs:
+        notifyUsers: ''
+        instructions: |
+          Approve Prod SWA deploy.
+          Branch: $(Build.SourceBranch)
+          Commit: $(Build.SourceVersion)
+          Scheduled IST: ${{ parameters.prodReleaseDateIst }}
+        onTimeout: 'reject'
+
+# ============ PROD (time-gated + environment approvals optional) ============
 - stage: Deploy_Prod
   displayName: Deploy to Prod
-  dependsOn: Deploy_QA
-  condition: and(succeeded(), eq('${{ parameters.deployProd }}', 'true'))
+  dependsOn:
+    - Prod_Gate
+  condition: and(succeeded(), eq('${{ parameters.deployProd }}','true'))
   variables:
   - group: swa-secrets-prod  # SWA_DEPLOYMENT_TOKEN_WEB_PROD, VITE_API_BASE_URL
   jobs:
   - deployment: Prod
     displayName: Deploy (Prod) via SWA build
-    environment: 'prod'      # Configure approvals in Pipelines → Environments → prod
+    environment: 'prod'   # Configure additional approvals in Environments if you want a second gate
     strategy:
       runOnce:
         deploy:
           steps:
           - checkout: self
 
-          # Time gate: wait until prodReleaseDateIst (IST) if provided
+          # Time gate in IST (runs on agent)
           - bash: |
               set -euo pipefail
               REL="${PROD_DATE}"
@@ -112,19 +133,6 @@ stages:
             displayName: "Time gate (IST)"
             env:
               PROD_DATE: ${{ parameters.prodReleaseDateIst }}
-
-          # (Optional) Manual check inside the deployment job (in addition to Environment approval)
-          - task: ManualValidation@0
-            displayName: "Manual approval (final check)"
-            timeoutInMinutes: 1440
-            inputs:
-              notifyUsers: ''
-              instructions: |
-                Approve Prod SWA deploy.
-                Branch: $(Build.SourceBranch)
-                Commit: $(Build.SourceVersion)
-                Scheduled IST: ${{ parameters.prodReleaseDateIst }}
-              onTimeout: 'reject'
 
           - task: AzureStaticWebApp@0
             displayName: 'Deploy to Azure Static Web App (Prod)'
