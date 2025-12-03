@@ -10,6 +10,14 @@ pr:
     include:
       - 'release-*'
       - 'feature/*'
+# ----- PROD runtime controls -----
+parameters:
+- name: prodReleaseDateUtc
+  type: string
+  default: ''        # e.g. '2025-12-05 10:30:00' (UTC)
+- name: deployProd
+  type: boolean
+  default: false     # must be set true when you intend to deploy PROD
 
 pool:
   vmImage: 'ubuntu-latest'
