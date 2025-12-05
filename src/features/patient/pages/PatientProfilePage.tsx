@@ -29,7 +29,7 @@ import {
   PatientProfileModal
 } from '../components';
 import EPrescriptionPad from '@/pages/EPrescriptionPad';
-import PrescriptionCustomizePanel from '@/components/prescription/PrescriptionCustomizePanel';
+import PrescriptionCustomizePanel from '@/features/prescription/components/PrescriptionCustomizePanel';
 import { usePatientProfile } from '../hooks/usePatientProfile';
 import { useAuthStore } from '@/store/authStore';
 import { PatientProfileData } from '../services/patientProfileApi';

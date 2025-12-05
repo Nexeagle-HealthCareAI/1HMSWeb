@@ -31,7 +31,8 @@ import {
   ClipboardCheck,
   CircleCheck,
   Expand,
-  LucideIcon
+  LucideIcon,
+  LayoutDashboard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -50,7 +51,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { PrescriptionCustomizePanel } from '@/components/prescription/PrescriptionCustomizePanel';
+import { PrescriptionCustomizePanel } from '@/features/prescription/components/PrescriptionCustomizePanel';
+import { PrescriptionLayout } from '@/features/prescription/components/layout/PrescriptionLayout';
 import { format, subDays, addDays } from 'date-fns';
 import { useAuthStore } from '@/store/authStore';
 import { appointmentApi } from '@/features/appointment/services/appointmentApi';
@@ -106,7 +108,7 @@ export const ClinicalDashboard: React.FC = () => {
   const [appointmentToCancel, setAppointmentToCancel] = useState<PatientAppointment | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [activeNavButton, setActiveNavButton] = useState<'appointments' | 'settings' | 'calendar' | 'assistant'>('appointments');
-  const [settingsTab, setSettingsTab] = useState<'fields' | 'personalized'>('fields');
+  const [settingsTab, setSettingsTab] = useState<'fields' | 'personalized' | 'layout'>('fields');
   const headerRef = useRef<HTMLDivElement>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
   const [windowWidth, setWindowWidth] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1920));
@@ -1733,37 +1735,48 @@ export const ClinicalDashboard: React.FC = () => {
             <div className="w-full mx-auto px-3 sm:px-6 py-2 sm:py-4 space-y-4">
               {/* Unified Prescription Settings Navigation - Mobile Responsive */}
               <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-2 sm:p-3 shadow-sm">
-                <Tabs value={settingsTab} onValueChange={(value) => setSettingsTab(value as 'fields' | 'personalized')}>
-                  <TabsList className="grid w-full grid-cols-2 bg-gray-100 dark:bg-gray-700 h-auto">
-                <TabsTrigger 
-                  value="fields" 
-                  className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-green-50 dark:hover:bg-green-900/20"
-                >
-                  <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="font-medium hidden sm:inline">Fields</span>
-                  <span className="font-medium sm:hidden">Fields</span>
-                  {settingsTab === 'fields' && (
-                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="personalized" 
-                  className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-purple-50 dark:hover:bg-purple-900/20"
-                >
-                  <Database className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="font-medium hidden sm:inline">Personal Data</span>
-                  <span className="font-medium sm:hidden">Personal</span>
-                  {settingsTab === 'personalized' && (
-                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
-                  )}
-                </TabsTrigger>
+                <Tabs value={settingsTab} onValueChange={(value) => setSettingsTab(value as 'fields' | 'personalized' | 'layout')}>
+                  <TabsList className="grid w-full grid-cols-3 bg-gray-100 dark:bg-gray-700 h-auto">
+                    <TabsTrigger 
+                      value="fields" 
+                      className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-green-50 dark:hover:bg-green-900/20"
+                    >
+                      <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <span className="font-medium hidden sm:inline">Fields</span>
+                      <span className="font-medium sm:hidden">Fields</span>
+                      {settingsTab === 'fields' && (
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
+                      )}
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="personalized" 
+                      className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                    >
+                      <Database className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <span className="font-medium hidden sm:inline">Personal Data</span>
+                      <span className="font-medium sm:hidden">Personal</span>
+                      {settingsTab === 'personalized' && (
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
+                      )}
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="layout" 
+                      className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                    >
+                      <LayoutDashboard className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <span className="font-medium hidden sm:inline">Layout Lab</span>
+                      <span className="font-medium sm:hidden">Layout</span>
+                      {settingsTab === 'layout' && (
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
+                      )}
+                    </TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
 
               {/* Prescription Settings Content - Mobile Responsive */}
               <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-                <Tabs value={settingsTab} onValueChange={(value) => setSettingsTab(value as 'fields' | 'personalized')}>
+                <Tabs value={settingsTab} onValueChange={(value) => setSettingsTab(value as 'fields' | 'personalized' | 'layout')}>
                   <TabsContent value="fields" className="m-0">
                     <div className="p-2 sm:p-4">
                       <PrescriptionCustomizePanel showCloseButton={false} defaultTab="fields" />
@@ -1772,6 +1785,11 @@ export const ClinicalDashboard: React.FC = () => {
                   <TabsContent value="personalized" className="m-0">
                     <div className="p-2 sm:p-4">
                       <PrescriptionCustomizePanel showCloseButton={false} defaultTab="personalized" />
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="layout" className="m-0">
+                    <div className="p-2 sm:p-4">
+                      <PrescriptionLayout />
                     </div>
                   </TabsContent>
                 </Tabs>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { usePrescriptionFieldConfig } from '@/features/doctor/hooks/usePrescriptionFieldConfig';
+import { usePrescriptionFieldConfig } from '@/features/prescription/hooks/usePrescriptionFieldConfig';
 import { useAuthStore } from '@/store/authStore';
-import { prescriptionFieldConfigApi } from '@/features/doctor/services/prescriptionFieldConfigApi';
+import { prescriptionFieldConfigApi } from '@/features/prescription/services/prescriptionFieldConfigApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
