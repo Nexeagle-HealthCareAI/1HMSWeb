@@ -19,9 +19,10 @@ interface PreviewPanelProps {
   typography: TypographySettings;
   overflowStrategy: 'reuse-template' | 'blank';
   templateFile: File | null;
+  templateUrl?: string | null;
 }
 
-export const PreviewPanel = ({ previewUrl, zoom, isGenerating, onZoomChange, onOpen, isTestEnabled = false, margins, typography, overflowStrategy, templateFile }: PreviewPanelProps) => {
+export const PreviewPanel = ({ previewUrl, zoom, isGenerating, onZoomChange, onOpen, isTestEnabled = false, margins, typography, overflowStrategy, templateFile, templateUrl }: PreviewPanelProps) => {
   const [isTestModalOpen, setIsTestModalOpen] = useState(false);
   const openTestModal = () => {
     if (!isTestEnabled) return;
@@ -72,6 +73,7 @@ export const PreviewPanel = ({ previewUrl, zoom, isGenerating, onZoomChange, onO
         typography={typography}
         overflowStrategy={overflowStrategy}
         templateFile={templateFile}
+        templateUrl={templateUrl}
       />
     </Card>
   );

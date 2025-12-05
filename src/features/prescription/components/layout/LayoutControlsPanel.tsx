@@ -19,10 +19,10 @@ interface LayoutControlsPanelProps {
   templateError: string | null;
   isAnalyzingTemplate: boolean;
   onTemplateUpload: (file: File) => void;
-  onApplyRecommendedMargins?: () => void;
   typography: TypographySettings;
   onTypographyChange: (next: Partial<TypographySettings>) => void;
   onSaveLayout?: () => void;
+  isSavingLayout?: boolean;
 }
 
 const clampMargin = (value: number) => {
@@ -46,10 +46,10 @@ export const LayoutControlsPanel = ({
   templateError,
   isAnalyzingTemplate,
   onTemplateUpload,
-  onApplyRecommendedMargins,
   typography,
   onTypographyChange,
   onSaveLayout,
+  isSavingLayout,
 }: LayoutControlsPanelProps) => {
   const handleMarginInput = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -98,11 +98,6 @@ export const LayoutControlsPanel = ({
                   Non-A4 upload converted from {templateMeta.originalPageSize.width} × {templateMeta.originalPageSize.height}{' '}
                   {templateMeta.originalPageSize.unit} to standard A4 before previewing.
                 </p>
-              )}
-              {onApplyRecommendedMargins && (
-                <Button type="button" variant="secondary" size="sm" className="mt-3" onClick={onApplyRecommendedMargins}>
-                  Apply recommended margins
-                </Button>
               )}
             </div>
           )}
@@ -247,8 +242,8 @@ export const LayoutControlsPanel = ({
           </div>
 
           <div className="flex justify-end">
-            <Button type="button" onClick={onSaveLayout} disabled={!onSaveLayout}>
-              Save layout settings
+            <Button type="button" onClick={onSaveLayout} disabled={!onSaveLayout || isSavingLayout}>
+              {isSavingLayout ? 'Saving...' : 'Save layout settings'}
             </Button>
           </div>
         </CardContent>

@@ -1,8 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { PDFDocument } from 'pdf-lib';
 import { jsPDF } from 'jspdf';
 import { usePrescriptionStore } from '@/store/prescription';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthStore } from '@/store/authStore';
+import { prescriptionFieldConfigApi } from '@/features/doctor/services/prescriptionFieldConfigApi';
+import { usePrescriptionLayoutSettings } from '@/features/prescription/hooks/usePrescriptionFieldConfig';
+import { resolveTemplateFetchUrl } from '@/features/prescription/utils/templateFetch';
 
 export interface MarginConfig {
   top: number;
@@ -152,6 +156,20 @@ const isA4Size = (widthPt: number, heightPt: number) => {
   return isApproximately(shorter, 210, 3) && isApproximately(longer, 297, 3);
 };
 
+const resolvePositiveNumber = (value: number | null | undefined, fallback: number) => (typeof value === 'number' && value > 0 ? value : fallback);
+const isValidFontFamily = (value: string | null | undefined): value is TypographySettings['family'] => {
+  if (!value) return false;
+  return ['Helvetica', 'Times', 'Courier', 'Arial', 'Georgia'].includes(value);
+};
+const resolveFontWeight = (value: string | null | undefined, fallback: TypographySettings['weight']): TypographySettings['weight'] => {
+  if (!value) return fallback;
+  const normalized = value.toLowerCase();
+  if (normalized === 'bold') return 'bold';
+  if (normalized === 'medium') return 'medium';
+  if (normalized === 'regular') return 'regular';
+  return fallback;
+};
+
 type A4CompatibilityResult = {
   file: File;
   wasConverted: boolean;
@@ -163,6 +181,10 @@ type A4CompatibilityResult = {
 export const usePrescriptionDesigner = () => {
   const { settings, update } = usePrescriptionStore();
   const { toast } = useToast();
+  const doctorId = useAuthStore((state) => state.doctorId);
+  const hospitalId = useAuthStore((state) => state.hospitalId);
+  const userId = useAuthStore((state) => state.userId);
+  const { layoutSettings, refetchLayoutSettings } = usePrescriptionLayoutSettings();
 
   const [templateMeta, setTemplateMeta] = useState<TemplateMetadata | null>(null);
   const [templateError, setTemplateError] = useState<string | null>(null);
@@ -171,8 +193,14 @@ export const usePrescriptionDesigner = () => {
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const [zoom, setZoom] = useState(100);
   const [overflowStrategy, setOverflowStrategy] = useState<'reuse-template' | 'blank'>('reuse-template');
-  const [templatePreviewUrl, setTemplatePreviewUrl] = useState<string | null>(null);
   const [templateFile, setTemplateFile] = useState<File | null>(null);
+  const [templateUploadSuccessOpen, setTemplateUploadSuccessOpen] = useState(false);
+  const [templateUploadSuccessMessage, setTemplateUploadSuccessMessage] = useState('Template uploaded successfully.');
+  const [isSavingLayout, setIsSavingLayout] = useState(false);
+  const [layoutSaveSuccessOpen, setLayoutSaveSuccessOpen] = useState(false);
+  const [layoutSaveSuccessMessage, setLayoutSaveSuccessMessage] = useState('Layout settings saved successfully.');
+  const lastServerTemplateUriRef = useRef<string | null>(null);
+  const lastAppliedLayoutSettingsRef = useRef<string | null>(null);
 
   const layoutMargins: MarginConfig = settings.page?.margin ?? defaultMargins;
   const orientation: 'portrait' | 'landscape' = settings.page?.orientation ?? 'portrait';
@@ -185,24 +213,6 @@ export const usePrescriptionDesigner = () => {
   };
 
   const previewData: PrescriptionDesignerData = defaultDesignerData;
-
-  const applyRecommendedMargins = useCallback(() => {
-    if (!templateMeta) return;
-    update({
-      page: {
-        ...settings.page,
-        margin: templateMeta.recommendedMargins,
-      },
-      pdf: {
-        ...settings.pdf,
-        margin: templateMeta.recommendedMargins,
-      },
-    });
-    toast({
-      title: 'Margins applied',
-      description: 'Template-derived margins copied to layout controls.',
-    });
-  }, [settings.page, settings.pdf, templateMeta, toast, update]);
 
   const updateMargins = useCallback((margins: MarginConfig) => {
     update({
@@ -225,6 +235,51 @@ export const usePrescriptionDesigner = () => {
       },
     });
   }, [typography, update]);
+
+  const layoutSettingsSignature = layoutSettings
+    ? JSON.stringify({
+        headerHeight: layoutSettings.headerHeight ?? null,
+        footerHeight: layoutSettings.footerHeight ?? null,
+        contentLeftMargin: layoutSettings.contentLeftMargin ?? null,
+        contentRightMargin: layoutSettings.contentRightMargin ?? null,
+        overFlowPage: layoutSettings.overFlowPage ?? null,
+        fontFamily: layoutSettings.fontFamily ?? null,
+        fontSize: layoutSettings.fontSize ?? null,
+        fontWeight: layoutSettings.fontWeight ?? null,
+        textColour: layoutSettings.textColour ?? null,
+      })
+    : null;
+
+  useEffect(() => {
+    if (!layoutSettings || !layoutSettingsSignature) return;
+    if (lastAppliedLayoutSettingsRef.current === layoutSettingsSignature) return;
+
+    lastAppliedLayoutSettingsRef.current = layoutSettingsSignature;
+
+    const nextMargins: MarginConfig = {
+      top: resolvePositiveNumber(layoutSettings.headerHeight, defaultMargins.top),
+      bottom: resolvePositiveNumber(layoutSettings.footerHeight, defaultMargins.bottom),
+      left: resolvePositiveNumber(layoutSettings.contentLeftMargin, defaultMargins.left),
+      right: resolvePositiveNumber(layoutSettings.contentRightMargin, defaultMargins.right),
+    };
+
+    updateMargins(nextMargins);
+
+    const nextOverflow = layoutSettings.overFlowPage ? 'reuse-template' : 'blank';
+    setOverflowStrategy(nextOverflow);
+
+    const resolvedFamily = isValidFontFamily(layoutSettings.fontFamily) ? layoutSettings.fontFamily : typography.family;
+    const resolvedSize = resolvePositiveNumber(layoutSettings.fontSize, typography.size);
+    const resolvedWeight = resolveFontWeight(layoutSettings.fontWeight, typography.weight);
+    const resolvedColor = layoutSettings.textColour && layoutSettings.textColour.trim().length > 0 ? layoutSettings.textColour : typography.color;
+
+    updateTypography({
+      family: resolvedFamily,
+      size: resolvedSize,
+      weight: resolvedWeight,
+      color: resolvedColor,
+    });
+  }, [layoutSettings, layoutSettingsSignature, typography, updateMargins, setOverflowStrategy, updateTypography]);
 
   const ensureA4Compatibility = useCallback(async (file: File): Promise<A4CompatibilityResult> => {
     const buffer = await file.arrayBuffer();
@@ -310,20 +365,156 @@ export const usePrescriptionDesigner = () => {
     };
   }, [toast]);
 
+  const uploadTemplateToServer = useCallback(async (originalFile: File) => {
+    if (!doctorId || !userId) {
+      toast({
+        title: 'Missing information',
+        description: 'Doctor or user details are unavailable. Please reload and try again.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    try {
+      await prescriptionFieldConfigApi.uploadTemplate({
+        file: originalFile,
+        doctorId,
+        hospitalId: hospitalId ?? undefined,
+        loggedInUserId: userId,
+      });
+      return true;
+    } catch (error) {
+      console.error('Template upload failed', error);
+      toast({
+        title: 'Upload failed',
+        description: 'We could not upload this template to the server. Please try again.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  }, [doctorId, hospitalId, toast, userId]);
+
 
   const revokePreviewUrl = useCallback((url: string | null) => {
-    if (url) {
+    if (url && url.startsWith('blob:')) {
       URL.revokeObjectURL(url);
     }
   }, []);
 
   useEffect(() => () => revokePreviewUrl(previewUrl), [previewUrl, revokePreviewUrl]);
-  useEffect(() => () => {
-    if (templatePreviewUrl) {
-      URL.revokeObjectURL(templatePreviewUrl);
-    }
-  }, [templatePreviewUrl]);
 
+  useEffect(() => {
+    const uri = layoutSettings?.uri;
+    if (!uri) return;
+
+    setPreviewUrl((currentUrl) => {
+      if (currentUrl === uri) {
+        return currentUrl;
+      }
+      revokePreviewUrl(currentUrl);
+      return uri;
+    });
+
+    if (uri === lastServerTemplateUriRef.current) return;
+
+    const fetchUrl = resolveTemplateFetchUrl(uri);
+    if (!fetchUrl) return;
+
+    let isCancelled = false;
+
+    const hydrateTemplateFromServer = async () => {
+      try {
+        const response = await fetch(fetchUrl, {
+          method: 'GET',
+          mode: 'cors',
+          cache: 'no-store',
+          credentials: 'omit',
+          referrerPolicy: 'no-referrer',
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to fetch template: ${response.status}`);
+        }
+        const blob = await response.blob();
+        if (isCancelled) return;
+
+        const arrayBuffer = await blob.arrayBuffer();
+        if (isCancelled) return;
+
+        const pdfDoc = await PDFDocument.load(arrayBuffer);
+        if (isCancelled) return;
+
+        const firstPage = pdfDoc.getPages()[0];
+        const widthPt = firstPage?.getWidth() ?? A4_WIDTH_PT;
+        const heightPt = firstPage?.getHeight() ?? A4_HEIGHT_PT;
+        const orientationHint: 'portrait' | 'landscape' = widthPt > heightPt ? 'landscape' : 'portrait';
+
+        const deriveMargin = () => ({
+          top: resolvePositiveNumber(layoutSettings?.headerHeight, defaultMargins.top),
+          bottom: resolvePositiveNumber(layoutSettings?.footerHeight, defaultMargins.bottom),
+          left: resolvePositiveNumber(layoutSettings?.contentLeftMargin, defaultMargins.left),
+          right: resolvePositiveNumber(layoutSettings?.contentRightMargin, defaultMargins.right),
+        });
+
+        const normalizedMargins = deriveMargin();
+        const fileNameCandidate = uri.split('?')[0]?.split('/')?.pop() || 'prescription-template.pdf';
+        let sanitizedFileName = fileNameCandidate;
+        try {
+          sanitizedFileName = decodeURIComponent(fileNameCandidate);
+        } catch (decodeError) {
+          console.warn('Unable to decode template filename from URI', decodeError);
+        }
+        const mimeType = blob.type && blob.type.length > 0 ? blob.type : 'application/pdf';
+        const serverFile = new File([arrayBuffer], sanitizedFileName, { type: mimeType });
+
+        setTemplateFile(serverFile);
+        setTemplateMeta({
+          fileName: sanitizedFileName,
+          fileSizeKb: Math.max(1, Math.round(serverFile.size / 1024)),
+          pageSize: {
+            width: Number(formatMm(widthPt)),
+            height: Number(formatMm(heightPt)),
+            unit: 'mm',
+          },
+          orientationHint,
+          recommendedMargins: normalizedMargins,
+          trimBox: normalizedMargins,
+          cropBox: normalizedMargins,
+          analyzedAt: new Date().toISOString(),
+          wasConverted: false,
+          originalPageSize: undefined,
+        });
+        lastServerTemplateUriRef.current = uri;
+      } catch (error) {
+        console.error('Failed to hydrate template from layout settings', error);
+      }
+    };
+
+    hydrateTemplateFromServer();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [layoutSettings?.uri, layoutSettings?.headerHeight, layoutSettings?.footerHeight, layoutSettings?.contentLeftMargin, layoutSettings?.contentRightMargin, revokePreviewUrl]);
+
+  useEffect(() => {
+    if (!layoutSettings) return;
+    const normalizedMargins = {
+      top: resolvePositiveNumber(layoutSettings.headerHeight, defaultMargins.top),
+      bottom: resolvePositiveNumber(layoutSettings.footerHeight, defaultMargins.bottom),
+      left: resolvePositiveNumber(layoutSettings.contentLeftMargin, defaultMargins.left),
+      right: resolvePositiveNumber(layoutSettings.contentRightMargin, defaultMargins.right),
+    };
+
+    setTemplateMeta((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        recommendedMargins: normalizedMargins,
+        trimBox: normalizedMargins,
+        cropBox: normalizedMargins,
+      };
+    });
+  }, [layoutSettings?.headerHeight, layoutSettings?.footerHeight, layoutSettings?.contentLeftMargin, layoutSettings?.contentRightMargin]);
   const handleTemplateUpload = useCallback(async (file: File) => {
     setIsAnalyzingTemplate(true);
     setTemplateError(null);
@@ -341,14 +532,6 @@ export const usePrescriptionDesigner = () => {
         height: Number(pageSizeMm.height.toFixed(1)),
         unit: 'mm' as const,
       };
-
-      const templateDisplayUrl = URL.createObjectURL(compatibleFile);
-      setTemplatePreviewUrl((current) => {
-        if (current) {
-          URL.revokeObjectURL(current);
-        }
-        return templateDisplayUrl;
-      });
 
       const meta: TemplateMetadata = {
         fileName: compatibleFile.name,
@@ -376,6 +559,13 @@ export const usePrescriptionDesigner = () => {
       revokePreviewUrl(previewUrl);
       setPreviewUrl(objectUrl);
 
+      const didUpload = await uploadTemplateToServer(compatibleFile);
+      if (didUpload) {
+        setTemplateUploadSuccessMessage('Template uploaded successfully.');
+        setTemplateUploadSuccessOpen(true);
+        refetchLayoutSettings();
+      }
+
       toast({
         title: wasConverted ? 'Converted template ready' : 'Template ready',
         description: wasConverted
@@ -388,7 +578,7 @@ export const usePrescriptionDesigner = () => {
     } finally {
       setIsAnalyzingTemplate(false);
     }
-  }, [ensureA4Compatibility, layoutMargins, previewUrl, revokePreviewUrl, toast]);
+  }, [ensureA4Compatibility, layoutMargins, previewUrl, refetchLayoutSettings, revokePreviewUrl, toast, uploadTemplateToServer]);
 
   const generatePreview = useCallback(async () => {
     setIsGeneratingPreview(true);
@@ -478,12 +668,61 @@ export const usePrescriptionDesigner = () => {
     window.open(previewUrl, '_blank', 'noopener');
   }, [previewUrl]);
 
+  const saveLayoutSettings = useCallback(async () => {
+    if (!doctorId || !userId) {
+      toast({
+        title: 'Missing information',
+        description: 'Doctor or user details are unavailable. Please reload and try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSavingLayout(true);
+    try {
+      await prescriptionFieldConfigApi.updatePrescriptionSettings({
+        hospitalId: hospitalId ?? undefined,
+        doctorId,
+        headerHeight: layoutMargins.top,
+        footerHeight: layoutMargins.bottom,
+        contentLeftMargin: layoutMargins.left,
+        contentRightMargin: layoutMargins.right,
+        overFlowPage: overflowStrategy === 'reuse-template',
+        fontFamily: typography.family,
+        fontSize: typography.size,
+        fontWeight: typography.weight,
+        textColour: typography.color,
+        loggedInUserId: userId,
+      });
+
+      toast({
+        title: 'Layout saved',
+        description: 'Prescription layout settings updated successfully.',
+      });
+
+      setLayoutSaveSuccessMessage('Prescription layout settings updated successfully.');
+      setLayoutSaveSuccessOpen(true);
+
+      await refetchLayoutSettings();
+    } catch (error) {
+      console.error('Failed to save layout settings', error);
+      toast({
+        title: 'Save failed',
+        description: 'Unable to save layout settings. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingLayout(false);
+    }
+  }, [doctorId, hospitalId, layoutMargins.bottom, layoutMargins.left, layoutMargins.right, layoutMargins.top, overflowStrategy, refetchLayoutSettings, toast, typography.color, typography.family, typography.size, typography.weight, userId]);
+
+  const serverTemplateUri = layoutSettings?.uri ?? null;
+
   return {
     templateMeta,
     templateError,
     isAnalyzingTemplate,
     handleTemplateUpload,
-    applyRecommendedMargins,
     layoutMargins,
     updateMargins,
     typography,
@@ -496,7 +735,17 @@ export const usePrescriptionDesigner = () => {
     openPreviewInNewTab,
     overflowStrategy,
     setOverflowStrategy,
-    templatePreviewUrl,
     templateFile,
+    templateUploadSuccessOpen,
+    setTemplateUploadSuccessOpen,
+    templateUploadSuccessMessage,
+    layoutSaveSuccessOpen,
+    setLayoutSaveSuccessOpen,
+    layoutSaveSuccessMessage,
+    refetchLayoutSettings,
+    serverTemplateUri,
+    serverLayoutSettings: layoutSettings,
+    saveLayoutSettings,
+    isSavingLayout,
   };
 };

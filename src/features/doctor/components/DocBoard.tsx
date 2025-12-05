@@ -109,6 +109,7 @@ export const ClinicalDashboard: React.FC = () => {
   const [isCancelling, setIsCancelling] = useState(false);
   const [activeNavButton, setActiveNavButton] = useState<'appointments' | 'settings' | 'calendar' | 'assistant'>('appointments');
   const [settingsTab, setSettingsTab] = useState<'fields' | 'personalized' | 'layout'>('fields');
+  const [layoutRefreshToken, setLayoutRefreshToken] = useState(0);
   const headerRef = useRef<HTMLDivElement>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
   const [windowWidth, setWindowWidth] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1920));
@@ -172,6 +173,19 @@ export const ClinicalDashboard: React.FC = () => {
       description: 'Personalize layouts'
     }
   ];
+
+  const handleSettingsTabChange = (value: 'fields' | 'personalized' | 'layout') => {
+    setSettingsTab(value);
+    if (value === 'layout') {
+      setLayoutRefreshToken((token) => token + 1);
+    }
+  };
+
+  const handleLayoutTabClick = () => {
+    if (settingsTab === 'layout') {
+      setLayoutRefreshToken((token) => token + 1);
+    }
+  };
 
   // Compute API date window based on tab
   const { startDate: apiStartDate, endDate: apiEndDate } = useMemo(() => {
@@ -1735,7 +1749,7 @@ export const ClinicalDashboard: React.FC = () => {
             <div className="w-full mx-auto px-3 sm:px-6 py-2 sm:py-4 space-y-4">
               {/* Unified Prescription Settings Navigation - Mobile Responsive */}
               <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-2 sm:p-3 shadow-sm">
-                <Tabs value={settingsTab} onValueChange={(value) => setSettingsTab(value as 'fields' | 'personalized' | 'layout')}>
+                <Tabs value={settingsTab} onValueChange={(value) => handleSettingsTabChange(value as 'fields' | 'personalized' | 'layout')}>
                   <TabsList className="grid w-full grid-cols-3 bg-gray-100 dark:bg-gray-700 h-auto">
                     <TabsTrigger 
                       value="fields" 
@@ -1761,6 +1775,7 @@ export const ClinicalDashboard: React.FC = () => {
                     </TabsTrigger>
                     <TabsTrigger 
                       value="layout" 
+                      onClick={handleLayoutTabClick}
                       className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                     >
                       <LayoutDashboard className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -1776,7 +1791,7 @@ export const ClinicalDashboard: React.FC = () => {
 
               {/* Prescription Settings Content - Mobile Responsive */}
               <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-                <Tabs value={settingsTab} onValueChange={(value) => setSettingsTab(value as 'fields' | 'personalized' | 'layout')}>
+                <Tabs value={settingsTab} onValueChange={(value) => handleSettingsTabChange(value as 'fields' | 'personalized' | 'layout')}>
                   <TabsContent value="fields" className="m-0">
                     <div className="p-2 sm:p-4">
                       <PrescriptionCustomizePanel showCloseButton={false} defaultTab="fields" />
@@ -1789,7 +1804,7 @@ export const ClinicalDashboard: React.FC = () => {
                   </TabsContent>
                   <TabsContent value="layout" className="m-0">
                     <div className="p-2 sm:p-4">
-                      <PrescriptionLayout />
+                      <PrescriptionLayout refreshToken={layoutRefreshToken} />
                     </div>
                   </TabsContent>
                 </Tabs>

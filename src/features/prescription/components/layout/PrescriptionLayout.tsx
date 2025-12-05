@@ -1,9 +1,23 @@
+import { useEffect } from 'react';
 import { LayoutControlsPanel } from '@/features/prescription/components/layout/LayoutControlsPanel';
 import { PreviewPanel } from '@/features/prescription/components/layout/PreviewPanel';
+import { TemplateUploadSuccessModal } from '@/features/prescription/components/modals/TemplateUploadSuccessModal';
+import { LayoutSaveSuccessModal } from '@/features/prescription/components/modals/LayoutSaveSuccessModal';
 import { usePrescriptionDesigner } from '@/features/prescription/hooks/usePrescriptionDesigner';
 
-export const PrescriptionLayout = () => {
+interface PrescriptionLayoutProps {
+  refreshToken?: number;
+}
+
+export const PrescriptionLayout = ({ refreshToken }: PrescriptionLayoutProps) => {
   const designer = usePrescriptionDesigner();
+  const { refetchLayoutSettings } = designer;
+
+  useEffect(() => {
+    if (typeof refreshToken === 'number') {
+      refetchLayoutSettings();
+    }
+  }, [refreshToken, refetchLayoutSettings]);
 
   return (
     <div className="space-y-6">
@@ -25,10 +39,10 @@ export const PrescriptionLayout = () => {
             templateError={designer.templateError}
             isAnalyzingTemplate={designer.isAnalyzingTemplate}
             onTemplateUpload={designer.handleTemplateUpload}
-            onApplyRecommendedMargins={designer.applyRecommendedMargins}
             typography={designer.typography}
             onTypographyChange={designer.updateTypography}
-            onSaveLayout={designer.generatePreview}
+            onSaveLayout={designer.saveLayoutSettings}
+            isSavingLayout={designer.isSavingLayout}
           />
         </div>
         <PreviewPanel
@@ -37,13 +51,24 @@ export const PrescriptionLayout = () => {
           isGenerating={designer.isGeneratingPreview}
           onZoomChange={(value) => designer.setZoom(value)}
           onOpen={designer.openPreviewInNewTab}
-          isTestEnabled={Boolean(designer.templateMeta)}
+          isTestEnabled={Boolean(designer.templateMeta || designer.serverTemplateUri)}
           margins={designer.layoutMargins}
           typography={designer.typography}
           overflowStrategy={designer.overflowStrategy}
           templateFile={designer.templateFile}
+          templateUrl={designer.serverTemplateUri}
         />
       </div>
+      <TemplateUploadSuccessModal
+        open={designer.templateUploadSuccessOpen}
+        onOpenChange={designer.setTemplateUploadSuccessOpen}
+        message={designer.templateUploadSuccessMessage}
+      />
+      <LayoutSaveSuccessModal
+        open={designer.layoutSaveSuccessOpen}
+        onOpenChange={designer.setLayoutSaveSuccessOpen}
+        message={designer.layoutSaveSuccessMessage}
+      />
     </div>
   );
 };

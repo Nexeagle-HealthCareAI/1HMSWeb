@@ -103,6 +103,15 @@ export const API_ENDPOINTS = {
     UPLOAD_ASSET: 'prescription/assets/upload',
     GET_ASSETS: (doctorId: string) => `prescription/assets?doctorId=${doctorId}`,
     DELETE_ASSET: 'prescription/assets/remove',
+    UPLOAD_TEMPLATE: 'prescription-settings/upload-template',
+    UPDATE_SETTINGS: 'prescription-settings',
+    GET_SETTINGS: (doctorId: string, hospitalId?: string) => {
+      const params = [`doctorId=${encodeURIComponent(doctorId)}`];
+      if (hospitalId) {
+        params.push(`hospitalId=${encodeURIComponent(hospitalId)}`);
+      }
+      return `prescription-settings?${params.join('&')}`;
+    },
   },
 } as const;
 

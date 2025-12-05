@@ -7,6 +7,7 @@ import { generatePrescription } from '@/features/prescription/utils/generatePres
 import { generateTemplateBoundPrescription } from '@/features/prescription/utils/generateTemplateBoundPrescription';
 import { defaultPrescriptionData } from '@/features/prescription/utils/prescriptionTestData';
 import { MarginConfig, PrescriptionDesignerData, TypographySettings } from '@/features/prescription/hooks/usePrescriptionDesigner';
+import { resolveTemplateFetchUrl } from '@/features/prescription/utils/templateFetch';
 
 interface TestModalProps {
   open: boolean;
@@ -15,9 +16,41 @@ interface TestModalProps {
   typography: TypographySettings;
   overflowStrategy: 'reuse-template' | 'blank';
   templateFile: File | null;
+  templateUrl?: string | null;
 }
 
-export const TestModal = ({ open, onOpenChange, margins, typography, overflowStrategy, templateFile }: TestModalProps) => {
+const deriveFileNameFromUrl = (url: string) => {
+  const withoutQuery = url.split('?')[0] ?? url;
+  const candidate = withoutQuery.split('/').pop() || 'prescription-template.pdf';
+  try {
+    return decodeURIComponent(candidate);
+  } catch {
+    return candidate;
+  }
+};
+
+const downloadTemplateFromUrl = async (url: string): Promise<File> => {
+  const fetchTarget = resolveTemplateFetchUrl(url);
+  if (!fetchTarget) {
+    throw new Error('Template url is missing. Upload a template before running the test.');
+  }
+
+  const response = await fetch(fetchTarget, {
+    method: 'GET',
+    mode: 'cors',
+    cache: 'no-store',
+    credentials: 'omit',
+    referrerPolicy: 'no-referrer',
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to download template: ${response.status}`);
+  }
+  const blob = await response.blob();
+  const fileName = deriveFileNameFromUrl(url);
+  return new File([await blob.arrayBuffer()], fileName, { type: blob.type || 'application/pdf' });
+};
+
+export const TestModal = ({ open, onOpenChange, margins, typography, overflowStrategy, templateFile, templateUrl }: TestModalProps) => {
   const [jsonValue, setJsonValue] = useState(() => JSON.stringify(defaultPrescriptionData, null, 2));
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [parsedPrescription, setParsedPrescription] = useState<PrescriptionDesignerData | null>(defaultPrescriptionData);
@@ -69,11 +102,16 @@ export const TestModal = ({ open, onOpenChange, margins, typography, overflowStr
     try {
       const headerHeight = margins.top;
       const footerHeight = margins.bottom;
+      let resolvedTemplateFile = templateFile;
+
+      if (!resolvedTemplateFile && templateUrl) {
+        resolvedTemplateFile = await downloadTemplateFromUrl(templateUrl);
+      }
 
       let blob: Blob;
-      if (templateFile) {
+      if (resolvedTemplateFile) {
         blob = await generateTemplateBoundPrescription({
-          templateFile,
+          templateFile: resolvedTemplateFile,
           layout: {
             margins,
             headerHeight,
@@ -102,11 +140,13 @@ export const TestModal = ({ open, onOpenChange, margins, typography, overflowStr
         URL.revokeObjectURL(generatedPreviewUrl);
       }
       setGeneratedPreviewUrl(nextUrl);
-      setPreviewMode('generated');
       setJsonError(null);
     } catch (error) {
       console.error('Failed to generate test preview', error);
-      setJsonError('Unable to generate preview. Check console for details.');
+      const message = error instanceof Error
+        ? error.message
+        : 'Unable to generate preview. Check console for details.';
+      setJsonError(message);
     } finally {
       setIsGenerating(false);
     }
@@ -152,7 +192,4 @@ export const TestModal = ({ open, onOpenChange, margins, typography, overflowStr
     </Dialog>
   );
 };
-function setPreviewMode(arg0: string) {
-    throw new Error('Function not implemented.');
-}
 

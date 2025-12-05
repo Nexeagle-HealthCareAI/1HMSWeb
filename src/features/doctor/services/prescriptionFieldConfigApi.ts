@@ -54,6 +54,63 @@ export interface UpdatePrescriptionFieldPreferenceResponse {
   message: string;
 }
 
+export interface PrescriptionLayoutSettings {
+  prescriptionSettingsId?: string;
+  hospitalId?: string;
+  doctorId?: string;
+  headerHeight?: number | null;
+  footerHeight?: number | null;
+  contentLeftMargin?: number | null;
+  contentRightMargin?: number | null;
+  overFlowPage?: boolean | null;
+  fontFamily?: string | null;
+  fontSize?: number | null;
+  fontWeight?: string | null;
+  textColour?: string | null;
+  uri?: string | null;
+  createdAtUtc?: string | null;
+  updatedAtUtc?: string | null;
+}
+
+export interface PrescriptionLayoutSettingsResponse {
+  success: boolean;
+  message: string;
+  data: PrescriptionLayoutSettings | null;
+}
+
+export interface UploadPrescriptionTemplateRequest {
+  file: File;
+  doctorId: string;
+  hospitalId?: string;
+  loggedInUserId: string;
+}
+
+export interface UploadPrescriptionTemplateResponse {
+  success: boolean;
+  message: string;
+  templateUrl?: string;
+}
+
+export interface UpdatePrescriptionLayoutSettingsRequest {
+  hospitalId?: string;
+  doctorId: string;
+  headerHeight: number;
+  footerHeight: number;
+  contentLeftMargin: number;
+  contentRightMargin: number;
+  overFlowPage: boolean;
+  fontFamily: string;
+  fontSize: number;
+  fontWeight: string;
+  textColour: string;
+  loggedInUserId: string;
+}
+
+export interface UpdatePrescriptionLayoutSettingsResponse {
+  success: boolean;
+  message: string;
+}
+
 export const prescriptionFieldConfigApi = {
   /**
    * Get doctor's prescription field preferences
@@ -89,6 +146,60 @@ export const prescriptionFieldConfigApi = {
      
       return response;
     } catch (error) {     
+      throw error;
+    }
+  },
+
+  /**
+   * Upload PDF template for prescription designer
+   */
+  async uploadTemplate(payload: UploadPrescriptionTemplateRequest): Promise<UploadPrescriptionTemplateResponse> {
+    try {
+      const formData = new FormData();
+      formData.append('File', payload.file);
+      formData.append('DoctorId', payload.doctorId);
+      if (payload.hospitalId) {
+        formData.append('HospitalId', payload.hospitalId);
+      }
+      formData.append('LoggedInUserId', payload.loggedInUserId);
+
+      const response = await apiClient.post<UploadPrescriptionTemplateResponse>(API_ENDPOINTS.PRESCRIPTION.UPLOAD_TEMPLATE, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getPrescriptionSettings(doctorId: string, hospitalId?: string): Promise<PrescriptionLayoutSettingsResponse> {
+    try {
+      const response = await apiClient.get<PrescriptionLayoutSettingsResponse>(
+        API_ENDPOINTS.PRESCRIPTION.GET_SETTINGS(doctorId, hospitalId)
+      );
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch prescription settings', error);
+      return {
+        success: false,
+        message: 'Unable to fetch prescription settings',
+        data: null,
+      };
+    }
+  },
+
+  async updatePrescriptionSettings(payload: UpdatePrescriptionLayoutSettingsRequest): Promise<UpdatePrescriptionLayoutSettingsResponse> {
+    try {
+      const response = await apiClient.put<UpdatePrescriptionLayoutSettingsResponse>(
+        API_ENDPOINTS.PRESCRIPTION.UPDATE_SETTINGS,
+        payload
+      );
+      return response;
+    } catch (error) {
+      console.error('Failed to update prescription settings', error);
       throw error;
     }
   }

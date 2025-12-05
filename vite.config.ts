@@ -42,6 +42,12 @@ export default defineConfig(({ mode }) => {
         '/auth': createProxyConfig(),
         '/admin': createProxyConfig(),
         '/patient-profile': createProxyConfig(),
+        '/blob-proxy': {
+          target: 'https://easyhmsblob.blob.core.windows.net',
+          changeOrigin: true,
+          secure: true,
+          rewrite: (path: string) => path.replace(/^\/blob-proxy/, ''),
+        },
       }
     },
     preview: {

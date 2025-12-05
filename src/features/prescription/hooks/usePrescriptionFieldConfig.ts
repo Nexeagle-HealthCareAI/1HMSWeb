@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
 import { prescriptionFieldConfigApi } from '../services/prescriptionFieldConfigApi';
+import type { PrescriptionLayoutSettings } from '../services/prescriptionFieldConfigApi';
 import { toast } from '@/hooks/use-toast';
 
 // Types
@@ -219,5 +220,46 @@ export const usePrescriptionFieldConfig = () => {
     updateFieldConfig,
     saveFieldConfiguration,
     isSaving: updatePreferencesMutation.isPending
+  };
+};
+
+const defaultLayoutSettings: Required<Pick<PrescriptionLayoutSettings, 'headerHeight' | 'footerHeight' | 'contentLeftMargin' | 'contentRightMargin'>> = {
+  headerHeight: 20,
+  footerHeight: 20,
+  contentLeftMargin: 20,
+  contentRightMargin: 20,
+};
+
+const normalizeLayoutSettings = (data: PrescriptionLayoutSettings | null): PrescriptionLayoutSettings | null => {
+  if (!data) return null;
+  return {
+    ...data,
+    headerHeight: typeof data.headerHeight === 'number' && data.headerHeight > 0 ? data.headerHeight : defaultLayoutSettings.headerHeight,
+    footerHeight: typeof data.footerHeight === 'number' && data.footerHeight > 0 ? data.footerHeight : defaultLayoutSettings.footerHeight,
+    contentLeftMargin: typeof data.contentLeftMargin === 'number' && data.contentLeftMargin > 0 ? data.contentLeftMargin : defaultLayoutSettings.contentLeftMargin,
+    contentRightMargin: typeof data.contentRightMargin === 'number' && data.contentRightMargin > 0 ? data.contentRightMargin : defaultLayoutSettings.contentRightMargin,
+  };
+};
+
+export const usePrescriptionLayoutSettings = () => {
+  const { getDoctorId, hospitalId: storedHospitalId, getHospitalId } = useAuthStore();
+  const doctorId = getDoctorId() || '';
+  const hospitalId = storedHospitalId || getHospitalId?.() || '';
+
+  const settingsQuery = useQuery({
+    queryKey: ['prescriptionLayoutSettings', doctorId, hospitalId],
+    queryFn: async () => {
+      return prescriptionFieldConfigApi.getPrescriptionSettings(doctorId, hospitalId);
+    },
+    enabled: Boolean(doctorId && hospitalId),
+    retry: 1,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  return {
+    layoutSettings: normalizeLayoutSettings(settingsQuery.data?.data ?? null),
+    isLoadingLayoutSettings: settingsQuery.isLoading,
+    layoutSettingsError: settingsQuery.error,
+    refetchLayoutSettings: settingsQuery.refetch,
   };
 };
