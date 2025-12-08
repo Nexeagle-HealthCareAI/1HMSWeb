@@ -3,11 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { generatePrescription } from '@/features/prescription/utils/generatePrescription';
-import { generateTemplateBoundPrescription } from '@/features/prescription/utils/generateTemplateBoundPrescription';
 import { defaultPrescriptionData } from '@/features/prescription/utils/prescriptionTestData';
 import { MarginConfig, PrescriptionDesignerData, TypographySettings } from '@/features/prescription/hooks/usePrescriptionDesigner';
 import { resolveTemplateFetchUrl } from '@/features/prescription/utils/templateFetch';
+import { buildTemplateBoundPreview, TemplateBoundLayoutConfig } from '@/components/shared/prescription-preview/services/previewRenderer';
 
 interface TestModalProps {
   open: boolean;
@@ -110,29 +109,30 @@ export const TestModal = ({ open, onOpenChange, margins, typography, overflowStr
 
       let blob: Blob;
       if (resolvedTemplateFile) {
-        blob = await generateTemplateBoundPrescription({
+        const layoutConfig: TemplateBoundLayoutConfig = {
+          margins,
+          headerHeight,
+          footerHeight,
+          overflowStrategy,
+        };
+        blob = await buildTemplateBoundPreview({
           templateFile: resolvedTemplateFile,
-          layout: {
-            margins,
-            headerHeight,
-            footerHeight,
-            overflowStrategy,
-          },
+          layout: layoutConfig,
           typography,
           prescription: parsedPrescription,
         });
-      } else {
-        blob = generatePrescription({
-          layout: {
-            margins,
-            headerHeight,
-            footerHeight,
-            overflowStrategy,
-            templateBackgroundDataUrl: undefined,
-          },
-          typography,
-          prescription: parsedPrescription,
-        });
+      // } else {
+      //   blob = buildDynamicPreview({
+      //     layout: {
+      //       margins,
+      //       headerHeight,
+      //       footerHeight,
+      //       overflowStrategy,
+      //       templateBackgroundDataUrl: undefined,
+      //     },
+      //     typography,
+      //     prescription: parsedPrescription,
+      //   });
       }
 
       const nextUrl = URL.createObjectURL(blob);

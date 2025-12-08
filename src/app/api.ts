@@ -105,6 +105,7 @@ export const API_ENDPOINTS = {
     DELETE_ASSET: 'prescription/assets/remove',
     UPLOAD_TEMPLATE: 'prescription-settings/upload-template',
     UPDATE_SETTINGS: 'prescription-settings',
+    GENERATE_DETAILS: 'e-prescription/generate-prescription-details',
     GET_SETTINGS: (doctorId: string, hospitalId?: string) => {
       const params = [`doctorId=${encodeURIComponent(doctorId)}`];
       if (hospitalId) {

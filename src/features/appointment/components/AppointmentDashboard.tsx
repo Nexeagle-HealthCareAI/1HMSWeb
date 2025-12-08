@@ -18,7 +18,8 @@ import {
   RefreshCw,
   Wifi,
   WifiOff,
-  Activity
+  Activity,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -45,14 +46,16 @@ import { format } from 'date-fns';
 import { useAppointmentDetails } from '../hooks/useAppointmentDetails';
 import { useAuthStore } from '@/store/authStore';
 import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 
 import { AppointmentDetail, appointmentApi } from '../services/appointmentApi';
-import { printPrescription } from '@/utils/printPrescription';
+import { PrescriptionPreviewModal, type GeneratePrescriptionDetailsRequest } from '@/components/shared/prescription-preview';
 
 export const AppointmentDashboard = () => {
   const { t } = useTranslation();
   const { hospitalId } = useAuthStore();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDoctor, setSelectedDoctor] = useState('all');
   const [activeTab, setActiveTab] = useState<'current' | 'past' | 'future'>('current');
@@ -75,6 +78,8 @@ export const AppointmentDashboard = () => {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [appointmentToCancel, setAppointmentToCancel] = useState<AppointmentDetail | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewRequest, setPreviewRequest] = useState<GeneratePrescriptionDetailsRequest | null>(null);
 
   const getStatusBadge = (status: AppointmentDetail['finalStatusCode'], appointment?: AppointmentDetail) => {
     switch (status) {
@@ -146,6 +151,13 @@ export const AppointmentDashboard = () => {
   const handleBookingClick = () => {
     setBookingRefreshToken((prev) => prev + 1);
     setShowBooking(true);
+  };
+
+  const handlePreviewModalChange = (open: boolean) => {
+    setPreviewModalOpen(open);
+    if (!open) {
+      setPreviewRequest(null);
+    }
   };
 
   // Manual refresh function
@@ -697,67 +709,31 @@ export const AppointmentDashboard = () => {
   };
 
   const handlePrintPrescription = (appointment: AppointmentDetail) => {
-    // Create patient data from appointment
-    const patientData = {
-      id: appointment.patientId,
-      name: appointment.patientFullName,
-      age: 0, // Would need to be fetched from patient API
-      gender: 'Unknown', // Would need to be fetched from patient API
-      phone: appointment.patientMobile || '',
-      email: '', // Would need to be fetched from patient API
-      address: '', // Would need to be fetched from patient API
-      dateOfBirth: '', // Would need to be fetched from patient API
-      emergencyContact: '' // Would need to be fetched from patient API
-    };
+    if (!hospitalId) {
+      toast({
+        title: 'Missing hospital context',
+        description: 'Please select a hospital before generating prescriptions.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-    // Create vitals data (would need to be fetched from vitals API)
-    const vitalsData = {
-      bloodPressure: '120/80',
-      temperature: '98.6°F',
-      heartRate: '72 bpm',
-      weight: '75 kg',
-      height: '175 cm',
-      bmi: '24.5',
-      oxygenSaturation: '98%'
-    };
+    if (!appointment.appointmentId || !appointment.patientId || !appointment.doctorId) {
+      toast({
+        title: 'Incomplete appointment data',
+        description: 'This appointment is missing identifiers required to generate a prescription.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-    // Create prescription data (would need to be fetched from prescription API)
-    const prescriptionData = {
-      chiefComplaint: 'Chest pain, Shortness of breath',
-      history: 'Family history of heart disease',
-      comorbidity: 'Hypertension, Diabetes',
-      examination: 'Blood pressure elevated, Heart rate regular',
-      diagnosis: 'Hypertension, Diabetes mellitus',
-      orders: {
-        investigations: ['Complete Blood Count', 'ECG', 'Chest X-Ray'],
-        procedures: ['Blood Pressure Monitoring']
-      },
-      medications: [
-        { name: 'Metformin', dosage: '500mg', frequency: 'Twice daily', duration: '30 days' },
-        { name: 'Lisinopril', dosage: '10mg', frequency: 'Once daily', duration: '30 days' }
-      ],
-      privateNotes: 'Follow up in 2 weeks',
-      certificates: 'Medical certificate issued',
-      immunizations: 'Annual flu vaccine recommended',
-      followUp: 'Follow up in 2 weeks',
-      nonPharmacologicalAdvice: 'Regular exercise, low sodium diet',
-      attachments: 'ECG report attached'
-    };
-
-    // Create doctor data (would need to be fetched from doctor API)
-    const doctorData = {
-      name: appointment.doctorName || 'Dr. Sarah Johnson',
-      degree: 'MBBS, MD (Cardiology)',
-      specialization: 'Cardiologist',
-      license: 'MD12345',
-      phone: '+1 (555) 234-5678',
-      email: 'dr.johnson@hospital.com',
-      address: 'Medical Center, 456 Health Street, City, State 12345',
-      signature: appointment.doctorName || 'Dr. Sarah Johnson'
-    };
-
-    // Call the print prescription function
-    printPrescription(patientData, vitalsData, prescriptionData, doctorData);
+    setPreviewRequest({
+      appointmentId: appointment.appointmentId,
+      patientId: appointment.patientId,
+      hospitalId,
+      doctorId: appointment.doctorId,
+    });
+    setPreviewModalOpen(true);
   };
 
   if (showBooking) {
@@ -1219,11 +1195,21 @@ export const AppointmentDashboard = () => {
                                 <Button 
                                   variant="outline" 
                                   size="sm"
+                                  disabled={previewModalOpen && previewRequest?.appointmentId === appointment.appointmentId}
                                   onClick={() => handlePrintPrescription(appointment)}
                                   className="h-6 px-2 text-xs text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-900/20"
                                 >
-                                   <FileText className="h-2.5 w-2.5 mr-1" />
-                                  Print
+                                    {previewModalOpen && previewRequest?.appointmentId === appointment.appointmentId ? (
+                                      <>
+                                        <Loader2 className="h-2.5 w-2.5 mr-1 animate-spin" />
+                                        Preparing
+                                      </>
+                                    ) : (
+                                      <>
+                                        <FileText className="h-2.5 w-2.5 mr-1" />
+                                        Print
+                                      </>
+                                    )}
                                 </Button>
                               </TableCell>
                                
@@ -1384,6 +1370,12 @@ export const AppointmentDashboard = () => {
           patientName={selectedPatientForProfile.patientFullName}
         />
       )}
+
+      <PrescriptionPreviewModal
+        open={previewModalOpen}
+        onOpenChange={handlePreviewModalChange}
+        request={previewRequest}
+      />
 
       {/* Cancel Confirmation Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>

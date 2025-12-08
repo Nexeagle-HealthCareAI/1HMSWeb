@@ -159,7 +159,16 @@ export const generateTemplateBoundPrescription = async ({ templateFile, layout, 
   const patient = prescription.patient ?? { name: '', id: '', age: '', gender: '', phone: '' };
   const doctor = prescription.doctor ?? null;
   const visit = prescription.visit ?? { date: '', location: '', followUp: '' };
-  const vitals = prescription.vitals ?? { bloodPressure: '', pulse: '', temperature: '', spo2: '' };
+  const vitals =
+    prescription.vitals ?? {
+      bloodPressure: '',
+      pulse: '',
+      temperature: '',
+      spo2: '',
+      height: '',
+      weight: '',
+      bmi: '',
+    };
   const chiefComplaints = ensureStringArray(prescription.chiefComplaints);
   const comorbidities = ensureStringArray(prescription.comorbidities);
   const investigations = ensureStringArray(prescription.investigations);

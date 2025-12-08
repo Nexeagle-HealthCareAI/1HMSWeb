@@ -50,6 +50,7 @@ export interface PrescriptionDesignerData {
     age: string;
     gender: string;
     phone: string;
+    details?: { label: string; value: string }[];
   };
   doctor: {
     name: string;
@@ -67,6 +68,9 @@ export interface PrescriptionDesignerData {
     pulse: string;
     temperature: string;
     spo2: string;
+    height?: string;
+    weight?: string;
+    bmi?: string;
   };
   chiefComplaints: string[];
   comorbidities: string[];
@@ -85,6 +89,12 @@ const defaultDesignerData: PrescriptionDesignerData = {
     age: '38',
     gender: 'Male',
     phone: '+1 999 123 4567',
+    details: [
+      { label: 'Patient ID', value: 'PT-000458' },
+      { label: 'Age', value: '38' },
+      { label: 'Gender', value: 'Male' },
+      { label: 'Phone', value: '+1 999 123 4567' },
+    ],
   },
   doctor: {
     name: 'Dr. Maya Desai',
@@ -102,6 +112,9 @@ const defaultDesignerData: PrescriptionDesignerData = {
     pulse: '74 bpm',
     temperature: '98.4 F',
     spo2: '99%',
+    height: '178 cm',
+    weight: '74 kg',
+    bmi: '23.4',
   },
   chiefComplaints: ['Intermittent chest discomfort', 'Shortness of breath on exertion'],
   comorbidities: ['Type 2 Diabetes Mellitus', 'Essential Hypertension'],
