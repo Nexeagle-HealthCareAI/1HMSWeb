@@ -60,6 +60,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useDoctorProfile } from '../hooks/useDoctorProfile';
 import { useDoctorAppointmentDetails } from '../hooks/useDoctorAppointmentDetails';
 import { DoctorAppointmentDetail } from '../services/doctorApi';
+import {
+  PrescriptionPreviewModal,
+  type GeneratePrescriptionDetailsRequest,
+} from '@/components/shared/prescription-preview';
 
 // Lazy-load the calendar page so it only loads when the doctor opens it from the dashboard
 const DoctorCalendar = lazy(() => import('@/features/doctor-calendar/DoctorCalendarPage').then(module => ({ default: module.DoctorCalendarPage })));
@@ -110,6 +114,8 @@ export const ClinicalDashboard: React.FC = () => {
   const [activeNavButton, setActiveNavButton] = useState<'appointments' | 'settings' | 'calendar' | 'assistant'>('appointments');
   const [settingsTab, setSettingsTab] = useState<'fields' | 'personalized' | 'layout'>('fields');
   const [layoutRefreshToken, setLayoutRefreshToken] = useState(0);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewRequest, setPreviewRequest] = useState<GeneratePrescriptionDetailsRequest | null>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
   const [windowWidth, setWindowWidth] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1920));
@@ -184,6 +190,35 @@ export const ClinicalDashboard: React.FC = () => {
   const handleLayoutTabClick = () => {
     if (settingsTab === 'layout') {
       setLayoutRefreshToken((token) => token + 1);
+    }
+  };
+
+  const buildPreviewRequest = (appointment: PatientAppointment): GeneratePrescriptionDetailsRequest | null => {
+    if (!appointment?.appointmentId || !appointment?.patientId || !hospitalId || !doctorId) {
+      return null;
+    }
+    return {
+      appointmentId: appointment.appointmentId,
+      patientId: appointment.patientId,
+      hospitalId,
+      doctorId,
+    };
+  };
+
+  const openPrescriptionPreview = (appointment: PatientAppointment) => {
+    const requestPayload = buildPreviewRequest(appointment);
+    if (!requestPayload) {
+      alert('Prescription preview requires doctor and hospital context.');
+      return;
+    }
+    setPreviewRequest(requestPayload);
+    setPreviewModalOpen(true);
+  };
+
+  const handlePreviewModalChange = (open: boolean) => {
+    setPreviewModalOpen(open);
+    if (!open) {
+      setPreviewRequest(null);
     }
   };
 
@@ -1345,6 +1380,8 @@ export const ClinicalDashboard: React.FC = () => {
                                   variant="outline"
                                   size="sm"
                                   className="h-8 px-3 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                                  disabled={!hospitalId || !doctorId}
+                                  onClick={() => openPrescriptionPreview(appointment)}
                                 >
                                   <FileText className="h-3 w-3 mr-1" />
                                   Print
@@ -1473,7 +1510,13 @@ export const ClinicalDashboard: React.FC = () => {
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="py-3 px-4">
-                                  <Button variant="outline" size="sm" className="h-7 px-3 text-xs">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 px-3 text-xs"
+                                    disabled={!hospitalId || !doctorId}
+                                    onClick={() => openPrescriptionPreview(appointment)}
+                                  >
                                     <FileText className="h-3 w-3 mr-1" />
                                     Print
                                   </Button>
@@ -1656,6 +1699,8 @@ export const ClinicalDashboard: React.FC = () => {
                                     variant="outline"
                                     size="sm"
                                     className="h-8 px-3 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                                    disabled={!hospitalId || !doctorId}
+                                    onClick={() => openPrescriptionPreview(appointment)}
                                   >
                                     <FileText className="h-3 w-3 mr-1" />
                                     Print
@@ -1813,6 +1858,14 @@ export const ClinicalDashboard: React.FC = () => {
           )}
 
       </div>
+
+      <PrescriptionPreviewModal
+        open={previewModalOpen}
+        onOpenChange={handlePreviewModalChange}
+        request={previewRequest}
+        title="Prescription Preview"
+        description="Download, share, or print the prescription PDF."
+      />
 
       {/* Cancel Confirmation Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
