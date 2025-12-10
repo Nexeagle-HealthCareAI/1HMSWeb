@@ -44,8 +44,6 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
     weightUnit: 'kg'
   });
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
   const calculateBMI = () => {
     const height = parseFloat(vitalsData.height);
     const weight = parseFloat(vitalsData.weight);
@@ -76,86 +74,57 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
     return { category: 'Obesity', color: 'text-red-500' };
   };
 
-  const validateVitals = () => {
-    const newErrors: Record<string, string> = {};
-
-    // Blood Pressure validation
-    if (vitalsData.systolic && (parseInt(vitalsData.systolic) < 70 || parseInt(vitalsData.systolic) > 250)) {
-      newErrors.systolic = 'Systolic pressure should be between 70-250 mmHg';
-    }
-    if (vitalsData.diastolic && (parseInt(vitalsData.diastolic) < 40 || parseInt(vitalsData.diastolic) > 150)) {
-      newErrors.diastolic = 'Diastolic pressure should be between 40-150 mmHg';
-    }
-
-    // Heart Rate validation
-    if (vitalsData.heartRate && (parseInt(vitalsData.heartRate) < 30 || parseInt(vitalsData.heartRate) > 220)) {
-      newErrors.heartRate = 'Heart rate should be between 30-220 bpm';
-    }
-
-    // Removed Respiratory Rate and Temperature validation as requested
-
-    // Oxygen Saturation validation
-    if (vitalsData.oxygenSaturation && (parseInt(vitalsData.oxygenSaturation) < 50 || parseInt(vitalsData.oxygenSaturation) > 100)) {
-      newErrors.oxygenSaturation = 'Oxygen saturation should be between 50-100%';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateVitals()) {
-      const bmi = calculateBMI();
-      
-      // Prepare vitals data for API
-      const apiVitalsData = {
-        appointmentId,
-        patientId,
-        vitalsJson: {
-          bp: {
-            sys: parseInt(vitalsData.systolic) || 0,
-            dia: parseInt(vitalsData.diastolic) || 0
-          },
-          pulse: parseInt(vitalsData.heartRate) || 0,
-          tempC: vitalsData.temperatureUnit === 'C' 
-            ? parseFloat(vitalsData.temperature) || 0
-            : ((parseFloat(vitalsData.temperature) || 0) - 32) * 5/9, // Convert F to C
-          spo2: parseInt(vitalsData.oxygenSaturation) || 0,
-          heightCm: vitalsData.heightUnit === 'cm' 
-            ? parseFloat(vitalsData.height) || 0
-            : parseFloat(vitalsData.height) * 30.48, // Convert ft to cm
-          weightKg: vitalsData.weightUnit === 'kg' 
-            ? parseFloat(vitalsData.weight) || 0
-            : parseFloat(vitalsData.weight) * 0.453592, // Convert lbs to kg
-          bmi: parseFloat(bmi) || 0
-        },
-        recordedBy: userId || ''
-      };
-      
-      console.log('Sending vitals API request with:', apiVitalsData);
+    const bmi = calculateBMI();
 
-      // Call the API to save vitals
-      saveVitals(apiVitalsData, {
-        onSuccess: (response) => {
-          if (response.success) {
-            toast.success('Vitals saved successfully!');
-            // Call the original onSubmit with the formatted vitals data
-            onSubmit({
-              ...vitalsData,
-              bmi,
-              bmiCategory: bmi ? getBMICategory(bmi).category : ''
-            });
-          } else {
-            toast.error(response.message || 'Failed to save vitals');
-          }
+    // Prepare vitals data for API
+    const apiVitalsData = {
+      appointmentId,
+      patientId,
+      vitalsJson: {
+        bp: {
+          sys: parseInt(vitalsData.systolic) || 0,
+          dia: parseInt(vitalsData.diastolic) || 0
         },
-        onError: (error) => {
-          console.error('Failed to save vitals:', error);
-          toast.error('Failed to save vitals. Please try again.');
+        pulse: parseInt(vitalsData.heartRate) || 0,
+        tempC: vitalsData.temperatureUnit === 'C' 
+          ? parseFloat(vitalsData.temperature) || 0
+          : ((parseFloat(vitalsData.temperature) || 0) - 32) * 5/9, // Convert F to C
+        spo2: parseInt(vitalsData.oxygenSaturation) || 0,
+        heightCm: vitalsData.heightUnit === 'cm' 
+          ? parseFloat(vitalsData.height) || 0
+          : parseFloat(vitalsData.height) * 30.48, // Convert ft to cm
+        weightKg: vitalsData.weightUnit === 'kg' 
+          ? parseFloat(vitalsData.weight) || 0
+          : parseFloat(vitalsData.weight) * 0.453592, // Convert lbs to kg
+        bmi: parseFloat(bmi) || 0
+      },
+      recordedBy: userId || ''
+    };
+    
+    console.log('Sending vitals API request with:', apiVitalsData);
+
+    // Call the API to save vitals
+    saveVitals(apiVitalsData, {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.success('Vitals saved successfully!');
+          // Call the original onSubmit with the formatted vitals data
+          onSubmit({
+            ...vitalsData,
+            bmi,
+            bmiCategory: bmi ? getBMICategory(bmi).category : ''
+          });
+        } else {
+          toast.error(response.message || 'Failed to save vitals');
         }
-      });
-    }
+      },
+      onError: (error) => {
+        console.error('Failed to save vitals:', error);
+        toast.error('Failed to save vitals. Please try again.');
+      }
+    });
   };
 
   const bmi = calculateBMI();
@@ -192,11 +161,8 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                   value={vitalsData.systolic}
                   onChange={(e) => setVitalsData(prev => ({ ...prev, systolic: e.target.value }))}
                   placeholder="120"
-                  className={`h-9 ${errors.systolic ? "border-red-500" : ""}`}
+                  className="h-9"
                 />
-                {errors.systolic && (
-                  <p className="text-red-500 text-xs mt-1">{errors.systolic}</p>
-                )}
               </div>
 
               <div>
@@ -209,11 +175,8 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                   value={vitalsData.diastolic}
                   onChange={(e) => setVitalsData(prev => ({ ...prev, diastolic: e.target.value }))}
                   placeholder="80"
-                  className={`h-9 ${errors.diastolic ? "border-red-500" : ""}`}
+                  className="h-9"
                 />
-                {errors.diastolic && (
-                  <p className="text-red-500 text-xs mt-1">{errors.diastolic}</p>
-                )}
               </div>
 
               <div>
@@ -226,11 +189,8 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                   value={vitalsData.heartRate}
                   onChange={(e) => setVitalsData(prev => ({ ...prev, heartRate: e.target.value }))}
                   placeholder="72"
-                  className={`h-9 ${errors.heartRate ? "border-red-500" : ""}`}
+                  className="h-9"
                 />
-                {errors.heartRate && (
-                  <p className="text-red-500 text-xs mt-1">{errors.heartRate}</p>
-                )}
               </div>
             </div>
           </Card>
@@ -252,11 +212,8 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                   value={vitalsData.respiratoryRate}
                   onChange={(e) => setVitalsData(prev => ({ ...prev, respiratoryRate: e.target.value }))}
                   placeholder="16"
-                  className={`h-9 ${errors.respiratoryRate ? "border-red-500" : ""}`}
+                  className="h-9"
                 />
-                {errors.respiratoryRate && (
-                  <p className="text-red-500 text-xs mt-1">{errors.respiratoryRate}</p>
-                )}
               </div>
 
               <div>
@@ -271,7 +228,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                     value={vitalsData.temperature}
                     onChange={(e) => setVitalsData(prev => ({ ...prev, temperature: e.target.value }))}
                     placeholder="37.0"
-                    className={`flex-1 h-9 ${errors.temperature ? "border-red-500" : ""}`}
+                    className="flex-1 h-9"
                   />
                   <select
                     value={vitalsData.temperatureUnit}
@@ -282,9 +239,6 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                     <option value="F">°F</option>
                   </select>
                 </div>
-                {errors.temperature && (
-                  <p className="text-red-500 text-xs mt-1">{errors.temperature}</p>
-                )}
               </div>
 
               <div>
@@ -297,11 +251,8 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                   value={vitalsData.oxygenSaturation}
                   onChange={(e) => setVitalsData(prev => ({ ...prev, oxygenSaturation: e.target.value }))}
                   placeholder="98"
-                  className={`h-9 ${errors.oxygenSaturation ? "border-red-500" : ""}`}
+                  className="h-9"
                 />
-                {errors.oxygenSaturation && (
-                  <p className="text-red-500 text-xs mt-1">{errors.oxygenSaturation}</p>
-                )}
               </div>
             </div>
           </Card>
