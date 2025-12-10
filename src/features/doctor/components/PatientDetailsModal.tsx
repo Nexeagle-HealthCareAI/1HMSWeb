@@ -1,20 +1,17 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   X, 
   User, 
   Phone, 
-  Mail, 
   Calendar, 
   Heart, 
   Stethoscope,
   CheckCircle,
   Clock,
   FlaskConical,
-  AlertCircle,
   Edit,
-  Save,
-  Plus,
-  Minus
+  Save
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -59,6 +56,7 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
   onStatusUpdate,
   onVitalsUpdate
 }) => {
+  const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
   const [vitals, setVitals] = useState({
     bloodPressure: patient?.bloodPressure || '120/80',
@@ -67,7 +65,7 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
     weight: patient?.weight || '65'
   });
 
-  const [clinicalNotes, setClinicalNotes] = useState('Patient presents with mild symptoms. Blood pressure is within normal range. Temperature is normal. Pulse rate is regular. Weight is stable.');
+  const [clinicalNotes, setClinicalNotes] = useState(() => t('patientDetailsModal.defaults.clinicalNotesSample'));
 
   const handleSaveVitals = () => {
     if (patient) {
@@ -83,19 +81,31 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
   };
 
   const getStatusBadge = (status: Patient['status']) => {
+    const statusMap: Record<Patient['status'], { labelKey: string; className: string }> = {
+      'vitals-required': { labelKey: 'vitalsRequired', className: 'bg-red-100 text-red-800 border-red-300' },
+      'ready-consultation': { labelKey: 'readyConsultation', className: 'bg-green-100 text-green-800 border-green-300' },
+      'under-consultation': { labelKey: 'underConsultation', className: 'bg-blue-100 text-blue-800 border-blue-300' },
+      'lab-test-required': { labelKey: 'labTestRequired', className: 'bg-purple-100 text-purple-800 border-purple-300' },
+      'awaiting-reconsultation': { labelKey: 'awaitingReconsultation', className: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
+      completed: { labelKey: 'completed', className: 'bg-green-100 text-green-800 border-green-300' },
+    };
+
+    const config = statusMap[status];
+    if (!config) return null;
+
     switch (status) {
       case 'vitals-required':
-        return <Badge className="bg-red-100 text-red-800 border-red-300">❤️ Vitals Required</Badge>;
+        return <Badge className={config.className}>{t(`patientDetailsModal.statuses.${config.labelKey}`)}</Badge>;
       case 'ready-consultation':
-        return <Badge className="bg-green-100 text-green-800 border-green-300">✅ Ready for Consultation</Badge>;
+        return <Badge className={config.className}>{t(`patientDetailsModal.statuses.${config.labelKey}`)}</Badge>;
       case 'under-consultation':
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-300">👨‍⚕️ Under Consultation</Badge>;
+        return <Badge className={config.className}>{t(`patientDetailsModal.statuses.${config.labelKey}`)}</Badge>;
       case 'lab-test-required':
-        return <Badge className="bg-purple-100 text-purple-800 border-purple-300">🧪 Lab Test Required</Badge>;
+        return <Badge className={config.className}>{t(`patientDetailsModal.statuses.${config.labelKey}`)}</Badge>;
       case 'awaiting-reconsultation':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">⏳ Awaiting Reconsultation</Badge>;
+        return <Badge className={config.className}>{t(`patientDetailsModal.statuses.${config.labelKey}`)}</Badge>;
       case 'completed':
-        return <Badge className="bg-green-100 text-green-800 border-green-300">🏁 Completed</Badge>;
+        return <Badge className={config.className}>{t(`patientDetailsModal.statuses.${config.labelKey}`)}</Badge>;
       default:
         return null;
     }
@@ -108,7 +118,7 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-2xl font-bold">Patient Details</DialogTitle>
+            <DialogTitle className="text-2xl font-bold">{t('patientDetailsModal.title')}</DialogTitle>
             <Button variant="ghost" size="sm" onClick={onClose}>
               <X className="h-4 w-4" />
             </Button>
@@ -121,38 +131,38 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5" />
-                Basic Information
+                {t('patientDetailsModal.basicInfo')}
               </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label className="text-sm font-medium text-gray-600">Patient ID</Label>
+                <Label className="text-sm font-medium text-gray-600">{t('patientDetailsModal.labels.patientId')}</Label>
                 <p className="font-mono text-blue-600">{patient.patientId}</p>
               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-600">Name</Label>
+                <Label className="text-sm font-medium text-gray-600">{t('patientDetailsModal.labels.name')}</Label>
                 <p className="font-semibold">{patient.patientName}</p>
               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-600">Phone</Label>
+                <Label className="text-sm font-medium text-gray-600">{t('patientDetailsModal.labels.phone')}</Label>
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-gray-500" />
                   <p>{patient.phone}</p>
                 </div>
               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-600">Appointment Time</Label>
+                <Label className="text-sm font-medium text-gray-600">{t('patientDetailsModal.labels.appointmentTime')}</Label>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-gray-500" />
                   <p>{patient.appointmentTime}</p>
                 </div>
               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-600">Token Number</Label>
+                <Label className="text-sm font-medium text-gray-600">{t('patientDetailsModal.labels.tokenNumber')}</Label>
                 <Badge variant="outline">#{patient.tokenNo}</Badge>
               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-600">Current Status</Label>
+                <Label className="text-sm font-medium text-gray-600">{t('patientDetailsModal.labels.currentStatus')}</Label>
                 {getStatusBadge(patient.status)}
               </div>
             </CardContent>
@@ -162,15 +172,15 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="vitals" className="flex items-center gap-2">
                 <Heart className="h-4 w-4" />
-                Vitals
+                {t('patientDetailsModal.tabs.vitals')}
               </TabsTrigger>
               <TabsTrigger value="clinical" className="flex items-center gap-2">
                 <Stethoscope className="h-4 w-4" />
-                Clinical Notes
+                {t('patientDetailsModal.tabs.clinical')}
               </TabsTrigger>
               <TabsTrigger value="actions" className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4" />
-                Actions
+                {t('patientDetailsModal.tabs.actions')}
               </TabsTrigger>
             </TabsList>
 
@@ -180,7 +190,7 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2">
                       <Heart className="h-5 w-5" />
-                      Vital Signs
+                      {t('patientDetailsModal.vitals.title')}
                     </CardTitle>
                     <Button
                       variant="outline"
@@ -190,12 +200,12 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                       {isEditing ? (
                         <>
                           <X className="h-4 w-4 mr-2" />
-                          Cancel
+                          {t('patientDetailsModal.vitals.cancel')}
                         </>
                       ) : (
                         <>
                           <Edit className="h-4 w-4 mr-2" />
-                          Edit
+                          {t('patientDetailsModal.vitals.edit')}
                         </>
                       )}
                     </Button>
@@ -204,55 +214,55 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="bloodPressure">Blood Pressure</Label>
+                      <Label htmlFor="bloodPressure">{t('patientDetailsModal.vitals.fields.bloodPressure')}</Label>
                       {isEditing ? (
                         <Input
                           id="bloodPressure"
                           value={vitals.bloodPressure}
                           onChange={(e) => setVitals({ ...vitals, bloodPressure: e.target.value })}
-                          placeholder="e.g., 120/80"
+                          placeholder={t('patientDetailsModal.vitals.placeholders.bloodPressure')}
                         />
                       ) : (
-                        <p className="text-lg font-medium">{vitals.bloodPressure || 'Not recorded'}</p>
+                        <p className="text-lg font-medium">{vitals.bloodPressure || t('patientDetailsModal.vitals.notRecorded')}</p>
                       )}
                     </div>
                     <div>
-                      <Label htmlFor="temperature">Temperature (°C)</Label>
+                      <Label htmlFor="temperature">{t('patientDetailsModal.vitals.fields.temperature')}</Label>
                       {isEditing ? (
                         <Input
                           id="temperature"
                           value={vitals.temperature}
                           onChange={(e) => setVitals({ ...vitals, temperature: e.target.value })}
-                          placeholder="e.g., 36.8"
+                          placeholder={t('patientDetailsModal.vitals.placeholders.temperature')}
                         />
                       ) : (
-                        <p className="text-lg font-medium">{vitals.temperature || 'Not recorded'}</p>
+                        <p className="text-lg font-medium">{vitals.temperature || t('patientDetailsModal.vitals.notRecorded')}</p>
                       )}
                     </div>
                     <div>
-                      <Label htmlFor="pulse">Pulse Rate (bpm)</Label>
+                      <Label htmlFor="pulse">{t('patientDetailsModal.vitals.fields.pulse')}</Label>
                       {isEditing ? (
                         <Input
                           id="pulse"
                           value={vitals.pulse}
                           onChange={(e) => setVitals({ ...vitals, pulse: e.target.value })}
-                          placeholder="e.g., 72"
+                          placeholder={t('patientDetailsModal.vitals.placeholders.pulse')}
                         />
                       ) : (
-                        <p className="text-lg font-medium">{vitals.pulse || 'Not recorded'}</p>
+                        <p className="text-lg font-medium">{vitals.pulse || t('patientDetailsModal.vitals.notRecorded')}</p>
                       )}
                     </div>
                     <div>
-                      <Label htmlFor="weight">Weight (kg)</Label>
+                      <Label htmlFor="weight">{t('patientDetailsModal.vitals.fields.weight')}</Label>
                       {isEditing ? (
                         <Input
                           id="weight"
                           value={vitals.weight}
                           onChange={(e) => setVitals({ ...vitals, weight: e.target.value })}
-                          placeholder="e.g., 65"
+                          placeholder={t('patientDetailsModal.vitals.placeholders.weight')}
                         />
                       ) : (
-                        <p className="text-lg font-medium">{vitals.weight || 'Not recorded'}</p>
+                        <p className="text-lg font-medium">{vitals.weight || t('patientDetailsModal.vitals.notRecorded')}</p>
                       )}
                     </div>
                   </div>
@@ -260,7 +270,7 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                     <div className="mt-4 flex justify-end">
                       <Button onClick={handleSaveVitals}>
                         <Save className="h-4 w-4 mr-2" />
-                        Save Vitals
+                        {t('patientDetailsModal.vitals.save')}
                       </Button>
                     </div>
                   )}
@@ -273,24 +283,24 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Stethoscope className="h-5 w-5" />
-                    Clinical Notes
+                    {t('patientDetailsModal.clinical.title')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div>
-                    <Label htmlFor="clinicalNotes">Notes</Label>
+                    <Label htmlFor="clinicalNotes">{t('patientDetailsModal.clinical.label')}</Label>
                     <Textarea
                       id="clinicalNotes"
                       value={clinicalNotes}
                       onChange={(e) => setClinicalNotes(e.target.value)}
-                      placeholder="Enter clinical notes, observations, or recommendations..."
+                      placeholder={t('patientDetailsModal.clinical.placeholder')}
                       rows={6}
                     />
                   </div>
                   <div className="mt-4 flex justify-end">
                     <Button>
                       <Save className="h-4 w-4 mr-2" />
-                      Save Notes
+                      {t('patientDetailsModal.clinical.save')}
                     </Button>
                   </div>
                 </CardContent>
@@ -302,7 +312,7 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <CheckCircle className="h-5 w-5" />
-                    Status Actions
+                    {t('patientDetailsModal.actions.title')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -314,7 +324,7 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                       disabled={patient.status === 'ready-consultation'}
                     >
                       <CheckCircle className="h-6 w-6 text-green-600" />
-                      <span>Mark Ready</span>
+                      <span>{t('patientDetailsModal.actions.markReady')}</span>
                     </Button>
                     <Button
                       variant="outline"
@@ -323,7 +333,7 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                       disabled={patient.status === 'under-consultation'}
                     >
                       <Stethoscope className="h-6 w-6 text-blue-600" />
-                      <span>Start Consultation</span>
+                      <span>{t('patientDetailsModal.actions.startConsultation')}</span>
                     </Button>
                     <Button
                       variant="outline"
@@ -332,7 +342,7 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                       disabled={patient.status === 'lab-test-required'}
                     >
                       <FlaskConical className="h-6 w-6 text-purple-600" />
-                      <span>Request Lab Test</span>
+                      <span>{t('patientDetailsModal.actions.requestLabTest')}</span>
                     </Button>
                     <Button
                       variant="outline"
@@ -341,7 +351,7 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                       disabled={patient.status === 'awaiting-reconsultation'}
                     >
                       <Clock className="h-6 w-6 text-yellow-600" />
-                      <span>Schedule Follow-up</span>
+                      <span>{t('patientDetailsModal.actions.scheduleFollowUp')}</span>
                     </Button>
                     <Button
                       variant="outline"
@@ -350,7 +360,7 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                       disabled={patient.status === 'completed'}
                     >
                       <CheckCircle className="h-6 w-6 text-green-600" />
-                      <span>Complete Consultation</span>
+                      <span>{t('patientDetailsModal.actions.completeConsultation')}</span>
                     </Button>
                   </div>
                 </CardContent>

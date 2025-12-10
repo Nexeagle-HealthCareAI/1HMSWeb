@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { User } from 'lucide-react';
 import { TimeSlot } from '../AppointmentBooking';
 import { Button } from '../ui/button';
@@ -19,6 +20,9 @@ export const EditPatientDialog: React.FC<EditPatientDialogProps> = ({
   onConfirm,
   onCancel
 }) => {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language || 'en';
+
   const [formData, setFormData] = useState({
     name: slot.patientInfo?.name || '',
     phone: slot.patientInfo?.phone || '',
@@ -43,23 +47,23 @@ export const EditPatientDialog: React.FC<EditPatientDialogProps> = ({
     const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Patient name is required';
+      newErrors.name = t('editPatientDialog.errors.nameRequired');
     }
 
     if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
+      newErrors.phone = t('editPatientDialog.errors.phoneRequired');
     } else if (formData.phone.replace(/\D/g, '').length < 10) {
-      newErrors.phone = 'Please enter a valid phone number';
+      newErrors.phone = t('editPatientDialog.errors.phoneInvalid');
     }
 
     if (!formData.age.trim()) {
-      newErrors.age = 'Age is required';
+      newErrors.age = t('editPatientDialog.errors.ageRequired');
     } else if (parseInt(formData.age) < 1 || parseInt(formData.age) > 120) {
-      newErrors.age = 'Please enter a valid age';
+      newErrors.age = t('editPatientDialog.errors.ageInvalid');
     }
 
     if (!formData.gender) {
-      newErrors.gender = 'Gender is required';
+      newErrors.gender = t('editPatientDialog.errors.genderRequired');
     }
 
     setErrors(newErrors);
@@ -88,16 +92,16 @@ export const EditPatientDialog: React.FC<EditPatientDialogProps> = ({
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-healthcare-primary flex items-center gap-2">
             <User className="h-5 w-5" />
-            Edit Patient Information
+            {t('editPatientDialog.title')}
           </DialogTitle>
         </DialogHeader>
 
         {/* Current Appointment Info */}
         <Card className="p-4 bg-muted">
-          <h3 className="font-semibold text-foreground mb-2">Appointment Details</h3>
+          <h3 className="font-semibold text-foreground mb-2">{t('editPatientDialog.appointmentDetails')}</h3>
           <div className="space-y-1 text-sm">
-            <p><strong>Date:</strong> {new Date(slot.date).toLocaleDateString()}</p>
-            <p><strong>Time:</strong> {slot.time}</p>
+            <p><strong>{t('editPatientDialog.dateLabel')}</strong> {new Intl.DateTimeFormat(locale).format(new Date(slot.date))}</p>
+            <p><strong>{t('editPatientDialog.timeLabel')}</strong> {slot.time}</p>
           </div>
         </Card>
 
@@ -105,13 +109,13 @@ export const EditPatientDialog: React.FC<EditPatientDialogProps> = ({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="edit-name" className="text-sm font-medium">
-              Patient Name <span className="text-red-500">*</span>
+              {t('editPatientDialog.patientName')} <span className="text-red-500">*</span>
             </Label>
             <Input
               id="edit-name"
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="Enter patient name"
+              placeholder={t('editPatientDialog.placeholders.name')}
               className={errors.name ? "border-red-500" : ""}
             />
             {errors.name && (
@@ -121,13 +125,13 @@ export const EditPatientDialog: React.FC<EditPatientDialogProps> = ({
 
           <div>
             <Label htmlFor="edit-phone" className="text-sm font-medium">
-              Phone Number <span className="text-red-500">*</span>
+              {t('editPatientDialog.phone')} <span className="text-red-500">*</span>
             </Label>
             <Input
               id="edit-phone"
               value={formData.phone}
               onChange={handlePhoneChange}
-              placeholder="+1-555-0123"
+              placeholder={t('editPatientDialog.placeholders.phone')}
               className={errors.phone ? "border-red-500" : ""}
             />
             {errors.phone && (
@@ -137,14 +141,14 @@ export const EditPatientDialog: React.FC<EditPatientDialogProps> = ({
 
           <div>
             <Label htmlFor="edit-age" className="text-sm font-medium">
-              Age <span className="text-red-500">*</span>
+              {t('editPatientDialog.age')} <span className="text-red-500">*</span>
             </Label>
             <Input
               id="edit-age"
               type="number"
               value={formData.age}
               onChange={(e) => setFormData(prev => ({ ...prev, age: e.target.value }))}
-              placeholder="Enter age"
+              placeholder={t('editPatientDialog.placeholders.age')}
               min="1"
               max="120"
               className={errors.age ? "border-red-500" : ""}
@@ -156,16 +160,16 @@ export const EditPatientDialog: React.FC<EditPatientDialogProps> = ({
 
           <div>
             <Label htmlFor="edit-gender" className="text-sm font-medium">
-              Gender <span className="text-red-500">*</span>
+              {t('editPatientDialog.gender')} <span className="text-red-500">*</span>
             </Label>
             <Select value={formData.gender} onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
               <SelectTrigger className={errors.gender ? "border-red-500" : ""}>
-                <SelectValue placeholder="Select gender" />
+                <SelectValue placeholder={t('editPatientDialog.placeholders.gender')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Male">Male</SelectItem>
-                <SelectItem value="Female">Female</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
+                <SelectItem value="Male">{t('editPatientDialog.genderOptions.male')}</SelectItem>
+                <SelectItem value="Female">{t('editPatientDialog.genderOptions.female')}</SelectItem>
+                <SelectItem value="Other">{t('editPatientDialog.genderOptions.other')}</SelectItem>
               </SelectContent>
             </Select>
             {errors.gender && (
@@ -180,13 +184,13 @@ export const EditPatientDialog: React.FC<EditPatientDialogProps> = ({
               onClick={onCancel}
               className="flex-1"
             >
-              Cancel
+              {t('editPatientDialog.cancel')}
             </Button>
             <Button
               type="submit"
               className="flex-1 bg-healthcare-primary hover:bg-healthcare-primary/90"
             >
-              Update Information
+              {t('editPatientDialog.update')}
             </Button>
           </div>
         </form>

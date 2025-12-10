@@ -1,18 +1,19 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import {
+  AlertCircle,
   Building2,
-  Save,
-  Phone,
-  Mail,
-  MapPin,
-  Globe,
+  CheckCircle2,
   Clock,
   FileText,
+  Globe,
   Hash,
-  Type,
-  AlertCircle,
-  CheckCircle2
+  Mail,
+  MapPin,
+  Phone,
+  Save,
+  Type
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,33 +21,24 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-// import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useHospitalApi } from '@/hooks/useApi';
 import { useAuthStore } from '@/store/authStore';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export interface HospitalBranding {
-  // Core Info
   name: string;
   type: string;
-  
-  // Contact
   email: string;
   contact: string;
   alternateContact: string;
   website: string;
-  
-  // Location
   location: string;
   city: string;
   state: string;
   country: string;
   pincode: string;
-  
-  // Config & Metadata
   timeZone: string;
   registrationNumber: string;
-
 }
 
 interface HospitalBrandingConfigProps {
@@ -54,130 +46,118 @@ interface HospitalBrandingConfigProps {
   onBrandingChange: (branding: HospitalBranding) => void;
 }
 
-const defaultBranding: HospitalBranding = {
-  // Core Info
-  name: '',
-  type: '',
-  
-  // Contact
-  email: '',
-  contact: '',
-  alternateContact: '',
-  website: '',
-  
-  // Location
-  location: '',
-  city: '',
-  state: '',
-  country: '',
-  pincode: '',
-  
-  // Config & Metadata
-  timeZone: '',
-  registrationNumber: '',
-
-};
-
-const hospitalTypes = [
-  { value: 'Clinic', label: 'Clinic', description: 'Small outpatient care unit, usually run by one or more doctors' },
-  { value: 'Polyclinic', label: 'Polyclinic', description: 'Multi-specialty outpatient facility without in-patient beds' },
-  { value: 'Nursing Home', label: 'Nursing Home', description: 'Small in-patient facility with basic medical care' },
-  { value: 'General Hospital', label: 'General Hospital', description: 'Treats a wide range of conditions with in-patient and emergency care' },
-  { value: 'Multispeciality Hospital', label: 'Multispeciality Hospital', description: 'Offers multiple medical disciplines under one roof' },
-  { value: 'Super Speciality Hospital', label: 'Super Speciality Hospital', description: 'Focused on advanced treatment in one or two specialties' },
-  ];
-
-const timeZones = [
-  { value: 'Asia/Kolkata', label: 'India Standard Time (IST)' },
-  { value: 'Asia/Dubai', label: 'Gulf Standard Time (GST)' },
-  { value: 'America/New_York', label: 'Eastern Time (ET)' },
-  { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
-  { value: 'Europe/London', label: 'Greenwich Mean Time (GMT)' },
-  { value: 'Asia/Tokyo', label: 'Japan Standard Time (JST)' },
-  { value: 'Australia/Sydney', label: 'Australian Eastern Time (AET)' }
+const requiredFields: ReadonlyArray<keyof HospitalBranding> = [
+  'name',
+  'type',
+  'email',
+  'contact',
+  'location',
+  'city',
+  'state',
+  'country',
+  'pincode',
+  'registrationNumber'
 ];
 
 export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
   branding,
   onBrandingChange
 }) => {
-  // Temporarily disable toasts
+  const { t } = useTranslation();
   const toast = (_?: any) => {};
   const queryClient = useQueryClient();
   const { userId, hospitalId, setHospitalId } = useAuthStore();
+
   const registerHospitalMutation = useHospitalApi.registerHospital();
   const updateHospitalMutation = useHospitalApi.updateHospital(hospitalId || '');
+
   const [isEditMode, setIsEditMode] = useState(false);
   const [snapshotBeforeEdit, setSnapshotBeforeEdit] = useState<HospitalBranding | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [previousBranding, setPreviousBranding] = useState<HospitalBranding | null>(null);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
 
-  // Validation functions
-  const requiredFields: Array<keyof HospitalBranding> = [
-    'name',
-    'type',
-    'contact',
-    'email',
-    'location',
-    'city',
-    'state',
-    'country',
-    'pincode',
-    'registrationNumber'
-  ];
+  const fieldLabels: Record<keyof HospitalBranding, string> = useMemo(
+    () => ({
+      name: t('hospitalBranding.labels.name'),
+      type: t('hospitalBranding.labels.type'),
+      email: t('hospitalBranding.labels.email'),
+      contact: t('hospitalBranding.labels.contact'),
+      alternateContact: t('hospitalBranding.labels.alternateContact'),
+      website: t('hospitalBranding.labels.website'),
+      location: t('hospitalBranding.labels.location'),
+      city: t('hospitalBranding.labels.city'),
+      state: t('hospitalBranding.labels.state'),
+      country: t('hospitalBranding.labels.country'),
+      pincode: t('hospitalBranding.labels.pincode'),
+      timeZone: t('hospitalBranding.labels.timeZone'),
+      registrationNumber: t('hospitalBranding.labels.registrationNumber')
+    }),
+    [t]
+  );
 
-  const fieldLabels: Record<keyof HospitalBranding, string> = {
-    name: 'Hospital name',
-    type: 'Hospital type',
-    email: 'Email address',
-    contact: 'Primary contact',
-    alternateContact: 'Alternate contact',
-    website: 'Website',
-    location: 'Street address',
-    city: 'City',
-    state: 'State/Province',
-    country: 'Country',
-    pincode: 'Postal code',
-    timeZone: 'Time zone',
-    registrationNumber: 'Registration number'
-  };
+  const hospitalTypes = useMemo(
+    () => [
+      { value: 'Clinic', label: t('hospitalBranding.hospitalTypes.clinic') },
+      { value: 'Polyclinic', label: t('hospitalBranding.hospitalTypes.polyclinic') },
+      { value: 'Nursing Home', label: t('hospitalBranding.hospitalTypes.nursingHome') },
+      { value: 'General Hospital', label: t('hospitalBranding.hospitalTypes.generalHospital') },
+      { value: 'Multispeciality Hospital', label: t('hospitalBranding.hospitalTypes.multispecialityHospital') },
+      { value: 'Super Speciality Hospital', label: t('hospitalBranding.hospitalTypes.superSpecialityHospital') }
+    ],
+    [t]
+  );
+
+  const timeZones = useMemo(
+    () => [
+      { value: 'Asia/Kolkata', label: t('hospitalBranding.timeZones.asiaKolkata') },
+      { value: 'Asia/Dubai', label: t('hospitalBranding.timeZones.asiaDubai') },
+      { value: 'America/New_York', label: t('hospitalBranding.timeZones.americaNewYork') },
+      { value: 'America/Los_Angeles', label: t('hospitalBranding.timeZones.americaLosAngeles') },
+      { value: 'Europe/London', label: t('hospitalBranding.timeZones.europeLondon') },
+      { value: 'Asia/Tokyo', label: t('hospitalBranding.timeZones.asiaTokyo') },
+      { value: 'Australia/Sydney', label: t('hospitalBranding.timeZones.australiaSydney') }
+    ],
+    [t]
+  );
 
   const RequiredIndicator: React.FC = () => (
-    <span className="text-red-500 font-semibold ml-1" aria-hidden="true">*</span>
+    <span className="text-red-500 font-semibold ml-1" aria-hidden="true">
+      *
+    </span>
   );
 
   const validateEmail = (email: string): string | null => {
     const trimmed = email.trim();
-    if (!trimmed) return 'Email address is required';
+    if (!trimmed) return t('hospitalBranding.validation.emailRequired');
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(trimmed) ? null : 'Please enter a valid email address';
+    return emailRegex.test(trimmed) ? null : t('hospitalBranding.validation.emailInvalid');
   };
 
   const validatePhone = (phone: string): string | null => {
     const trimmed = phone.trim();
-    if (!trimmed) return 'Primary contact is required';
+    if (!trimmed) return t('hospitalBranding.validation.contactRequired');
     const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/;
-    return phoneRegex.test(trimmed) ? null : 'Please enter a valid phone number';
+    return phoneRegex.test(trimmed) ? null : t('hospitalBranding.validation.phoneInvalid');
   };
 
   const validateWebsite = (website: string): string | null => {
-    if (!website) return null; // Allow empty website
-    const urlRegex = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
-    return urlRegex.test(website) ? null : 'Please enter a valid website URL';
+    if (!website) return null;
+    const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/;
+    return urlRegex.test(website) ? null : t('hospitalBranding.validation.websiteInvalid');
   };
 
   const validatePincode = (pincode: string): string | null => {
-    if (!pincode) return null; // Allow empty pincode
+    if (!pincode) return null;
     const pincodeRegex = /^[0-9]{4,10}$/;
-    return pincodeRegex.test(pincode) ? null : 'Please enter a valid postal code (4-10 digits)';
+    return pincodeRegex.test(pincode) ? null : t('hospitalBranding.validation.pincodeInvalid');
   };
 
   const validateField = (field: keyof HospitalBranding, value: string): string | null => {
     const trimmedValue = value?.trim() ?? '';
 
     if (requiredFields.includes(field) && !trimmedValue) {
-      return `${fieldLabels[field]} is required`;
+      return t('hospitalBranding.validation.required', { field: fieldLabels[field] });
     }
 
     switch (field) {
@@ -199,7 +179,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
   const validateBranding = (data: HospitalBranding) => {
     const errors: Record<string, string> = {};
 
-    requiredFields.forEach(field => {
+    requiredFields.forEach((field) => {
       const error = validateField(field, data[field]);
       if (error) {
         errors[field] = error;
@@ -207,7 +187,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
     });
 
     const optionalChecks: Array<keyof HospitalBranding> = ['alternateContact', 'website', 'timeZone'];
-    optionalChecks.forEach(field => {
+    optionalChecks.forEach((field) => {
       const error = validateField(field, data[field]);
       if (error) {
         errors[field] = error;
@@ -217,32 +197,28 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
-  
-  // Only fetch when a valid hospitalId is available
+
   const hospitalIdToUse = hospitalId || '';
-  
-  // Fetch hospital data
   const { data: hospitalData, isLoading, error } = useHospitalApi.getHospitalById(hospitalIdToUse);
   const completionPercent = hospitalData?.profileStatus?.profileCompletionPercent ?? 0;
   const completionChecklist = [
     {
-      label: 'Basic Information',
-      complete: hospitalData?.profileStatus?.isBasicInfoComplete ?? false,
+      label: t('hospitalBranding.completion.basicInfo'),
+      complete: hospitalData?.profileStatus?.isBasicInfoComplete ?? false
     },
     {
-      label: 'Location Details',
-      complete: hospitalData?.profileStatus?.isLocationInfoComplete ?? false,
+      label: t('hospitalBranding.completion.locationInfo'),
+      complete: hospitalData?.profileStatus?.isLocationInfoComplete ?? false
     },
     {
-      label: 'Contact Information',
-      complete: hospitalData?.profileStatus?.isContactInfoComplete ?? false,
-    },
+      label: t('hospitalBranding.completion.contactInfo'),
+      complete: hospitalData?.profileStatus?.isContactInfoComplete ?? false
+    }
   ];
 
-  // Update branding when hospital data is fetched
   useEffect(() => {
     if (hospitalData && hospitalData.hospitalId && hospitalData.name && !isEditMode) {
-      const updatedBranding = {
+      const updatedBranding: HospitalBranding = {
         name: hospitalData.name || '',
         type: hospitalData.type || '',
         email: hospitalData.email || '',
@@ -255,30 +231,28 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
         country: hospitalData.country || '',
         pincode: hospitalData.pincode || '',
         timeZone: hospitalData.timeZone || '',
-        registrationNumber: hospitalData.registrationNumber || '',
+        registrationNumber: hospitalData.registrationNumber || ''
       };
-      
-      // Only update if the data is actually different to prevent unnecessary re-renders
-      const hasChanges = Object.keys(updatedBranding).some(key => 
-        updatedBranding[key as keyof HospitalBranding] !== previousBranding?.[key as keyof HospitalBranding]
+
+      const hasChanges = Object.keys(updatedBranding).some(
+        (key) => updatedBranding[key as keyof HospitalBranding] !== previousBranding?.[key as keyof HospitalBranding]
       );
-      
+
       if (hasChanges) {
         onBrandingChange(updatedBranding);
         setPreviousBranding(updatedBranding);
       }
-      
-      // Store the hospitalId in auth store
+
       setHospitalId(hospitalData.hospitalId);
     }
-  }, [hospitalData, onBrandingChange, setHospitalId, isEditMode]);
+  }, [hospitalData, onBrandingChange, setHospitalId, isEditMode, previousBranding]);
 
   const handleSaveBranding = async () => {
     if (!userId) {
       toast({
-        title: "Error",
-        description: "User ID not found. Please login again.",
-        variant: "destructive"
+        title: t('hospitalBranding.toast.errorTitle'),
+        description: t('hospitalBranding.toast.missingUser'),
+        variant: 'destructive'
       });
       return;
     }
@@ -286,16 +260,15 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
     const isValid = validateBranding(branding);
     if (!isValid) {
       toast({
-        title: "Validation Error",
-        description: "Please complete all required fields before saving.",
-        variant: "destructive"
+        title: t('hospitalBranding.toast.validationTitle'),
+        description: t('hospitalBranding.toast.validationDescription'),
+        variant: 'destructive'
       });
       return;
     }
 
     try {
       if (!hospitalId) {
-        // First time: register
         const response = await registerHospitalMutation.mutateAsync({
           userId,
           name: branding.name,
@@ -316,15 +289,10 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
         if (response.success) {
           onBrandingChange(branding);
           setHospitalId(response.hospitalId);
-          // Don't exit edit mode for initial save - let user continue editing
           queryClient.invalidateQueries({ queryKey: ['hospital', response.hospitalId] });
           setShowCompletionModal(true);
-          // toast removed temporarily
-        } else {
-          // toast removed temporarily
         }
       } else {
-        // Subsequent edits: update
         const response = await updateHospitalMutation.mutateAsync({
           name: branding.name,
           type: branding.type,
@@ -348,14 +316,10 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
             queryClient.invalidateQueries({ queryKey: ['hospital', hospitalId] });
           }
           setShowCompletionModal(true);
-          // toast removed temporarily
-        } else {
-          // toast removed temporarily
         }
       }
-    } catch (error: any) {
-      console.error('Hospital save error:', error);
-      // toast removed temporarily
+    } catch (err) {
+      console.error('Hospital save error:', err);
     }
   };
 
@@ -364,10 +328,9 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
       ...branding,
       [field]: value
     });
-    
-    // Validate the field and update validation errors
+
     const error = validateField(field, value);
-    setValidationErrors(prev => {
+    setValidationErrors((prev) => {
       const next = { ...prev };
       if (error) {
         next[field] = error;
@@ -378,46 +341,42 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
     });
   };
 
-  const hasMissingRequiredFields = requiredFields.some(field => !(branding[field]?.trim()));
+  const hasMissingRequiredFields = requiredFields.some((field) => !(branding[field]?.trim()));
   const hasValidationErrors = Object.keys(validationErrors).length > 0;
   const isSaveDisabled = hasMissingRequiredFields || hasValidationErrors;
 
-  // Show loading state
   if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-center p-8">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-sm text-muted-foreground">Loading hospital information...</p>
+            <p className="text-sm text-muted-foreground">{t('hospitalBranding.loading.title')}</p>
           </div>
         </div>
       </div>
     );
   }
 
-  // Show error state
   if (error) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-center p-8">
           <div className="text-center">
-            <p className="text-sm text-red-600 mb-4">Failed to load hospital information</p>
-            <p className="text-xs text-muted-foreground">Please try refreshing the page</p>
+            <p className="text-sm text-red-600 mb-4">{t('hospitalBranding.error.title')}</p>
+            <p className="text-xs text-muted-foreground">{t('hospitalBranding.error.message')}</p>
           </div>
         </div>
       </div>
     );
   }
 
-  // Consider it an existing hospital only if we have loaded hospital data from the server
-  // This prevents the fields from being disabled immediately after the first save
   const isExistingHospital = !!(hospitalId && hospitalData && hospitalData.hospitalId);
 
   const handleStartEdit = () => {
     setSnapshotBeforeEdit({ ...branding });
     setIsEditMode(true);
-    setValidationErrors({}); // Clear validation errors when starting edit
+    setValidationErrors({});
   };
 
   const handleCancelEdit = () => {
@@ -425,14 +384,14 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
       onBrandingChange(snapshotBeforeEdit);
     }
     setIsEditMode(false);
-    setValidationErrors({}); // Clear validation errors when canceling edit
+    setValidationErrors({});
   };
 
   const handleCompletionContinue = () => {
     setShowCompletionModal(false);
     requestAnimationFrame(() => {
       const event = new CustomEvent('dashboard:navigate', {
-        detail: { view: 'dashboard', scrollToTop: true },
+        detail: { view: 'dashboard', scrollToTop: true }
       });
       window.dispatchEvent(event);
     });
@@ -442,75 +401,74 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Hospital Information</h3>
-          <p className="text-sm text-muted-foreground">
-            Configure your hospital's complete information and details
-          </p>
+          <h3 className="text-lg font-semibold">{t('hospitalBranding.title')}</h3>
+          <p className="text-sm text-muted-foreground">{t('hospitalBranding.subtitle')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {isExistingHospital && !isEditMode && (
             <Button onClick={handleStartEdit} variant="outline" className="sm:w-auto">
-              Edit Details
+              {t('hospitalBranding.buttons.editDetails')}
             </Button>
           )}
           {isExistingHospital && isEditMode && (
             <>
               <Button variant="outline" onClick={handleCancelEdit} className="sm:w-auto">
-                Cancel
+                {t('hospitalBranding.buttons.cancel')}
               </Button>
-              <Button 
+              <Button
                 onClick={handleSaveBranding}
                 disabled={updateHospitalMutation.isPending || isSaveDisabled}
                 className="sm:w-auto"
               >
                 <Save className="h-4 w-4 mr-2" />
-                {updateHospitalMutation.isPending ? 'Saving...' : 'Save Changes'}
+                {updateHospitalMutation.isPending
+                  ? t('hospitalBranding.buttons.saving')
+                  : t('hospitalBranding.buttons.saveChanges')}
               </Button>
             </>
           )}
           {!isExistingHospital && (
-            <Button 
+            <Button
               onClick={handleSaveBranding}
               disabled={registerHospitalMutation.isPending || isSaveDisabled}
               className="sm:w-auto"
             >
               <Save className="h-4 w-4 mr-2" />
-              {registerHospitalMutation.isPending ? 'Saving...' : 'Save Hospital Information'}
+              {registerHospitalMutation.isPending
+                ? t('hospitalBranding.buttons.saving')
+                : t('hospitalBranding.buttons.saveInfo')}
             </Button>
           )}
         </div>
       </div>
 
       <div className="grid gap-6">
-        {/* Core Information */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5" />
-              Core Information
+              {t('hospitalBranding.sections.core.title')}
             </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Basic hospital details and identity
-            </p>
+            <p className="text-sm text-muted-foreground">{t('hospitalBranding.sections.core.subtitle')}</p>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="hospitalName" className="flex items-center gap-2">
                   <Building2 className="h-4 w-4" />
-                  Hospital Name
+                  {t('hospitalBranding.labels.name')}
                   <RequiredIndicator />
                 </Label>
                 <Input
                   id="hospitalName"
                   value={branding.name}
                   onChange={(e) => updateBranding('name', e.target.value)}
-                  placeholder="Enter hospital name"
+                  placeholder={t('hospitalBranding.placeholders.name')}
                   required
                   disabled={isExistingHospital && !isEditMode}
                   className={validationErrors.name ? 'border-red-500 focus:border-red-500' : ''}
                 />
-                <p className="text-xs text-muted-foreground">Maximum 150 characters</p>
+                <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.name')}</p>
                 {validationErrors.name && (
                   <div className="flex items-center gap-1 text-xs text-red-500">
                     <AlertCircle className="h-3 w-3" />
@@ -521,18 +479,16 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
               <div className="space-y-2">
                 <Label htmlFor="hospitalType" className="flex items-center gap-2">
                   <Type className="h-4 w-4" />
-                  Hospital Type
+                  {t('hospitalBranding.labels.type')}
                   <RequiredIndicator />
                 </Label>
                 <Select
-                  value={hospitalTypes.some(t=>t.value===branding.type) ? branding.type : undefined}
-                  onValueChange={(value) => {
-                    updateBranding('type', value)
-                  }}
+                  value={hospitalTypes.some((type) => type.value === branding.type) ? branding.type : undefined}
+                  onValueChange={(value) => updateBranding('type', value)}
                   disabled={isExistingHospital && !isEditMode}
                 >
                   <SelectTrigger className={`w-full ${validationErrors.type ? 'border-red-500 focus:border-red-500' : ''}`}>
-                    <SelectValue placeholder="Select hospital type" />
+                    <SelectValue placeholder={t('hospitalBranding.placeholders.type')} />
                   </SelectTrigger>
                   <SelectContent className="max-h-48 overflow-y-auto">
                     {hospitalTypes.map((type) => (
@@ -549,34 +505,31 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                   </div>
                 )}
               </div>
-                         </div>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Contact Information */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Phone className="h-5 w-5" />
-              Contact Information
+              {t('hospitalBranding.sections.contact.title')}
             </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Primary and secondary contact details
-            </p>
+            <p className="text-sm text-muted-foreground">{t('hospitalBranding.sections.contact.subtitle')}</p>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="contact" className="flex items-center gap-2">
                   <Phone className="h-4 w-4" />
-                  Primary Contact
+                  {t('hospitalBranding.labels.contact')}
                   <RequiredIndicator />
                 </Label>
                 <Input
                   id="contact"
                   value={branding.contact}
                   onChange={(e) => updateBranding('contact', e.target.value)}
-                  placeholder="Enter primary phone number"
+                  placeholder={t('hospitalBranding.placeholders.contact')}
                   required
                   disabled={isExistingHospital && !isEditMode}
                   className={validationErrors.contact ? 'border-red-500 focus:border-red-500' : ''}
@@ -587,18 +540,18 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     {validationErrors.contact}
                   </div>
                 )}
-                <p className="text-xs text-muted-foreground">Main contact number</p>
+                <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.primaryContact')}</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="alternateContact" className="flex items-center gap-2">
                   <Phone className="h-4 w-4" />
-                  Alternate Contact
+                  {t('hospitalBranding.labels.alternateContact')}
                 </Label>
                 <Input
                   id="alternateContact"
                   value={branding.alternateContact}
                   onChange={(e) => updateBranding('alternateContact', e.target.value)}
-                  placeholder="Enter alternate phone number"
+                  placeholder={t('hospitalBranding.placeholders.alternateContact')}
                   disabled={isExistingHospital && !isEditMode}
                   className={validationErrors.alternateContact ? 'border-red-500 focus:border-red-500' : ''}
                 />
@@ -608,15 +561,15 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     {validationErrors.alternateContact}
                   </div>
                 )}
-                <p className="text-xs text-muted-foreground">Secondary contact number</p>
+                <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.alternateContact')}</p>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="email" className="flex items-center gap-2">
                   <Mail className="h-4 w-4" />
-                  Email Address
+                  {t('hospitalBranding.labels.email')}
                   <RequiredIndicator />
                 </Label>
                 <Input
@@ -624,7 +577,7 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                   type="email"
                   value={branding.email}
                   onChange={(e) => updateBranding('email', e.target.value)}
-                  placeholder="Enter email address"
+                  placeholder={t('hospitalBranding.placeholders.email')}
                   disabled={isExistingHospital && !isEditMode}
                   className={validationErrors.email ? 'border-red-500 focus:border-red-500' : ''}
                 />
@@ -634,18 +587,18 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     {validationErrors.email}
                   </div>
                 )}
-                <p className="text-xs text-muted-foreground">Primary email for communications</p>
+                <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.email')}</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="website" className="flex items-center gap-2">
                   <Globe className="h-4 w-4" />
-                  Website
+                  {t('hospitalBranding.labels.website')}
                 </Label>
                 <Input
                   id="website"
                   value={branding.website}
                   onChange={(e) => updateBranding('website', e.target.value)}
-                  placeholder="Enter website URL"
+                  placeholder={t('hospitalBranding.placeholders.website')}
                   disabled={isExistingHospital && !isEditMode}
                   className={validationErrors.website ? 'border-red-500 focus:border-red-500' : ''}
                 />
@@ -655,170 +608,164 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     {validationErrors.website}
                   </div>
                 )}
-                <p className="text-xs text-muted-foreground">Hospital's official website</p>
+                <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.website')}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Location Information */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MapPin className="h-5 w-5" />
-              Location Information
+              {t('hospitalBranding.sections.location.title')}
             </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Complete address and location details
-            </p>
+            <p className="text-sm text-muted-foreground">{t('hospitalBranding.sections.location.subtitle')}</p>
           </CardHeader>
-                     <CardContent className="space-y-4">
-             <div className="space-y-2">
-               <Label htmlFor="location" className="flex items-center gap-2">
-                 <MapPin className="h-4 w-4" />
-                 Street Address
-                 <RequiredIndicator />
-               </Label>
-                <Textarea
-                 id="location"
-                 value={branding.location}
-                 onChange={(e) => updateBranding('location', e.target.value)}
-                 placeholder="Enter complete street address"
-                 rows={3}
-                  required
-                  disabled={isExistingHospital && !isEditMode}
-                  className={validationErrors.location ? 'border-red-500 focus:border-red-500' : ''}
-               />
-               <p className="text-xs text-muted-foreground">Detailed street address</p>
-                {validationErrors.location && (
-                  <div className="flex items-center gap-1 text-xs text-red-500">
-                    <AlertCircle className="h-3 w-3" />
-                    {validationErrors.location}
-                  </div>
-                )}
-             </div>
-             
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <div className="space-y-2">
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="location" className="flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                {t('hospitalBranding.labels.location')}
+                <RequiredIndicator />
+              </Label>
+              <Textarea
+                id="location"
+                value={branding.location}
+                onChange={(e) => updateBranding('location', e.target.value)}
+                placeholder={t('hospitalBranding.placeholders.location')}
+                rows={3}
+                required
+                disabled={isExistingHospital && !isEditMode}
+                className={validationErrors.location ? 'border-red-500 focus:border-red-500' : ''}
+              />
+              <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.location')}</p>
+              {validationErrors.location && (
+                <div className="flex items-center gap-1 text-xs text-red-500">
+                  <AlertCircle className="h-3 w-3" />
+                  {validationErrors.location}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label htmlFor="city" className="flex items-center gap-2">
-                  City
+                  {t('hospitalBranding.labels.city')}
                   <RequiredIndicator />
                 </Label>
-                  <Input
-                   id="city"
-                   value={branding.city}
-                   onChange={(e) => updateBranding('city', e.target.value)}
-                   placeholder="Enter city name"
-                    required
-                    disabled={isExistingHospital && !isEditMode}
-                    className={validationErrors.city ? 'border-red-500 focus:border-red-500' : ''}
-                 />
+                <Input
+                  id="city"
+                  value={branding.city}
+                  onChange={(e) => updateBranding('city', e.target.value)}
+                  placeholder={t('hospitalBranding.placeholders.city')}
+                  required
+                  disabled={isExistingHospital && !isEditMode}
+                  className={validationErrors.city ? 'border-red-500 focus:border-red-500' : ''}
+                />
                 {validationErrors.city && (
                   <div className="flex items-center gap-1 text-xs text-red-500">
                     <AlertCircle className="h-3 w-3" />
                     {validationErrors.city}
                   </div>
                 )}
-               </div>
-               <div className="space-y-2">
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="state" className="flex items-center gap-2">
-                  State/Province
+                  {t('hospitalBranding.labels.state')}
                   <RequiredIndicator />
                 </Label>
-                  <Input
-                   id="state"
-                   value={branding.state}
-                   onChange={(e) => updateBranding('state', e.target.value)}
-                   placeholder="Enter state or province"
-                    required
-                    disabled={isExistingHospital && !isEditMode}
-                    className={validationErrors.state ? 'border-red-500 focus:border-red-500' : ''}
-                 />
+                <Input
+                  id="state"
+                  value={branding.state}
+                  onChange={(e) => updateBranding('state', e.target.value)}
+                  placeholder={t('hospitalBranding.placeholders.state')}
+                  required
+                  disabled={isExistingHospital && !isEditMode}
+                  className={validationErrors.state ? 'border-red-500 focus:border-red-500' : ''}
+                />
                 {validationErrors.state && (
                   <div className="flex items-center gap-1 text-xs text-red-500">
                     <AlertCircle className="h-3 w-3" />
                     {validationErrors.state}
                   </div>
                 )}
-               </div>
-             </div>
-             
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <div className="space-y-2">
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label htmlFor="country" className="flex items-center gap-2">
-                  Country
+                  {t('hospitalBranding.labels.country')}
                   <RequiredIndicator />
                 </Label>
-                  <Input
-                   id="country"
-                   value={branding.country}
-                   onChange={(e) => updateBranding('country', e.target.value)}
-                   placeholder="Enter country name"
-                    required
-                    disabled={isExistingHospital && !isEditMode}
-                    className={validationErrors.country ? 'border-red-500 focus:border-red-500' : ''}
-                 />
+                <Input
+                  id="country"
+                  value={branding.country}
+                  onChange={(e) => updateBranding('country', e.target.value)}
+                  placeholder={t('hospitalBranding.placeholders.country')}
+                  required
+                  disabled={isExistingHospital && !isEditMode}
+                  className={validationErrors.country ? 'border-red-500 focus:border-red-500' : ''}
+                />
                 {validationErrors.country && (
                   <div className="flex items-center gap-1 text-xs text-red-500">
                     <AlertCircle className="h-3 w-3" />
                     {validationErrors.country}
                   </div>
                 )}
-               </div>
-               <div className="space-y-2">
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="pincode" className="flex items-center gap-2">
-                  Postal Code
+                  {t('hospitalBranding.labels.pincode')}
                   <RequiredIndicator />
                 </Label>
-                  <Input
-                   id="pincode"
-                   value={branding.pincode}
-                   onChange={(e) => updateBranding('pincode', e.target.value)}
-                   placeholder="Enter postal code"
-                    required
-                    disabled={isExistingHospital && !isEditMode}
-                    className={validationErrors.pincode ? 'border-red-500 focus:border-red-500' : ''}
-                 />
-                 {validationErrors.pincode && (
-                   <div className="flex items-center gap-1 text-xs text-red-500">
-                     <AlertCircle className="h-3 w-3" />
-                     {validationErrors.pincode}
-                   </div>
-                 )}
-               </div>
-             </div>
-           </CardContent>
+                <Input
+                  id="pincode"
+                  value={branding.pincode}
+                  onChange={(e) => updateBranding('pincode', e.target.value)}
+                  placeholder={t('hospitalBranding.placeholders.pincode')}
+                  required
+                  disabled={isExistingHospital && !isEditMode}
+                  className={validationErrors.pincode ? 'border-red-500 focus:border-red-500' : ''}
+                />
+                {validationErrors.pincode && (
+                  <div className="flex items-center gap-1 text-xs text-red-500">
+                    <AlertCircle className="h-3 w-3" />
+                    {validationErrors.pincode}
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
         </Card>
 
-        {/* Configuration & Metadata */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Configuration & Metadata
+              {t('hospitalBranding.sections.config.title')}
             </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              System configuration and regulatory information
-            </p>
+            <p className="text-sm text-muted-foreground">{t('hospitalBranding.sections.config.subtitle')}</p>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="registrationNumber" className="flex items-center gap-2">
                   <Hash className="h-4 w-4" />
-                Registration Number
-                <RequiredIndicator />
+                  {t('hospitalBranding.labels.registrationNumber')}
+                  <RequiredIndicator />
                 </Label>
                 <Input
                   id="registrationNumber"
                   value={branding.registrationNumber}
                   onChange={(e) => updateBranding('registrationNumber', e.target.value)}
-                  placeholder="Enter hospital registration number"
+                  placeholder={t('hospitalBranding.placeholders.registrationNumber')}
                   required
                   disabled={isExistingHospital && !isEditMode}
                   className={validationErrors.registrationNumber ? 'border-red-500 focus:border-red-500' : ''}
                 />
-                <p className="text-xs text-muted-foreground">Official hospital registration number</p>
+                <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.registrationNumber')}</p>
                 {validationErrors.registrationNumber && (
                   <div className="flex items-center gap-1 text-xs text-red-500">
                     <AlertCircle className="h-3 w-3" />
@@ -829,11 +776,15 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
               <div className="space-y-2">
                 <Label htmlFor="timeZone" className="flex items-center gap-2">
                   <Clock className="h-4 w-4" />
-                  Time Zone
+                  {t('hospitalBranding.labels.timeZone')}
                 </Label>
-                <Select value={branding.timeZone} onValueChange={(value) => updateBranding('timeZone', value)} disabled={isExistingHospital && !isEditMode}>
+                <Select
+                  value={branding.timeZone}
+                  onValueChange={(value) => updateBranding('timeZone', value)}
+                  disabled={isExistingHospital && !isEditMode}
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select time zone" />
+                    <SelectValue placeholder={t('hospitalBranding.placeholders.timeZone')} />
                   </SelectTrigger>
                   <SelectContent>
                     {timeZones.map((tz) => (
@@ -843,17 +794,12 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">Hospital's operating time zone</p>
+                <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.timeZone')}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-
-
       </div>
-
-      {/* Action Buttons */}
-      <div className="flex justify-end gap-2" />
 
       <Dialog open={showCompletionModal} onOpenChange={setShowCompletionModal}>
         <DialogContent className="max-w-md">
@@ -861,14 +807,14 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
             <div className="mx-auto h-14 w-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <CheckCircle2 className="h-7 w-7" />
             </div>
-            <DialogTitle className="text-2xl font-semibold">Hospital profile complete!</DialogTitle>
+            <DialogTitle className="text-2xl font-semibold">{t('hospitalBranding.completion.title')}</DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
-              All required hospital details are now verified. Admin features are fully unlocked across the platform.
+              {t('hospitalBranding.completion.description')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-col items-center gap-1 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 p-4 text-center">
-            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-100">Completion score</p>
+            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-100">{t('hospitalBranding.completion.score')}</p>
             <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-200">{completionPercent}%</p>
           </div>
 
@@ -882,14 +828,16 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                 )}
                 <span className="font-medium text-foreground">{item.label}</span>
                 <span className="ml-auto text-xs text-muted-foreground">
-                  {item.complete ? 'Complete' : 'Pending'}
+                  {item.complete
+                    ? t('hospitalBranding.completion.statusComplete')
+                    : t('hospitalBranding.completion.statusPending')}
                 </span>
               </div>
             ))}
           </div>
 
           <Button className="mt-6 w-full" onClick={handleCompletionContinue}>
-            Continue
+            {t('hospitalBranding.buttons.continue')}
           </Button>
         </DialogContent>
       </Dialog>

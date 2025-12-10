@@ -36,18 +36,16 @@ import {
   PaginationNext, 
   PaginationPrevious 
 } from '@/components/ui/pagination';
-import { ArrowUp, Minimize2, Maximize2 } from 'lucide-react';
-
 import { AppointmentBooking } from './AppointmentBooking';
 import { VitalsForm } from './VitalsForm';
 import { TokenPrintModal } from './TokenPrintModal';
 import { PatientProfileModal } from '@/features/patient/components/PatientProfileModal';
+import { ArrowUp, Minimize2, Maximize2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAppointmentDetails } from '../hooks/useAppointmentDetails';
 import { useAuthStore } from '@/store/authStore';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-
 import { AppointmentDetail, appointmentApi } from '../services/appointmentApi';
 import { PrescriptionPreviewModal, type GeneratePrescriptionDetailsRequest } from '@/components/shared/prescription-preview';
 
@@ -82,6 +80,17 @@ export const AppointmentDashboard = () => {
   const [previewRequest, setPreviewRequest] = useState<GeneratePrescriptionDetailsRequest | null>(null);
 
   const getStatusBadge = (status: AppointmentDetail['finalStatusCode'], appointment?: AppointmentDetail) => {
+    const statusLabels = {
+      VITALS_REQUIRED: t('appointmentDashboard.statusLabels.vitalsRequired'),
+      READY: t('appointmentDashboard.statusLabels.ready'),
+      UNDER_CONSULT: t('appointmentDashboard.statusLabels.underConsult'),
+      LAB_REQUIRED: t('appointmentDashboard.statusLabels.labRequired'),
+      AWAITING_RECONSULT: t('appointmentDashboard.statusLabels.awaitingReconsult'),
+      COMPLETED: t('appointmentDashboard.statusLabels.completed'),
+      SCHEDULED: t('appointmentDashboard.statusLabels.scheduled'),
+      CANCELLED: t('appointmentDashboard.statusLabels.cancelled'),
+    } as Record<string, string>;
+
     switch (status) {
       case 'VITALS_REQUIRED':
         return (
@@ -89,25 +98,25 @@ export const AppointmentDashboard = () => {
             className="bg-red-50 text-red-700 border-red-200 cursor-pointer hover:bg-red-100 transition-colors text-xs px-1.5 py-0.5 font-medium"
             onClick={() => appointment && handleVitalsClick(appointment)}
           >
-            Vitals
+            {statusLabels.VITALS_REQUIRED}
           </Badge>
         );
       case 'READY':
-        return <Badge className="bg-green-50 text-green-700 border-green-200 text-xs px-1.5 py-0.5 font-medium">Ready</Badge>;
+        return <Badge className="bg-green-50 text-green-700 border-green-200 text-xs px-1.5 py-0.5 font-medium">{statusLabels.READY}</Badge>;
       case 'UNDER_CONSULT':
-        return <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-xs px-1.5 py-0.5 font-medium">Consulting</Badge>;
+        return <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-xs px-1.5 py-0.5 font-medium">{statusLabels.UNDER_CONSULT}</Badge>;
       case 'LAB_REQUIRED':
-        return <Badge className="bg-orange-50 text-orange-700 border-orange-200 text-xs px-1.5 py-0.5 font-medium">Lab</Badge>;
+        return <Badge className="bg-orange-50 text-orange-700 border-orange-200 text-xs px-1.5 py-0.5 font-medium">{statusLabels.LAB_REQUIRED}</Badge>;
       case 'AWAITING_RECONSULT':
-        return <Badge className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs px-1.5 py-0.5 font-medium">Reconsult</Badge>;
+        return <Badge className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs px-1.5 py-0.5 font-medium">{statusLabels.AWAITING_RECONSULT}</Badge>;
       case 'COMPLETED':
-        return <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs px-1.5 py-0.5 font-medium">Done</Badge>;
+        return <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs px-1.5 py-0.5 font-medium">{statusLabels.COMPLETED}</Badge>;
       case 'SCHEDULED':
-        return <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-xs px-1.5 py-0.5 font-medium">Scheduled</Badge>;
+        return <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-xs px-1.5 py-0.5 font-medium">{statusLabels.SCHEDULED}</Badge>;
       case 'CANCELLED':
-        return <Badge className="bg-gray-50 text-gray-600 border-gray-300 text-xs px-1.5 py-0.5 font-medium">Cancelled</Badge>;
+        return <Badge className="bg-gray-50 text-gray-600 border-gray-300 text-xs px-1.5 py-0.5 font-medium">{statusLabels.CANCELLED}</Badge>;
       default:
-        return <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-xs px-1.5 py-0.5 font-medium">{status}</Badge>;
+        return <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-xs px-1.5 py-0.5 font-medium">{statusLabels[status || ''] || status}</Badge>;
     }
   };
 
@@ -711,8 +720,8 @@ export const AppointmentDashboard = () => {
   const handlePrintPrescription = (appointment: AppointmentDetail) => {
     if (!hospitalId) {
       toast({
-        title: 'Missing hospital context',
-        description: 'Please select a hospital before generating prescriptions.',
+        title: t('appointmentDashboard.toast.missingHospitalTitle'),
+        description: t('appointmentDashboard.toast.missingHospitalDescription'),
         variant: 'destructive',
       });
       return;
@@ -720,8 +729,8 @@ export const AppointmentDashboard = () => {
 
     if (!appointment.appointmentId || !appointment.patientId || !appointment.doctorId) {
       toast({
-        title: 'Incomplete appointment data',
-        description: 'This appointment is missing identifiers required to generate a prescription.',
+        title: t('appointmentDashboard.toast.missingAppointmentDataTitle'),
+        description: t('appointmentDashboard.toast.missingAppointmentDataDescription'),
         variant: 'destructive',
       });
       return;
@@ -746,10 +755,10 @@ export const AppointmentDashboard = () => {
               onClick={() => setShowBooking(false)}
               className="group flex items-center gap-2 border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
             >
-              <span className="text-gray-700 dark:text-gray-200 font-medium">Back</span>
+              <span className="text-gray-700 dark:text-gray-200 font-medium">{t('common.back')}</span>
             </Button>
             <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />
-            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">Book New Appointment</h1>
+            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">{t('appointmentDashboard.bookNewAppointment')}</h1>
           </div>
         </div>
         <AppointmentBooking refreshToken={bookingRefreshToken} />
@@ -762,14 +771,14 @@ export const AppointmentDashboard = () => {
       {/* Header */}
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3 shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-white">Appointment Dashboard</h1>
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-white">{t('appointmentDashboard.title')}</h1>
               <Button 
             variant="outline"
                 onClick={handleBookingClick} 
             className="group flex items-center gap-2 border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
               >
             <Plus className="h-4 w-4 text-gray-600 dark:text-gray-300 transition-transform group-hover:translate-x-1" />
-            <span className="text-gray-700 dark:text-gray-200 font-medium">Book Appointment</span>
+            <span className="text-gray-700 dark:text-gray-200 font-medium">{t('appointmentDashboard.bookAppointment')}</span>
               </Button>
             </div>
         </div>                
@@ -783,11 +792,11 @@ export const AppointmentDashboard = () => {
             {/* Appointment Type Tabs */}
             <div className="mb-4">
               <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
-                                 {[
-                   { key: 'current', label: 'Current Appointments' },
-                   { key: 'past', label: 'Past Appointments' },
-                   { key: 'future', label: 'Future Appointments' }
-                 ].map((tab) => (
+                {[
+                  { key: 'current', label: t('appointmentDashboard.tabs.current') },
+                  { key: 'past', label: t('appointmentDashboard.tabs.past') },
+                  { key: 'future', label: t('appointmentDashboard.tabs.future') },
+                ].map((tab) => (
                    <button
                      key={tab.key}
                      onClick={() => setActiveTab(tab.key as 'current' | 'past' | 'future')}
@@ -815,7 +824,7 @@ export const AppointmentDashboard = () => {
                        )}
                      </div>
                    </button>
-                 ))}
+                  ))}
           </div>
         </div>                
 
@@ -826,7 +835,7 @@ export const AppointmentDashboard = () => {
                 <div className="relative max-w-md">
                           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                           <Input
-                        placeholder="Search by patient ID or name"
+                        placeholder={t('appointmentDashboard.searchPlaceholder')}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-10 h-10"
@@ -835,13 +844,13 @@ export const AppointmentDashboard = () => {
                       
                 {/* Doctor Filter Dropdown */}
                 <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Doctor:</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('appointmentDashboard.doctorLabel')}:</label>
                   <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
                     <SelectTrigger className="w-48 h-10">
-                      <SelectValue placeholder="All Doctors" />
+                      <SelectValue placeholder={t('appointmentDashboard.allDoctors')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Doctors</SelectItem>
+                      <SelectItem value="all">{t('appointmentDashboard.allDoctors')}</SelectItem>
                       {doctorOptions.map((doctor) => (
                         <SelectItem key={doctor.value} value={doctor.value}>
                           {doctor.label}
@@ -854,27 +863,27 @@ export const AppointmentDashboard = () => {
                 {/* Date Range Filter - Only show for Past and Future tabs */}
                 {(activeTab === 'past' || activeTab === 'future') && (
                   <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Date Range:</label>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('appointmentDashboard.dateRange.label')}:</label>
                     <div className="flex items-center gap-2">
                       <div className="flex flex-col gap-1">
-                        <label className="text-xs text-gray-500 dark:text-gray-400">Start Date</label>
+                        <label className="text-xs text-gray-500 dark:text-gray-400">{t('appointmentDashboard.dateRange.start')}</label>
                         <Input
                           type="date"
                           value={startDate}
                           onChange={(e) => handleStartDateChange(e.target.value)}
                           className="w-40 h-10 text-xs"
-                          placeholder="Start Date"
+                          placeholder={t('appointmentDashboard.dateRange.start')}
                         />
                       </div>
-                      <span className="text-gray-400 text-sm mt-6">to</span>
+                      <span className="text-gray-400 text-sm mt-6">{t('appointmentDashboard.dateRange.to')}</span>
                       <div className="flex flex-col gap-1">
-                        <label className="text-xs text-gray-500 dark:text-gray-400">End Date</label>
+                        <label className="text-xs text-gray-500 dark:text-gray-400">{t('appointmentDashboard.dateRange.end')}</label>
                         <Input
                           type="date"
                           value={endDate}
                           onChange={(e) => handleEndDateChange(e.target.value)}
                           className="w-40 h-10 text-xs"
-                          placeholder="End Date"
+                          placeholder={t('appointmentDashboard.dateRange.end')}
                           min={startDate || undefined}
                         />
                     </div>
@@ -890,14 +899,14 @@ export const AppointmentDashboard = () => {
                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                    <div className="flex flex-wrap gap-2">
                   {[
-                    { key: 'all', label: 'All', color: 'bg-gray-100 text-gray-700 border-gray-200' },
-                    { key: 'VITALS_REQUIRED', label: 'Vitals Required', color: 'bg-red-100 text-red-700 border-red-200' },
-                    { key: 'READY', label: 'Ready', color: 'bg-green-100 text-green-700 border-green-200' },
-                    { key: 'UNDER_CONSULT', label: 'Under Consult', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-                    { key: 'LAB_REQUIRED', label: 'Lab Required', color: 'bg-orange-100 text-orange-700 border-orange-200' },
-                    { key: 'AWAITING_RECONSULT', label: 'Awaiting Reconsult', color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
-                    { key: 'COMPLETED', label: 'Completed', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-                    { key: 'CANCELLED', label: 'Cancelled', color: 'bg-gray-100 text-gray-600 border-gray-300' }
+                    { key: 'all', label: t('appointmentDashboard.statusFilters.all'), color: 'bg-gray-100 text-gray-700 border-gray-200' },
+                    { key: 'VITALS_REQUIRED', label: t('appointmentDashboard.statusFilters.vitalsRequired'), color: 'bg-red-100 text-red-700 border-red-200' },
+                    { key: 'READY', label: t('appointmentDashboard.statusFilters.ready'), color: 'bg-green-100 text-green-700 border-green-200' },
+                    { key: 'UNDER_CONSULT', label: t('appointmentDashboard.statusFilters.underConsult'), color: 'bg-blue-100 text-blue-700 border-blue-200' },
+                    { key: 'LAB_REQUIRED', label: t('appointmentDashboard.statusFilters.labRequired'), color: 'bg-orange-100 text-orange-700 border-orange-200' },
+                    { key: 'AWAITING_RECONSULT', label: t('appointmentDashboard.statusFilters.awaitingReconsult'), color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
+                    { key: 'COMPLETED', label: t('appointmentDashboard.statusFilters.completed'), color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+                    { key: 'CANCELLED', label: t('appointmentDashboard.statusFilters.cancelled'), color: 'bg-gray-100 text-gray-600 border-gray-300' }
                   ].map((status) => {
                     const count = appointments.filter(a => {
                       const appointmentStartDate = new Date(a.startAt);
@@ -963,7 +972,7 @@ export const AppointmentDashboard = () => {
                   className="h-9 px-4 text-xs md:self-start"
                 >
                   <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  Refresh Now
+                  {t('appointmentDashboard.refreshNow')}
                 </Button>
                </div>
              </div>
@@ -973,7 +982,7 @@ export const AppointmentDashboard = () => {
             {isLoading && (
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8 text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600 dark:text-gray-400">Loading appointments...</p>
+                <p className="text-gray-600 dark:text-gray-400">{t('appointmentDashboard.loadingAppointments')}</p>
                   </div>
             )}
 
@@ -987,10 +996,10 @@ export const AppointmentDashboard = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                   </svg>
                   </div>
-                <p className="text-red-600 dark:text-red-400 font-medium mb-2">Error loading appointments</p>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">{error.message || 'Failed to load appointments'}</p>
+                  <p className="text-red-600 dark:text-red-400 font-medium mb-2">{t('appointmentDashboard.errorTitle')}</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">{error.message || t('appointmentDashboard.errorDescription')}</p>
                 <Button onClick={() => refetch()} variant="outline" size="sm">
-                  Try Again
+                    {t('appointmentDashboard.tryAgain')}
                 </Button>
                 </div>
             )}
@@ -1023,28 +1032,36 @@ export const AppointmentDashboard = () => {
                            <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">
                              <div className="flex items-center gap-1.5">
                                <User className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-                               <span>Patient ID</span>
+                                 <span>{t('appointmentDashboard.table.patientId')}</span>
                                <Eye className="h-2.5 w-2.5 text-gray-400" />
                              </div>
                            </TableHead>
-                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Patient Name</TableHead>
-                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Doctor Name</TableHead>
-                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Token No</TableHead>
+                             <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">{t('appointmentDashboard.table.patientName')}</TableHead>
+                             <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">{t('appointmentDashboard.table.doctorName')}</TableHead>
+                             <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">{t('appointmentDashboard.table.tokenNo')}</TableHead>
                            <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">
-                             {activeTab === 'past' ? 'Last Appointment Date' : activeTab === 'future' ? 'Appointment Date' : 'Appointment Time'}
+                               {activeTab === 'past'
+                                 ? t('appointmentDashboard.table.lastAppointmentDate')
+                                 : activeTab === 'future'
+                                   ? t('appointmentDashboard.table.appointmentDate')
+                                   : t('appointmentDashboard.table.appointmentTime')}
                            </TableHead>
                            <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">
-                             {activeTab === 'past' ? 'Last Completed Status' : 'Current Status'}
+                               {activeTab === 'past'
+                                 ? t('appointmentDashboard.table.lastCompletedStatus')
+                                 : t('appointmentDashboard.table.currentStatus')}
                            </TableHead>
                            {activeTab !== 'past' && (
-                             <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Actions</TableHead>
+                               <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">{t('appointmentDashboard.table.actions')}</TableHead>
                            )}
-                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">Print Prescription</TableHead>
+                             <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">{t('appointmentDashboard.table.printPrescription')}</TableHead>
                                                        <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">
-                              {activeTab === 'past' ? 'Next FollowUp Date' : 'Print Token'}
+                                {activeTab === 'past'
+                                  ? t('appointmentDashboard.table.nextFollowUpDate')
+                                  : t('appointmentDashboard.table.printToken')}
                             </TableHead>
                             {activeTab === 'past' && (
-                              <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">IsCompleted</TableHead>
+                                <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">{t('appointmentDashboard.table.isCompleted')}</TableHead>
                             )}
                        </TableRow>
                     </TableHeader>
@@ -1058,11 +1075,11 @@ export const AppointmentDashboard = () => {
                               </div>
                               <div>
                                   <p className="text-gray-900 dark:text-white font-medium text-xs">
-                                    {activeTab === 'current' && 'No current appointments found'}
-                                    {activeTab === 'past' && 'No past appointments found'}
-                                    {activeTab === 'future' && 'No future appointments found'}
+                                      {activeTab === 'current' && t('appointmentDashboard.emptyStates.current')}
+                                      {activeTab === 'past' && t('appointmentDashboard.emptyStates.past')}
+                                      {activeTab === 'future' && t('appointmentDashboard.emptyStates.future')}
                                   </p>
-                                  <p className="text-gray-500 dark:text-gray-400 text-xs">Try adjusting your search terms or doctor filter</p>
+                                    <p className="text-gray-500 dark:text-gray-400 text-xs">{t('appointmentDashboard.emptyStates.adjustFilters')}</p>
                               </div>
                             </div>
                           </TableCell>
@@ -1075,7 +1092,7 @@ export const AppointmentDashboard = () => {
                                  <button
                                    onClick={() => handlePatientIdClick(appointment)}
                                    className="group relative font-mono bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600 px-3 py-2 rounded-md text-xs font-semibold text-blue-700 dark:text-blue-300 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md"
-                                   title="Click to view patient profile"
+                                   title={t('appointmentDashboard.tooltip.viewProfile')}
                                  >
                                    <div className="flex items-center gap-1.5">
                                      <User className="h-3 w-3" />
@@ -1083,7 +1100,7 @@ export const AppointmentDashboard = () => {
                                      <Eye className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                               </div>
                                    <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                                     Click to view profile
+                                     {t('appointmentDashboard.tooltip.viewProfile')}
                 </div>
                                  </button>
                                </TableCell>
@@ -1108,7 +1125,7 @@ export const AppointmentDashboard = () => {
                                      <User className="h-2.5 w-2.5 text-green-600 dark:text-green-400" />
                                 </div>
                                    <span className="text-gray-700 dark:text-gray-300 text-xs truncate">
-                                     {appointment.doctorName || 'Not Assigned'}
+                                     {appointment.doctorName || t('appointmentDashboard.actionButtons.notApplicable')}
                                    </span>
                               </div>
                             </TableCell>
@@ -1116,7 +1133,7 @@ export const AppointmentDashboard = () => {
                                                                                                {/* Token No */}
                                 <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                                   <span className="font-mono bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded text-xs font-medium">
-                                    {appointment.token?.tokenNumber || 'N/A'}
+                                    {appointment.token?.tokenNumber || t('appointmentDashboard.actionButtons.notApplicable')}
                                   </span>
                               </TableCell>
                                 
@@ -1173,7 +1190,7 @@ export const AppointmentDashboard = () => {
                                        onClick={() => handleCancelClick(appointment)}
                                      >
                                        <X className="h-2.5 w-2.5 mr-1" />
-                                      Cancel
+                                      {t('common.cancel')}
                                       </Button>
                                     {appointment.finalStatusCode === 'VITALS_REQUIRED' && (
                                       <Button 
@@ -1183,7 +1200,7 @@ export const AppointmentDashboard = () => {
                                         className="h-6 px-2 text-xs text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                                       >
                                         <Heart className="h-2.5 w-2.5 mr-1" />
-                                        Vitals
+                                        {t('appointmentDashboard.actionButtons.vitals')}
                                       </Button>
                                   )}
                                 </div>
@@ -1202,12 +1219,12 @@ export const AppointmentDashboard = () => {
                                     {previewModalOpen && previewRequest?.appointmentId === appointment.appointmentId ? (
                                       <>
                                         <Loader2 className="h-2.5 w-2.5 mr-1 animate-spin" />
-                                        Preparing
+                                        {t('appointmentDashboard.actionButtons.preparing')}
                                       </>
                                     ) : (
                                       <>
                                         <FileText className="h-2.5 w-2.5 mr-1" />
-                                        Print
+                                        {t('common.print')}
                                       </>
                                     )}
                                 </Button>
@@ -1217,7 +1234,7 @@ export const AppointmentDashboard = () => {
                                 <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                                   {activeTab === 'past' ? (
                                     <div className="text-center">
-                                      <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">NA</span>
+                                      <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{t('appointmentDashboard.actionButtons.notApplicable')}</span>
                 </div>
                                   ) : (
                         <Button
@@ -1227,7 +1244,7 @@ export const AppointmentDashboard = () => {
                                       className="h-6 px-2 text-xs text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                         >
                                       <Printer className="h-2.5 w-2.5 mr-1" />
-                                  Print
+                                  {t('appointmentDashboard.table.printToken')}
                         </Button>
                         )}
                         </TableCell>
@@ -1243,7 +1260,7 @@ export const AppointmentDashboard = () => {
                                           className="h-6 px-2 text-xs text-emerald-600 border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
                                       >
                                           <UserCheck className="h-2.5 w-2.5 mr-1" />
-                                          Completed
+                                          {t('appointmentDashboard.actionButtons.completed')}
                                       </Button>
                                       ) : (
                                         <div className="flex items-center justify-center w-8 h-8 bg-red-200 dark:bg-red-800/40 rounded-full border-2 border-red-300 dark:border-red-600 shadow-sm">
@@ -1265,9 +1282,13 @@ export const AppointmentDashboard = () => {
                     <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
                       <div className="flex items-center gap-1.5">
                         <User className="h-4 w-4" />
-                        <span className="font-medium">Quick Tip:</span>
+                        <span className="font-medium">{t('appointmentDashboard.quickTip.title')}</span>
                       </div>
-                      <span>Click on any <span className="font-mono bg-blue-100 dark:bg-blue-800 px-1.5 py-0.5 rounded text-xs font-semibold">Patient ID</span> to view the patient's complete profile and medical history</span>
+                      <span>
+                        {t('appointmentDashboard.quickTip.description', {
+                          defaultValue: 'Click on any Patient ID to view the patient\'s complete profile and medical history',
+                        })}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1279,7 +1300,11 @@ export const AppointmentDashboard = () => {
               <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
                     <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Showing {startIndex + 1} to {Math.min(endIndex, filteredAppointments.length)} of {filteredAppointments.length} appointments
+                    {t('appointmentDashboard.pagination.showing', {
+                      from: startIndex + 1,
+                      to: Math.min(endIndex, filteredAppointments.length),
+                      total: filteredAppointments.length,
+                    })}
                       </div>
                   <Pagination>
                     <PaginationContent>
@@ -1381,19 +1406,19 @@ export const AppointmentDashboard = () => {
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Cancel Appointment</DialogTitle>
+            <DialogTitle>{t('appointmentDashboard.dialog.cancelTitle')}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to cancel this appointment? This action cannot be undone.
+              {t('appointmentDashboard.dialog.cancelDescription')}
             </DialogDescription>
           </DialogHeader>
           {appointmentToCancel && (
             <div className="py-4">
               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                 <div className="space-y-2 text-sm">
-                  <div><span className="font-medium">Patient:</span> {appointmentToCancel.patientFullName}</div>
-                  <div><span className="font-medium">Patient ID:</span> {appointmentToCancel.patientId}</div>
-                  <div><span className="font-medium">Doctor:</span> {appointmentToCancel.doctorName}</div>
-                  <div><span className="font-medium">Appointment ID:</span> {appointmentToCancel.appointmentId}</div>
+                  <div><span className="font-medium">{t('appointmentDashboard.dialog.patient')}:</span> {appointmentToCancel.patientFullName}</div>
+                  <div><span className="font-medium">{t('appointmentDashboard.dialog.patientId')}:</span> {appointmentToCancel.patientId}</div>
+                  <div><span className="font-medium">{t('appointmentDashboard.dialog.doctor')}:</span> {appointmentToCancel.doctorName}</div>
+                  <div><span className="font-medium">{t('appointmentDashboard.dialog.appointmentId')}:</span> {appointmentToCancel.appointmentId}</div>
                       </div>
                       </div>
                     </div>
@@ -1404,14 +1429,14 @@ export const AppointmentDashboard = () => {
               onClick={handleCancelDialogClose}
               disabled={isCancelling}
                         >
-              Keep Appointment
+              {t('appointmentDashboard.dialog.keepAppointment')}
                         </Button>
                                   <Button 
               variant="destructive"
               onClick={handleCancelConfirm}
               disabled={isCancelling}
             >
-              {isCancelling ? 'Cancelling...' : 'Cancel Appointment'}
+              {isCancelling ? t('appointmentDashboard.dialog.cancelling') : t('appointmentDashboard.dialog.confirmCancel')}
                                   </Button>
           </DialogFooter>
         </DialogContent>

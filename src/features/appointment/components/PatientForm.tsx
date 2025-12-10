@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Shield, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RegisterAppointmentRequest, generatePatientId } from '../services/appointmentApi';
@@ -58,7 +59,7 @@ const createInitialFormState = (): PatientFormState => ({
   address: '',
   city: '',
   pincode: '',
-  reason: 'General consultation',
+  reason: '',
   isPaid: false,
   paymentMode: '',
   hasInsurance: false,
@@ -72,45 +73,45 @@ const collectValidationErrors = (data: PatientFormState) => {
   const newErrors: Record<string, string> = {};
 
   if (!data.name.trim()) {
-    newErrors.name = 'Patient name is required';
+    newErrors.name = 'patientForm.errors.nameRequired';
   }
 
   const cleanPhone = formatPhoneNumber(data.phone);
   if (!cleanPhone) {
-    newErrors.phone = 'Phone number is required';
+    newErrors.phone = 'patientForm.errors.phoneRequired';
   } else if (!PHONE_REGEX.test(cleanPhone)) {
-    newErrors.phone = 'Please enter a valid 10-digit mobile number';
+    newErrors.phone = 'patientForm.errors.phoneInvalid';
   }
 
   if (!data.age.trim()) {
-    newErrors.age = 'Age is required';
+    newErrors.age = 'patientForm.errors.ageRequired';
   } else {
     const ageValue = parseInt(data.age, 10);
     if (Number.isNaN(ageValue) || ageValue < 1 || ageValue > 120) {
-      newErrors.age = 'Please enter a valid age';
+      newErrors.age = 'patientForm.errors.ageInvalid';
     }
   }
 
   if (!data.gender) {
-    newErrors.gender = 'Gender is required';
+    newErrors.gender = 'patientForm.errors.genderRequired';
   }
 
   if (!data.address.trim()) {
-    newErrors.address = 'Address is required';
+    newErrors.address = 'patientForm.errors.addressRequired';
   }
 
   if (!data.city.trim()) {
-    newErrors.city = 'City is required';
+    newErrors.city = 'patientForm.errors.cityRequired';
   }
 
   if (!data.pincode.trim()) {
-    newErrors.pincode = 'Pincode is required';
+    newErrors.pincode = 'patientForm.errors.pincodeRequired';
   } else if (!/^\d{6}$/.test(data.pincode)) {
-    newErrors.pincode = 'Pincode must be exactly 6 digits';
+    newErrors.pincode = 'patientForm.errors.pincodeInvalid';
   }
 
   if (data.isPaid && !data.paymentMode) {
-    newErrors.paymentMode = 'Payment mode is required when paid';
+    newErrors.paymentMode = 'patientForm.errors.paymentModeRequired';
   }
 
   return newErrors;
@@ -121,7 +122,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { format } from 'date-fns';
 
 interface PatientFormProps {
   selectedSlot: TimeSlot;
@@ -138,6 +138,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   onSubmit,
   onCancel
 }) => {
+  const { t, i18n } = useTranslation();
   const [formData, setFormData] = useState<PatientFormState>(createInitialFormState());
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState('');
@@ -152,42 +153,50 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const pendingValidationErrors = useMemo(() => collectValidationErrors(formData), [formData]);
   const isFormReady = Object.keys(pendingValidationErrors).length === 0;
 
+  const dateFormatter = useMemo(() => new Intl.DateTimeFormat(i18n.language, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  }), [i18n.language]);
+
+  const timeFormatter = useMemo(() => new Intl.DateTimeFormat(i18n.language, {
+    hour: 'numeric',
+    minute: '2-digit'
+  }), [i18n.language]);
+
   const formatTime = (time: string) => {
-    const [hour, minute] = time.split(':');
-    const hourNum = parseInt(hour);
-    const ampm = hourNum >= 12 ? 'PM' : 'AM';
-    const hour12 = hourNum % 12 || 12;
-    return `${hour12}:${minute} ${ampm}`;
+    const date = new Date(`1970-01-01T${time}:00`);
+    return timeFormatter.format(date);
   };
 
   // Helper functions for search functionality
   const getSearchPlaceholder = (field: string) => {
     switch (field) {
       case 'patientId':
-        return 'Enter Patient ID (e.g., P001, PAT123)';
+        return t('patientForm.search.placeholder.patientId');
       case 'name':
-        return 'Enter Patient Name (e.g., John Doe, Sarah)';
+        return t('patientForm.search.placeholder.name');
       case 'appointmentId':
-        return 'Enter Appointment ID (e.g., APT001, APT123)';
+        return t('patientForm.search.placeholder.appointmentId');
       case 'contact':
-  return 'Enter contact number (e.g., 9876543210)';
+        return t('patientForm.search.placeholder.contact');
       default:
-        return 'Enter search term';
+        return t('patientForm.search.placeholder.default');
     }
   };
 
   const getSearchFieldLabel = (field: string) => {
     switch (field) {
       case 'patientId':
-        return 'Patient ID';
+        return t('patientForm.search.fields.patientId');
       case 'name':
-        return 'Patient Name';
+        return t('patientForm.search.fields.name');
       case 'appointmentId':
-        return 'Appointment ID';
+        return t('patientForm.search.fields.appointmentId');
       case 'contact':
-        return 'Contact Number';
+        return t('patientForm.search.fields.contact');
       default:
-        return 'Search Field';
+        return t('patientForm.search.fields.default');
     }
   };
 
@@ -196,33 +205,33 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       case 'patientId':
         return (
           <>
-            <p>• Patient ID: P001, PAT123, P2024001</p>
-            <p>• Unique identifier for each patient</p>
+            <p>{t('patientForm.search.help.patientId.line1')}</p>
+            <p>{t('patientForm.search.help.patientId.line2')}</p>
           </>
         );
       case 'name':
         return (
           <>
-            <p>• Full name: John Doe, Sarah Smith</p>
-            <p>• Partial name: John, Sarah</p>
+            <p>{t('patientForm.search.help.name.line1')}</p>
+            <p>{t('patientForm.search.help.name.line2')}</p>
           </>
         );
       case 'appointmentId':
         return (
           <>
-            <p>• Appointment ID: APT000001, APT0000123</p>
-            <p>• PatientId: PT0000012, PT0000011</p>
+            <p>{t('patientForm.search.help.appointmentId.line1')}</p>
+            <p>{t('patientForm.search.help.appointmentId.line2')}</p>
           </>
         );
       case 'contact':
         return (
           <>
-            <p>• Phone: 9876XXXXXX</p>
-            <p>• Mobile: 8074XXXXXX</p>
+            <p>{t('patientForm.search.help.contact.line1')}</p>
+            <p>{t('patientForm.search.help.contact.line2')}</p>
           </>
         );
       default:
-        return <p>• Enter the search term</p>;
+        return <p>{t('patientForm.search.help.default')}</p>;
     }
   };
 
@@ -265,7 +274,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       address: patient.address || '',
       city: patient.city || '',
       pincode: patient.pincode || '',
-      reason: 'Follow-up consultation',
+      reason: t('patientForm.reason.followUp'),
       isPaid: false,
       paymentMode: '',
       hasInsurance: false,
@@ -327,7 +336,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
         doctorId: doctor.id,
         apptDate: new Date(selectedSlot.date + 'T' + selectedSlot.time).toISOString(),
         startAt: selectedSlot.date + 'T' + selectedSlot.time + ':00', // Keep as local time string, don't convert to UTC
-        reason: formData.reason || 'General consultation',
+        reason: formData.reason || t('patientForm.reason.general'),
         slotTimeInMinutes: selectedSlot.slotDurationInMinutes || 10, // Use slot duration from UI or default to 10
         userId: getUserId() || ''
       };
@@ -375,10 +384,10 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       <DialogContent className="max-w-7xl max-h-[95vh] overflow-y-auto dark:bg-gray-900">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-healthcare-primary dark:text-blue-400">
-            Book Appointment
+            {t('patientForm.title')}
           </DialogTitle>
           <DialogDescription className="dark:text-gray-300">
-            Please fill in the patient information to schedule your appointment.
+            {t('patientForm.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -386,7 +395,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           {/* Appointment Details - Compact */}
           <div className="xl:col-span-1">
             <Card className="p-3 bg-gradient-subtle dark:bg-gray-800 border-healthcare-primary/20 dark:border-blue-400/20 h-fit">
-              <h3 className="font-semibold text-foreground dark:text-white mb-2 text-sm">Appointment Details</h3>
+              <h3 className="font-semibold text-foreground dark:text-white mb-2 text-sm">{t('patientForm.appointmentDetails.title')}</h3>
               <div className="space-y-2 text-xs">
                 <div className="flex items-center gap-2">
                   <User className="h-3 w-3 text-healthcare-primary" />
@@ -394,7 +403,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-3 w-3 text-healthcare-primary" />
-                  <span>{format(new Date(selectedSlot.date), 'MMM dd, yyyy')}</span>
+                  <span>{dateFormatter.format(new Date(selectedSlot.date))}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-3 w-3 text-healthcare-primary" />
@@ -402,11 +411,11 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">⏱️</span>
-                  <span className="text-xs">Duration: {selectedSlot.slotDurationInMinutes || 10} minutes</span>
+                  <span className="text-xs">{t('patientForm.appointmentDetails.duration', { minutes: selectedSlot.slotDurationInMinutes || 10 })}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-3 w-3 text-healthcare-primary" />
-                  <span className="font-medium">Fee: ₹500</span>
+                  <span className="font-medium">{t('patientForm.appointmentDetails.fee')}</span>
                 </div>
               </div>
               
@@ -414,20 +423,20 @@ export const PatientForm: React.FC<PatientFormProps> = ({
               <div className="mt-4 pt-3 border-t border-healthcare-primary/20 dark:border-blue-400/20">
                 <h4 className="font-medium text-foreground dark:text-white mb-2 text-sm flex items-center gap-1">
                   <Search className="h-3 w-3 text-blue-600" />
-                  Search Existing Patient
+                  {t('patientForm.search.title')}
                 </h4>
                 <div className="space-y-2">
                   {/* Search Field Dropdown */}
                   <div className="flex gap-2">
                     <Select value={searchField} onValueChange={(value: string) => setSearchField(value as 'patientId' | 'name' | 'appointmentId' | 'contact')}>
                       <SelectTrigger className="text-xs h-8 flex-1 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
-                        <SelectValue placeholder="Select search field" />
+                        <SelectValue placeholder={t('patientForm.search.fieldPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="patientId">Patient ID</SelectItem>
-                        <SelectItem value="name">Patient Name</SelectItem>
-                        <SelectItem value="appointmentId">Appointment ID</SelectItem>
-                        <SelectItem value="contact">Contact</SelectItem>
+                        <SelectItem value="patientId">{t('patientForm.search.fields.patientId')}</SelectItem>
+                        <SelectItem value="name">{t('patientForm.search.fields.name')}</SelectItem>
+                        <SelectItem value="appointmentId">{t('patientForm.search.fields.appointmentId')}</SelectItem>
+                        <SelectItem value="contact">{t('patientForm.search.fields.contact')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -442,7 +451,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                   
                   {/* Search Help Text */}
                   <div className="text-xs text-muted-foreground dark:text-gray-400 space-y-1">
-                    <p>💡 <strong>Search by {getSearchFieldLabel(searchField)}:</strong></p>
+                    <p>💡 <strong>{t('patientForm.search.helpTitle', { field: getSearchFieldLabel(searchField) })}</strong></p>
                     {getSearchHelpText(searchField)}
                   </div>
                   
@@ -454,13 +463,13 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     disabled={isSearching || isSearchLoading || !searchQuery.trim()}
                   >
                     <Search className="h-3 w-3 mr-1" />
-                    {isSearching || isSearchLoading ? 'Searching...' : 'Search Patient'}
+                    {isSearching || isSearchLoading ? t('patientForm.search.searching') : t('patientForm.search.submit')}
                   </Button>
                   
                   {/* Search Error Display */}
                   {searchError && (
                     <div className="text-red-500 text-xs bg-red-50 dark:bg-red-900/20 p-2 rounded border border-red-200 dark:border-red-800">
-                      <p>Search error: {searchError}</p>
+                      <p>{t('patientForm.search.error', { error: searchError })}</p>
                       <Button 
                         type="button" 
                         size="sm" 
@@ -468,7 +477,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                         className="mt-1 h-6 text-xs"
                         onClick={clearSearchError}
                       >
-                        Clear Error
+                        {t('patientForm.search.clearError')}
                       </Button>
                     </div>
                   )}
@@ -485,77 +494,77 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 <div className="mb-3">
                   <h3 className="font-semibold text-foreground dark:text-white flex items-center gap-2">
                     <User className="h-4 w-4 text-healthcare-primary" />
-                    Personal Information
+                    {t('patientForm.personal.title')}
                   </h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                   <div>
                     <Label htmlFor="name" className="text-sm font-medium dark:text-gray-300">
-                      Patient Name <span className="text-red-500">*</span>
+                      {t('patientForm.personal.name')} <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="name"
                       value={formData.name}
                       onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Enter patient name"
+                      placeholder={t('patientForm.personal.namePlaceholder')}
                       className={`h-9 ${errors.name ? "border-red-500" : ""}`}
                     />
                     {errors.name && (
-                      <p className="text-red-500 text-xs mt-1">{errors.name}</p>
+                      <p className="text-red-500 text-xs mt-1">{t(errors.name)}</p>
                     )}
                   </div>
 
                   <div>
                     <Label htmlFor="phone" className="text-sm font-medium">
-                      Phone Number <span className="text-red-500">*</span>
+                      {t('patientForm.personal.phone')} <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="phone"
                       value={formData.phone}
                       onChange={handlePhoneChange}
-                      placeholder="Enter 10-digit mobile number"
+                      placeholder={t('patientForm.personal.phonePlaceholder')}
                       className={`h-9 ${errors.phone ? "border-red-500" : ""}`}
                     />
                     {errors.phone && (
-                      <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
+                      <p className="text-red-500 text-xs mt-1">{t(errors.phone)}</p>
                     )}
                   </div>
 
                   <div>
                     <Label htmlFor="age" className="text-sm font-medium">
-                      Age <span className="text-red-500">*</span>
+                      {t('patientForm.personal.age')} <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="age"
                       type="number"
                       value={formData.age}
                       onChange={(e) => setFormData(prev => ({ ...prev, age: e.target.value }))}
-                      placeholder="Age"
+                      placeholder={t('patientForm.personal.agePlaceholder')}
                       min="1"
                       max="120"
                       className={`h-9 ${errors.age ? "border-red-500" : ""}`}
                     />
                     {errors.age && (
-                      <p className="text-red-500 text-xs mt-1">{errors.age}</p>
+                      <p className="text-red-500 text-xs mt-1">{t(errors.age)}</p>
                     )}
                   </div>
 
                   <div>
                     <Label htmlFor="gender" className="text-sm font-medium">
-                      Gender <span className="text-red-500">*</span>
+                      {t('patientForm.personal.gender')} <span className="text-red-500">*</span>
                     </Label>
                     <Select value={formData.gender} onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
                       <SelectTrigger className={`h-9 ${errors.gender ? "border-red-500" : ""}`}>
-                        <SelectValue placeholder="Select gender" />
+                        <SelectValue placeholder={t('patientForm.personal.genderPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Male">Male</SelectItem>
-                        <SelectItem value="Female">Female</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
+                        <SelectItem value="Male">{t('patientForm.personal.genderOptions.male')}</SelectItem>
+                        <SelectItem value="Female">{t('patientForm.personal.genderOptions.female')}</SelectItem>
+                        <SelectItem value="Other">{t('patientForm.personal.genderOptions.other')}</SelectItem>
                       </SelectContent>
                     </Select>
                     {errors.gender && (
-                      <p className="text-red-500 text-xs mt-1">{errors.gender}</p>
+                      <p className="text-red-500 text-xs mt-1">{t(errors.gender)}</p>
                     )}
                   </div>
                 </div>
@@ -567,56 +576,56 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 <Card className="p-4">
                   <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-healthcare-primary" />
-                    Address Information
+                    {t('patientForm.address.title')}
                   </h3>
                   <div className="space-y-3">
                     <div>
                       <Label htmlFor="address" className="text-sm font-medium">
-                        Address <span className="text-red-500">*</span>
+                        {t('patientForm.address.address')} <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         id="address"
                         value={formData.address}
                         onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                        placeholder="Enter full address"
+                        placeholder={t('patientForm.address.addressPlaceholder')}
                         className={`h-9 ${errors.address ? "border-red-500" : ""}`}
                       />
                       {errors.address && (
-                        <p className="text-red-500 text-xs mt-1">{errors.address}</p>
+                        <p className="text-red-500 text-xs mt-1">{t(errors.address)}</p>
                       )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <Label htmlFor="city" className="text-sm font-medium">
-                          City <span className="text-red-500">*</span>
+                          {t('patientForm.address.city')} <span className="text-red-500">*</span>
                         </Label>
                         <Input
                           id="city"
                           value={formData.city}
                           onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                          placeholder="Enter city"
+                          placeholder={t('patientForm.address.cityPlaceholder')}
                           className={`h-9 ${errors.city ? "border-red-500" : ""}`}
                         />
                         {errors.city && (
-                          <p className="text-red-500 text-xs mt-1">{errors.city}</p>
+                          <p className="text-red-500 text-xs mt-1">{t(errors.city)}</p>
                         )}
                       </div>
 
                       <div>
                         <Label htmlFor="pincode" className="text-sm font-medium">
-                          Pincode <span className="text-red-500">*</span>
+                          {t('patientForm.address.pincode')} <span className="text-red-500">*</span>
                         </Label>
                         <Input
                           id="pincode"
                           value={formData.pincode}
                           onChange={(e) => setFormData(prev => ({ ...prev, pincode: e.target.value }))}
-                          placeholder="6-digit pincode"
+                          placeholder={t('patientForm.address.pincodePlaceholder')}
                           maxLength={6}
                           className={`h-9 ${errors.pincode ? "border-red-500" : ""}`}
                         />
                         {errors.pincode && (
-                          <p className="text-red-500 text-xs mt-1">{errors.pincode}</p>
+                          <p className="text-red-500 text-xs mt-1">{t(errors.pincode)}</p>
                         )}
                       </div>
                     </div>
@@ -629,7 +638,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 <Card className="p-4">
                   <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
                     <Shield className="h-4 w-4 text-green-600" />
-                    Insurance & Payment
+                    {t('patientForm.insurance.title')}
                   </h3>
                   <div className="space-y-3">
                     {/* Insurance Section */}
@@ -646,7 +655,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                           }))}
                         />
                         <Label htmlFor="hasInsurance" className="text-sm font-medium">
-                          Has Insurance
+                          {t('patientForm.insurance.hasInsurance')}
                         </Label>
                       </div>
 
@@ -654,17 +663,17 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                         <div className="grid grid-cols-2 gap-2">
                           <Select value={formData.insuranceType} onValueChange={(value) => setFormData(prev => ({ ...prev, insuranceType: value }))}>
                             <SelectTrigger className="h-9">
-                              <SelectValue placeholder="Type" />
+                              <SelectValue placeholder={t('patientForm.insurance.typePlaceholder')} />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="insurance">Insurance ID</SelectItem>
-                              <SelectItem value="abha">ABHA ID</SelectItem>
+                              <SelectItem value="insurance">{t('patientForm.insurance.types.insurance')}</SelectItem>
+                              <SelectItem value="abha">{t('patientForm.insurance.types.abha')}</SelectItem>
                             </SelectContent>
                           </Select>
                           <Input
                             value={formData.insuranceId}
                             onChange={(e) => setFormData(prev => ({ ...prev, insuranceId: e.target.value }))}
-                            placeholder={formData.insuranceType === 'abha' ? 'ABHA ID' : 'Insurance ID'}
+                            placeholder={formData.insuranceType === 'abha' ? t('patientForm.insurance.types.abha') : t('patientForm.insurance.types.insurance')}
                             className="h-9"
                           />
                         </div>
@@ -680,24 +689,24 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                           onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPaid: !!checked, paymentMode: !!checked ? prev.paymentMode : '' }))}
                         />
                         <Label htmlFor="isPaid" className="text-sm font-medium">
-                          Payment Completed
+                          {t('patientForm.payment.completed')}
                         </Label>
                       </div>
 
                       {formData.isPaid && (
                         <Select value={formData.paymentMode} onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMode: value }))}>
                           <SelectTrigger className={`h-9 ${errors.paymentMode ? "border-red-500" : ""}`}>
-                            <SelectValue placeholder="Payment mode" />
+                            <SelectValue placeholder={t('patientForm.payment.modePlaceholder')} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="cash">Cash</SelectItem>
-                            <SelectItem value="upi">UPI</SelectItem>
-                            <SelectItem value="card">Card</SelectItem>
+                            <SelectItem value="cash">{t('patientForm.payment.modes.cash')}</SelectItem>
+                            <SelectItem value="upi">{t('patientForm.payment.modes.upi')}</SelectItem>
+                            <SelectItem value="card">{t('patientForm.payment.modes.card')}</SelectItem>
                           </SelectContent>
                         </Select>
                       )}
                       {errors.paymentMode && (
-                        <p className="text-red-500 text-xs mt-1">{errors.paymentMode}</p>
+                        <p className="text-red-500 text-xs mt-1">{t(errors.paymentMode)}</p>
                       )}
                     </div>
                   </div>
@@ -711,14 +720,14 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                   onClick={onCancel}
                   className="flex-1 h-10"
                 >
-                  Cancel
+                  {t('patientForm.actions.cancel')}
                 </Button>
                 <Button
                   type="submit"
                   disabled={isSubmitting || isBookingLoading || !isFormReady}
                   className="flex-1 bg-healthcare-primary hover:bg-healthcare-primary/90 h-10"
                 >
-                  {isSubmitting || isBookingLoading ? 'Booking Appointment...' : 'Book Appointment'}
+                  {isSubmitting || isBookingLoading ? t('patientForm.actions.submitting') : t('patientForm.actions.submit')}
                 </Button>
               </div>
             </form>
@@ -732,10 +741,10 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Search className="h-5 w-5 text-blue-600" />
-              Search Results
+              {t('patientForm.searchResults.title')}
             </DialogTitle>
             <DialogDescription>
-              Found {searchResults.length} patient(s) matching your search criteria. Select the correct patient to fill the form.
+              {t('patientForm.searchResults.description', { count: searchResults.length })}
             </DialogDescription>
           </DialogHeader>
 
@@ -756,55 +765,55 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                           </div>
                           <div>
                             <h4 className="font-semibold text-foreground">{patient.fullName}</h4>
-                            <p className="text-sm text-muted-foreground">ID: {patient.patientId}</p>
+                            <p className="text-sm text-muted-foreground">{t('patientForm.searchResults.id', { id: patient.patientId })}</p>
                           </div>
                         </div>
                         
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div>
-                            <span className="text-muted-foreground">Phone:</span>
+                            <span className="text-muted-foreground">{t('patientForm.searchResults.phone')}</span>
                             <p className="font-medium">{patient.mobile}</p>
                           </div>
                           <div>
-                            <span className="text-muted-foreground">Gender:</span>
+                            <span className="text-muted-foreground">{t('patientForm.searchResults.gender')}</span>
                             <p className="font-medium">{patient.sex}</p>
                           </div>
                           <div>
-                            <span className="text-muted-foreground">Age:</span>
-                            <p className="font-medium">{patient.age} years</p>
+                            <span className="text-muted-foreground">{t('patientForm.searchResults.age')}</span>
+                            <p className="font-medium">{t('patientForm.searchResults.ageValue', { age: patient.age })}</p>
                           </div>
                           <div>
-                            <span className="text-muted-foreground">Last Visit:</span>
-                            <p className="font-medium">{patient.lastRegistrationAt ? new Date(patient.lastRegistrationAt).toLocaleDateString() : 'N/A'}</p>
+                            <span className="text-muted-foreground">{t('patientForm.searchResults.lastVisit')}</span>
+                            <p className="font-medium">{patient.lastRegistrationAt ? dateFormatter.format(new Date(patient.lastRegistrationAt)) : t('patientForm.searchResults.notAvailable')}</p>
                           </div>
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mt-2">
                           <div>
-                            <span className="text-muted-foreground">Address:</span>
-                            <p className="font-medium text-xs truncate">{patient.address || 'N/A'}</p>
+                            <span className="text-muted-foreground">{t('patientForm.searchResults.address')}</span>
+                            <p className="font-medium text-xs truncate">{patient.address || t('patientForm.searchResults.notAvailable')}</p>
                           </div>
                           <div>
-                            <span className="text-muted-foreground">City:</span>
-                            <p className="font-medium">{patient.city || 'N/A'}</p>
+                            <span className="text-muted-foreground">{t('patientForm.searchResults.city')}</span>
+                            <p className="font-medium">{patient.city || t('patientForm.searchResults.notAvailable')}</p>
                           </div>
                           <div>
-                            <span className="text-muted-foreground">Pincode:</span>
-                            <p className="font-medium">{patient.pincode || 'N/A'}</p>
+                            <span className="text-muted-foreground">{t('patientForm.searchResults.pincode')}</span>
+                            <p className="font-medium">{patient.pincode || t('patientForm.searchResults.notAvailable')}</p>
                           </div>
                         </div>
                         
                         <div className="mt-2">
-                          <span className="text-muted-foreground text-sm">Matched by:</span>
+                          <span className="text-muted-foreground text-sm">{t('patientForm.searchResults.matchedBy')}</span>
                           <p className="text-sm">{patient.matched.by}: {patient.matched.value}</p>
                         </div>
                         
                         {patient.appointmentDate && (
                           <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border">
-                            <span className="text-muted-foreground text-sm">Upcoming Appointment:</span>
+                            <span className="text-muted-foreground text-sm">{t('patientForm.searchResults.upcoming')}</span>
                             <p className="text-sm font-medium">
-                              {new Date(patient.appointmentDate).toLocaleDateString()} 
-                              {patient.tokenNumber && patient.tokenNumber !== '0' && ` (Token: ${patient.tokenNumber})`}
+                              {dateFormatter.format(new Date(patient.appointmentDate))}
+                              {patient.tokenNumber && patient.tokenNumber !== '0' && ` (${t('patientForm.searchResults.token', { token: patient.tokenNumber })})`}
                             </p>
                           </div>
                         )}
@@ -819,7 +828,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                             handlePatientSelect(patient);
                           }}
                         >
-                          Select Patient
+                          {t('patientForm.searchResults.selectPatient')}
                         </Button>
                       </div>
                     </div>
@@ -829,9 +838,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({
             ) : (
               <div className="text-center py-8">
                 <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No patients found</h3>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">{t('patientForm.searchResults.emptyTitle')}</h3>
                 <p className="text-gray-500 dark:text-gray-400">
-                  No patients match your search criteria. Try a different search term or create a new patient.
+                  {t('patientForm.searchResults.emptyDescription')}
                 </p>
               </div>
             )}
@@ -842,7 +851,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
               variant="outline" 
               onClick={() => setShowSearchResults(false)}
             >
-              Close
+              {t('patientForm.searchResults.close')}
             </Button>
             {searchResults.length === 0 && (
               <Button 
@@ -852,7 +861,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                   setSearchQuery('');
                 }}
               >
-                Create New Patient
+                {t('patientForm.searchResults.createNew')}
               </Button>
             )}
           </div>

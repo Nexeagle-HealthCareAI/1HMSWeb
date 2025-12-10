@@ -144,39 +144,39 @@ export const ClinicalDashboard: React.FC = () => {
   const canBypassDoctorRestriction = (userRole === 'AdminDoctor' || userRole === 'Doctor') && Boolean(hospitalId);
   const isDoctorExperienceLocked = doctorProfileRestricted && !canBypassDoctorRestriction;
 
-  const doctorDisplayName = doctorProfileResponse?.userId || 'Doctor';
+  const doctorDisplayName = doctorProfileResponse?.userId || t('docBoard.header.defaultDoctorName');
 
   const navButtons: Array<{ key: NavKey; label: string; shortLabel: string; Icon: LucideIcon; requiresProfile?: boolean; description: string; }> = [
     {
       key: 'appointments',
-      label: 'Appointments',
-      shortLabel: 'Appts',
+      label: t('docBoard.nav.appointments.label'),
+      shortLabel: t('docBoard.nav.appointments.short'),
       Icon: Calendar,
-      description: 'Monitor today’s queue'
+      description: t('docBoard.nav.appointments.description')
     },
     {
       key: 'calendar',
-      label: t('doctorCalendar.myCalendar') || 'My Calendar',
-      shortLabel: 'Cal',
+      label: t('docBoard.nav.calendar.label'),
+      shortLabel: t('docBoard.nav.calendar.short'),
       Icon: CalendarDays,
       requiresProfile: true,
-      description: 'Plan your week'
+      description: t('docBoard.nav.calendar.description')
     },
     {
       key: 'assistant',
-      label: 'AI Assistant',
-      shortLabel: 'AI',
+      label: t('docBoard.nav.assistant.label'),
+      shortLabel: t('docBoard.nav.assistant.short'),
       Icon: Bot,
       requiresProfile: true,
-      description: 'Summaries & insights'
+      description: t('docBoard.nav.assistant.description')
     },
     {
       key: 'settings',
-      label: 'Prescription Settings',
-      shortLabel: 'Settings',
+      label: t('docBoard.nav.settings.label'),
+      shortLabel: t('docBoard.nav.settings.short'),
       Icon: FileText,
       requiresProfile: true,
-      description: 'Personalize layouts'
+      description: t('docBoard.nav.settings.description')
     }
   ];
 
@@ -208,7 +208,7 @@ export const ClinicalDashboard: React.FC = () => {
   const openPrescriptionPreview = (appointment: PatientAppointment) => {
     const requestPayload = buildPreviewRequest(appointment);
     if (!requestPayload) {
-      alert('Prescription preview requires doctor and hospital context.');
+      alert(t('docBoard.alerts.previewMissingContext'));
       return;
     }
     setPreviewRequest(requestPayload);
@@ -356,25 +356,25 @@ export const ClinicalDashboard: React.FC = () => {
       case 'VITALS_REQUIRED':
         return (
           <Badge className="bg-red-50 text-red-700 border-red-200 text-xs px-1.5 py-0.5 font-medium">
-            Vitals Required
+            {t('docBoard.statusBadge.vitalsRequired')}
           </Badge>
         );
       case 'READY':
-        return <Badge className="bg-green-50 text-green-700 border-green-200 text-xs px-1.5 py-0.5 font-medium">Ready</Badge>;
+        return <Badge className="bg-green-50 text-green-700 border-green-200 text-xs px-1.5 py-0.5 font-medium">{t('docBoard.statusBadge.ready')}</Badge>;
       case 'UNDER_CONSULT':
-        return <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-xs px-1.5 py-0.5 font-medium">Consulting</Badge>;
+        return <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-xs px-1.5 py-0.5 font-medium">{t('docBoard.statusBadge.consulting')}</Badge>;
       case 'LAB_REQUIRED':
-        return <Badge className="bg-orange-50 text-orange-700 border-orange-200 text-xs px-1.5 py-0.5 font-medium">Lab Required</Badge>;
+        return <Badge className="bg-orange-50 text-orange-700 border-orange-200 text-xs px-1.5 py-0.5 font-medium">{t('docBoard.statusBadge.labRequired')}</Badge>;
       case 'AWAITING_RECONSULT':
-        return <Badge className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs px-1.5 py-0.5 font-medium">Reconsult</Badge>;
+        return <Badge className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs px-1.5 py-0.5 font-medium">{t('docBoard.statusBadge.reconsult')}</Badge>;
       case 'COMPLETED':
-        return <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs px-1.5 py-0.5 font-medium">Completed</Badge>;
+        return <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs px-1.5 py-0.5 font-medium">{t('docBoard.statusBadge.completed')}</Badge>;
       case 'SCHEDULED':
-        return <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-xs px-1.5 py-0.5 font-medium">Scheduled</Badge>;
+        return <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-xs px-1.5 py-0.5 font-medium">{t('docBoard.statusBadge.scheduled')}</Badge>;
       case 'CANCELLED':
-        return <Badge className="bg-gray-50 text-gray-600 border-gray-300 text-xs px-1.5 py-0.5 font-medium">Cancelled</Badge>;
+        return <Badge className="bg-gray-50 text-gray-600 border-gray-300 text-xs px-1.5 py-0.5 font-medium">{t('docBoard.statusBadge.cancelled')}</Badge>;
       default:
-        return <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-xs px-1.5 py-0.5 font-medium">{status}</Badge>;
+        return <Badge className="bg-gray-50 text-gray-700 border-gray-200 text-xs px-1.5 py-0.5 font-medium">{t('docBoard.statusBadge.default', { status })}</Badge>;
     }
   };
 
@@ -520,8 +520,8 @@ export const ClinicalDashboard: React.FC = () => {
   }> = [
     {
       value: 'current',
-      label: 'Current Appointments',
-      subLabel: 'Live queue & vitals',
+      label: t('docBoard.tabs.current.label'),
+      subLabel: t('docBoard.tabs.current.subLabel'),
       Icon: Activity,
       accent: 'from-blue-500 via-indigo-500 to-purple-500',
       iconColor: 'text-blue-500 dark:text-blue-300',
@@ -529,8 +529,8 @@ export const ClinicalDashboard: React.FC = () => {
     },
     {
       value: 'past',
-      label: 'Past Visits',
-      subLabel: 'History & follow-ups',
+      label: t('docBoard.tabs.past.label'),
+      subLabel: t('docBoard.tabs.past.subLabel'),
       Icon: Clock,
       accent: 'from-slate-500 via-slate-600 to-slate-700',
       iconColor: 'text-slate-500 dark:text-slate-300',
@@ -538,8 +538,8 @@ export const ClinicalDashboard: React.FC = () => {
     },
     {
       value: 'future',
-      label: 'Upcoming Schedule',
-      subLabel: 'Next 7 days',
+      label: t('docBoard.tabs.future.label'),
+      subLabel: t('docBoard.tabs.future.subLabel'),
       Icon: CalendarDays,
       accent: 'from-emerald-500 via-teal-500 to-cyan-500',
       iconColor: 'text-emerald-500 dark:text-emerald-300',
@@ -714,16 +714,16 @@ export const ClinicalDashboard: React.FC = () => {
                   <Calendar className="h-4 w-4 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight"> Dashboard</h1>
+                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">{t('docBoard.header.title')}</h1>
                   {clampedProfileCompletion < 100 && (
                     <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2 text-[11px] sm:text-xs">
                       <button
                         type="button"
                         onClick={() => navigate('/profile?tab=professional')}
                         className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white/80 dark:bg-slate-900/70 border border-blue-100 dark:border-slate-800 shadow-inner transition-transform hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
-                        title="View professional profile"
+                        title={t('docBoard.header.viewProfessionalProfile')}
                       >
-                        <span className="uppercase tracking-wide text-blue-600 dark:text-blue-300 font-semibold">Professional profile</span>
+                        <span className="uppercase tracking-wide text-blue-600 dark:text-blue-300 font-semibold">{t('docBoard.header.professionalProfile')}</span>
                         <div className="flex items-center gap-1 text-gray-900 dark:text-white font-bold">
                           {clampedProfileCompletion}%
                           {clampedProfileCompletion === 100 && <CircleCheck className="h-3.5 w-3.5 text-emerald-500" />}
@@ -742,7 +742,7 @@ export const ClinicalDashboard: React.FC = () => {
                 {!doctorProfileRestricted && profileCompletionPercentage === 100 && (
                   <Badge className="ml-2 bg-white/80 dark:bg-slate-800/80 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-500/40 flex items-center gap-1 px-2.5 py-1 text-xs font-semibold shadow-sm">
                     <UserCheck className="h-3.5 w-3.5 text-green-600" />
-                    Verified
+                    {t('docBoard.header.verified')}
                   </Badge>
                 )}
               </div>
@@ -762,7 +762,7 @@ export const ClinicalDashboard: React.FC = () => {
                       aria-disabled={locked}
                       aria-pressed={isActive}
                       tabIndex={locked ? -1 : 0}
-                      title={locked ? (doctorProfileMessage || 'Complete your profile to unlock this section') : description}
+                      title={locked ? (doctorProfileMessage || t('docBoard.nav.lockedMessage')) : description}
                       className={`group flex-1 lg:flex-none min-w-[96px] flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-2.5 py-1.5 border transition-all duration-300 text-[12px] ${
                         isActive
                           ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white border-transparent shadow-xl shadow-blue-500/30'
@@ -807,9 +807,9 @@ export const ClinicalDashboard: React.FC = () => {
                 </div>
                 <div className="space-y-1 sm:space-y-2">
                   <p className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300">
-                    {doctorProfileLoading ? 'Loading doctor profile...' : 'Loading appointment data...'}
+                        {doctorProfileLoading ? t('docBoard.loading.doctorProfile') : t('docBoard.loading.appointments')}
                   </p>
-                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Please wait while we fetch your data</p>
+                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{t('docBoard.loading.helper')}</p>
                 </div>
               </div>
             </div>
@@ -824,12 +824,16 @@ export const ClinicalDashboard: React.FC = () => {
                 </div>
                 <div className="space-y-1 sm:space-y-2">
                   <p className="text-lg sm:text-xl font-bold text-red-800 dark:text-red-200">
-                    {doctorProfileError ? 'Failed to load doctor profile' : 'Failed to load appointment data'}
+                    {doctorProfileError ? t('docBoard.error.doctorProfile') : t('docBoard.error.appointments')}
                   </p>
                   <p className="text-red-600 dark:text-red-400 text-xs sm:text-sm max-w-md">
                     {!hospitalId || !doctorId
-                      ? `Missing required data: ${!hospitalId ? 'Hospital ID' : ''} ${!doctorId ? 'Doctor ID' : ''}`
-                      : 'Please check the console for error details and try refreshing the page'}
+                      ? t('docBoard.error.missingData', {
+                          fields: [!hospitalId ? t('docBoard.error.missingHospitalId') : '', !doctorId ? t('docBoard.error.missingDoctorId') : '']
+                            .filter(Boolean)
+                            .join(' ')
+                        })
+                      : t('docBoard.error.generic')}
                   </p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-3 sm:mt-4 w-full sm:w-auto">
@@ -840,7 +844,7 @@ export const ClinicalDashboard: React.FC = () => {
                     className="bg-white hover:bg-red-50 border-red-300 text-red-700 hover:text-red-800 transition-all duration-200 w-full sm:w-auto"
                   >
                     <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                    Retry
+                    {t('common.retry')}
                   </Button>
                   <Button
                     variant="outline"
@@ -849,7 +853,7 @@ export const ClinicalDashboard: React.FC = () => {
                     className="bg-white hover:bg-red-50 border-red-300 text-red-700 hover:text-red-800 transition-all duration-200 w-full sm:w-auto"
                   >
                     <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                    Refresh Page
+                    {t('docBoard.error.refreshPage')}
                   </Button>
                 </div>
               </div>
@@ -882,10 +886,10 @@ export const ClinicalDashboard: React.FC = () => {
                     <div className="space-y-3 sm:space-y-4">
                       <div>
                         <h3 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
-                          Complete Your Doctor Profile
+                          {t('docBoard.restriction.title')}
                         </h3>
                         <p className="text-blue-700 dark:text-blue-300 text-sm sm:text-base mt-2 font-medium">
-                          {doctorProfileMessage || 'Unlock full access to calendar, appointments, and prescription features'}
+                          {doctorProfileMessage || t('docBoard.restriction.subtitle')}
                         </p>
                       </div>
 
@@ -893,24 +897,24 @@ export const ClinicalDashboard: React.FC = () => {
                       <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-4 sm:p-5 border border-blue-100 dark:border-blue-900/50">
                         <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
                           <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                          Required Information:
+                          {t('docBoard.restriction.requiredInfoTitle')}
                         </p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left">
                           <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                             <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
-                            <span>Medical License Number</span>
+                            <span>{t('docBoard.restriction.requiredItems.license')}</span>
                           </div>
                           <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                             <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
-                            <span>Department & Specializations</span>
+                            <span>{t('docBoard.restriction.requiredItems.department')}</span>
                           </div>
                           <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                             <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
-                            <span>Professional Qualifications</span>
+                            <span>{t('docBoard.restriction.requiredItems.qualifications')}</span>
                           </div>
                           <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                             <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
-                            <span>Experience & Registration Details</span>
+                            <span>{t('docBoard.restriction.requiredItems.experience')}</span>
                           </div>
                         </div>
                       </div>
@@ -919,15 +923,15 @@ export const ClinicalDashboard: React.FC = () => {
                       <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 text-xs sm:text-sm">
                         <div className="flex items-center gap-2 px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">
                           <Calendar className="h-3.5 w-3.5" />
-                          <span>Calendar Access</span>
+                          <span>{t('docBoard.restriction.benefits.calendar')}</span>
                         </div>
                         <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-full">
                           <FileText className="h-3.5 w-3.5" />
-                          <span>Prescriptions</span>
+                          <span>{t('docBoard.restriction.benefits.prescriptions')}</span>
                         </div>
                         <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full">
                           <Clock className="h-3.5 w-3.5" />
-                          <span>Appointments</span>
+                          <span>{t('docBoard.restriction.benefits.appointments')}</span>
                         </div>
                       </div>
                     </div>
@@ -943,12 +947,12 @@ export const ClinicalDashboard: React.FC = () => {
                     >
                       <div className="flex items-center gap-2">
                         <Settings className="h-5 w-5" />
-                        <span className="text-base sm:text-lg">Complete Profile Now</span>
+                        <span className="text-base sm:text-lg">{t('docBoard.restriction.completeProfileCta')}</span>
                         <ExternalLink className="h-4 w-4" />
                       </div>
                     </Button>
                     <p className="text-xs text-gray-500 dark:text-gray-400 text-center lg:text-left mt-2">
-                      Takes only 2-3 minutes
+                      {t('docBoard.restriction.ctaHelper')}
                     </p>
                   </div>
                 </div>
@@ -974,7 +978,7 @@ export const ClinicalDashboard: React.FC = () => {
                 <div className="bg-white dark:bg-gray-900 rounded-2xl p-3 shadow-xl border border-gray-200 dark:border-gray-800 h-full lg:min-h-[calc(100vh-160px)] flex flex-col">
                   <div className={`mb-2 px-1 flex items-center justify-end gap-2 ${isSidebarCollapsed ? 'lg:flex-col lg:items-center lg:gap-1.5' : ''}`}>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-gray-400 lg:hidden">Swipe to explore</span>
+                      <span className="text-[10px] text-gray-400 lg:hidden">{t('docBoard.tabs.swipeHint')}</span>
                       <button
                         type="button"
                         onClick={() => setIsSidebarCollapsed((prev) => !prev)}
@@ -982,14 +986,14 @@ export const ClinicalDashboard: React.FC = () => {
                         aria-pressed={isSidebarCollapsed}
                         aria-expanded={!isSidebarCollapsed}
                         aria-controls="appointment-views-nav"
-                        aria-label={isSidebarCollapsed ? 'Expand appointment sidebar' : 'Collapse appointment sidebar'}
+                        aria-label={isSidebarCollapsed ? t('docBoard.tabs.expandSidebar') : t('docBoard.tabs.collapseSidebar')}
                       >
                         {isSidebarCollapsed ? (
                           <Expand className="h-3.5 w-3.5" aria-hidden />
                         ) : (
                           <X className="h-3.5 w-3.5" aria-hidden />
                         )}
-                        <span className="sr-only">{isSidebarCollapsed ? 'Expand appointment sidebar' : 'Collapse appointment sidebar'}</span>
+                        <span className="sr-only">{isSidebarCollapsed ? t('docBoard.tabs.expandSidebar') : t('docBoard.tabs.collapseSidebar')}</span>
                       </button>
                     </div>
                   </div>
@@ -1104,7 +1108,7 @@ export const ClinicalDashboard: React.FC = () => {
                       >
                         <div className="flex items-center gap-1 sm:gap-1.5">
                           <CircleCheck className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                          <span>All ({currentAppointmentCounts.all})</span>
+                          <span>{t('docBoard.filters.all', { count: currentAppointmentCounts.all })}</span>
                         </div>
                       </Button>
 
@@ -1120,7 +1124,7 @@ export const ClinicalDashboard: React.FC = () => {
                       >
                         <div className="flex items-center gap-1 sm:gap-1.5">
                           <Heart className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                          <span>Vitals ({currentAppointmentCounts.vitalsRequired})</span>
+                          <span>{t('docBoard.filters.vitalsRequired', { count: currentAppointmentCounts.vitalsRequired })}</span>
                         </div>
                       </Button>
 
@@ -1136,7 +1140,7 @@ export const ClinicalDashboard: React.FC = () => {
                       >
                         <div className="flex items-center gap-1 sm:gap-1.5">
                           <UserCheck className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                          <span>Ready ({currentAppointmentCounts.ready})</span>
+                          <span>{t('docBoard.filters.ready', { count: currentAppointmentCounts.ready })}</span>
                         </div>
                       </Button>
 
@@ -1152,7 +1156,7 @@ export const ClinicalDashboard: React.FC = () => {
                       >
                         <div className="flex items-center gap-1 sm:gap-1.5">
                           <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                          <span>Consulting ({currentAppointmentCounts.underConsult})</span>
+                          <span>{t('docBoard.filters.consulting', { count: currentAppointmentCounts.underConsult })}</span>
                         </div>
                       </Button>
 
@@ -1168,7 +1172,7 @@ export const ClinicalDashboard: React.FC = () => {
                       >
                         <div className="flex items-center gap-1 sm:gap-1.5">
                           <FlaskConical className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                          <span>Lab ({currentAppointmentCounts.labRequired})</span>
+                          <span>{t('docBoard.filters.labRequired', { count: currentAppointmentCounts.labRequired })}</span>
                         </div>
                       </Button>
 
@@ -1184,7 +1188,7 @@ export const ClinicalDashboard: React.FC = () => {
                       >
                         <div className="flex items-center gap-1 sm:gap-1.5">
                           <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                          <span>Reconsult ({currentAppointmentCounts.awaitingReconsult})</span>
+                          <span>{t('docBoard.filters.reconsult', { count: currentAppointmentCounts.awaitingReconsult })}</span>
                         </div>
                       </Button>
 
@@ -1200,7 +1204,7 @@ export const ClinicalDashboard: React.FC = () => {
                       >
                         <div className="flex items-center gap-1 sm:gap-1.5">
                           <UserCheck className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                          <span>Completed ({currentAppointmentCounts.completed})</span>
+                          <span>{t('docBoard.filters.completed', { count: currentAppointmentCounts.completed })}</span>
                         </div>
                       </Button>
 
@@ -1216,14 +1220,14 @@ export const ClinicalDashboard: React.FC = () => {
                       >
                         <div className="flex items-center gap-1 sm:gap-1.5">
                           <X className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                          <span>Cancelled ({currentAppointmentCounts.cancelled})</span>
+                          <span>{t('docBoard.filters.cancelled', { count: currentAppointmentCounts.cancelled })}</span>
                         </div>
                       </Button>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 justify-end">
                       <div className="rounded-2xl border border-gray-200/80 dark:border-gray-700/80 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
-                        Last synced{' '}
+                        {t('docBoard.sync.lastSynced')}{' '}
                         <span className="font-semibold text-gray-900 dark:text-white">
                           {lastUpdateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
@@ -1236,7 +1240,7 @@ export const ClinicalDashboard: React.FC = () => {
                         className="h-7 w-7 sm:h-8 sm:w-8 border-gray-200 dark:border-gray-700 text-blue-600 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-gray-800"
                       >
                         <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-                        <span className="sr-only">Refresh</span>
+                        <span className="sr-only">{t('docBoard.sync.refresh')}</span>
                       </Button>
                     </div>
                   </div>
@@ -1247,7 +1251,7 @@ export const ClinicalDashboard: React.FC = () => {
                     <div className="relative group">
                       <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3 sm:h-4 sm:w-4 group-focus-within:text-blue-500 transition-colors duration-200" />
                       <Input
-                        placeholder="Search patients by name or ID..."
+                        placeholder={t('docBoard.search.currentPlaceholder')}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-8 sm:pl-10 h-8 sm:h-10 text-xs sm:text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 rounded-lg shadow-sm hover:shadow-md"
@@ -1271,31 +1275,31 @@ export const ClinicalDashboard: React.FC = () => {
                       <TableHeader>
                         <TableRow className="bg-gradient-to-r from-blue-50/80 via-indigo-50/80 to-purple-50/80 dark:from-gray-800 dark:via-gray-800 dark:to-gray-900">
                           <TableHead className="text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
-                            Patient
+                            {t('docBoard.table.patient')}
                           </TableHead>
                           <TableHead className="hidden xl:table-cell text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
-                            Patient Name
+                            {t('docBoard.table.patientName')}
                           </TableHead>
                           <TableHead className="text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
-                            Token
+                            {t('docBoard.table.token')}
                           </TableHead>
                           <TableHead className="hidden md:table-cell text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
-                            Appointment Time
+                            {t('docBoard.table.appointmentTime')}
                           </TableHead>
                           <TableHead className="text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
-                            Status
+                            {t('docBoard.table.status')}
                           </TableHead>
                           <TableHead className="hidden lg:table-cell text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
-                            Case
+                            {t('docBoard.table.case')}
                           </TableHead>
                           <TableHead className="text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
-                            Actions
+                            {t('docBoard.table.actions')}
                           </TableHead>
                           <TableHead className="hidden lg:table-cell text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
-                            Print Rx
+                            {t('docBoard.table.printRx')}
                           </TableHead>
                           <TableHead className="hidden lg:table-cell text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
-                            Print Token
+                            {t('docBoard.table.printToken')}
                           </TableHead>
                         </TableRow>
                       </TableHeader>
@@ -1319,7 +1323,7 @@ export const ClinicalDashboard: React.FC = () => {
                                     {appointment.patientFullName}
                                   </p>
                                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    {appointment.phone || 'No mobile on file'}
+                                    {appointment.phone || t('docBoard.table.noPhone')}
                                   </p>
                                 </div>
                               </TableCell>
@@ -1328,8 +1332,8 @@ export const ClinicalDashboard: React.FC = () => {
                               </TableCell>
                               <TableCell className="py-4 px-4">
                                 <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-100 px-3 py-1 text-xs font-semibold">
-                                  <span className="text-[11px] uppercase tracking-wide">Token</span>
-                                  <span>#{appointment.tokenDetails?.tokenNumber || 'N/A'}</span>
+                                  <span className="text-[11px] uppercase tracking-wide">{t('docBoard.table.tokenLabel')}</span>
+                                  <span>#{appointment.tokenDetails?.tokenNumber || t('docBoard.table.notAvailable')}</span>
                                 </div>
                               </TableCell>
                               <TableCell className="hidden md:table-cell py-4 px-4">
@@ -1345,7 +1349,7 @@ export const ClinicalDashboard: React.FC = () => {
                               </TableCell>
                               <TableCell className="hidden lg:table-cell py-4 px-4">
                                 <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                                  New Case
+                                  {t('docBoard.table.newCase')}
                                 </Badge>
                               </TableCell>
                               <TableCell className="py-4 px-4">
@@ -1360,7 +1364,7 @@ export const ClinicalDashboard: React.FC = () => {
                                       onClick={() => handleCancelClick(appointment)}
                                     >
                                       <X className="h-3 w-3 mr-1" />
-                                      Cancel
+                                      {t('common.cancel')}
                                     </Button>
                                   )}
                                   {appointment.finalStatusCode === 'VITALS_REQUIRED' && (
@@ -1370,7 +1374,7 @@ export const ClinicalDashboard: React.FC = () => {
                                       className="h-8 px-3 text-xs font-semibold text-purple-600 border-purple-200 hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30"
                                     >
                                       <Heart className="h-3 w-3 mr-1" />
-                                      Vitals
+                                      {t('docBoard.table.vitals')}
                                     </Button>
                                   )}
                                 </div>
@@ -1384,7 +1388,7 @@ export const ClinicalDashboard: React.FC = () => {
                                   onClick={() => openPrescriptionPreview(appointment)}
                                 >
                                   <FileText className="h-3 w-3 mr-1" />
-                                  Print
+                                  {t('common.print')}
                                 </Button>
                               </TableCell>
                               <TableCell className="hidden lg:table-cell py-4 px-4">
@@ -1394,7 +1398,7 @@ export const ClinicalDashboard: React.FC = () => {
                                   className="h-8 px-3 text-xs font-semibold bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
                                 >
                                   <Printer className="h-3 w-3 mr-1" />
-                                  Print
+                                  {t('common.print')}
                                 </Button>
                               </TableCell>
                             </TableRow>
@@ -1402,7 +1406,7 @@ export const ClinicalDashboard: React.FC = () => {
                         ) : (
                           <TableRow>
                             <TableCell colSpan={9} className="text-center py-10 text-gray-500 dark:text-gray-400">
-                              No appointments found
+                              {t('docBoard.empty.current')}
                             </TableCell>
                           </TableRow>
                         )}
@@ -1421,7 +1425,7 @@ export const ClinicalDashboard: React.FC = () => {
                       <div className="relative group flex-1 min-w-[220px]">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
                         <Input
-                          placeholder="Search patients by name or ID..."
+                          placeholder={t('docBoard.search.pastPlaceholder')}
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
                           className="pl-9 h-9 text-sm"
@@ -1436,7 +1440,7 @@ export const ClinicalDashboard: React.FC = () => {
                         )}
                       </div>
                       <div className="flex flex-col gap-1 min-w-[140px] text-[11px] text-gray-600 dark:text-gray-300">
-                        <span>From</span>
+                        <span>{t('docBoard.date.from')}</span>
                         <Input
                           type="date"
                           value={startDate}
@@ -1446,7 +1450,7 @@ export const ClinicalDashboard: React.FC = () => {
                         />
                       </div>
                       <div className="flex flex-col gap-1 min-w-[140px] text-[11px] text-gray-600 dark:text-gray-300">
-                        <span>To</span>
+                        <span>{t('docBoard.date.to')}</span>
                         <Input
                           type="date"
                           value={endDate}
@@ -1464,15 +1468,15 @@ export const ClinicalDashboard: React.FC = () => {
                       <Table className="border-collapse">
                         <TableHeader>
                           <TableRow className="bg-gray-50 dark:bg-gray-800/80">
-                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Patient ID</TableHead>
-                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Patient Name</TableHead>
-                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Token</TableHead>
-                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Last Visit</TableHead>
-                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Status</TableHead>
-                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Case</TableHead>
-                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Print Rx</TableHead>
-                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Follow Up</TableHead>
-                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Completed</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">{t('docBoard.table.patientId')}</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">{t('docBoard.table.patientName')}</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">{t('docBoard.table.token')}</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">{t('docBoard.table.lastVisit')}</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">{t('docBoard.table.status')}</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">{t('docBoard.table.case')}</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">{t('docBoard.table.printRx')}</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">{t('docBoard.table.followUp')}</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">{t('docBoard.table.completed')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1506,7 +1510,7 @@ export const ClinicalDashboard: React.FC = () => {
                                 <TableCell className="py-3 px-4">{getStatusBadge(appointment.finalStatusCode)}</TableCell>
                                 <TableCell className="py-3 px-4">
                                   <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-300">
-                                    New
+                                    {t('docBoard.table.newCase')}
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="py-3 px-4">
@@ -1518,11 +1522,11 @@ export const ClinicalDashboard: React.FC = () => {
                                     onClick={() => openPrescriptionPreview(appointment)}
                                   >
                                     <FileText className="h-3 w-3 mr-1" />
-                                    Print
+                                    {t('common.print')}
                                   </Button>
                                 </TableCell>
                                 <TableCell className="py-3 px-4">
-                                  <span className="text-xs text-gray-500 dark:text-gray-400">NA</span>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">{t('docBoard.table.notApplicable')}</span>
                                 </TableCell>
                                 <TableCell className="py-3 px-4">
                                   {appointment.finalStatusCode === 'COMPLETED' ? (
@@ -1544,7 +1548,7 @@ export const ClinicalDashboard: React.FC = () => {
                           ) : (
                             <TableRow>
                               <TableCell colSpan={9} className="text-center py-10 text-gray-500 dark:text-gray-400">
-                                No past appointments found
+                                {t('docBoard.empty.past')}
                               </TableCell>
                             </TableRow>
                           )}
@@ -1597,7 +1601,7 @@ export const ClinicalDashboard: React.FC = () => {
                       <div className="relative group flex-1 min-w-[220px]">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
                         <Input
-                          placeholder="Search upcoming patients..."
+                          placeholder={t('docBoard.search.futurePlaceholder')}
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
                           className="pl-9 h-9 text-sm"
@@ -1612,7 +1616,7 @@ export const ClinicalDashboard: React.FC = () => {
                         )}
                       </div>
                       <div className="flex flex-col gap-1 min-w-[140px] text-[11px] text-gray-600 dark:text-gray-300">
-                        <span>From</span>
+                        <span>{t('docBoard.date.from')}</span>
                         <Input
                           type="date"
                           value={startDate}
@@ -1622,7 +1626,7 @@ export const ClinicalDashboard: React.FC = () => {
                         />
                       </div>
                       <div className="flex flex-col gap-1 min-w-[140px] text-[11px] text-gray-600 dark:text-gray-300">
-                        <span>To</span>
+                        <span>{t('docBoard.date.to')}</span>
                         <Input
                           type="date"
                           value={endDate}
@@ -1639,15 +1643,15 @@ export const ClinicalDashboard: React.FC = () => {
                       <Table className="border-collapse">
                         <TableHeader>
                           <TableRow className="bg-gray-50 dark:bg-gray-800/80">
-                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Patient ID</TableHead>
-                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4 hidden sm:table-cell">Patient Name</TableHead>
-                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Token</TableHead>
-                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4 hidden md:table-cell">Time</TableHead>
-                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Status</TableHead>
-                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4 hidden lg:table-cell">Case</TableHead>
-                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">Actions</TableHead>
-                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4 hidden lg:table-cell">Print Rx</TableHead>
-                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4 hidden lg:table-cell">Print Token</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">{t('docBoard.table.patientId')}</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4 hidden sm:table-cell">{t('docBoard.table.patientName')}</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">{t('docBoard.table.token')}</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4 hidden md:table-cell">{t('docBoard.table.time')}</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">{t('docBoard.table.status')}</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4 hidden lg:table-cell">{t('docBoard.table.case')}</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">{t('docBoard.table.actions')}</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4 hidden lg:table-cell">{t('docBoard.table.printRx')}</TableHead>
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4 hidden lg:table-cell">{t('docBoard.table.printToken')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1674,7 +1678,7 @@ export const ClinicalDashboard: React.FC = () => {
                                 <TableCell className="py-3 px-4">{getStatusBadge(appointment.finalStatusCode)}</TableCell>
                                 <TableCell className="py-3 px-4 hidden lg:table-cell">
                                   <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
-                                    New
+                                    {t('docBoard.table.newCase')}
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="py-3 px-4">
@@ -1689,7 +1693,7 @@ export const ClinicalDashboard: React.FC = () => {
                                         onClick={() => handleCancelClick(appointment)}
                                       >
                                         <X className="h-3 w-3 mr-1" />
-                                        Cancel
+                                        {t('common.cancel')}
                                       </Button>
                                     )}
                                   </div>
@@ -1703,7 +1707,7 @@ export const ClinicalDashboard: React.FC = () => {
                                     onClick={() => openPrescriptionPreview(appointment)}
                                   >
                                     <FileText className="h-3 w-3 mr-1" />
-                                    Print
+                                    {t('common.print')}
                                   </Button>
                                 </TableCell>
                                 <TableCell className="py-3 px-4 hidden lg:table-cell">
@@ -1713,7 +1717,7 @@ export const ClinicalDashboard: React.FC = () => {
                                     className="h-8 px-3 text-xs font-semibold bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
                                   >
                                     <Printer className="h-3 w-3 mr-1" />
-                                    Print
+                                    {t('common.print')}
                                   </Button>
                                 </TableCell>
                               </TableRow>
@@ -1721,7 +1725,7 @@ export const ClinicalDashboard: React.FC = () => {
                           ) : (
                             <TableRow>
                               <TableCell colSpan={9} className="text-center py-10 text-gray-500 dark:text-gray-400">
-                                No future appointments found
+                                {t('docBoard.empty.future')}
                               </TableCell>
                             </TableRow>
                           )}
@@ -1774,7 +1778,7 @@ export const ClinicalDashboard: React.FC = () => {
           {/* Doctor Calendar - embedded in DocBoard */}
           {activeNavButton === 'calendar' && (
             <div className="w-full mx-auto px-3 sm:px-6 py-2 sm:py-4">
-              <Suspense fallback={<div className="p-6 text-center">Loading calendar...</div>}>
+              <Suspense fallback={<div className="p-6 text-center">{t('docBoard.calendar.loading')}</div>}>
                 <DoctorCalendar />
               </Suspense>
             </div>
@@ -1783,7 +1787,7 @@ export const ClinicalDashboard: React.FC = () => {
           {/* AI Assistant - embedded in DocBoard */}
           {activeNavButton === 'assistant' && (
             <div className="w-full mx-auto px-3 sm:px-6 py-2 sm:py-4">
-              <Suspense fallback={<div className="p-6 text-center">Loading assistant...</div>}>
+              <Suspense fallback={<div className="p-6 text-center">{t('docBoard.assistant.loading')}</div>}>
                 <DocAI />
               </Suspense>
             </div>
@@ -1801,8 +1805,8 @@ export const ClinicalDashboard: React.FC = () => {
                       className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-green-50 dark:hover:bg-green-900/20"
                     >
                       <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
-                      <span className="font-medium hidden sm:inline">Fields</span>
-                      <span className="font-medium sm:hidden">Fields</span>
+                      <span className="font-medium hidden sm:inline">{t('docBoard.settings.fields')}</span>
+                      <span className="font-medium sm:hidden">{t('docBoard.settings.fields')}</span>
                       {settingsTab === 'fields' && (
                         <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
                       )}
@@ -1812,8 +1816,8 @@ export const ClinicalDashboard: React.FC = () => {
                       className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                     >
                       <Database className="h-3 w-3 sm:h-4 sm:w-4" />
-                      <span className="font-medium hidden sm:inline">Personal Data</span>
-                      <span className="font-medium sm:hidden">Personal</span>
+                      <span className="font-medium hidden sm:inline">{t('docBoard.settings.personalData')}</span>
+                      <span className="font-medium sm:hidden">{t('docBoard.settings.personalShort')}</span>
                       {settingsTab === 'personalized' && (
                         <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
                       )}
@@ -1824,8 +1828,8 @@ export const ClinicalDashboard: React.FC = () => {
                       className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                     >
                       <LayoutDashboard className="h-3 w-3 sm:h-4 sm:w-4" />
-                      <span className="font-medium hidden sm:inline">Layout Lab</span>
-                      <span className="font-medium sm:hidden">Layout</span>
+                      <span className="font-medium hidden sm:inline">{t('docBoard.settings.layoutLab')}</span>
+                      <span className="font-medium sm:hidden">{t('docBoard.settings.layoutShort')}</span>
                       {settingsTab === 'layout' && (
                         <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
                       )}
@@ -1863,32 +1867,32 @@ export const ClinicalDashboard: React.FC = () => {
         open={previewModalOpen}
         onOpenChange={handlePreviewModalChange}
         request={previewRequest}
-        title="Prescription Preview"
-        description="Download, share, or print the prescription PDF."
+        title={t('docBoard.preview.title')}
+        description={t('docBoard.preview.description')}
       />
 
       {/* Cancel Confirmation Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Cancel Appointment</DialogTitle>
-            <DialogDescription>Are you sure you want to cancel this appointment? This action cannot be undone.</DialogDescription>
+            <DialogTitle>{t('docBoard.cancelDialog.title')}</DialogTitle>
+            <DialogDescription>{t('docBoard.cancelDialog.description')}</DialogDescription>
           </DialogHeader>
           {appointmentToCancel && (
             <div className="py-4">
               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                 <div className="space-y-2 text-sm">
                   <div>
-                    <span className="font-medium">Patient:</span> {appointmentToCancel.patientFullName}
+                    <span className="font-medium">{t('docBoard.cancelDialog.patient')}:</span> {appointmentToCancel.patientFullName}
                   </div>
                   <div>
-                    <span className="font-medium">Patient ID:</span> {appointmentToCancel.patientId}
+                    <span className="font-medium">{t('docBoard.cancelDialog.patientId')}:</span> {appointmentToCancel.patientId}
                   </div>
                   <div>
-                    <span className="font-medium">Doctor:</span> Dr. Current User
+                    <span className="font-medium">{t('docBoard.cancelDialog.doctor')}:</span> {doctorDisplayName}
                   </div>
                   <div>
-                    <span className="font-medium">Appointment ID:</span> {appointmentToCancel.appointmentId}
+                    <span className="font-medium">{t('docBoard.cancelDialog.appointmentId')}:</span> {appointmentToCancel.appointmentId}
                   </div>
                 </div>
               </div>
@@ -1896,10 +1900,10 @@ export const ClinicalDashboard: React.FC = () => {
           )}
           <DialogFooter className="flex gap-2">
             <Button variant="outline" onClick={handleCancelDialogClose} disabled={isCancelling}>
-              Keep Appointment
+              {t('docBoard.cancelDialog.keepAppointment')}
             </Button>
             <Button variant="destructive" onClick={handleCancelConfirm} disabled={isCancelling}>
-              {isCancelling ? 'Cancelling...' : 'Cancel Appointment'}
+              {isCancelling ? t('docBoard.cancelDialog.cancelling') : t('docBoard.cancelDialog.confirmCancel')}
             </Button>
           </DialogFooter>
         </DialogContent>

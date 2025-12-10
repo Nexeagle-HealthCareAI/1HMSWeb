@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { X, Plus, Search, Check } from 'lucide-react';
 import { useSpecializationApi } from '@/hooks/useApi';
@@ -24,6 +24,7 @@ export const SpecializationSelector: React.FC<SpecializationSelectorProps> = ({
   onSpecializationsChange,
   disabled = false
 }) => {
+  const { t } = useTranslation();
   const [customSpecialization, setCustomSpecialization] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,16 +69,16 @@ export const SpecializationSelector: React.FC<SpecializationSelectorProps> = ({
   return (
     <div className="space-y-4">
       <div>
-        <Label htmlFor="specializations">Specializations</Label>
+        <Label htmlFor="specializations">{t('specializationSelector.label')}</Label>
         <p className="text-sm text-muted-foreground mb-2">
-          Select from available specializations or add custom ones for {departmentName}
+          {t('specializationSelector.description', { department: departmentName || t('specializationSelector.label') })}
         </p>
       </div>
 
       {/* Selected Specializations */}
       {selectedSpecializations.length > 0 && (
         <div className="space-y-2">
-          <Label className="text-sm font-medium">Selected Specializations</Label>
+          <Label className="text-sm font-medium">{t('specializationSelector.selected')}</Label>
           <div className="flex flex-wrap gap-2">
             {selectedSpecializations.map((spec, index) => (
               <Badge
@@ -106,17 +107,17 @@ export const SpecializationSelector: React.FC<SpecializationSelectorProps> = ({
       {/* Available Specializations Dropdown */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label className="text-sm font-medium">Available Specializations</Label>
+          <Label className="text-sm font-medium">{t('specializationSelector.available')}</Label>
           {availableSpecializations.length > 0 && (
             <span className="text-xs text-muted-foreground">
-              {filteredSpecializations.length} of {availableSpecializations.length} available
+              {t('specializationSelector.availableCount', { filtered: filteredSpecializations.length, total: availableSpecializations.length })}
             </span>
           )}
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search specializations..."
+            placeholder={t('specializationSelector.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -127,11 +128,11 @@ export const SpecializationSelector: React.FC<SpecializationSelectorProps> = ({
         {specializationsLoading ? (
           <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
-            Loading specializations...
+            {t('specializationSelector.loading')}
           </div>
         ) : specializationsError ? (
           <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
-            Failed to load specializations. You can still add custom ones.
+            {t('specializationSelector.loadError')}
           </div>
         ) : (
           <Card className="max-h-48 overflow-y-auto">
@@ -140,13 +141,13 @@ export const SpecializationSelector: React.FC<SpecializationSelectorProps> = ({
                 <div className="text-sm text-muted-foreground text-center py-4">
                   {searchTerm ? (
                     <div>
-                      <p>No specializations found for "{searchTerm}"</p>
-                      <p className="text-xs mt-1">Try a different search term or add a custom specialization</p>
+                      <p>{t('specializationSelector.empty.noResults', { term: searchTerm })}</p>
+                      <p className="text-xs mt-1">{t('specializationSelector.empty.noResultsHint')}</p>
                     </div>
                   ) : (
                     <div>
-                      <p>No specializations available for this department</p>
-                      <p className="text-xs mt-1">You can add custom specializations below</p>
+                      <p>{t('specializationSelector.empty.noSearch')}</p>
+                      <p className="text-xs mt-1">{t('specializationSelector.empty.noSearchHint')}</p>
                     </div>
                   )}
                 </div>
@@ -186,14 +187,14 @@ export const SpecializationSelector: React.FC<SpecializationSelectorProps> = ({
               className="flex items-center gap-2"
             >
               <Plus className="h-4 w-4" />
-              Add Custom Specialization
+              {t('specializationSelector.custom.button')}
             </Button>
           ) : (
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Add Custom Specialization</Label>
+              <Label className="text-sm font-medium">{t('specializationSelector.custom.label')}</Label>
               <div className="flex gap-2">
                 <Input
-                  placeholder="Enter custom specialization..."
+                  placeholder={t('specializationSelector.custom.placeholder')}
                   value={customSpecialization}
                   onChange={(e) => setCustomSpecialization(e.target.value)}
                   onKeyPress={handleKeyPress}
@@ -204,7 +205,7 @@ export const SpecializationSelector: React.FC<SpecializationSelectorProps> = ({
                   onClick={handleAddCustomSpecialization}
                   disabled={!customSpecialization.trim()}
                 >
-                  Add
+                  {t('specializationSelector.custom.add')}
                 </Button>
                 <Button
                   variant="outline"
@@ -214,7 +215,7 @@ export const SpecializationSelector: React.FC<SpecializationSelectorProps> = ({
                     setCustomSpecialization('');
                   }}
                 >
-                  Cancel
+                  {t('specializationSelector.custom.cancel')}
                 </Button>
               </div>
             </div>
@@ -224,7 +225,7 @@ export const SpecializationSelector: React.FC<SpecializationSelectorProps> = ({
 
       {/* Help Text */}
       <div className="text-xs text-muted-foreground">
-        💡 You can select multiple specializations. If you don't find what you need, add custom ones.
+        💡 {t('specializationSelector.help')}
       </div>
     </div>
   );

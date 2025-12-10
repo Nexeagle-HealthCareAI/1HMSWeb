@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Activity, Heart, Thermometer, Scale, Ruler } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -29,6 +30,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
   console.log('VitalsForm received props:', { patientName, appointmentId, patientId });
   const { mutate: saveVitals, isPending } = useSaveVitals();
   const { userId } = useAuthStore();
+  const { t } = useTranslation();
   
   const [vitalsData, setVitalsData] = useState({
     systolic: '',
@@ -68,10 +70,10 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
 
   const getBMICategory = (bmi: string) => {
     const bmiValue = parseFloat(bmi);
-    if (bmiValue < 18.5) return { category: 'Underweight', color: 'text-blue-500' };
-    if (bmiValue < 25) return { category: 'Normal weight', color: 'text-green-500' };
-    if (bmiValue < 30) return { category: 'Overweight', color: 'text-orange-500' };
-    return { category: 'Obesity', color: 'text-red-500' };
+    if (bmiValue < 18.5) return { category: t('vitalsForm.bmi.category.underweight'), color: 'text-blue-500' };
+    if (bmiValue < 25) return { category: t('vitalsForm.bmi.category.normal'), color: 'text-green-500' };
+    if (bmiValue < 30) return { category: t('vitalsForm.bmi.category.overweight'), color: 'text-orange-500' };
+    return { category: t('vitalsForm.bmi.category.obesity'), color: 'text-red-500' };
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -109,7 +111,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
     saveVitals(apiVitalsData, {
       onSuccess: (response) => {
         if (response.success) {
-          toast.success('Vitals saved successfully!');
+          toast.success(t('vitalsForm.toast.success'));
           // Call the original onSubmit with the formatted vitals data
           onSubmit({
             ...vitalsData,
@@ -117,12 +119,12 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
             bmiCategory: bmi ? getBMICategory(bmi).category : ''
           });
         } else {
-          toast.error(response.message || 'Failed to save vitals');
+          toast.error(response.message || t('vitalsForm.toast.error'));
         }
       },
       onError: (error) => {
         console.error('Failed to save vitals:', error);
-        toast.error('Failed to save vitals. Please try again.');
+        toast.error(t('vitalsForm.toast.errorTryAgain'));
       }
     });
   };
@@ -136,10 +138,10 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-healthcare-primary dark:text-blue-400 flex items-center gap-2">
             <Activity className="h-5 w-5" />
-            Update Vitals - {patientName}
+            {t('vitalsForm.title', { patientName })}
           </DialogTitle>
           <DialogDescription className="dark:text-gray-300">
-            Recording vital signs is optional but helps provide better care. You can skip this step if needed.
+            {t('vitalsForm.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -148,47 +150,47 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
           <Card className="p-3 dark:bg-gray-800">
             <h3 className="font-semibold text-foreground dark:text-white mb-3 flex items-center gap-2">
               <Heart className="h-4 w-4 text-red-500" />
-              Cardiovascular Vitals
+              {t('vitalsForm.sections.cardio')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <Label htmlFor="systolic" className="text-sm font-medium dark:text-gray-300">
-                  Systolic BP (mmHg)
+                  {t('vitalsForm.fields.systolic')}
                 </Label>
                 <Input
                   id="systolic"
                   type="number"
                   value={vitalsData.systolic}
                   onChange={(e) => setVitalsData(prev => ({ ...prev, systolic: e.target.value }))}
-                  placeholder="120"
+                  placeholder={t('vitalsForm.placeholders.systolic')}
                   className="h-9"
                 />
               </div>
 
               <div>
                 <Label htmlFor="diastolic" className="text-sm font-medium">
-                  Diastolic BP (mmHg)
+                  {t('vitalsForm.fields.diastolic')}
                 </Label>
                 <Input
                   id="diastolic"
                   type="number"
                   value={vitalsData.diastolic}
                   onChange={(e) => setVitalsData(prev => ({ ...prev, diastolic: e.target.value }))}
-                  placeholder="80"
+                  placeholder={t('vitalsForm.placeholders.diastolic')}
                   className="h-9"
                 />
               </div>
 
               <div>
                 <Label htmlFor="heartRate" className="text-sm font-medium">
-                  Heart Rate (bpm)
+                  {t('vitalsForm.fields.heartRate')}
                 </Label>
                 <Input
                   id="heartRate"
                   type="number"
                   value={vitalsData.heartRate}
                   onChange={(e) => setVitalsData(prev => ({ ...prev, heartRate: e.target.value }))}
-                  placeholder="72"
+                  placeholder={t('vitalsForm.placeholders.heartRate')}
                   className="h-9"
                 />
               </div>
@@ -199,26 +201,26 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
           <Card className="p-3 dark:bg-gray-800">
             <h3 className="font-semibold text-foreground dark:text-white mb-3 flex items-center gap-2">
               <Thermometer className="h-4 w-4 text-orange-500" />
-              Respiratory & Temperature
+              {t('vitalsForm.sections.respiratory')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <Label htmlFor="respiratoryRate" className="text-sm font-medium">
-                  Respiratory Rate (breaths/min)
+                  {t('vitalsForm.fields.respiratoryRate')}
                 </Label>
                 <Input
                   id="respiratoryRate"
                   type="number"
                   value={vitalsData.respiratoryRate}
                   onChange={(e) => setVitalsData(prev => ({ ...prev, respiratoryRate: e.target.value }))}
-                  placeholder="16"
+                  placeholder={t('vitalsForm.placeholders.respiratoryRate')}
                   className="h-9"
                 />
               </div>
 
               <div>
                 <Label htmlFor="temperature" className="text-sm font-medium">
-                  Body Temperature
+                  {t('vitalsForm.fields.temperature')}
                 </Label>
                 <div className="flex gap-2">
                   <Input
@@ -227,7 +229,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                     step="0.1"
                     value={vitalsData.temperature}
                     onChange={(e) => setVitalsData(prev => ({ ...prev, temperature: e.target.value }))}
-                    placeholder="37.0"
+                    placeholder={t('vitalsForm.placeholders.temperature')}
                     className="flex-1 h-9"
                   />
                   <select
@@ -243,14 +245,14 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
 
               <div>
                 <Label htmlFor="oxygenSaturation" className="text-sm font-medium">
-                  Oxygen Saturation (%)
+                  {t('vitalsForm.fields.oxygenSaturation')}
                 </Label>
                 <Input
                   id="oxygenSaturation"
                   type="number"
                   value={vitalsData.oxygenSaturation}
                   onChange={(e) => setVitalsData(prev => ({ ...prev, oxygenSaturation: e.target.value }))}
-                  placeholder="98"
+                  placeholder={t('vitalsForm.placeholders.oxygenSaturation')}
                   className="h-9"
                 />
               </div>
@@ -261,12 +263,12 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
           <Card className="p-3">
             <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
               <Scale className="h-4 w-4 text-blue-500" />
-              Physical Measurements
+              {t('vitalsForm.sections.physical')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <Label htmlFor="height" className="text-sm font-medium">
-                  Height
+                  {t('vitalsForm.fields.height')}
                 </Label>
                 <div className="flex gap-2">
                   <Input
@@ -275,7 +277,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                     step="0.1"
                     value={vitalsData.height}
                     onChange={(e) => setVitalsData(prev => ({ ...prev, height: e.target.value }))}
-                    placeholder="170"
+                    placeholder={t('vitalsForm.placeholders.height')}
                     className="flex-1 h-9"
                   />
                   <select
@@ -291,7 +293,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
 
               <div>
                 <Label htmlFor="weight" className="text-sm font-medium">
-                  Weight
+                  {t('vitalsForm.fields.weight')}
                 </Label>
                 <div className="flex gap-2">
                   <Input
@@ -300,7 +302,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                     step="0.1"
                     value={vitalsData.weight}
                     onChange={(e) => setVitalsData(prev => ({ ...prev, weight: e.target.value }))}
-                    placeholder="70"
+                    placeholder={t('vitalsForm.placeholders.weight')}
                     className="flex-1 h-9"
                   />
                   <select
@@ -316,7 +318,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
 
               <div>
                 <Label className="text-sm font-medium">
-                  BMI (Body Mass Index)
+                  {t('vitalsForm.fields.bmi')}
                 </Label>
                 <div className="mt-1 p-2 bg-muted rounded-md border h-9 flex items-center">
                   {bmi ? (
@@ -330,7 +332,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                     </div>
                   ) : (
                     <div className="text-muted-foreground text-xs">
-                      Enter height & weight
+                      {t('vitalsForm.bmi.prompt')}
                     </div>
                   )}
                 </div>
@@ -341,7 +343,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
           {!hideSkipButton && (
             <div className="bg-muted/50 p-3 rounded-lg border-l-4 border-healthcare-primary/50 mb-3">
               <p className="text-sm text-muted-foreground">
-                💡 <strong>Optional Step:</strong> Vital signs help us provide better care, but you can proceed without entering them if you prefer.
+                💡 <strong>{t('vitalsForm.optionalStep.title')}</strong> {t('vitalsForm.optionalStep.description')}
               </p>
             </div>
           )}
@@ -354,7 +356,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                 onClick={onCancel}
                 className="flex-1 text-base py-2"
               >
-                Skip This Step
+                {t('vitalsForm.actions.skip')}
               </Button>
             )}
             <Button
@@ -362,7 +364,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
               disabled={isPending}
               className={`${hideSkipButton ? 'px-8' : 'flex-1'} bg-healthcare-primary hover:bg-healthcare-primary/90 text-base py-2`}
             >
-              {isPending ? 'Saving...' : 'Save Vitals'}
+              {isPending ? t('vitalsForm.actions.saving') : t('vitalsForm.actions.save')}
             </Button>
           </div>
         </form>

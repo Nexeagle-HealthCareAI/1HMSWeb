@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,6 +18,7 @@ export const QualificationSelector: React.FC<QualificationSelectorProps> = ({
   onQualificationsChange,
   disabled = false
 }) => {
+  const { t } = useTranslation();
   const [customQualification, setCustomQualification] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
 
@@ -70,16 +72,16 @@ export const QualificationSelector: React.FC<QualificationSelectorProps> = ({
   return (
     <div className="space-y-4">
       <div>
-        <Label htmlFor="qualifications">Qualifications</Label>
+        <Label htmlFor="qualifications">{t('qualificationSelector.label')}</Label>
         <p className="text-sm text-muted-foreground mb-2">
-          Select from common qualifications or add custom ones
+          {t('qualificationSelector.description')}
         </p>
       </div>
 
       {/* Selected Qualifications */}
       {selectedQualifications.length > 0 && (
         <div className="space-y-2">
-          <Label className="text-sm font-medium">Selected Qualifications</Label>
+          <Label className="text-sm font-medium">{t('qualificationSelector.selected')}</Label>
           <div className="flex flex-wrap gap-2">
             {selectedQualifications.map((qual, index) => (
               <Badge
@@ -107,7 +109,7 @@ export const QualificationSelector: React.FC<QualificationSelectorProps> = ({
 
       {/* Common Qualifications */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium">Common Qualifications</Label>
+        <Label className="text-sm font-medium">{t('qualificationSelector.common')}</Label>
         <Card className="max-h-48 overflow-y-auto">
           <CardContent className="p-2">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-1">
@@ -144,14 +146,14 @@ export const QualificationSelector: React.FC<QualificationSelectorProps> = ({
               className="flex items-center gap-2"
             >
               <Plus className="h-4 w-4" />
-              Add Custom Qualification
+              {t('qualificationSelector.custom.button')}
             </Button>
           ) : (
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Add Custom Qualification</Label>
+              <Label className="text-sm font-medium">{t('qualificationSelector.custom.label')}</Label>
               <div className="flex gap-2">
                 <Input
-                  placeholder="Enter custom qualification (e.g., MBBS, MD Cardiology, etc.)"
+                  placeholder={t('qualificationSelector.custom.placeholder')}
                   value={customQualification}
                   onChange={(e) => setCustomQualification(e.target.value)}
                   onKeyPress={handleKeyPress}
@@ -162,7 +164,7 @@ export const QualificationSelector: React.FC<QualificationSelectorProps> = ({
                   onClick={handleAddCustomQualification}
                   disabled={!customQualification.trim()}
                 >
-                  Add
+                  {t('qualificationSelector.custom.add')}
                 </Button>
                 <Button
                   variant="outline"
@@ -172,7 +174,7 @@ export const QualificationSelector: React.FC<QualificationSelectorProps> = ({
                     setCustomQualification('');
                   }}
                 >
-                  Cancel
+                  {t('qualificationSelector.custom.cancel')}
                 </Button>
               </div>
             </div>
@@ -182,7 +184,7 @@ export const QualificationSelector: React.FC<QualificationSelectorProps> = ({
 
       {/* Help Text */}
       <div className="text-xs text-muted-foreground">
-        💡 You can add multiple qualifications. Click on common ones or add custom qualifications as needed.
+        💡 {t('qualificationSelector.help')}
       </div>
     </div>
   );

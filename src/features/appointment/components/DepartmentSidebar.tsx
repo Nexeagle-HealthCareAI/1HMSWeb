@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Doctor, Department } from './AppointmentBooking';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,11 +21,13 @@ export const DepartmentSidebar: React.FC<DepartmentSidebarProps> = ({
   onDepartmentSelect,
   onDoctorSelect
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="w-80 bg-white border-r border-border p-4 shadow-lg">
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-foreground mb-4">
-          Select Department
+          {t('departmentSidebar.selectDepartment')}
         </h3>
         
         <div className="space-y-2">
@@ -54,7 +57,7 @@ export const DepartmentSidebar: React.FC<DepartmentSidebarProps> = ({
 
       <div>
         <h3 className="text-lg font-semibold text-foreground mb-4">
-          Available Doctors
+          {t('departmentSidebar.availableDoctors')}
         </h3>
         
         <div className="space-y-2">
@@ -90,20 +93,20 @@ export const DepartmentSidebar: React.FC<DepartmentSidebarProps> = ({
       {/* Legend */}
       <div className="mt-8 p-4 bg-muted rounded-lg">
         <h4 className="font-medium text-foreground mb-3 text-sm">
-          Slot Legend
+          {t('departmentSidebar.slotLegend')}
         </h4>
         <div className="space-y-2 text-xs">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-slot-available border border-slot-available-border rounded"></div>
-            <span>Available</span>
+            <span>{t('departmentSidebar.legend.available')}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-slot-booked border border-slot-booked-border rounded"></div>
-            <span>Booked</span>
+            <span>{t('departmentSidebar.legend.booked')}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-slot-selected border border-slot-selected-border rounded"></div>
-            <span>Selected</span>
+            <span>{t('departmentSidebar.legend.selected')}</span>
           </div>
         </div>
       </div>

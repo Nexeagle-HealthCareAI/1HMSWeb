@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   Settings,
   CreditCard,
@@ -18,6 +19,7 @@ interface SystemConfigurationProps {
 }
 
 export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusTab }) => {
+  const { t } = useTranslation();
   const {
     activeTab,
     setActiveTab,
@@ -25,27 +27,32 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
     handleBrandingChange
   } = useSystemConfiguration(focusTab);
 
-  const navigationItems = [
-    {
-      id: 'subscription',
-      label: 'Subscription',
-      description: 'Plans, billing cycles, invoices',
-      icon: CreditCard,
-    },
-    {
-      id: 'branding',
-      label: 'Hospital Info',
-      description: 'Identity, contact, compliance',
-      icon: Palette,
-    },
-  ] as const;
+  const navigationItems = useMemo(
+    () => [
+      {
+        id: 'subscription',
+        label: t('systemConfiguration.navigation.subscription.label'),
+        description: t('systemConfiguration.navigation.subscription.description'),
+        icon: CreditCard,
+      },
+      {
+        id: 'branding',
+        label: t('systemConfiguration.navigation.branding.label'),
+        description: t('systemConfiguration.navigation.branding.description'),
+        icon: Palette,
+      },
+    ] as const,
+    [t]
+  );
 
   return (
     <div className="space-y-8">
       <div className="grid gap-6 lg:grid-cols-[280px,1fr]">
         <aside className="hidden lg:flex">
           <div className="w-full rounded-2xl border border-border/60 bg-card/60 p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Configuration Areas</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t('systemConfiguration.navigation.configurationAreas')}
+            </p>
             <div className="mt-3 space-y-3">
               {navigationItems.map((item) => (
                 <button
@@ -99,14 +106,16 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
               <div className="rounded-2xl border border-border/60 bg-white/80 p-5 dark:bg-background/60">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">Billing Overview</p>
-                    <h3 className="text-xl font-semibold">Subscription Management</h3>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                      {t('systemConfiguration.subscription.billingOverview')}
+                    </p>
+                    <h3 className="text-xl font-semibold">{t('systemConfiguration.subscription.subscriptionManagement')}</h3>
                     <p className="text-sm text-muted-foreground">
-                      Manage plan renewals, invoices, and payment preferences.
+                      {t('systemConfiguration.subscription.description')}
                     </p>
                   </div>
                   <div className="rounded-xl border border-green-200/80 bg-green-50 px-4 py-2 text-sm font-medium text-green-700 dark:border-green-900/40 dark:bg-green-950/20 dark:text-green-200">
-                    All systems active
+                    {t('systemConfiguration.subscription.statusActive')}
                   </div>
                 </div>
               </div>
@@ -114,40 +123,40 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <Card className="border-border/70 bg-muted/40 backdrop-blur">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Remaining Days</CardTitle>
+                    <CardTitle className="text-sm font-medium">{t('systemConfiguration.subscription.cards.remainingDays.title')}</CardTitle>
                     <span className="rounded-full bg-white/80 p-2 text-primary shadow-sm">
                       <Calendar className="h-4 w-4" />
                     </span>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-semibold">45</div>
-                    <p className="text-xs text-muted-foreground">Days left in your current cycle</p>
+                    <div className="text-3xl font-semibold">{t('systemConfiguration.subscription.cards.remainingDays.value')}</div>
+                    <p className="text-xs text-muted-foreground">{t('systemConfiguration.subscription.cards.remainingDays.helper')}</p>
                   </CardContent>
                 </Card>
 
                 <Card className="border-border/70 bg-muted/40 backdrop-blur">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Payment Mode</CardTitle>
+                    <CardTitle className="text-sm font-medium">{t('systemConfiguration.subscription.cards.paymentMode.title')}</CardTitle>
                     <span className="rounded-full bg-white/80 p-2 text-primary shadow-sm">
                       <Wallet className="h-4 w-4" />
                     </span>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-semibold">Credit Card</div>
-                    <p className="text-xs text-muted-foreground">Primary method on record</p>
+                    <div className="text-3xl font-semibold">{t('systemConfiguration.subscription.cards.paymentMode.value')}</div>
+                    <p className="text-xs text-muted-foreground">{t('systemConfiguration.subscription.cards.paymentMode.helper')}</p>
                   </CardContent>
                 </Card>
 
                 <Card className="border-border/70 bg-muted/40 backdrop-blur">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Bill</CardTitle>
+                    <CardTitle className="text-sm font-medium">{t('systemConfiguration.subscription.cards.totalBill.title')}</CardTitle>
                     <span className="rounded-full bg-white/80 p-2 text-primary shadow-sm">
                       <Receipt className="h-4 w-4" />
                     </span>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-semibold">₹12,000</div>
-                    <p className="text-xs text-muted-foreground">Amount invoiced this cycle</p>
+                    <div className="text-3xl font-semibold">{t('systemConfiguration.subscription.cards.totalBill.value')}</div>
+                    <p className="text-xs text-muted-foreground">{t('systemConfiguration.subscription.cards.totalBill.helper')}</p>
                   </CardContent>
                 </Card>
               </div>

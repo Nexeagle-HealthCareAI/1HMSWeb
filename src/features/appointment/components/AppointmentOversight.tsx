@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   Calendar, 
   Clock, 
@@ -33,8 +34,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
 
 interface Doctor {
   id: string;
@@ -131,6 +130,8 @@ const sampleAppointments: Appointment[] = [
 ];
 
 export const AppointmentOversight: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language || 'en';
   const [appointments, setAppointments] = useState<Appointment[]>(sampleAppointments);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('all');
@@ -166,11 +167,11 @@ export const AppointmentOversight: React.FC = () => {
 
   const getStatusBadge = (status: Appointment['status']) => {
     const statusConfig = {
-      confirmed: { variant: 'default', icon: CheckCircle, label: 'Confirmed' },
-      cancelled: { variant: 'destructive', icon: XCircle, label: 'Cancelled' },
-      'no-show': { variant: 'secondary', icon: UserX, label: 'No Show' },
-      completed: { variant: 'outline', icon: CheckCircle, label: 'Completed' },
-      rescheduled: { variant: 'secondary', icon: Calendar, label: 'Rescheduled' }
+      confirmed: { variant: 'default', icon: CheckCircle, label: t('appointmentOversight.status.confirmed') },
+      cancelled: { variant: 'destructive', icon: XCircle, label: t('appointmentOversight.status.cancelled') },
+      'no-show': { variant: 'secondary', icon: UserX, label: t('appointmentOversight.status.noShow') },
+      completed: { variant: 'outline', icon: CheckCircle, label: t('appointmentOversight.status.completed') },
+      rescheduled: { variant: 'secondary', icon: Calendar, label: t('appointmentOversight.status.rescheduled') }
     };
     
     const config = statusConfig[status];
@@ -186,9 +187,9 @@ export const AppointmentOversight: React.FC = () => {
 
   const getPriorityBadge = (priority: Appointment['priority']) => {
     const priorityConfig = {
-      low: { variant: 'outline', label: 'Low' },
-      medium: { variant: 'secondary', label: 'Medium' },
-      high: { variant: 'destructive', label: 'High' }
+      low: { variant: 'outline', label: t('appointmentOversight.priority.low') },
+      medium: { variant: 'secondary', label: t('appointmentOversight.priority.medium') },
+      high: { variant: 'destructive', label: t('appointmentOversight.priority.high') }
     };
     
     const config = priorityConfig[priority];
@@ -198,8 +199,8 @@ export const AppointmentOversight: React.FC = () => {
   const handleReassignDoctor = () => {
     if (!selectedAppointment || !reassignData.newDoctorId) {
       toast({
-        title: "Missing Information",
-        description: "Please select a doctor and provide a reason.",
+        title: t('appointmentOversight.toast.missingTitle'),
+        description: t('appointmentOversight.toast.missingDescription'),
         variant: "destructive"
       });
       return;
@@ -221,8 +222,11 @@ export const AppointmentOversight: React.FC = () => {
     ));
 
     toast({
-      title: "Doctor Reassigned",
-      description: `Appointment reassigned to ${newDoctor.name}${reassignData.notifyPatient ? '. Patient has been notified.' : ''}`,
+      title: t('appointmentOversight.toast.reassignedTitle'),
+      description: t('appointmentOversight.toast.reassignedDescription', {
+        doctor: newDoctor.name,
+        notified: reassignData.notifyPatient ? t('appointmentOversight.toast.notified') : ''
+      }).trim(),
     });
 
     setShowReassignDialog(false);
@@ -231,13 +235,14 @@ export const AppointmentOversight: React.FC = () => {
   };
 
   const handleStatusUpdate = (appointmentId: string, newStatus: Appointment['status']) => {
+    const statusKey = newStatus === 'no-show' ? 'noShow' : newStatus;
     setAppointments(prev => prev.map(apt => 
       apt.id === appointmentId ? { ...apt, status: newStatus } : apt
     ));
 
     toast({
-      title: "Status Updated",
-      description: `Appointment status changed to ${newStatus}`,
+      title: t('appointmentOversight.toast.statusUpdatedTitle'),
+      description: t('appointmentOversight.toast.statusUpdatedDescription', { status: t(`appointmentOversight.status.${statusKey}`) }),
     });
   };
 
@@ -249,8 +254,8 @@ export const AppointmentOversight: React.FC = () => {
     ));
 
     toast({
-      title: "Follow-up Scheduled",
-      description: `Follow-up scheduled for ${format(followUpDate, 'PPP')}`,
+      title: t('appointmentOversight.toast.followUpScheduledTitle'),
+      description: t('appointmentOversight.toast.followUpScheduledDescription', { date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(followUpDate) }),
     });
   };
 
@@ -269,10 +274,10 @@ export const AppointmentOversight: React.FC = () => {
     };
 
     return [
-      { title: "Today's Appointments", value: stats.total, icon: Calendar, color: "healthcare-primary" },
-      { title: "Confirmed", value: stats.confirmed, icon: CheckCircle, color: "healthcare-success" },
-      { title: "No Shows", value: stats.noShows, icon: UserX, color: "healthcare-error" },
-      { title: "Follow-ups Required", value: stats.followUpsRequired, icon: AlertTriangle, color: "healthcare-warning" },
+      { title: t('appointmentOversight.stats.today'), value: stats.total, icon: Calendar, color: "healthcare-primary" },
+      { title: t('appointmentOversight.status.confirmed'), value: stats.confirmed, icon: CheckCircle, color: "healthcare-success" },
+      { title: t('appointmentOversight.stats.noShows'), value: stats.noShows, icon: UserX, color: "healthcare-error" },
+      { title: t('appointmentOversight.stats.followUpsRequired'), value: stats.followUpsRequired, icon: AlertTriangle, color: "healthcare-warning" },
     ];
   };
 
@@ -281,8 +286,8 @@ export const AppointmentOversight: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Appointment Oversight</h1>
-          <p className="text-muted-foreground">Manage and monitor all appointments across departments</p>
+          <h1 className="text-2xl font-bold text-foreground">{t('appointmentOversight.title')}</h1>
+          <p className="text-muted-foreground">{t('appointmentOversight.subtitle')}</p>
         </div>
         
         <div className="flex flex-col sm:flex-row gap-2">
@@ -290,21 +295,21 @@ export const AppointmentOversight: React.FC = () => {
             <DialogTrigger asChild>
               <Button variant="outline" className="gap-2">
                 <CalendarX className="h-4 w-4" />
-                Manage Slots
+                {t('appointmentOversight.manageSlots')}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
-                <DialogTitle>Slot Management</DialogTitle>
+                <DialogTitle>{t('appointmentOversight.slotManagement.title')}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label>Select Date</Label>
+                  <Label>{t('appointmentOversight.slotManagement.selectDate')}</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="w-full justify-start">
                         <Calendar className="h-4 w-4 mr-2" />
-                        Pick a date
+                        {t('appointmentOversight.slotManagement.pickDate')}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
@@ -313,10 +318,10 @@ export const AppointmentOversight: React.FC = () => {
                   </Popover>
                 </div>
                 <div>
-                  <Label>Select Doctor</Label>
+                  <Label>{t('appointmentOversight.slotManagement.selectDoctor')}</Label>
                   <Select>
                     <SelectTrigger>
-                      <SelectValue placeholder="Choose doctor" />
+                      <SelectValue placeholder={t('appointmentOversight.slotManagement.chooseDoctor')} />
                     </SelectTrigger>
                     <SelectContent>
                       {doctors.map((doctor) => (
@@ -330,11 +335,11 @@ export const AppointmentOversight: React.FC = () => {
                 <div className="flex gap-2">
                   <Button className="flex-1" variant="destructive">
                     <Ban className="h-4 w-4 mr-1" />
-                    Block Slots
+                    {t('appointmentOversight.slotManagement.blockSlots')}
                   </Button>
                   <Button className="flex-1">
                     <CalendarCheck className="h-4 w-4 mr-1" />
-                    Open Slots
+                    {t('appointmentOversight.slotManagement.openSlots')}
                   </Button>
                 </div>
               </div>
@@ -343,7 +348,7 @@ export const AppointmentOversight: React.FC = () => {
           
           <Button className="gap-2">
             <Download className="h-4 w-4" />
-            Export Report
+            {t('appointmentOversight.exportReport')}
           </Button>
         </div>
       </div>
@@ -374,7 +379,7 @@ export const AppointmentOversight: React.FC = () => {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search appointments..."
+                placeholder={t('appointmentOversight.filters.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -383,10 +388,10 @@ export const AppointmentOversight: React.FC = () => {
             
             <Select value={filterDepartment} onValueChange={setFilterDepartment}>
               <SelectTrigger>
-                <SelectValue placeholder="All Departments" />
+                <SelectValue placeholder={t('appointmentOversight.filters.allDepartments')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
+                <SelectItem value="all">{t('appointmentOversight.filters.allDepartments')}</SelectItem>
                 {departments.map((dept) => (
                   <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                 ))}
@@ -395,15 +400,15 @@ export const AppointmentOversight: React.FC = () => {
 
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger>
-                <SelectValue placeholder="All Status" />
+                <SelectValue placeholder={t('appointmentOversight.filters.allStatus')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-                <SelectItem value="no-show">No Show</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="rescheduled">Rescheduled</SelectItem>
+                <SelectItem value="all">{t('appointmentOversight.filters.allStatus')}</SelectItem>
+                <SelectItem value="confirmed">{t('appointmentOversight.status.confirmed')}</SelectItem>
+                <SelectItem value="cancelled">{t('appointmentOversight.status.cancelled')}</SelectItem>
+                <SelectItem value="no-show">{t('appointmentOversight.status.noShow')}</SelectItem>
+                <SelectItem value="completed">{t('appointmentOversight.status.completed')}</SelectItem>
+                <SelectItem value="rescheduled">{t('appointmentOversight.status.rescheduled')}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -411,7 +416,7 @@ export const AppointmentOversight: React.FC = () => {
               <PopoverTrigger asChild>
                 <Button variant="outline" className="justify-start">
                   <Calendar className="h-4 w-4 mr-2" />
-                  {filterDate ? format(filterDate, 'PPP') : 'Filter by date'}
+                  {filterDate ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(filterDate) : t('appointmentOversight.filters.filterByDate')}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
@@ -433,7 +438,7 @@ export const AppointmentOversight: React.FC = () => {
                 setFilterDate(undefined);
               }}
             >
-              Clear Filters
+              {t('appointmentOversight.filters.clear')}
             </Button>
           </div>
         </CardContent>
@@ -442,7 +447,7 @@ export const AppointmentOversight: React.FC = () => {
       {/* Appointments Table */}
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle>Appointments ({filteredAppointments.length})</CardTitle>
+          <CardTitle>{t('appointmentOversight.table.title', { count: filteredAppointments.length })}</CardTitle>
         </CardHeader>
         <CardContent>
           {/* Desktop Table */}
@@ -450,13 +455,13 @@ export const AppointmentOversight: React.FC = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-semibold">Patient</th>
-                  <th className="text-left py-3 px-4 font-semibold">Doctor</th>
-                  <th className="text-left py-3 px-4 font-semibold">Date & Time</th>
-                  <th className="text-left py-3 px-4 font-semibold">Status</th>
-                  <th className="text-left py-3 px-4 font-semibold">Priority</th>
-                  <th className="text-left py-3 px-4 font-semibold">Follow-up</th>
-                  <th className="text-left py-3 px-4 font-semibold">Actions</th>
+                  <th className="text-left py-3 px-4 font-semibold">{t('appointmentOversight.table.headers.patient')}</th>
+                  <th className="text-left py-3 px-4 font-semibold">{t('appointmentOversight.table.headers.doctor')}</th>
+                  <th className="text-left py-3 px-4 font-semibold">{t('appointmentOversight.table.headers.dateTime')}</th>
+                  <th className="text-left py-3 px-4 font-semibold">{t('appointmentOversight.table.headers.status')}</th>
+                  <th className="text-left py-3 px-4 font-semibold">{t('appointmentOversight.table.headers.priority')}</th>
+                  <th className="text-left py-3 px-4 font-semibold">{t('appointmentOversight.table.headers.followUp')}</th>
+                  <th className="text-left py-3 px-4 font-semibold">{t('appointmentOversight.table.headers.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -477,7 +482,7 @@ export const AppointmentOversight: React.FC = () => {
                     </td>
                     <td className="py-3 px-4">
                       <div>
-                        <div className="font-medium">{format(appointment.date, 'MMM dd, yyyy')}</div>
+                        <div className="font-medium">{new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(appointment.date)}</div>
                         <div className="text-sm text-muted-foreground">{appointment.time}</div>
                       </div>
                     </td>
@@ -486,15 +491,15 @@ export const AppointmentOversight: React.FC = () => {
                     <td className="py-3 px-4">
                       {appointment.followUpRequired ? (
                         <div className="text-sm">
-                          <div className="text-healthcare-warning">Required</div>
+                          <div className="text-healthcare-warning">{t('appointmentOversight.followUp.required')}</div>
                           {appointment.followUpDate && (
                             <div className="text-xs text-muted-foreground">
-                              {format(appointment.followUpDate, 'MMM dd')}
+                              {new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(appointment.followUpDate)}
                             </div>
                           )}
                         </div>
                       ) : (
-                        <span className="text-sm text-muted-foreground">Not required</span>
+                        <span className="text-sm text-muted-foreground">{t('appointmentOversight.followUp.notRequired')}</span>
                       )}
                     </td>
                     <td className="py-3 px-4">
@@ -512,27 +517,27 @@ export const AppointmentOversight: React.FC = () => {
                             }}
                           >
                             <Edit className="h-4 w-4 mr-2" />
-                            Reassign Doctor
+                            {t('appointmentOversight.actions.reassignDoctor')}
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => handleStatusUpdate(appointment.id, 'completed')}
                           >
                             <CheckCircle className="h-4 w-4 mr-2" />
-                            Mark Completed
+                            {t('appointmentOversight.actions.markCompleted')}
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => handleStatusUpdate(appointment.id, 'no-show')}
                           >
                             <UserX className="h-4 w-4 mr-2" />
-                            Mark No-Show
+                            {t('appointmentOversight.actions.markNoShow')}
                           </DropdownMenuItem>
                           <DropdownMenuItem>
                             <Phone className="h-4 w-4 mr-2" />
-                            Call Patient
+                            {t('appointmentOversight.actions.callPatient')}
                           </DropdownMenuItem>
                           <DropdownMenuItem>
                             <MessageSquare className="h-4 w-4 mr-2" />
-                            Send Message
+                            {t('appointmentOversight.actions.sendMessage')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -560,25 +565,25 @@ export const AppointmentOversight: React.FC = () => {
                 
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Doctor:</span>
+                    <span className="text-muted-foreground">{t('appointmentOversight.table.headers.doctor')}:</span>
                     <span className="font-medium">{appointment.doctorName}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Department:</span>
+                    <span className="text-muted-foreground">{t('appointmentOversight.table.labels.department')}:</span>
                     <span>{appointment.department}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Date:</span>
-                    <span>{format(appointment.date, 'MMM dd, yyyy')}</span>
+                    <span className="text-muted-foreground">{t('appointmentOversight.table.labels.date')}:</span>
+                    <span>{new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(appointment.date)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Time:</span>
+                    <span className="text-muted-foreground">{t('appointmentOversight.table.labels.time')}:</span>
                     <span>{appointment.time}</span>
                   </div>
                   {appointment.followUpRequired && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Follow-up:</span>
-                      <span className="text-healthcare-warning">Required</span>
+                      <span className="text-muted-foreground">{t('appointmentOversight.table.headers.followUp')}:</span>
+                      <span className="text-healthcare-warning">{t('appointmentOversight.followUp.required')}</span>
                     </div>
                   )}
                 </div>
@@ -594,7 +599,7 @@ export const AppointmentOversight: React.FC = () => {
                     }}
                   >
                     <Edit className="h-3 w-3 mr-1" />
-                    Reassign
+                    {t('appointmentOversight.actions.reassign')}
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -607,17 +612,17 @@ export const AppointmentOversight: React.FC = () => {
                         onClick={() => handleStatusUpdate(appointment.id, 'completed')}
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
-                        Mark Completed
+                        {t('appointmentOversight.actions.markCompleted')}
                       </DropdownMenuItem>
                       <DropdownMenuItem 
                         onClick={() => handleStatusUpdate(appointment.id, 'no-show')}
                       >
                         <UserX className="h-4 w-4 mr-2" />
-                        Mark No-Show
+                        {t('appointmentOversight.actions.markNoShow')}
                       </DropdownMenuItem>
                       <DropdownMenuItem>
                         <Phone className="h-4 w-4 mr-2" />
-                        Call Patient
+                        {t('appointmentOversight.actions.callPatient')}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -632,26 +637,26 @@ export const AppointmentOversight: React.FC = () => {
       <Dialog open={showReassignDialog} onOpenChange={setShowReassignDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Reassign Doctor</DialogTitle>
+            <DialogTitle>{t('appointmentOversight.reassignDialog.title')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             {selectedAppointment && (
               <div className="p-3 bg-muted rounded-lg">
                 <p className="font-medium">{selectedAppointment.patientName}</p>
                 <p className="text-sm text-muted-foreground">
-                  Current: {selectedAppointment.doctorName} - {selectedAppointment.department}
+                  {t('appointmentOversight.reassignDialog.currentDoctor', { doctor: selectedAppointment.doctorName, department: selectedAppointment.department })}
                 </p>
               </div>
             )}
             
             <div>
-              <Label>New Doctor</Label>
+              <Label>{t('appointmentOversight.reassignDialog.newDoctor')}</Label>
               <Select 
                 value={reassignData.newDoctorId} 
                 onValueChange={(value) => setReassignData(prev => ({ ...prev, newDoctorId: value }))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select new doctor" />
+                  <SelectValue placeholder={t('appointmentOversight.reassignDialog.selectDoctorPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {doctors
@@ -666,12 +671,12 @@ export const AppointmentOversight: React.FC = () => {
             </div>
 
             <div>
-              <Label htmlFor="reason">Reason for Reassignment</Label>
+              <Label htmlFor="reason">{t('appointmentOversight.reassignDialog.reasonLabel')}</Label>
               <Textarea
                 id="reason"
                 value={reassignData.reason}
                 onChange={(e) => setReassignData(prev => ({ ...prev, reason: e.target.value }))}
-                placeholder="Enter reason for reassignment"
+                placeholder={t('appointmentOversight.reassignDialog.reasonPlaceholder')}
                 rows={3}
               />
             </div>
@@ -682,15 +687,15 @@ export const AppointmentOversight: React.FC = () => {
                 checked={reassignData.notifyPatient}
                 onCheckedChange={(checked) => setReassignData(prev => ({ ...prev, notifyPatient: checked as boolean }))}
               />
-              <Label htmlFor="notify">Notify patient about reassignment</Label>
+              <Label htmlFor="notify">{t('appointmentOversight.reassignDialog.notifyPatient')}</Label>
             </div>
 
             <div className="flex gap-2">
               <Button onClick={handleReassignDoctor} className="flex-1">
-                Reassign Doctor
+                {t('appointmentOversight.reassignDialog.submit')}
               </Button>
               <Button variant="outline" onClick={() => setShowReassignDialog(false)} className="flex-1">
-                Cancel
+                {t('appointmentOversight.reassignDialog.cancel')}
               </Button>
             </div>
           </div>

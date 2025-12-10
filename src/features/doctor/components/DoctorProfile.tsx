@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -43,6 +44,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
   onSave,
   onCancel
 }) => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const userId = useAuthStore((state) => state.userId);
@@ -114,34 +116,26 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
   const selectedDepartmentName = selectedDepartment?.name || profileData.primaryDepartment || '';
 
   // Validation schema
-  const DoctorSchema = z.object({
-    licenseNumber: z.string().min(1, 'License number is required'),
-    qualifications: z.array(z.string()).min(1, 'Select at least one qualification'),
-    specializations: z.array(z.string()).min(1, 'Select at least one specialization'),
-    experienceYears: z
-      .union([z.string(), z.number()])
-      .transform((v) => {
-        if (typeof v === 'string') {
-          return Number(v);
-        }
-        return v;
-      })
-      .refine((v) => Number.isInteger(v) && v >= 0, { message: 'Experience years is required and must be a non-negative number' }),
-    medicalCouncil: z.string().min(1, 'Medical council is required').max(100, 'Too long'),
-    registrationYear: z
-      .union([z.string(), z.number()])
-      .transform((v) => {
-        if (typeof v === 'string') {
-          return Number(v);
-        }
-        return v;
-      })
-      .refine(
-        (v) => Number.isInteger(v) && v >= 1900 && v <= new Date().getFullYear(),
-        { message: 'Registration year is required and must be valid' }
-      ),
-    bio: z.string().optional(),
-  });
+  const DoctorSchema = useMemo(() => (
+    z.object({
+      licenseNumber: z.string().min(1, t('docProfile.errors.licenseRequired')),
+      qualifications: z.array(z.string()).min(1, t('docProfile.errors.qualificationsRequired')),
+      specializations: z.array(z.string()).min(1, t('docProfile.errors.specializationsRequired')),
+      experienceYears: z
+        .union([z.string(), z.number()])
+        .transform((v) => (typeof v === 'string' ? Number(v) : v))
+        .refine((v) => Number.isInteger(v) && v >= 0, { message: t('docProfile.errors.experienceInvalid') }),
+      medicalCouncil: z.string().min(1, t('docProfile.errors.medicalCouncilRequired')).max(100, t('docProfile.errors.medicalCouncilTooLong')),
+      registrationYear: z
+        .union([z.string(), z.number()])
+        .transform((v) => (typeof v === 'string' ? Number(v) : v))
+        .refine(
+          (v) => Number.isInteger(v) && v >= 1900 && v <= new Date().getFullYear(),
+          { message: t('docProfile.errors.registrationYearInvalid') }
+        ),
+      bio: z.string().optional(),
+    })
+  ), [t]);
 
   // Load doctor profile data from React Query response
   useEffect(() => {
@@ -203,6 +197,8 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
     }));
   };
 
+  const bioWordCount = profileData.bio ? profileData.bio.trim().split(/\s+/).filter(Boolean).length : 0;
+
   // Validate doctor data
   const validateDoctor = (): boolean => {
     const result = DoctorSchema.safeParse({
@@ -230,8 +226,8 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
 
     if (!resolvedHospitalId) {
       toast({
-        title: 'Error',
-        description: 'Hospital information is missing. Please refresh and try again.',
+        title: t('common.error'),
+        description: t('docProfile.toast.missingHospital'),
         variant: 'destructive',
       });
       return;
@@ -242,8 +238,8 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
       // Validate department
       if (!profileData.department) {
         toast({ 
-          title: 'Error', 
-          description: 'Please select a valid department.',
+          title: t('common.error'), 
+          description: t('docProfile.toast.missingDepartment'),
           variant: 'destructive'
         });
         return;
@@ -274,7 +270,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
             setDoctorProfileExists(true);
             setDoctorId(newDoctorId);
             setDoctorProfileRestriction(false, null);
-            toast({ title: 'Success', description: 'Doctor profile created successfully.' });
+            toast({ title: t('common.success'), description: t('docProfile.toast.createSuccess') });
             queryClient.invalidateQueries({ queryKey: ['doctor', 'profile'] });
             queryClient.invalidateQueries({ queryKey: ['profile', 'completion'] });
             try {
@@ -294,8 +290,8 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
         // Update existing doctor profile
         if (!doctorId) {
           toast({ 
-            title: 'Error', 
-            description: 'Unable to update profile. Please refresh the page and try again.',
+            title: t('common.error'), 
+            description: t('docProfile.toast.missingDoctorId'),
             variant: 'destructive'
           });
           return;
@@ -319,7 +315,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
           const resp = await doctorApi.updateDoctorProfessional(updateData);
           const updatedDoctorId = resp?.doctorId || (resp as any)?.doctorId || doctorId;
           setDoctorProfileRestriction(false, null);
-          toast({ title: 'Success', description: 'Doctor profile updated successfully.' });
+          toast({ title: t('common.success'), description: t('docProfile.toast.updateSuccess') });
           queryClient.invalidateQueries({ queryKey: ['doctor', 'profile', updatedDoctorId] });
           queryClient.invalidateQueries({ queryKey: ['profile', 'completion'] });
           try {
@@ -349,16 +345,16 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
 
     } catch (error: any) {
       console.error('Error saving doctor profile:', error);
-      let errorMessage = 'Failed to save professional details. Please try again.';
+      let errorMessage = t('docProfile.toast.genericError');
       if (error?.response?.status === 400) {
-        errorMessage = 'Invalid data provided. Please check your information and try again.';
+        errorMessage = t('docProfile.toast.invalidData');
       } else if (error?.response?.status === 409) {
-        errorMessage = 'A profile with this license number already exists.';
+        errorMessage = t('docProfile.toast.licenseConflict');
       } else if (error?.response?.status === 404) {
-        errorMessage = 'Profile not found. Please refresh the page and try again.';
+        errorMessage = t('docProfile.toast.notFound');
       }
       toast({ 
-        title: 'Error', 
+        title: t('common.error'), 
         description: errorMessage,
         variant: 'destructive'
       });
@@ -377,14 +373,14 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
             <AccordionTrigger className={`${isProfileComplete ? 'hover:bg-green-100/50 dark:hover:bg-green-900/30' : ''} transition-colors hover:no-underline focus:no-underline`}>
               <div className="flex flex-wrap items-center gap-2 text-left">
                 <Stethoscope className={`h-4 w-4 ${isProfileComplete ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`} />
-                <span className={`${isProfileComplete ? 'text-green-800 font-medium dark:text-green-200' : 'text-foreground'}`}>Doctor Professional</span>
+                <span className={`${isProfileComplete ? 'text-green-800 font-medium dark:text-green-200' : 'text-foreground'}`}>{t('docProfile.sectionTitle')}</span>
                 <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary dark:bg-primary/20 dark:text-primary-100">
-                  Professional completion {clampedProfileCompletion}%
+                  {t('docProfile.completionLabel', { percent: clampedProfileCompletion })}
                 </span>
                 {isProfileComplete ? (
                   <div className="flex items-center gap-1 sm:ml-2">
                     <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-300" />
-                    <span className="text-xs text-green-600 font-medium dark:text-green-200">Complete</span>
+                    <span className="text-xs text-green-600 font-medium dark:text-green-200">{t('docProfile.complete')}</span>
                   </div>
                 ) : (
                   <span className={`text-xs ${Object.keys(doctorErrors).length ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-300'}`}>
@@ -397,7 +393,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div>
                   <Label htmlFor="department" className="flex items-center gap-1">
-                    Department
+                    {t('docProfile.fields.department.label')}
                     <span className="text-red-500">*</span>
                   </Label>
                   <Select
@@ -406,15 +402,15 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                     disabled={!isEditing || departmentsLoading}
                   >
                     <SelectTrigger id="department" className="mt-1">
-                      <SelectValue placeholder={departmentsLoading ? "Loading departments..." : "Select department"} />
+                      <SelectValue placeholder={departmentsLoading ? t('docProfile.fields.department.loading') : t('docProfile.fields.department.placeholder')} />
                     </SelectTrigger>
                     <SelectContent className="max-h-56 overflow-y-auto">
                       {departmentsLoading ? (
-                        <SelectItem value="loading" disabled>Loading departments...</SelectItem>
+                        <SelectItem value="loading" disabled>{t('docProfile.fields.department.loading')}</SelectItem>
                       ) : departmentsError ? (
-                        <SelectItem value="error" disabled>Error loading departments</SelectItem>
+                        <SelectItem value="error" disabled>{t('docProfile.fields.department.loadError')}</SelectItem>
                       ) : departmentOptions.length === 0 ? (
-                        <SelectItem value="no-data" disabled>No departments available</SelectItem>
+                        <SelectItem value="no-data" disabled>{t('docProfile.fields.department.empty')}</SelectItem>
                       ) : (
                         departmentOptions.map(({ id, name }) => (
                           <SelectItem key={id} value={id}>{name}</SelectItem>
@@ -424,14 +420,14 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                   </Select>
                   {departmentsError && (
                     <p className="text-xs text-red-600 mt-1">
-                      Failed to load departments. Please try again later.
+                      {t('docProfile.fields.department.loadError')}
                     </p>
                   )}
                 </div>
                 
                 <div className="md:col-span-2">
                   <Label className="flex items-center gap-1 text-sm font-medium">
-                    Specializations
+                    {t('docProfile.fields.specializations.label')}
                     <span className="text-red-500">*</span>
                   </Label>
                   <SpecializationSelector
@@ -448,7 +444,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                 
                 <div className="md:col-span-2">
                   <Label className="flex items-center gap-1 text-sm font-medium">
-                    Qualifications
+                    {t('docProfile.fields.qualifications.label')}
                     <span className="text-red-500">*</span>
                   </Label>
                   <QualificationSelector
@@ -463,7 +459,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                 
                 <div>
                   <Label htmlFor="licenseNumber" className="flex items-center gap-1">
-                    Medical License Number
+                    {t('docProfile.fields.licenseNumber.label')}
                     <span className="text-red-500">*</span>
                   </Label>
                   <Input
@@ -478,7 +474,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                 
                 <div>
                   <Label htmlFor="experienceYears" className="flex items-center gap-1">
-                    Years of Experience
+                    {t('docProfile.fields.experienceYears.label')}
                     <span className="text-red-500">*</span>
                   </Label>
                   <Input
@@ -496,7 +492,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                 
                 <div>
                   <Label htmlFor="medicalCouncil" className="flex items-center gap-1">
-                    Medical Council
+                    {t('docProfile.fields.medicalCouncil.label')}
                     <span className="text-red-500">*</span>
                   </Label>
                   <Input
@@ -513,7 +509,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                 
                 <div>
                   <Label htmlFor="registrationYear" className="flex items-center gap-1">
-                    Registration Year
+                    {t('docProfile.fields.registrationYear.label')}
                     <span className="text-red-500">*</span>
                   </Label>
                   <Input
@@ -528,7 +524,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                 </div>
                 
                 <div className="md:col-span-2">
-                  <Label htmlFor="bio">Bio</Label>
+                  <Label htmlFor="bio">{t('docProfile.fields.bio.label')}</Label>
                   <div className="space-y-2">
                     <Textarea
                       id="bio"
@@ -537,12 +533,12 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                       disabled={!isEditing}
                       className="mt-1"
                       rows={4}
-                      placeholder="Write a brief professional bio about your medical expertise, specializations, and approach to patient care. Aim for around 50 words for better profile visibility."
+                      placeholder={t('docProfile.fields.bio.placeholder')}
                     />
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>💡 Tip: Write around 50 words to improve your profile visibility and help patients understand your expertise better.</span>
-                      <span className={`${profileData.bio ? (profileData.bio.split(' ').length < 30 ? 'text-amber-600' : profileData.bio.split(' ').length > 70 ? 'text-red-600' : 'text-green-600') : 'text-muted-foreground'}`}>
-                        {profileData.bio ? `${profileData.bio.split(' ').length} words` : '0 words'}
+                      <span>{t('docProfile.fields.bio.tip')}</span>
+                      <span className={`${profileData.bio ? (bioWordCount < 30 ? 'text-amber-600' : bioWordCount > 70 ? 'text-red-600' : 'text-green-600') : 'text-muted-foreground'}`}>
+                        {t('docProfile.fields.bio.wordCount', { count: bioWordCount })}
                       </span>
                     </div>
                   </div>
@@ -557,7 +553,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                 <div className="flex flex-col gap-2 mt-4 sm:flex-row sm:justify-end">
                   {onCancel && (
                     <Button variant="outline" onClick={onCancel} className="w-full sm:w-auto">
-                      Cancel
+                      {t('common.cancel')}
                     </Button>
                   )}
                   <Button 
@@ -568,12 +564,12 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                     {saving ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        Saving...
+                        {t('docProfile.actions.saving')}
                       </>
                     ) : (
                       <>
                         <Save className="h-4 w-4" />
-                        Save Professional
+                        {t('docProfile.actions.save')}
                       </>
                       )}
                   </Button>
@@ -588,12 +584,12 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
       <AlertDialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Professional details updated</AlertDialogTitle>
+            <AlertDialogTitle>{t('docProfile.success.title')}</AlertDialogTitle>
             <AlertDialogDescription className="space-y-4">
-              <p>Your profile is now synced with the latest information. What would you like to do next?</p>
+              <p>{t('docProfile.success.description')}</p>
               <div className="border border-slate-100 rounded-xl p-4 bg-slate-50/60">
                 <div className="flex items-center justify-between text-sm font-medium text-slate-700">
-                  <span>Profile completion</span>
+                  <span>{t('docProfile.success.profileCompletion')}</span>
                   <span className="text-blue-600">{clampedProfileCompletion}%</span>
                 </div>
                 <div className="mt-2 h-2 rounded-full bg-slate-200">
@@ -605,15 +601,15 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                 </div>
                 <p className="mt-2 text-xs text-slate-500">
                   {clampedProfileCompletion === 100
-                    ? 'Amazing! Your professional profile is fully complete.'
-                    : 'Complete the remaining fields to unlock the full experience.'}
+                    ? t('docProfile.success.completeMessage')
+                    : t('docProfile.success.incompleteMessage')}
                 </p>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setShowSuccessModal(false)}>
-              Continue editing
+              {t('docProfile.success.continueEditing')}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
@@ -621,7 +617,7 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
                 navigate('/dashboard');
               }}
             >
-              Go to dashboard
+              {t('docProfile.success.goToDashboard')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

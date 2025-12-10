@@ -1,11 +1,11 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Calendar, Clock, User } from 'lucide-react';
 import { TimeSlot } from '../AppointmentBooking';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Card } from '../ui/card';
 import { Alert, AlertDescription } from '../ui/alert';
-import { format } from 'date-fns';
 
 interface CancelAppointmentDialogProps {
   slot: TimeSlot;
@@ -18,13 +18,22 @@ export const CancelAppointmentDialog: React.FC<CancelAppointmentDialogProps> = (
   onConfirm,
   onCancel
 }) => {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language || 'en';
+
   const formatTime = (time: string) => {
     const [hour, minute] = time.split(':');
-    const hourNum = parseInt(hour);
-    const ampm = hourNum >= 12 ? 'PM' : 'AM';
-    const hour12 = hourNum % 12 || 12;
-    return `${hour12}:${minute} ${ampm}`;
+    const dateObj = new Date();
+    dateObj.setHours(Number(hour), Number(minute), 0, 0);
+    return new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(dateObj);
   };
+
+  const formattedDate = new Intl.DateTimeFormat(locale, {
+    weekday: 'long',
+    month: 'long',
+    day: '2-digit',
+    year: 'numeric'
+  }).format(new Date(slot.date));
 
   return (
     <Dialog open={true} onOpenChange={onCancel}>
@@ -32,7 +41,7 @@ export const CancelAppointmentDialog: React.FC<CancelAppointmentDialogProps> = (
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-red-600 flex items-center gap-2">
             <AlertTriangle className="h-5 w-5" />
-            Cancel Appointment
+            {t('cancelAppointmentDialog.title')}
           </DialogTitle>
         </DialogHeader>
 
@@ -40,13 +49,13 @@ export const CancelAppointmentDialog: React.FC<CancelAppointmentDialogProps> = (
         <Alert className="border-red-200 bg-red-50">
           <AlertTriangle className="h-4 w-4 text-red-600" />
           <AlertDescription className="text-red-800">
-            <strong>Warning:</strong> This action cannot be undone. The appointment will be permanently cancelled and the time slot will become available for other patients.
+            <strong>{t('cancelAppointmentDialog.warningLabel')}</strong> {t('cancelAppointmentDialog.warningText')}
           </AlertDescription>
         </Alert>
 
         {/* Appointment Details */}
         <Card className="p-4 bg-muted">
-          <h3 className="font-semibold text-foreground mb-3">Appointment to Cancel</h3>
+          <h3 className="font-semibold text-foreground mb-3">{t('cancelAppointmentDialog.appointmentHeading')}</h3>
           <div className="space-y-3">
             {slot.patientInfo && (
               <div className="flex items-center gap-3">
@@ -55,7 +64,7 @@ export const CancelAppointmentDialog: React.FC<CancelAppointmentDialogProps> = (
                   <p className="font-medium">{slot.patientInfo.name}</p>
                   <p className="text-sm text-muted-foreground">{slot.patientInfo.phone}</p>
                   <p className="text-sm text-muted-foreground">
-                    {slot.patientInfo.age} years old, {slot.patientInfo.gender}
+                    {t('cancelAppointmentDialog.patientMeta', { age: slot.patientInfo.age, gender: slot.patientInfo.gender })}
                   </p>
                 </div>
               </div>
@@ -65,7 +74,7 @@ export const CancelAppointmentDialog: React.FC<CancelAppointmentDialogProps> = (
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="font-medium">
-                  {format(new Date(slot.date), 'EEEE, MMMM dd, yyyy')}
+                  {formattedDate}
                 </p>
               </div>
             </div>
@@ -82,10 +91,10 @@ export const CancelAppointmentDialog: React.FC<CancelAppointmentDialogProps> = (
         {/* Confirmation Question */}
         <div className="text-center py-4">
           <p className="text-foreground font-medium mb-2">
-            Are you sure you want to cancel this appointment?
+            {t('cancelAppointmentDialog.confirmQuestion')}
           </p>
           <p className="text-sm text-muted-foreground">
-            The patient should be notified about the cancellation.
+            {t('cancelAppointmentDialog.confirmHint')}
           </p>
         </div>
 
@@ -96,14 +105,14 @@ export const CancelAppointmentDialog: React.FC<CancelAppointmentDialogProps> = (
             onClick={onCancel}
             className="flex-1"
           >
-            Keep Appointment
+            {t('cancelAppointmentDialog.keep')}
           </Button>
           <Button
             onClick={onConfirm}
             variant="destructive"
             className="flex-1"
           >
-            Yes, Cancel Appointment
+            {t('cancelAppointmentDialog.confirm')}
           </Button>
         </div>
       </DialogContent>

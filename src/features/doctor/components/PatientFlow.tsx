@@ -1,12 +1,10 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, 
-  Plus, 
   Search, 
-  Filter, 
   Heart, 
-  UserCheck, 
   FlaskConical, 
   CheckCircle,
   Clock,
@@ -14,24 +12,17 @@ import {
   X,
   User,
   Stethoscope,
-  ArrowLeft,
-  List,
   CalendarDays,
   History,
-  CalendarIcon,
-  TrendingUp,
-  AlertCircle,
-  Phone,
-  MapPin
+  Phone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { format } from 'date-fns';
 
 interface Patient {
   id: string;
@@ -56,6 +47,7 @@ const mockPastPatients: Patient[] = [];
 const mockFuturePatients: Patient[] = [];
 
 export const PatientFlow = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -165,6 +157,7 @@ export const PatientFlow = () => {
   }, [searchTerm, statusFilter, selectedStatus, activeTab, selectedDate, dateRange]);
 
   const getStatusBadge = (status: Patient['status'], patient?: Patient) => {
+    const badgeLabel = t(`patientFlow.statusBadges.${status}`);
     switch (status) {
       case 'vitals-required':
         return (
@@ -172,19 +165,19 @@ export const PatientFlow = () => {
             className="bg-red-100 text-red-800 border-red-300 cursor-pointer hover:bg-red-200 transition-colors text-xs"
             onClick={() => patient && handleVitalsClick(patient)}
           >
-            ❤️ Vitals
+            {badgeLabel}
           </Badge>
         );
       case 'ready-consultation':
-        return <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">✅ Ready</Badge>;
+        return <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">{badgeLabel}</Badge>;
       case 'under-consultation':
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-300 text-xs">👨‍⚕️ Consulting</Badge>;
+        return <Badge className="bg-blue-100 text-blue-800 border-blue-300 text-xs">{badgeLabel}</Badge>;
       case 'lab-test-required':
-        return <Badge className="bg-purple-100 text-purple-800 border-purple-300 text-xs">🧪 Lab Test</Badge>;
+        return <Badge className="bg-purple-100 text-purple-800 border-purple-300 text-xs">{badgeLabel}</Badge>;
       case 'awaiting-reconsultation':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 text-xs">⏳ Follow-up</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 text-xs">{badgeLabel}</Badge>;
       case 'completed':
-        return <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">🏁 Done</Badge>;
+        return <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">{badgeLabel}</Badge>;
       default:
         return null;
     }
@@ -216,15 +209,15 @@ export const PatientFlow = () => {
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="current" className="flex items-center gap-2">
                   <Clock className="h-4 w-4" />
-                  Current Patients
+                  {t('patientFlow.tabs.current')}
                 </TabsTrigger>
                 <TabsTrigger value="past" className="flex items-center gap-2">
                   <History className="h-4 w-4" />
-                  Past Appointments
+                  {t('patientFlow.tabs.past')}
                 </TabsTrigger>
                 <TabsTrigger value="future" className="flex items-center gap-2">
                   <CalendarDays className="h-4 w-4" />
-                  Future Patients
+                  {t('patientFlow.tabs.future')}
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -234,16 +227,16 @@ export const PatientFlow = () => {
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Current Patients</h2>
-                    <p className="text-gray-600 dark:text-gray-400">Manage today's patient flow and track progress</p>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('patientFlow.current.title')}</h2>
+                    <p className="text-gray-600 dark:text-gray-400">{t('patientFlow.current.subtitle')}</p>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
                       <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-sm font-medium text-green-700">Live Updates</span>
+                      <span className="text-sm font-medium text-green-700">{t('patientFlow.current.live')}</span>
                     </div>
                     <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                      {kpis.totalToday} Total Today
+                      {kpis.totalToday} {t('patientFlow.current.totalToday')}
                     </Badge>
                   </div>
                 </div>
@@ -256,11 +249,11 @@ export const PatientFlow = () => {
                 <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                   <div className="flex flex-col lg:flex-row gap-4">
                     <div className="flex-1">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Patients</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('patientFlow.current.searchLabel')}</label>
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
-                          placeholder="Search by patient name, ID, or phone..."
+                          placeholder={t('patientFlow.current.searchPlaceholder')}
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
                           className="pl-10"
@@ -275,9 +268,9 @@ export const PatientFlow = () => {
               {/* Status Navigation */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Patient Journey Status</h3>
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{t('patientFlow.current.journeyTitle')}</h3>
                   <div className="text-sm text-gray-500 dark:text-gray-400">
-                    Click any status to filter patients
+                    {t('patientFlow.current.journeyHint')}
                   </div>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
@@ -291,8 +284,8 @@ export const PatientFlow = () => {
                   >
                     <div className="text-center">
                       <div className="text-lg font-bold mb-1">{kpis.totalToday}</div>
-                      <div className="text-xs font-medium">All Patients</div>
-                      <div className="text-xs opacity-75 mt-1">Total Today</div>
+                      <div className="text-xs font-medium">{t('patientFlow.current.tiles.all.title')}</div>
+                      <div className="text-xs opacity-75 mt-1">{t('patientFlow.current.tiles.all.subtitle')}</div>
                     </div>
                     {selectedStatus === 'all' && (
                       <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-600 rounded-full"></div>
@@ -310,8 +303,8 @@ export const PatientFlow = () => {
                     <div className="text-center">
                       <Heart className="h-5 w-5 mx-auto mb-1" />
                       <div className="text-lg font-bold mb-1">{kpis.vitalsRequired}</div>
-                      <div className="text-xs font-medium">Vitals</div>
-                      <div className="text-xs opacity-75 mt-1">Needs Update</div>
+                      <div className="text-xs font-medium">{t('patientFlow.current.tiles.vitals.title')}</div>
+                      <div className="text-xs opacity-75 mt-1">{t('patientFlow.current.tiles.vitals.subtitle')}</div>
                     </div>
                     {selectedStatus === 'vitals-required' && (
                       <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-600 rounded-full"></div>
@@ -329,8 +322,8 @@ export const PatientFlow = () => {
                     <div className="text-center">
                       <CheckCircle className="h-5 w-5 mx-auto mb-1" />
                       <div className="text-lg font-bold mb-1">{kpis.readyConsultation}</div>
-                      <div className="text-xs font-medium">Ready</div>
-                      <div className="text-xs opacity-75 mt-1">For Consultation</div>
+                      <div className="text-xs font-medium">{t('patientFlow.current.tiles.ready.title')}</div>
+                      <div className="text-xs opacity-75 mt-1">{t('patientFlow.current.tiles.ready.subtitle')}</div>
                     </div>
                     {selectedStatus === 'ready-consultation' && (
                       <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-600 rounded-full"></div>
@@ -348,8 +341,8 @@ export const PatientFlow = () => {
                     <div className="text-center">
                       <Stethoscope className="h-5 w-5 mx-auto mb-1" />
                       <div className="text-lg font-bold mb-1">{kpis.underConsultation}</div>
-                      <div className="text-xs font-medium">Consulting</div>
-                      <div className="text-xs opacity-75 mt-1">In Progress</div>
+                      <div className="text-xs font-medium">{t('patientFlow.current.tiles.consulting.title')}</div>
+                      <div className="text-xs opacity-75 mt-1">{t('patientFlow.current.tiles.consulting.subtitle')}</div>
                     </div>
                     {selectedStatus === 'under-consultation' && (
                       <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-600 rounded-full"></div>
@@ -367,8 +360,8 @@ export const PatientFlow = () => {
                     <div className="text-center">
                       <FlaskConical className="h-5 w-5 mx-auto mb-1" />
                       <div className="text-lg font-bold mb-1">{kpis.labFollowUps}</div>
-                      <div className="text-xs font-medium">Lab Tests</div>
-                      <div className="text-xs opacity-75 mt-1">Required</div>
+                      <div className="text-xs font-medium">{t('patientFlow.current.tiles.lab.title')}</div>
+                      <div className="text-xs opacity-75 mt-1">{t('patientFlow.current.tiles.lab.subtitle')}</div>
                     </div>
                     {selectedStatus === 'lab-test-required' && (
                       <div className="absolute -top-1 -right-1 w-3 h-3 bg-purple-600 rounded-full"></div>
@@ -386,8 +379,8 @@ export const PatientFlow = () => {
                     <div className="text-center">
                       <Clock className="h-5 w-5 mx-auto mb-1" />
                       <div className="text-lg font-bold mb-1">{kpis.doctorFollowUps}</div>
-                      <div className="text-xs font-medium">Follow-ups</div>
-                      <div className="text-xs opacity-75 mt-1">Awaiting</div>
+                      <div className="text-xs font-medium">{t('patientFlow.current.tiles.followups.title')}</div>
+                      <div className="text-xs opacity-75 mt-1">{t('patientFlow.current.tiles.followups.subtitle')}</div>
                     </div>
                     {selectedStatus === 'awaiting-reconsultation' && (
                       <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-600 rounded-full"></div>
@@ -405,8 +398,8 @@ export const PatientFlow = () => {
                     <div className="text-center">
                       <CheckCircle className="h-5 w-5 mx-auto mb-1" />
                       <div className="text-lg font-bold mb-1">{kpis.completed}</div>
-                      <div className="text-xs font-medium">Completed</div>
-                      <div className="text-xs opacity-75 mt-1">Finished</div>
+                      <div className="text-xs font-medium">{t('patientFlow.current.tiles.completed.title')}</div>
+                      <div className="text-xs opacity-75 mt-1">{t('patientFlow.current.tiles.completed.subtitle')}</div>
                     </div>
                     {selectedStatus === 'completed' && (
                       <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-600 rounded-full"></div>
@@ -421,13 +414,13 @@ export const PatientFlow = () => {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gray-50 dark:bg-gray-700">
-                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Token</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Patient ID</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Patient Name</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Contact</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Time</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Status</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Actions</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.table.headers.token')}</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.table.headers.patientId')}</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.table.headers.patientName')}</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.table.headers.contact')}</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.table.headers.time')}</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.table.headers.status')}</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.table.headers.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -441,7 +434,7 @@ export const PatientFlow = () => {
                               <button
                                 onClick={() => handlePatientIdClick(patient.patientId)}
                                 className="hover:text-blue-800 hover:underline cursor-pointer transition-colors"
-                                title="Click to view patient profile"
+                                title={t('patientFlow.table.patientIdTitle')}
                               >
                                 {patient.patientId}
                               </button>
@@ -449,7 +442,7 @@ export const PatientFlow = () => {
                             <TableCell>
                               <div>
                                 <div className="font-medium text-sm">{patient.patientName}</div>
-                                <div className="text-xs text-gray-500">ID: {patient.patientId}</div>
+                                <div className="text-xs text-gray-500">{t('patientFlow.table.rowId', { id: patient.patientId })}</div>
                               </div>
                             </TableCell>
                             <TableCell className="text-xs">
@@ -472,7 +465,7 @@ export const PatientFlow = () => {
                                   className="text-xs h-7 px-2"
                                 >
                                   <Eye className="h-3 w-3 mr-1" />
-                                  View
+                                  {t('patientFlow.table.view')}
                                 </Button>
                               </div>
                             </TableCell>
@@ -484,8 +477,9 @@ export const PatientFlow = () => {
                             <div className="flex flex-col items-center gap-2">
                               <Calendar className="h-8 w-8 text-muted-foreground" />
                               <p className="text-muted-foreground">
-                                {selectedStatus === 'all' ? 'No patients found' :
-                                 `No ${selectedStatus.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')} patients found`}
+                                {selectedStatus === 'all'
+                                  ? t('patientFlow.empty.current')
+                                  : t('patientFlow.empty.currentByStatus', { status: t(`patientFlow.statusLabels.${selectedStatus}`) })}
                               </p>
                             </div>
                           </TableCell>
@@ -502,16 +496,16 @@ export const PatientFlow = () => {
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Past Appointments</h2>
-                    <p className="text-gray-600 dark:text-gray-400">View completed patient consultations and historical data</p>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('patientFlow.past.title')}</h2>
+                    <p className="text-gray-600 dark:text-gray-400">{t('patientFlow.past.subtitle')}</p>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
                       <History className="h-4 w-4 text-gray-600" />
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Historical Data</span>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.past.chip')}</span>
                     </div>
                     <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                      {pastStats.completedPast} Completed
+                      {pastStats.completedPast} {t('patientFlow.past.badge')}
                     </Badge>
                   </div>
                 </div>
@@ -522,11 +516,11 @@ export const PatientFlow = () => {
                 <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                   <div className="flex flex-col lg:flex-row gap-4">
                     <div className="flex-1">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Past Appointments</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('patientFlow.past.searchLabel')}</label>
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
-                          placeholder="Search by patient name, ID, or doctor..."
+                          placeholder={t('patientFlow.past.searchPlaceholder')}
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
                           className="pl-10"
@@ -538,10 +532,10 @@ export const PatientFlow = () => {
                   
                   {/* Date Range Filter */}
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Filter by Date Range</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{t('patientFlow.filters.dateRangeTitle')}</label>
                     <div className="flex flex-col sm:flex-row gap-3">
                       <div className="flex-1">
-                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Start Date</label>
+                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">{t('patientFlow.filters.startDate')}</label>
                         <Input
                           type="date"
                           value={dateRange.startDate}
@@ -551,7 +545,7 @@ export const PatientFlow = () => {
                         />
                       </div>
                       <div className="flex-1">
-                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">End Date</label>
+                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">{t('patientFlow.filters.endDate')}</label>
                         <Input
                           type="date"
                           value={dateRange.endDate}
@@ -568,7 +562,7 @@ export const PatientFlow = () => {
                           className="h-10 px-3"
                         >
                           <X className="h-4 w-4 mr-1" />
-                          Clear
+                          {t('patientFlow.filters.clear')}
                         </Button>
                       </div>
                     </div>
@@ -578,10 +572,10 @@ export const PatientFlow = () => {
                           <Calendar className="h-4 w-4" />
                           <span>
                             {dateRange.startDate && dateRange.endDate 
-                              ? `Showing appointments from ${format(new Date(dateRange.startDate), 'MMM dd, yyyy')} to ${format(new Date(dateRange.endDate), 'MMM dd, yyyy')}`
+                              ? t('patientFlow.filters.summaryBetween', { start: format(new Date(dateRange.startDate), 'MMM dd, yyyy'), end: format(new Date(dateRange.endDate), 'MMM dd, yyyy') })
                               : dateRange.startDate 
-                                ? `Showing appointments from ${format(new Date(dateRange.startDate), 'MMM dd, yyyy')} onwards`
-                                : `Showing appointments until ${format(new Date(dateRange.endDate), 'MMM dd, yyyy')}`
+                                ? t('patientFlow.filters.summaryFrom', { start: format(new Date(dateRange.startDate), 'MMM dd, yyyy') })
+                                : t('patientFlow.filters.summaryUntil', { end: format(new Date(dateRange.endDate), 'MMM dd, yyyy') })
                             }
                           </span>
                         </div>
@@ -597,14 +591,14 @@ export const PatientFlow = () => {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gray-50 dark:bg-gray-700">
-                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Token</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Patient ID</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Patient Name</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Contact</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Date</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Time</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Status</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Actions</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.table.headers.token')}</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.table.headers.patientId')}</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.table.headers.patientName')}</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.table.headers.contact')}</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.table.headers.date')}</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.table.headers.time')}</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.table.headers.status')}</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.table.headers.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -618,7 +612,7 @@ export const PatientFlow = () => {
                               <button
                                 onClick={() => handlePatientIdClick(patient.patientId)}
                                 className="hover:text-blue-800 hover:underline cursor-pointer transition-colors"
-                                title="Click to view patient profile"
+                                title={t('patientFlow.table.patientIdTitle')}
                               >
                                 {patient.patientId}
                               </button>
@@ -626,7 +620,7 @@ export const PatientFlow = () => {
                             <TableCell>
                               <div>
                                 <div className="font-medium text-sm">{patient.patientName}</div>
-                                <div className="text-xs text-gray-500">ID: {patient.patientId}</div>
+                                <div className="text-xs text-gray-500">{t('patientFlow.table.rowId', { id: patient.patientId })}</div>
                               </div>
                             </TableCell>
                             <TableCell className="text-xs">
@@ -652,7 +646,7 @@ export const PatientFlow = () => {
                                   className="text-xs h-7 px-2"
                                 >
                                   <Eye className="h-3 w-3 mr-1" />
-                                  View
+                                  {t('patientFlow.table.view')}
                                 </Button>
                               </div>
                             </TableCell>
@@ -664,7 +658,7 @@ export const PatientFlow = () => {
                             <div className="flex flex-col items-center gap-2">
                               <History className="h-8 w-8 text-muted-foreground" />
                               <p className="text-muted-foreground">
-                                No past appointments found for the selected criteria
+                                {t('patientFlow.empty.past')}
                               </p>
                             </div>
                           </TableCell>
@@ -681,16 +675,16 @@ export const PatientFlow = () => {
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Future Appointments</h2>
-                    <p className="text-gray-600 dark:text-gray-400">View upcoming patient appointments and scheduled consultations</p>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('patientFlow.future.title')}</h2>
+                    <p className="text-gray-600 dark:text-gray-400">{t('patientFlow.future.subtitle')}</p>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                       <CalendarDays className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Upcoming</span>
+                      <span className="text-sm font-medium text-blue-700 dark:text-blue-300">{t('patientFlow.future.chip')}</span>
                     </div>
                     <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                      {futureStats.readyFuture} Ready
+                      {futureStats.readyFuture} {t('patientFlow.future.badge')}
                     </Badge>
                   </div>
                 </div>
@@ -701,11 +695,11 @@ export const PatientFlow = () => {
                 <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                   <div className="flex flex-col lg:flex-row gap-4">
                     <div className="flex-1">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Future Appointments</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('patientFlow.future.searchLabel')}</label>
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
-                          placeholder="Search by patient name, ID, or doctor..."
+                          placeholder={t('patientFlow.future.searchPlaceholder')}
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
                           className="pl-10"
@@ -717,10 +711,10 @@ export const PatientFlow = () => {
                   
                   {/* Date Range Filter */}
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Filter by Date Range</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{t('patientFlow.filters.dateRangeTitle')}</label>
                     <div className="flex flex-col sm:flex-row gap-3">
                       <div className="flex-1">
-                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Start Date</label>
+                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">{t('patientFlow.filters.startDate')}</label>
                         <Input
                           type="date"
                           value={dateRange.startDate}
@@ -730,7 +724,7 @@ export const PatientFlow = () => {
                         />
                       </div>
                       <div className="flex-1">
-                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">End Date</label>
+                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">{t('patientFlow.filters.endDate')}</label>
                         <Input
                           type="date"
                           value={dateRange.endDate}
@@ -747,7 +741,7 @@ export const PatientFlow = () => {
                           className="h-10 px-3"
                         >
                           <X className="h-4 w-4 mr-1" />
-                          Clear
+                          {t('patientFlow.filters.clear')}
                         </Button>
                       </div>
                     </div>
@@ -757,10 +751,10 @@ export const PatientFlow = () => {
                           <Calendar className="h-4 w-4" />
                           <span>
                             {dateRange.startDate && dateRange.endDate 
-                              ? `Showing appointments from ${format(new Date(dateRange.startDate), 'MMM dd, yyyy')} to ${format(new Date(dateRange.endDate), 'MMM dd, yyyy')}`
+                              ? t('patientFlow.filters.summaryBetween', { start: format(new Date(dateRange.startDate), 'MMM dd, yyyy'), end: format(new Date(dateRange.endDate), 'MMM dd, yyyy') })
                               : dateRange.startDate 
-                                ? `Showing appointments from ${format(new Date(dateRange.startDate), 'MMM dd, yyyy')} onwards`
-                                : `Showing appointments until ${format(new Date(dateRange.endDate), 'MMM dd, yyyy')}`
+                                ? t('patientFlow.filters.summaryFrom', { start: format(new Date(dateRange.startDate), 'MMM dd, yyyy') })
+                                : t('patientFlow.filters.summaryUntil', { end: format(new Date(dateRange.endDate), 'MMM dd, yyyy') })
                             }
                           </span>
                         </div>
@@ -776,14 +770,14 @@ export const PatientFlow = () => {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gray-50 dark:bg-gray-700">
-                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Token</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Patient ID</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Patient Name</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Contact</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Date</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Time</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Status</TableHead>
-                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">Actions</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.table.headers.token')}</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.table.headers.patientId')}</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.table.headers.patientName')}</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.table.headers.contact')}</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.table.headers.date')}</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.table.headers.time')}</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.table.headers.status')}</TableHead>
+                        <TableHead className="text-xs font-medium text-gray-700 dark:text-gray-300">{t('patientFlow.table.headers.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -797,7 +791,7 @@ export const PatientFlow = () => {
                               <button
                                 onClick={() => handlePatientIdClick(patient.patientId)}
                                 className="hover:text-blue-800 hover:underline cursor-pointer transition-colors"
-                                title="Click to view patient profile"
+                                title={t('patientFlow.table.patientIdTitle')}
                               >
                                 {patient.patientId}
                               </button>
@@ -805,7 +799,7 @@ export const PatientFlow = () => {
                             <TableCell>
                               <div>
                                 <div className="font-medium text-sm">{patient.patientName}</div>
-                                <div className="text-xs text-gray-500">ID: {patient.patientId}</div>
+                                <div className="text-xs text-gray-500">{t('patientFlow.table.rowId', { id: patient.patientId })}</div>
                               </div>
                             </TableCell>
                             <TableCell className="text-xs">
@@ -831,7 +825,7 @@ export const PatientFlow = () => {
                                   className="text-xs h-7 px-2"
                                 >
                                   <Eye className="h-3 w-3 mr-1" />
-                                  View
+                                  {t('patientFlow.table.view')}
                                 </Button>
                               </div>
                             </TableCell>
@@ -843,7 +837,7 @@ export const PatientFlow = () => {
                             <div className="flex flex-col items-center gap-2">
                               <CalendarDays className="h-8 w-8 text-muted-foreground" />
                               <p className="text-muted-foreground">
-                                No future appointments found for the selected criteria
+                                {t('patientFlow.empty.future')}
                               </p>
                             </div>
                           </TableCell>

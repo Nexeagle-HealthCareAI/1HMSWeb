@@ -16,17 +16,17 @@ export const useDoctorProfile = (userId?: string) => {
       try {        
         const response = await doctorApi.getDoctorProfile(userId);      
         console.log('Response+useDoctorProfile:', response);
-        // Check if response is empty or invalid
+        // Check if response is empty or invalid (e.g. 204 No Content from API)
         const isEmptyResponse = !response || (typeof response === 'object' && Object.keys(response).length === 0);
 
         if (isEmptyResponse) {        
           setDoctorProfileRestriction(true, 'Please complete your doctor profile to unlock calendar and prescription features.');
-        
-          const authStore = useAuthStore.getState();        
-          
-          const error = new Error(`Doctor profile is incomplete for user ID: ${userId}`);
-          (error as any).code = 'DOCTOR_PROFILE_INCOMPLETE';
-          throw error;
+
+          // Attach a synthetic 204 response so UI treats this as profile-incomplete instead of a hard error
+          const profileError: any = new Error(`Doctor profile not found for user ID: ${userId}`);
+          profileError.code = 'DOCTOR_PROFILE_INCOMPLETE';
+          profileError.response = { status: 204, statusText: 'No Content', data: null };
+          throw profileError;
         }
         setDoctorProfileRestriction(false, null);        
         // Verify restriction was cleared
@@ -37,11 +37,23 @@ export const useDoctorProfile = (userId?: string) => {
         
         const status = error?.response?.status;     
        
+        // Handle profile-incomplete errors first (explicit code from empty response handling)
+        if (error?.code === 'DOCTOR_PROFILE_INCOMPLETE') {
+          setDoctorProfileRestriction(true, 'Please complete your doctor profile to unlock calendar and prescription features.');
+
+          const profileError: any = error instanceof Error ? error : new Error(`Doctor profile not found for user ID: ${userId}`);
+          if (!profileError.response) {
+            profileError.response = error?.response || { status: 204, statusText: 'No Content', data: null };
+          }
+          if (!profileError.message) {
+            profileError.message = `Doctor profile not found for user ID: ${userId}`;
+          }
+          throw profileError;
+        }
+
         // Handle 204 No Content status - Doctor profile doesn't exist, needs to complete profile
         if (status === 204) {
           setDoctorProfileRestriction(true, 'Please complete your doctor profile to unlock calendar and prescription features.');
-          
-          const authStore = useAuthStore.getState();         
           
           // Preserve the error structure with response for proper handling in UI
           const profileError: any = new Error(`Doctor profile not found for user ID: ${userId}`);
@@ -69,14 +81,6 @@ export const useDoctorProfile = (userId?: string) => {
           throw new Error('Network error. Please check your connection.');
         }
         
-        if (error?.code === 'DOCTOR_PROFILE_INCOMPLETE') {
-        setDoctorProfileRestriction(true, 'Please complete your doctor profile to unlock calendar and prescription features.');
-          
-          // Verify restriction was set
-          const authStore = useAuthStore.getState();
-         
-        }
-
         throw new Error(`Failed to fetch doctor profile: ${error?.message || 'Unknown error'}`);
       }
     },

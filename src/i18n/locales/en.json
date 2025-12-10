@@ -175,6 +175,45 @@
     "liveUpdates": "Live Updates",
     "totalToday": "Total Today",
     "priorityActions": "Priority Actions:",
+    "tabs": {
+      "current": "Current Appointments",
+      "past": "Past Appointments",
+      "future": "Future Appointments"
+    },
+    "searchPlaceholder": "Search by patient ID or name",
+    "doctorLabel": "Doctor",
+    "allDoctors": "All Doctors",
+    "dateRange": {
+      "label": "Date Range",
+      "start": "Start Date",
+      "end": "End Date",
+      "to": "to"
+    },
+    "statusFilters": {
+      "all": "All",
+      "vitalsRequired": "Vitals Required",
+      "ready": "Ready",
+      "underConsult": "Under Consult",
+      "labRequired": "Lab Required",
+      "awaitingReconsult": "Awaiting Reconsult",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "statusLabels": {
+      "vitalsRequired": "Vitals",
+      "ready": "Ready",
+      "underConsult": "Consulting",
+      "labRequired": "Lab",
+      "awaitingReconsult": "Reconsult",
+      "completed": "Done",
+      "scheduled": "Scheduled",
+      "cancelled": "Cancelled"
+    },
+    "refreshNow": "Refresh Now",
+    "loadingAppointments": "Loading appointments...",
+    "errorTitle": "Error loading appointments",
+    "errorDescription": "Failed to load appointments",
+    "tryAgain": "Try Again",
     "kpis": {
       "total": "Total",
       "vitals": "Vitals",
@@ -213,7 +252,53 @@
       "tokenNo": "Token No",
       "status": "Status",
       "phone": "Phone",
-      "actions": "Actions"
+      "actions": "Actions",
+      "lastAppointmentDate": "Last Appointment Date",
+      "lastCompletedStatus": "Last Completed Status",
+      "currentStatus": "Current Status",
+      "printPrescription": "Print Prescription",
+      "printToken": "Print Token",
+      "nextFollowUpDate": "Next Follow-up Date",
+      "isCompleted": "Is Completed"
+    },
+    "emptyStates": {
+      "current": "No current appointments found",
+      "past": "No past appointments found",
+      "future": "No future appointments found",
+      "adjustFilters": "Try adjusting your search terms or doctor filter"
+    },
+    "quickTip": {
+      "title": "Quick Tip:",
+      "description": "Click on any Patient ID to view the patient's complete profile and medical history"
+    },
+    "tooltip": {
+      "viewProfile": "Click to view profile"
+    },
+    "actionButtons": {
+      "vitals": "Vitals",
+      "preparing": "Preparing",
+      "notApplicable": "NA",
+      "completed": "Completed"
+    },
+    "toast": {
+      "missingHospitalTitle": "Missing hospital context",
+      "missingHospitalDescription": "Please select a hospital before generating prescriptions.",
+      "missingAppointmentDataTitle": "Incomplete appointment data",
+      "missingAppointmentDataDescription": "This appointment is missing identifiers required to generate a prescription."
+    },
+    "dialog": {
+      "cancelTitle": "Cancel Appointment",
+      "cancelDescription": "Are you sure you want to cancel this appointment? This action cannot be undone.",
+      "patient": "Patient",
+      "patientId": "Patient ID",
+      "doctor": "Doctor",
+      "appointmentId": "Appointment ID",
+      "keepAppointment": "Keep Appointment",
+      "confirmCancel": "Cancel Appointment",
+      "cancelling": "Cancelling..."
+    },
+    "pagination": {
+      "showing": "Showing {{from}} to {{to}} of {{total}} appointments"
     }
   },
   "patients": {
@@ -959,15 +1044,1105 @@
     "departmentSelection": "🏥 Department Selection",
     "department": "Department",
     "doctor": "Doctor",
-  "noDepartmentsAvailable": "No departments available",
-  "noDepartmentsAvailableMessage": "Hospital departments are not set up yet. Please Add/Onboard Doctor or ask an administrator",
+    "selectedLabel": "Selected:",
+    "noDoctorSelected": "No doctor selected",
+    "selectDepartmentFirst": "Select a department first",
+    "noDepartmentsAvailable": "No departments available",
+    "noDepartmentsAvailableMessage": "Hospital departments are not set up yet. Please Add/Onboard Doctor or ask an administrator",
     "moreDepartments": "More Departments",
     "selectDoctor": "Select Doctor",
     "loadingDoctors": "Loading doctors...",
     "errorLoadingDoctors": "Error loading doctors",
     "noDoctorsAvailable": "No doctors available",
     "timeOff": "Time Off",
-    "available": "Available"
+    "available": "Available",
+    "availableDoctors": "Available Doctors",
+    "defaultQualification": "MBBS",
+    "generalSpecialization": "General",
+    "dateSelection": "Select Date",
+    "otherDate": "Other",
+    "selectDate": "Select Date",
+    "today": "Today",
+    "shiftSelection": "Select Time Shift",
+    "noShiftsAvailable": "No shifts available for this doctor",
+    "timeSlots": "Available Time Slots",
+    "availableCount": "{{count}} Available",
+    "loadingSlots": "Loading available time slots...",
+    "loadingSlotsMessage": "Please wait while we fetch the latest slot information.",
+    "noSlotsAvailableTimeOff": "No time slots available - Doctor is on time off",
+    "pleaseSelectDifferentDate": "Please select a different date or doctor",
+    "doctorUnavailable": "Doctor Unavailable - Time Off",
+    "doctorUnavailableMessage": "The doctor is not available on this date.",
+    "whatYouCanDo": "What you can do:",
+    "selectDifferentDate": "Select a different date",
+    "chooseAnotherDoctor": "Choose another doctor from the same department",
+    "contactHospital": "Contact the hospital for emergency appointments",
+    "loadingBookedSlots": "Loading booked slots information...",
+    "bookedSlotsError": "Unable to load external booking information. Some slots may appear available but could be booked externally.",
+    "legend": "Slot Types:",
+    "availableLegend": "Available",
+    "bookedLegend": "Booked",
+    "timeOffLegend": "Time Off",
+    "selectedLegend": "Selected",
+    "tapAnySlotTip": "Tap any available slot to book an appointment."
+  },
+  "bookingSuccess": {
+    "title": "Appointment Booked!",
+    "subtitle": "Your appointment is confirmed",
+    "idLabel": "ID:",
+    "tokenLabel": "Token:",
+    "doctorLabel": "Doctor",
+    "dateLabel": "Date",
+    "timeLabel": "Time",
+    "patientLabel": "Patient",
+    "patientPhone": "Phone",
+    "copyToastTitle": "Copied!",
+    "copyToastDescription": "Appointment ID copied to clipboard",
+    "done": "Done",
+    "bookAnother": "Book Another",
+    "print": "Print",
+    "printTemplate": {
+      "title": "Appointment Confirmation",
+      "hospitalName": "NexEagle Hospital",
+      "tokenLabel": "Token No:",
+      "appointmentDate": "Appointment Date:",
+      "doctorName": "Doctor Name:",
+      "specialization": "Specialization:",
+      "generatedOn": "Generated on {{date}}",
+      "thankYou": "Thank you for choosing NexEagle Hospital"
+    }
+  },
+  "cancelAppointmentDialog": {
+    "title": "Cancel Appointment",
+    "warningLabel": "Warning:",
+    "warningText": "This action cannot be undone. The appointment will be permanently cancelled and the time slot will become available for other patients.",
+    "appointmentHeading": "Appointment to Cancel",
+    "patientMeta": "{{age}} years old, {{gender}}",
+    "confirmQuestion": "Are you sure you want to cancel this appointment?",
+    "confirmHint": "The patient should be notified about the cancellation.",
+    "keep": "Keep Appointment",
+    "confirm": "Yes, Cancel Appointment"
+  },
+  "dateSelector": {
+    "title": "Select Date",
+    "today": "Today",
+    "otherDate": "Other Date",
+    "selectedDateLabel": "Selected Date:"
+  },
+  "departmentSidebar": {
+    "selectDepartment": "Select Department",
+    "availableDoctors": "Available Doctors",
+    "slotLegend": "Slot Legend",
+    "legend": {
+      "available": "Available",
+      "booked": "Booked",
+      "selected": "Selected"
+    }
+  },
+  "editPatientDialog": {
+    "title": "Edit Patient Information",
+    "appointmentDetails": "Appointment Details",
+    "dateLabel": "Date:",
+    "timeLabel": "Time:",
+    "patientName": "Patient Name",
+    "phone": "Phone Number",
+    "age": "Age",
+    "gender": "Gender",
+    "cancel": "Cancel",
+    "update": "Update Information",
+    "placeholders": {
+      "name": "Enter patient name",
+      "phone": "Enter phone number",
+      "age": "Enter age",
+      "gender": "Select gender"
+    },
+    "genderOptions": {
+      "male": "Male",
+      "female": "Female",
+      "other": "Other"
+    },
+    "errors": {
+      "nameRequired": "Patient name is required",
+      "phoneRequired": "Phone number is required",
+      "phoneInvalid": "Please enter a valid phone number",
+      "ageRequired": "Age is required",
+      "ageInvalid": "Please enter a valid age",
+      "genderRequired": "Gender is required"
+    }
+  },
+  "appointmentList": {
+    "loading": "Loading appointments...",
+    "error": "Error loading appointments",
+    "retry": "Retry",
+    "filters": {
+      "title": "Filters",
+      "statusPlaceholder": "Status",
+      "allStatus": "All Status",
+      "searchPatient": "Search patient...",
+      "clear": "Clear Filters"
+    },
+    "status": {
+      "scheduled": "Scheduled",
+      "confirmed": "Confirmed",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "doctorName": "Dr. {{name}}",
+    "noReason": "No reason provided",
+    "actions": {
+      "confirm": "Confirm",
+      "updating": "Updating..."
+    },
+    "empty": "No appointments found",
+    "toast": {
+      "successTitle": "Success",
+      "errorTitle": "Error",
+      "createSuccess": "Appointment created successfully",
+      "createFail": "Failed to create appointment",
+      "statusUpdated": "Appointment status updated successfully",
+      "statusFail": "Failed to update appointment status"
+    }
+  },
+  "appointmentOversight": {
+    "title": "Appointment Oversight",
+    "subtitle": "Manage and monitor all appointments across departments",
+    "manageSlots": "Manage Slots",
+    "exportReport": "Export Report",
+    "slotManagement": {
+      "title": "Slot Management",
+      "selectDate": "Select Date",
+      "pickDate": "Pick a date",
+      "selectDoctor": "Select Doctor",
+      "chooseDoctor": "Choose doctor",
+      "blockSlots": "Block Slots",
+      "openSlots": "Open Slots"
+    },
+    "filters": {
+      "searchPlaceholder": "Search appointments...",
+      "allDepartments": "All Departments",
+      "allStatus": "All Status",
+      "filterByDate": "Filter by date",
+      "clear": "Clear Filters"
+    },
+    "status": {
+      "confirmed": "Confirmed",
+      "cancelled": "Cancelled",
+      "noShow": "No Show",
+      "completed": "Completed",
+      "rescheduled": "Rescheduled"
+    },
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    },
+    "stats": {
+      "today": "Today's Appointments",
+      "noShows": "No Shows",
+      "followUpsRequired": "Follow-ups Required"
+    },
+    "table": {
+      "title": "Appointments ({{count}})",
+      "headers": {
+        "patient": "Patient",
+        "doctor": "Doctor",
+        "dateTime": "Date & Time",
+        "status": "Status",
+        "priority": "Priority",
+        "followUp": "Follow-up",
+        "actions": "Actions"
+      },
+      "labels": {
+        "department": "Department",
+        "date": "Date",
+        "time": "Time"
+      }
+    },
+    "followUp": {
+      "required": "Required",
+      "notRequired": "Not required"
+    },
+    "actions": {
+      "reassignDoctor": "Reassign Doctor",
+      "markCompleted": "Mark Completed",
+      "markNoShow": "Mark No-Show",
+      "callPatient": "Call Patient",
+      "sendMessage": "Send Message",
+      "reassign": "Reassign"
+    },
+    "reassignDialog": {
+      "title": "Reassign Doctor",
+      "currentDoctor": "Current: {{doctor}} - {{department}}",
+      "newDoctor": "New Doctor",
+      "selectDoctorPlaceholder": "Select new doctor",
+      "reasonLabel": "Reason for Reassignment",
+      "reasonPlaceholder": "Enter reason for reassignment",
+      "notifyPatient": "Notify patient about reassignment",
+      "submit": "Reassign Doctor",
+      "cancel": "Cancel"
+    },
+    "toast": {
+      "missingTitle": "Missing Information",
+      "missingDescription": "Please select a doctor and provide a reason.",
+      "reassignedTitle": "Doctor Reassigned",
+      "reassignedDescription": "Appointment reassigned to {{doctor}} {{notified}}",
+      "notified": "Patient has been notified.",
+      "statusUpdatedTitle": "Status Updated",
+      "statusUpdatedDescription": "Appointment status changed to {{status}}",
+      "followUpScheduledTitle": "Follow-up Scheduled",
+      "followUpScheduledDescription": "Follow-up scheduled for {{date}}"
+    }
+  },
+  "docBoard": {
+    "header": {
+      "title": "Dashboard",
+      "viewProfessionalProfile": "View professional profile",
+      "professionalProfile": "Professional profile",
+      "verified": "Verified",
+      "defaultDoctorName": "Dr. Current User"
+    },
+    "nav": {
+      "appointments": { "label": "Appointments", "short": "Appts", "description": "Monitor today’s queue" },
+      "calendar": { "label": "My Calendar", "short": "Cal", "description": "Plan your week" },
+      "assistant": { "label": "AI Assistant", "short": "AI", "description": "Summaries & insights" },
+      "settings": { "label": "Prescription Settings", "short": "Settings", "description": "Personalize layouts" },
+      "lockedMessage": "Complete your profile to unlock this section"
+    },
+    "alerts": {
+      "previewMissingContext": "Prescription preview requires doctor and hospital context."
+    },
+    "loading": {
+      "doctorProfile": "Loading doctor profile...",
+      "appointments": "Loading appointment data...",
+      "helper": "Please wait while we fetch your data"
+    },
+    "error": {
+      "doctorProfile": "Failed to load doctor profile",
+      "appointments": "Failed to load appointment data",
+      "missingData": "Missing required data: {{fields}}",
+      "missingHospitalId": "Hospital ID",
+      "missingDoctorId": "Doctor ID",
+      "generic": "Please check the console for error details and try refreshing the page",
+      "refreshPage": "Refresh Page"
+    },
+    "restriction": {
+      "title": "Complete Your Doctor Profile",
+      "subtitle": "Unlock full access to calendar, appointments, and prescription features",
+      "requiredInfoTitle": "Required Information:",
+      "requiredItems": {
+        "license": "Medical License Number",
+        "department": "Department & Specializations",
+        "qualifications": "Professional Qualifications",
+        "experience": "Experience & Registration Details"
+      },
+      "benefits": {
+        "calendar": "Calendar Access",
+        "prescriptions": "Prescriptions",
+        "appointments": "Appointments"
+      },
+      "completeProfileCta": "Complete Profile Now",
+      "ctaHelper": "Takes only 2-3 minutes"
+    },
+    "tabs": {
+      "swipeHint": "Swipe to explore",
+      "expandSidebar": "Expand appointment sidebar",
+      "collapseSidebar": "Collapse appointment sidebar",
+      "current": { "label": "Current Appointments", "subLabel": "Live queue & vitals" },
+      "past": { "label": "Past Visits", "subLabel": "History & follow-ups" },
+      "future": { "label": "Upcoming Schedule", "subLabel": "Next 7 days" }
+    },
+    "statusBadge": {
+      "vitalsRequired": "Vitals Required",
+      "ready": "Ready",
+      "consulting": "Consulting",
+      "labRequired": "Lab Required",
+      "reconsult": "Reconsult",
+      "completed": "Completed",
+      "scheduled": "Scheduled",
+      "cancelled": "Cancelled",
+      "default": "{{status}}"
+    },
+    "filters": {
+      "all": "All ({{count}})",
+      "vitalsRequired": "Vitals ({{count}})",
+      "ready": "Ready ({{count}})",
+      "consulting": "Consulting ({{count}})",
+      "labRequired": "Lab ({{count}})",
+      "reconsult": "Reconsult ({{count}})",
+      "completed": "Completed ({{count}})",
+      "cancelled": "Cancelled ({{count}})"
+    },
+    "sync": {
+      "lastSynced": "Last synced",
+      "refresh": "Refresh"
+    },
+    "search": {
+      "currentPlaceholder": "Search patients by name or ID...",
+      "pastPlaceholder": "Search patients by name or ID...",
+      "futurePlaceholder": "Search upcoming patients..."
+    },
+    "date": {
+      "from": "From",
+      "to": "To"
+    },
+    "table": {
+      "patient": "Patient",
+      "patientName": "Patient Name",
+      "patientId": "Patient ID",
+      "token": "Token",
+      "tokenLabel": "Token",
+      "tokenNumber": "Token Number",
+      "notAvailable": "N/A",
+      "appointmentTime": "Appointment Time",
+      "time": "Time",
+      "status": "Status",
+      "case": "Case",
+      "actions": "Actions",
+      "printRx": "Print Rx",
+      "printToken": "Print Token",
+      "lastVisit": "Last Visit",
+      "followUp": "Follow Up",
+      "completed": "Completed",
+      "newCase": "New Case",
+      "vitals": "Vitals",
+      "notApplicable": "NA",
+      "noPhone": "No mobile on file"
+    },
+    "empty": {
+      "current": "No appointments found",
+      "past": "No past appointments found",
+      "future": "No future appointments found"
+    },
+    "preview": {
+      "title": "Prescription Preview",
+      "description": "Download, share, or print the prescription PDF."
+    },
+    "calendar": {
+      "loading": "Loading calendar..."
+    },
+    "assistant": {
+      "loading": "Loading assistant..."
+    },
+    "cancelDialog": {
+      "title": "Cancel Appointment",
+      "description": "Are you sure you want to cancel this appointment? This action cannot be undone.",
+      "patient": "Patient",
+      "patientId": "Patient ID",
+      "doctor": "Doctor",
+      "appointmentId": "Appointment ID",
+      "keepAppointment": "Keep Appointment",
+      "confirmCancel": "Cancel Appointment",
+      "cancelling": "Cancelling..."
+    },
+    "settings": {
+      "fields": "Fields",
+      "personalData": "Personal Data",
+      "personalShort": "Personal",
+      "layoutLab": "Layout Lab",
+      "layoutShort": "Layout"
+    }
+  },
+  "patientForm": {
+    "title": "Book Appointment",
+    "description": "Please fill in the patient information to schedule your appointment.",
+    "reason": {
+      "general": "General consultation",
+      "followUp": "Follow-up consultation"
+    },
+    "appointmentDetails": {
+      "title": "Appointment Details",
+      "duration": "Duration: {{minutes}} minutes",
+      "fee": "Fee: ₹500"
+    },
+    "search": {
+      "title": "Search Existing Patient",
+      "fieldPlaceholder": "Select search field",
+      "fields": {
+        "patientId": "Patient ID",
+        "name": "Patient Name",
+        "appointmentId": "Appointment ID",
+        "contact": "Contact",
+        "default": "Search Field"
+      },
+      "placeholder": {
+        "patientId": "Enter Patient ID (e.g., P001, PAT123)",
+        "name": "Enter Patient Name (e.g., John Doe, Sarah)",
+        "appointmentId": "Enter Appointment ID (e.g., APT001, APT123)",
+        "contact": "Enter contact number (e.g., 9876543210)",
+        "default": "Enter search term"
+      },
+      "helpTitle": "Search by {{field}}:",
+      "help": {
+        "patientId": {
+          "line1": "• Patient ID: P001, PAT123, P2024001",
+          "line2": "• Unique identifier for each patient"
+        },
+        "name": {
+          "line1": "• Full name: John Doe, Sarah Smith",
+          "line2": "• Partial name: John, Sarah"
+        },
+        "appointmentId": {
+          "line1": "• Appointment ID: APT000001, APT0000123",
+          "line2": "• PatientId: PT0000012, PT0000011"
+        },
+        "contact": {
+          "line1": "• Phone: 9876XXXXXX",
+          "line2": "• Mobile: 8074XXXXXX"
+        },
+        "default": "• Enter the search term"
+      },
+      "searching": "Searching...",
+      "submit": "Search Patient",
+      "error": "Search error: {{error}}",
+      "clearError": "Clear Error"
+    },
+    "personal": {
+      "title": "Personal Information",
+      "name": "Patient Name",
+      "namePlaceholder": "Enter patient name",
+      "phone": "Phone Number",
+      "phonePlaceholder": "Enter 10-digit mobile number",
+      "age": "Age",
+      "agePlaceholder": "Age",
+      "gender": "Gender",
+      "genderPlaceholder": "Select gender",
+      "genderOptions": {
+        "male": "Male",
+        "female": "Female",
+        "other": "Other"
+      }
+    },
+    "address": {
+      "title": "Address Information",
+      "address": "Address",
+      "addressPlaceholder": "Enter full address",
+      "city": "City",
+      "cityPlaceholder": "Enter city",
+      "pincode": "Pincode",
+      "pincodePlaceholder": "6-digit pincode"
+    },
+    "insurance": {
+      "title": "Insurance & Payment",
+      "hasInsurance": "Has Insurance",
+      "typePlaceholder": "Type",
+      "types": {
+        "insurance": "Insurance ID",
+        "abha": "ABHA ID"
+      }
+    },
+    "payment": {
+      "completed": "Payment Completed",
+      "modePlaceholder": "Payment mode",
+      "modes": {
+        "cash": "Cash",
+        "upi": "UPI",
+        "card": "Card"
+      }
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "submit": "Book Appointment",
+      "submitting": "Booking Appointment..."
+    },
+    "searchResults": {
+      "title": "Search Results",
+      "description": "Found {{count}} patient(s) matching your search criteria. Select the correct patient to fill the form.",
+      "id": "ID: {{id}}",
+      "phone": "Phone:",
+      "gender": "Gender:",
+      "age": "Age:",
+      "ageValue": "{{age}} years",
+      "lastVisit": "Last Visit:",
+      "notAvailable": "N/A",
+      "address": "Address:",
+      "city": "City:",
+      "pincode": "Pincode:",
+      "matchedBy": "Matched by:",
+      "upcoming": "Upcoming Appointment:",
+      "token": "Token: {{token}}",
+      "selectPatient": "Select Patient",
+      "emptyTitle": "No patients found",
+      "emptyDescription": "No patients match your search criteria. Try a different search term or create a new patient.",
+      "close": "Close",
+      "createNew": "Create New Patient"
+    },
+    "errors": {
+      "nameRequired": "Patient name is required",
+      "phoneRequired": "Phone number is required",
+      "phoneInvalid": "Please enter a valid 10-digit mobile number",
+      "ageRequired": "Age is required",
+      "ageInvalid": "Please enter a valid age",
+      "genderRequired": "Gender is required",
+      "addressRequired": "Address is required",
+      "cityRequired": "City is required",
+      "pincodeRequired": "Pincode is required",
+      "pincodeInvalid": "Pincode must be exactly 6 digits",
+      "paymentModeRequired": "Payment mode is required when paid"
+    }
+  },
+  "rescheduleDialog": {
+    "title": "Reschedule Appointment",
+    "current": {
+      "title": "Current Appointment",
+      "patient": "Patient:",
+      "date": "Date:",
+      "time": "Time:"
+    },
+    "steps": {
+      "date": "1. Select Date",
+      "time": "2. Select Time"
+    },
+    "selectNewDate": "Select New Date",
+    "selectNewTime": "Select New Time",
+    "selectedDateLabel": "Selected Date:",
+    "changeDate": "Change Date",
+    "slot": {
+      "available": "Available",
+      "booked": "Booked"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "confirm": "Confirm Reschedule"
+    }
+  },
+  "shiftTabs": {
+    "title": "Select Time Shift",
+    "shifts": {
+      "morning": {
+        "name": "Morning",
+        "time": "8AM - 12PM"
+      },
+      "afternoon": {
+        "name": "Afternoon",
+        "time": "12PM - 4PM"
+      },
+      "evening": {
+        "name": "Evening",
+        "time": "4PM - 8PM"
+      },
+      "night": {
+        "name": "Night",
+        "time": "8PM - 11PM"
+      }
+    }
+  },
+  "timeSlots": {
+    "title": "Available Time Slots",
+    "status": {
+      "booked": "Booked",
+      "available": "Available"
+    },
+    "tooltip": {
+      "patient": "Patient:",
+      "phone": "Phone:",
+      "age": "Age:",
+      "gender": "Gender:"
+    },
+    "empty": "No time slots available for this shift"
+  },
+  "vitalsForm": {
+    "title": "Update Vitals - {{patientName}}",
+    "description": "Recording vital signs is optional but helps provide better care. You can skip this step if needed.",
+    "sections": {
+      "cardio": "Cardiovascular Vitals",
+      "respiratory": "Respiratory & Temperature",
+      "physical": "Physical Measurements"
+    },
+    "fields": {
+      "systolic": "Systolic BP (mmHg)",
+      "diastolic": "Diastolic BP (mmHg)",
+      "heartRate": "Heart Rate (bpm)",
+      "respiratoryRate": "Respiratory Rate (breaths/min)",
+      "temperature": "Body Temperature",
+      "oxygenSaturation": "Oxygen Saturation (%)",
+      "height": "Height",
+      "weight": "Weight",
+      "bmi": "BMI (Body Mass Index)"
+    },
+    "placeholders": {
+      "systolic": "120",
+      "diastolic": "80",
+      "heartRate": "72",
+      "respiratoryRate": "16",
+      "temperature": "37.0",
+      "oxygenSaturation": "98",
+      "height": "170",
+      "weight": "70"
+    },
+    "bmi": {
+      "prompt": "Enter height & weight",
+      "category": {
+        "underweight": "Underweight",
+        "normal": "Normal weight",
+        "overweight": "Overweight",
+        "obesity": "Obesity"
+      }
+    },
+    "optionalStep": {
+      "title": "Optional Step:",
+      "description": "Vital signs help us provide better care, but you can proceed without entering them if you prefer."
+    },
+    "actions": {
+      "skip": "Skip This Step",
+      "save": "Save Vitals",
+      "saving": "Saving..."
+    },
+    "toast": {
+      "success": "Vitals saved successfully!",
+      "error": "Failed to save vitals",
+      "errorTryAgain": "Failed to save vitals. Please try again."
+    }
+  },
+  "docProfile": {
+    "sectionTitle": "Professional Details",
+    "completionLabel": "Professional completion {{percent}}%",
+    "complete": "Complete",
+    "fields": {
+      "department": {
+        "label": "Primary Department",
+        "loading": "Loading departments...",
+        "placeholder": "Select department",
+        "loadError": "Failed to load departments",
+        "empty": "No departments available"
+      },
+      "specializations": {
+        "label": "Specializations"
+      },
+      "qualifications": {
+        "label": "Qualifications"
+      },
+      "licenseNumber": {
+        "label": "License Number"
+      },
+      "experienceYears": {
+        "label": "Experience (years)"
+      },
+      "medicalCouncil": {
+        "label": "Medical Council"
+      },
+      "registrationYear": {
+        "label": "Registration Year"
+      },
+      "bio": {
+        "label": "Professional Bio",
+        "placeholder": "Share your experience, clinical focus, and patient philosophy...",
+        "tip": "Aim for 30-70 words. Keep it patient-friendly.",
+        "wordCount": "{{count}} words"
+      }
+    },
+    "actions": {
+      "saving": "Saving...",
+      "save": "Save professional details"
+    },
+    "errors": {
+      "licenseRequired": "License number is required",
+      "qualificationsRequired": "Select at least one qualification",
+      "specializationsRequired": "Select at least one specialization",
+      "experienceInvalid": "Experience must be a valid non-negative number",
+      "medicalCouncilRequired": "Medical council is required",
+      "medicalCouncilTooLong": "Medical council name is too long",
+      "registrationYearInvalid": "Enter a valid registration year"
+    },
+    "toast": {
+      "missingHospital": "Please select a hospital before saving.",
+      "missingDepartment": "Please select a primary department before saving.",
+      "missingDoctorId": "Doctor ID is missing. Please refresh and try again.",
+      "createSuccess": "Doctor profile created successfully.",
+      "updateSuccess": "Doctor profile updated successfully.",
+      "genericError": "Failed to save doctor profile.",
+      "invalidData": "Some fields look invalid. Please review your entries.",
+      "licenseConflict": "A doctor with this license already exists.",
+      "notFound": "Doctor profile not found."
+    },
+    "success": {
+      "title": "Professional details updated",
+      "description": "Your profile is now synced with the latest information. What would you like to do next?",
+      "profileCompletion": "Profile completion",
+      "completeMessage": "Amazing! Your professional profile is fully complete.",
+      "incompleteMessage": "Complete the remaining fields to unlock the full experience.",
+      "continueEditing": "Continue editing",
+      "goToDashboard": "Go to dashboard"
+    }
+  },
+  "patientDetailsModal": {
+    "title": "Patient Details",
+    "basicInfo": "Basic Information",
+    "labels": {
+      "patientId": "Patient ID",
+      "name": "Name",
+      "phone": "Phone",
+      "appointmentTime": "Appointment Time",
+      "tokenNumber": "Token Number",
+      "currentStatus": "Current Status"
+    },
+    "tabs": {
+      "vitals": "Vitals",
+      "clinical": "Clinical Notes",
+      "actions": "Actions"
+    },
+    "statuses": {
+      "vitalsRequired": "❤️ Vitals Required",
+      "readyConsultation": "✅ Ready for Consultation",
+      "underConsultation": "👨‍⚕️ Under Consultation",
+      "labTestRequired": "🧪 Lab Test Required",
+      "awaitingReconsultation": "⏳ Awaiting Reconsultation",
+      "completed": "🏁 Completed"
+    },
+    "vitals": {
+      "title": "Vital Signs",
+      "edit": "Edit",
+      "cancel": "Cancel",
+      "save": "Save Vitals",
+      "notRecorded": "Not recorded",
+      "fields": {
+        "bloodPressure": "Blood Pressure",
+        "temperature": "Temperature (°C)",
+        "pulse": "Pulse Rate (bpm)",
+        "weight": "Weight (kg)"
+      },
+      "placeholders": {
+        "bloodPressure": "e.g., 120/80",
+        "temperature": "e.g., 36.8",
+        "pulse": "e.g., 72",
+        "weight": "e.g., 65"
+      }
+    },
+    "clinical": {
+      "title": "Clinical Notes",
+      "label": "Notes",
+      "placeholder": "Enter clinical notes, observations, or recommendations...",
+      "save": "Save Notes"
+    },
+    "actions": {
+      "title": "Status Actions",
+      "markReady": "Mark Ready",
+      "startConsultation": "Start Consultation",
+      "requestLabTest": "Request Lab Test",
+      "scheduleFollowUp": "Schedule Follow-up",
+      "completeConsultation": "Complete Consultation"
+    },
+    "defaults": {
+      "clinicalNotesSample": "Patient presents with mild symptoms. Blood pressure is within normal range. Temperature is normal. Pulse rate is regular. Weight is stable."
+    }
+  },
+  "patientFlow": {
+    "tabs": {
+      "current": "Current Patients",
+      "past": "Past Appointments",
+      "future": "Future Patients"
+    },
+    "statusLabels": {
+      "all": "All",
+      "vitals-required": "Vitals",
+      "ready-consultation": "Ready",
+      "under-consultation": "Consulting",
+      "lab-test-required": "Lab Test",
+      "awaiting-reconsultation": "Follow-up",
+      "completed": "Completed"
+    },
+    "statusBadges": {
+      "vitals-required": "❤️ Vitals",
+      "ready-consultation": "✅ Ready",
+      "under-consultation": "👨‍⚕️ Consulting",
+      "lab-test-required": "🧪 Lab Test",
+      "awaiting-reconsultation": "⏳ Follow-up",
+      "completed": "🏁 Done"
+    },
+    "current": {
+      "title": "Current Patients",
+      "subtitle": "Manage today's patient flow and track progress",
+      "live": "Live Updates",
+      "totalToday": "Total Today",
+      "searchLabel": "Search Patients",
+      "searchPlaceholder": "Search by patient name, ID, or phone...",
+      "journeyTitle": "Patient Journey Status",
+      "journeyHint": "Click any status to filter patients",
+      "tiles": {
+        "all": {
+          "title": "All Patients",
+          "subtitle": "Total Today"
+        },
+        "vitals": {
+          "title": "Vitals",
+          "subtitle": "Needs Update"
+        },
+        "ready": {
+          "title": "Ready",
+          "subtitle": "For Consultation"
+        },
+        "consulting": {
+          "title": "Consulting",
+          "subtitle": "In Progress"
+        },
+        "lab": {
+          "title": "Lab Tests",
+          "subtitle": "Required"
+        },
+        "followups": {
+          "title": "Follow-ups",
+          "subtitle": "Awaiting"
+        },
+        "completed": {
+          "title": "Completed",
+          "subtitle": "Finished"
+        }
+      }
+    },
+    "past": {
+      "title": "Past Appointments",
+      "subtitle": "View completed patient consultations and historical data",
+      "chip": "Historical Data",
+      "badge": "Completed",
+      "searchLabel": "Search Past Appointments",
+      "searchPlaceholder": "Search by patient name, ID, or doctor..."
+    },
+    "future": {
+      "title": "Future Appointments",
+      "subtitle": "View upcoming patient appointments and scheduled consultations",
+      "chip": "Upcoming",
+      "badge": "Ready",
+      "searchLabel": "Search Future Appointments",
+      "searchPlaceholder": "Search by patient name, ID, or doctor..."
+    },
+    "filters": {
+      "dateRangeTitle": "Filter by Date Range",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "clear": "Clear",
+      "summaryBetween": "Showing appointments from {{start}} to {{end}}",
+      "summaryFrom": "Showing appointments from {{start}} onwards",
+      "summaryUntil": "Showing appointments until {{end}}"
+    },
+    "table": {
+      "headers": {
+        "token": "Token",
+        "patientId": "Patient ID",
+        "patientName": "Patient Name",
+        "contact": "Contact",
+        "time": "Time",
+        "date": "Date",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "view": "View",
+      "patientIdTitle": "Click to view patient profile",
+      "rowId": "ID: {{id}}"
+    },
+    "empty": {
+      "current": "No patients found",
+      "currentByStatus": "No {{status}} patients found",
+      "past": "No past appointments found for the selected criteria",
+      "future": "No future appointments found for the selected criteria"
+    }
+  },
+  "qualificationSelector": {
+    "label": "Qualifications",
+    "description": "Select from common qualifications or add custom ones",
+    "selected": "Selected Qualifications",
+    "common": "Common Qualifications",
+    "custom": {
+      "button": "Add Custom Qualification",
+      "label": "Add Custom Qualification",
+      "placeholder": "Enter custom qualification (e.g., MBBS, MD Cardiology, etc.)",
+      "add": "Add",
+      "cancel": "Cancel"
+    },
+    "help": "You can add multiple qualifications. Click on common ones or add custom qualifications as needed."
+  },
+  "specializationSelector": {
+    "label": "Specializations",
+    "description": "Select from available specializations or add custom ones for {{department}}",
+    "selected": "Selected Specializations",
+    "available": "Available Specializations",
+    "availableCount": "{{filtered}} of {{total}} available",
+    "searchPlaceholder": "Search specializations...",
+    "loading": "Loading specializations...",
+    "loadError": "Failed to load specializations. You can still add custom ones.",
+    "empty": {
+      "noSearch": "No specializations available for this department",
+      "noSearchHint": "You can add custom specializations below",
+      "noResults": "No specializations found for \"{{term}}\"",
+      "noResultsHint": "Try a different search term or add a custom specialization"
+    },
+    "custom": {
+      "button": "Add Custom Specialization",
+      "label": "Add Custom Specialization",
+      "placeholder": "Enter custom specialization...",
+      "add": "Add",
+      "cancel": "Cancel"
+    },
+    "help": "You can select multiple specializations. If you don't find what you need, add custom ones."
+  },
+  "hospitalBranding": {
+    "title": "Hospital Information",
+    "subtitle": "Configure your hospital's complete information and details",
+    "loading": {
+      "title": "Loading hospital information...",
+      "message": "Please wait while we fetch your hospital information."
+    },
+    "error": {
+      "title": "Failed to load hospital information",
+      "message": "Please try refreshing the page"
+    },
+    "buttons": {
+      "editDetails": "Edit Details",
+      "cancel": "Cancel",
+      "saveChanges": "Save Changes",
+      "saving": "Saving...",
+      "saveInfo": "Save Hospital Information",
+      "continue": "Continue"
+    },
+    "modal": {
+      "headerTitle": "Complete Hospital Information",
+      "headerSubtitle": "Set up your hospital profile to get started",
+      "steps": {
+        "basicInfo": "Basic Info",
+        "location": "Location",
+        "registration": "Registration"
+      },
+      "nextStep": "Next Step",
+      "saveAndComplete": "Save & Complete"
+    },
+    "sections": {
+      "core": {
+        "title": "Core Information",
+        "subtitle": "Basic hospital details and identity"
+      },
+      "contact": {
+        "title": "Contact Information",
+        "subtitle": "Primary and secondary contact details"
+      },
+      "location": {
+        "title": "Location Information",
+        "subtitle": "Complete address and location details"
+      },
+      "config": {
+        "title": "Configuration & Metadata",
+        "subtitle": "System configuration and regulatory information"
+      }
+    },
+    "labels": {
+      "name": "Hospital Name",
+      "type": "Hospital Type",
+      "email": "Email Address",
+      "contact": "Primary Contact",
+      "alternateContact": "Alternate Contact",
+      "website": "Website",
+      "location": "Street Address",
+      "city": "City",
+      "state": "State/Province",
+      "country": "Country",
+      "pincode": "Postal Code",
+      "timeZone": "Time Zone",
+      "registrationNumber": "Registration Number"
+    },
+    "placeholders": {
+      "name": "Enter hospital name",
+      "type": "Select hospital type",
+      "email": "Enter email address",
+      "contact": "Enter primary phone number",
+      "alternateContact": "Enter alternate phone number",
+      "website": "Enter website URL",
+      "location": "Enter complete street address",
+      "city": "Enter city name",
+      "state": "Enter state or province",
+      "country": "Enter country name",
+      "pincode": "Enter postal code",
+      "registrationNumber": "Enter hospital registration number",
+      "timeZone": "Select time zone"
+    },
+    "helpers": {
+      "name": "Maximum 150 characters",
+      "primaryContact": "Main contact number",
+      "alternateContact": "Secondary contact number",
+      "email": "Primary email for communications",
+      "website": "Hospital's official website",
+      "location": "Detailed street address",
+      "registrationNumber": "Official hospital registration number",
+      "timeZone": "Hospital's operating time zone"
+    },
+    "hospitalTypes": {
+      "hospital": "Hospital",
+      "clinic": "Clinic",
+      "medicalCenter": "Medical Center",
+      "nursingHome": "Nursing Home",
+      "diagnosticCenter": "Diagnostic Center",
+      "dentalClinic": "Dental Clinic",
+      "eyeClinic": "Eye Clinic",
+      "other": "Other"
+    },
+    "timeZones": {
+      "asiaKolkata": "Asia/Kolkata (IST)",
+      "americaNewYork": "America/New_York (EST)",
+      "americaLosAngeles": "America/Los_Angeles (PST)",
+      "europeLondon": "Europe/London (GMT)",
+      "asiaDubai": "Asia/Dubai (GST)",
+      "asiaSingapore": "Asia/Singapore (SGT)"
+    },
+    "completion": {
+      "title": "Hospital profile complete!",
+      "description": "All required hospital details are now verified. Admin features are fully unlocked across the platform.",
+      "score": "Completion score",
+      "basicInfo": "Basic Information",
+      "locationInfo": "Location Details",
+      "contactInfo": "Contact Information",
+      "statusComplete": "Complete",
+      "statusPending": "Pending"
+    },
+    "toast": {
+      "errorTitle": "Error",
+      "missingUser": "User ID not found. Please login again.",
+      "validationTitle": "Validation Error",
+      "validationDescription": "Please complete all required fields before saving.",
+      "successTitle": "Success!",
+      "successDescription": "Hospital information saved successfully.",
+      "errorDescription": "Failed to save hospital information. Please try again."
+    },
+    "validation": {
+      "required": "{{field}} is required",
+      "emailRequired": "Email address is required",
+      "emailInvalid": "Please enter a valid email address",
+      "contactRequired": "Primary contact is required",
+      "phoneInvalid": "Please enter a valid phone number",
+      "websiteInvalid": "Please enter a valid website URL",
+      "pincodeInvalid": "Please enter a valid postal code (4-10 digits)"
+    }
+  },
+  "systemConfiguration": {
+    "navigation": {
+      "configurationAreas": "Configuration Areas",
+      "subscription": {
+        "label": "Subscription",
+        "description": "Plans, billing cycles, invoices"
+      },
+      "branding": {
+        "label": "Hospital Info",
+        "description": "Identity, contact, compliance"
+      }
+    },
+    "subscription": {
+      "billingOverview": "Billing Overview",
+      "subscriptionManagement": "Subscription Management",
+      "description": "Manage plan renewals, invoices, and payment preferences.",
+      "statusActive": "All systems active",
+      "cards": {
+        "remainingDays": {
+          "title": "Remaining Days",
+          "value": "45",
+          "helper": "Days left in your current cycle"
+        },
+        "paymentMode": {
+          "title": "Payment Mode",
+          "value": "Credit Card",
+          "helper": "Primary method on record"
+        },
+        "totalBill": {
+          "title": "Total Bill",
+          "value": "₹12,000",
+          "helper": "Amount invoiced this cycle"
+        }
+      }
+    }
   },
   "languages": {
     "en": "English",

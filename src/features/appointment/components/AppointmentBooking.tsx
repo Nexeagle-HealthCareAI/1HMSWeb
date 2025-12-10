@@ -131,7 +131,8 @@ const generateTimeSlots = (doctorId: string, date: string): TimeSlot[] => {
 };
 
 export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshToken }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language || 'en';
   const queryClient = useQueryClient();
   // Get userId and authentication status from Zustand auth store
   const userId = useAuthStore((state) => state.userId);
@@ -302,7 +303,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
       const newDoctor = {
         id: firstDoctor.doctorId,
         name: firstDoctor.doctorName,       
-        specialization: firstDoctor.specializations?.length > 0 ? firstDoctor.specializations.join(', ') : 'General',
+        specialization: firstDoctor.specializations?.length > 0 ? firstDoctor.specializations.join(', ') : t('appointmentBooking.generalSpecialization'),
         department: selectedDepartment,
         is_available: true
       };
@@ -591,15 +592,15 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-500 text-4xl mb-4">⚠️</div>
-          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Failed to Load Hospital Information</h2>
+          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('appointmentBooking.failedToLoadHospital')}</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            {hospitalUserError instanceof Error ? hospitalUserError.message : 'An error occurred while loading hospital information'}
+            {hospitalUserError instanceof Error ? hospitalUserError.message : t('appointmentBooking.errorOccurred')}
           </p>
           <button 
             onClick={() => window.location.reload()} 
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Try Again
+            {t('appointmentBooking.tryAgain')}
           </button>
         </div>
       </div>
@@ -716,7 +717,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                         id: selectedApiDoctor.doctorId,
                         name: selectedApiDoctor.doctorName,
                         department: selectedDepartmentData.name,
-                        specialization: selectedApiDoctor.specializations?.length > 0 ? selectedApiDoctor.specializations.join(', ') : 'General'
+                          specialization: selectedApiDoctor.specializations?.length > 0 ? selectedApiDoctor.specializations.join(', ') : t('appointmentBooking.generalSpecialization')
                       };
                       handleDoctorSelect(newDoctor);
                     }
@@ -741,10 +742,10 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                             <div className="flex-1 min-w-0">
                                 <div className="font-medium truncate">{doctor.doctorName}</div>
                                 <div className="text-xs text-muted-foreground truncate">
-                                  {doctor.qualifications?.length > 0 ? doctor.qualifications.join(', ') : 'MBBS'}
+                                  {doctor.qualifications?.length > 0 ? doctor.qualifications.join(', ') : t('appointmentBooking.defaultQualification')}
                                 </div>
                                 <div className="text-xs text-blue-600 truncate">
-                                  {doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : 'General'}
+                                  {doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : t('appointmentBooking.generalSpecialization')}
                                 </div>
                                 <div className="text-xs text-gray-500 truncate">
                                   {isDoctorOnTimeOff(doctor.doctorId) ? t('appointmentBooking.timeOff') : t('appointmentBooking.available')}
@@ -818,16 +819,16 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
               {/* Doctor Selection - Desktop */}
               <div className="border-t pt-4">
                 <h3 className="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                  👩‍⚕️ Available Doctors
+                  👩‍⚕️ {t('appointmentBooking.availableDoctors')}
                 </h3>
                 <div className="space-y-2">
                   {doctorsLoading ? (
                     <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 text-center text-xs text-gray-500">
-                      Loading doctors...
+                      {t('appointmentBooking.loadingDoctors')}
                     </div>
                   ) : doctorsError ? (
                     <div className="p-3 rounded-lg border border-red-200 bg-red-50 text-center text-xs text-red-500">
-                      Error loading doctors
+                      {t('appointmentBooking.errorLoadingDoctors')}
                     </div>
                   ) : doctorsResponse?.doctors && doctorsResponse.doctors.length > 0 ? (
                     doctorsResponse.doctors.map((doctor) => (
@@ -838,7 +839,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                             id: doctor.doctorId,
                             name: doctor.doctorName,
                             department: selectedDepartmentData?.name || '',
-                            specialization: doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : 'General'
+                            specialization: doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : t('appointmentBooking.generalSpecialization')
                           };
                           handleDoctorSelect(newDoctor);
                         }}
@@ -850,13 +851,13 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                     >
                         <div className="font-medium text-blue-600 text-sm">{doctor.doctorName}</div>
                         <div className="text-xs text-gray-600 mb-1">
-                          {doctor.qualifications?.length > 0 ? doctor.qualifications.join(', ') : 'MBBS'}
+                          {doctor.qualifications?.length > 0 ? doctor.qualifications.join(', ') : t('appointmentBooking.defaultQualification')}
                         </div>
                         <div className="text-xs text-blue-600 mb-1">
-                          {doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : 'General'}
+                          {doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : t('appointmentBooking.generalSpecialization')}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {isDoctorOnTimeOff(doctor.doctorId) ? 'Time Off' : 'Available'}
+                          {isDoctorOnTimeOff(doctor.doctorId) ? t('appointmentBooking.timeOff') : t('appointmentBooking.available')}
                         </div>
                         {isDoctorOnTimeOff(doctor.doctorId) && (
                           <div className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full"></div>
@@ -865,7 +866,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                     ))
                   ) : (
                     <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 text-center text-xs text-gray-500">
-                      No doctors available
+                      {t('appointmentBooking.noDoctorsAvailable')}
                     </div>
                   )}
                 </div>
@@ -876,15 +877,15 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                 <div className="flex flex-col gap-2 text-xs">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-gradient-to-r from-teal-400 to-emerald-500 rounded-full"></div>
-                    <span className="text-gray-600 dark:text-gray-400">Available</span>
+                    <span className="text-gray-600 dark:text-gray-400">{t('appointmentBooking.availableLegend')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-gradient-to-r from-rose-400 to-red-500 rounded-full"></div>
-                    <span className="text-gray-600 dark:text-gray-400">Booked</span>
+                    <span className="text-gray-600 dark:text-gray-400">{t('appointmentBooking.bookedLegend')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span className="text-gray-600 dark:text-gray-400">Time Off</span>
+                    <span className="text-gray-600 dark:text-gray-400">{t('appointmentBooking.timeOffLegend')}</span>
                   </div>
                 </div>
               </div>
@@ -897,18 +898,19 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
               <div className="max-w-4xl mx-auto">
                 {/* Desktop Header - Compact */}
                 <div className="hidden lg:block mb-3">
-                  <h1 className="text-xl font-bold text-foreground dark:text-white mb-1">Schedule Appointment</h1>
+                  <h1 className="text-xl font-bold text-foreground dark:text-white mb-1">{t('appointmentBooking.title')}</h1>
                   <p className="text-xs text-muted-foreground dark:text-gray-400">
-                    Selected: <span className="font-semibold text-primary">{selectedDoctor?.name || 'No doctor selected'}</span>
+                    {t('appointmentBooking.selectedLabel')}{' '}
+                    <span className="font-semibold text-primary">{selectedDoctor?.name || t('appointmentBooking.noDoctorSelected')}</span>
                     <span className="text-muted-foreground/50"> • </span>
-                    <span>{selectedDoctor?.specialization || 'Select a department first'}</span>
+                    <span>{selectedDoctor?.specialization || t('appointmentBooking.selectDepartmentFirst')}</span>
                   </p>
                 </div>
 
                 {/* Date Selection with Calendar - Compact */}
                 <div className="mb-3">
                   <h2 className="text-xs font-semibold mb-2 flex items-center gap-1 text-foreground dark:text-white">
-                    📅 Select Date
+                    📅 {t('appointmentBooking.dateSelection')}
                   </h2>
                   <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
                     {Array.from({ length: 7 }, (_, i) => {
@@ -928,10 +930,10 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                           }`}
                         >
                           <div className="font-medium">
-                            {isToday ? 'Today' : date.toLocaleDateString('en', { weekday: 'short' })}
+                            {isToday ? t('appointmentBooking.today') : new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(date)}
                           </div>
                           <div className={`text-xs mt-0.5 ${isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
-                            {date.toLocaleDateString('en', { month: 'short', day: 'numeric' })}
+                            {new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(date)}
                           </div>
                         </button>
                       );
@@ -942,7 +944,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                       <PopoverTrigger asChild>
                         <button className="px-2 py-1.5 rounded-md border border-dashed border-border bg-muted hover:bg-accent text-center min-w-[60px] lg:min-w-[70px] text-xs flex-shrink-0 transition-all hover:scale-105">
                           <CalendarIcon className="h-3 w-3 mx-auto text-muted-foreground" />
-                          <div className="mt-0.5 text-muted-foreground">Other</div>
+                          <div className="mt-0.5 text-muted-foreground">{t('appointmentBooking.otherDate')}</div>
                         </button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0 z-50" align="start">
@@ -962,7 +964,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                 {/* Medical-Appropriate Shift Selection - Compact */}
                 <div className="mb-3">
                   <h2 className="text-xs font-semibold mb-2 flex items-center gap-1">
-                    ⏰ Select Time Shift
+                    ⏰ {t('appointmentBooking.shiftSelection')}
                   </h2>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                                         {availableShifts.length > 0 ? (
@@ -987,7 +989,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                       ))
                                          ) : (
                        <div className="col-span-full text-center py-4 text-gray-500">
-                         No shifts available for this doctor
+                         {t('appointmentBooking.noShiftsAvailable')}
                        </div>
                      )}
                   </div>
@@ -996,24 +998,28 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                 {/* Time Slots - Ultra-Responsive Grid - Compact */}
                 <div>
                   <h2 className="text-xs font-semibold mb-2 flex items-center gap-1">
-                    🕐 Available Time Slots
+                    🕐 {t('appointmentBooking.timeSlots')}
                     <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">
-                      {timeSlots.filter(slot => {
-                        const selectedShiftData = availableShifts.find(s => s.id === selectedShift);
-                        if (!selectedShiftData) return true;
-                        const slotHour = parseInt(slot.time.split(':')[0]);
-                        const startHour = parseInt(selectedShiftData.startTime.split(':')[0]);
-                        const endHour = parseInt(selectedShiftData.endTime.split(':')[0]);
-                        return slotHour >= startHour && slotHour < endHour;
-                      }).filter(slot => !slot.isBooked).length} Available
+                      {t('appointmentBooking.availableCount', {
+                        count: timeSlots
+                          .filter(slot => {
+                            const selectedShiftData = availableShifts.find(s => s.id === selectedShift);
+                            if (!selectedShiftData) return true;
+                            const slotHour = parseInt(slot.time.split(':')[0]);
+                            const startHour = parseInt(selectedShiftData.startTime.split(':')[0]);
+                            const endHour = parseInt(selectedShiftData.endTime.split(':')[0]);
+                            return slotHour >= startHour && slotHour < endHour;
+                          })
+                          .filter(slot => !slot.isBooked).length,
+                      })}
                     </span>
                   </h2>
                   {/* Custom loading spinner for time slots */}
                   {showTimeSlotsLoading ? (
                     <div className="col-span-full text-center py-8">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
-                      <p className="text-sm text-blue-600 dark:text-blue-300 mb-2">Loading available time slots...</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Please wait while we fetch the latest slot information.</p>
+                      <p className="text-sm text-blue-600 dark:text-blue-300 mb-2">{t('appointmentBooking.loadingSlots')}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t('appointmentBooking.loadingSlotsMessage')}</p>
                     </div>
                   ) : (
                     <>
@@ -1022,10 +1028,10 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                           <div className="col-span-full text-center py-8">
                             <div className="text-red-500 text-4xl mb-3">🚫</div>
                             <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                              No time slots available - Doctor is on time off
+                              {t('appointmentBooking.noSlotsAvailableTimeOff')}
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-500">
-                              Please select a different date or doctor
+                              {t('appointmentBooking.pleaseSelectDifferentDate')}
                             </p>
                           </div>
                         ) : timeSlots
@@ -1084,17 +1090,17 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                             </div>
                             <div className="flex-1">
                               <h3 className="text-sm font-semibold text-red-800 dark:text-red-200 mb-1">
-                                Doctor Unavailable - Time Off
+                                {t('appointmentBooking.doctorUnavailable')}
                               </h3>
                               <p className="text-sm text-red-700 dark:text-red-300 mb-2">
-                                {doctorSlotsResponse.timeOffReason || "The doctor is not available on this date."}
+                                {doctorSlotsResponse.timeOffReason || t('appointmentBooking.doctorUnavailableMessage')}
                               </p>
                               <div className="text-xs text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-800/30 p-2 rounded border border-red-200 dark:border-red-700">
-                                <strong>What you can do:</strong>
+                                <strong>{t('appointmentBooking.whatYouCanDo')}</strong>
                                 <ul className="mt-1 space-y-1">
-                                  <li>• Select a different date</li>
-                                  <li>• Choose another doctor from the same department</li>
-                                  <li>• Contact the hospital for emergency appointments</li>
+                                  <li>• {t('appointmentBooking.selectDifferentDate')}</li>
+                                  <li>• {t('appointmentBooking.chooseAnotherDoctor')}</li>
+                                  <li>• {t('appointmentBooking.contactHospital')}</li>
                                 </ul>
                               </div>
                             </div>
@@ -1106,7 +1112,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                         <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                           <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                            <span className="text-sm">Loading booked slots information...</span>
+                            <span className="text-sm">{t('appointmentBooking.loadingBookedSlots')}</span>
                           </div>
                         </div>
                       )}
@@ -1114,29 +1120,29 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                         <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                           <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-300">
                             <span className="text-lg">⚠️</span>
-                            <span className="text-sm">Unable to load external booking information. Some slots may appear available but could be booked externally.</span>
+                            <span className="text-sm">{t('appointmentBooking.bookedSlotsError')}</span>
                           </div>
                         </div>
                       )}
                       {/* Legend - Compact */}
                       <div className="mt-2 p-2 bg-white/50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
-                        <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Slot Types:</div>
+                        <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t('appointmentBooking.legend')}</div>
                         <div className="grid grid-cols-3 gap-1 text-xs">
                           <div className="flex items-center gap-1">
                             <div className="w-2 h-2 bg-teal-200 rounded border border-teal-300"></div>
-                            <span className="text-gray-600 dark:text-gray-400">Available</span>
+                            <span className="text-gray-600 dark:text-gray-400">{t('appointmentBooking.availableLegend')}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <div className="w-2 h-2 bg-red-200 rounded border border-red-300"></div>
-                            <span className="text-gray-600 dark:text-gray-400">Booked</span>
+                            <span className="text-gray-600 dark:text-gray-400">{t('appointmentBooking.bookedLegend')}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <div className="w-2 h-2 bg-blue-500 rounded border border-blue-600"></div>
-                            <span className="text-gray-600 dark:text-gray-400">Selected</span>
+                            <span className="text-gray-600 dark:text-gray-400">{t('appointmentBooking.selectedLegend')}</span>
                           </div>
                         </div>
                         <div className="mt-1 text-xs text-gray-500 dark:text-gray-500">
-                          💡 Tap any available slot to book an appointment.
+                          💡 {t('appointmentBooking.tapAnySlotTip')}
                         </div>
                       </div>
                     </>

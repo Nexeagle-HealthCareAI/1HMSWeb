@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Sunrise, Sun, Sunset, Moon } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
@@ -12,32 +13,32 @@ interface ShiftTabsProps {
 const shifts = [
   {
     id: 'morning',
-    name: 'Morning',
-    time: '8AM - 12PM',
+    nameKey: 'shiftTabs.shifts.morning.name',
+    timeKey: 'shiftTabs.shifts.morning.time',
     icon: Sunrise,
     color: 'text-orange-500',
     bgColor: 'bg-orange-50 border-orange-200'
   },
   {
     id: 'afternoon',
-    name: 'Afternoon',
-    time: '12PM - 4PM',
+    nameKey: 'shiftTabs.shifts.afternoon.name',
+    timeKey: 'shiftTabs.shifts.afternoon.time',
     icon: Sun,
     color: 'text-yellow-500',
     bgColor: 'bg-yellow-50 border-yellow-200'
   },
   {
     id: 'evening',
-    name: 'Evening',
-    time: '4PM - 8PM',
+    nameKey: 'shiftTabs.shifts.evening.name',
+    timeKey: 'shiftTabs.shifts.evening.time',
     icon: Sunset,
     color: 'text-orange-600',
     bgColor: 'bg-orange-50 border-orange-300'
   },
   {
     id: 'night',
-    name: 'Night',
-    time: '8PM - 11PM',
+    nameKey: 'shiftTabs.shifts.night.name',
+    timeKey: 'shiftTabs.shifts.night.time',
     icon: Moon,
     color: 'text-blue-600',
     bgColor: 'bg-blue-50 border-blue-200'
@@ -48,10 +49,12 @@ export const ShiftTabs: React.FC<ShiftTabsProps> = ({
   selectedShift,
   onShiftSelect
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="mb-6">
       <h3 className="text-lg font-semibold text-foreground mb-4">
-        Select Time Shift
+        {t('shiftTabs.title')}
       </h3>
       
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -81,10 +84,10 @@ export const ShiftTabs: React.FC<ShiftTabsProps> = ({
                     "font-semibold text-sm",
                     isSelected ? "text-healthcare-primary" : "text-foreground"
                   )}>
-                    {shift.name}
+                    {t(shift.nameKey)}
                   </h4>
                   <p className="text-xs text-muted-foreground">
-                    {shift.time}
+                    {t(shift.timeKey)}
                   </p>
                 </div>
               </div>

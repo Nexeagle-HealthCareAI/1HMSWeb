@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Clock } from 'lucide-react';
 import { TimeSlot } from './AppointmentBooking';
 import { Card } from '@/components/ui/card';
@@ -24,24 +25,29 @@ export const TimeSlots: React.FC<TimeSlotsProps> = ({
   selectedShift,
   onSlotSelect
 }) => {
+  const { t, i18n } = useTranslation();
   const currentShiftTimes = shiftTimes[selectedShift as keyof typeof shiftTimes] || [];
   const currentShiftSlots = timeSlots.filter(slot => 
     currentShiftTimes.includes(slot.time)
   );
 
+  const timeFormatter = useMemo(() => new Intl.DateTimeFormat(i18n.language, {
+    hour: 'numeric',
+    minute: '2-digit'
+  }), [i18n.language]);
+
   const formatTime = (time: string) => {
     const [hour, minute] = time.split(':');
-    const hourNum = parseInt(hour);
-    const ampm = hourNum >= 12 ? 'PM' : 'AM';
-    const hour12 = hourNum % 12 || 12;
-    return `${hour12}:${minute} ${ampm}`;
+    const date = new Date();
+    date.setHours(parseInt(hour, 10) || 0, parseInt(minute || '0', 10) || 0, 0, 0);
+    return timeFormatter.format(date);
   };
 
   return (
     <TooltipProvider>
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-foreground mb-4">
-          Available Time Slots
+          {t('timeSlots.title')}
         </h3>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -70,7 +76,7 @@ export const TimeSlots: React.FC<TimeSlotsProps> = ({
                         variant={slot.isBooked ? "destructive" : "default"}
                         className="text-xs mt-1"
                       >
-                        {slot.isBooked ? 'Booked' : 'Available'}
+                        {slot.isBooked ? t('timeSlots.status.booked') : t('timeSlots.status.available')}
                       </Badge>
                     </div>
                     
@@ -82,10 +88,10 @@ export const TimeSlots: React.FC<TimeSlotsProps> = ({
               {slot.isBooked && slot.patientInfo && (
                 <TooltipContent side="top" className="bg-white border shadow-lg p-3">
                   <div className="space-y-1 text-sm">
-                    <p><strong>Patient:</strong> {slot.patientInfo.name}</p>
-                    <p><strong>Phone:</strong> {slot.patientInfo.phone}</p>
-                    <p><strong>Age:</strong> {slot.patientInfo.age}</p>
-                    <p><strong>Gender:</strong> {slot.patientInfo.gender}</p>
+                    <p><strong>{t('timeSlots.tooltip.patient')}</strong> {slot.patientInfo.name}</p>
+                    <p><strong>{t('timeSlots.tooltip.phone')}</strong> {slot.patientInfo.phone}</p>
+                    <p><strong>{t('timeSlots.tooltip.age')}</strong> {slot.patientInfo.age}</p>
+                    <p><strong>{t('timeSlots.tooltip.gender')}</strong> {slot.patientInfo.gender}</p>
                   </div>
                 </TooltipContent>
               )}
@@ -96,7 +102,7 @@ export const TimeSlots: React.FC<TimeSlotsProps> = ({
         {currentShiftSlots.length === 0 && (
           <div className="text-center py-8 text-muted-foreground">
             <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No time slots available for this shift</p>
+            <p>{t('timeSlots.empty')}</p>
           </div>
         )}
       </div>

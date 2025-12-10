@@ -5,6 +5,10 @@ import { useAuthApi } from '@/hooks/useApi';
 import { fetchAndStoreUserPermissions } from '@/features/auth/services/authApi';
 import { ValidationUtils } from '@/utils/validation';
 import { useHospitalUser } from '@/features/appointment/hooks/useHospitalUser';
+import { API_ENDPOINTS } from '@/app/api';
+import { axiosInstance } from '@/services/axiosClient';
+import { useQueryClient } from '@tanstack/react-query';
+// Align registration with login: if hospital mapping exists, also try to load doctor profile
 import {
   RegistrationLayout,
   UserTypeSelection,
@@ -28,6 +32,7 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
   const { setToken, setUserId, setUserRole, getUserId, getToken, setAuthenticatedUser, setHospitalId, setEmployeeId } = useAuthStore();
   const currentUserId = getUserId();
   const { refetch: refetchHospitalUser } = useHospitalUser(currentUserId || '');
+  const queryClient = useQueryClient();
   
   const [step, setStep] = useState(1);
   const [userType, setUserType] = useState('');
@@ -60,34 +65,85 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
     }
   };
 
-  const fetchAndStoreHospitalDetails = useCallback(async () => {
-    if (!currentUserId) {
-      return null;
-    }
+  const fetchAndStoreHospitalMapping = useCallback(async (
+    userId: string
+  ): Promise<'found' | 'not_registered' | 'error'> => {
+    const authStore = useAuthStore.getState();
+    authStore.setHospitalId(null);
+    authStore.setEmployeeId(null);
+    authStore.setHospitalAccessRestriction(false, null);
+
+    queryClient.removeQueries({ queryKey: ['hospitalUserByUserId'] });
+    queryClient.removeQueries({ queryKey: ['hospital'] });
 
     try {
-      const result = await refetchHospitalUser();
-      const hospitalUser = result.data;
-
-      if (hospitalUser?.hospitalId) {
-        setHospitalId(hospitalUser.hospitalId);
-      }
-
-      if (hospitalUser?.employeeID) {
-        setEmployeeId(hospitalUser.employeeID);
-      }
-
-      return hospitalUser;
-    } catch (error) {
-      console.error('Failed to fetch hospital details:', error);
-      toast({
-        title: "Hospital lookup failed",
-        description: "We couldn't fetch your hospital information. Please try again later.",
-        variant: "destructive"
+      const response = await axiosInstance.get(API_ENDPOINTS.HOSPITALS.GET_BY_USER_ID(userId), {
+        validateStatus: (status) => !!status && [200, 204, 404].includes(status),
       });
-      return null;
+
+      const statusCode = response.status || 0;
+      const data = response.data as Record<string, any> | undefined;
+      const message = typeof data?.message === 'string' ? data.message : undefined;
+      const normalizedMessage = message?.toLowerCase() || '';
+
+      if (statusCode === 204) {
+        authStore.setHospitalAccessRestriction(true, message || 'Complete hospital information to unlock full access.');
+        return 'not_registered';
+      }
+
+      if (statusCode === 200) {
+        const hospitalId = data?.hospitalId ?? data?.hospitalID ?? null;
+        const employeeId = data?.employeeID ?? data?.employeeId ?? null;
+
+        if (!hospitalId || normalizedMessage.includes('not registered')) {
+          authStore.setHospitalAccessRestriction(true, message || 'Hospital not registered. Complete mandatory information to get full access.');
+          return 'not_registered';
+        }
+
+        authStore.setHospitalId(hospitalId);
+        if (employeeId) {
+          authStore.setEmployeeId(employeeId);
+        }
+
+        authStore.setHospitalAccessRestriction(false, null);
+        return 'found';
+      }
+
+      if (statusCode === 404) {
+        authStore.setHospitalAccessRestriction(true, message || 'Hospital mapping not found. Complete hospital information to unlock full access.');
+        return 'not_registered';
+      }
+
+      authStore.setHospitalAccessRestriction(true, message || 'Unexpected hospital mapping response.');
+      return 'error';
+    } catch (error: any) {
+      const statusCode = error?.response?.status ?? error?.response?.statusCode;
+      const message = error?.response?.data?.message || error?.message || 'Failed to fetch hospital mapping.';
+      const authStore = useAuthStore.getState();
+      authStore.setHospitalAccessRestriction(true, message);
+
+      if (statusCode === 404) {
+        return 'not_registered';
+      }
+
+      console.warn('Hospital mapping fetch failed:', error);
+      return 'error';
     }
-  }, [currentUserId, refetchHospitalUser, setHospitalId, setEmployeeId]);
+  }, [queryClient]);
+
+  const fetchDoctorProfileIfMapped = useCallback(async (userId: string, hospitalResult: 'found' | 'not_registered' | 'error') => {
+    if (hospitalResult !== 'found') return;
+    try {
+      const { doctorApi } = await import('@/features/doctor/services/doctorApi');
+      await doctorApi.getDoctorProfile(userId);
+    } catch (doctorError: any) {
+      if (doctorError?.response?.status === 404) {
+        console.warn('Doctor profile not found (404) post-registration:', doctorError);
+      } else {
+        console.warn('Doctor profile fetch failed post-registration (non-blocking):', doctorError);
+      }
+    }
+  }, []);
 
   // Helper function to get user-friendly error messages
   const getErrorMessage = (error: any): string => {
@@ -495,7 +551,8 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
         const token = getToken();
         if (userId && token) {
           setAuthenticatedUser(userId, token);
-          await fetchAndStoreHospitalDetails();
+          const hospitalResult = await fetchAndStoreHospitalMapping(userId);
+          await fetchDoctorProfileIfMapped(userId, hospitalResult);
           
           // Fetch and store user permissions
           try {
@@ -531,7 +588,8 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
     const token = getToken();
     if (userId && token) {
       setAuthenticatedUser(userId, token);
-      await fetchAndStoreHospitalDetails();
+      const hospitalResult = await fetchAndStoreHospitalMapping(userId);
+      await fetchDoctorProfileIfMapped(userId, hospitalResult);
       
       // Fetch and store user permissions
       try {

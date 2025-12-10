@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar as CalendarComponent } from '../ui/calendar';
-import { format, addDays, isSameDay } from 'date-fns';
+import { addDays, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface DateSelectorProps {
@@ -17,6 +18,8 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
   onDateSelect
 }) => {
   const [showCalendar, setShowCalendar] = useState(false);
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language || 'en';
 
   // Generate next 5 days
   const getNext5Days = () => {
@@ -26,10 +29,26 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
 
   const next5Days = getNext5Days();
 
+  const formatQuickLabel = (date: Date, isToday: boolean) => {
+    if (isToday) return t('dateSelector.today');
+    return new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(date);
+  };
+
+  const formatQuickDate = (date: Date) =>
+    new Intl.DateTimeFormat(locale, { month: 'short', day: '2-digit' }).format(date);
+
+  const formatSelectedDate = (date: Date) =>
+    new Intl.DateTimeFormat(locale, {
+      weekday: 'long',
+      month: 'long',
+      day: '2-digit',
+      year: 'numeric'
+    }).format(date);
+
   return (
     <div className="mb-6">
       <h3 className="text-lg font-semibold text-foreground mb-4">
-        Select Date
+        {t('dateSelector.title')}
       </h3>
       
       <div className="flex flex-wrap gap-3 mb-4">
@@ -47,10 +66,10 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
             onClick={() => onDateSelect(date)}
           >
             <span className="text-xs opacity-75">
-              {index === 0 ? 'Today' : format(date, 'EEE')}
+              {formatQuickLabel(date, index === 0)}
             </span>
             <span className="text-sm font-semibold">
-              {format(date, 'MMM dd')}
+              {formatQuickDate(date)}
             </span>
           </Button>
         ))}
@@ -63,7 +82,7 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
               className="flex-col h-16 px-4 min-w-[100px] hover:bg-muted"
             >
               <Calendar className="h-4 w-4 mb-1" />
-              <span className="text-xs">Other Date</span>
+              <span className="text-xs">{t('dateSelector.otherDate')}</span>
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
@@ -86,9 +105,9 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
 
       <Card className="p-3 bg-muted">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Selected Date:</span>
+          <span className="text-muted-foreground">{t('dateSelector.selectedDateLabel')}</span>
           <span className="font-semibold text-healthcare-primary">
-            {format(selectedDate, 'EEEE, MMMM dd, yyyy')}
+            {formatSelectedDate(selectedDate)}
           </span>
         </div>
       </Card>
