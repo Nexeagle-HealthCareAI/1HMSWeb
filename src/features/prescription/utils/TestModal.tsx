@@ -92,11 +92,7 @@ export const TestModal = ({ open, onOpenChange, margins, typography, overflowStr
   };
 
   const handleGenerate = async () => {
-    if (!parsedPrescription) {
-      setJsonError('Fix JSON before generating the preview.');
-      return;
-    }
-
+    // Always use defaultPrescriptionData for generation, ignoring user JSON and API
     setIsGenerating(true);
     try {
       const headerHeight = margins.top;
@@ -119,20 +115,8 @@ export const TestModal = ({ open, onOpenChange, margins, typography, overflowStr
           templateFile: resolvedTemplateFile,
           layout: layoutConfig,
           typography,
-          prescription: parsedPrescription,
+          prescription: defaultPrescriptionData,
         });
-      // } else {
-      //   blob = buildDynamicPreview({
-      //     layout: {
-      //       margins,
-      //       headerHeight,
-      //       footerHeight,
-      //       overflowStrategy,
-      //       templateBackgroundDataUrl: undefined,
-      //     },
-      //     typography,
-      //     prescription: parsedPrescription,
-      //   });
       }
 
       const nextUrl = URL.createObjectURL(blob);

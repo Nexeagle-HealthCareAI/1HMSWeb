@@ -27,7 +27,7 @@ interface LayoutControlsPanelProps {
 
 const clampMargin = (value: number) => {
   if (Number.isNaN(value)) return 10;
-  return Math.min(Math.max(value, 5), 45);
+  return Math.min(Math.max(value, 0), 1000);
 };
 
 const marginLabels: Record<keyof MarginConfig, string> = {
@@ -53,11 +53,21 @@ export const LayoutControlsPanel = ({
 }: LayoutControlsPanelProps) => {
   const handleMarginInput = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
+    // Allow empty string for user editing, don't update until valid number
+    if (value === '') {
+      onMarginsChange({
+        ...margins,
+        [name]: value,
+      } as MarginConfig);
+      return;
+    }
     const parsed = clampMargin(Number(value));
-    onMarginsChange({
-      ...margins,
-      [name]: parsed,
-    } as MarginConfig);
+    if (!Number.isNaN(parsed)) {
+      onMarginsChange({
+        ...margins,
+        [name]: parsed,
+      } as MarginConfig);
+    }
   };
 
   const handleTemplateChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -129,9 +139,9 @@ export const LayoutControlsPanel = ({
                       id={`margin-${side}`}
                       name={side}
                       type="number"
-                      min={5}
-                      max={45}
-                      value={margins[side]}
+                      min={0}
+                      max={1000}
+                      value={margins[side] === 0 ? (typeof margins[side] === 'string' ? margins[side] : 0) : margins[side]}
                       onChange={handleMarginInput}
                     />
                   </div>
@@ -145,9 +155,9 @@ export const LayoutControlsPanel = ({
                       id={`margin-${side}`}
                       name={side}
                       type="number"
-                      min={5}
-                      max={45}
-                      value={margins[side]}
+                      min={0}
+                      max={1000}
+                      value={margins[side] === 0 ? (typeof margins[side] === 'string' ? margins[side] : 0) : margins[side]}
                       onChange={handleMarginInput}
                     />
                   </div>

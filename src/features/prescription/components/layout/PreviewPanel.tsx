@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Eye } from 'lucide-react';
 import { TestModal } from '@/features/prescription/utils/TestModal';
+import { defaultPrescriptionData } from '@/features/prescription/utils/prescriptionTestData';
 import { MarginConfig, TypographySettings } from '@/features/prescription/hooks/usePrescriptionDesigner';
 
 interface PreviewPanelProps {
@@ -49,6 +50,11 @@ export const PreviewPanel = ({ previewUrl, zoom, isGenerating, onZoomChange, onO
               <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
                 {isGenerating ? <Skeleton className="h-10 w-3/4" /> : <Eye className="h-6 w-6" />}
                 <p>No preview yet. Generate one to validate spacing.</p>
+                {/* Show test data for development/demo */}
+                <div className="mt-4 w-full max-w-xs text-left text-xs bg-white/80 rounded p-2 border">
+                  <strong>Test Data:</strong>
+                  <pre className="whitespace-pre-wrap break-all">{JSON.stringify(defaultPrescriptionData, null, 2)}</pre>
+                </div>
               </div>
             )}
           </AspectRatio>
