@@ -27,9 +27,11 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   const { getUserId } = useAuthStore();
   const userId = getUserId();
   const { data: userDetailsResponse } = useUserDetails(userId || '');
-  
+
+  const fallbackDoctorName = t('doctorCalendar.doctorFallback');
   // Get user name or fallback to contact number
-  const doctorName = userDetailsResponse?.userProfile?.fullName || userDetailsResponse?.mobileNumber || 'Doctor';
+  const doctorDisplayName =
+    userDetailsResponse?.userProfile?.fullName || userDetailsResponse?.mobileNumber || fallbackDoctorName;
   const handlePrevious = () => {
     const newDate = new Date(currentDate);
     if (view === 'dayGridMonth') {
@@ -63,7 +65,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
       case 'dayGridMonth':
         return format(currentDate, 'MMMM yyyy');
       case 'timeGridWeek':
-        return `Week of ${format(currentDate, 'MMM dd, yyyy')}`;
+        return t('doctorCalendar.weekOf', { date: format(currentDate, 'MMM dd, yyyy') });
       case 'timeGridDay':
         return format(currentDate, 'EEEE, MMMM d, yyyy');
       default:
@@ -81,7 +83,9 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             <User className="h-3 w-3 text-blue-600 dark:text-blue-400" />
           </div>
           <div className="flex flex-col">
-            <span className="text-xs font-semibold text-blue-900 dark:text-blue-100">Dr. {doctorName}</span>
+            <span className="text-xs font-semibold text-blue-900 dark:text-blue-100">
+              {t('doctorCalendar.doctorPrefix', { name: doctorDisplayName })}
+            </span>
             <span className="text-xs text-blue-600 dark:text-blue-300">{t('doctorCalendar.calendarView')}</span>
           </div>
         </div>

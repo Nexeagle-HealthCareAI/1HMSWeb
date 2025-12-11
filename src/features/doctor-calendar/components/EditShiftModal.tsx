@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ShiftName, CreateOverridePayload } from '../api/types';
 import { format, parseISO } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
 interface EditShiftModalProps {
   open: boolean;
@@ -36,6 +37,7 @@ export const EditShiftModal: React.FC<EditShiftModalProps> = ({
   onDelete,
   isLoading = false
 }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     startTime: '09:00',
     endTime: '12:00',
@@ -130,7 +132,7 @@ export const EditShiftModal: React.FC<EditShiftModalProps> = ({
       return format(date, 'EEEE, MMMM d, yyyy');
     } catch (error) {
       // Fallback to a simple format if parsing fails
-      return dateStr || 'Unknown Date';
+      return dateStr || t('doctorCalendar.editShiftModal.unknownDate');
     }
   };
 
@@ -157,18 +159,21 @@ export const EditShiftModal: React.FC<EditShiftModalProps> = ({
       <DialogContent className="sm:max-w-[640px]">
         <DialogHeader>
           <DialogTitle>
-            Edit {shiftName} Shift - {formatDate(shiftDate || new Date().toISOString().split('T')[0])}
+            {t('doctorCalendar.editShiftModal.title', {
+              shiftName,
+              date: formatDate(shiftDate || new Date().toISOString().split('T')[0])
+            })}
           </DialogTitle>
         </DialogHeader>
         
         <div className="rounded-md bg-blue-50 border border-blue-200 text-sm text-blue-700 px-4 py-3 mb-4">
-          Changes apply only to this specific shift on the selected date. Your default weekly schedule remains unchanged.
+          {t('doctorCalendar.editShiftModal.info')}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="overrideDate">Override Date</Label>
+              <Label htmlFor="overrideDate">{t('doctorCalendar.editShiftModal.labels.overrideDate')}</Label>
               <Input
                 id="overrideDate"
                 value={formatDate(new Date().toISOString())}
@@ -180,7 +185,7 @@ export const EditShiftModal: React.FC<EditShiftModalProps> = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date</Label>
+              <Label htmlFor="startDate">{t('doctorCalendar.editShiftModal.labels.startDate')}</Label>
               <Input
                 id="startDate"
                 value={formatDate(normalizedShiftDate.toISOString())}
@@ -189,7 +194,7 @@ export const EditShiftModal: React.FC<EditShiftModalProps> = ({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="endDate">End Date</Label>
+              <Label htmlFor="endDate">{t('doctorCalendar.editShiftModal.labels.endDate')}</Label>
               <Input
                 id="endDate"
                 value={formatDate(normalizedShiftDate.toISOString())}
@@ -201,7 +206,7 @@ export const EditShiftModal: React.FC<EditShiftModalProps> = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="startTime">Start Time</Label>
+              <Label htmlFor="startTime">{t('doctorCalendar.editShiftModal.labels.startTime')}</Label>
               <Input
                 id="startTime"
                 type="time"
@@ -212,7 +217,7 @@ export const EditShiftModal: React.FC<EditShiftModalProps> = ({
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="endTime">End Time</Label>
+              <Label htmlFor="endTime">{t('doctorCalendar.editShiftModal.labels.endTime')}</Label>
               <Input
                 id="endTime"
                 type="time"
@@ -224,7 +229,7 @@ export const EditShiftModal: React.FC<EditShiftModalProps> = ({
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="slotMinutes">Slot Duration (minutes)</Label>
+            <Label htmlFor="slotMinutes">{t('doctorCalendar.editShiftModal.labels.slotDuration')}</Label>
             <Input
               id="slotMinutes"
               type="number"
@@ -238,7 +243,7 @@ export const EditShiftModal: React.FC<EditShiftModalProps> = ({
                   setFormData(prev => ({ ...prev, slotMinutes: value }));
                 }
               }}
-              placeholder="Enter any integer"
+              placeholder={t('doctorCalendar.editShiftModal.placeholders.slotDuration')}
             />
           </div>
           
@@ -250,7 +255,7 @@ export const EditShiftModal: React.FC<EditShiftModalProps> = ({
                 onClick={handleDelete}
                 disabled={isLoading}
               >
-                Delete Override
+                {t('doctorCalendar.editShiftModal.actions.delete')}
               </Button>
             )}
             
@@ -260,14 +265,16 @@ export const EditShiftModal: React.FC<EditShiftModalProps> = ({
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >
-              Cancel
+              {t('doctorCalendar.editShiftModal.actions.cancel')}
             </Button>
             
             <Button
               type="submit"
               disabled={!isFormValid() || isLoading}
             >
-              {isLoading ? 'Saving...' : 'Save Override'}
+              {isLoading
+                ? t('doctorCalendar.editShiftModal.actions.saving')
+                : t('doctorCalendar.editShiftModal.actions.save')}
             </Button>
           </DialogFooter>
         </form>

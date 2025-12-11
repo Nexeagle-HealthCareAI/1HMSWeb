@@ -279,7 +279,7 @@ export const InactivityProvider: React.FC<InactivityProviderProps> = ({ children
                   {isLoggingOut ? (
                     <>
                       <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin mr-2"></div>
-                      Logging out...
+                      {t('inactivity.loggingOut')}
                     </>
                   ) : (
                     <>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +28,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
   onSave,
   isLoading = false
 }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     title: '',
     blockType: 'Leave' as BlockType,
@@ -94,23 +96,23 @@ export const BlockModal: React.FC<BlockModalProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Create Block</DialogTitle>
+          <DialogTitle>{t('blockModal.title')}</DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="title">Title</Label>
+            <Label htmlFor="title">{t('blockModal.fields.titleLabel')}</Label>
             <Input
               id="title"
               value={formData.title}
               onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              placeholder="e.g., Annual Leave, Surgery, Meeting"
+              placeholder={t('blockModal.fields.titlePlaceholder')}
               required
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="blockType">Block Type</Label>
+            <Label htmlFor="blockType">{t('blockModal.fields.blockTypeLabel')}</Label>
             <Select
               value={formData.blockType}
               onValueChange={(value: BlockType) => setFormData(prev => ({ ...prev, blockType: value }))}
@@ -120,16 +122,16 @@ export const BlockModal: React.FC<BlockModalProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Leave" className={getBlockTypeColor('Leave')}>
-                  Leave
+                  {t('blockModal.fields.blockType.leave')}
                 </SelectItem>
                 <SelectItem value="Personal" className={getBlockTypeColor('Personal')}>
-                  Personal
+                  {t('blockModal.fields.blockType.personal')}
                 </SelectItem>
                 <SelectItem value="Surgery" className={getBlockTypeColor('Surgery')}>
-                  Surgery
+                  {t('blockModal.fields.blockType.surgery')}
                 </SelectItem>
                 <SelectItem value="Admin" className={getBlockTypeColor('Admin')}>
-                  Admin
+                  {t('blockModal.fields.blockType.admin')}
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -137,7 +139,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="startDateTime">Start Date & Time</Label>
+              <Label htmlFor="startDateTime">{t('blockModal.fields.startLabel')}</Label>
               <Input
                 id="startDateTime"
                 type="datetime-local"
@@ -148,7 +150,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="endDateTime">End Date & Time</Label>
+              <Label htmlFor="endDateTime">{t('blockModal.fields.endLabel')}</Label>
               <Input
                 id="endDateTime"
                 type="datetime-local"
@@ -162,7 +164,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
           {formData.startDateTime && formData.endDateTime && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="text-sm text-blue-800">
-                <div className="font-medium">Block Duration:</div>
+                <div className="font-medium">{t('blockModal.fields.durationLabel')}</div>
                 <div>
                   {format(new Date(formData.startDateTime), 'MMM dd, yyyy HH:mm')} - {format(new Date(formData.endDateTime), 'MMM dd, yyyy HH:mm')}
                 </div>
@@ -177,14 +179,14 @@ export const BlockModal: React.FC<BlockModalProps> = ({
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >
-              Cancel
+              {t('blockModal.actions.cancel')}
             </Button>
             
             <Button
               type="submit"
               disabled={!isFormValid() || isLoading}
             >
-              {isLoading ? 'Creating...' : 'Create Block'}
+              {isLoading ? t('blockModal.actions.pending') : t('blockModal.actions.create')}
             </Button>
           </DialogFooter>
         </form>

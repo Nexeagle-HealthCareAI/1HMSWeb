@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, Mail, Users } from 'lucide-react';
@@ -20,13 +21,15 @@ export const InvitationSuccessModal: React.FC<InvitationSuccessModalProps> = ({
   invitedUserEmail,
   invitedUserRole,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-green-600" />
-            Invitation Sent Successfully!
+            {t('userManagement.invitationSuccess.title')}
           </DialogTitle>
         </DialogHeader>
         
@@ -36,9 +39,9 @@ export const InvitationSuccessModal: React.FC<InvitationSuccessModalProps> = ({
               <Mail className="h-8 w-8 text-green-600" />
             </div>
             
-            <h3 className="text-lg font-semibold mb-2">Invitation Delivered</h3>
+            <h3 className="text-lg font-semibold mb-2">{t('userManagement.invitationSuccess.deliveredTitle')}</h3>
             <p className="text-muted-foreground mb-4">
-              An invitation has been sent to the user. They will receive an email with registration instructions.
+              {t('userManagement.invitationSuccess.deliveredDescription')}
             </p>
           </div>
 
@@ -48,24 +51,23 @@ export const InvitationSuccessModal: React.FC<InvitationSuccessModalProps> = ({
               <span className="font-medium">{invitedUserName}</span>
             </div>
             <div className="text-sm text-muted-foreground">
-              <div>Email: {invitedUserEmail}</div>
-              <div>Role: {invitedUserRole}</div>
+              <div>{t('userManagement.invitationSuccess.emailLabel')}: {invitedUserEmail}</div>
+              <div>{t('userManagement.invitationSuccess.roleLabel')}: {invitedUserRole}</div>
             </div>
           </div>
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-sm text-blue-800">
-              <strong>Next Steps:</strong> The user will receive an email with a registration link. 
-              Once they complete registration, you can view them in the "Onboarded Users" tab.
+              <strong>{t('userManagement.invitationSuccess.nextStepsTitle')}:</strong> {t('userManagement.invitationSuccess.nextStepsDescription')}
             </p>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="outline" onClick={onClose}>
-              Close
+              {t('common.close')}
             </Button>
             <Button onClick={onViewInvitedUsers}>
-              View Invited Users
+              {t('userManagement.viewInvitedUsers')}
             </Button>
           </div>
         </div>

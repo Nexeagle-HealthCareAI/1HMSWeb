@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +28,8 @@ export const DeactivateUserDialog: React.FC<DeactivateUserDialogProps> = ({
   userEmail,
   isPending,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
@@ -36,11 +39,11 @@ export const DeactivateUserDialog: React.FC<DeactivateUserDialogProps> = ({
               <UserX className="h-6 w-6 text-red-600" />
             </div>
             <DialogTitle className="text-xl font-semibold text-red-900">
-              Deactivate User
+              {t('userManagement.deactivateDialog.title')}
             </DialogTitle>
           </div>
           <DialogDescription className="text-base text-gray-700">
-            Are you sure you want to deactivate this user? This action will immediately revoke their access to the application.
+            {t('userManagement.deactivateDialog.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -52,17 +55,17 @@ export const DeactivateUserDialog: React.FC<DeactivateUserDialogProps> = ({
                 <Shield className="h-4 w-4 text-blue-600" />
               </div>
               <div>
-                <h4 className="font-medium text-gray-900">User Details</h4>
-                <p className="text-sm text-gray-600">User to be deactivated</p>
+                <h4 className="font-medium text-gray-900">{t('userManagement.deactivateDialog.userDetailsTitle')}</h4>
+                <p className="text-sm text-gray-600">{t('userManagement.deactivateDialog.userDetailsSubtitle')}</p>
               </div>
             </div>
             <div className="space-y-2">
               <div>
-                <span className="text-sm font-medium text-gray-700">Name:</span>
+                <span className="text-sm font-medium text-gray-700">{t('userManagement.deactivateDialog.labels.name')}:</span>
                 <span className="ml-2 text-sm text-gray-900">{userName}</span>
               </div>
               <div>
-                <span className="text-sm font-medium text-gray-700">Email:</span>
+                <span className="text-sm font-medium text-gray-700">{t('userManagement.deactivateDialog.labels.email')}:</span>
                 <span className="ml-2 text-sm text-gray-900">{userEmail}</span>
               </div>
             </div>
@@ -73,12 +76,12 @@ export const DeactivateUserDialog: React.FC<DeactivateUserDialogProps> = ({
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
               <div className="space-y-1">
-                <h4 className="font-medium text-red-900">Important Notice</h4>
+                <h4 className="font-medium text-red-900">{t('userManagement.deactivateDialog.noticeTitle')}</h4>
                 <ul className="text-sm text-red-700 space-y-1">
-                  <li>• User will lose immediate access to the application</li>
-                  <li>• All active sessions will be terminated</li>
-                  <li>• User will need to be reactivated to regain access</li>
-                  <li>• This action can be reversed by an administrator</li>
+                  <li>• {t('userManagement.deactivateDialog.noticeItems.access')}</li>
+                  <li>• {t('userManagement.deactivateDialog.noticeItems.sessions')}</li>
+                  <li>• {t('userManagement.deactivateDialog.noticeItems.reactivation')}</li>
+                  <li>• {t('userManagement.deactivateDialog.noticeItems.reversible')}</li>
                 </ul>
               </div>
             </div>
@@ -92,7 +95,7 @@ export const DeactivateUserDialog: React.FC<DeactivateUserDialogProps> = ({
             disabled={isPending}
             className="flex-1"
           >
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             variant="destructive"
@@ -103,12 +106,12 @@ export const DeactivateUserDialog: React.FC<DeactivateUserDialogProps> = ({
             {isPending ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Deactivating...
+                {t('userManagement.deactivateDialog.deactivating')}
               </>
             ) : (
               <>
                 <UserX className="h-4 w-4 mr-2" />
-                Deactivate User
+                {t('userManagement.deactivateDialog.confirm')}
               </>
             )}
           </Button>

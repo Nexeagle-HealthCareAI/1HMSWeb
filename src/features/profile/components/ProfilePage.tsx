@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuthStore } from '@/store/authStore';
@@ -139,6 +140,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   onBack, 
   userType = 'Doctor' 
 }) => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('personal');
   const [isEditing, setIsEditing] = useState(false);
@@ -399,8 +401,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     
     setIsEditing(false);
     toast({
-      title: "Profile Updated! 🎉",
-      description: "Your profile has been successfully updated.",
+      title: t('profilePage.toast.updatedTitle'),
+      description: t('profilePage.toast.updatedDescription'),
     });
   };
 
@@ -513,7 +515,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     setSaving((s) => ({ ...s, basic: true, address: true }));
     try {
       if (!userId) {
-        toast({ title: 'Error', description: 'User ID not found.', variant: 'destructive' });
+          toast({ title: t('profilePage.toast.errorTitle'), description: t('profilePage.toast.missingUser'), variant: 'destructive' });
         return;
       }
 
@@ -541,8 +543,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         } catch (uploadError) {
           console.error('Error uploading profile picture:', uploadError);
           toast({
-            title: 'Upload Error',
-            description: 'Failed to upload profile picture, but continuing with other updates.',
+            title: t('profilePage.toast.uploadErrorTitle'),
+            description: t('profilePage.toast.uploadErrorDescription'),
             variant: 'destructive',
           });
         }
@@ -601,7 +603,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     if (!validateEmployment()) return;
     setSaving((s) => ({ ...s, employment: true }));
     try {
-      toast({ title: 'Saved', description: 'Employment info updated.' });
+      toast({ title: t('profilePage.toast.savedTitle'), description: t('profilePage.toast.employmentSaved') });
     } finally {
       setSaving((s) => ({ ...s, employment: false }));
     }
@@ -615,7 +617,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       <div className="min-h-screen bg-gradient-subtle p-4 lg:p-6 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading profile information...</p>
+          <p className="text-muted-foreground">{t('profilePage.loading')}</p>
         </div>
       </div>
     );
@@ -634,11 +636,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
               className="flex items-center gap-2 w-full sm:w-auto justify-center"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back
+              {t('profilePage.header.back')}
             </Button>
             <div className="text-center sm:text-left">
-              <h1 className="text-2xl lg:text-3xl font-bold text-foreground">My Profile</h1>
-              <p className="text-muted-foreground text-sm sm:text-base">Manage your personal and professional information</p>
+              <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{t('profilePage.header.title')}</h1>
+              <p className="text-muted-foreground text-sm sm:text-base">{t('profilePage.header.subtitle')}</p>
             </div>
           </div>
           <Button
@@ -665,7 +667,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             className="flex items-center justify-center gap-2 w-full sm:w-auto"
           >
             <Edit3 className="h-4 w-4" />
-            {isEditing ? 'Cancel' : 'Edit Profile'}
+            {isEditing ? t('profilePage.header.cancel') : t('profilePage.header.edit')}
           </Button>
         </div>
       </div>
@@ -679,7 +681,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
               {isEditing && (
                 <Badge variant="secondary" className="mb-2">
                   <Edit3 className="h-3 w-3 mr-1" />
-                  Editing Mode
+                  {t('profilePage.badges.editing')}
                 </Badge>
               )}
               <ProfilePictureUploader
@@ -887,19 +889,19 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
             <div className="space-y-3 text-left">
               <div className="rounded-md border bg-muted/40 p-3">
-                <p className="text-xs text-muted-foreground">Full name</p>
+                <p className="text-xs text-muted-foreground">{t('profilePage.summary.fullName')}</p>
                 <p className="font-medium">
                   {profileData.personal.fullName || '—'}
                 </p>
               </div>
               <div className="rounded-md border bg-muted/40 p-3">
-                <p className="text-xs text-muted-foreground">Phone number</p>
+                <p className="text-xs text-muted-foreground">{t('profilePage.summary.phone')}</p>
                 <p className="font-medium">
                   {profileData.personal.phone || '—'}
                 </p>
               </div>
               <div className="rounded-md border bg-muted/40 p-3">
-                <p className="text-xs text-muted-foreground">Employee ID</p>
+                <p className="text-xs text-muted-foreground">{t('profilePage.summary.employeeId')}</p>
                 <p className="font-medium">
                   {employeeIdFromStore || profileData.personal.employeeId || '—'}
                 </p>
@@ -937,12 +939,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                          <AccordionTrigger className="transition-colors dark:hover:bg-muted/30 hover:no-underline focus:no-underline">
                            <div className="flex flex-wrap items-center gap-2 text-left">
                              <User className="h-4 w-4 text-muted-foreground" />
-                             <span className="text-foreground">Personal Information</span>
+                                 <span className="text-foreground">{t('profilePage.personal.title')}</span>
                            <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary dark:bg-primary/20 dark:text-primary-100">
-                              Profile completion {completionPercentage}%
+                              {t('profilePage.personal.completion', { percent: completionPercentage })}
                             </span>
                              <span className={`text-xs ${Object.keys(basicErrors).length || Object.keys(addressErrors).length ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-300'}`}>
-                               {Object.keys(basicErrors).length || Object.keys(addressErrors).length ? '⚠︎' : '✓'}
+                                   {Object.keys(basicErrors).length || Object.keys(addressErrors).length ? '⚠︎' : '✓'}
                              </span>
                            </div>
                          </AccordionTrigger>
@@ -952,12 +954,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                              <div>
                                <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                  <User className="h-4 w-4 text-muted-foreground" />
-                                 Basic Information
+                                     {t('profilePage.personal.basic.title')}
                                </h4>
                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                  <div>
                                    <Label htmlFor="fullName">
-                                     Full Name <span className="text-red-500" aria-hidden="true">*</span>
+                                         {t('profilePage.personal.basic.fullName.label')} <span className="text-red-500" aria-hidden="true">*</span>
                                    </Label>
                                    <Input
                                      id="fullName"
@@ -972,7 +974,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                  </div>
                                  <div>
                                    <Label htmlFor="email">
-                                     Email Address <span className="text-red-500" aria-hidden="true">*</span>
+                                         {t('profilePage.personal.basic.email.label')} <span className="text-red-500" aria-hidden="true">*</span>
                                    </Label>
                                    <Input
                                      id="email"
@@ -989,7 +991,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                  </div>
                                  <div>
                                    <Label htmlFor="phone">
-                                     Phone Number <span className="text-red-500" aria-hidden="true">*</span>
+                                         {t('profilePage.personal.basic.phone.label')} <span className="text-red-500" aria-hidden="true">*</span>
                                    </Label>
                                    <Input
                                      id="phone"
@@ -1007,7 +1009,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    )}
                                  </div>
                                  <div>
-                                   <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                                       <Label htmlFor="dateOfBirth">{t('profilePage.personal.basic.dob.label')}</Label>
                                    <Input
                                      id="dateOfBirth"
                                      type="date"
@@ -1021,7 +1023,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    )}
                                  </div>
                                  <div>
-                                   <Label htmlFor="gender">Gender</Label>
+                                       <Label htmlFor="gender">{t('profilePage.personal.basic.gender.label')}</Label>
                                    <Select
                                      value={profileData.personal.gender || ''}
                                      onValueChange={(value) => handleInputChange('personal', 'gender', value)}
@@ -1043,7 +1045,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    )}
                                  </div>
                                                                    <div>
-                                    <Label htmlFor="bloodGroup">Blood Group</Label>
+                                                                 <Label htmlFor="bloodGroup">{t('profilePage.personal.basic.bloodGroup.label')}</Label>
                                     <Select
                                       value={profileData.personal.bloodGroup || ''}
                                       onValueChange={(value) => handleInputChange('personal', 'bloodGroup', value)}
@@ -1071,12 +1073,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                              <div>
                                <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                  <MapPin className="h-4 w-4" />
-                                 Address & Contact
+                                     {t('profilePage.personal.address.title')}
                                </h4>
                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                  <div>
                                    <Label htmlFor="address1">
-                                     Address Line 1 <span className="text-red-500" aria-hidden="true">*</span>
+                                     {t('profilePage.personal.address.address1.label')} <span className="text-red-500" aria-hidden="true">*</span>
                                    </Label>
                                    <Input
                                      id="address1"
@@ -1104,7 +1106,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                  </div>
                                  <div>
                                    <Label htmlFor="city">
-                                     City <span className="text-red-500" aria-hidden="true">*</span>
+                                     {t('profilePage.personal.address.city.label')} <span className="text-red-500" aria-hidden="true">*</span>
                                    </Label>
                                    <Input 
                                      id="city" 
@@ -1119,7 +1121,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                  </div>
                                  <div>
                                    <Label htmlFor="state">
-                                     State <span className="text-red-500" aria-hidden="true">*</span>
+                                     {t('profilePage.personal.address.state.label')} <span className="text-red-500" aria-hidden="true">*</span>
                                    </Label>
                                    <Input 
                                      id="state" 
@@ -1134,7 +1136,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                  </div>
                                  <div>
                                    <Label htmlFor="country">
-                                     Country <span className="text-red-500" aria-hidden="true">*</span>
+                                     {t('profilePage.personal.address.country.label')} <span className="text-red-500" aria-hidden="true">*</span>
                                    </Label>
                                    <Input 
                                      id="country" 
@@ -1149,7 +1151,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                  </div>
                                  <div>
                                    <Label htmlFor="pincode">
-                                     Pincode <span className="text-red-500" aria-hidden="true">*</span>
+                                     {t('profilePage.personal.address.pincode.label')} <span className="text-red-500" aria-hidden="true">*</span>
                                    </Label>
                                    <Input 
                                      id="pincode" 
@@ -1166,7 +1168,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                  <div>
                                    <Label htmlFor="emergencyName">
-                                     Emergency Contact Name
+                                     {t('profilePage.personal.address.emergencyName.label')}
                                    </Label>
                                    <Input 
                                      id="emergencyName" 
@@ -1181,7 +1183,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                  </div>
                                  <div>
                                    <Label htmlFor="emergencyNumber">
-                                     Emergency Contact Number
+                                     {t('profilePage.personal.address.emergencyNumber.label')}
                                    </Label>
                                    <Input 
                                      id="emergencyNumber" 
@@ -1209,7 +1211,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    onClick={() => setIsEditing(false)}
                                    className="w-full sm:w-auto"
                                  >
-                                   Cancel
+                                     {t('common.cancel')}
                                  </Button>
                                  <Button 
                                    onClick={savePersonalInformation}
@@ -1219,12 +1221,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                                    {saving.basic || saving.address ? (
                                      <>
                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                       Saving...
+                                          {t('common.saving', { defaultValue: 'Saving...' })}
                                      </>
                                    ) : (
                                      <>
                                        <Save className="h-4 w-4" />
-                                       Save Personal Information
+                                          {t('profilePage.personal.save')}
                                      </>
                                    )}
                                  </Button>

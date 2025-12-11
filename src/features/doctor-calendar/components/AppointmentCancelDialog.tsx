@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Calendar, Clock, User, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -30,10 +31,12 @@ export const AppointmentCancelDialog: React.FC<AppointmentCancelDialogProps> = (
   appointmentData,
   isPending
 }) => {
+  const { t } = useTranslation();
+
   const formatTime = (time: string) => {
     const [hour, minute] = time.split(':');
     const hourNum = parseInt(hour);
-    const ampm = hourNum >= 12 ? 'PM' : 'AM';
+    const ampm = hourNum >= 12 ? t('appointmentCancelDialog.time.pm') : t('appointmentCancelDialog.time.am');
     const hour12 = hourNum % 12 || 12;
     return `${hour12}:${minute} ${ampm}`;
   };
@@ -48,7 +51,7 @@ export const AppointmentCancelDialog: React.FC<AppointmentCancelDialogProps> = (
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-red-600 flex items-center gap-2">
             <AlertTriangle className="h-5 w-5" />
-            Cancel Appointment
+            {t('appointmentCancelDialog.title')}
           </DialogTitle>
         </DialogHeader>
 
@@ -56,7 +59,8 @@ export const AppointmentCancelDialog: React.FC<AppointmentCancelDialogProps> = (
         <Alert className="border-red-200 bg-red-50">
           <AlertTriangle className="h-4 w-4 text-red-600" />
           <AlertDescription className="text-red-800">
-            <strong>Warning:</strong> This action cannot be undone. The appointment will be permanently cancelled and the time slot will become available for other patients.
+            <strong>{t('appointmentCancelDialog.warningLabel')}</strong>{' '}
+            {t('appointmentCancelDialog.warningDescription')}
           </AlertDescription>
         </Alert>
 
@@ -72,7 +76,10 @@ export const AppointmentCancelDialog: React.FC<AppointmentCancelDialogProps> = (
                 )}
                 {appointmentData.patientAge && appointmentData.patientGender && (
                   <p className="text-sm text-muted-foreground">
-                    {appointmentData.patientAge} years old, {appointmentData.patientGender}
+                    {t('appointmentCancelDialog.patientAgeGender', {
+                      age: appointmentData.patientAge,
+                      gender: appointmentData.patientGender
+                    })}
                   </p>
                 )}
               </div>
@@ -98,7 +105,9 @@ export const AppointmentCancelDialog: React.FC<AppointmentCancelDialogProps> = (
               <div className="flex items-center gap-3">
                 <Phone className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <p className="font-medium">Token: {appointmentData.tokenNumber}</p>
+                  <p className="font-medium">
+                    {t('appointmentCancelDialog.tokenLabel', { token: appointmentData.tokenNumber })}
+                  </p>
                 </div>
               </div>
             )}
@@ -108,10 +117,10 @@ export const AppointmentCancelDialog: React.FC<AppointmentCancelDialogProps> = (
         {/* Confirmation Question */}
         <div className="text-center py-4">
           <p className="text-foreground font-medium mb-2">
-            Are you sure you want to cancel this appointment?
+            {t('appointmentCancelDialog.confirmTitle')}
           </p>
           <p className="text-sm text-muted-foreground">
-            The patient should be notified about the cancellation.
+            {t('appointmentCancelDialog.confirmSubtitle')}
           </p>
         </div>
 
@@ -123,14 +132,16 @@ export const AppointmentCancelDialog: React.FC<AppointmentCancelDialogProps> = (
             disabled={isPending}
             className="flex-1"
           >
-            Keep Appointment
+            {t('appointmentCancelDialog.actions.keep')}
           </Button>
           <Button
             onClick={onConfirm}
             disabled={isPending}
             className="flex-1 bg-red-600 hover:bg-red-700 text-white"
           >
-            {isPending ? 'Canceling...' : 'Yes, Cancel Appointment'}
+            {isPending
+              ? t('appointmentCancelDialog.actions.pending')
+              : t('appointmentCancelDialog.actions.confirm')}
           </Button>
         </div>
       </DialogContent>

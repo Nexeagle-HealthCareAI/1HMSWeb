@@ -82,7 +82,7 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
     visibleEvents.forEach(event => {
       if (event.type === 'shift') {
         const shiftName =
-          event.extendedProps?.shiftName || t('doctorCalendar.shiftDetails.untitledShift', { defaultValue: 'Shift' });
+          event.extendedProps?.shiftName || t('doctorCalendar.shiftDetails.untitledShift');
         const startDate = event.start ? new Date(event.start) : null;
         const endDate = event.end ? new Date(event.end) : startDate;
         const deriveTime = (fallbackDate: Date | null, explicit?: string) => {
@@ -97,7 +97,7 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
         };
         const startTime = deriveTime(startDate, event.extendedProps?.startTime);
         const endTime = deriveTime(endDate, event.extendedProps?.endTime);
-        const timeRange = startTime && endTime ? `${startTime} - ${endTime}` : t('doctorCalendar.shiftDetails.customTiming', { defaultValue: 'Custom timing' });
+        const timeRange = startTime && endTime ? `${startTime} - ${endTime}` : t('doctorCalendar.shiftDetails.customTiming');
         const slotMinutes = extractSlotMinutes(event);
         const maxPatients = event.extendedProps?.maxPatients ?? event.extendedProps?.patientLimit;
         const dayLabel = startDate ? format(startDate, 'EEE') : null;
@@ -171,7 +171,7 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
   const formatTimeOffRange = React.useCallback(
     (start: Date | null, end: Date | null) => {
       if (!start) {
-        return t('doctorCalendar.shiftDetails.timeOffUnknown', { defaultValue: 'Date TBD' });
+        return t('doctorCalendar.shiftDetails.timeOffUnknown');
       }
       const endDate = end ?? start;
       const sameDay = start.toDateString() === endDate.toDateString();
@@ -230,7 +230,7 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
           <Info className="h-4 w-4 text-blue-600" />
-          {t('doctorCalendar.shiftDetails.shiftOverview', { defaultValue: 'Shift Overview' })}
+          {t('doctorCalendar.shiftDetails.shiftOverview')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -240,10 +240,10 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
           <div className="space-y-1 rounded-md border border-amber-200 bg-amber-50/70 dark:border-amber-500/40 dark:bg-amber-900/20 p-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-amber-800 dark:text-amber-200">
-                {t('doctorCalendar.shiftDetails.timeOffSummary', { defaultValue: 'Upcoming Time Off' })}
+                {t('doctorCalendar.shiftDetails.timeOffSummary')}
               </span>
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-200 text-amber-700 dark:border-amber-400 dark:text-amber-200 bg-white/70 dark:bg-transparent">
-                {timeOffSummaries.length} {t('doctorCalendar.shiftDetails.days', { defaultValue: 'entries' })}
+                {timeOffSummaries.length} {t('doctorCalendar.shiftDetails.entries')}
               </Badge>
             </div>
             <div className="space-y-1">
@@ -263,7 +263,7 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
         <div className="space-y-2">
           
           {isLoading ? (
-            <div className="text-xs text-gray-500 dark:text-gray-400">Loading shifts...</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('doctorCalendar.shiftDetails.loadingShifts')}</div>
           ) : uniqueShifts.length > 0 ? (
             <div className="space-y-1">
               {uniqueShifts.map((shift, index) => {
@@ -293,7 +293,7 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
                       >
                         {shift.name}
                         {shiftHasTimeOffConflict && (
-                          <span className="ml-1 text-red-500">(Time-off)</span>
+                          <span className="ml-1 text-red-500">{t('doctorCalendar.shiftDetails.timeOffConflictLabel')}</span>
                         )}
                       </span>
                       <Badge
@@ -311,7 +311,7 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
                               }
                         }
                       >
-                        {shift.instances.length} {t('doctorCalendar.shiftDetails.timeRanges', { defaultValue: 'slots' })}
+                        {shift.instances.length} {t('doctorCalendar.shiftDetails.timeRanges')}
                       </Badge>
                     </div>
 
@@ -332,7 +332,7 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
                               if (instance.slotMinutes != null) {
                                 return (
                                   <span className="ml-1 text-[10px] text-gray-500 dark:text-gray-400">
-                                    • {instance.slotMinutes}-min {t('doctorCalendar.shiftDetails.slots', { defaultValue: 'slots' })}
+                                    • {instance.slotMinutes}-min {t('doctorCalendar.shiftDetails.slots')}
                                     {dayAnnotation}
                                   </span>
                                 );
@@ -349,7 +349,7 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
                             })()}
                             {instance.maxPatients != null && (
                               <span className="ml-1 text-[10px] text-gray-500 dark:text-gray-400">
-                                • {instance.maxPatients} {t('doctorCalendar.shiftDetails.patients', { defaultValue: 'pts' })}
+                                • {instance.maxPatients} {t('doctorCalendar.shiftDetails.patients')}
                               </span>
                             )}
                           </Badge>
@@ -357,15 +357,13 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
                       </div>
                     ) : (
                       <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                        {t('doctorCalendar.shiftDetails.noTimeRanges', { defaultValue: 'No time ranges configured' })}
+                        {t('doctorCalendar.shiftDetails.noTimeRanges')}
                       </p>
                     )}
 
                     {shift.dataSource === 'Default' && (
                       <p className="text-[11px] text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/40 border border-slate-200/70 dark:border-slate-700/50 rounded px-2 py-1">
-                        {t('doctorCalendar.shiftDetails.defaultShiftNotice', {
-                          defaultValue: 'This is part of your default schedule and cannot be deleted.'
-                        })}
+                        {t('doctorCalendar.shiftDetails.defaultShiftNotice')}
                       </p>
                     )}
                   </div>
@@ -373,7 +371,7 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
               })}
             </div>
           ) : (
-            <div className="text-xs text-gray-500 dark:text-gray-400">No shifts scheduled</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{t('doctorCalendar.shiftDetails.noShiftsScheduled')}</div>
           )}
         </div>
 

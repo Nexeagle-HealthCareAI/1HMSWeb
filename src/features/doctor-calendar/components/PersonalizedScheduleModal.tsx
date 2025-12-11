@@ -36,6 +36,7 @@ interface ShiftTemplate {
   defaultStartTime: string;
   defaultEndTime: string;
   color: string;
+  label: string;
   description: string;
 }
 
@@ -62,6 +63,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
       defaultStartTime: '09:00',
       defaultEndTime: '12:00',
       color: 'bg-teal-50 border-teal-200 text-teal-800',
+      label: t('doctorCalendar.shifts.morning'),
       description: t('doctorCalendar.shifts.morningOPDHours')
     },
     {
@@ -70,6 +72,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
       defaultStartTime: '14:00',
       defaultEndTime: '17:00',
       color: 'bg-amber-50 border-amber-200 text-amber-800',
+      label: t('doctorCalendar.shifts.afternoon'),
       description: t('doctorCalendar.shifts.afternoonOPDHours')
     },
     {
@@ -78,6 +81,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
       defaultStartTime: '18:00',
       defaultEndTime: '21:00',
       color: 'bg-violet-50 border-violet-200 text-violet-800',
+      label: t('doctorCalendar.shifts.evening'),
       description: t('doctorCalendar.shifts.eveningOPDHours')
     }
   ];
@@ -285,7 +289,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
   const generateTimeOffPayload = (): CreateBlockPayload => {
     return {
       doctorId,
-      title: `${blockFormData.blockType} - Time Off`,
+      title: `${getBlockTypeLabel(blockFormData.blockType)} - ${t('doctorCalendar.personalizedScheduleModal.block.timeOff')}`,
       blockType: blockFormData.blockType,
       startDateTime: blockFormData.startDateTime,
       endDateTime: blockFormData.endDateTime
@@ -320,8 +324,8 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
      // Enhanced validation
      if (selectedShifts.size === 0) {
        toast({
-         title: t('doctorCalendar.selectShift', 'Select at least one shift'),
-         description: t('doctorCalendar.selectShiftMessage', 'Turn on Morning, Afternoon, or Evening before saving.'),
+         title: t('doctorCalendar.personalizedScheduleModal.validation.selectShift.title'),
+         description: t('doctorCalendar.personalizedScheduleModal.validation.selectShift.description'),
          variant: 'destructive'
        });
        return; // No shifts selected
@@ -331,8 +335,8 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
     if (scheduleMode === 'recurring') {
       if (recurringDays.size === 0) {
         toast({
-          title: t('doctorCalendar.selectRecurringDays', 'Pick recurring days'),
-          description: t('doctorCalendar.selectRecurringDaysMessage', 'Choose at least one day of the week for the recurring schedule.'),
+          title: t('doctorCalendar.personalizedScheduleModal.validation.recurringDays.title'),
+          description: t('doctorCalendar.personalizedScheduleModal.validation.recurringDays.description'),
           variant: 'destructive'
         });
         return; // No days selected for recurring schedule
@@ -342,8 +346,8 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
       const end = parseISO(recurringEndDate);
       if (!(start instanceof Date) || isNaN(start.getTime()) || !(end instanceof Date) || isNaN(end.getTime()) || start >= end) {
         toast({
-          title: t('doctorCalendar.invalidDateRange', 'Fix the recurring date range'),
-          description: t('doctorCalendar.invalidDateRangeMessage', 'End date must be after the start date for recurring schedules.'),
+          title: t('doctorCalendar.personalizedScheduleModal.validation.dateRange.title'),
+          description: t('doctorCalendar.personalizedScheduleModal.validation.dateRange.description'),
           variant: 'destructive'
         });
         return; // End date must be after start date
@@ -370,8 +374,8 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
 
      if (!hasValidConfigs) {
       toast({
-        title: t('doctorCalendar.adjustShiftTimes', 'Check the shift timings'),
-        description: t('doctorCalendar.adjustShiftTimesMessage', 'Each selected shift needs a valid start and end time (end must be after start).'),
+          title: t('doctorCalendar.personalizedScheduleModal.validation.shiftTimes.title'),
+          description: t('doctorCalendar.personalizedScheduleModal.validation.shiftTimes.description'),
         variant: 'destructive'
       });
        return; // Invalid shift configurations
@@ -383,8 +387,8 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
       onOpenChange(false);
     } else {
       toast({
-        title: t('doctorCalendar.noSchedulePayload', 'Nothing to save yet'),
-        description: t('doctorCalendar.noSchedulePayloadMessage', 'Select at least one shift and provide valid times before saving.'),
+        title: t('doctorCalendar.personalizedScheduleModal.validation.noPayload.title'),
+        description: t('doctorCalendar.personalizedScheduleModal.validation.noPayload.description'),
         variant: 'destructive'
       });
     }
@@ -466,7 +470,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
     return true;
   };
 
-   const isScheduleFormValid = () => {
+  const isScheduleFormValid = () => {
      if (selectedShifts.size === 0) return false;
 
      // Validate recurring schedule settings
@@ -495,7 +499,25 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
      });
    };
 
-     const getBlockTypeColor = (blockType: BlockType) => {
+    const getBlockTypeLabel = (blockType: BlockType) => {
+      const keyMap: Record<BlockType, string> = {
+        'Annual Leave': 'annualLeave',
+        'Sick Leave': 'sickLeave',
+        Personal: 'personal',
+        Conference: 'conference',
+        Training: 'training',
+        Meeting: 'meeting',
+        Emergency: 'emergency',
+        Other: 'other'
+      };
+
+      const translationKey = keyMap[blockType] ?? 'other';
+      return t(`doctorCalendar.personalizedScheduleModal.blockTypes.${translationKey}`, {
+        defaultValue: blockType
+      });
+    };
+
+    const getBlockTypeColor = (blockType: BlockType) => {
      switch (blockType) {
        case 'Annual Leave': return 'text-red-600';
        case 'Sick Leave': return 'text-orange-600';
@@ -526,13 +548,13 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
    
 
   const DAYS = [
-    { index: 1, name: 'Monday', short: 'Mon' },
-    { index: 2, name: 'Tuesday', short: 'Tue' },
-    { index: 3, name: 'Wednesday', short: 'Wed' },
-    { index: 4, name: 'Thursday', short: 'Thu' },
-    { index: 5, name: 'Friday', short: 'Fri' },
-    { index: 6, name: 'Saturday', short: 'Sat' },
-    { index: 7, name: 'Sunday', short: 'Sun' }
+    { index: 1, key: 'monday', shortKey: 'mon' },
+    { index: 2, key: 'tuesday', shortKey: 'tue' },
+    { index: 3, key: 'wednesday', shortKey: 'wed' },
+    { index: 4, key: 'thursday', shortKey: 'thu' },
+    { index: 5, key: 'friday', shortKey: 'fri' },
+    { index: 6, key: 'saturday', shortKey: 'sat' },
+    { index: 7, key: 'sunday', shortKey: 'sun' }
   ];
 
   return (
@@ -542,7 +564,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
           <DialogHeader className="pb-4">
             <DialogTitle className="flex items-center gap-2 text-lg">
               <Calendar className="h-5 w-5" />
-              Schedule & Time Off Management
+              {t('doctorCalendar.personalizedScheduleModal.title')}
             </DialogTitle>
           </DialogHeader>
           
@@ -560,7 +582,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                   onClick={() => setScheduleType('schedule')}
                 >
                   <Clock className="h-4 w-4" />
-                  Schedule
+                  {t('doctorCalendar.personalizedScheduleModal.tabs.schedule')}
                 </button>
                 <button
                   type="button"
@@ -572,7 +594,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                   onClick={() => setScheduleType('block')}
                 >
                   <AlertCircle className="h-4 w-4" />
-                  Time Off
+                  {t('doctorCalendar.personalizedScheduleModal.tabs.timeOff')}
                 </button>
               </div>
 
@@ -583,7 +605,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                     <div className="space-y-3">
                       <Label className="text-sm font-semibold flex items-center gap-2">
                         <Info className="h-4 w-4" />
-                        Schedule Type
+                        {t('doctorCalendar.personalizedScheduleModal.scheduleType')}
                       </Label>
                       <div className="flex gap-2">
                         <Button
@@ -594,7 +616,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                           className="flex-1"
                         >
                           <Calendar className="h-4 w-4 mr-2" />
-                          Single Day
+                          {t('doctorCalendar.personalizedScheduleModal.scheduleModes.single')}
                         </Button>
                         <Button
                           type="button"
@@ -604,7 +626,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                           className="flex-1"
                         >
                           <Repeat className="h-4 w-4 mr-2" />
-                          Recurring
+                          {t('doctorCalendar.personalizedScheduleModal.scheduleModes.recurring')}
                         </Button>
                       </div>
                     </div>
@@ -613,7 +635,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                     {scheduleMode === 'single' ? (
                       <div className="space-y-3">
                         <div>
-                          <Label htmlFor="startDate">Schedule Date</Label>
+                          <Label htmlFor="startDate">{t('doctorCalendar.personalizedScheduleModal.dates.scheduleDate')}</Label>
                           <Input
                             id="startDate"
                             type="date"
@@ -635,7 +657,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                       <div className="space-y-3">
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <Label htmlFor="recurringStartDate">Start Date</Label>
+                            <Label htmlFor="recurringStartDate">{t('doctorCalendar.personalizedScheduleModal.dates.startDate')}</Label>
                             <Input
                               id="recurringStartDate"
                               type="date"
@@ -650,7 +672,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                             />
                           </div>
                           <div>
-                            <Label htmlFor="recurringEndDate">End Date</Label>
+                            <Label htmlFor="recurringEndDate">{t('doctorCalendar.personalizedScheduleModal.dates.endDate')}</Label>
                             <Input
                               id="recurringEndDate"
                               type="date"
@@ -668,7 +690,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                         </div>
                         
                         <div>
-                          <Label className="text-sm font-medium">Recurring Days</Label>
+                          <Label className="text-sm font-medium">{t('doctorCalendar.personalizedScheduleModal.dates.recurringDays')}</Label>
                           <div className="flex flex-wrap gap-1 mt-2">
                             {DAYS.map(day => (
                               <Button
@@ -679,7 +701,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                                 onClick={() => handleDayToggle(day.index)}
                                 className="h-7 px-2 text-xs"
                               >
-                                {day.short}
+                                  {t(`doctorCalendar.personalizedScheduleModal.days.short.${day.shortKey}`)}
                               </Button>
                             ))}
                           </div>
@@ -689,7 +711,9 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
 
                     {/* Shift Selection */}
                     <div className="space-y-3">
-                      <Label className="text-sm font-semibold">Select Shifts</Label>
+                      <Label className="text-sm font-semibold">
+                        {t('doctorCalendar.personalizedScheduleModal.shifts.selectLabel')}
+                      </Label>
                       <div className="grid grid-cols-2 gap-2">
                         {SHIFT_TEMPLATES.map((template) => {
                           const isSelected = selectedShifts.has(template.name);
@@ -711,7 +735,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                                     {template.icon}
                                   </div>
                                   <div className="flex-1">
-                                    <h4 className="font-medium text-sm">{template.name}</h4>
+                                    <h4 className="font-medium text-sm">{template.label}</h4>
                                     <p className="text-xs text-gray-600">{template.description}</p>
                                   </div>
                                   <button
@@ -739,7 +763,9 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                                 {isSelected && (
                                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                     <div>
-                                      <Label className="text-xs">Start Time</Label>
+                                      <Label className="text-xs">
+                                        {t('doctorCalendar.personalizedScheduleModal.shifts.startTime')}
+                                      </Label>
                                       <Input
                                         type="time"
                                         value={config.startTime}
@@ -752,7 +778,9 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                                       />
                                     </div>
                                     <div>
-                                      <Label className="text-xs">End Time</Label>
+                                      <Label className="text-xs">
+                                        {t('doctorCalendar.personalizedScheduleModal.shifts.endTime')}
+                                      </Label>
                                       <Input
                                         type="time"
                                         value={config.endTime}
@@ -765,7 +793,9 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                                       />
                                     </div>
                                     <div>
-                                      <Label className="text-xs">Duration (min)</Label>
+                                      <Label className="text-xs">
+                                        {t('doctorCalendar.personalizedScheduleModal.shifts.duration')}
+                                      </Label>
                                       <Input
                                         type="number"
                                         value={config.slotDuration}
@@ -794,7 +824,9 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                     <div className="space-y-4">
                       {/* Block Type Selection */}
                       <div>
-                        <Label htmlFor="blockType" className="text-sm font-semibold">Type of Time Off</Label>
+                        <Label htmlFor="blockType" className="text-sm font-semibold">
+                          {t('doctorCalendar.personalizedScheduleModal.block.typeLabel')}
+                        </Label>
                         <Select
                           value={blockFormData.blockType}
                           onValueChange={(value: BlockType) => setBlockFormData(prev => ({ ...prev, blockType: value }))}
@@ -804,28 +836,28 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Annual Leave" className={getBlockTypeColor('Annual Leave')}>
-                              Annual Leave
+                              {getBlockTypeLabel('Annual Leave')}
                             </SelectItem>
                             <SelectItem value="Sick Leave" className={getBlockTypeColor('Sick Leave')}>
-                              Sick Leave
+                              {getBlockTypeLabel('Sick Leave')}
                             </SelectItem>
                             <SelectItem value="Personal" className={getBlockTypeColor('Personal')}>
-                              Personal
+                              {getBlockTypeLabel('Personal')}
                             </SelectItem>
                             <SelectItem value="Conference" className={getBlockTypeColor('Conference')}>
-                              Conference
+                              {getBlockTypeLabel('Conference')}
                             </SelectItem>
                             <SelectItem value="Training" className={getBlockTypeColor('Training')}>
-                              Training
+                              {getBlockTypeLabel('Training')}
                             </SelectItem>
                             <SelectItem value="Meeting" className={getBlockTypeColor('Meeting')}>
-                              Meeting
+                              {getBlockTypeLabel('Meeting')}
                             </SelectItem>
                             <SelectItem value="Emergency" className={getBlockTypeColor('Emergency')}>
-                              Emergency
+                              {getBlockTypeLabel('Emergency')}
                             </SelectItem>
                             <SelectItem value="Other" className={getBlockTypeColor('Other')}>
-                              Other
+                              {getBlockTypeLabel('Other')}
                             </SelectItem>
                           </SelectContent>
                         </Select>
@@ -835,7 +867,9 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                       <div className="grid grid-cols-2 gap-4">
                         {/* Start Date & Time */}
                         <div className="space-y-2">
-                          <Label className="text-sm font-semibold">Start Date & Time</Label>
+                          <Label className="text-sm font-semibold">
+                            {t('doctorCalendar.personalizedScheduleModal.block.startDateTime')}
+                          </Label>
                           <div className="space-y-2">
                             <Input
                               type="date"
@@ -877,7 +911,9 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
 
                         {/* End Date & Time */}
                         <div className="space-y-2">
-                          <Label className="text-sm font-semibold">End Date & Time</Label>
+                          <Label className="text-sm font-semibold">
+                            {t('doctorCalendar.personalizedScheduleModal.block.endDateTime')}
+                          </Label>
                           <div className="space-y-2">
                             <Input
                               type="date"
@@ -924,12 +960,27 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                       <Card className="p-3 bg-gray-50">
                         <div className="flex items-center gap-2 mb-2">
                           <CheckCircle className="h-4 w-4 text-green-600" />
-                          <span className="text-sm font-medium">Time Off Summary</span>
+                          <span className="text-sm font-medium">
+                            {t('doctorCalendar.personalizedScheduleModal.block.summaryTitle')}
+                          </span>
                         </div>
                         <div className="text-xs text-gray-600 space-y-1">
-                          <p><strong>Type:</strong> {blockFormData.blockType}</p>
-                          <p><strong>Start:</strong> {blockFormData.startDateTime ? format(new Date(blockFormData.startDateTime), 'MMM dd, yyyy HH:mm') : 'Not set'}</p>
-                          <p><strong>End:</strong> {blockFormData.endDateTime ? format(new Date(blockFormData.endDateTime), 'MMM dd, yyyy HH:mm') : 'Not set'}</p>
+                          <p>
+                            <strong>{t('doctorCalendar.personalizedScheduleModal.block.summary.type')}</strong>{' '}
+                            {getBlockTypeLabel(blockFormData.blockType)}
+                          </p>
+                          <p>
+                            <strong>{t('doctorCalendar.personalizedScheduleModal.block.summary.start')}</strong>{' '}
+                            {blockFormData.startDateTime
+                              ? format(new Date(blockFormData.startDateTime), 'MMM dd, yyyy HH:mm')
+                              : t('doctorCalendar.personalizedScheduleModal.block.summary.notSet')}
+                          </p>
+                          <p>
+                            <strong>{t('doctorCalendar.personalizedScheduleModal.block.summary.end')}</strong>{' '}
+                            {blockFormData.endDateTime
+                              ? format(new Date(blockFormData.endDateTime), 'MMM dd, yyyy HH:mm')
+                              : t('doctorCalendar.personalizedScheduleModal.block.summary.notSet')}
+                          </p>
                         </div>
                       </Card>
                     </div>
@@ -946,14 +997,18 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                 onClick={() => onOpenChange(false)}
                 className="w-full sm:w-auto h-11 text-sm font-semibold"
               >
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 type="submit"
                 disabled={isLoading || (scheduleType === 'schedule' ? !isScheduleFormValid() : !isBlockFormValid())}
                 className="w-full sm:w-auto h-11 text-sm font-semibold bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 shadow-lg shadow-blue-200/60 dark:shadow-blue-900/30"
               >
-                {isLoading ? 'Saving...' : scheduleType === 'schedule' ? 'Save Schedule' : 'Save Time Off'}
+                {isLoading
+                  ? t('doctorCalendar.personalizedScheduleModal.actions.saving')
+                  : scheduleType === 'schedule'
+                    ? t('doctorCalendar.personalizedScheduleModal.actions.saveSchedule')
+                    : t('doctorCalendar.personalizedScheduleModal.actions.saveTimeOff')}
               </Button>
             </DialogFooter>
           </form>

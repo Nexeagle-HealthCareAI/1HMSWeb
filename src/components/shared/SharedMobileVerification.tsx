@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -74,13 +75,22 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
   allowSendOTP = true,
   title,
   subtitle,
-  sendButtonText = 'Send OTP',
-  verifyButtonText = 'Verify OTP',
-  resendButtonText = 'Resend OTP',
+  sendButtonText,
+  verifyButtonText,
+  resendButtonText,
   className = ''
 }) => {
+  const { t } = useTranslation();
   const [errors, setErrors] = useState<{ mobile?: string; otp?: string }>({});
   const [hasAutoVerified, setHasAutoVerified] = useState(false);
+
+  const showHeader = Boolean(title || subtitle);
+  const resolvedTitle = title ?? (showHeader ? getDefaultTitle() : undefined);
+  const resolvedSubtitle = subtitle ?? (showHeader ? getDefaultSubtitle() : undefined);
+  const resolvedSendButtonText = sendButtonText ?? t('mobileVerification.buttons.sendOtp');
+  const resolvedVerifyButtonText = verifyButtonText ?? t('mobileVerification.buttons.verifyOtp');
+  const resolvedResendButtonText = resendButtonText ?? t('mobileVerification.buttons.resendOtp');
+  const progressPercent = Math.round((currentStep / totalSteps) * 100);
 
   // Format mobile number as user types
   const formatMobile = (value: string) => {
@@ -133,12 +143,12 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
   const handleSendOTP = () => {
     const cleanMobile = ValidationUtils.cleanMobileNumber(mobile);
     if (!cleanMobile) {
-      setErrors(prev => ({ ...prev, mobile: 'Mobile number is required' }));
+      setErrors(prev => ({ ...prev, mobile: t('mobileVerification.errors.mobileRequired') }));
       return;
     }
     
     if (!ValidationUtils.isValidMobile(cleanMobile)) {
-      setErrors(prev => ({ ...prev, mobile: 'Please enter a valid mobile number' }));
+      setErrors(prev => ({ ...prev, mobile: t('mobileVerification.errors.mobileInvalid') }));
       return;
     }
     
@@ -147,7 +157,7 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
 
   const handleVerifyOTP = () => {
     if (!otp || otp.length !== 6) {
-      setErrors(prev => ({ ...prev, otp: 'Please enter a valid 6-digit OTP' }));
+      setErrors(prev => ({ ...prev, otp: t('mobileVerification.errors.otpInvalid') }));
       return;
     }
     
@@ -156,12 +166,12 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
 
   // Auto-submit OTP when 6 digits are entered
   useEffect(() => {
-    if (otp.length === 6 && otpSent && !isLoading && !hasAutoVerified) {
+    if (autoVerify && otp.length === 6 && otpSent && !isLoading && !hasAutoVerified) {
       console.log('Auto-verifying OTP...');
       setHasAutoVerified(true);
       handleVerifyOTP();
     }
-  }, [otp, otpSent, isLoading, hasAutoVerified]);
+  }, [otp, otpSent, isLoading, hasAutoVerified, autoVerify]);
 
   // Reset auto-verification flag when OTP is cleared or changed
   useEffect(() => {
@@ -179,22 +189,22 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
   const getDefaultTitle = () => {
     switch (mode) {
       case 'login':
-        return 'Login with OTP';
+        return t('mobileVerification.titles.login');
       case 'forgot-password':
-        return 'Reset Password';
+        return t('mobileVerification.titles.forgot-password');
       default:
-        return 'Mobile Verification';
+        return t('mobileVerification.titles.registration');
     }
   };
 
   const getDefaultSubtitle = () => {
     switch (mode) {
       case 'login':
-        return 'Enter your mobile number to receive a login OTP';
+        return t('mobileVerification.subtitles.login');
       case 'forgot-password':
-        return 'Enter your mobile number to reset your password';
+        return t('mobileVerification.subtitles.forgot-password');
       default:
-        return 'Enter your mobile number to verify your account';
+        return t('mobileVerification.subtitles.registration');
     }
   };
 
@@ -204,30 +214,30 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
       {showProgress && (
         <div className="mb-4">
           <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-            <span>Step {currentStep} of {totalSteps}</span>
-            <span>{Math.round((currentStep / totalSteps) * 100)}%</span>
+            <span>{t('mobileVerification.progress.step', { currentStep, totalSteps })}</span>
+            <span>{t('mobileVerification.progress.percent', { percent: progressPercent })}</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div 
               className="bg-primary h-2 rounded-full transition-all duration-300"
-              style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+              style={{ width: `${progressPercent}%` }}
             />
           </div>
         </div>
       )}
 
       {/* Title and subtitle */}
-      {(title || subtitle) && (
+      {showHeader && (resolvedTitle || resolvedSubtitle) && (
         <div className="text-center mb-4">
-          {title && <h2 className="text-lg font-semibold text-gray-900 mb-1">{title}</h2>}
-          {subtitle && <p className="text-sm text-gray-600">{subtitle}</p>}
+          {resolvedTitle && <h2 className="text-lg font-semibold text-gray-900 mb-1">{resolvedTitle}</h2>}
+          {resolvedSubtitle && <p className="text-sm text-gray-600">{resolvedSubtitle}</p>}
         </div>
       )}
 
       {/* Mobile Number Input */}
       <div className="space-y-2">
         <Label htmlFor="mobile" className="text-sm font-medium">
-          Mobile Number
+          {t('mobileVerification.labels.mobile')}
         </Label>
         <div className="relative">
           <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -236,7 +246,7 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
             type="tel"
             value={mobile}
             onChange={handleMobileChange}
-            placeholder="+91-XXX-XXX-XXXX"
+            placeholder={t('mobileVerification.placeholders.mobile')}
             className={`h-10 pl-10 text-sm ${errors.mobile ? 'border-red-500' : ''}`}
             disabled={isLoading || mobileDisabled}
           />
@@ -258,10 +268,10 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
           {isLoading ? (
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              Sending OTP...
+              {t('mobileVerification.buttons.sendingOtp')}
             </div>
           ) : (
-            sendButtonText
+            resolvedSendButtonText
           )}
         </Button>
       )}
@@ -270,7 +280,7 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
       {!otpSent && !allowSendOTP && mobile && (
         <div className="text-center py-2">
           <p className="text-sm text-muted-foreground">
-            Change mobile number to send new OTP
+            {t('mobileVerification.messages.changeMobileToResend')}
           </p>
         </div>
       )}
@@ -280,14 +290,14 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
         <div className="space-y-3">
           <div className="space-y-2">
             <Label htmlFor="otp" className="text-sm font-medium">
-              Enter OTP
+              {t('mobileVerification.labels.otp')}
             </Label>
             <Input
               id="otp"
               type="text"
               value={otp}
               onChange={handleOtpChange}
-              placeholder="Enter 6-digit OTP"
+              placeholder={t('mobileVerification.placeholders.otp')}
               className={`h-10 text-center tracking-widest text-sm font-mono ${
                 errors.otp || hasVerificationError ? 'border-red-500' : ''
               }`}
@@ -316,7 +326,9 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
               disabled={resendTimer > 0 || isLoading}
             >
               <RefreshCw className="h-4 w-4 mr-1" />
-              {resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : resendButtonText}
+              {resendTimer > 0
+                ? t('mobileVerification.buttons.resendIn', { seconds: resendTimer })
+                : resolvedResendButtonText}
             </Button>
           </div>
 
@@ -330,10 +342,10 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
               {isLoading ? (
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Verifying...
+                  {t('mobileVerification.buttons.verifying')}
                 </div>
               ) : (
-                verifyButtonText
+                resolvedVerifyButtonText
               )}
             </Button>
           )}
@@ -343,7 +355,7 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
             <div className="text-center py-2">
               <div className="flex items-center justify-center gap-2 text-blue-600">
                 <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-sm font-medium">Verifying OTP automatically...</span>
+                <span className="text-sm font-medium">{t('mobileVerification.messages.autoVerifying')}</span>
               </div>
             </div>
           )}
@@ -359,7 +371,7 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
                   disabled={isLoading}
                   className="flex-1 h-10"
                 >
-                  Back
+                  {t('common.back')}
                 </Button>
               )}
               {onNext && (
@@ -369,7 +381,7 @@ export const SharedMobileVerification: React.FC<SharedMobileVerificationProps> =
                   disabled={isLoading || !otpSent}
                   className="flex-1 h-10 bg-primary text-white"
                 >
-                  Next
+                  {t('common.next')}
                 </Button>
               )}
             </div>

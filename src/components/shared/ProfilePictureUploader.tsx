@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
@@ -28,6 +29,7 @@ export const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
   className,
   autoUpload = true,
 }) => {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const { userId } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -55,8 +57,8 @@ export const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
     // Validate file type
     if (!file.type.startsWith('image/')) {
       toast({
-        title: 'Invalid file type',
-        description: 'Please select an image file (PNG, JPG, JPEG, etc.)',
+        title: t('profilePictureUploader.errors.invalidTypeTitle'),
+        description: t('profilePictureUploader.errors.invalidTypeDescription'),
         variant: 'destructive',
       });
       return;
@@ -66,8 +68,8 @@ export const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
       toast({
-        title: 'File too large',
-        description: 'Please select an image smaller than 5MB',
+        title: t('profilePictureUploader.errors.fileTooLargeTitle'),
+        description: t('profilePictureUploader.errors.fileTooLargeDescription'),
         variant: 'destructive',
       });
       return;
@@ -92,8 +94,8 @@ export const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
   const uploadImage = async (file: File) => {
     if (!userId) {
       toast({
-        title: 'Error',
-        description: 'User not authenticated',
+        title: t('profilePictureUploader.errors.authTitle'),
+        description: t('profilePictureUploader.errors.authDescription'),
         variant: 'destructive',
       });
       return;
@@ -109,8 +111,8 @@ export const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
 
       if (response.success) {
         toast({
-          title: 'Success',
-          description: 'Profile picture updated successfully',
+          title: t('profilePictureUploader.success.uploadTitle'),
+          description: t('profilePictureUploader.success.uploadDescription'),
         });
         
         // Call the callback with the new image URL
@@ -123,8 +125,8 @@ export const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
     } catch (error: any) {
       console.error('Upload error:', error);
       toast({
-        title: 'Upload failed',
-        description: error.message || 'Failed to upload profile picture. Please try again.',
+        title: t('profilePictureUploader.errors.uploadFailedTitle'),
+        description: error.message || t('profilePictureUploader.errors.uploadFailedDescription'),
         variant: 'destructive',
       });
       setPreviewUrl(null);
@@ -165,8 +167,8 @@ export const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
     // Otherwise, call the API to remove from server (legacy behavior)
     if (!userId) {
       toast({
-        title: 'Error',
-        description: 'User not authenticated',
+        title: t('profilePictureUploader.errors.authTitle'),
+        description: t('profilePictureUploader.errors.authDescription'),
         variant: 'destructive',
       });
       return;
@@ -179,8 +181,8 @@ export const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
 
       if (response.success) {
         toast({
-          title: 'Success',
-          description: 'Profile picture removed successfully',
+          title: t('profilePictureUploader.success.removeTitle'),
+          description: t('profilePictureUploader.success.removeDescription'),
         });
         
         // Clear the preview and notify parent component
@@ -198,8 +200,8 @@ export const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
     } catch (error: any) {
       console.error('Remove error:', error);
       toast({
-        title: 'Remove failed',
-        description: error.message || 'Failed to remove profile picture. Please try again.',
+        title: t('profilePictureUploader.errors.removeFailedTitle'),
+        description: error.message || t('profilePictureUploader.errors.removeFailedDescription'),
         variant: 'destructive',
       });
     } finally {
@@ -223,7 +225,7 @@ export const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
       {/* Avatar */}
       <div className="relative">
         <Avatar className={config.avatar}>
-          <AvatarImage src={displayImageUrl} alt="Profile picture" />
+          <AvatarImage src={displayImageUrl} alt={t('profilePictureUploader.alt')} />
           <AvatarFallback>
             <Camera className="h-6 w-6 text-muted-foreground" />
           </AvatarFallback>
@@ -243,7 +245,7 @@ export const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
       {/* Helper text */}
       {!disabled && !displayImageUrl && (
         <p className="text-xs text-muted-foreground text-center">
-          Click upload button below to add a profile picture
+          {t('profilePictureUploader.helperText')}
         </p>
       )}
 
@@ -259,7 +261,7 @@ export const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
             className={cn(config.button, 'gap-2')}
           >
             <Upload className={config.icon} />
-            {isUploading ? 'Uploading...' : 'Upload'}
+            {isUploading ? t('profilePictureUploader.buttons.uploading') : t('profilePictureUploader.buttons.upload')}
           </Button>
 
           {displayImageUrl && (
@@ -272,7 +274,7 @@ export const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
               className={cn(config.button, 'gap-2')}
             >
               <X className={config.icon} />
-              {isRemoving ? 'Removing...' : 'Remove'}
+              {isRemoving ? t('profilePictureUploader.buttons.removing') : t('profilePictureUploader.buttons.remove')}
             </Button>
           )}
         </div>
@@ -291,7 +293,7 @@ export const ProfilePictureUploader: React.FC<ProfilePictureUploaderProps> = ({
       {/* Upload/Remove progress indicator */}
       {(isUploading || isRemoving) && (
         <div className="text-xs text-muted-foreground">
-          {isUploading ? 'Uploading image...' : 'Removing image...'}
+          {isUploading ? t('profilePictureUploader.status.uploading') : t('profilePictureUploader.status.removing')}
         </div>
       )}
     </div>

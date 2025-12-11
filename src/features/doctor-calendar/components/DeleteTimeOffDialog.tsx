@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Calendar, Clock, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
 interface DeleteTimeOffDialogProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export const DeleteTimeOffDialog: React.FC<DeleteTimeOffDialogProps> = ({
   timeOffData,
   isPending,
 }) => {
+  const { t } = useTranslation();
   console.log('🔍 DeleteTimeOffDialog props:', {
     isOpen,
     timeOffData,
@@ -86,11 +88,11 @@ export const DeleteTimeOffDialog: React.FC<DeleteTimeOffDialogProps> = ({
               <Trash2 className="h-6 w-6 text-red-600" />
             </div>
             <DialogTitle className="text-xl font-semibold text-red-900">
-              Delete Time Off
+              {t('doctorCalendar.deleteTimeOffDialog.title')}
             </DialogTitle>
           </div>
           <DialogDescription className="text-base text-gray-700">
-            Are you sure you want to delete this time-off entry? This action cannot be undone.
+            {t('doctorCalendar.deleteTimeOffDialog.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -103,13 +105,19 @@ export const DeleteTimeOffDialog: React.FC<DeleteTimeOffDialogProps> = ({
                   <Calendar className="h-4 w-4 text-blue-600" />
                 </div>
                 <div>
-                  <h4 className="font-medium text-gray-900">Time Off Details</h4>
-                  <p className="text-sm text-gray-600">Entry to be deleted</p>
+                  <h4 className="font-medium text-gray-900">
+                    {t('doctorCalendar.deleteTimeOffDialog.detailsTitle')}
+                  </h4>
+                  <p className="text-sm text-gray-600">
+                    {t('doctorCalendar.deleteTimeOffDialog.detailsSubtitle')}
+                  </p>
                 </div>
               </div>
               <div className="space-y-2">
                 <div>
-                  <span className="text-sm font-medium text-gray-700">Reason:</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    {t('doctorCalendar.deleteTimeOffDialog.labels.reason')}
+                  </span>
                   <span className="ml-2 text-sm text-gray-900">{timeOffData.reason}</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -134,12 +142,14 @@ export const DeleteTimeOffDialog: React.FC<DeleteTimeOffDialogProps> = ({
               <div className="flex items-start gap-3">
                 <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
                 <div className="space-y-1">
-                  <h4 className="font-medium text-red-900">Important Notice</h4>
+                  <h4 className="font-medium text-red-900">
+                    {t('doctorCalendar.deleteTimeOffDialog.warning.title')}
+                  </h4>
                   <ul className="text-sm text-red-700 space-y-1">
-                    <li>• This time-off entry will be permanently deleted</li>
-                    <li>• Any blocked appointments during this period will be unblocked</li>
-                    <li>• This action cannot be undone</li>
-                    <li>• You may need to reschedule affected appointments</li>
+                    <li>• {t('doctorCalendar.deleteTimeOffDialog.warning.bullet1')}</li>
+                    <li>• {t('doctorCalendar.deleteTimeOffDialog.warning.bullet2')}</li>
+                    <li>• {t('doctorCalendar.deleteTimeOffDialog.warning.bullet3')}</li>
+                    <li>• {t('doctorCalendar.deleteTimeOffDialog.warning.bullet4')}</li>
                   </ul>
                 </div>
               </div>
@@ -154,7 +164,7 @@ export const DeleteTimeOffDialog: React.FC<DeleteTimeOffDialogProps> = ({
             disabled={isPending}
             className="flex-1"
           >
-            Cancel
+            {t('doctorCalendar.deleteTimeOffDialog.actions.cancel')}
           </Button>
           <Button
             variant="destructive"
@@ -165,12 +175,12 @@ export const DeleteTimeOffDialog: React.FC<DeleteTimeOffDialogProps> = ({
             {isPending ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Deleting...
+                {t('doctorCalendar.deleteTimeOffDialog.actions.deleting')}
               </>
             ) : (
               <>
                 <Trash2 className="h-4 w-4 mr-2" />
-                Delete Time Off
+                {t('doctorCalendar.deleteTimeOffDialog.actions.delete')}
               </>
             )}
           </Button>

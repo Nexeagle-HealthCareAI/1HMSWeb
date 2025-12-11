@@ -88,7 +88,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const userRole = authStore.getUserRole() || 'Doctor';
   const userId = authStore.getUserId();
   const profileTarget = (userRole === 'Doctor' || userRole === 'AdminDoctor') ? '/profile?tab=professional' : '/profile';
-  const personalProfileLabel = t('header.personalProfile', { defaultValue: 'Personal Profile' });
+  const personalProfileLabel = t('header.personalProfile');
 
   // Keyboard shortcut for sidebar toggle
   useEffect(() => {
@@ -201,7 +201,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 setSidebarCollapsed(!sidebarCollapsed);
               }}
               className="relative h-10 w-10 p-0 hover:bg-white/90 dark:hover:bg-gray-800/90 rounded-xl transition-all duration-300 hover:scale-110 hover:shadow-lg border border-gray-200/50 dark:border-gray-600/50 hover:border-blue-300 dark:hover:border-blue-600 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-md active:scale-95 active:rotate-3 overflow-hidden"
-              title="Collapse sidebar"
+              title={t('header.collapseSidebar')}
             >
               {/* Ripple effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-indigo-400/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -268,12 +268,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                       {isActive && (
                         <div className="flex items-center gap-2 mt-1">
                           <div className="w-1.5 h-1.5 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
-                          <span className="text-xs font-medium text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-800/60 px-2 py-1 rounded-full">Active</span>
+                          <span className="text-xs font-medium text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-800/60 px-2 py-1 rounded-full">{t('common.active')}</span>
                         </div>
                       )}
                       {!isActive && isDisabled && (
                         <span className="mt-1 text-xs font-medium text-amber-600 dark:text-amber-300">
-                          Restricted until hospital info complete
+                          {t('header.restrictedAccessMessage')}
                         </span>
                       )}
                     </div>
@@ -309,7 +309,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 setSidebarCollapsed(false);
               }}
               className="h-8 w-8 p-0 hover:bg-blue-500 hover:text-white rounded-full border-2 border-blue-500 bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-300 shadow-lg hover:shadow-xl"
-              title="Expand sidebar"
+              title={t('header.expandSidebar')}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -327,7 +327,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                text-gray-700 dark:text-gray-200 hover:text-red-600 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 border border-gray-200 dark:border-gray-500 hover:border-red-300 dark:hover:border-red-600
              `}
              onClick={handleLogout}
-             title={sidebarCollapsed ? "Logout" : undefined}
+             title={sidebarCollapsed ? t('common.logout') : undefined}
            >
              <div className={`
                relative flex items-center justify-center rounded-lg p-3
@@ -339,8 +339,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
              
              {!sidebarCollapsed && (
                <div className="flex flex-col items-start">
-                 <span className="font-semibold text-sm text-gray-900 dark:text-white">Logout</span>
-                 <span className="text-xs text-red-600 dark:text-red-400">Sign out safely</span>
+                <span className="font-semibold text-sm text-gray-900 dark:text-white">{t('common.logout')}</span>
+                <span className="text-xs text-red-600 dark:text-red-400">{t('header.logoutSubtitle')}</span>
                </div>
              )}
            </Button>
@@ -388,7 +388,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               {/* Sidebar Toggle Hint */}
               <div className="hidden lg:flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-md border border-gray-200 dark:border-gray-600">
                 <span className="font-medium">Ctrl+B</span>
-                <span className="text-gray-500 dark:text-gray-400">to toggle sidebar</span>
+                  <span className="text-gray-500 dark:text-gray-400">{t('header.toggleSidebarHint')}</span>
               </div>
               
               {/* Profile Completion Indicator */}

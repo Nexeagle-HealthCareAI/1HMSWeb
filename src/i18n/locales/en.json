@@ -114,6 +114,77 @@
       "unlockIn": "Will unlock in {{time}}"
     }
   },
+  "mobileVerification": {
+    "titles": {
+      "registration": "Mobile Verification",
+      "login": "Login with OTP",
+      "forgot-password": "Reset Password"
+    },
+    "subtitles": {
+      "registration": "Enter your mobile number to verify your account",
+      "login": "Enter your mobile number to receive a login OTP",
+      "forgot-password": "Enter your mobile number to reset your password"
+    },
+    "labels": {
+      "mobile": "Mobile Number",
+      "otp": "Enter OTP"
+    },
+    "placeholders": {
+      "mobile": "+91-XXX-XXX-XXXX",
+      "otp": "Enter 6-digit OTP"
+    },
+    "progress": {
+      "step": "Step {{currentStep}} of {{totalSteps}}",
+      "percent": "{{percent}}%"
+    },
+    "buttons": {
+      "sendOtp": "Send OTP",
+      "sendingOtp": "Sending OTP...",
+      "verifyOtp": "Verify OTP",
+      "verifying": "Verifying...",
+      "resendOtp": "Resend OTP",
+      "resendIn": "Resend OTP in {{seconds}}s",
+      "back": "Back",
+      "next": "Next"
+    },
+    "errors": {
+      "mobileRequired": "Mobile number is required",
+      "mobileInvalid": "Please enter a valid mobile number",
+      "otpInvalid": "Please enter a valid 6-digit OTP"
+    },
+    "messages": {
+      "changeMobileToResend": "Change mobile number to send new OTP",
+      "autoVerifying": "Verifying OTP automatically..."
+    }
+  },
+  "prescriptionPreview": {
+    "title": "Prescription Preview",
+    "description": "Review, download, share, or print the generated prescription.",
+    "previewFrameTitle": "Prescription preview",
+    "actions": {
+      "title": "Prescription Actions",
+      "description": "Download, share, or print your prescription PDF. These options help you keep, send, or use your prescription as needed.",
+      "tip": "Tip: For best print results, use A4 paper and set margins to minimum.",
+      "download": "Download PDF",
+      "share": "Share",
+      "print": "Print"
+    },
+    "share": {
+      "title": "Prescription",
+      "text": "Prescription PDF",
+      "unsupported": "Sharing is not supported in this browser."
+    }
+  },
+  "passwordResetSuccess": {
+    "title": "Password Reset Successful!",
+    "description": "Your password has been updated. You can now log in with the new password or reset another if needed.",
+    "actions": {
+      "loginNow": "Login Now",
+      "resetAnother": "Reset Another Password",
+      "continueReset": "Or continue with password reset",
+      "goToLogin": "Go to Login Page"
+    }
+  },
   "navigation": {
     "dashboard": "Dashboard",
     "appointments": "Appointments",
@@ -428,10 +499,13 @@
   },
   "doctorCalendar": {
     "title": "Doctor Calendar",
+    "doctorPrefix": "Dr. {{name}}",
+    "doctorFallback": "Doctor",
     "myCalendar": "My Calendar",
     "calendarView": "Calendar View",
     "scheduleAndTimeOff": "Schedule & Time Off",
     "clickForToday": "Click for today",
+    "weekOf": "Week of {{date}}",
     "views": {
       "month": "Month",
       "week": "Week",
@@ -441,6 +515,33 @@
       "previous": "Previous",
       "next": "Next",
       "today": "Today"
+    },
+    "overrideBadge": "Override",
+    "clickToManageHint": "Tap to manage override",
+    "appointmentDetailsFallbackTitle": "Appointment Details",
+    "appointmentDetailsFallbackDescription": "Patient: {{patient}}, Token: {{token}}",
+    "blockDetailsTitle": "Block Details",
+    "blockDetailsDescription": "{{title}}",
+    "eventMovedDescription": "{{title}} moved to {{date}}",
+    "eventResizedDescription": "{{title}} resized",
+    "hospitalContextMissing": "Hospital context is missing. Please refresh and try again.",
+    "successDialog": {
+      "continue": "Great! Continue"
+    },
+    "confirmDeleteOverride": "Delete override shift?",
+    "confirmDeleteOverrideMessage": "This will remove the override and revert to your default schedule for:",
+    "deleteOverrideIrreversible": "This action cannot be undone.",
+    "deleting": "Deleting...",
+    "deleteOverride": "Delete override",
+    "cancel": "Cancel",
+    "days": {
+      "sunday": "Sunday",
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday"
     },
     "shifts": {
       "morning": "Morning",
@@ -460,6 +561,41 @@
       "emergencyScheduleDescription": "24/7 emergency department schedule",
       "partTimeScheduleDescription": "Part-time morning schedule"
     },
+    "weeklyTemplates": {
+      "title": "Weekly Templates",
+      "description": "Configure recurring weekly shifts. Only active templates will be applied.",
+      "labels": {
+        "start": "Start",
+        "end": "End",
+        "slotMinutes": "Slot (min)",
+        "maxPatients": "Max Patients"
+      },
+      "placeholders": {
+        "maxPatients": "∞"
+      },
+      "actions": {
+        "reset": "Reset",
+        "save": "Save",
+        "saving": "Saving..."
+      },
+      "errors": {
+        "endAfterStart": "End time must be after start time",
+        "slotDurationPositive": "Slot duration must be greater than 0",
+        "maxPatientsPositive": "Max patients must be greater than 0"
+      },
+      "toast": {
+        "presetAppliedTitle": "Preset Applied",
+        "presetAppliedDescription": "\"{{preset}}\" schedule has been applied. Review and save to confirm.",
+        "dayCopiedTitle": "Day Copied",
+        "dayCopiedDescription": "{{day}} schedule copied to all other days.",
+        "validationTitle": "Validation Errors",
+        "validationDescription": "Please fix the errors before saving.",
+        "saveSuccessTitle": "Templates Saved",
+        "saveSuccessDescription": "Weekly templates have been updated successfully.",
+        "saveFailedTitle": "Save Failed",
+        "saveFailedDescription": "Failed to save templates. Please try again."
+      }
+    },
     "shiftDetails": {
       "calendarGuide": "Calendar Guide",
       "dataSource": "Data Source",
@@ -473,6 +609,18 @@
       "timeOffPeriodsActive": "📅 Time-Off Periods Active",
       "timeOffAffectsShifts": "You have scheduled time-off periods. Regular shifts may be affected.",
       "timeOff": "Time Off",
+      "timeOffUnknown": "Date TBD",
+      "timeOffSummary": "Upcoming Time Off",
+      "entries": "entries",
+      "timeOffConflictLabel": "(Time-off)",
+      "untitledShift": "Shift",
+      "customTiming": "Custom timing",
+      "shiftOverview": "Shift Overview",
+      "timeRanges": "slots",
+      "slots": "slots",
+      "patients": "pts",
+      "noTimeRanges": "No time ranges configured",
+      "defaultShiftNotice": "This is part of your default schedule and cannot be deleted.",
       "allDay": "All Day",
       "partial": "Partial",
       "activeShifts": "Active Shifts",
@@ -641,6 +789,205 @@
       "retry": "Retry",
       "tryAgain": "Try Again"
     },
+    "dateRangeSelection": {
+      "title": "Date Range Selection",
+      "description": "Review and confirm the selected date range",
+      "viewTypes": {
+        "month": "Month",
+        "week": "Week",
+        "day": "Day",
+        "block": "Custom"
+      },
+      "viewDescriptions": {
+        "month": "Month range selected - covers the entire month",
+        "week": "Week range selected - covers Monday to Sunday",
+        "day": "Day range selected - covers the selected day",
+        "block": "Custom range selected - covers your selected dates",
+        "default": "Date range selected"
+      },
+      "selectedRange": "Selected Range:",
+      "days": "{{count}} day",
+      "days_plural": "{{count}} days",
+      "to": "to",
+      "customizeRange": "Customize Range:",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "daysIncluded": "Days Included:",
+      "actions": {
+        "cancel": "Cancel",
+        "confirmRange": "Confirm Range"
+      }
+    },
+    "deleteTimeOffDialog": {
+      "title": "Delete Time Off",
+      "description": "Are you sure you want to delete this time-off entry? This action cannot be undone.",
+      "detailsTitle": "Time Off Details",
+      "detailsSubtitle": "Entry to be deleted",
+      "labels": {
+        "reason": "Reason:"
+      },
+      "warning": {
+        "title": "Important Notice",
+        "bullet1": "This time-off entry will be permanently deleted",
+        "bullet2": "Any blocked appointments during this period will be unblocked",
+        "bullet3": "This action cannot be undone",
+        "bullet4": "You may need to reschedule affected appointments"
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "delete": "Delete Time Off",
+        "deleting": "Deleting..."
+      }
+    },
+    "editShiftModal": {
+      "title": "Edit {{shiftName}} Shift - {{date}}",
+      "info": "Changes apply only to this specific shift on the selected date. Your default weekly schedule remains unchanged.",
+      "unknownDate": "Unknown Date",
+      "labels": {
+        "overrideDate": "Override Date",
+        "startDate": "Start Date",
+        "endDate": "End Date",
+        "startTime": "Start Time",
+        "endTime": "End Time",
+        "slotDuration": "Slot Duration (minutes)"
+      },
+      "placeholders": {
+        "slotDuration": "Enter any integer"
+      },
+      "actions": {
+        "delete": "Delete Override",
+        "cancel": "Cancel",
+        "save": "Save Override",
+        "saving": "Saving..."
+      }
+    },
+    "legend": {
+      "defaultShifts": "Default Shifts",
+      "personalizedShifts": "Personalized Shifts",
+      "unavailable": "Unavailable",
+      "caption": "Blue: working hours, Red: unavailable periods"
+    },
+    "personalizedScheduleModal": {
+      "title": "Schedule & Time Off Management",
+      "tabs": {
+        "schedule": "Schedule",
+        "timeOff": "Time Off"
+      },
+      "scheduleType": "Schedule Type",
+      "scheduleModes": {
+        "single": "Single Day",
+        "recurring": "Recurring"
+      },
+      "dates": {
+        "scheduleDate": "Schedule Date",
+        "startDate": "Start Date",
+        "endDate": "End Date",
+        "recurringDays": "Recurring Days"
+      },
+      "shifts": {
+        "selectLabel": "Select Shifts",
+        "startTime": "Start Time",
+        "endTime": "End Time",
+        "duration": "Duration (min)"
+      },
+      "days": {
+        "short": {
+          "mon": "Mon",
+          "tue": "Tue",
+          "wed": "Wed",
+          "thu": "Thu",
+          "fri": "Fri",
+          "sat": "Sat",
+          "sun": "Sun"
+        }
+      },
+      "block": {
+        "typeLabel": "Type of Time Off",
+        "startDateTime": "Start Date & Time",
+        "endDateTime": "End Date & Time",
+        "timeOff": "Time Off",
+        "summaryTitle": "Time Off Summary",
+        "summary": {
+          "type": "Type:",
+          "start": "Start:",
+          "end": "End:",
+          "notSet": "Not set"
+        }
+      },
+      "blockTypes": {
+        "annualLeave": "Annual Leave",
+        "sickLeave": "Sick Leave",
+        "personal": "Personal",
+        "conference": "Conference",
+        "training": "Training",
+        "meeting": "Meeting",
+        "emergency": "Emergency",
+        "other": "Other"
+      },
+      "actions": {
+        "saveSchedule": "Save Schedule",
+        "saveTimeOff": "Save Time Off",
+        "saving": "Saving..."
+      },
+      "validation": {
+        "selectShift": {
+          "title": "Select at least one shift",
+          "description": "Turn on Morning, Afternoon, or Evening before saving."
+        },
+        "recurringDays": {
+          "title": "Pick recurring days",
+          "description": "Choose at least one day of the week for the recurring schedule."
+        },
+        "dateRange": {
+          "title": "Fix the recurring date range",
+          "description": "End date must be after the start date for recurring schedules."
+        },
+        "shiftTimes": {
+          "title": "Check the shift timings",
+          "description": "Each selected shift needs a valid start and end time (end must be after start)."
+        },
+        "noPayload": {
+          "title": "Nothing to save yet",
+          "description": "Select at least one shift and provide valid times before saving."
+        }
+      }
+    },
+    "overrideActionDialog": {
+      "title": "Override Schedule Options",
+      "description": "What would you like to do with this override schedule?",
+      "detailsTitle": "Override Details:",
+      "labels": {
+        "shift": "Shift",
+        "date": "Date",
+        "time": "Time"
+      },
+      "actions": {
+        "update": {
+          "title": "Update Override",
+          "description": "Modify the schedule details"
+        },
+        "cancel": {
+          "title": "Cancel Override",
+          "description": "Remove and revert to default template"
+        },
+        "close": "Close"
+      },
+      "warning": "⚠️ Canceling will permanently remove this override and revert to the default template schedule."
+    },
+    "cancelOverrideDialog": {
+      "title": "Cancel Shift Override",
+      "description": "Are you sure you want to cancel this shift override? This will remove the personalized schedule and revert to the default template.",
+      "detailsTitle": "Override Details:",
+      "shiftLabel": "Shift",
+      "dateLabel": "Date",
+      "timeLabel": "Time",
+      "warning": "⚠️ This action cannot be undone. The shift will revert to the default template schedule.",
+      "actions": {
+        "keepOverride": "Keep Override",
+        "confirm": "Yes, Cancel Override",
+        "cancelling": "Canceling..."
+      }
+    },
     "loading": {
       "initializingCalendar": "Initializing calendar...",
       "loadingDoctorProfile": "Loading doctor profile...",
@@ -726,6 +1073,7 @@
     "timeRemaining": "Time remaining: {{time}}",
     "stayConnected": "Stay Connected",
     "logoutNow": "Logout Now",
+    "loggingOut": "Logging out...",
     "autoLogoutMessage": "If you don't respond within 2 minutes, you will be automatically logged out."
   },
   "header": {
@@ -736,10 +1084,16 @@
     "appointmentScheduler": "Appointments",
     "docAI": "AI Assistant",
     "completeProfile": "Complete Profile",
+    "personalProfile": "Personal Profile",
     "changeLanguage": "Change Language",
     "notifications": "Notifications",
     "profile": "Profile",
-    "settings": "Settings"
+    "settings": "Settings",
+    "collapseSidebar": "Collapse sidebar",
+    "expandSidebar": "Expand sidebar",
+    "toggleSidebarHint": "to toggle sidebar",
+    "restrictedAccessMessage": "Restricted until hospital info complete",
+    "logoutSubtitle": "Sign out safely"
   },
   "mainLayout": {
     "sidebar": "Sidebar",
@@ -753,8 +1107,97 @@
     "chooseLanguage": "Choose your preferred language",
     "current": "Current",
     "changesApplyImmediately": "Changes apply immediately",
+    "rtlLayoutActive": "RTL layout active",
     "internationalEnglish": "International English",
-    "hindiIndia": "Hindi (India)"
+    "hindiIndia": "Hindi (India)",
+    "languages": {
+      "en": {
+        "name": "English",
+        "nativeName": "English",
+        "description": "International English",
+        "region": "Global"
+      },
+      "hi": {
+        "name": "Hindi",
+        "nativeName": "हिंदी",
+        "description": "Hindi (India)",
+        "region": "India"
+      }
+    }
+  },
+  "invalidToken": {
+    "brandName": "NexEagle HMS",
+    "brandAlt": "NexEagle logo",
+    "title": "Invalid Invitation Link",
+    "defaultMessage": "The invitation link is invalid.",
+    "reasonsTitle": "Possible Reasons:",
+    "reasons": [
+      "The invitation link has expired",
+      "The invitation has been revoked",
+      "The invitation has already been used",
+      "The link is malformed or corrupted"
+    ],
+    "helpTitle": "Need Help?",
+    "contactAdmin": "Contact your administrator",
+    "requestNewLink": "to request a new invitation link.",
+    "provideInfo": "Please provide them with the following information:",
+    "info": {
+      "fullName": "Your full name",
+      "mobileNumber": "Your mobile number",
+      "intendedRole": "Your intended role in the system",
+      "receivedWhen": "When you received the original invitation"
+    },
+    "securityTitle": "Security Notice",
+    "securityMessage": "Invitation links are time-sensitive and single-use for security purposes. This helps protect your organization's data and ensures only authorized users can access the system.",
+    "backToLogin": "Back to Login",
+    "errorNote": "If you believe this is an error, please contact your system administrator."
+  },
+  "notFound": {
+    "code": "404",
+    "title": "Oops! Page Not Found",
+    "description": "The page you're looking for doesn't exist or you might not have access to it. Let's get you back on track!",
+    "goToLogin": "Go to Login",
+    "goToDashboard": "Go to Dashboard",
+    "goBack": "Go Back",
+    "helpTitle": "Need Help?",
+    "helpText": "If you believe this is an error or need assistance, please contact our support team.",
+    "links": {
+      "home": "Home",
+      "helpCenter": "Help Center",
+      "contactUs": "Contact Us"
+    }
+  },
+  "profilePictureUploader": {
+    "alt": "Profile picture",
+    "helperText": "JPG, PNG, or GIF up to 5MB.",
+    "buttons": {
+      "upload": "Upload photo",
+      "uploading": "Uploading...",
+      "remove": "Remove",
+      "removing": "Removing..."
+    },
+    "status": {
+      "uploading": "Uploading...",
+      "removing": "Removing..."
+    },
+    "errors": {
+      "invalidTypeTitle": "Invalid file type",
+      "invalidTypeDescription": "Please upload an image file (JPG, PNG, or GIF).",
+      "fileTooLargeTitle": "File is too large",
+      "fileTooLargeDescription": "Please choose an image under 5MB.",
+      "authTitle": "Authentication required",
+      "authDescription": "You must be signed in to upload a profile picture.",
+      "uploadFailedTitle": "Upload failed",
+      "uploadFailedDescription": "Something went wrong while uploading your photo.",
+      "removeFailedTitle": "Remove failed",
+      "removeFailedDescription": "Could not remove your profile picture. Please try again."
+    },
+    "success": {
+      "uploadTitle": "Profile picture updated",
+      "uploadDescription": "Your new photo has been saved.",
+      "removeTitle": "Profile picture removed",
+      "removeDescription": "Your photo has been removed."
+    }
   },
   "settingsPage": {
     "title": "Settings",
@@ -883,7 +1326,69 @@
     "confirmed": "Confirmed",
     "pending": "Pending",
     "cancelled": "Cancelled",
-    "vsLastPeriod": "vs last period"
+    "vsLastPeriod": "vs last period",
+    "hospitalAccessFallback": "Complete hospital information to unlock full access.",
+    "hospitalIdLabel": "Hospital ID:",
+    "hospitalIdCopySr": "Copy Hospital ID",
+    "cta": {
+      "completeInfo": "Complete Info",
+      "updateDetails": "Update Details"
+    },
+    "checklist": {
+      "basicInfoLabel": "Basic Information",
+      "basicInfoHelper": "Legal entity & statutory details",
+      "locationLabel": "Location & Infrastructure",
+      "locationHelper": "Geo coverage, branches, beds",
+      "contactLabel": "Contact & Support",
+      "contactHelper": "Hotlines, escalation, billing contacts"
+    },
+    "exec": {
+      "profileScoreLabel": "Profile Score",
+      "profileScoreHelperUnlocked": "Advanced modules unlocked",
+      "profileScoreHelperLocked": "Complete setup to unlock advanced modules",
+      "checklistLabel": "Checklist Progress",
+      "checklistHelperDone": "All tasks done",
+      "checklistHelperPending": "{{count}} tasks pending",
+      "accessLabelUnlocked": "Access Status",
+      "accessLabelRestricted": "Access Restricted",
+      "accessValueUnlocked": "Unlocked",
+      "accessValueRestricted": "Restricted",
+      "accessHelperUnlocked": "Team can manage every module",
+      "accessHelperRestricted": "Complete basics + location to unlock"
+    },
+    "quickActions": {
+      "brandingLabel": "Update Hospital Info",
+      "brandingDescription": "Complete hospital profile, branding, and compliance details.",
+      "systemConfigLabel": "Review System Config",
+      "systemConfigDescription": "Audit modules, templates, and integrations.",
+      "userAccessLabel": "Manage Roles & Access",
+      "userAccessDescription": "Invite admins, doctors, and finance partners.",
+      "openModule": "Open module"
+    }
+  },
+  "dashboardOverview": {
+    "kpi": {
+      "todayAppointments": "Today's Appointments",
+      "weeklyOpd": "OPD Visits This Week",
+      "monthlyRevenue": "Revenue This Month",
+      "patientSatisfaction": "Patient Satisfaction"
+    },
+    "charts": {
+      "appointmentTrend": "Appointments Trend (Last 15 Days)",
+      "departmentLoad": "Department Load Distribution",
+      "departmentLoadLabel": "{{name}} {{percent}}%",
+      "revenueByDoctor": "Revenue by Doctor",
+      "opdActivity": "OPD Activity by Hour"
+    },
+    "tables": {
+      "recentAppointments": "Recent Appointments",
+      "doctorPerformance": "Doctor Performance",
+      "doctorPatientsThisMonth": "{{count}} patients this month",
+      "doctorRevenue": "${{value}}"
+    },
+    "actions": {
+      "viewAll": "View All"
+    }
   },
   "profile": {
     "title": "Profile",
@@ -997,6 +1502,7 @@
     "fullName": "Full Name",
     "phone": "Phone",
     "email": "Email",
+    "userAreas": "User areas",
     "selectRole": "Select Role",
     "enterFullName": "Enter full name",
     "enterPhoneNumber": "Enter phone number",
@@ -1026,7 +1532,139 @@
     "noUsersFound": "No users found",
     "noInvitationsFound": "No invitations found",
     "userInvitedSuccessfully": "User invited successfully",
-    "userInvitedDescription": "Invitation has been sent to the user. They will receive an email to complete their registration."
+    "userInvitedDescription": "Invitation has been sent to the user. They will receive an email to complete their registration.",
+    "validation": {
+      "email": "Please enter a valid email address.",
+      "phone": "Please enter a valid 10-digit phone number."
+    },
+    "inviteError": {
+      "title": "Invitation could not be sent",
+      "defaultMessage": "We could not send the invitation. Please check the details and try again."
+    },
+    "deactivateDialog": {
+      "title": "Deactivate User",
+      "description": "Are you sure you want to deactivate this user? This action will immediately revoke their access to the application.",
+      "userDetailsTitle": "User Details",
+      "userDetailsSubtitle": "User to be deactivated",
+      "labels": {
+        "name": "Name",
+        "email": "Email"
+      },
+      "noticeTitle": "Important Notice",
+      "noticeItems": {
+        "access": "User will lose immediate access to the application",
+        "sessions": "All active sessions will be terminated",
+        "reactivation": "User will need to be reactivated to regain access",
+        "reversible": "This action can be reversed by an administrator"
+      },
+      "deactivating": "Deactivating...",
+      "confirm": "Deactivate User"
+    },
+    "invitationSuccess": {
+      "title": "Invitation Sent Successfully!",
+      "deliveredTitle": "Invitation Delivered",
+      "deliveredDescription": "An invitation has been sent to the user. They will receive an email with registration instructions.",
+      "emailLabel": "Email",
+      "roleLabel": "Role",
+      "nextStepsTitle": "Next Steps",
+      "nextStepsDescription": "The user will receive an email with a registration link. Once they complete registration, you can view them in the Onboarded Users tab."
+    },
+    "invitedUsers": {
+      "hospitalMissingTitle": "Hospital ID Not Found",
+      "hospitalMissingMessage": "Please log in again to access user management.",
+      "loading": "Loading invited users...",
+      "errorTitle": "Error Loading Data",
+      "searchPlaceholder": "Search invitations by name, email, or phone...",
+      "rolePlaceholder": "Filter by role",
+      "statusPlaceholder": "Filter by status",
+      "allRoles": "All Roles",
+      "status": {
+        "all": "All",
+        "pending": "Pending",
+        "accepted": "Accepted",
+        "revoked": "Revoked",
+        "expired": "Expired"
+      },
+      "emptyTitle": "No invitations found",
+      "emptyFilterHint": "Try adjusting your search or filters to find what you're looking for.",
+      "emptyScopeHint": "No {{scope}} invitations found in the system.",
+      "badges": {
+        "canResend": "Can Resend",
+        "canRevoke": "Can Revoke"
+      },
+      "dates": {
+        "created": "Created",
+        "expires": "Expires",
+        "accepted": "Accepted",
+        "revoked": "Revoked"
+      },
+      "actions": {
+        "resend": "Resend",
+        "resending": "Sending...",
+        "revoke": "Revoke",
+        "revoking": "Revoking...",
+        "processing": "Processing action..."
+      },
+      "confirm": {
+        "resendTitle": "Resend Invitation Email",
+        "revokeTitle": "Revoke Invitation Access",
+        "resendDescription": "Are you sure you want to resend the invitation email to {{name}}?",
+        "resendNote": "A new invitation email will be sent to {{email}}",
+        "revokeDescription": "Are you sure you want to revoke the invitation for {{name}}?",
+        "revokeNote": "This action cannot be undone and will prevent the user from completing registration.",
+        "resendConfirm": "Resend Email",
+        "revokeConfirm": "Revoke Access"
+      },
+      "na": "N/A"
+      },
+      "onboardedUsers": {
+        "loading": "Loading onboarded users...",
+        "error": "Error loading onboarded users",
+        "searchLabel": "Search",
+        "searchPlaceholder": "Search users by name, email, or phone...",
+        "roleLabel": "Role",
+        "rolePlaceholder": "Filter by role",
+        "allRoles": "All Roles",
+        "statusLabel": "Status",
+        "statusPlaceholder": "Filter by status",
+        "status": {
+          "all": "All Status",
+          "active": "Active",
+          "inactive": "Inactive"
+        },
+        "emptyTitle": "No users found",
+        "emptyFilters": "Try adjusting your search or filters",
+        "emptyDefault": "No onboarded users yet",
+        "labels": {
+          "phone": "Phone",
+          "role": "Role",
+          "id": "ID",
+          "employeeId": "Employee ID",
+          "primaryUser": "Primary User"
+        },
+        "badges": {
+          "primary": "Primary"
+        },
+        "actions": {
+          "viewTooltip": "View Details",
+          "cannotDeactivateSelf": "Cannot deactivate yourself",
+          "deactivateUser": "Deactivate User",
+          "alreadyInactive": "User already inactive",
+          "moreOptions": "More Options"
+        },
+        "view": {
+          "title": "User Details",
+          "description": "Complete snapshot of the selected team member.",
+          "fullNameLabel": "Full Name",
+          "notProvided": "Not provided",
+          "contact": "Contact",
+          "identity": "Identity",
+          "roles": "Roles",
+          "permissions": "Permissions"
+        },
+        "unknownRole": "Unknown",
+        "na": "N/A"
+    }
   },
   "appointmentBooking": {
     "title": "Schedule Appointment",
@@ -2036,6 +2674,46 @@
       "timeZone": "Time Zone",
       "registrationNumber": "Registration Number"
     },
+    "appointmentCancelDialog": {
+      "title": "Cancel Appointment",
+      "warningLabel": "Warning:",
+      "warningDescription": "This action cannot be undone. The appointment will be permanently cancelled and the time slot will become available for other patients.",
+      "patientAgeGender": "{{age}} years old, {{gender}}",
+      "tokenLabel": "Token: {{token}}",
+      "confirmTitle": "Are you sure you want to cancel this appointment?",
+      "confirmSubtitle": "The patient should be notified about the cancellation.",
+      "actions": {
+        "keep": "Keep Appointment",
+        "confirm": "Yes, Cancel Appointment",
+        "pending": "Canceling..."
+      },
+      "time": {
+        "am": "AM",
+        "pm": "PM"
+      }
+    },
+    "blockModal": {
+      "title": "Create Block",
+      "fields": {
+        "titleLabel": "Title",
+        "titlePlaceholder": "e.g., Annual Leave, Surgery, Meeting",
+        "blockTypeLabel": "Block Type",
+        "blockType": {
+          "leave": "Leave",
+          "personal": "Personal",
+          "surgery": "Surgery",
+          "admin": "Admin"
+        },
+        "startLabel": "Start Date & Time",
+        "endLabel": "End Date & Time",
+        "durationLabel": "Block Duration:"
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "create": "Create Block",
+        "pending": "Creating..."
+      }
+    },
     "placeholders": {
       "name": "Enter hospital name",
       "type": "Select hospital type",
@@ -2106,6 +2784,134 @@
       "phoneInvalid": "Please enter a valid phone number",
       "websiteInvalid": "Please enter a valid website URL",
       "pincodeInvalid": "Please enter a valid postal code (4-10 digits)"
+    }
+  },
+  "profileCompletion": {
+    "card": {
+      "title": "Complete Your Profile",
+      "subtitle": "Top doctors average 95% completion",
+      "progressLabel": "Progress: {{percent}}%",
+      "progressBadge": "{{completed}}/{{total}} Complete",
+      "ctaPrimary": "Add Details Now ({{minutes}} mins)",
+      "ctaSecondary": "Remind Me Later"
+    },
+    "modal": {
+      "title": "Complete Your Profile",
+      "description": "Complete your profile to unlock all features and increase patient trust",
+      "currentProgress": "Current Progress",
+      "saveProgress": "Save Progress",
+      "later": "Later"
+    },
+    "fields": {
+      "defaultAction": "Complete",
+      "mobile": {
+        "label": "Mobile Verified",
+        "description": "Phone number verification"
+      },
+      "license": {
+        "label": "Medical License",
+        "description": "Upload medical license document",
+        "enforcement": "Required before prescriptions",
+        "benefit": "Unlock prescription feature",
+        "action": "Upload"
+      },
+      "hospital": {
+        "label": "Hospital Details",
+        "description": "Add hospital/clinic information",
+        "enforcement": "Required for patient visibility",
+        "benefit": "Appear in patient searches",
+        "action": "Add Details"
+      },
+      "email": {
+        "label": "Email Address",
+        "description": "Add email for important updates",
+        "benefit": "Get appointment notifications",
+        "action": "Add Email"
+      },
+      "photo": {
+        "label": "Profile Photo",
+        "description": "Add professional photo",
+        "benefit": "Patients trust verified profiles",
+        "action": "Upload Photo"
+      }
+    },
+    "badges": {
+      "required": "Required",
+      "completed": "Completed"
+    },
+    "toast": {
+      "updatedTitle": "Profile Updated!",
+      "updatedDescription": "Field marked as completed",
+      "reminderTitle": "Reminder Set",
+      "reminderDescription": "We'll remind you after {{count}} more logins"
+    },
+    "congrats": {
+      "title": "Congratulations!",
+      "message": "You're in the top 10% of profile completeness! Patients are more likely to trust complete profiles."
+    },
+    "banner": {
+      "message": "Complete your profile to unlock all features.",
+      "badge": "Profile {{score}}%",
+      "completeSetup": "Complete Setup",
+      "dismiss": "Dismiss"
+    }
+  },
+  "profilePage": {
+    "loading": "Loading profile information...",
+    "header": {
+      "back": "Back",
+      "title": "My Profile",
+      "subtitle": "Manage your personal and professional information",
+      "edit": "Edit Profile",
+      "cancel": "Cancel"
+    },
+    "badges": {
+      "editing": "Editing Mode"
+    },
+    "summary": {
+      "fullName": "Full name",
+      "phone": "Phone number",
+      "employeeId": "Employee ID"
+    },
+    "personal": {
+      "title": "Personal Information",
+      "completion": "Profile completion {{percent}}%",
+      "basic": {
+        "title": "Basic Information",
+        "fullName": { "label": "Full Name" },
+        "email": { "label": "Email Address" },
+        "phone": { "label": "Phone Number" },
+        "dob": { "label": "Date of Birth" },
+        "gender": { "label": "Gender" },
+        "bloodGroup": { "label": "Blood Group" }
+      },
+      "address": {
+        "title": "Address & Contact",
+        "address1": { "label": "Address Line 1" },
+        "address2": { "label": "Address Line 2" },
+        "city": { "label": "City" },
+        "state": { "label": "State" },
+        "country": { "label": "Country" },
+        "pincode": { "label": "Pincode" },
+        "emergencyName": { "label": "Emergency Contact Name" },
+        "emergencyNumber": { "label": "Emergency Contact Number" }
+      },
+      "save": "Save Personal Information"
+    },
+    "toast": {
+      "updatedTitle": "Profile Updated! 🎉",
+      "updatedDescription": "Your profile has been successfully updated.",
+      "errorTitle": "Error",
+      "missingUser": "User ID not found.",
+      "uploadErrorTitle": "Upload Error",
+      "uploadErrorDescription": "Failed to upload profile picture, but continuing with other updates.",
+      "savedTitle": "Saved",
+      "employmentSaved": "Employment info updated."
+    },
+    "dialog": {
+      "title": "Profile updated",
+      "description": "Your profile completion is currently {{percent}}%.",
+      "close": "OK, Close"
     }
   },
   "systemConfiguration": {

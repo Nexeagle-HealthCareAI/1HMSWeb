@@ -250,20 +250,20 @@ useEffect(() => {
   const profileChecklist = [
     {
       id: 'basic-info',
-      label: 'Basic Information',
-      helper: 'Legal entity & statutory details',
+      label: t('admin.checklist.basicInfoLabel'),
+      helper: t('admin.checklist.basicInfoHelper'),
       complete: isBasicInfoComplete
     },
     {
       id: 'location',
-      label: 'Location & Infrastructure',
-      helper: 'Geo coverage, branches, beds',
+      label: t('admin.checklist.locationLabel'),
+      helper: t('admin.checklist.locationHelper'),
       complete: isLocationInfoComplete
     },
     {
       id: 'contact',
-      label: 'Contact & Support',
-      helper: 'Hotlines, escalation, billing contacts',
+      label: t('admin.checklist.contactLabel'),
+      helper: t('admin.checklist.contactHelper'),
       complete: isContactInfoComplete
     }
   ];
@@ -274,25 +274,35 @@ useEffect(() => {
   const executiveInsights = [
     {
       id: 'score',
-      label: 'Profile Score',
+      label: t('admin.exec.profileScoreLabel'),
       value: `${hospitalScore}%`,
-      helper: accessUnlocked ? 'Advanced modules unlocked' : 'Complete setup to unlock advanced modules',
+      helper: accessUnlocked
+        ? t('admin.exec.profileScoreHelperUnlocked')
+        : t('admin.exec.profileScoreHelperLocked'),
       accent: 'from-blue-500 via-indigo-500 to-purple-500',
       Icon: Star
     },
     {
       id: 'checklist',
-      label: 'Checklist Progress',
+      label: t('admin.exec.checklistLabel'),
       value: `${completedChecklist}/${profileChecklist.length}`,
-      helper: pendingChecklist === 0 ? 'All tasks done' : `${pendingChecklist} tasks pending`,
+      helper: pendingChecklist === 0
+        ? t('admin.exec.checklistHelperDone')
+        : t('admin.exec.checklistHelperPending', { count: pendingChecklist }),
       accent: 'from-emerald-500 via-teal-500 to-cyan-500',
       Icon: CheckCircle2
     },
     {
       id: 'access',
-      label: accessUnlocked ? 'Access Status' : 'Access Restricted',
-      value: accessUnlocked ? 'Unlocked' : 'Restricted',
-      helper: accessUnlocked ? 'Team can manage every module' : 'Complete basics + location to unlock',
+      label: accessUnlocked
+        ? t('admin.exec.accessLabelUnlocked')
+        : t('admin.exec.accessLabelRestricted'),
+      value: accessUnlocked
+        ? t('admin.exec.accessValueUnlocked')
+        : t('admin.exec.accessValueRestricted'),
+      helper: accessUnlocked
+        ? t('admin.exec.accessHelperUnlocked')
+        : t('admin.exec.accessHelperRestricted'),
       accent: accessUnlocked ? 'from-purple-500 via-indigo-500 to-blue-500' : 'from-amber-500 via-orange-500 to-red-500',
       Icon: ShieldCheck
     }
@@ -338,24 +348,24 @@ useEffect(() => {
   const quickActions = [
     {
       id: 'branding',
-      label: 'Update Hospital Info',
-      description: 'Complete hospital profile, branding, and compliance details.',
+      label: t('admin.quickActions.brandingLabel'),
+      description: t('admin.quickActions.brandingDescription'),
       Icon: Building2,
       action: focusHospitalBranding,
       disabled: false
     },
     {
       id: 'systemConfig',
-      label: 'Review System Config',
-      description: 'Audit modules, templates, and integrations.',
+      label: t('admin.quickActions.systemConfigLabel'),
+      description: t('admin.quickActions.systemConfigDescription'),
       Icon: Cog,
       action: () => setCurrentView('system-config'),
       disabled: false
     },
     {
       id: 'userAccess',
-      label: 'Manage Roles & Access',
-      description: 'Invite admins, doctors, and finance partners.',
+      label: t('admin.quickActions.userAccessLabel'),
+      description: t('admin.quickActions.userAccessDescription'),
       Icon: Shield,
       action: () => setCurrentView('user-management'),
       disabled: !accessUnlocked
@@ -452,7 +462,7 @@ useEffect(() => {
                   {!accessUnlocked ? t('admin.completeHospitalInfo') : t('admin.updateHospitalDetails')}
                 </span>
                 <span className="sm:hidden">
-                  {!accessUnlocked ? 'Complete Info' : 'Update Details'}
+                  {!accessUnlocked ? t('admin.cta.completeInfo') : t('admin.cta.updateDetails')}
                 </span>
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -489,7 +499,7 @@ useEffect(() => {
               <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-primary/20 text-[9px] font-bold text-primary">
                 {Math.round(hospitalScore)}
               </span>
-              <span className="hidden sm:inline">{hospitalAccessMessage || 'Complete hospital information to unlock full access.'}</span>
+              <span className="hidden sm:inline">{hospitalAccessMessage || t('admin.hospitalAccessFallback')}</span>
               <span className="sm:hidden">{Math.round(hospitalScore)}%</span>
             </button>
           )}
@@ -503,7 +513,7 @@ useEffect(() => {
 
         {hospitalId && (
           <div className="flex w-full sm:w-auto items-center gap-2 text-xs sm:text-sm text-muted-foreground justify-between sm:justify-end sm:ml-auto">
-            <span className="font-medium text-foreground">Hospital ID:</span>
+            <span className="font-medium text-foreground">{t('admin.hospitalIdLabel')}</span>
             <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
               <Badge variant="outline" className="font-mono text-primary border-primary/40 bg-primary/5 max-w-full sm:max-w-none truncate">
                 {hospitalId}
@@ -514,10 +524,10 @@ useEffect(() => {
                 variant="ghost"
                 className="h-7 w-7"
                 onClick={handleCopyHospitalId}
-                aria-label={t('admin.copyHospitalId') || 'Copy Hospital ID'}
+                aria-label={t('admin.copyHospitalId') || t('admin.hospitalIdCopySr')}
               >
                 <Copy className="h-4 w-4" />
-                <span className="sr-only">Copy Hospital ID</span>
+                <span className="sr-only">{t('admin.hospitalIdCopySr')}</span>
               </Button>
             </div>
           </div>
@@ -562,7 +572,7 @@ useEffect(() => {
                 </div>
               </div>
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{isLocked ? t('admin.adminFeaturesLocked') : 'Open module'}</span>
+                <span>{isLocked ? t('admin.adminFeaturesLocked') : t('admin.quickActions.openModule')}</span>
                 <ArrowRight className="h-4 w-4" />
               </div>
             </button>

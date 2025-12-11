@@ -1,5 +1,6 @@
   // ...validation helpers removed...
-import React, { useState } from 'react';
+  import React, { useState } from 'react';
+  import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +24,7 @@ import { useAuthStore } from '@/store/authStore';
 import { DeactivateUserDialog } from './DeactivateUserDialog';
 
 export const OnboardedUsers: React.FC = () => {
+  const { t } = useTranslation();
   const { getAllUsers, deactivateUser } = useUserManagementApi();
   const authStore = useAuthStore.getState();
   const hospitalId = authStore.getHospitalId();
@@ -49,7 +51,7 @@ export const OnboardedUsers: React.FC = () => {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
   const getPrimaryRoleName = (user: AllUsersResponse['users'][number]) =>
-    user.roles?.[0]?.roleName || 'Unknown';
+    user.roles?.[0]?.roleName || t('userManagement.onboardedUsers.unknownRole');
 
   const getUserStatus = (statusId: number) => (statusId === 1 ? 'active' : 'inactive');
   const isUserActive = (user: AllUsersResponse['users'][number]) => getUserStatus(user.usersStatusId) === 'active';
@@ -122,7 +124,7 @@ export const OnboardedUsers: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="text-muted-foreground">Loading onboarded users...</div>
+        <div className="text-muted-foreground">{t('userManagement.onboardedUsers.loading')}</div>
       </div>
     );
   }
@@ -130,7 +132,7 @@ export const OnboardedUsers: React.FC = () => {
   if (error) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="text-red-600">Error loading onboarded users</div>
+        <div className="text-red-600">{t('userManagement.onboardedUsers.error')}</div>
       </div>
     );
   }
@@ -143,11 +145,11 @@ export const OnboardedUsers: React.FC = () => {
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:gap-6">
             <div className="flex-1">
               <div className="relative flex flex-col">
-                <label className="block text-sm font-medium mb-1">Search</label>
+                <label className="block text-sm font-medium mb-1">{t('userManagement.onboardedUsers.searchLabel')}</label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
-                    placeholder="Search users by name, email, or phone..."
+                    placeholder={t('userManagement.onboardedUsers.searchPlaceholder')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
@@ -156,13 +158,13 @@ export const OnboardedUsers: React.FC = () => {
               </div>
             </div>
             <div className="w-full md:w-[200px] flex flex-col">
-              <label className="block text-sm font-medium mb-1">Role</label>
+              <label className="block text-sm font-medium mb-1">{t('userManagement.onboardedUsers.roleLabel')}</label>
               <Select value={roleFilter} onValueChange={setRoleFilter}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Filter by role" />
+                  <SelectValue placeholder={t('userManagement.onboardedUsers.rolePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Roles</SelectItem>
+                  <SelectItem value="all">{t('userManagement.onboardedUsers.allRoles')}</SelectItem>
                   {uniqueRoles.map(role => (
                     <SelectItem key={role} value={role}>{role}</SelectItem>
                   ))}
@@ -170,15 +172,15 @@ export const OnboardedUsers: React.FC = () => {
               </Select>
             </div>
             <div className="w-full md:w-[200px] flex flex-col">
-              <label className="block text-sm font-medium mb-1">Status</label>
+              <label className="block text-sm font-medium mb-1">{t('userManagement.onboardedUsers.statusLabel')}</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Filter by status" />
+                  <SelectValue placeholder={t('userManagement.onboardedUsers.statusPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="all">{t('userManagement.onboardedUsers.status.all')}</SelectItem>
+                  <SelectItem value="active">{t('userManagement.onboardedUsers.status.active')}</SelectItem>
+                  <SelectItem value="inactive">{t('userManagement.onboardedUsers.status.inactive')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -193,11 +195,11 @@ export const OnboardedUsers: React.FC = () => {
             <Card>
               <CardContent className="p-8 text-center">
                 <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No users found</h3>
+                <h3 className="text-lg font-semibold mb-2">{t('userManagement.onboardedUsers.emptyTitle')}</h3>
                 <p className="text-muted-foreground">
                   {searchTerm || roleFilter !== 'all' || statusFilter !== 'all' 
-                    ? 'Try adjusting your search or filters'
-                    : 'No onboarded users yet'
+                    ? t('userManagement.onboardedUsers.emptyFilters')
+                    : t('userManagement.onboardedUsers.emptyDefault')
                   }
                 </p>
               </CardContent>
@@ -233,16 +235,16 @@ export const OnboardedUsers: React.FC = () => {
                     {/* Contact Info */}
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className="font-medium">Phone:</span>
+                        <span className="font-medium">{t('userManagement.onboardedUsers.labels.phone')}:</span>
                         <span>{user.mobileNumber}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className="font-medium">Role:</span>
+                        <span className="font-medium">{t('userManagement.onboardedUsers.labels.role')}:</span>
                         <span>{getPrimaryRoleName(user)}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className="font-medium">ID:</span>
-                        <span>{user.employeeID || 'N/A'}</span>
+                        <span className="font-medium">{t('userManagement.onboardedUsers.labels.id')}:</span>
+                        <span>{user.employeeID || t('userManagement.onboardedUsers.na')}</span>
                       </div>
                     </div>
 
@@ -258,11 +260,11 @@ export const OnboardedUsers: React.FC = () => {
                         variant={isUserActive(user) ? 'default' : 'secondary'}
                         className={`text-xs ${getStatusColor(isUserActive(user) ? 'active' : 'inactive')}`}
                       >
-                        {isUserActive(user) ? 'Active' : 'Inactive'}
+                        {isUserActive(user) ? t('userManagement.onboardedUsers.status.active') : t('userManagement.onboardedUsers.status.inactive')}
                       </Badge>
                       {user.isPrimary && (
                         <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
-                          Primary
+                          {t('userManagement.onboardedUsers.badges.primary')}
                         </Badge>
                       )}
                     </div>
@@ -278,7 +280,7 @@ export const OnboardedUsers: React.FC = () => {
                             setIsViewDialogOpen(true);
                           }}
                           className="h-7 w-7 p-0 hover:bg-blue-50 hover:text-blue-600"
-                          title="View Details"
+                          title={t('userManagement.onboardedUsers.actions.viewTooltip')}
                         >
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
@@ -297,10 +299,10 @@ export const OnboardedUsers: React.FC = () => {
                           }`}
                           title={
                             user.userId === currentUserId
-                              ? 'Cannot deactivate yourself'
+                              ? t('userManagement.onboardedUsers.actions.cannotDeactivateSelf')
                               : isUserActive(user)
-                                ? 'Deactivate User'
-                                : 'User already inactive'
+                                ? t('userManagement.onboardedUsers.actions.deactivateUser')
+                                : t('userManagement.onboardedUsers.actions.alreadyInactive')
                           }
                           disabled={!isUserActive(user) || user.userId === currentUserId}
                         >
@@ -311,7 +313,7 @@ export const OnboardedUsers: React.FC = () => {
                         variant="ghost" 
                         size="sm" 
                         className="h-7 w-7 p-0 hover:bg-gray-50"
-                        title="More Options"
+                        title={t('userManagement.onboardedUsers.actions.moreOptions')}
                       >
                         <MoreHorizontal className="h-3.5 w-3.5" />
                       </Button>
@@ -346,8 +348,8 @@ export const OnboardedUsers: React.FC = () => {
        }}>
          <DialogContent className="sm:max-w-lg">
            <DialogHeader>
-             <DialogTitle>User Details</DialogTitle>
-             <DialogDescription>Complete snapshot of the selected team member.</DialogDescription>
+                <DialogTitle>{t('userManagement.onboardedUsers.view.title')}</DialogTitle>
+                <DialogDescription>{t('userManagement.onboardedUsers.view.description')}</DialogDescription>
            </DialogHeader>
            {viewUser && (
              <div className="space-y-6 text-sm">
@@ -358,15 +360,15 @@ export const OnboardedUsers: React.FC = () => {
                    <Users className="h-6 w-6" />
                  </div>
                  <div className="flex-1 min-w-0">
-                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Full Name</p>
-                   <p className="text-lg font-semibold truncate">{viewUser.fullName || 'Not provided'}</p>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{t('userManagement.onboardedUsers.view.fullNameLabel')}</p>
+                    <p className="text-lg font-semibold truncate">{viewUser.fullName || t('userManagement.onboardedUsers.view.notProvided')}</p>
                    <div className="mt-2 flex flex-wrap gap-2">
                      <Badge className={getRoleColor(getPrimaryRoleName(viewUser))}>{getPrimaryRoleName(viewUser)}</Badge>
                      <Badge variant="outline" className={isUserActive(viewUser) ? 'border-emerald-200 text-emerald-700' : 'border-gray-200 text-gray-600'}>
-                       {isUserActive(viewUser) ? 'Active' : 'Inactive'}
+                        {isUserActive(viewUser) ? t('userManagement.onboardedUsers.status.active') : t('userManagement.onboardedUsers.status.inactive')}
                      </Badge>
                      {viewUser.isPrimary && (
-                       <Badge variant="outline" className="border-amber-200 text-amber-700 bg-amber-50">Primary</Badge>
+                        <Badge variant="outline" className="border-amber-200 text-amber-700 bg-amber-50">{t('userManagement.onboardedUsers.badges.primary')}</Badge>
                      )}
                    </div>
                  </div>
@@ -374,26 +376,26 @@ export const OnboardedUsers: React.FC = () => {
 
                <div className="grid gap-4 sm:grid-cols-2">
                  <div className="rounded-lg border p-3 space-y-2">
-                   <p className="text-xs font-medium text-muted-foreground">Contact</p>
+                    <p className="text-xs font-medium text-muted-foreground">{t('userManagement.onboardedUsers.view.contact')}</p>
                    <div className="flex items-center gap-2">
                      <Mail className="h-4 w-4 text-muted-foreground" />
-                     <span className="truncate">{viewUser.email || '—'}</span>
+                      <span className="truncate">{viewUser.email || '—'}</span>
                    </div>
                    <div className="flex items-center gap-2">
                      <Phone className="h-4 w-4 text-muted-foreground" />
-                     <span>{viewUser.mobileNumber || '—'}</span>
+                      <span>{viewUser.mobileNumber || '—'}</span>
                    </div>
                  </div>
                  <div className="rounded-lg border p-3 space-y-2">
-                   <p className="text-xs font-medium text-muted-foreground">Identity</p>
+                    <p className="text-xs font-medium text-muted-foreground">{t('userManagement.onboardedUsers.view.identity')}</p>
                    <div className="flex items-center justify-between">
-                     <span className="text-muted-foreground">Employee ID</span>
-                     <span className="font-medium">{viewUser.employeeID || '—'}</span>
+                      <span className="text-muted-foreground">{t('userManagement.onboardedUsers.labels.employeeId')}</span>
+                      <span className="font-medium">{viewUser.employeeID || '—'}</span>
                    </div>
                    <div className="flex items-center justify-between">
-                     <span className="text-muted-foreground">Primary User</span>
+                      <span className="text-muted-foreground">{t('userManagement.onboardedUsers.labels.primaryUser')}</span>
                      <Badge variant="outline" className={viewUser.isPrimary ? 'border-emerald-200 text-emerald-700 bg-emerald-50' : 'border-gray-200 text-gray-600 bg-gray-50'}>
-                       {viewUser.isPrimary ? 'Yes' : 'No'}
+                        {viewUser.isPrimary ? t('common.yes') : t('common.no')}
                      </Badge>
                    </div>
                  </div>
@@ -403,7 +405,7 @@ export const OnboardedUsers: React.FC = () => {
                  <div className="rounded-lg border p-3">
                    <div className="flex items-center gap-2 mb-3">
                      <Shield className="h-4 w-4 text-muted-foreground" />
-                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Roles</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('userManagement.onboardedUsers.view.roles')}</p>
                    </div>
                    <div className="flex flex-wrap gap-2">
                      {viewUser.roles.map((role) => (
@@ -419,7 +421,7 @@ export const OnboardedUsers: React.FC = () => {
                  <div className="rounded-lg border p-3">
                    <div className="flex items-center gap-2 mb-3">
                      <Key className="h-4 w-4 text-muted-foreground" />
-                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Permissions</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('userManagement.onboardedUsers.view.permissions')}</p>
                    </div>
                    <div className="flex flex-wrap gap-2">
                      {viewUser.permissionKeys.map((permission) => (
@@ -433,7 +435,7 @@ export const OnboardedUsers: React.FC = () => {
              </div>
            )}
            <DialogFooter>
-             <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>Close</Button>
+            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>{t('common.close')}</Button>
            </DialogFooter>
          </DialogContent>
        </Dialog>

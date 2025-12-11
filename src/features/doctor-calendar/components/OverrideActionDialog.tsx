@@ -1,8 +1,9 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Calendar, X, Edit, Trash2 } from 'lucide-react';
+import { Calendar, Edit, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
 interface OverrideActionDialogProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export const OverrideActionDialog: React.FC<OverrideActionDialogProps> = ({
   overrideData,
   isPending
 }) => {
+  const { t } = useTranslation();
   // Debug logging
   React.useEffect(() => {
     if (isOpen && overrideData) {
@@ -42,7 +44,7 @@ export const OverrideActionDialog: React.FC<OverrideActionDialogProps> = ({
   const formatTime = (time: string) => {
     const [hours, minutes] = time.split(':');
     const hour12 = parseInt(hours) % 12 || 12;
-    const ampm = parseInt(hours) >= 12 ? 'PM' : 'AM';
+    const ampm = parseInt(hours) >= 12 ? t('calendar.time.pm') : t('calendar.time.am');
     return `${hour12}:${minutes} ${ampm}`;
   };
 
@@ -54,21 +56,29 @@ export const OverrideActionDialog: React.FC<OverrideActionDialogProps> = ({
             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
               <Calendar className="h-4 w-4 text-blue-600" />
             </div>
-            Override Schedule Options
+            {t('doctorCalendar.overrideActionDialog.title')}
           </DialogTitle>
         </DialogHeader>
         
         <div className="py-4">
           <p className="text-gray-600 mb-4">
-            What would you like to do with this override schedule?
+            {t('doctorCalendar.overrideActionDialog.description')}
           </p>
           
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm mb-4">
-            <div className="font-medium text-blue-800 mb-1">Override Details:</div>
+            <div className="font-medium text-blue-800 mb-1">
+              {t('doctorCalendar.overrideActionDialog.detailsTitle')}
+            </div>
             <div className="text-blue-700 space-y-1">
-              <div>• Shift: {overrideData.shiftName}</div>
-              <div>• Date: {format(new Date(overrideData.date), 'EEEE, MMMM d, yyyy')}</div>
-              <div>• Time: {formatTime(overrideData.startTime)} - {formatTime(overrideData.endTime)}</div>
+              <div>
+                • {t('doctorCalendar.overrideActionDialog.labels.shift')}: {overrideData.shiftName}
+              </div>
+              <div>
+                • {t('doctorCalendar.overrideActionDialog.labels.date')}: {format(new Date(overrideData.date), 'EEEE, MMMM d, yyyy')}
+              </div>
+              <div>
+                • {t('doctorCalendar.overrideActionDialog.labels.time')}: {formatTime(overrideData.startTime)} - {formatTime(overrideData.endTime)}
+              </div>
             </div>
           </div>
           
@@ -78,8 +88,12 @@ export const OverrideActionDialog: React.FC<OverrideActionDialogProps> = ({
                 <Edit className="h-5 w-5 text-green-600" />
               </div>
               <div className="flex-1">
-                <div className="font-medium text-gray-900">Update Override</div>
-                <div className="text-sm text-gray-600">Modify the schedule details</div>
+                <div className="font-medium text-gray-900">
+                  {t('doctorCalendar.overrideActionDialog.actions.update.title')}
+                </div>
+                <div className="text-sm text-gray-600">
+                  {t('doctorCalendar.overrideActionDialog.actions.update.description')}
+                </div>
               </div>
             </div>
             
@@ -88,14 +102,18 @@ export const OverrideActionDialog: React.FC<OverrideActionDialogProps> = ({
                 <Trash2 className="h-5 w-5 text-red-600" />
               </div>
               <div className="flex-1">
-                <div className="font-medium text-gray-900">Cancel Override</div>
-                <div className="text-sm text-gray-600">Remove and revert to default template</div>
+                <div className="font-medium text-gray-900">
+                  {t('doctorCalendar.overrideActionDialog.actions.cancel.title')}
+                </div>
+                <div className="text-sm text-gray-600">
+                  {t('doctorCalendar.overrideActionDialog.actions.cancel.description')}
+                </div>
               </div>
             </div>
           </div>
           
           <p className="text-xs text-gray-500 mt-4">
-            ⚠️ Canceling will permanently remove this override and revert to the default template schedule.
+            {t('doctorCalendar.overrideActionDialog.warning')}
           </p>
         </div>
 
@@ -106,7 +124,7 @@ export const OverrideActionDialog: React.FC<OverrideActionDialogProps> = ({
             onClick={onClose}
             disabled={isPending}
           >
-            Close
+            {t('doctorCalendar.overrideActionDialog.actions.close')}
           </Button>
         </DialogFooter>
       </DialogContent>

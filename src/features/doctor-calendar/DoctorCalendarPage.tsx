@@ -143,7 +143,7 @@ export const DoctorCalendarPage: React.FC = () => {
   const hospitalId = authStore.getHospitalId();
   
   // Get doctor name - prioritize from doctor profile, fallback to user details
-  const doctorName = userDetailsResponse?.userProfile?.fullName || userDetailsResponse?.mobileNumber || 'Doctor';
+  const doctorName = userDetailsResponse?.userProfile?.fullName || userDetailsResponse?.mobileNumber || t('doctorCalendar.doctorFallback');
   
   // Get date range for API calls
   const getDateRange = useCallback(() => {
@@ -203,8 +203,8 @@ export const DoctorCalendarPage: React.FC = () => {
   
   // Use real events directly
   const allEvents = events;
-  const clickToManageHint = t('doctorCalendar.clickToManage', 'Tap to manage override');
-  const overrideBadgeLabel = t('doctorCalendar.overrideBadge', 'Override');
+  const clickToManageHint = t('doctorCalendar.clickToManageHint');
+  const overrideBadgeLabel = t('doctorCalendar.overrideBadge');
 
   const dynamicScrollTime = React.useMemo(() => {
     if (view !== 'timeGridDay') return '06:00:00';
@@ -472,8 +472,11 @@ export const DoctorCalendarPage: React.FC = () => {
         });
       } else {
         toast({
-          title: "Appointment Details",
-          description: `Patient: ${patientName}, Token: ${tokenNumber}`,
+          title: t('doctorCalendar.appointmentDetailsFallbackTitle'),
+          description: t('doctorCalendar.appointmentDetailsFallbackDescription', {
+            patient: patientName,
+            token: tokenNumber ?? ''
+          }),
         });
       }
          } else if (eventType === 'block') {
@@ -484,8 +487,8 @@ export const DoctorCalendarPage: React.FC = () => {
           openTimeOffDeleteModal(event);
        } else {
          toast({
-           title: "Block Details",
-           description: `${event.title}`,
+           title: t('doctorCalendar.blockDetailsTitle'),
+           description: t('doctorCalendar.blockDetailsDescription', { title: event.title ?? '' }),
          });
        }
      }
@@ -570,7 +573,10 @@ export const DoctorCalendarPage: React.FC = () => {
     // Handle event drag and drop
     toast({
       title: t('doctorCalendar.eventMoved'),
-      description: `${dropInfo.event.title} moved to ${format(dropInfo.event.start!, 'MMM dd, yyyy')}`,
+      description: t('doctorCalendar.eventMovedDescription', {
+        title: dropInfo.event.title,
+        date: format(dropInfo.event.start!, 'MMM dd, yyyy')
+      }),
     });
   }, [toast]);
   
@@ -578,7 +584,9 @@ export const DoctorCalendarPage: React.FC = () => {
     // Handle event resize
     toast({
       title: t('doctorCalendar.eventResized'),
-      description: `${resizeInfo.event.title} resized`,
+      description: t('doctorCalendar.eventResizedDescription', {
+        title: resizeInfo.event.title
+      }),
     });
   }, [toast]);
   
@@ -826,8 +834,8 @@ export const DoctorCalendarPage: React.FC = () => {
       
       if (hasTimeOffToday) {
         toast({
-          title: "Time Off Conflict",
-          description: "You already have time-off scheduled for today. Please cancel existing time-off first or select a different date.",
+          title: t('doctorCalendar.conflicts.timeOffConflict'),
+          description: t('doctorCalendar.conflicts.timeOffConflictToday'),
           variant: "destructive",
         });
         return;
@@ -841,8 +849,8 @@ export const DoctorCalendarPage: React.FC = () => {
       });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to open personalized schedule modal",
+        title: t('doctorCalendar.error'),
+        description: t('doctorCalendar.errors.failedToOpenModal'),
         variant: "destructive",
       });
     }
@@ -881,8 +889,8 @@ export const DoctorCalendarPage: React.FC = () => {
     createOverrideMutation.mutate(finalPayload, {
       onSuccess: async (data) => {
     toast({
-          title: "Success",
-          description: data.message || "Shift override created successfully",
+          title: t('doctorCalendar.success'),
+          description: data.message || t('doctorCalendar.notifications.shiftOverrideCreated'),
     });
     setEditShiftModal(prev => ({ ...prev, open: false }));
         // Refresh calendar data without reloading the entire page
@@ -890,8 +898,8 @@ export const DoctorCalendarPage: React.FC = () => {
       },
       onError: (error) => {
         toast({
-          title: "Error",
-          description: "Failed to create shift override",
+          title: t('doctorCalendar.error'),
+          description: t('doctorCalendar.errors.failedToCreateOverride'),
           variant: "destructive",
         });
       }
@@ -961,7 +969,7 @@ export const DoctorCalendarPage: React.FC = () => {
     if (!hospitalId) {
       toast({
         title: t('doctorCalendar.error'),
-        description: 'Hospital context is missing. Please refresh and try again.',
+        description: t('doctorCalendar.hospitalContextMissing'),
         variant: 'destructive',
       });
       return;
@@ -1282,7 +1290,7 @@ export const DoctorCalendarPage: React.FC = () => {
                     {doctorProfileError && (
                       <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                         <p className="text-red-700 dark:text-red-400 font-medium">{t('errors.doctorProfileError')}</p>
-                        <p className="text-red-600 dark:text-red-300 text-sm mt-1">{doctorProfileError.message}</p>
+                        <p className="text-red-600 dark:text-red-300 text-sm mt-1">{doctorProfileError.message || t('doctorCalendar.profileLoadError')}</p>
                       </div>
                     )}
                   </div>
@@ -1939,7 +1947,7 @@ export const DoctorCalendarPage: React.FC = () => {
                 }}
                 className="bg-green-600 hover:bg-green-700 text-white"
               >
-                Great! Continue
+                {t('doctorCalendar.successDialog.continue')}
               </Button>
             </DialogFooter>
           </DialogContent>

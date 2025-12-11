@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Check, X, Upload, Building, Mail, Camera, Star, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -19,87 +20,61 @@ interface ProfileCompletionProps {
   onClose: () => void;
 }
 
-interface ProfileField {
-  id: string;
-  label: string;
-  description: string;
+interface ProfileFieldMeta {
+  id: 'mobile' | 'license' | 'hospital' | 'email' | 'photo';
   icon: React.ComponentType<any>;
-  completed: boolean;
   required: boolean;
-  enforcement?: string;
-  benefit?: string;
+  defaultCompleted?: boolean;
+  hasEnforcement?: boolean;
+  hasBenefit?: boolean;
+  actionKey?: string;
 }
 
-export const ProfileCompletion: React.FC<ProfileCompletionProps> = ({ onClose }) => {
-  const [showModal, setShowModal] = useState(false);
-  const [profileFields, setProfileFields] = useState<ProfileField[]>([
-    {
-      id: 'mobile',
-      label: 'Mobile Verified',
-      description: 'Phone number verification',
-      icon: Check,
-      completed: true,
-      required: true
-    },
-    {
-      id: 'license',
-      label: 'Medical License',
-      description: 'Upload medical license document',
-      icon: Upload,
-      completed: false,
-      required: true,
-      enforcement: 'Required before prescriptions',
-      benefit: 'Unlock prescription feature'
-    },
-    {
-      id: 'hospital',
-      label: 'Hospital Details',
-      description: 'Add hospital/clinic information',
-      icon: Building,
-      completed: false,
-      required: true,
-      enforcement: 'Required for patient visibility',
-      benefit: 'Appear in patient searches'
-    },
-    {
-      id: 'email',
-      label: 'Email Address',
-      description: 'Add email for important updates',
-      icon: Mail,
-      completed: false,
-      required: false,
-      benefit: 'Get appointment notifications'
-    },
-    {
-      id: 'photo',
-      label: 'Profile Photo',
-      description: 'Add professional photo',
-      icon: Camera,
-      completed: false,
-      required: false,
-      benefit: 'Patients trust verified profiles'
-    }
-  ]);
+const profileFieldMeta: ProfileFieldMeta[] = [
+  { id: 'mobile', icon: Check, required: true, defaultCompleted: true },
+  { id: 'license', icon: Upload, required: true, hasEnforcement: true, hasBenefit: true, actionKey: 'license' },
+  { id: 'hospital', icon: Building, required: true, hasEnforcement: true, hasBenefit: true, actionKey: 'hospital' },
+  { id: 'email', icon: Mail, required: false, hasBenefit: true, actionKey: 'email' },
+  { id: 'photo', icon: Camera, required: false, hasBenefit: true, actionKey: 'photo' },
+];
 
-  const completedCount = profileFields.filter(field => field.completed).length;
+const initialCompletionState = profileFieldMeta.reduce<Record<string, boolean>>((acc, meta) => {
+  acc[meta.id] = meta.defaultCompleted ?? false;
+  return acc;
+}, {});
+
+export const ProfileCompletion: React.FC<ProfileCompletionProps> = ({ onClose }) => {
+  const { t } = useTranslation();
+  const [showModal, setShowModal] = useState(false);
+  const [completedState, setCompletedState] = useState<Record<string, boolean>>(initialCompletionState);
+
+  const profileFields = useMemo(() => profileFieldMeta.map((meta) => ({
+    ...meta,
+    label: t(`profileCompletion.fields.${meta.id}.label`),
+    description: t(`profileCompletion.fields.${meta.id}.description`),
+    enforcement: meta.hasEnforcement ? t(`profileCompletion.fields.${meta.id}.enforcement`) : undefined,
+    benefit: meta.hasBenefit ? t(`profileCompletion.fields.${meta.id}.benefit`) : undefined,
+    actionLabel: t(`profileCompletion.fields.${meta.id}.action`, { defaultValue: t('profileCompletion.fields.defaultAction') }),
+    completed: completedState[meta.id] ?? false,
+  })), [t, completedState]);
+
+  const completedCount = profileFields.filter((field) => field.completed).length;
   const totalFields = profileFields.length;
   const progressPercentage = Math.round((completedCount / totalFields) * 100);
 
   const handleCompleteField = (fieldId: string) => {
-    setProfileFields(prev => prev.map(field => 
-      field.id === fieldId ? { ...field, completed: true } : field
-    ));
+    setCompletedState((prev) => ({ ...prev, [fieldId]: true }));
     
     toast({
-      title: "Profile Updated!",
-      description: "Field marked as completed"
+      title: t('profileCompletion.toast.updatedTitle'),
+      description: t('profileCompletion.toast.updatedDescription')
     });
   };
 
   const remindLater = () => {
     toast({
-      title: "Reminder Set",
-      description: "We'll remind you after 3 more logins"
+      title: t('profileCompletion.toast.reminderTitle'),
+      description: t('profileCompletion.toast.reminderDescription', { count: 3 })
     });
     onClose();
   };
@@ -114,9 +89,9 @@ export const ProfileCompletion: React.FC<ProfileCompletionProps> = ({ onClose })
                 <Star className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-semibold text-lg">Complete Your Profile</h3>
+                <h3 className="font-semibold text-lg">{t('profileCompletion.card.title')}</h3>
                 <p className="text-white/90 text-sm">
-                  Top doctors average 95% completion
+                  {t('profileCompletion.card.subtitle')}
                 </p>
               </div>
             </div>
@@ -132,9 +107,9 @@ export const ProfileCompletion: React.FC<ProfileCompletionProps> = ({ onClose })
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm">Progress: {progressPercentage}%</span>
+              <span className="text-sm">{t('profileCompletion.card.progressLabel', { percent: progressPercentage })}</span>
               <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
-                {completedCount}/{totalFields} Complete
+                {t('profileCompletion.card.progressBadge', { completed: completedCount, total: totalFields })}
               </Badge>
             </div>
             
@@ -145,7 +120,7 @@ export const ProfileCompletion: React.FC<ProfileCompletionProps> = ({ onClose })
                 onClick={() => setShowModal(true)}
                 className="bg-white text-healthcare-primary hover:bg-white/90 font-semibold"
               >
-                Add Details Now (2 mins)
+                {t('profileCompletion.card.ctaPrimary', { minutes: 2 })}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
               <Button 
@@ -153,7 +128,7 @@ export const ProfileCompletion: React.FC<ProfileCompletionProps> = ({ onClose })
                 onClick={remindLater}
                 className="text-white border-white/30 hover:bg-white/20"
               >
-                Remind Me Later
+                {t('profileCompletion.card.ctaSecondary')}
               </Button>
             </div>
           </div>
@@ -165,16 +140,16 @@ export const ProfileCompletion: React.FC<ProfileCompletionProps> = ({ onClose })
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-healthcare-primary">
-              Complete Your Profile
+              {t('profileCompletion.modal.title')}
             </DialogTitle>
             <DialogDescription>
-              Complete your profile to unlock all features and increase patient trust
+              {t('profileCompletion.modal.description')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-              <span className="font-medium">Current Progress</span>
+              <span className="font-medium">{t('profileCompletion.modal.currentProgress')}</span>
               <div className="flex items-center gap-2">
                 <Progress value={progressPercentage} className="w-20 h-2" />
                 <span className="text-sm font-semibold">{progressPercentage}%</span>
@@ -196,11 +171,11 @@ export const ProfileCompletion: React.FC<ProfileCompletionProps> = ({ onClose })
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{field.label}</span>
                         {field.required && (
-                          <Badge variant="outline" className="text-xs">Required</Badge>
+                          <Badge variant="outline" className="text-xs">{t('profileCompletion.badges.required')}</Badge>
                         )}
                         {field.completed && (
                           <Badge variant="default" className="text-xs bg-healthcare-success">
-                            Completed
+                            {t('profileCompletion.badges.completed')}
                           </Badge>
                         )}
                       </div>
@@ -224,10 +199,7 @@ export const ProfileCompletion: React.FC<ProfileCompletionProps> = ({ onClose })
                       onClick={() => handleCompleteField(field.id)}
                       className="bg-healthcare-primary hover:bg-healthcare-primary/90"
                     >
-                      {field.id === 'license' ? 'Upload' : 
-                       field.id === 'hospital' ? 'Add Details' :
-                       field.id === 'email' ? 'Add Email' :
-                       field.id === 'photo' ? 'Upload Photo' : 'Complete'}
+                      {field.actionLabel}
                     </Button>
                   )}
                 </div>
@@ -238,10 +210,10 @@ export const ProfileCompletion: React.FC<ProfileCompletionProps> = ({ onClose })
               <div className="p-4 bg-gradient-primary/10 rounded-lg border border-healthcare-primary/20">
                 <div className="flex items-center gap-2 text-healthcare-primary mb-2">
                   <Star className="h-5 w-5" />
-                  <span className="font-semibold">Congratulations!</span>
+                  <span className="font-semibold">{t('profileCompletion.congrats.title')}</span>
                 </div>
                 <p className="text-sm">
-                  You're in the top 10% of profile completeness! Patients are more likely to trust complete profiles.
+                  {t('profileCompletion.congrats.message')}
                 </p>
               </div>
             )}
@@ -251,7 +223,7 @@ export const ProfileCompletion: React.FC<ProfileCompletionProps> = ({ onClose })
                 onClick={() => setShowModal(false)}
                 className="flex-1 bg-healthcare-primary"
               >
-                Save Progress
+                {t('profileCompletion.modal.saveProgress')}
               </Button>
               <Button 
                 variant="outline" 
@@ -260,7 +232,7 @@ export const ProfileCompletion: React.FC<ProfileCompletionProps> = ({ onClose })
                   remindLater();
                 }}
               >
-                Later
+                {t('profileCompletion.modal.later')}
               </Button>
             </div>
           </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useTranslation } from 'react-i18next';
 import { 
   BarChart, 
   Bar, 
@@ -64,28 +65,30 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   renderKPICard, 
   getStatusBadge 
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="space-y-6 transition-all duration-300">
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         {renderKPICard(
-          "Today's Appointments",
+          t('dashboardOverview.kpi.todayAppointments'),
           <Calendar className="h-6 w-6 text-primary" />,
           kpiData.todayAppointments
         )}
         {renderKPICard(
-          "OPD Visits This Week",
+          t('dashboardOverview.kpi.weeklyOpd'),
           <Users className="h-6 w-6 text-primary" />,
           kpiData.weeklyOPD
         )}
         {renderKPICard(
-          "Revenue This Month",
+          t('dashboardOverview.kpi.monthlyRevenue'),
           <DollarSign className="h-6 w-6 text-primary" />,
           kpiData.monthlyRevenue,
           true
         )}
         {renderKPICard(
-          "Patient Satisfaction",
+          t('dashboardOverview.kpi.patientSatisfaction'),
           <Star className="h-6 w-6 text-primary" />,
           kpiData.satisfaction
         )}
@@ -96,7 +99,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         {/* Appointments Trend */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm lg:text-base">Appointments Trend (Last 15 Days)</CardTitle>
+            <CardTitle className="text-sm lg:text-base">{t('dashboardOverview.charts.appointmentTrend')}</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
@@ -120,7 +123,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         {/* Department Load Distribution */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm lg:text-base">Department Load Distribution</CardTitle>
+            <CardTitle className="text-sm lg:text-base">{t('dashboardOverview.charts.departmentLoad')}</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
@@ -130,7 +133,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }) =>
+                    t('dashboardOverview.charts.departmentLoadLabel', {
+                      name,
+                      percent: (percent * 100).toFixed(0)
+                    })
+                  }
                   outerRadius={60}
                   fill="#8884d8"
                   dataKey="value"
@@ -151,7 +159,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         {/* Revenue by Doctor */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm lg:text-base">Revenue by Doctor</CardTitle>
+            <CardTitle className="text-sm lg:text-base">{t('dashboardOverview.charts.revenueByDoctor')}</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
@@ -175,7 +183,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         {/* Hourly Activity Heatmap */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm lg:text-base">OPD Activity by Hour</CardTitle>
+            <CardTitle className="text-sm lg:text-base">{t('dashboardOverview.charts.opdActivity')}</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
@@ -203,10 +211,10 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         <Card>
           <CardHeader>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-              <CardTitle className="text-sm lg:text-base">Recent Appointments</CardTitle>
+              <CardTitle className="text-sm lg:text-base">{t('dashboardOverview.tables.recentAppointments')}</CardTitle>
               <Button variant="outline" size="sm">
                 <Eye className="h-4 w-4 mr-2" />
-                View All
+                {t('dashboardOverview.actions.viewAll')}
               </Button>
             </div>
           </CardHeader>
@@ -232,10 +240,10 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         <Card>
           <CardHeader>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-              <CardTitle className="text-sm lg:text-base">Doctor Performance</CardTitle>
+              <CardTitle className="text-sm lg:text-base">{t('dashboardOverview.tables.doctorPerformance')}</CardTitle>
               <Button variant="outline" size="sm">
                 <Eye className="h-4 w-4 mr-2" />
-                View All
+                {t('dashboardOverview.actions.viewAll')}
               </Button>
             </div>
           </CardHeader>
@@ -245,14 +253,20 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 border rounded-lg gap-2">
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-sm">{doctor.name}</p>
-                    <p className="text-xs text-muted-foreground">{doctor.patients} patients this month</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t('dashboardOverview.tables.doctorPatientsThisMonth', { count: doctor.patients })}
+                    </p>
                   </div>
                   <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
                     <div className="flex items-center gap-1">
                       <Star className="h-4 w-4 text-yellow-500" />
                       <span className="font-medium text-sm">{doctor.satisfaction}</span>
                     </div>
-                    <p className="text-xs text-muted-foreground">${doctor.revenue.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t('dashboardOverview.tables.doctorRevenue', {
+                        value: doctor.revenue.toLocaleString()
+                      })}
+                    </p>
                   </div>
                 </div>
               ))}

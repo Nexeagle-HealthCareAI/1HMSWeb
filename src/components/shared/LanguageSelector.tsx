@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Globe, Check, Languages, Monitor } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/hooks/useLanguage';
 
 interface Language {
   code: string;
@@ -15,23 +16,32 @@ interface Language {
   region: string;
 }
 
-const languages: Language[] = [
-  { 
-    code: 'en', 
-    name: 'English', 
-    nativeName: 'English', 
+interface LanguageDefinition {
+  code: string;
+  flag: string;
+  nameKey: string;
+  nativeNameKey: string;
+  descriptionKey: string;
+  regionKey: string;
+}
+
+const languageDefinitions: LanguageDefinition[] = [
+  {
+    code: 'en',
     flag: '🇺🇸',
-    description: 'International English',
-    region: 'Global'
+    nameKey: 'languageSelector.languages.en.name',
+    nativeNameKey: 'languageSelector.languages.en.nativeName',
+    descriptionKey: 'languageSelector.languages.en.description',
+    regionKey: 'languageSelector.languages.en.region'
   },
-  { 
-    code: 'hi', 
-    name: 'Hindi', 
-    nativeName: 'हिंदी', 
+  {
+    code: 'hi',
     flag: '🇮🇳',
-    description: 'Hindi (India)',
-    region: 'India'
-  },
+    nameKey: 'languageSelector.languages.hi.name',
+    nativeNameKey: 'languageSelector.languages.hi.nativeName',
+    descriptionKey: 'languageSelector.languages.hi.description',
+    regionKey: 'languageSelector.languages.hi.region'
+  }
 ];
 
 interface LanguageSelectorProps {
@@ -49,19 +59,33 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   showFlags = true,
   showNativeNames = true,
   showDescriptions = false,
-  label = 'Language'
+  label
 }) => {
   const { i18n, t } = useTranslation();
+  const { isRTL } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
 
-  const currentLanguage = languages.find(lang => lang.code === i18n.language) || languages[0];
+  const languages = useMemo<Language[]>(
+    () =>
+      languageDefinitions.map((language) => ({
+        code: language.code,
+        flag: language.flag,
+        name: t(language.nameKey),
+        nativeName: t(language.nativeNameKey),
+        description: t(language.descriptionKey),
+        region: t(language.regionKey)
+      })),
+    [t]
+  );
+
+  const currentLanguage = languages.find((lang) => lang.code === i18n.language) || languages[0];
 
   const handleLanguageChange = (languageCode: string) => {
     i18n.changeLanguage(languageCode);
     setIsOpen(false);
     
     // Update document language
-    document.documentElement.dir = 'ltr';
+    document.documentElement.dir = isRTL() ? 'rtl' : 'ltr';
     document.documentElement.lang = languageCode;
   };
 
@@ -113,7 +137,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
       <div className={cn("space-y-3", className)}>
         <div className="flex items-center gap-2">
           <Languages className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">{label}</span>
+          <span className="text-sm font-medium">{label ?? t('languageSelector.selectLanguage')}</span>
         </div>
         
         <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -134,10 +158,8 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
           </PopoverTrigger>
           <PopoverContent className="w-80 p-0" align="start">
             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="font-semibold text-sm">Select Language</h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                Choose your preferred language for the application interface
-              </p>
+              <h3 className="font-semibold text-sm">{t('languageSelector.selectLanguage')}</h3>
+              <p className="text-xs text-muted-foreground mt-1">{t('languageSelector.chooseLanguage')}</p>
             </div>
             <div className="py-2">
               {languages.map((language) => (
@@ -156,12 +178,12 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
             <div className="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Monitor className="h-3 w-3" />
-                <span>Language changes apply immediately</span>
+                <span>{t('languageSelector.changesApplyImmediately')}</span>
               </div>
-              {i18n.language === 'hi' && (
+              {isRTL() && (
                 <div className="flex items-center gap-2 text-xs text-blue-600 mt-1">
-                  <span>🇮🇳</span>
-                  <span>Hindi language active</span>
+                  <span>🔄</span>
+                  <span>{t('languageSelector.rtlLayoutActive')}</span>
                 </div>
               )}
             </div>
@@ -212,7 +234,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
         {isOpen && (
           <div className="absolute top-full left-0 mt-1 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-50">
             <div className="p-2 border-b border-gray-200 dark:border-gray-700">
-              <span className="text-xs font-medium text-muted-foreground">Select Language</span>
+              <span className="text-xs font-medium text-muted-foreground">{t('languageSelector.selectLanguage')}</span>
             </div>
             {languages.map((language) => (
               <button
@@ -250,7 +272,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
       </PopoverTrigger>
       <PopoverContent className="w-64 p-0" align="end">
         <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-          <span className="text-sm font-medium">Choose Language</span>
+          <span className="text-sm font-medium">{t('languageSelector.selectLanguage')}</span>
         </div>
         <div className="py-1">
           {languages.map((language) => (

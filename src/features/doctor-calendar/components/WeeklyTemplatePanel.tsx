@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +28,6 @@ interface WeeklyTemplatePanelProps {
   doctorId: string;
 }
 
-const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const shiftNames: ShiftName[] = ['Morning', 'Afternoon', 'Evening'];
 
 export const WeeklyTemplatePanel: React.FC<WeeklyTemplatePanelProps> = ({
@@ -41,6 +40,28 @@ export const WeeklyTemplatePanel: React.FC<WeeklyTemplatePanelProps> = ({
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   
   const { toast } = useToast();
+
+  const dayLabels = useMemo(
+    () => [
+      t('doctorCalendar.days.sunday'),
+      t('doctorCalendar.days.monday'),
+      t('doctorCalendar.days.tuesday'),
+      t('doctorCalendar.days.wednesday'),
+      t('doctorCalendar.days.thursday'),
+      t('doctorCalendar.days.friday'),
+      t('doctorCalendar.days.saturday')
+    ],
+    [t]
+  );
+
+  const shiftLabelMap = useMemo(
+    () => ({
+      Morning: t('doctorCalendar.shifts.morning'),
+      Afternoon: t('doctorCalendar.shifts.afternoon'),
+      Evening: t('doctorCalendar.shifts.evening')
+    }),
+    [t]
+  );
   
   // Preset templates for common schedules
   const presetTemplates = {
@@ -145,15 +166,15 @@ export const WeeklyTemplatePanel: React.FC<WeeklyTemplatePanelProps> = ({
       const endTime = new Date(`2000-01-01T${updatedTemplate.endTime}`);
       
       if (startTime >= endTime) {
-        errors[templateId] = 'End time must be after start time';
+        errors[templateId] = t('doctorCalendar.weeklyTemplates.errors.endAfterStart');
       }
       
       if (updatedTemplate.slotMinutes <= 0) {
-        errors[templateId] = 'Slot duration must be greater than 0';
+        errors[templateId] = t('doctorCalendar.weeklyTemplates.errors.slotDurationPositive');
       }
       
       if (updatedTemplate.maxPatients !== null && updatedTemplate.maxPatients <= 0) {
-        errors[templateId] = 'Max patients must be greater than 0';
+        errors[templateId] = t('doctorCalendar.weeklyTemplates.errors.maxPatientsPositive');
       }
     }
     
@@ -206,8 +227,8 @@ export const WeeklyTemplatePanel: React.FC<WeeklyTemplatePanelProps> = ({
     setValidationErrors({});
     
     toast({
-      title: "Preset Applied",
-      description: `${presetName} schedule has been applied. Review and save to confirm.`,
+      title: t('doctorCalendar.weeklyTemplates.toast.presetAppliedTitle'),
+      description: t('doctorCalendar.weeklyTemplates.toast.presetAppliedDescription', { preset: presetName }),
     });
   };
   
@@ -237,8 +258,10 @@ export const WeeklyTemplatePanel: React.FC<WeeklyTemplatePanelProps> = ({
     setValidationErrors({});
     
     toast({
-      title: "Day Copied",
-      description: `${dayNames[sourceDayIndex]} schedule copied to all other days.`,
+      title: t('doctorCalendar.weeklyTemplates.toast.dayCopiedTitle'),
+      description: t('doctorCalendar.weeklyTemplates.toast.dayCopiedDescription', {
+        day: dayLabels[sourceDayIndex]
+      }),
     });
   };
   
@@ -271,9 +294,9 @@ export const WeeklyTemplatePanel: React.FC<WeeklyTemplatePanelProps> = ({
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
       toast({
-        title: "Validation Errors",
-        description: "Please fix the errors before saving.",
-        variant: "destructive",
+        title: t('doctorCalendar.weeklyTemplates.toast.validationTitle'),
+        description: t('doctorCalendar.weeklyTemplates.toast.validationDescription'),
+        variant: 'destructive',
       });
       return;
     }
@@ -284,14 +307,14 @@ export const WeeklyTemplatePanel: React.FC<WeeklyTemplatePanelProps> = ({
       setIsDirty(false);
       setValidationErrors({});
       toast({
-        title: "Templates Saved",
-        description: "Weekly templates have been updated successfully.",
+        title: t('doctorCalendar.weeklyTemplates.toast.saveSuccessTitle'),
+        description: t('doctorCalendar.weeklyTemplates.toast.saveSuccessDescription'),
       });
     } catch (error) {
       toast({
-        title: "Save Failed",
-        description: "Failed to save templates. Please try again.",
-        variant: "destructive",
+        title: t('doctorCalendar.weeklyTemplates.toast.saveFailedTitle'),
+        description: t('doctorCalendar.weeklyTemplates.toast.saveFailedDescription'),
+        variant: 'destructive',
       });
     }
   };
@@ -313,7 +336,7 @@ export const WeeklyTemplatePanel: React.FC<WeeklyTemplatePanelProps> = ({
     <Card className="h-full">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span>Weekly Templates</span>
+          <span>{t('doctorCalendar.weeklyTemplates.title')}</span>
           <div className="flex gap-2">
             {isDirty && (
               <Button
@@ -322,7 +345,7 @@ export const WeeklyTemplatePanel: React.FC<WeeklyTemplatePanelProps> = ({
                 onClick={handleReset}
                 disabled={saveTemplatesMutation.isPending}
               >
-                Reset
+                {t('doctorCalendar.weeklyTemplates.actions.reset')}
               </Button>
             )}
             <Button
@@ -330,7 +353,9 @@ export const WeeklyTemplatePanel: React.FC<WeeklyTemplatePanelProps> = ({
               onClick={handleSave}
               disabled={!isDirty || saveTemplatesMutation.isPending}
             >
-              {saveTemplatesMutation.isPending ? 'Saving...' : 'Save'}
+              {saveTemplatesMutation.isPending
+                ? t('doctorCalendar.weeklyTemplates.actions.saving')
+                : t('doctorCalendar.weeklyTemplates.actions.save')}
             </Button>
           </div>
         </CardTitle>
@@ -338,11 +363,11 @@ export const WeeklyTemplatePanel: React.FC<WeeklyTemplatePanelProps> = ({
       
       <CardContent className="space-y-4">
         <div className="text-sm text-muted-foreground">
-          Configure recurring weekly shifts. Only active templates will be applied.
+          {t('doctorCalendar.weeklyTemplates.description')}
         </div>
         
         <div className="space-y-4">
-          {dayNames.map((dayName, dayIndex) => (
+          {dayLabels.map((dayName, dayIndex) => (
             <div key={dayIndex} className="border rounded-lg p-4">
               <h3 className="font-semibold text-lg mb-3">{dayName}</h3>
               
@@ -360,13 +385,13 @@ export const WeeklyTemplatePanel: React.FC<WeeklyTemplatePanelProps> = ({
                             updateTemplate(template.templateId, { isActive: checked })
                           }
                         />
-                        <Label className="font-medium capitalize">{shiftName}</Label>
+                        <Label className="font-medium capitalize">{shiftLabelMap[shiftName] ?? shiftName}</Label>
                       </div>
                       
                       {template.isActive && (
                         <div className="flex-1 grid grid-cols-4 gap-2">
                           <div>
-                            <Label className="text-xs">Start</Label>
+                            <Label className="text-xs">{t('doctorCalendar.weeklyTemplates.labels.start')}</Label>
                             <Input
                               type="time"
                               value={template.startTime}
@@ -378,7 +403,7 @@ export const WeeklyTemplatePanel: React.FC<WeeklyTemplatePanelProps> = ({
                           </div>
                           
                           <div>
-                            <Label className="text-xs">End</Label>
+                            <Label className="text-xs">{t('doctorCalendar.weeklyTemplates.labels.end')}</Label>
                             <Input
                               type="time"
                               value={template.endTime}
@@ -390,7 +415,7 @@ export const WeeklyTemplatePanel: React.FC<WeeklyTemplatePanelProps> = ({
                           </div>
                           
                           <div>
-                            <Label className="text-xs">Slot (min)</Label>
+                            <Label className="text-xs">{t('doctorCalendar.weeklyTemplates.labels.slotMinutes')}</Label>
                             <Select
                               value={template.slotMinutes.toString()}
                               onValueChange={(value) => 
@@ -412,7 +437,7 @@ export const WeeklyTemplatePanel: React.FC<WeeklyTemplatePanelProps> = ({
                           </div>
                           
                           <div>
-                            <Label className="text-xs">Max Patients</Label>
+                            <Label className="text-xs">{t('doctorCalendar.weeklyTemplates.labels.maxPatients')}</Label>
                             <Input
                               type="number"
                               min="1"
@@ -422,7 +447,7 @@ export const WeeklyTemplatePanel: React.FC<WeeklyTemplatePanelProps> = ({
                                   maxPatients: e.target.value ? parseInt(e.target.value) : null 
                                 })
                               }
-                              placeholder="∞"
+                              placeholder={t('doctorCalendar.weeklyTemplates.placeholders.maxPatients')}
                               className="h-8"
                             />
                           </div>

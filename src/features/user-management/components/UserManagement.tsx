@@ -2,40 +2,20 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from 'react-i18next';
 
-import { 
-  Users, 
-  UserPlus, 
-  Edit2, 
-  Trash2, 
-  Search,
-  Eye,
-  Settings,
-  FileText,
-  Database,
-  Calendar,
-  DollarSign,
-  TestTube,
-  Pill,
-  Mail,
-  AlertCircle
-} from 'lucide-react';
+import { Users, UserPlus, Mail, AlertCircle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useUserManagementApi } from '../hooks/useUserManagementApi';
-import { Role as ApiRole, RolesResponse, InviteUserRequest } from '../services/userManagementApi';
+import { RolesResponse, InviteUserRequest } from '../services/userManagementApi';
 import { OnboardedUsers } from './OnboardedUsers';
 import { InvitedUsers } from './InvitedUsers';
 import { InvitationSuccessModal } from './InvitationSuccessModal';
 import { useAuthStore } from '@/store/authStore';
-import { useMutation } from '@tanstack/react-query';
-import { InviteUserResponse } from '../services/userManagementApi';
 import { ValidationUtils } from '@/utils/validation';
 import { cn } from '@/lib/utils';
 
@@ -87,14 +67,14 @@ export const UserManagement: React.FC = () => {
     // Simple email regex
     return /^[\w-.]+@[\w-]+\.[a-zA-Z]{2,}$/.test(email)
       ? ''
-      : 'Please enter a valid email address.';
+      : t('userManagement.validation.email');
   };
   const validatePhone = (phone: string) => {
     if (!phone) return '';
     // Accepts 10 digit numbers only
     return /^\d{10}$/.test(phone)
       ? ''
-      : 'Please enter a valid 10-digit phone number.';
+      : t('userManagement.validation.phone');
   };
 
   const navigationItems: Array<{
@@ -138,7 +118,7 @@ export const UserManagement: React.FC = () => {
       try {
         const response = await inviteUser.mutateAsync(inviteData);
         if (!response.success) {
-          setInviteErrorModal({ open: true, message: response.message || 'We could not send the invitation. Please check the details and try again.' });
+          setInviteErrorModal({ open: true, message: response.message || t('userManagement.inviteError.defaultMessage') });
           return;
         }
         setInvitedUserInfo({
@@ -153,12 +133,6 @@ export const UserManagement: React.FC = () => {
         console.error('Error inviting user:', error);
       }
     }
-  };
-
-  // Get role display name from API roles
-  const getRoleDisplayName = (roleId: string) => {
-    const apiRole = typedRolesResponse?.allRoles.find(r => r.roleId === roleId);
-    return apiRole?.roleName || roleId;
   };
 
   // Get role color for display
@@ -191,7 +165,7 @@ export const UserManagement: React.FC = () => {
       <div className="grid gap-6 lg:grid-cols-[280px,1fr]">
         <aside className="hidden lg:flex">
           <div className="w-full rounded-2xl border border-border/60 bg-card/60 p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">User areas</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('userManagement.userAreas')}</p>
             <div className="mt-3 space-y-3">
               {navigationItems.map((item) => (
                 <button
@@ -389,15 +363,15 @@ export const UserManagement: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-red-500" />
-              Invitation could not be sent
+              {t('userManagement.inviteError.title')}
             </DialogTitle>
             <DialogDescription>
-              {inviteErrorModal.message}
+              {inviteErrorModal.message || t('userManagement.inviteError.defaultMessage')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button onClick={() => setInviteErrorModal({ open: false, message: '' })}>
-              Close
+              {t('userManagement.close')}
             </Button>
           </DialogFooter>
         </DialogContent>

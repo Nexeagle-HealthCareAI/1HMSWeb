@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -48,6 +49,7 @@ interface InvitedUsersProps {
 }
 
 export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL' }) => {
+  const { t } = useTranslation();
   const authStore = useAuthStore.getState();
   const hospitalId = authStore.getHospitalId();
   const currentUserId = authStore.getUserId();
@@ -120,36 +122,39 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
     return allUsers.filter(user => user.status.toLowerCase() === status.toLowerCase()).length;
   };
 
-  const scopeFilters = [
-    {
-      value: 'ALL',
-      label: 'All',
-      count: allUsers.length,
-      badgeClass: 'bg-primary/10 text-primary',
-      dotClass: 'bg-primary/70'
-    },
-    {
-      value: 'Pending',
-      label: 'Pending',
-      count: getStatusCount('Pending'),
-      badgeClass: 'bg-amber-50 text-amber-700',
-      dotClass: 'bg-amber-500'
-    },
-    {
-      value: 'Accepted',
-      label: 'Accepted',
-      count: getStatusCount('Accepted'),
-      badgeClass: 'bg-emerald-50 text-emerald-700',
-      dotClass: 'bg-emerald-500'
-    },
-    {
-      value: 'Revoked',
-      label: 'Revoked',
-      count: getStatusCount('Revoked'),
-      badgeClass: 'bg-rose-50 text-rose-700',
-      dotClass: 'bg-rose-500'
-    }
-  ] as const;
+  const scopeFilters = useMemo(
+    () => [
+      {
+        value: 'ALL',
+        label: t('userManagement.invitedUsers.status.all'),
+        count: allUsers.length,
+        badgeClass: 'bg-primary/10 text-primary',
+        dotClass: 'bg-primary/70'
+      },
+      {
+        value: 'Pending',
+        label: t('userManagement.invitedUsers.status.pending'),
+        count: getStatusCount('Pending'),
+        badgeClass: 'bg-amber-50 text-amber-700',
+        dotClass: 'bg-amber-500'
+      },
+      {
+        value: 'Accepted',
+        label: t('userManagement.invitedUsers.status.accepted'),
+        count: getStatusCount('Accepted'),
+        badgeClass: 'bg-emerald-50 text-emerald-700',
+        dotClass: 'bg-emerald-500'
+      },
+      {
+        value: 'Revoked',
+        label: t('userManagement.invitedUsers.status.revoked'),
+        count: getStatusCount('Revoked'),
+        badgeClass: 'bg-rose-50 text-rose-700',
+        dotClass: 'bg-rose-500'
+      }
+    ] as const,
+    [allUsers.length, t]
+  );
 
   const getRoleColor = (roleName: string) => {
     switch (roleName.toLowerCase()) {
@@ -197,7 +202,7 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
   };
 
   const formatDate = (dateString: string) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return t('userManagement.invitedUsers.na');
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -209,7 +214,8 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
 
   // Get display status - API should return the correct status
   const getDisplayStatus = (status: string) => {
-    return status;
+    const key = status.toLowerCase();
+    return t(`userManagement.invitedUsers.status.${key}`, { defaultValue: status });
   };
 
   // Check if a specific invitation is being processed
@@ -261,8 +267,8 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
         <Card className="w-full max-w-md">
           <CardContent className="p-6 text-center">
             <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Hospital ID Not Found</h3>
-            <p className="text-muted-foreground">Please log in again to access user management.</p>
+            <h3 className="text-lg font-semibold mb-2">{t('userManagement.invitedUsers.hospitalMissingTitle')}</h3>
+            <p className="text-muted-foreground">{t('userManagement.invitedUsers.hospitalMissingMessage')}</p>
           </CardContent>
         </Card>
       </div>
@@ -275,7 +281,7 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
         <Card className="w-full max-w-md">
           <CardContent className="p-6 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading invited users...</p>
+            <p className="text-muted-foreground">{t('userManagement.invitedUsers.loading')}</p>
           </CardContent>
         </Card>
       </div>
@@ -288,7 +294,7 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
         <Card className="w-full max-w-md">
           <CardContent className="p-6 text-center">
             <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Error Loading Data</h3>
+            <h3 className="text-lg font-semibold mb-2">{t('userManagement.invitedUsers.errorTitle')}</h3>
             <p className="text-muted-foreground">{error.message}</p>
           </CardContent>
         </Card>
@@ -306,7 +312,7 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
-                  placeholder="Search invitations by name, email, or phone..."
+                  placeholder={t('userManagement.invitedUsers.searchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 h-11"
@@ -316,10 +322,10 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
               <Select value={roleFilter} onValueChange={setRoleFilter}>
                 <SelectTrigger className="h-11 sm:w-[180px]">
-                  <SelectValue placeholder="Filter by role" />
+                  <SelectValue placeholder={t('userManagement.invitedUsers.rolePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Roles</SelectItem>
+                  <SelectItem value="all">{t('userManagement.invitedUsers.allRoles')}</SelectItem>
                   {uniqueRoles.map(role => (
                     <SelectItem key={role} value={role}>{role}</SelectItem>
                   ))}
@@ -327,7 +333,7 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
               </Select>
               <Select value={activeScope} onValueChange={(value) => setActiveScope(value as 'Pending' | 'Accepted' | 'Revoked' | 'ALL')}>
                 <SelectTrigger className="h-11 sm:w-[200px]">
-                  <SelectValue placeholder="Filter by status" />
+                  <SelectValue placeholder={t('userManagement.invitedUsers.statusPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {scopeFilters.map(({ value, label, count }) => (
@@ -355,11 +361,13 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
               <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Mail className="h-8 w-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">No invitations found</h3>
+              <h3 className="text-lg font-semibold mb-2">{t('userManagement.invitedUsers.emptyTitle')}</h3>
               <p className="text-muted-foreground max-w-sm mx-auto">
                 {searchTerm || roleFilter !== 'all' 
-                  ? 'Try adjusting your search or filters to find what you\'re looking for.'
-                  : `No ${activeScope.toLowerCase()} invitations found in the system.`
+                  ? t('userManagement.invitedUsers.emptyFilterHint')
+                  : t('userManagement.invitedUsers.emptyScopeHint', {
+                      scope: t(`userManagement.invitedUsers.status.${activeScope.toLowerCase()}`, { defaultValue: activeScope.toLowerCase() })
+                    })
                 }
               </p>
             </CardContent>
@@ -405,13 +413,13 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
                         {user.status.toLowerCase() !== 'accepted' && (
                           <Badge variant="outline" className="text-blue-600 border-blue-200">
                             <Send className="h-2 w-2 mr-1" />
-                            Can Resend
+                            {t('userManagement.invitedUsers.badges.canResend')}
                           </Badge>
                         )}
                         {user.status.toLowerCase() !== 'revoked' && (
                           <Badge variant="outline" className="text-red-600 border-red-200">
                             <Ban className="h-2 w-2 mr-1" />
-                            Can Revoke
+                            {t('userManagement.invitedUsers.badges.canRevoke')}
                           </Badge>
                         )}
                       </div>
@@ -422,22 +430,22 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
                     <div className="text-left sm:text-right space-y-1">
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Calendar className="h-3 w-3" />
-                        <span>Created: {formatDate(user.createdAt)}</span>
+                        <span>{t('userManagement.invitedUsers.dates.created')}: {formatDate(user.createdAt)}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Clock className="h-3 w-3" />
-                        <span>Expires: {formatDate(user.expiresAt)}</span>
+                        <span>{t('userManagement.invitedUsers.dates.expires')}: {formatDate(user.expiresAt)}</span>
                       </div>
                       {user.acceptedAt && (
                         <div className="flex items-center gap-2 text-xs text-green-600">
                           <CheckCircle className="h-3 w-3" />
-                          <span>Accepted: {formatDate(user.acceptedAt)}</span>
+                          <span>{t('userManagement.invitedUsers.dates.accepted')}: {formatDate(user.acceptedAt)}</span>
                         </div>
                       )}
                       {user.revokedAt && (
                         <div className="flex items-center gap-2 text-xs text-red-600">
                           <XCircle className="h-3 w-3" />
-                          <span>Revoked: {formatDate(user.revokedAt)}</span>
+                          <span>{t('userManagement.invitedUsers.dates.revoked')}: {formatDate(user.revokedAt)}</span>
                         </div>
                       )}
                     </div>
@@ -464,7 +472,9 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
                             ) : (
                               <Send className="h-3 w-3 mr-1" />
                             )}
-                            {isProcessing(user.invitationId) ? 'Sending...' : 'Resend'}
+                            {isProcessing(user.invitationId)
+                              ? t('userManagement.invitedUsers.actions.resending')
+                              : t('userManagement.invitedUsers.actions.resend')}
                           </Button>
                         )}
                         
@@ -481,7 +491,9 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
                             ) : (
                               <Ban className="h-3 w-3 mr-1" />
                             )}
-                            {isProcessing(user.invitationId) ? 'Revoking...' : 'Revoke'}
+                            {isProcessing(user.invitationId)
+                              ? t('userManagement.invitedUsers.actions.revoking')
+                              : t('userManagement.invitedUsers.actions.revoke')}
                           </Button>
                         )}
                         
@@ -492,7 +504,7 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
                       {isProcessing(user.invitationId) && (
                         <div className="flex items-center gap-2 text-xs text-blue-600">
                           <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
-                          <span>Processing action...</span>
+                          <span>{t('userManagement.invitedUsers.actions.processing')}</span>
                         </div>
                       )}
                     </div>
@@ -509,32 +521,38 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {actionType === 'resend' ? 'Resend Invitation Email' : 'Revoke Invitation Access'}
+              {actionType === 'resend'
+                ? t('userManagement.invitedUsers.confirm.resendTitle')
+                : t('userManagement.invitedUsers.confirm.revokeTitle')}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {actionType === 'resend' ? (
                 <>
-                  Are you sure you want to resend the invitation email to{' '}
-                  <span className="font-semibold">{selectedInvitation?.recipientName}</span>?
+                  {t('userManagement.invitedUsers.confirm.resendDescription', {
+                    name: selectedInvitation?.recipientName ?? ''
+                  })}
                   <br />
                   <span className="text-sm text-muted-foreground">
-                    A new invitation email will be sent to {selectedInvitation?.recipientEmail}
+                    {t('userManagement.invitedUsers.confirm.resendNote', {
+                      email: selectedInvitation?.recipientEmail ?? ''
+                    })}
                   </span>
                 </>
               ) : (
                 <>
-                  Are you sure you want to revoke the invitation for{' '}
-                  <span className="font-semibold">{selectedInvitation?.recipientName}</span>?
+                  {t('userManagement.invitedUsers.confirm.revokeDescription', {
+                    name: selectedInvitation?.recipientName ?? ''
+                  })}
                   <br />
                   <span className="text-sm text-muted-foreground">
-                    This action cannot be undone and will prevent the user from completing registration.
+                    {t('userManagement.invitedUsers.confirm.revokeNote')}
                   </span>
                 </>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleActionConfirm}
               disabled={manageInvitation.isPending || isProcessing(selectedInvitation?.invitationId || '')}
@@ -543,10 +561,14 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
               {manageInvitation.isPending || isProcessing(selectedInvitation?.invitationId || '') ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  {actionType === 'resend' ? 'Sending...' : 'Revoking...'}
+                  {actionType === 'resend'
+                    ? t('userManagement.invitedUsers.actions.resending')
+                    : t('userManagement.invitedUsers.actions.revoking')}
                 </>
               ) : (
-                actionType === 'resend' ? 'Resend Email' : 'Revoke Access'
+                actionType === 'resend'
+                  ? t('userManagement.invitedUsers.confirm.resendConfirm')
+                  : t('userManagement.invitedUsers.confirm.revokeConfirm')
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

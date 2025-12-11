@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { CalendarService, CalendarViewType, DateRange } from '../services/calendarService';
 import { format, isSameDay } from 'date-fns';
 import { Calendar as CalendarIcon, Clock, CalendarDays } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface DateRangeSelectionPopupProps {
   open: boolean;
@@ -33,9 +34,10 @@ export const DateRangeSelectionPopup: React.FC<DateRangeSelectionPopupProps> = (
   selectedDate,
   onConfirm,
   onCancel,
-  title = "Date Range Selection",
-  description = "Review and confirm the selected date range"
+  title,
+  description
 }) => {
+  const { t } = useTranslation();
   const [dateRange, setDateRange] = useState<DateRange | null>(null);
   const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined);
   const [customEndDate, setCustomEndDate] = useState<Date | undefined>(undefined);
@@ -85,17 +87,22 @@ export const DateRangeSelectionPopup: React.FC<DateRangeSelectionPopupProps> = (
   const getViewTypeDescription = () => {
     switch (viewType) {
       case 'month':
-        return "Month range selected - covers the entire month";
+        return t('doctorCalendar.dateRangeSelection.viewDescriptions.month');
       case 'week':
-        return "Week range selected - covers Monday to Sunday";
+        return t('doctorCalendar.dateRangeSelection.viewDescriptions.week');
       case 'day':
-        return "Day range selected - covers the selected day";
+        return t('doctorCalendar.dateRangeSelection.viewDescriptions.day');
       case 'block':
-        return "Custom range selected - covers your selected dates";
+        return t('doctorCalendar.dateRangeSelection.viewDescriptions.block');
       default:
-        return "Date range selected";
+        return t('doctorCalendar.dateRangeSelection.viewDescriptions.default');
     }
   };
+
+  const getViewTypeLabel = () =>
+    t(`doctorCalendar.dateRangeSelection.viewTypes.${viewType}`, {
+      defaultValue: CalendarService.getViewTypeLabel(viewType)
+    });
 
   const getDateRangeSummary = () => {
     if (!dateRange) return null;
@@ -126,10 +133,10 @@ export const DateRangeSelectionPopup: React.FC<DateRangeSelectionPopupProps> = (
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {getViewTypeIcon()}
-            {title}
+            {title ?? t('doctorCalendar.dateRangeSelection.title')}
           </DialogTitle>
           <DialogDescription>
-            {description}
+            {description ?? t('doctorCalendar.dateRangeSelection.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -138,7 +145,7 @@ export const DateRangeSelectionPopup: React.FC<DateRangeSelectionPopupProps> = (
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="gap-1">
               {getViewTypeIcon()}
-              {CalendarService.getViewTypeLabel(viewType)}
+              {getViewTypeLabel()}
             </Badge>
             <span className="text-sm text-muted-foreground">
               {getViewTypeDescription()}
@@ -148,9 +155,11 @@ export const DateRangeSelectionPopup: React.FC<DateRangeSelectionPopupProps> = (
           {/* Date Range Display */}
           <div className="bg-muted/50 rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Selected Range:</Label>
+              <Label className="text-sm font-medium">
+                {t('doctorCalendar.dateRangeSelection.selectedRange')}
+              </Label>
               <Badge variant="secondary">
-                {summary.totalDays} {summary.totalDays === 1 ? 'day' : 'days'}
+                {t('doctorCalendar.dateRangeSelection.days', { count: summary.totalDays })}
               </Badge>
             </div>
             
@@ -160,7 +169,7 @@ export const DateRangeSelectionPopup: React.FC<DateRangeSelectionPopupProps> = (
               </div>
               <div className="text-sm text-muted-foreground mt-1">
                 {summary.startDateFormatted}
-                {!summary.isSingleDay && ` to ${summary.endDateFormatted}`}
+                {!summary.isSingleDay && ` ${t('doctorCalendar.dateRangeSelection.to')} ${summary.endDateFormatted}`}
               </div>
             </div>
           </div>
@@ -168,10 +177,14 @@ export const DateRangeSelectionPopup: React.FC<DateRangeSelectionPopupProps> = (
           {/* Custom Date Range Selection for Block View */}
           {viewType === 'block' && (
             <div className="space-y-3">
-              <Label className="text-sm font-medium">Customize Range:</Label>
+              <Label className="text-sm font-medium">
+                {t('doctorCalendar.dateRangeSelection.customizeRange')}
+              </Label>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs text-muted-foreground">Start Date</Label>
+                  <Label className="text-xs text-muted-foreground">
+                    {t('doctorCalendar.dateRangeSelection.startDate')}
+                  </Label>
                   <Calendar
                     mode="single"
                     selected={customStartDate}
@@ -181,7 +194,9 @@ export const DateRangeSelectionPopup: React.FC<DateRangeSelectionPopupProps> = (
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-muted-foreground">End Date</Label>
+                  <Label className="text-xs text-muted-foreground">
+                    {t('doctorCalendar.dateRangeSelection.endDate')}
+                  </Label>
                   <Calendar
                     mode="single"
                     selected={customEndDate}
@@ -197,7 +212,9 @@ export const DateRangeSelectionPopup: React.FC<DateRangeSelectionPopupProps> = (
           {/* Days Preview */}
           {!summary.isSingleDay && (
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Days Included:</Label>
+              <Label className="text-sm font-medium">
+                {t('doctorCalendar.dateRangeSelection.daysIncluded')}
+              </Label>
               <div className="bg-background border rounded-lg p-3 max-h-32 overflow-y-auto">
                 <div className="grid grid-cols-7 gap-1 text-xs">
                   {CalendarService.getDaysInRange(dateRange).map((day, index) => (
@@ -220,14 +237,14 @@ export const DateRangeSelectionPopup: React.FC<DateRangeSelectionPopupProps> = (
             variant="outline"
             onClick={handleCancel}
           >
-            Cancel
+            {t('doctorCalendar.dateRangeSelection.actions.cancel')}
           </Button>
           <Button
             onClick={handleConfirm}
             className="gap-2"
           >
             <CalendarIcon className="h-4 w-4" />
-            Confirm Range
+            {t('doctorCalendar.dateRangeSelection.actions.confirmRange')}
           </Button>
         </DialogFooter>
       </DialogContent>

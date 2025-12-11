@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  AlertTriangle, 
-  Mail, 
-  ArrowLeft, 
+import { useTranslation } from 'react-i18next';
+import {
+  AlertTriangle,
+  Mail,
+  ArrowLeft,
   Shield,
   Clock
 } from 'lucide-react';
@@ -14,10 +15,15 @@ interface InvalidTokenPageProps {
   message?: string;
 }
 
-const InvalidTokenPage: React.FC<InvalidTokenPageProps> = ({ 
-  message = "Invalid token." 
-}) => {
+const InvalidTokenPage: React.FC<InvalidTokenPageProps> = ({ message }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
+
+  const resolvedMessage = message ?? t('invalidToken.defaultMessage');
+  const reasons = useMemo(
+    () => t('invalidToken.reasons', { returnObjects: true }) as string[],
+    [t]
+  );
 
   const handleBackToLogin = () => {
     navigate('/');
@@ -31,10 +37,10 @@ const InvalidTokenPage: React.FC<InvalidTokenPageProps> = ({
           <div className="flex items-center justify-center mb-3 sm:mb-4">
             <img 
               src="/Logo.png" 
-              alt="NexEagle Logo" 
+              alt={t('invalidToken.brandAlt')}
               className="h-10 w-auto sm:h-12 mr-2 sm:mr-3"
             />
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">NexEagle HMS</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{t('invalidToken.brandName')}</h1>
           </div>
         </div>
 
@@ -47,25 +53,24 @@ const InvalidTokenPage: React.FC<InvalidTokenPageProps> = ({
               </div>
             </div>
             <CardTitle className="text-xl font-semibold text-gray-800">
-              Invalid Invitation Link
+              {t('invalidToken.title')}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-4 sm:px-6 text-center space-y-6">
             {/* Error Message */}
             <div className="space-y-3">
               <p className="text-gray-600 text-base">
-                {message}
+                {resolvedMessage}
               </p>
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-left">
                 <h4 className="font-medium text-red-800 mb-2 flex items-center gap-2">
                   <Clock className="h-4 w-4" />
-                  Possible Reasons:
+                  {t('invalidToken.reasonsTitle')}
                 </h4>
                 <ul className="text-sm text-red-700 space-y-1 ml-6">
-                  <li>• The invitation link has expired</li>
-                  <li>• The invitation has been revoked</li>
-                  <li>• The invitation has already been used</li>
-                  <li>• The link is malformed or corrupted</li>
+                  {reasons.map((reason) => (
+                    <li key={reason}>• {reason}</li>
+                  ))}
                 </ul>
               </div>
             </div>
@@ -74,20 +79,18 @@ const InvalidTokenPage: React.FC<InvalidTokenPageProps> = ({
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h4 className="font-medium text-blue-800 mb-3 flex items-center gap-2">
                 <Mail className="h-4 w-4" />
-                Need Help?
+                {t('invalidToken.helpTitle')}
               </h4>
               <div className="text-sm text-blue-700 space-y-2 text-left">
                 <p>
-                  <strong>Contact your administrator</strong> to request a new invitation link.
+                  <strong>{t('invalidToken.contactAdmin')}</strong> {t('invalidToken.requestNewLink')}
                 </p>
-                <p>
-                  Please provide them with the following information:
-                </p>
+                <p>{t('invalidToken.provideInfo')}</p>
                 <ul className="ml-4 space-y-1">
-                  <li>• Your full name</li>
-                  <li>• Your mobile number</li>
-                  <li>• Your intended role in the system</li>
-                  <li>• When you received the original invitation</li>
+                  <li>• {t('invalidToken.info.fullName')}</li>
+                  <li>• {t('invalidToken.info.mobileNumber')}</li>
+                  <li>• {t('invalidToken.info.intendedRole')}</li>
+                  <li>• {t('invalidToken.info.receivedWhen')}</li>
                 </ul>
               </div>
             </div>
@@ -96,11 +99,10 @@ const InvalidTokenPage: React.FC<InvalidTokenPageProps> = ({
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <h4 className="font-medium text-gray-800 mb-2 flex items-center gap-2">
                 <Shield className="h-4 w-4" />
-                Security Notice
+                {t('invalidToken.securityTitle')}
               </h4>
               <p className="text-sm text-gray-600 text-left">
-                Invitation links are time-sensitive and single-use for security purposes. 
-                This helps protect your organization's data and ensures only authorized users can access the system.
+                {t('invalidToken.securityMessage')}
               </p>
             </div>
 
@@ -111,11 +113,11 @@ const InvalidTokenPage: React.FC<InvalidTokenPageProps> = ({
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Login
+                {t('invalidToken.backToLogin')}
               </Button>
               
               <p className="text-xs text-gray-500">
-                If you believe this is an error, please contact your system administrator.
+                {t('invalidToken.errorNote')}
               </p>
             </div>
           </CardContent>
