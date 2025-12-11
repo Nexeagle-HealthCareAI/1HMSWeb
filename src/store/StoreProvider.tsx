@@ -2,7 +2,6 @@ import React, { useEffect, ReactNode } from 'react';
 import { useAuthStore } from './authStore';
 import { useAppStore } from './appStore';
 import { useUserStore } from './userStore';
-import { ThemeProvider } from '@/components/providers/ThemeProvider';
 
 interface StoreProviderProps {
   children: ReactNode;
@@ -86,9 +85,7 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
 
 
   return (
-    <ThemeProvider>
-      {children}
-    </ThemeProvider>
+    <>{children}</>
   );
 };
 
