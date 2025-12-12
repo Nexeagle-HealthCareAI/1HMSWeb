@@ -738,22 +738,22 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                     ) : doctorsResponse?.doctors && doctorsResponse.doctors.length > 0 ? (
                       doctorsResponse.doctors.map((doctor) => (
                         <SelectItem key={doctor.doctorId} value={doctor.doctorId} className="text-xs">
-                        <div className="flex items-center justify-between w-full">
-                            <div className="flex-1 min-w-0">
-                                <div className="font-medium truncate">{doctor.doctorName}</div>
-                                <div className="text-xs text-muted-foreground truncate">
-                                  {doctor.qualifications?.length > 0 ? doctor.qualifications.join(', ') : t('appointmentBooking.defaultQualification')}
-                                </div>
-                                <div className="text-xs text-blue-600 truncate">
-                                  {doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : t('appointmentBooking.generalSpecialization')}
-                                </div>
-                                <div className="text-xs text-gray-500 truncate">
-                                  {isDoctorOnTimeOff(doctor.doctorId) ? t('appointmentBooking.timeOff') : t('appointmentBooking.available')}
-                                </div>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center w-full gap-1 sm:gap-2">
+                          <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                            <div className="text-base sm:text-sm break-words whitespace-normal leading-tight">{doctor.doctorName}</div>
+                            <div className="hidden sm:block text-xs text-muted-foreground break-words whitespace-normal leading-tight">
+                              {doctor.qualifications?.length > 0 ? doctor.qualifications.join(', ') : t('appointmentBooking.defaultQualification')}
                             </div>
-                            {isDoctorOnTimeOff(doctor.doctorId) && (
-                              <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 ml-2"></div>
-                            )}
+                            <div className="hidden sm:block text-xs text-blue-600 break-words whitespace-normal leading-tight">
+                              {doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : t('appointmentBooking.generalSpecialization')}
+                            </div>
+                            <div className="hidden sm:block text-xs text-gray-500 break-words whitespace-normal leading-tight">
+                              {isDoctorOnTimeOff(doctor.doctorId) ? t('appointmentBooking.timeOff') : t('appointmentBooking.available')}
+                            </div>
+                          </div>
+                          {isDoctorOnTimeOff(doctor.doctorId) && (
+                            <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 ml-2 mt-1 sm:mt-0"></div>
+                          )}
                         </div>
                         </SelectItem>
                       ))
@@ -849,15 +849,17 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                           : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
                       }`}
                     >
-                        <div className="font-medium text-blue-600 text-sm">{doctor.doctorName}</div>
-                        <div className="text-xs text-gray-600 mb-1">
-                          {doctor.qualifications?.length > 0 ? doctor.qualifications.join(', ') : t('appointmentBooking.defaultQualification')}
-                        </div>
-                        <div className="text-xs text-blue-600 mb-1">
-                          {doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : t('appointmentBooking.generalSpecialization')}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {isDoctorOnTimeOff(doctor.doctorId) ? t('appointmentBooking.timeOff') : t('appointmentBooking.available')}
+                        <div className="flex flex-col gap-0.5">
+                          <div className="text-blue-600 text-base sm:text-sm break-words whitespace-normal leading-tight">{doctor.doctorName}</div>
+                          <div className="hidden sm:block text-xs text-gray-600 break-words whitespace-normal leading-tight">
+                            {doctor.qualifications?.length > 0 ? doctor.qualifications.join(', ') : t('appointmentBooking.defaultQualification')}
+                          </div>
+                          <div className="hidden sm:block text-xs text-blue-600 break-words whitespace-normal leading-tight">
+                            {doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : t('appointmentBooking.generalSpecialization')}
+                          </div>
+                          <div className="hidden sm:block text-xs text-gray-500 break-words whitespace-normal leading-tight">
+                            {isDoctorOnTimeOff(doctor.doctorId) ? t('appointmentBooking.timeOff') : t('appointmentBooking.available')}
+                          </div>
                         </div>
                         {isDoctorOnTimeOff(doctor.doctorId) && (
                           <div className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full"></div>

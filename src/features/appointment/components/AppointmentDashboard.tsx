@@ -784,14 +784,14 @@ export const AppointmentDashboard = () => {
         </div>                
 
       {/* Main Dashboard Content */}
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="max-w-7xl mx-auto p-2 sm:p-4 md:p-6">
         {/* Main Content Area */}
         <div className="w-full">
           {/* Current Appointments Section */}
           <div className="space-y-4">
             {/* Appointment Type Tabs */}
-            <div className="mb-4">
-              <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+            <div className="mb-2 sm:mb-4">
+              <div className="flex flex-col sm:flex-row sm:space-x-1 space-y-2 sm:space-y-0 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
                 {[
                   { key: 'current', label: t('appointmentDashboard.tabs.current') },
                   { key: 'past', label: t('appointmentDashboard.tabs.past') },
@@ -830,9 +830,9 @@ export const AppointmentDashboard = () => {
 
             {/* Compact Search Bar */}
             <div className="mb-4">
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
                 {/* Search Input */}
-                <div className="relative max-w-md">
+                <div className="relative w-full max-w-md">
                           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                           <Input
                         placeholder={t('appointmentDashboard.searchPlaceholder')}
@@ -843,10 +843,10 @@ export const AppointmentDashboard = () => {
                       </div>
                       
                 {/* Doctor Filter Dropdown */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('appointmentDashboard.doctorLabel')}:</label>
                   <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
-                    <SelectTrigger className="w-48 h-10">
+                    <SelectTrigger className="w-full sm:w-48 h-10">
                       <SelectValue placeholder={t('appointmentDashboard.allDoctors')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -862,27 +862,27 @@ export const AppointmentDashboard = () => {
 
                 {/* Date Range Filter - Only show for Past and Future tabs */}
                 {(activeTab === 'past' || activeTab === 'future') && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 w-full sm:w-auto">
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('appointmentDashboard.dateRange.label')}:</label>
                     <div className="flex items-center gap-2">
-                      <div className="flex flex-col gap-1">
+                      <div className="flex flex-col gap-1 w-full">
                         <label className="text-xs text-gray-500 dark:text-gray-400">{t('appointmentDashboard.dateRange.start')}</label>
                         <Input
                           type="date"
                           value={startDate}
                           onChange={(e) => handleStartDateChange(e.target.value)}
-                          className="w-40 h-10 text-xs"
+                          className="w-full sm:w-40 h-10 text-xs"
                           placeholder={t('appointmentDashboard.dateRange.start')}
                         />
                       </div>
                       <span className="text-gray-400 text-sm mt-6">{t('appointmentDashboard.dateRange.to')}</span>
-                      <div className="flex flex-col gap-1">
+                      <div className="flex flex-col gap-1 w-full">
                         <label className="text-xs text-gray-500 dark:text-gray-400">{t('appointmentDashboard.dateRange.end')}</label>
                         <Input
                           type="date"
                           value={endDate}
                           onChange={(e) => handleEndDateChange(e.target.value)}
-                          className="w-40 h-10 text-xs"
+                          className="w-full sm:w-40 h-10 text-xs"
                           placeholder={t('appointmentDashboard.dateRange.end')}
                           min={startDate || undefined}
                         />
@@ -969,7 +969,7 @@ export const AppointmentDashboard = () => {
                   size="sm"
                   onClick={handleManualRefresh}
                   disabled={isRefreshing}
-                  className="h-9 px-4 text-xs md:self-start"
+                  className="h-9 px-4 text-xs md:self-start mt-2 sm:mt-0"
                 >
                   <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
                   {t('appointmentDashboard.refreshNow')}
@@ -1006,10 +1006,10 @@ export const AppointmentDashboard = () => {
 
             {/* Current Appointments Table */}
             {!isLoading && !error && (
-              <div className="space-y-4">
-               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm">
-                  <div className="px-4 py-2.5 border-b border-gray-200 dark:border-gray-600 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
-                  <div className="flex items-center justify-between">
+                <div className="space-y-4">
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-x-auto shadow-sm">
+                  <div className="px-2 sm:px-4 py-2.5 border-b border-gray-200 dark:border-gray-600 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
                       <div>
                         <p className="text-xs text-gray-600 dark:text-gray-400">
                           {totalPages > 1 && `Page ${currentPage} of ${totalPages}`}
@@ -1025,43 +1025,43 @@ export const AppointmentDashboard = () => {
                   </div>
                 </div>
                 
-                <div className="overflow-x-auto">
-                    <Table className="border-collapse">
+                <div className="overflow-x-auto w-full">
+                  <Table className="border-collapse min-w-[700px] md:min-w-full text-xs md:text-sm">
                                         <TableHeader>
                          <TableRow className="bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700">
-                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">
+                             <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">
                              <div className="flex items-center gap-1.5">
                                <User className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                                  <span>{t('appointmentDashboard.table.patientId')}</span>
                                <Eye className="h-2.5 w-2.5 text-gray-400" />
                              </div>
                            </TableHead>
-                             <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">{t('appointmentDashboard.table.patientName')}</TableHead>
-                             <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">{t('appointmentDashboard.table.doctorName')}</TableHead>
-                             <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">{t('appointmentDashboard.table.tokenNo')}</TableHead>
-                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">
+                             <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.patientName')}</TableHead>
+                             <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.doctorName')}</TableHead>
+                             <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.tokenNo')}</TableHead>
+                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">
                                {activeTab === 'past'
                                  ? t('appointmentDashboard.table.lastAppointmentDate')
                                  : activeTab === 'future'
                                    ? t('appointmentDashboard.table.appointmentDate')
                                    : t('appointmentDashboard.table.appointmentTime')}
                            </TableHead>
-                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">
+                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">
                                {activeTab === 'past'
                                  ? t('appointmentDashboard.table.lastCompletedStatus')
                                  : t('appointmentDashboard.table.currentStatus')}
                            </TableHead>
                            {activeTab !== 'past' && (
-                               <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">{t('appointmentDashboard.table.actions')}</TableHead>
+                               <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.actions')}</TableHead>
                            )}
-                             <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">{t('appointmentDashboard.table.printPrescription')}</TableHead>
-                                                       <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">
+                             <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.printPrescription')}</TableHead>
+                                                       <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">
                                 {activeTab === 'past'
                                   ? t('appointmentDashboard.table.nextFollowUpDate')
                                   : t('appointmentDashboard.table.printToken')}
                             </TableHead>
                             {activeTab === 'past' && (
-                                <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-2 px-2">{t('appointmentDashboard.table.isCompleted')}</TableHead>
+                              <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.isCompleted')}</TableHead>
                             )}
                        </TableRow>
                     </TableHeader>
@@ -1086,7 +1086,7 @@ export const AppointmentDashboard = () => {
                         </TableRow>
                       ) : (
                                                      currentAppointments.map((appointment) => (
-                             <TableRow key={appointment.appointmentId} className={`hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors border-b border-gray-100 dark:border-gray-700/50 ${compactMode ? 'h-10' : 'h-12'}`}>
+                             <TableRow key={appointment.appointmentId} className={`hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors border-b border-gray-100 dark:border-gray-700/50 ${compactMode ? 'h-10' : 'h-12'} text-xs md:text-sm`}>
                                {/* Patient ID */}
                                <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                                  <button
@@ -1120,15 +1120,21 @@ export const AppointmentDashboard = () => {
                                
                                {/* Doctor Name */}
                                <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                                 <div className="flex items-center gap-1.5">
+                                 {/* Laptop/Desktop: show full info, else only doctor name */}
+                                 <div className="hidden lg:flex items-center gap-1.5">
                                    <div className="w-5 h-5 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center flex-shrink-0">
                                      <User className="h-2.5 w-2.5 text-green-600 dark:text-green-400" />
-                                </div>
+                                   </div>
                                    <span className="text-gray-700 dark:text-gray-300 text-xs truncate">
                                      {appointment.doctorName || t('appointmentDashboard.actionButtons.notApplicable')}
                                    </span>
-                              </div>
-                            </TableCell>
+                                 </div>
+                                 <div className="lg:hidden">
+                                   <span className="text-gray-700 dark:text-gray-300 text-xs truncate">
+                                     {appointment.doctorName || t('appointmentDashboard.actionButtons.notApplicable')}
+                                   </span>
+                                 </div>
+                               </TableCell>
                                
                                                                                                {/* Token No */}
                                 <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
