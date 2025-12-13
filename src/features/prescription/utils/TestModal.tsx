@@ -7,6 +7,7 @@ import { defaultPrescriptionData } from '@/features/prescription/utils/prescript
 import { MarginConfig, PrescriptionDesignerData, TypographySettings } from '@/features/prescription/hooks/usePrescriptionDesigner';
 import { resolveTemplateFetchUrl } from '@/features/prescription/utils/templateFetch';
 import { buildTemplateBoundPreview, TemplateBoundLayoutConfig } from '@/components/shared/prescription-preview/services/previewRenderer';
+import { generateTemplateBoundPrescription } from './generateTemplateBoundPrescription';
 
 interface TestModalProps {
   open: boolean;
@@ -92,7 +93,11 @@ export const TestModal = ({ open, onOpenChange, margins, typography, overflowStr
   };
 
   const handleGenerate = async () => {
-    // Always use defaultPrescriptionData for generation, ignoring user JSON and API
+    // Use user-edited JSON (parsedPrescription) for preview generation
+    if (!parsedPrescription) {
+      setJsonError('Invalid JSON structure. Fix syntax before running the test.');
+      return;
+    }
     setIsGenerating(true);
     try {
       const headerHeight = margins.top;
@@ -111,11 +116,11 @@ export const TestModal = ({ open, onOpenChange, margins, typography, overflowStr
           footerHeight,
           overflowStrategy,
         };
-        blob = await buildTemplateBoundPreview({
+        blob = await generateTemplateBoundPrescription({
           templateFile: resolvedTemplateFile,
           layout: layoutConfig,
           typography,
-          prescription: defaultPrescriptionData,
+          prescription: parsedPrescription,
         });
       }
 
@@ -138,16 +143,16 @@ export const TestModal = ({ open, onOpenChange, margins, typography, overflowStr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-[1400px] max-h-[90vh] overflow-hidden">
+      <DialogContent className="w-[95vw] max-w-[1400px] max-h-[90vh] min-w-[900px] min-h-[600px] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Test prescription preview</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-3">
+        <div className="grid gap-6 md:grid-cols-2 h-[500px] min-h-[500px]">
+          <div className="space-y-3 h-full min-w-[350px] flex flex-col">
             <p className="text-sm font-semibold">Prescription JSON</p>
-            <Textarea value={jsonValue} onChange={handleJsonChange} className="h-[28rem] font-mono text-xs" />
+            <Textarea value={jsonValue} onChange={handleJsonChange} className="h-[28rem] font-mono text-xs flex-1" />
             {jsonError && <p className="text-xs text-destructive">{jsonError}</p>}
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 sticky bottom-0 bg-white pt-3 pb-1 mt-auto z-10 border-t">
               <Button variant="outline" type="button" onClick={handleClose}>
                 Close
               </Button>
@@ -156,13 +161,18 @@ export const TestModal = ({ open, onOpenChange, margins, typography, overflowStr
               </Button>
             </div>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-3 h-full min-w-[350px] flex flex-col">
             <p className="text-sm font-semibold">Live preview</p>
-            <div className="rounded-lg border bg-muted/40 p-3">
+            <div className="rounded-lg border bg-muted/40 p-3 flex-1 flex flex-col">
               {generatedPreviewUrl ? (
-                <ScrollArea className="h-[28rem]">
-                  <iframe src={generatedPreviewUrl} title="Prescription test preview" className="h-[700px] w-full rounded-md border" />
-                </ScrollArea>
+                <div className="h-[28rem] w-full flex-1">
+                  <iframe
+                    src={generatedPreviewUrl}
+                    title="Prescription test preview"
+                    className="h-full w-full rounded-md border-0 bg-transparent"
+                    style={{ background: 'transparent' }}
+                  />
+                </div>
               ) : null}
               {!generatedPreviewUrl && (
                 <div className="flex h-[28rem] items-center justify-center text-sm text-muted-foreground">

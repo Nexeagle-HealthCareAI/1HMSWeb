@@ -224,7 +224,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     addressLine1: z
       .string()
       .trim()
-      .min(5, 'Address line 1 is required')
+      .min(1, 'Address line 1 is required')
       .max(120, 'Address line 1 must be under 120 characters')
       .regex(addressRegex, 'Address line is required '),
     addressLine2: z
