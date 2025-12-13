@@ -134,7 +134,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
 
   return (
     <Dialog open={true} onOpenChange={onCancel}>
-      <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto dark:bg-gray-900">
+      <DialogContent className="max-w-5xl max-h-[95vh] min-w-[500px] min-h-[600px] overflow-y-auto dark:bg-gray-900">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-healthcare-primary dark:text-blue-400 flex items-center gap-2">
             <Activity className="h-5 w-5" />
