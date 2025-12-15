@@ -93,14 +93,14 @@ export const generateTemplateBoundPrescription = async ({ templateFile, layout, 
   const boldFont = await outputDoc.embedFont(fontDefinition.bold);
   const color = hexToRgb(typography.color);
 
-  const textSize = typography.size;
+  const textSize = typography.size > 0 ? typography.size : 12;
   const lineHeight = Math.max(textSize + 2, textSize * 1.3);
   const leftPad = mmToPt(layout.margins.left);
   const rightPad = mmToPt(layout.margins.right);
   const templateHeaderPad = mmToPt(layout.margins.top + layout.headerHeight);
   const templateFooterPad = mmToPt(layout.margins.bottom + layout.footerHeight);
-  const blankHeaderPad = mmToPt(layout.margins.top + 5);
-  const blankFooterPad = mmToPt(layout.margins.bottom + 5);
+  const blankHeaderPad = mmToPt(layout.margins.top);
+  const blankFooterPad = mmToPt(layout.margins.bottom);
   const contentWidth = pageWidth - leftPad - rightPad;
 
   let currentPageIndex = -1;
@@ -132,7 +132,11 @@ export const generateTemplateBoundPrescription = async ({ templateFile, layout, 
   }
 
   const writeLine = async (text: string, options?: { bold?: boolean }) => {
-    const font = options?.bold ? boldFont : regularFont;
+    const font = options?.bold
+      ? boldFont
+      : typography.weight === 'bold'
+        ? boldFont
+        : regularFont;
     const wrapped = wrapText(text, font, textSize, contentWidth);
     for (const line of wrapped) {
       await ensureRoom();
@@ -157,6 +161,11 @@ export const generateTemplateBoundPrescription = async ({ templateFile, layout, 
   };
 
   const patient = prescription.patient ?? { name: '', id: '', age: '', gender: '', phone: '' };
+  const patientAddress = (() => {
+    const fromDetails = patient.details?.find((detail) => detail.label?.toLowerCase().includes('address'))?.value;
+    const fromField = (patient as { address?: string }).address;
+    return fromDetails || fromField || '';
+  })();
   const doctor = prescription.doctor ?? null;
   const visit = prescription.visit ?? { date: '', location: '', followUp: '' };
   const vitals =
@@ -177,8 +186,11 @@ export const generateTemplateBoundPrescription = async ({ templateFile, layout, 
   const notes = prescription.notes ?? '';
   const resolvedVisitDate = visit.date ? new Date(visit.date).toLocaleDateString() : '';
 
-  await writeLine(`Patient: ${patient.name || '—'} (${patient.age || '—'}/${patient.gender || '—'})`, { bold: true });
-  await writeLine(`Patient ID: ${patient.id || '—'}`);
+  await writeLine('Patient Information', { bold: true });
+  await writeLine(`Patient ID: ${patient.id || '—'} Name: ${patient.name || '—'} Age: ${patient.age || '—'} Gender: ${patient.gender || '—'}`);
+  if (patientAddress) {
+    await writeLine(`Address: ${patientAddress}`);
+  }
   await writeLine(`Phone: ${patient.phone || '—'}`);
   cursorY -= lineHeight / 2;
 
