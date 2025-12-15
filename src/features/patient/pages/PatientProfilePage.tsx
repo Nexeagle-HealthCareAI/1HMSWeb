@@ -28,7 +28,7 @@ import {
   PatientLabTests,
   PatientProfileModal
 } from '../components';
-import EPrescriptionPad from '@/pages/EPrescriptionPad';
+import EPrescriptionPad from '@/features/patient/components/EPrescriptionPad';
 import PrescriptionCustomizePanel from '@/features/prescription/components/PrescriptionCustomizePanel';
 import { usePatientProfile } from '../hooks/usePatientProfile';
 import { useAuthStore } from '@/store/authStore';

@@ -28,7 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
-import EPrescriptionPad from '@/pages/EPrescriptionPad';
+import EPrescriptionPad from '@/features/patient/components/EPrescriptionPad';
 
 
 

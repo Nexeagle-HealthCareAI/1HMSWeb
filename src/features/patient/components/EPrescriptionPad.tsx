@@ -9,13 +9,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Settings, 
-  Save, 
-  Printer, 
-  Download, 
-  Plus, 
-  Trash2, 
+import {
+  Settings,
+  Save,
+  Printer,
+  Download,
+  Plus,
+  Trash2,
   Edit3,
   Eye,
   FileText,
@@ -91,7 +91,7 @@ interface FieldConfig {
 const convertPreferencesToFieldConfigs = (preferences: any) => {
   console.log('=== Converting Preferences ===');
   console.log('Input preferences:', preferences);
-  
+
   const fieldDefinitions = [
     { id: 'vitals', label: 'Vitals' },
     { id: 'chiefComplaint', label: 'Chief Complaint' },
@@ -111,7 +111,7 @@ const convertPreferencesToFieldConfigs = (preferences: any) => {
 
   const result = fieldDefinitions.map(field => {
     let apiFieldName = field.id;
-    
+
     if (field.id === 'certificates') {
       apiFieldName = 'certificatesAndNotes';
     } else if (field.id === 'followUp') {
@@ -124,15 +124,15 @@ const convertPreferencesToFieldConfigs = (preferences: any) => {
         enabled: investigationsEnabled || proceduresEnabled
       };
     }
-    
+
     const enabled = preferences[apiFieldName];
-    
+
     return {
       ...field,
       enabled: enabled !== undefined ? Boolean(enabled) : false
     };
   });
-  
+
   console.log('Converted field configs:', result);
   return result;
 };
@@ -185,14 +185,14 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
         setIsLoadingApiPreferences(true);
         const doctorId = getDoctorId() || '';
         const hospitalId = getHospitalId?.() || '';
-        
+
         if (!doctorId || !hospitalId) {
           console.warn('Missing identifiers for prescription preferences', { doctorId, hospitalId });
           return;
         }
 
         const response = await prescriptionFieldConfigApi.getFieldPreferences(doctorId, hospitalId);
-        
+
         if (response.success && response.preference) {
           setApiPreferences(response.preference);
           console.log('Prescription field preferences loaded in EPrescriptionPad');
@@ -213,15 +213,15 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
 
   // Get field preferences from API or passed props
   const { fields: fieldConfigs, isLoadingPreferences } = usePrescriptionFieldConfig();
-  
+
   // Use API preferences if available, otherwise use hook data
-  const finalFieldConfigs = apiPreferences ? 
-    convertPreferencesToFieldConfigs(apiPreferences) : 
+  const finalFieldConfigs = apiPreferences ?
+    convertPreferencesToFieldConfigs(apiPreferences) :
     fieldConfigs;
-  
+
   // Determine if we should show loading state
   const shouldShowLoading = !apiPreferences && (isLoadingApiPreferences || isLoadingPreferences);
-  
+
   // Search functionality state
   const [searchSuggestions, setSearchSuggestions] = useState<{ [key: string]: string[] }>({
     chiefComplaint: [
@@ -239,10 +239,10 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
       'Ibuprofen', 'Aspirin', 'Warfarin', 'Insulin', 'Levothyroxine', 'Albuterol'
     ]
   });
-  
+
   const [showSuggestions, setShowSuggestions] = useState<{ [key: string]: boolean }>({});
   const [filteredSuggestions, setFilteredSuggestions] = useState<{ [key: string]: string[] }>({});
-  
+
   // Collapsible sections state
   const [collapsedSections, setCollapsedSections] = useState<{ [key: string]: boolean }>({
     vitals: false,
@@ -263,7 +263,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
 
   // Individual field save status
   const [fieldSaveStatus, setFieldSaveStatus] = useState<{ [key: string]: 'idle' | 'saving' | 'saved' | 'error' }>({});
-  
+
   // Field configuration is now handled by the API via usePrescriptionFieldConfig hook
   const renderFieldIcon = (fieldId: string) => {
     const iconMap: { [key: string]: React.ReactNode } = {
@@ -295,7 +295,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
   // Search functionality
   const handleSearchInput = (fieldId: string, value: string) => {
     const suggestions = searchSuggestions[fieldId] || [];
-    const filtered = suggestions.filter(suggestion => 
+    const filtered = suggestions.filter(suggestion =>
       suggestion.toLowerCase().includes(value.toLowerCase())
     );
     setFilteredSuggestions(prev => ({ ...prev, [fieldId]: filtered }));
@@ -311,17 +311,17 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
     setShowSuggestions(prev => ({ ...prev, [fieldId]: false }));
   };
 
-  const SearchableInput = ({ 
-    fieldId, 
-    value, 
-    onChange, 
-    placeholder, 
-    className = "" 
-  }: { 
-    fieldId: string; 
-    value: string; 
-    onChange: (value: string) => void; 
-    placeholder: string; 
+  const SearchableInput = ({
+    fieldId,
+    value,
+    onChange,
+    placeholder,
+    className = ''
+  }: {
+    fieldId: string;
+    value: string;
+    onChange: (value: string) => void;
+    placeholder: string;
     className?: string;
   }) => (
     <div className="relative">
@@ -360,13 +360,13 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
 
   const saveFieldData = async (fieldId: string, data: any) => {
     setFieldSaveStatus(prev => ({ ...prev, [fieldId]: 'saving' }));
-    
+
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
       const savedData = JSON.parse(localStorage.getItem('eprescription-field-data') || '{}');
       savedData[fieldId] = data;
       localStorage.setItem('eprescription-field-data', JSON.stringify(savedData));
-      
+
       setFieldSaveStatus(prev => ({ ...prev, [fieldId]: 'saved' }));
       setTimeout(() => {
         setFieldSaveStatus(prev => ({ ...prev, [fieldId]: 'idle' }));
@@ -380,16 +380,16 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
   };
 
   const renderCollapsibleSection = (
-    fieldId: string, 
-    title: string, 
+    fieldId: string,
+    title: string,
     content: React.ReactNode
   ) => {
     const field = finalFieldConfigs.find(f => f.id === fieldId);
     if (!field?.enabled) return null;
 
-      return (
+    return (
       <Card key={fieldId}>
-        <CardHeader 
+        <CardHeader
           className="pb-3 cursor-pointer hover:bg-gray-50 transition-colors"
           onClick={() => toggleSection(fieldId)}
         >
@@ -406,7 +406,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
         </CardHeader>
         {!collapsedSections[fieldId] && (
           <CardContent>
-              {content}
+            {content}
             <div className="flex justify-end pt-2">
               <Button
                 size="sm"
@@ -577,7 +577,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                       className="h-8 text-sm border-gray-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
                     />
                   </div>
-                  
+
                   {/* Temperature */}
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
@@ -594,7 +594,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                       className="h-8 text-sm border-gray-200 focus:border-red-400 focus:ring-1 focus:ring-red-100"
                     />
                   </div>
-                  
+
                   {/* Heart Rate */}
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
@@ -611,7 +611,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                       className="h-8 text-sm border-gray-200 focus:border-green-400 focus:ring-1 focus:ring-green-100"
                     />
                   </div>
-                  
+
                   {/* O2 Saturation */}
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
@@ -628,7 +628,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                       className="h-8 text-sm border-gray-200 focus:border-purple-400 focus:ring-1 focus:ring-purple-100"
                     />
                   </div>
-                  
+
                   {/* Weight */}
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
@@ -645,7 +645,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                       className="h-8 text-sm border-gray-200 focus:border-gray-400 focus:ring-1 focus:ring-gray-100"
                     />
                   </div>
-                  
+
                   {/* Height */}
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
@@ -662,7 +662,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                       className="h-8 text-sm border-gray-200 focus:border-gray-400 focus:ring-1 focus:ring-gray-100"
                     />
                   </div>
-                  
+
                   {/* BMI */}
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
@@ -1072,13 +1072,13 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                 <Button variant="outline" size="sm" className="h-8 text-sm">
                   <Plus className="h-4 w-4 mr-2" />
                   Add Attachment
-              </Button>
-                  </div>
-                )}
+                </Button>
+              </div>
+            )}
 
-                  </div>
-                  </div>
-                  </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

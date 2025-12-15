@@ -12,6 +12,7 @@
     "build:prod": "vite build --mode production",
     "build:deploy": "npm run clean:build && vite build --mode production",
     "preview": "vite preview",
+    "start": "npm run build && npx serve -s dist -l 3000",
     "lint": "eslint .",
     "security:audit": "npm audit",
     "security:fix": "npm audit fix",
