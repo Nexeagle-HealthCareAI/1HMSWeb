@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 import { useHospitalApi } from '@/hooks/useApi';
 import { useAuthStore } from '@/store/authStore';
 
@@ -63,13 +64,19 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
   branding,
   onBrandingChange
 }) => {
-  const { t } = useTranslation();
-  const toast = (_?: any) => {};
+  const { t, i18n } = useTranslation();
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const { userId, hospitalId, setHospitalId } = useAuthStore();
 
+  const translate = (key: string, fallback: string) => t(key, { defaultValue: fallback });
+
+  const hospitalIdToUse = hospitalId || '';
+  const { data: hospitalData, isLoading, error } = useHospitalApi.getHospitalById(hospitalIdToUse);
+  const effectiveHospitalId = hospitalId || hospitalData?.hospitalId || '';
+
   const registerHospitalMutation = useHospitalApi.registerHospital();
-  const updateHospitalMutation = useHospitalApi.updateHospital(hospitalId || '');
+  const updateHospitalMutation = useHospitalApi.updateHospital(effectiveHospitalId);
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [snapshotBeforeEdit, setSnapshotBeforeEdit] = useState<HospitalBranding | null>(null);
@@ -79,46 +86,78 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
 
   const fieldLabels: Record<keyof HospitalBranding, string> = useMemo(
     () => ({
-      name: t('hospitalBranding.labels.name'),
-      type: t('hospitalBranding.labels.type'),
-      email: t('hospitalBranding.labels.email'),
-      contact: t('hospitalBranding.labels.contact'),
-      alternateContact: t('hospitalBranding.labels.alternateContact'),
-      website: t('hospitalBranding.labels.website'),
-      location: t('hospitalBranding.labels.location'),
-      city: t('hospitalBranding.labels.city'),
-      state: t('hospitalBranding.labels.state'),
-      country: t('hospitalBranding.labels.country'),
-      pincode: t('hospitalBranding.labels.pincode'),
-      timeZone: t('hospitalBranding.labels.timeZone'),
-      registrationNumber: t('hospitalBranding.labels.registrationNumber')
+      name: translate('hospitalBranding.labels.name', 'Hospital Name'),
+      type: translate('hospitalBranding.labels.type', 'Hospital Type'),
+      email: translate('hospitalBranding.labels.email', 'Email'),
+      contact: translate('hospitalBranding.labels.contact', 'Primary Contact'),
+      alternateContact: translate('hospitalBranding.labels.alternateContact', 'Alternate Contact'),
+      website: translate('hospitalBranding.labels.website', 'Website'),
+      location: translate('hospitalBranding.labels.location', 'Location'),
+      city: translate('hospitalBranding.labels.city', 'City'),
+      state: translate('hospitalBranding.labels.state', 'State'),
+      country: translate('hospitalBranding.labels.country', 'Country'),
+      pincode: translate('hospitalBranding.labels.pincode', 'Pincode'),
+      timeZone: translate('hospitalBranding.labels.timeZone', 'Time Zone'),
+      registrationNumber: translate('hospitalBranding.labels.registrationNumber', 'Registration Number')
     }),
-    [t]
+    [translate, i18n.language]
   );
 
-  const hospitalTypes = useMemo(
-    () => [
-      { value: 'Clinic', label: t('hospitalBranding.hospitalTypes.clinic') },
-      { value: 'Polyclinic', label: t('hospitalBranding.hospitalTypes.polyclinic') },
-      { value: 'Nursing Home', label: t('hospitalBranding.hospitalTypes.nursingHome') },
-      { value: 'General Hospital', label: t('hospitalBranding.hospitalTypes.generalHospital') },
-      { value: 'Multispeciality Hospital', label: t('hospitalBranding.hospitalTypes.multispecialityHospital') },
-      { value: 'Super Speciality Hospital', label: t('hospitalBranding.hospitalTypes.superSpecialityHospital') }
-    ],
-    [t]
-  );
+  // The hospitalTypes array uses translation keys with a fallback to English labels.
+  // If you see a key like 'hospitalBranding.hospitalTypes.polyclinic' in the dropdown, check your translation files.
+  // The second argument to t() ensures a human-friendly label is always shown.
+  const hospitalTypes = useMemo(() => {
+    const lang = i18n.language;
+    const types = [
+      'clinic',
+      'polyclinic',
+      'nursingHome',
+      'generalHospital',
+      'multispecialityHospital',
+      'superSpecialityHospital',
+      'other'
+    ] as const;
+
+    const englishFallback: Record<typeof types[number], string> = {
+      clinic: 'Clinic',
+      polyclinic: 'Polyclinic',
+      nursingHome: 'Nursing Home',
+      generalHospital: 'General Hospital',
+      multispecialityHospital: 'Multispeciality Hospital',
+      superSpecialityHospital: 'Super Speciality Hospital',
+      other: 'Other'
+    };
+
+    const hindiFallback: Record<typeof types[number], string> = {
+      clinic: 'क्लिनिक',
+      polyclinic: 'पॉलीक्लिनिक',
+      nursingHome: 'नर्सिंग होम',
+      generalHospital: 'जनरल हॉस्पिटल',
+      multispecialityHospital: 'मल्टी स्पेशियलिटी हॉस्पिटल',
+      superSpecialityHospital: 'सुपर स्पेशियलिटी हॉस्पिटल',
+      other: 'अन्य'
+    };
+
+    return types.map((type) => {
+      const fallback = lang === 'hi' ? hindiFallback[type] : englishFallback[type];
+      const label = t(`hospitalBranding.hospitalTypes.${type}`, {
+        defaultValue: fallback
+      });
+      return { value: type, label };
+    });
+  }, [t, i18n.language]);
 
   const timeZones = useMemo(
     () => [
-      { value: 'Asia/Kolkata', label: t('hospitalBranding.timeZones.asiaKolkata') },
-      { value: 'Asia/Dubai', label: t('hospitalBranding.timeZones.asiaDubai') },
-      { value: 'America/New_York', label: t('hospitalBranding.timeZones.americaNewYork') },
-      { value: 'America/Los_Angeles', label: t('hospitalBranding.timeZones.americaLosAngeles') },
-      { value: 'Europe/London', label: t('hospitalBranding.timeZones.europeLondon') },
-      { value: 'Asia/Tokyo', label: t('hospitalBranding.timeZones.asiaTokyo') },
-      { value: 'Australia/Sydney', label: t('hospitalBranding.timeZones.australiaSydney') }
+      { value: 'Asia/Kolkata', label: translate('hospitalBranding.timeZones.asiaKolkata', 'Asia/Kolkata') },
+      { value: 'Asia/Dubai', label: translate('hospitalBranding.timeZones.asiaDubai', 'Asia/Dubai') },
+      { value: 'America/New_York', label: translate('hospitalBranding.timeZones.americaNewYork', 'America/New York') },
+      { value: 'America/Los_Angeles', label: translate('hospitalBranding.timeZones.americaLosAngeles', 'America/Los Angeles') },
+      { value: 'Europe/London', label: translate('hospitalBranding.timeZones.europeLondon', 'Europe/London') },
+      { value: 'Asia/Tokyo', label: translate('hospitalBranding.timeZones.asiaTokyo', 'Asia/Tokyo') },
+      { value: 'Australia/Sydney', label: translate('hospitalBranding.timeZones.australiaSydney', 'Australia/Sydney') }
     ],
-    [t]
+    [translate, i18n.language]
   );
 
   const RequiredIndicator: React.FC = () => (
@@ -129,35 +168,35 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
 
   const validateEmail = (email: string): string | null => {
     const trimmed = email.trim();
-    if (!trimmed) return t('hospitalBranding.validation.emailRequired');
+    if (!trimmed) return translate('hospitalBranding.validation.emailRequired', 'Email is required');
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(trimmed) ? null : t('hospitalBranding.validation.emailInvalid');
+    return emailRegex.test(trimmed) ? null : translate('hospitalBranding.validation.emailInvalid', 'Invalid email address');
   };
 
   const validatePhone = (phone: string): string | null => {
     const trimmed = phone.trim();
-    if (!trimmed) return t('hospitalBranding.validation.contactRequired');
+    if (!trimmed) return translate('hospitalBranding.validation.contactRequired', 'Contact number is required');
     const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/;
-    return phoneRegex.test(trimmed) ? null : t('hospitalBranding.validation.phoneInvalid');
+    return phoneRegex.test(trimmed) ? null : translate('hospitalBranding.validation.phoneInvalid', 'Invalid phone number');
   };
 
   const validateWebsite = (website: string): string | null => {
     if (!website) return null;
     const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/;
-    return urlRegex.test(website) ? null : t('hospitalBranding.validation.websiteInvalid');
+    return urlRegex.test(website) ? null : translate('hospitalBranding.validation.websiteInvalid', 'Invalid website URL');
   };
 
   const validatePincode = (pincode: string): string | null => {
     if (!pincode) return null;
     const pincodeRegex = /^[0-9]{4,10}$/;
-    return pincodeRegex.test(pincode) ? null : t('hospitalBranding.validation.pincodeInvalid');
+    return pincodeRegex.test(pincode) ? null : translate('hospitalBranding.validation.pincodeInvalid', 'Invalid pincode');
   };
 
   const validateField = (field: keyof HospitalBranding, value: string): string | null => {
     const trimmedValue = value?.trim() ?? '';
 
     if (requiredFields.includes(field) && !trimmedValue) {
-      return t('hospitalBranding.validation.required', { field: fieldLabels[field] });
+      return translate('hospitalBranding.validation.required', `${fieldLabels[field]} is required`);
     }
 
     switch (field) {
@@ -198,20 +237,20 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
     return Object.keys(errors).length === 0;
   };
 
-  const hospitalIdToUse = hospitalId || '';
-  const { data: hospitalData, isLoading, error } = useHospitalApi.getHospitalById(hospitalIdToUse);
+  // const hospitalIdToUse = hospitalId || '';
+  // const { data: hospitalData, isLoading, error } = useHospitalApi.getHospitalById(hospitalIdToUse);
   const completionPercent = hospitalData?.profileStatus?.profileCompletionPercent ?? 0;
   const completionChecklist = [
     {
-      label: t('hospitalBranding.completion.basicInfo'),
+      label: translate('hospitalBranding.completion.basicInfo', 'Basic information'),
       complete: hospitalData?.profileStatus?.isBasicInfoComplete ?? false
     },
     {
-      label: t('hospitalBranding.completion.locationInfo'),
+      label: translate('hospitalBranding.completion.locationInfo', 'Location details'),
       complete: hospitalData?.profileStatus?.isLocationInfoComplete ?? false
     },
     {
-      label: t('hospitalBranding.completion.contactInfo'),
+      label: translate('hospitalBranding.completion.contactInfo', 'Contact details'),
       complete: hospitalData?.profileStatus?.isContactInfoComplete ?? false
     }
   ];
@@ -250,8 +289,8 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
   const handleSaveBranding = async () => {
     if (!userId) {
       toast({
-        title: t('hospitalBranding.toast.errorTitle'),
-        description: t('hospitalBranding.toast.missingUser'),
+        title: translate('hospitalBranding.toast.errorTitle', 'Error'),
+        description: translate('hospitalBranding.toast.missingUser', 'User information is missing'),
         variant: 'destructive'
       });
       return;
@@ -260,8 +299,8 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
     const isValid = validateBranding(branding);
     if (!isValid) {
       toast({
-        title: t('hospitalBranding.toast.validationTitle'),
-        description: t('hospitalBranding.toast.validationDescription'),
+        title: translate('hospitalBranding.toast.validationTitle', 'Please fix the highlighted fields'),
+        description: translate('hospitalBranding.toast.validationDescription', 'Some required fields are missing or invalid.'),
         variant: 'destructive'
       });
       return;
@@ -351,7 +390,9 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
         <div className="flex items-center justify-center p-8">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-sm text-muted-foreground">{t('hospitalBranding.loading.title')}</p>
+            <p className="text-sm text-muted-foreground">
+              {translate('hospitalBranding.loading.title', 'Loading hospital details...')}
+            </p>
           </div>
         </div>
       </div>
@@ -363,8 +404,12 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
       <div className="space-y-6">
         <div className="flex items-center justify-center p-8">
           <div className="text-center">
-            <p className="text-sm text-red-600 mb-4">{t('hospitalBranding.error.title')}</p>
-            <p className="text-xs text-muted-foreground">{t('hospitalBranding.error.message')}</p>
+            <p className="text-sm text-red-600 mb-4">
+              {translate('hospitalBranding.error.title', 'Unable to load hospital details')}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {translate('hospitalBranding.error.message', 'Please try again in a moment.')}
+            </p>
           </div>
         </div>
       </div>
@@ -394,53 +439,57 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
         detail: { view: 'dashboard', scrollToTop: true }
       });
       window.dispatchEvent(event);
-    });
-  };
+        });
+      };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">{t('hospitalBranding.title')}</h3>
-          <p className="text-sm text-muted-foreground">{t('hospitalBranding.subtitle')}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {isExistingHospital && !isEditMode && (
-            <Button onClick={handleStartEdit} variant="outline" className="sm:w-auto">
-              {t('hospitalBranding.buttons.editDetails')}
-            </Button>
-          )}
-          {isExistingHospital && isEditMode && (
-            <>
-              <Button variant="outline" onClick={handleCancelEdit} className="sm:w-auto">
-                {t('hospitalBranding.buttons.cancel')}
-              </Button>
-              <Button
-                onClick={handleSaveBranding}
-                disabled={updateHospitalMutation.isPending || isSaveDisabled}
-                className="sm:w-auto"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {updateHospitalMutation.isPending
-                  ? t('hospitalBranding.buttons.saving')
-                  : t('hospitalBranding.buttons.saveChanges')}
-              </Button>
-            </>
-          )}
-          {!isExistingHospital && (
-            <Button
-              onClick={handleSaveBranding}
-              disabled={registerHospitalMutation.isPending || isSaveDisabled}
-              className="sm:w-auto"
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {registerHospitalMutation.isPending
-                ? t('hospitalBranding.buttons.saving')
-                : t('hospitalBranding.buttons.saveInfo')}
-            </Button>
-          )}
-        </div>
-      </div>
+      return (
+        <div className="space-y-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h3 className="text-lg font-semibold">
+                {translate('hospitalBranding.title', 'Hospital Branding')}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {translate('hospitalBranding.subtitle', 'Add your hospital details')}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {isExistingHospital && !isEditMode && (
+                <Button onClick={handleStartEdit} variant="outline" className="sm:w-auto">
+                  {translate('hospitalBranding.buttons.editDetails', 'Edit details')}
+                </Button>
+              )}
+              {isExistingHospital && isEditMode && (
+                <>
+                  <Button variant="outline" onClick={handleCancelEdit} className="sm:w-auto">
+                    {translate('hospitalBranding.buttons.cancel', 'Cancel')}
+                  </Button>
+                  <Button
+                    onClick={handleSaveBranding}
+                    disabled={updateHospitalMutation.isPending || isSaveDisabled}
+                    className="sm:w-auto"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    {updateHospitalMutation.isPending
+                      ? translate('hospitalBranding.buttons.saving', 'Saving...')
+                      : translate('hospitalBranding.buttons.saveChanges', 'Save changes')}
+                  </Button>
+                </>
+              )}
+              {!isExistingHospital && (
+                <Button
+                  onClick={handleSaveBranding}
+                  disabled={registerHospitalMutation.isPending || isSaveDisabled}
+                  className="sm:w-auto"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {registerHospitalMutation.isPending
+                    ? translate('hospitalBranding.buttons.saving', 'Saving...')
+                    : translate('hospitalBranding.buttons.saveInfo', 'Save information')}
+                </Button>
+              )}
+            </div>
+          </div>
 
       <div className="grid gap-6">
         <Card>

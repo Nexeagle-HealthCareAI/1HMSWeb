@@ -1,4 +1,139 @@
 {
+  "hospitalBranding": {
+    "title": "Hospital Branding",
+    "subtitle": "Add your hospital details",
+    "loading": {
+      "title": "Loading hospital details...",
+      "message": "Please wait while we fetch your hospital information."
+    },
+    "error": {
+      "title": "Unable to load hospital details",
+      "message": "Please try again in a moment."
+    },
+    "buttons": {
+      "editDetails": "Edit details",
+      "cancel": "Cancel",
+      "saveChanges": "Save changes",
+      "saveInfo": "Save information",
+      "saving": "Saving...",
+      "continue": "Continue"
+    },
+    "sections": {
+      "core": {
+        "title": "Core details",
+        "subtitle": "Primary hospital identity information"
+      },
+      "contact": {
+        "title": "Contact information",
+        "subtitle": "Primary and secondary contact details"
+      },
+      "location": {
+        "title": "Location details",
+        "subtitle": "Full address and locality"
+      },
+      "config": {
+        "title": "Configuration & metadata",
+        "subtitle": "System configuration and regulatory info"
+      }
+    },
+    "labels": {
+      "name": "Hospital Name",
+      "type": "Hospital Type",
+      "email": "Email",
+      "contact": "Primary Contact",
+      "alternateContact": "Alternate Contact",
+      "website": "Website",
+      "location": "Location",
+      "city": "City",
+      "state": "State",
+      "country": "Country",
+      "pincode": "Pincode",
+      "timeZone": "Time Zone",
+      "registrationNumber": "Registration Number"
+    },
+    "placeholders": {
+      "name": "Enter hospital name",
+      "type": "Select hospital type",
+      "email": "Enter email address",
+      "contact": "Enter primary phone number",
+      "alternateContact": "Enter alternate phone number",
+      "website": "Enter website URL",
+      "location": "Enter full street address",
+      "city": "Enter city",
+      "state": "Enter state or province",
+      "country": "Enter country",
+      "pincode": "Enter pincode",
+      "timeZone": "Select time zone",
+      "registrationNumber": "Enter hospital registration number"
+    },
+    "helpers": {
+      "name": "Up to 150 characters",
+      "primaryContact": "Main contact number",
+      "alternateContact": "Secondary contact number",
+      "email": "Primary email for communication",
+      "website": "Official hospital website",
+      "location": "Detailed street address",
+      "registrationNumber": "Official hospital registration number",
+      "timeZone": "Operational time zone of the hospital"
+    },
+    "hospitalTypes": {
+      "clinic": "Clinic",
+      "polyclinic": "Polyclinic",
+      "nursingHome": "Nursing Home",
+      "generalHospital": "General Hospital",
+      "multispecialityHospital": "Multispeciality Hospital",
+      "superSpecialityHospital": "Super Speciality Hospital",
+      "other": "Other",
+      "clinic_hi": "क्लिनिक",
+      "polyclinic_hi": "पॉलीक्लिनिक",
+      "nursingHome_hi": "नर्सिंग होम",
+      "generalHospital_hi": "जनरल हॉस्पिटल",
+      "multispecialityHospital_hi": "मल्टीस्पेशलिटी हॉस्पिटल",
+      "superSpecialityHospital_hi": "सुपर स्पेशलिटी हॉस्पिटल",
+      "other_hi": "अन्य",
+      "क्लिनिक_en": "Clinic",
+      "पॉलीक्लिनिक_en": "Polyclinic",
+      "नर्सिंग होम_en": "Nursing Home",
+      "जनरल हॉस्पिटल_en": "General Hospital",
+      "मल्टीस्पेशलिटी हॉस्पिटल_en": "Multispeciality Hospital",
+      "सुपर स्पेशलिटी हॉस्पिटल_en": "Super Speciality Hospital",
+      "अन्य_en": "Other"
+    },
+    "timeZones": {
+      "asiaKolkata": "Asia/Kolkata",
+      "asiaDubai": "Asia/Dubai",
+      "americaNewYork": "America/New York",
+      "americaLosAngeles": "America/Los Angeles",
+      "europeLondon": "Europe/London",
+      "asiaTokyo": "Asia/Tokyo",
+      "australiaSydney": "Australia/Sydney"
+    },
+    "validation": {
+      "required": "{{field}} is required",
+      "emailRequired": "Email is required",
+      "emailInvalid": "Invalid email address",
+      "contactRequired": "Contact number is required",
+      "phoneInvalid": "Invalid phone number",
+      "websiteInvalid": "Invalid website URL",
+      "pincodeInvalid": "Invalid pincode"
+    },
+    "toast": {
+      "errorTitle": "Error",
+      "missingUser": "User information is missing",
+      "validationTitle": "Please fix the highlighted fields",
+      "validationDescription": "Some required fields are missing or invalid."
+    },
+    "completion": {
+      "title": "Profile complete!",
+      "description": "All required hospital details are verified. Admin features are now fully unlocked.",
+      "score": "Completion score",
+      "basicInfo": "Basic information",
+      "locationInfo": "Location details",
+      "contactInfo": "Contact details",
+      "statusComplete": "Complete",
+      "statusPending": "Pending"
+    }
+  },
   "common": {
     "loading": "Loading...",
     "error": "Error",
@@ -388,9 +523,14 @@
     "medications": "Medications",
     "emergencyContact": "Emergency Contact",
     "male": "Male",
-    "female": "Female",
-    "other": "Other",
-    "noPatients": "No patients found",
+    "female": "Female",    
+      "clinic": "Clinic",
+      "polyclinic": "Polyclinic",
+      "nursingHome": "Nursing Home",
+      "generalHospital": "General Hospital",
+      "multispecialityHospital": "Multispeciality Hospital",
+      "superSpecialityHospital": "Super Speciality Hospital",
+      "other": "Other",
     "addPatient": "Add Patient",
     "addNewPatient": "Add New Patient",
     "updatePatient": "Update Patient",
@@ -1491,8 +1631,6 @@
   "userManagement": {
     "title": "User Management",
     "subtitle": "Manage users, roles, permissions and track activities",
-    "onboardedUsers": "Onboarded Users",
-    "invitedUsers": "Invited Users",
     "onboardedUsersSubtitle": "Manage active users in the system",
     "invitedUsersSubtitle": "Track and manage user invitations",
     "activeUsers": "Active Users",
@@ -2610,181 +2748,6 @@
       "cancel": "Cancel"
     },
     "help": "You can select multiple specializations. If you don't find what you need, add custom ones."
-  },
-  "hospitalBranding": {
-    "title": "Hospital Information",
-    "subtitle": "Configure your hospital's complete information and details",
-    "loading": {
-      "title": "Loading hospital information...",
-      "message": "Please wait while we fetch your hospital information."
-    },
-    "error": {
-      "title": "Failed to load hospital information",
-      "message": "Please try refreshing the page"
-    },
-    "buttons": {
-      "editDetails": "Edit Details",
-      "cancel": "Cancel",
-      "saveChanges": "Save Changes",
-      "saving": "Saving...",
-      "saveInfo": "Save Hospital Information",
-      "continue": "Continue"
-    },
-    "modal": {
-      "headerTitle": "Complete Hospital Information",
-      "headerSubtitle": "Set up your hospital profile to get started",
-      "steps": {
-        "basicInfo": "Basic Info",
-        "location": "Location",
-        "registration": "Registration"
-      },
-      "nextStep": "Next Step",
-      "saveAndComplete": "Save & Complete"
-    },
-    "sections": {
-      "core": {
-        "title": "Core Information",
-        "subtitle": "Basic hospital details and identity"
-      },
-      "contact": {
-        "title": "Contact Information",
-        "subtitle": "Primary and secondary contact details"
-      },
-      "location": {
-        "title": "Location Information",
-        "subtitle": "Complete address and location details"
-      },
-      "config": {
-        "title": "Configuration & Metadata",
-        "subtitle": "System configuration and regulatory information"
-      }
-    },
-    "labels": {
-      "name": "Hospital Name",
-      "type": "Hospital Type",
-      "email": "Email Address",
-      "contact": "Primary Contact",
-      "alternateContact": "Alternate Contact",
-      "website": "Website",
-      "location": "Street Address",
-      "city": "City",
-      "state": "State/Province",
-      "country": "Country",
-      "pincode": "Postal Code",
-      "timeZone": "Time Zone",
-      "registrationNumber": "Registration Number"
-    },
-    "appointmentCancelDialog": {
-      "title": "Cancel Appointment",
-      "warningLabel": "Warning:",
-      "warningDescription": "This action cannot be undone. The appointment will be permanently cancelled and the time slot will become available for other patients.",
-      "patientAgeGender": "{{age}} years old, {{gender}}",
-      "tokenLabel": "Token: {{token}}",
-      "confirmTitle": "Are you sure you want to cancel this appointment?",
-      "confirmSubtitle": "The patient should be notified about the cancellation.",
-      "actions": {
-        "keep": "Keep Appointment",
-        "confirm": "Yes, Cancel Appointment",
-        "pending": "Canceling..."
-      },
-      "time": {
-        "am": "AM",
-        "pm": "PM"
-      }
-    },
-    "blockModal": {
-      "title": "Create Block",
-      "fields": {
-        "titleLabel": "Title",
-        "titlePlaceholder": "e.g., Annual Leave, Surgery, Meeting",
-        "blockTypeLabel": "Block Type",
-        "blockType": {
-          "leave": "Leave",
-          "personal": "Personal",
-          "surgery": "Surgery",
-          "admin": "Admin"
-        },
-        "startLabel": "Start Date & Time",
-        "endLabel": "End Date & Time",
-        "durationLabel": "Block Duration:"
-      },
-      "actions": {
-        "cancel": "Cancel",
-        "create": "Create Block",
-        "pending": "Creating..."
-      }
-    },
-    "placeholders": {
-      "name": "Enter hospital name",
-      "type": "Select hospital type",
-      "email": "Enter email address",
-      "contact": "Enter primary phone number",
-      "alternateContact": "Enter alternate phone number",
-      "website": "Enter website URL",
-      "location": "Enter complete street address",
-      "city": "Enter city name",
-      "state": "Enter state or province",
-      "country": "Enter country name",
-      "pincode": "Enter postal code",
-      "registrationNumber": "Enter hospital registration number",
-      "timeZone": "Select time zone"
-    },
-    "helpers": {
-      "name": "Maximum 150 characters",
-      "primaryContact": "Main contact number",
-      "alternateContact": "Secondary contact number",
-      "email": "Primary email for communications",
-      "website": "Hospital's official website",
-      "location": "Detailed street address",
-      "registrationNumber": "Official hospital registration number",
-      "timeZone": "Hospital's operating time zone"
-    },
-    "hospitalTypes": {
-      "hospital": "Hospital",
-      "clinic": "Clinic",
-      "medicalCenter": "Medical Center",
-      "nursingHome": "Nursing Home",
-      "diagnosticCenter": "Diagnostic Center",
-      "dentalClinic": "Dental Clinic",
-      "eyeClinic": "Eye Clinic",
-      "other": "Other"
-    },
-    "timeZones": {
-      "asiaKolkata": "Asia/Kolkata (IST)",
-      "americaNewYork": "America/New_York (EST)",
-      "americaLosAngeles": "America/Los_Angeles (PST)",
-      "europeLondon": "Europe/London (GMT)",
-      "asiaDubai": "Asia/Dubai (GST)",
-      "asiaSingapore": "Asia/Singapore (SGT)"
-    },
-    "completion": {
-      "title": "Hospital profile complete!",
-      "description": "All required hospital details are now verified. Admin features are fully unlocked across the platform.",
-      "score": "Completion score",
-      "basicInfo": "Basic Information",
-      "locationInfo": "Location Details",
-      "contactInfo": "Contact Information",
-      "statusComplete": "Complete",
-      "statusPending": "Pending"
-    },
-    "toast": {
-      "errorTitle": "Error",
-      "missingUser": "User ID not found. Please login again.",
-      "validationTitle": "Validation Error",
-      "validationDescription": "Please complete all required fields before saving.",
-      "successTitle": "Success!",
-      "successDescription": "Hospital information saved successfully.",
-      "errorDescription": "Failed to save hospital information. Please try again."
-    },
-    "validation": {
-      "required": "{{field}} is required",
-      "emailRequired": "Email address is required",
-      "emailInvalid": "Please enter a valid email address",
-      "contactRequired": "Primary contact is required",
-      "phoneInvalid": "Please enter a valid phone number",
-      "websiteInvalid": "Please enter a valid website URL",
-      "pincodeInvalid": "Please enter a valid postal code (4-10 digits)"
-    }
   },
   "profileCompletion": {
     "card": {

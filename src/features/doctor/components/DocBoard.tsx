@@ -1298,9 +1298,7 @@ export const ClinicalDashboard: React.FC = () => {
                           <TableHead className="hidden lg:table-cell text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
                             {t('docBoard.table.printRx')}
                           </TableHead>
-                          <TableHead className="hidden lg:table-cell text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
-                            {t('docBoard.table.printToken')}
-                          </TableHead>
+                          {/* Print Token column removed */}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1311,24 +1309,21 @@ export const ClinicalDashboard: React.FC = () => {
                               className="group border-b border-gray-100/80 dark:border-gray-800/70 last:border-b-0 hover:bg-blue-50/50 dark:hover:bg-gray-800/50 transition-all duration-200"
                             >
                               <TableCell className="py-4 px-4 align-top">
-                                <div className="space-y-1.5">
-                                  <button
-                                    onClick={() => handlePatientIdClick(appointment)}
-                                    className="text-sm font-semibold text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-200 inline-flex items-center gap-1 transition-colors"
-                                  >
-                                    {appointment.patientId}
-                                    <ExternalLink className="h-3 w-3" />
-                                  </button>
-                                  <p className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
-                                    {appointment.patientFullName}
-                                  </p>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    {appointment.phone || t('docBoard.table.noPhone')}
-                                  </p>
-                                </div>
+                                <button
+                                  onClick={() => handlePatientIdClick(appointment)}
+                                  className="text-sm font-semibold text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-200 inline-flex items-center gap-1 transition-colors"
+                                >
+                                  {appointment.patientId}
+                                  <ExternalLink className="h-3 w-3" />
+                                </button>
                               </TableCell>
                               <TableCell className="hidden xl:table-cell py-4 px-4 text-sm text-gray-600 dark:text-gray-300">
-                                {appointment.patientFullName}
+                                <div className="flex flex-col">
+                                  <span>{appointment.patientFullName}</span>
+                                  {appointment.phone && (
+                                    <span className="text-xs text-gray-400 dark:text-gray-500">{appointment.phone}</span>
+                                  )}
+                                </div>
                               </TableCell>
                               <TableCell className="py-4 px-4">
                                 <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-100 px-3 py-1 text-xs font-semibold">
@@ -1367,16 +1362,7 @@ export const ClinicalDashboard: React.FC = () => {
                                       {t('common.cancel')}
                                     </Button>
                                   )}
-                                  {appointment.finalStatusCode === 'VITALS_REQUIRED' && (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-8 px-3 text-xs font-semibold text-purple-600 border-purple-200 hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30"
-                                    >
-                                      <Heart className="h-3 w-3 mr-1" />
-                                      {t('docBoard.table.vitals')}
-                                    </Button>
-                                  )}
+                                  {/* Vitals button removed */}
                                 </div>
                               </TableCell>
                               <TableCell className="hidden lg:table-cell py-4 px-4">
@@ -1391,16 +1377,7 @@ export const ClinicalDashboard: React.FC = () => {
                                   {t('common.print')}
                                 </Button>
                               </TableCell>
-                              <TableCell className="hidden lg:table-cell py-4 px-4">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 px-3 text-xs font-semibold bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                                >
-                                  <Printer className="h-3 w-3 mr-1" />
-                                  {t('common.print')}
-                                </Button>
-                              </TableCell>
+                              {/* Print Token cell removed */}
                             </TableRow>
                           ))
                         ) : (
@@ -1495,7 +1472,14 @@ export const ClinicalDashboard: React.FC = () => {
                                     <ExternalLink className="h-3 w-3" />
                                   </button>
                                 </TableCell>
-                                <TableCell className="py-3 px-4">{appointment.patientFullName}</TableCell>
+                                <TableCell className="py-3 px-4">
+                                  <div className="flex flex-col">
+                                    <span>{appointment.patientFullName}</span>
+                                    {appointment.phone && (
+                                      <span className="text-xs text-gray-400 dark:text-gray-500">{appointment.phone}</span>
+                                    )}
+                                  </div>
+                                </TableCell>
                                 <TableCell className="py-3 px-4">{appointment.tokenDetails?.tokenNumber || 'N/A'}</TableCell>
                                 <TableCell className="py-3 px-4">
                                   <div className="space-y-0.5">
@@ -1651,7 +1635,7 @@ export const ClinicalDashboard: React.FC = () => {
                             <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4 hidden lg:table-cell">{t('docBoard.table.case')}</TableHead>
                             <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4">{t('docBoard.table.actions')}</TableHead>
                             <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4 hidden lg:table-cell">{t('docBoard.table.printRx')}</TableHead>
-                            <TableHead className="font-semibold text-gray-900 dark:text-white text-[11px] uppercase py-3 px-4 hidden lg:table-cell">{t('docBoard.table.printToken')}</TableHead>
+                            {/* Print Token column removed */}
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1670,7 +1654,14 @@ export const ClinicalDashboard: React.FC = () => {
                                     <ExternalLink className="h-3 w-3" />
                                   </button>
                                 </TableCell>
-                                <TableCell className="py-3 px-4 hidden sm:table-cell">{appointment.patientFullName}</TableCell>
+                                <TableCell className="py-3 px-4 hidden sm:table-cell">
+                                  <div className="flex flex-col">
+                                    <span>{appointment.patientFullName}</span>
+                                    {appointment.phone && (
+                                      <span className="text-xs text-gray-400 dark:text-gray-500">{appointment.phone}</span>
+                                    )}
+                                  </div>
+                                </TableCell>
                                 <TableCell className="py-3 px-4">{appointment.tokenDetails?.tokenNumber || 'N/A'}</TableCell>
                                 <TableCell className="py-3 px-4 hidden md:table-cell">
                                   {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
@@ -1710,16 +1701,7 @@ export const ClinicalDashboard: React.FC = () => {
                                     {t('common.print')}
                                   </Button>
                                 </TableCell>
-                                <TableCell className="py-3 px-4 hidden lg:table-cell">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 px-3 text-xs font-semibold bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
-                                  >
-                                    <Printer className="h-3 w-3 mr-1" />
-                                    {t('common.print')}
-                                  </Button>
-                                </TableCell>
+                                {/* Print Token cell removed */}
                               </TableRow>
                             ))
                           ) : (

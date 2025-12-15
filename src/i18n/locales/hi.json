@@ -1,4 +1,29 @@
 {
+  "hospitalBranding": {
+    "hospitalTypes": {
+      "clinic": "क्लिनिक",
+      "polyclinic": "पॉलीक्लिनिक",
+      "nursingHome": "नर्सिंग होम",
+      "generalHospital": "जनरल हॉस्पिटल",
+      "multispecialityHospital": "मल्टीस्पेशलिटी हॉस्पिटल",
+      "superSpecialityHospital": "सुपर स्पेशलिटी हॉस्पिटल",
+      "other": "अन्य",
+      "clinic_en": "Clinic",
+      "polyclinic_en": "Polyclinic",
+      "nursingHome_en": "Nursing Home",
+      "generalHospital_en": "General Hospital",
+      "multispecialityHospital_en": "Multispeciality Hospital",
+      "superSpecialityHospital_en": "Super Speciality Hospital",
+      "other_en": "Other",
+      "Clinic_hi": "क्लिनिक",
+      "Polyclinic_hi": "पॉलीक्लिनिक",
+      "Nursing Home_hi": "नर्सिंग होम",
+      "General Hospital_hi": "जनरल हॉस्पिटल",
+      "Multispeciality Hospital_hi": "मल्टीस्पेशलिटी हॉस्पिटल",
+      "Super Speciality Hospital_hi": "सुपर स्पेशलिटी हॉस्पिटल",
+      "Other_hi": "अन्य"
+    }
+  },
   "common": {
     "loading": "लोड हो रहा है...",
     "error": "त्रुटि",
@@ -3049,14 +3074,27 @@
         "timeZone": "अस्पताल का परिचालन समय क्षेत्र"
       },
       "hospitalTypes": {
-        "hospital": "अस्पताल",
         "clinic": "क्लिनिक",
-        "medicalCenter": "मेडिकल सेंटर",
+        "polyclinic": "पॉलीक्लिनिक",
         "nursingHome": "नर्सिंग होम",
-        "diagnosticCenter": "डायग्नोस्टिक सेंटर",
-        "dentalClinic": "डेंटल क्लिनिक",
-        "eyeClinic": "आई क्लिनिक",
-        "other": "अन्य"
+        "generalHospital": "जनरल हॉस्पिटल",
+        "multispecialityHospital": "मल्टीस्पेशलिटी हॉस्पिटल",
+        "superSpecialityHospital": "सुपर स्पेशलिटी हॉस्पिटल",
+        "other": "अन्य",
+        "clinic_en": "Clinic",
+        "polyclinic_en": "Polyclinic",
+        "nursingHome_en": "Nursing Home",
+        "generalHospital_en": "General Hospital",
+        "multispecialityHospital_en": "Multispeciality Hospital",
+        "superSpecialityHospital_en": "Super Speciality Hospital",
+        "other_en": "Other",
+        "Clinic_hi": "क्लिनिक",
+        "Polyclinic_hi": "पॉलीक्लिनिक",
+        "Nursing Home_hi": "नर्सिंग होम",
+        "General Hospital_hi": "जनरल हॉस्पिटल",
+        "Multispeciality Hospital_hi": "मल्टीस्पेशलिटी हॉस्पिटल",
+        "Super Speciality Hospital_hi": "सुपर स्पेशलिटी हॉस्पिटल",
+        "Other_hi": "अन्य"
       },
       "timeZones": {
         "asiaKolkata": "एशिया/कोलकाता (IST)",
@@ -3064,7 +3102,9 @@
         "americaLosAngeles": "अमेरिका/लॉस एंजिलिस (PST)",
         "europeLondon": "यूरोप/लंदन (GMT)",
         "asiaDubai": "एशिया/दुबई (GST)",
-        "asiaSingapore": "एशिया/सिंगापुर (SGT)"
+        "asiaSingapore": "एशिया/सिंगापुर (SGT)",
+        "asiaTokyo": "एशिया/टोक्यो (JST)",
+        "australiaSydney": "ऑस्ट्रेलिया/सिडनी (AEST)"
       },
       "completion": {
         "title": "अस्पताल प्रोफ़ाइल पूर्ण!",

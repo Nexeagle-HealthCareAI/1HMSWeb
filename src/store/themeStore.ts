@@ -37,6 +37,9 @@ export interface ThemeState {
     spacing: 'compact' | 'comfortable' | 'spacious';
     animations: boolean;
     reducedMotion: boolean;
+    contrast: 'low' | 'normal' | 'high';
+    brightness: 'dim' | 'normal' | 'bright';
+    colorBlindness: 'none' | 'protanopia' | 'deuteranopia' | 'tritanopia';
   };
   
   // System preferences

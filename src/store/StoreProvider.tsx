@@ -2,6 +2,7 @@ import React, { useEffect, ReactNode } from 'react';
 import { useAuthStore } from './authStore';
 import { useAppStore } from './appStore';
 import { useUserStore } from './userStore';
+import { useThemeStore } from './themeStore';
 
 interface StoreProviderProps {
   children: ReactNode;
@@ -21,6 +22,7 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
   // Get store actions
   const { isTokenValid } = useAuthStore();
   const { updateLastActivity } = useUserStore();
+  const { mode, settings, systemPreferences, getEffectiveMode, updateSystemPreferences } = useThemeStore();
 
   // Initialize stores on mount
   useEffect(() => {
@@ -81,6 +83,48 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
       clearInterval(tokenRefreshInterval);
     };
   }, [updateLastActivity]);
+
+  // Sync system theme preferences (dark mode and reduced motion)
+  useEffect(() => {
+    const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const reduceMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    const updatePreferences = () => {
+      updateSystemPreferences({
+        prefersDark: darkQuery.matches,
+        prefersReducedMotion: reduceMotionQuery.matches,
+      });
+    };
+
+    updatePreferences();
+
+    darkQuery.addEventListener('change', updatePreferences);
+    reduceMotionQuery.addEventListener('change', updatePreferences);
+
+    return () => {
+      darkQuery.removeEventListener('change', updatePreferences);
+      reduceMotionQuery.removeEventListener('change', updatePreferences);
+    };
+  }, [updateSystemPreferences]);
+
+  // Apply theme classes and accessibility data attributes instantly on change
+  useEffect(() => {
+    const root = document.documentElement;
+    const effectiveMode = getEffectiveMode();
+
+    root.classList.toggle('dark', effectiveMode === 'dark');
+    root.style.colorScheme = effectiveMode;
+
+    root.dataset.contrast = settings.contrast ?? 'normal';
+    root.dataset.brightness = settings.brightness ?? 'normal';
+    root.dataset.colorblindness = settings.colorBlindness ?? 'none';
+
+    if (settings.reducedMotion || systemPreferences.prefersReducedMotion) {
+      root.dataset.motion = 'reduced';
+    } else {
+      delete root.dataset.motion;
+    }
+  }, [getEffectiveMode, mode, settings, systemPreferences]);
 
 
 
