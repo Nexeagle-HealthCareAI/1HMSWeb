@@ -629,7 +629,10 @@ export const ClinicalDashboard: React.FC = () => {
   };
 
   const handlePatientIdClick = (appointment: DoctorAppointmentDetail | PatientAppointment) => {
-    navigate(`/patient/new?patientId=${appointment.patientId}`);
+    const encodedPatientId = encodeURIComponent(appointment.patientId);
+    const encodedAppointmentId = appointment.appointmentId ? encodeURIComponent(appointment.appointmentId) : '';
+    const appointmentParam = encodedAppointmentId ? `&appointmentId=${encodedAppointmentId}` : '';
+    navigate(`/patient/new?patientId=${encodedPatientId}${appointmentParam}`);
   };
 
   // Manual refresh

@@ -22,6 +22,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { 
   PatientOverview,
   PatientTimeline,
@@ -33,6 +34,7 @@ import PrescriptionCustomizePanel from '@/features/prescription/components/Presc
 import { usePatientProfile } from '../hooks/usePatientProfile';
 import { useAuthStore } from '@/store/authStore';
 import { PatientProfileData } from '../services/patientProfileApi';
+import { PrescriptionPreviewModal, type GeneratePrescriptionDetailsRequest } from '@/components/shared/prescription-preview';
 
 interface PatientData {
   id: string;
@@ -129,9 +131,25 @@ interface VitalSigns {
 export const PatientProfilePage: React.FC = () => {
   const { patientId: routePatientId } = useParams<{ patientId: string }>();
   const [searchParams] = useSearchParams();
-  const queryPatientId = searchParams.get('patientId');
+
+  const safeDecode = (value: string | null) => {
+    if (!value) return null;
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return value;
+    }
+  };
+
+  const queryPatientId = safeDecode(searchParams.get('patientId'));
+  const appointmentId = safeDecode(searchParams.get('appointmentId'));
   const navigate = useNavigate();
-  const { hospitalId } = useAuthStore();
+  const {
+    hospitalId: storedHospitalId,
+    doctorId: storedDoctorId,
+    getHospitalId,
+    getDoctorId,
+  } = useAuthStore();
   
   // Use patientId from route params or query params
   const patientId = routePatientId || queryPatientId;
@@ -144,8 +162,14 @@ export const PatientProfilePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [showPatientProfileModal, setShowPatientProfileModal] = useState(false);
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewRequest, setPreviewRequest] = useState<GeneratePrescriptionDetailsRequest | null>(null);
 
   // Use the patient profile hook for real data
+  const hospitalId = storedHospitalId || getHospitalId();
+  const doctorId = storedDoctorId || getDoctorId();
+
   const {
     patientProfile,
     isLoading: profileLoading,
@@ -210,6 +234,8 @@ export const PatientProfilePage: React.FC = () => {
     { id: 'prescription-fields', label: 'Prescription Fields', icon: Settings },
   ];
 
+  const activeTabMeta = navigationItems.find((item) => item.id === activeTab) || navigationItems[0];
+
   // Handle edit profile click
   const handleEditProfile = () => {
     setShowPatientProfileModal(true);
@@ -224,6 +250,33 @@ export const PatientProfilePage: React.FC = () => {
   const handleProfileUpdateSuccess = () => {
     refetchProfile();
     setShowPatientProfileModal(false);
+  };
+
+  const handleConfirmSubmit = () => {
+    // Placeholder for final submission logic
+    setShowSubmitConfirm(false);
+  };
+
+  const handlePreview = () => {
+    if (!patientId || !appointmentId || !hospitalId || !doctorId) {
+      alert('Missing details to generate preview. Please ensure patient, appointment, hospital, and doctor are set.');
+      return;
+    }
+
+    setPreviewRequest({
+      appointmentId,
+      patientId,
+      hospitalId,
+      doctorId,
+    });
+    setPreviewModalOpen(true);
+  };
+
+  const handlePreviewModalChange = (open: boolean) => {
+    setPreviewModalOpen(open);
+    if (!open) {
+      setPreviewRequest(null);
+    }
   };
 
   // Calculate risk level for patient header
@@ -312,7 +365,6 @@ export const PatientProfilePage: React.FC = () => {
                 {!sidebarCollapsed && (
                 <div>
                     <h1 className="text-base font-semibold text-foreground mb-1 transition-colors duration-200">Patient Profile</h1>
-                    <p className="text-sm text-muted-foreground transition-colors duration-200">ID: {patientId}</p>
                 </div>
                 )}
               </div>
@@ -330,7 +382,7 @@ export const PatientProfilePage: React.FC = () => {
                   variant="ghost"
                   className={`
                     w-full group relative transition-all duration-200 flex items-center hover-lift
-                    ${sidebarCollapsed ? 'justify-center px-2 h-11 w-11 mx-auto rounded-lg' : 'justify-start gap-3 h-11 px-3 rounded-lg'}
+                    ${sidebarCollapsed ? 'justify-center px-2 h-11 w-11 mx-auto rounded-lg' : 'justify-start gap-2 h-11 px-2.5 rounded-lg'}
                     ${isActive 
                       ? 'ring-2 ring-primary bg-primary/5 text-primary border border-primary/20 shadow-sm' 
                       : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
@@ -361,10 +413,10 @@ export const PatientProfilePage: React.FC = () => {
           <div className="ml-4">
           {/* Patient Header - Show for all tabs */}
           {patient && (
-            <div className="bg-white border-b border-gray-200 shadow-sm">
-              <div className="px-6 py-4">
+            <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm sticky top-0 z-20">
+              <div className="px-6 py-4 text-gray-900 dark:text-gray-50">
                 <div className="flex items-center justify-between gap-4">
-                  {/* Left Section: Avatar + Basic Info */}
+                  {/* Left Section: Avatar + Basic Info + Actions */}
                   <div className="flex items-center gap-4 min-w-0 flex-1">
                     {/* Patient Avatar with Risk Indicator */}
                     <div className="relative flex-shrink-0">
@@ -381,21 +433,30 @@ export const PatientProfilePage: React.FC = () => {
 
                     {/* Patient Name and Basic Info */}
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-3 mb-1">
-                        <h1 className="text-lg font-bold text-gray-900 truncate">{patient.name}</h1>
+                      <div className="flex items-center gap-3 mb-1 flex-wrap">
+                        <h1 className="text-lg font-bold text-gray-900 dark:text-gray-50 truncate">{patient.name}</h1>
                         <Badge className={`${riskLevel.bg} ${riskLevel.color} border-0 text-xs px-2 py-0.5`}>
                           {riskLevel.level} Risk
                         </Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleEditProfile}
+                          className="gap-2 text-xs h-8 px-2 shadow-none hover:bg-transparent hover:text-primary"
+                        >
+                          <Edit className="h-3 w-3" />
+                          Edit
+                        </Button>
                       </div>
                       
                       {/* Compact Info Row */}
-                      <div className="flex items-center gap-4 text-xs text-gray-600">
+                      <div className="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-300">
                         <span className="flex items-center gap-1">
-                          <span className="font-medium">ID:</span>
-                          <span className="text-blue-600 font-mono">{patient.id}</span>
+                          <span className="font-medium text-gray-800 dark:text-gray-200">ID:</span>
+                          <span className="text-blue-600 dark:text-blue-300 font-mono">{patient.id}</span>
                         </span>
                         <span className="flex items-center gap-1">
-                          <span className="font-medium">Age:</span>
+                          <span className="font-medium text-gray-800 dark:text-gray-200">Age:</span>
                           <span>{patient.age}y, {patient.gender}</span>
                         </span>
                         <span className="flex items-center gap-1">
@@ -403,28 +464,35 @@ export const PatientProfilePage: React.FC = () => {
                           <span className="truncate max-w-32">{patient.phone}</span>
                         </span>
                         <span className="flex items-center gap-1">
-                          <Heart className="h-3 w-3" />
                           <span>{patient.bloodGroup}</span>
                         </span>
                         <span className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
                           <span className="truncate max-w-32">{patient.email}</span>
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Right Section: Action Button */}
-                  <div className="flex-shrink-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleEditProfile}
-                      className="gap-2 text-xs h-8 px-3"
-                    >
-                      <Edit className="h-3 w-3" />
-                      Edit
-                    </Button>
+                  {/* Right Section: Contextual Actions / Active Tab Indicator */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-800 dark:text-gray-100">
+                      {activeTabMeta && (
+                        <>
+                          <activeTabMeta.icon className="h-5 w-5 text-primary" />
+                          <span>{activeTabMeta.label}</span>
+                        </>
+                      )}
+                    </div>
+                    {activeTab === 'prescriptions' && (
+                      <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm" className="text-xs sm:text-sm h-8 sm:h-9" onClick={handlePreview}>
+                            Preview
+                          </Button>
+                          <Button size="sm" className="text-xs sm:text-sm h-8 sm:h-9" onClick={() => setShowSubmitConfirm(true)}>
+                            Submit
+                          </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -433,24 +501,22 @@ export const PatientProfilePage: React.FC = () => {
 
             {/* Overview Tab */}
             {activeTab === 'overview' && (
-              <PatientOverview
-                patient={patient}
-                appointments={appointments}
-                prescriptions={prescriptions}
-                labTests={labTests}
-                vitalSigns={vitalSigns}
-                onNavigateToTimeline={() => setActiveTab('timeline')}
-                onEditProfile={handleEditProfile}
-              />
+              <div className="flex items-center justify-center h-64 text-muted-foreground">
+                <div className="text-center space-y-2">
+                  <div className="text-2xl font-semibold">Coming Soon</div>
+                  <p className="text-sm">Overview will be available in an upcoming update.</p>
+                </div>
+              </div>
             )}
 
             {/* Timeline Tab */}
             {activeTab === 'timeline' && (
-              <PatientTimeline 
-                timelineEvents={timelineEvents} 
-                patientStatus="Active"
-                lastVisitDate={appointments.length > 0 ? appointments[0].date : undefined}
-              />
+              <div className="flex items-center justify-center h-64 text-muted-foreground">
+                <div className="text-center space-y-2">
+                  <div className="text-2xl font-semibold">Coming Soon</div>
+                  <p className="text-sm">Patient Timeline will be available in an upcoming update.</p>
+                </div>
+              </div>
             )}
 
             {/* Prescriptions Tab */}
@@ -469,7 +535,12 @@ export const PatientProfilePage: React.FC = () => {
 
             {/* Lab Tests Tab */}
             {activeTab === 'lab-tests' && (
-              <PatientLabTests labTests={labTests} appointments={appointments} />
+              <div className="flex items-center justify-center h-64 text-muted-foreground">
+                <div className="text-center space-y-2">
+                  <div className="text-2xl font-semibold">Coming Soon</div>
+                  <p className="text-sm">Lab Tests will be available in an upcoming update.</p>
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -484,6 +555,35 @@ export const PatientProfilePage: React.FC = () => {
           patientName={patient?.name || 'Unknown Patient'}
         />
       )}
+
+      {/* Submit Confirmation Modal */}
+      <Dialog open={showSubmitConfirm} onOpenChange={setShowSubmitConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Submit E-Prescription</DialogTitle>
+            <DialogDescription>
+              Once you confirm, this patient’s e-prescription will be marked as completed.
+            </DialogDescription>
+          </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to submit the prescription for this patient?
+            </p>
+          <DialogFooter className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowSubmitConfirm(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmSubmit}>
+              Confirm & Complete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <PrescriptionPreviewModal
+        open={previewModalOpen}
+        onOpenChange={handlePreviewModalChange}
+        request={previewRequest}
+      />
       </div>
     </div>
   );

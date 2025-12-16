@@ -521,34 +521,6 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
 
   return (
     <div className="h-full flex flex-col bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <FileText className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold text-gray-900">E-Prescription Pad</h1>
-              <p className="text-sm text-gray-500">Patient ID: {patientId}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="flex items-center gap-2">
-              <Eye className="h-4 w-4" />
-              Preview
-            </Button>
-            <Button variant="outline" size="sm" className="flex items-center gap-2">
-              <Save className="h-4 w-4" />
-              Save for Later
-            </Button>
-            <Button size="sm" className="flex items-center gap-2">
-              <Printer className="h-4 w-4" />
-              Print
-            </Button>
-          </div>
-        </div>
-      </div>
 
       <div className="flex-1 flex overflow-hidden">
         {/* Main Content */}
