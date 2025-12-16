@@ -6,6 +6,8 @@ export { authApi } from '@/features/auth/services/authApi';
 export { appointmentApi } from '@/features/appointment/services/appointmentApi';
 export { patientApi } from '@/features/patient/services/patientApi';
 export { doctorApi } from '@/features/doctor/services/doctorApi';
+export { personalizedDataApi, type PersonalizedLookupType } from '@/features/prescription/services/personalizedDataApi';
+export { personalizedMedicineApi, type PersonalizedMedicinePayload } from '@/features/prescription/services/personalizedMedicineApi';
 
 // Re-export types for convenience
 export type {

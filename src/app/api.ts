@@ -29,6 +29,18 @@ export const API_ENDPOINTS = {
     },
     GET_PATIENT_VITALS: (patientId: string, appointmentId: string) =>
       `/e-prescription/patient-details/vitals?patientId=${encodeURIComponent(patientId)}&appointmentId=${encodeURIComponent(appointmentId)}`,
+    PERSONALIZED_DATA: (doctorId: string, hospitalId?: string, lookupType?: string) => {
+      const params = [`doctorId=${encodeURIComponent(doctorId)}`];
+      if (hospitalId) {
+        params.push(`hospitalId=${encodeURIComponent(hospitalId)}`);
+      }
+      if (lookupType) {
+        params.push(`lookupType=${encodeURIComponent(lookupType)}`);
+      }
+      return `/e-prescription/configuration/personalized-data?${params.join('&')}`;
+    },
+    PERSONALIZED_MEDICINE: (doctorId: string, hospitalId: string) =>
+      `/e-prescription/configuration/personalized-medicine/doctorId=${encodeURIComponent(doctorId)}&hospitalId=${encodeURIComponent(hospitalId)}`,
   },
   AUTH: {
     LOGIN: 'auth/user/login',

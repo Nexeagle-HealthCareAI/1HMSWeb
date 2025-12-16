@@ -4,6 +4,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { usePrescriptionFieldConfig } from '@/features/prescription/hooks/usePrescriptionFieldConfig';
+import { useAuthStore } from '@/store/authStore';
+import { useToast } from '@/hooks/use-toast';
+import { personalizedDataApi, PersonalizedLookupType } from '@/features/prescription/services/personalizedDataApi';
+import { personalizedMedicineApi } from '@/features/prescription/services/personalizedMedicineApi';
 import { 
   Settings, 
   Save, 
@@ -54,10 +58,15 @@ interface FieldConfig {
 
 interface PersonalizedDataItem {
   id: string;
+  personalId?: string | null;
   name: string;
   code: string;
   shortDesc: string;
   synonyms: string;
+  prefferedId?: number | string;
+  usageCount?: number;
+  createdAt?: string;
+  modifiedAt?: string;
   genericName?: string;
   brandName?: string;
   form?: string;
@@ -93,6 +102,8 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
   hidePersonalizedHeader = false
 }) => {
   const [customizeTab, setCustomizeTab] = useState<'fields' | 'playground'>(defaultTab === 'personalized' ? 'playground' : 'fields');
+  const { hospitalId, doctorId } = useAuthStore();
+  const { toast } = useToast();
   
   // Use API hook for field configuration
   const {
@@ -118,14 +129,19 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
   const [selectedPersonalizedCategory, setSelectedPersonalizedCategory] = useState<string>('chiefComplaint');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddingItem, setIsAddingItem] = useState(false);
+  const [isLoadingPersonalized, setIsLoadingPersonalized] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const PAGE_SIZE = 8;
 
   // New item states
   const [newItemName, setNewItemName] = useState('');
   const [newItemCode, setNewItemCode] = useState('');
   const [newItemShortDesc, setNewItemShortDesc] = useState('');
   const [newItemSynonyms, setNewItemSynonyms] = useState('');
+  const [newItemPersonalId, setNewItemPersonalId] = useState<string | null>(null);
   const [newItemGenericName, setNewItemGenericName] = useState('');
   const [newItemBrandName, setNewItemBrandName] = useState('');
   const [newItemForm, setNewItemForm] = useState('');
@@ -152,6 +168,8 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
   const [editItemIndication, setEditItemIndication] = useState('');
   const [editItemNotes, setEditItemNotes] = useState('');
   const [editItemMedicineId, setEditItemMedicineId] = useState('');
+
+  const isMedicationCategory = selectedPersonalizedCategory === 'medications';
 
   const personalizedDataCategories = [
     { id: 'chiefComplaint', label: 'Chief Complaint', icon: AlertCircleIcon, color: 'text-red-600' },
@@ -201,13 +219,58 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
     );
   };
 
-  const addPersonalizedDataItem = () => {
+  const addPersonalizedDataItem = async (): Promise<boolean> => {
+    const lookupTypeMap: Record<string, PersonalizedLookupType> = {
+      chiefComplaint: 'CHIEF_COMPLAINT',
+      history: 'HISTORY',
+      comorbidity: 'COMORBIDITY',
+      examination: 'EXAMINATION',
+      diagnosis: 'DIAGNOSIS',
+      investigations: 'INVESTIGATION',
+      procedures: 'PROCEDURE',
+      medications: 'MEDICATION',
+    };
+
+    const isMedication = selectedPersonalizedCategory === 'medications';
+
+    if (isMedication) {
+      if (!newItemGenericName.trim() && !newItemBrandName.trim()) {
+        toast({
+          title: 'Generic or brand required',
+          description: 'Please enter a generic name (preferred) or brand name.',
+          variant: 'destructive',
+        });
+        return false;
+      }
+    } else if (!newItemName.trim()) {
+      toast({
+        title: 'Name required',
+        description: 'Please enter a name before saving.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    setIsAddingItem(true);
+
+    const nowIso = new Date().toISOString();
+
+    const resolvedName = isMedication
+      ? (newItemGenericName.trim() || newItemBrandName.trim() || newItemMedicineId.trim() || 'Medication')
+      : newItemName;
+
+    const resolvedCode = isMedication ? (newItemMedicineId || newItemCode) : newItemCode;
+
     const newItem: PersonalizedDataItem = {
-      id: Date.now().toString(),
-      name: newItemName,
-      code: newItemCode,
+      id: editingItem || Date.now().toString(),
+      personalId: newItemPersonalId ?? (editingItem || null),
+      name: resolvedName,
+      code: resolvedCode,
       shortDesc: newItemShortDesc,
       synonyms: newItemSynonyms,
+      usageCount: 0,
+      createdAt: nowIso,
+      modifiedAt: nowIso,
       genericName: newItemGenericName,
       brandName: newItemBrandName,
       form: newItemForm,
@@ -220,65 +283,273 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
       medicineId: newItemMedicineId
     };
 
-    setPersonalizedData(prev => ({
-      ...prev,
-      [selectedPersonalizedCategory]: [...prev[selectedPersonalizedCategory as keyof PersonalizedData], newItem]
-    }));
+    const resetForm = () => {
+      setNewItemName('');
+      setNewItemCode('');
+      setNewItemShortDesc('');
+      setNewItemSynonyms('');
+      setNewItemPersonalId(null);
+      setNewItemGenericName('');
+      setNewItemBrandName('');
+      setNewItemForm('');
+      setNewItemStrengthValue('');
+      setNewItemStrengthUnit('');
+      setNewItemRoute('');
+      setNewItemDose('');
+      setNewItemIndication('');
+      setNewItemNotes('');
+      setNewItemMedicineId('');
+      setEditingItem(null);
+      setIsAddingItem(false);
+    };
 
-    // Reset form
-    setNewItemName('');
-    setNewItemCode('');
-    setNewItemShortDesc('');
-    setNewItemSynonyms('');
-    setNewItemGenericName('');
-    setNewItemBrandName('');
-    setNewItemForm('');
-    setNewItemStrengthValue('');
-    setNewItemStrengthUnit('');
-    setNewItemRoute('');
-    setNewItemDose('');
-    setNewItemIndication('');
-    setNewItemNotes('');
-    setNewItemMedicineId('');
-    setIsAddingItem(false);
+    if (isMedication) {
+      if (!doctorId || !hospitalId) {
+        setPersonalizedData(prev => {
+          const items = prev[selectedPersonalizedCategory as keyof PersonalizedData];
+          const next = editingItem
+            ? items.map(i => (i.id === editingItem ? newItem : i))
+            : [...items, newItem];
+          return {
+            ...prev,
+            [selectedPersonalizedCategory]: next
+          };
+        });
+        setCurrentPage(1);
+        setShowAddModal(false);
+        resetForm();
+        toast({
+          title: 'Saved locally',
+          description: 'Missing doctor/hospital context. Saved only in this session.',
+        });
+        return true;
+      }
+
+      let success = false;
+      try {
+        await personalizedMedicineApi.upsert(doctorId, hospitalId, {
+          genericName: newItemGenericName,
+          brandName: newItemBrandName,
+          form: newItemForm,
+          strengthValue: newItemStrengthValue,
+          strengthUnit: newItemStrengthUnit,
+          route: newItemRoute,
+          dose: newItemDose,
+          indication: newItemIndication,
+          notes: newItemNotes,
+          medicineId: newItemMedicineId,
+        });
+
+        const refreshedMeds = await personalizedMedicineApi.list(doctorId, hospitalId);
+        const normalizedMeds = (refreshedMeds || []).map((item, idx) => ({
+          id: `${item.prefferedId ?? item.medicineId ?? idx}`,
+          prefferedId: item.prefferedId,
+          name: item.genericName || item.brandName || '',
+          genericName: item.genericName || '',
+          brandName: item.brandName || '',
+          form: item.form || '',
+          strengthValue: item.strengthValue || '',
+          strengthUnit: item.strengthUnit || '',
+          route: item.route || '',
+          dose: item.dose || '',
+          indication: item.indication || '',
+          notes: item.notes || '',
+          medicineId: item.medicineId || '',
+          code: item.medicineId || '',
+          shortDesc: item.brandName || item.genericName || '',
+          synonyms: '',
+        }));
+
+        setPersonalizedData(prev => ({
+          ...prev,
+          medications: normalizedMeds,
+        }));
+
+        setCurrentPage(1);
+        success = true;
+        toast({
+          title: 'Saved',
+          description: 'Medication saved successfully.',
+        });
+      } catch (error) {
+        console.error('Failed to save medication', error);
+        toast({
+          title: 'Save failed',
+          description: 'Could not sync medication. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        resetForm();
+      }
+
+      if (success) {
+        setShowAddModal(false);
+      }
+
+      return success;
+    }
+
+    const lookupType = lookupTypeMap[selectedPersonalizedCategory];
+    if (!lookupType || !hospitalId || !doctorId) {
+      setPersonalizedData(prev => ({
+        ...prev,
+        [selectedPersonalizedCategory]: [...prev[selectedPersonalizedCategory as keyof PersonalizedData], newItem]
+      }));
+      setCurrentPage(1);
+      setShowAddModal(false);
+      resetForm();
+      toast({
+        title: 'Saved locally',
+        description: 'Missing doctor/hospital context. Saved only in this session.',
+        variant: 'default'
+      });
+      return true;
+    }
+
+    let success = false;
+
+    try {
+      await personalizedDataApi.upsert(doctorId, hospitalId, lookupType, {
+        personalId: newItemPersonalId ?? editingItem ?? null,
+        name: newItemName,
+        code: newItemCode,
+        shortDesc: newItemShortDesc,
+        synonyms: newItemSynonyms,
+      });
+
+      const refreshed = await personalizedDataApi.list(doctorId, hospitalId, lookupType);
+      const normalized = (refreshed || []).map((item, idx) => ({
+        id: item.id ?? item.personalId ?? item.code ?? item.name ?? `${lookupType}-${idx}`,
+        personalId: item.personalId ?? null,
+        name: item.name ?? '',
+        code: item.code ?? '',
+        shortDesc: item.shortDesc ?? '',
+        synonyms: item.synonyms ?? '',
+        usageCount: typeof item.usageCount === 'number' ? item.usageCount : 0,
+        createdAt: item.createdAt ?? '',
+        modifiedAt: item.modifiedAt ?? '',
+      }));
+
+      setPersonalizedData(prev => ({
+        ...prev,
+        [selectedPersonalizedCategory]: normalized,
+      }));
+
+      toast({
+        title: 'Saved',
+        description: 'Personalized data updated successfully.',
+      });
+      success = true;
+    } catch (error) {
+      console.error('Failed to save personalized data', error);
+      toast({
+        title: 'Save failed',
+        description: 'Could not sync to server. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      resetForm();
+    }
+
+    if (success) {
+      setCurrentPage(1);
+      setShowAddModal(false);
+    }
+
+    return success;
   };
 
-  const deletePersonalizedDataItem = (itemId: string) => {
-    setPersonalizedData(prev => ({
-      ...prev,
-      [selectedPersonalizedCategory]: prev[selectedPersonalizedCategory as keyof PersonalizedData].filter(item => item.id !== itemId)
-    }));
+  const deletePersonalizedDataItem = async (itemId: string) => {
+    const items = personalizedData[selectedPersonalizedCategory as keyof PersonalizedData] || [];
+    const target = items.find(i => i.id === itemId);
+    const lookupTypeMap: Record<string, PersonalizedLookupType> = {
+      chiefComplaint: 'CHIEF_COMPLAINT',
+      history: 'HISTORY',
+      comorbidity: 'COMORBIDITY',
+      examination: 'EXAMINATION',
+      diagnosis: 'DIAGNOSIS',
+      investigations: 'INVESTIGATION',
+      procedures: 'PROCEDURE',
+      medications: 'MEDICATION',
+    };
+
+    const isMedication = selectedPersonalizedCategory === 'medications';
+
+    if (!target || isMedication || !doctorId || !hospitalId || !target.personalId) {
+      setPersonalizedData(prev => ({
+        ...prev,
+        [selectedPersonalizedCategory]: prev[selectedPersonalizedCategory as keyof PersonalizedData].filter(item => item.id !== itemId)
+      }));
+      return;
+    }
+
+    const lookupType = lookupTypeMap[selectedPersonalizedCategory];
+    if (!lookupType) {
+      setPersonalizedData(prev => ({
+        ...prev,
+        [selectedPersonalizedCategory]: prev[selectedPersonalizedCategory as keyof PersonalizedData].filter(item => item.id !== itemId)
+      }));
+      return;
+    }
+
+    try {
+      setIsLoadingPersonalized(true);
+      await personalizedDataApi.remove(doctorId, hospitalId, target.personalId);
+      const refreshed = await personalizedDataApi.list(doctorId, hospitalId, lookupType);
+      const normalized = (refreshed || []).map((item, idx) => ({
+        id: item.id ?? item.personalId ?? item.code ?? item.name ?? `${lookupType}-${idx}`,
+        personalId: item.personalId ?? null,
+        name: item.name ?? '',
+        code: item.code ?? '',
+        shortDesc: item.shortDesc ?? '',
+        synonyms: item.synonyms ?? '',
+            usageCount: typeof item.usageCount === 'number' ? item.usageCount : 0,
+            createdAt: item.createdAt ?? '',
+            modifiedAt: item.modifiedAt ?? '',
+      }));
+
+      setPersonalizedData(prev => ({
+        ...prev,
+        [selectedPersonalizedCategory]: normalized,
+      }));
+
+      toast({
+        title: 'Deleted',
+        description: 'Personalized data removed successfully.',
+      });
+    } catch (error) {
+      console.error('Failed to delete personalized data', error);
+      toast({
+        title: 'Delete failed',
+        description: 'Could not delete on server. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingPersonalized(false);
+    }
   };
 
   const editPersonalizedDataItem = (itemId: string) => {
     const item = personalizedData[selectedPersonalizedCategory as keyof PersonalizedData].find(i => i.id === itemId);
     if (item) {
-      const updatedItem = {
-        ...item,
-        name: editItemName,
-        code: editItemCode,
-        shortDesc: editItemShortDesc,
-        synonyms: editItemSynonyms,
-        genericName: editItemGenericName,
-        brandName: editItemBrandName,
-        form: editItemForm,
-        strengthValue: editItemStrengthValue,
-        strengthUnit: editItemStrengthUnit,
-        route: editItemRoute,
-        dose: editItemDose,
-        indication: editItemIndication,
-        notes: editItemNotes,
-        medicineId: editItemMedicineId
-      };
-
-    setPersonalizedData(prev => ({
-      ...prev,
-        [selectedPersonalizedCategory]: prev[selectedPersonalizedCategory as keyof PersonalizedData].map(i => 
-          i.id === itemId ? updatedItem : i
-        )
-      }));
+      setEditingItem(item.id);
+      setShowAddModal(true);
+      setNewItemPersonalId(item.personalId ?? item.id ?? null);
+      setNewItemName(item.name);
+      setNewItemCode(item.code);
+      setNewItemShortDesc(item.shortDesc);
+      setNewItemSynonyms(item.synonyms);
+      setNewItemGenericName(item.genericName || '');
+      setNewItemBrandName(item.brandName || '');
+      setNewItemForm(item.form || '');
+      setNewItemStrengthValue(item.strengthValue || '');
+      setNewItemStrengthUnit(item.strengthUnit || '');
+      setNewItemRoute(item.route || '');
+      setNewItemDose(item.dose || '');
+      setNewItemIndication(item.indication || '');
+      setNewItemNotes(item.notes || '');
+      setNewItemMedicineId(item.medicineId || '');
     }
-    setEditingItem(null);
   };
 
   const getNamePlaceholder = (category: string) => {
@@ -293,20 +564,6 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
       medications: 'e.g., Atorvastatin'
     };
     return placeholders[category] || 'Enter name';
-  };
-
-  const getCodePlaceholder = (category: string) => {
-    const placeholders: { [key: string]: string } = {
-      chiefComplaint: 'e.g., CC001',
-      history: 'e.g., H001',
-      comorbidity: 'e.g., C001',
-      examination: 'e.g., EX001',
-      diagnosis: 'e.g., DX001',
-      investigations: 'e.g., INV001',
-      procedures: 'e.g., PROC001',
-      medications: 'e.g., MED001'
-    };
-    return placeholders[category] || 'Enter code';
   };
 
   const getShortDescPlaceholder = (category: string) => {
@@ -350,6 +607,103 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
 
     // Field configuration is now loaded via API
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedPersonalizedCategory, searchQuery]);
+
+  useEffect(() => {
+    const lookupTypeMap: Record<string, PersonalizedLookupType> = {
+      chiefComplaint: 'CHIEF_COMPLAINT',
+      history: 'HISTORY',
+      comorbidity: 'COMORBIDITY',
+      examination: 'EXAMINATION',
+      diagnosis: 'DIAGNOSIS',
+      investigations: 'INVESTIGATION',
+      procedures: 'PROCEDURE',
+      medications: 'MEDICATION',
+    };
+
+    const fetchCategory = async () => {
+      if (!doctorId || !hospitalId) return;
+
+      const lookupType = lookupTypeMap[selectedPersonalizedCategory];
+      setIsLoadingPersonalized(true);
+
+      try {
+        if (selectedPersonalizedCategory === 'medications') {
+          const meds = await personalizedMedicineApi.list(doctorId, hospitalId);
+          const normalized = (meds || []).map((item, idx) => ({
+            id: `${item.prefferedId ?? item.medicineId ?? idx}`,
+            prefferedId: item.prefferedId,
+            name: item.genericName || item.brandName || '',
+            genericName: item.genericName || '',
+            brandName: item.brandName || '',
+            form: item.form || '',
+            strengthValue: item.strengthValue || '',
+            strengthUnit: item.strengthUnit || '',
+            route: item.route || '',
+            dose: item.dose || '',
+            indication: item.indication || '',
+            notes: item.notes || '',
+            medicineId: item.medicineId || '',
+            code: item.medicineId || '',
+            shortDesc: item.brandName || item.genericName || '',
+            synonyms: '',
+          }));
+
+          setPersonalizedData(prev => ({
+            ...prev,
+            medications: normalized,
+          }));
+        } else if (lookupType) {
+          const refreshed = await personalizedDataApi.list(doctorId, hospitalId, lookupType);
+          const normalized = (refreshed || []).map((item, idx) => ({
+            id: item.id ?? item.personalId ?? item.code ?? item.name ?? `${lookupType}-${idx}`,
+            personalId: item.personalId ?? null,
+            name: item.name ?? '',
+            code: item.code ?? '',
+            shortDesc: item.shortDesc ?? '',
+            synonyms: item.synonyms ?? '',
+            usageCount: typeof item.usageCount === 'number' ? item.usageCount : 0,
+            createdAt: item.createdAt ?? '',
+            modifiedAt: item.modifiedAt ?? '',
+          }));
+
+          setPersonalizedData(prev => ({
+            ...prev,
+            [selectedPersonalizedCategory]: normalized,
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to load personalized data', error);
+        toast({
+          title: 'Load failed',
+          description: 'Could not fetch personalized data. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoadingPersonalized(false);
+      }
+    };
+
+    fetchCategory();
+  }, [selectedPersonalizedCategory, doctorId, hospitalId]);
+
+  useEffect(() => {
+    const items = personalizedData[selectedPersonalizedCategory as keyof PersonalizedData] || [];
+    const filtered = searchQuery.trim()
+      ? items.filter(item =>
+          item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.shortDesc.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : items;
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [personalizedData, selectedPersonalizedCategory, searchQuery, currentPage]);
 
   useEffect(() => {
     // Save personalized data
@@ -453,7 +807,6 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                       {personalizedDataCategories.map((category) => {
                         const IconComponent = category.icon;
                         const isSelected = selectedPersonalizedCategory === category.id;
-                        const itemCount = personalizedData[category.id as keyof PersonalizedData]?.length || 0;
                         
                         return (
                           <button
@@ -472,13 +825,6 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                           {isSelected && (
                             <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-600 rounded-full animate-pulse"></div>
                           )}
-                          <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs ${
-                            isSelected 
-                              ? 'bg-green-600 text-white' 
-                              : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
-                          }`}>
-                            {itemCount}
-                          </span>
                           </button>
                         );
                       })}
@@ -492,9 +838,9 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                 <div className="flex-shrink-0 p-2 sm:p-3 border-b border-gray-200 bg-white">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
                     <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
-                        {React.createElement(personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.icon || FileText, {
-                        className: `h-3 w-3 sm:h-4 sm:w-4 ${personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.color}`
-                        })}
+                      {React.createElement(personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.icon || FileText, {
+                      className: `h-3 w-3 sm:h-4 sm:w-4 ${personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.color}`
+                      })}
                       <h3 className="text-sm sm:text-lg font-semibold text-gray-900 truncate">
                           {personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label}
                       </h3>
@@ -526,197 +872,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                     </div>
                   </div>
 
-                {/* Add Item Form - Removed, now using modal */}
-                {false && (
-                    <div className="flex-shrink-0 p-4 border-b border-gray-200 bg-blue-50">
-                      <div className="max-w-4xl">
-                      <h5 className="text-sm font-semibold text-gray-900 mb-3">
-                        Add New {personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label}
-                      </h5>
-                        
-                        {selectedPersonalizedCategory === 'medications' ? (
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">Generic Name</label>
-                                <Input
-                                  value={newItemGenericName}
-                                  onChange={(e) => setNewItemGenericName(e.target.value)}
-                                  placeholder="e.g., Atorvastatin"
-                                  className="w-full"
-                                  autoFocus
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">Brand Name</label>
-                                <Input
-                                  value={newItemBrandName}
-                                  onChange={(e) => setNewItemBrandName(e.target.value)}
-                                placeholder="e.g., Lipitor"
-                                  className="w-full"
-                                />
-                              </div>
-                            </div>
-                          <div className="grid grid-cols-3 gap-3">
-                              <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">Form</label>
-                                <Input
-                                  value={newItemForm}
-                                  onChange={(e) => setNewItemForm(e.target.value)}
-                                  placeholder="e.g., Tablet"
-                                  className="w-full"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">Strength Value</label>
-                                <Input
-                                  value={newItemStrengthValue}
-                                  onChange={(e) => setNewItemStrengthValue(e.target.value)}
-                                  placeholder="e.g., 10"
-                                  className="w-full"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">Strength Unit</label>
-                                <Input
-                                  value={newItemStrengthUnit}
-                                  onChange={(e) => setNewItemStrengthUnit(e.target.value)}
-                                  placeholder="e.g., mg"
-                                  className="w-full"
-                                />
-                              </div>
-                            </div>
-                          <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">Route</label>
-                                <Input
-                                  value={newItemRoute}
-                                  onChange={(e) => setNewItemRoute(e.target.value)}
-                                placeholder="e.g., Oral"
-                                  className="w-full"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">Dose</label>
-                                <Input
-                                  value={newItemDose}
-                                  onChange={(e) => setNewItemDose(e.target.value)}
-                                  placeholder="e.g., 1 tab"
-                                  className="w-full"
-                                />
-                              </div>
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Indication</label>
-                              <Input
-                                value={newItemIndication}
-                                onChange={(e) => setNewItemIndication(e.target.value)}
-                                placeholder="e.g., Primary hypercholesterolemia"
-                                className="w-full"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
-                              <Input
-                                value={newItemNotes}
-                                onChange={(e) => setNewItemNotes(e.target.value)}
-                                placeholder="e.g., if any"
-                                className="w-full"
-                              />
-                            </div>
-                            <div className="flex gap-2">
-                              <Button onClick={addPersonalizedDataItem} className="bg-green-600 hover:bg-green-700">
-                                <CheckCircle className="h-4 w-4 mr-1" />
-                                Save
-                              </Button>
-                              <Button 
-                                onClick={() => {
-                                  setIsAddingItem(false);
-                                  setNewItemGenericName('');
-                                  setNewItemBrandName('');
-                                  setNewItemForm('');
-                                  setNewItemStrengthValue('');
-                                  setNewItemStrengthUnit('');
-                                  setNewItemRoute('');
-                                  setNewItemDose('');
-                                  setNewItemIndication('');
-                                  setNewItemNotes('');
-                                  setNewItemMedicineId('');
-                                }} 
-                                variant="outline"
-                              >
-                                <X className="h-4 w-4 mr-1" />
-                                Cancel
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="space-y-3">
-                          <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">Name</label>
-                                <Input
-                                  value={newItemName}
-                                  onChange={(e) => setNewItemName(e.target.value)}
-                                  placeholder={getNamePlaceholder(selectedPersonalizedCategory)}
-                                  className="w-full"
-                                  autoFocus
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">Code</label>
-                                <Input
-                                  value={newItemCode}
-                                  onChange={(e) => setNewItemCode(e.target.value)}
-                                  placeholder={getCodePlaceholder(selectedPersonalizedCategory)}
-                                  className="w-full"
-                                />
-                              </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">Short Description</label>
-                                <Input
-                                  value={newItemShortDesc}
-                                  onChange={(e) => setNewItemShortDesc(e.target.value)}
-                                  placeholder={getShortDescPlaceholder(selectedPersonalizedCategory)}
-                                  className="w-full"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">Synonyms</label>
-                                <Input
-                                  value={newItemSynonyms}
-                                  onChange={(e) => setNewItemSynonyms(e.target.value)}
-                                  placeholder={getSynonymsPlaceholder(selectedPersonalizedCategory)}
-                                  className="w-full"
-                                />
-                              </div>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button onClick={addPersonalizedDataItem} className="bg-green-600 hover:bg-green-700">
-                                <CheckCircle className="h-4 w-4 mr-1" />
-                                Save
-                              </Button>
-                              <Button 
-                                onClick={() => {
-                                  setIsAddingItem(false);
-                                  setNewItemName('');
-                                setNewItemCode('');
-                                  setNewItemShortDesc('');
-                                  setNewItemSynonyms('');
-                                }} 
-                                variant="outline"
-                              >
-                                <X className="h-4 w-4 mr-1" />
-                                Cancel
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                {/* legacy inline add form removed */}
 
                 {/* Tabular Data Display - Mobile Responsive */}
                 <div className="flex-1 overflow-y-auto bg-white">
@@ -730,47 +886,72 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                         )
                       : items;
 
+                    const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
+                    const page = Math.min(currentPage, totalPages);
+                    const startIndex = (page - 1) * PAGE_SIZE;
+                    const paginatedItems = filteredItems.slice(startIndex, startIndex + PAGE_SIZE);
+
                     return (
                       <div className="p-2 sm:p-3">
-                        {filteredItems.length > 0 ? (
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-xs sm:text-sm">
+                        {isLoadingPersonalized ? (
+                          <div className="flex flex-col items-center justify-center h-full text-gray-500 min-h-[200px]">
+                            <Activity className="h-6 w-6 mb-2 animate-spin" />
+                            <p className="text-sm">Loading templates...</p>
+                          </div>
+                        ) : filteredItems.length > 0 ? (
+                          <div className="space-y-3">
+                            <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+                              <table className="w-full text-xs sm:text-sm text-gray-800">
                               <thead>
-                                <tr className="border-b border-gray-200">
+                                <tr className="bg-gray-50 border-b border-gray-200">
                                   <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm">Name</th>
-                                  <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden sm:table-cell">Code</th>
                                   <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden md:table-cell">Description</th>
+                                  <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">Usage</th>
+                                  <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden xl:table-cell">Last Modified</th>
                                   {selectedPersonalizedCategory === 'medications' && (
                                     <>
-                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">Brand</th>
                                       <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">Strength</th>
                                       <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">Form</th>
+                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden xl:table-cell">Route</th>
+                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden xl:table-cell">Dose</th>
+                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden 2xl:table-cell">Indication</th>
+                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden 2xl:table-cell">Notes</th>
+                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden sm:table-cell">Medicine ID</th>
                                     </>
                                   )}
                                   <th className="text-right py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm">Actions</th>
                                 </tr>
                               </thead>
-                              <tbody>
-                                {filteredItems.map((item) => (
-                                  <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
-                                    <td className="py-1.5 sm:py-2 px-2 sm:px-3">
-                                      <span className="font-medium text-gray-900 text-xs sm:text-sm">
-                                        {selectedPersonalizedCategory === 'medications' ? item.genericName || item.name : item.name}
-                                      </span>
+                              <tbody className="divide-y divide-gray-100">
+                                {paginatedItems.map((item) => (
+                                  <tr key={item.id} className="hover:bg-gray-50">
+                                    <td className="py-2 sm:py-2.5 px-2 sm:px-3 align-top">
+                                      <div className="flex flex-col gap-0.5">
+                                        <span className="font-semibold text-gray-900 text-xs sm:text-sm">
+                                          {selectedPersonalizedCategory === 'medications' ? item.genericName || item.name : item.name}
+                                        </span>
+                                        {selectedPersonalizedCategory === 'medications' && item.brandName && (
+                                          <span className="text-[11px] text-gray-500">Brand: {item.brandName}</span>
+                                        )}
+                                      </div>
                                     </td>
-                                    <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden sm:table-cell">
-                                      <span className="text-gray-600 text-xs sm:text-sm">{item.code}</span>
-                                    </td>
-                                    <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden md:table-cell">
+                                    <td className="py-2 sm:py-2.5 px-2 sm:px-3 hidden md:table-cell align-top">
                                       <span className="text-gray-600 text-xs sm:text-sm">
                                         {selectedPersonalizedCategory === 'medications' ? item.brandName || item.shortDesc : item.shortDesc}
                                       </span>
                                     </td>
+                                    <td className="py-2 sm:py-2.5 px-2 sm:px-3 hidden lg:table-cell align-top">
+                                      <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[11px] font-semibold">
+                                        {item.usageCount ?? 0} used
+                                      </span>
+                                    </td>
+                                    <td className="py-2 sm:py-2.5 px-2 sm:px-3 hidden xl:table-cell align-top">
+                                      <span className="text-gray-500 text-[11px]">
+                                        {item.modifiedAt ? new Date(item.modifiedAt).toLocaleDateString() : '—'}
+                                      </span>
+                                    </td>
                                     {selectedPersonalizedCategory === 'medications' && (
                                       <>
-                                        <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden lg:table-cell">
-                                          <span className="text-gray-600 text-xs sm:text-sm">{item.brandName}</span>
-                                        </td>
                                         <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden lg:table-cell">
                                           <span className="text-gray-600 text-xs sm:text-sm">
                                             {item.strengthValue} {item.strengthUnit}
@@ -779,31 +960,27 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                                         <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden lg:table-cell">
                                           <span className="text-gray-600 text-xs sm:text-sm">{item.form}</span>
                                         </td>
+                                        <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden xl:table-cell">
+                                          <span className="text-gray-600 text-xs sm:text-sm">{item.route}</span>
+                                        </td>
+                                        <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden xl:table-cell">
+                                          <span className="text-gray-600 text-xs sm:text-sm">{item.dose}</span>
+                                        </td>
+                                        <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden 2xl:table-cell">
+                                          <span className="text-gray-600 text-xs sm:text-sm">{item.indication}</span>
+                                        </td>
+                                        <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden 2xl:table-cell">
+                                          <span className="text-gray-600 text-xs sm:text-sm">{item.notes}</span>
+                                        </td>
+                                        <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden sm:table-cell">
+                                          <span className="text-gray-600 text-xs sm:text-sm">{item.medicineId}</span>
+                                        </td>
                                       </>
                                     )}
                                     <td className="py-1.5 sm:py-2 px-2 sm:px-3">
                                       <div className="flex items-center justify-end gap-1">
                                         <Button
-                                          onClick={() => {
-                                            setEditingItem(item.id);
-                                            if (selectedPersonalizedCategory === 'medications') {
-                                              setEditItemGenericName(item.genericName || '');
-                                              setEditItemBrandName(item.brandName || '');
-                                              setEditItemForm(item.form || '');
-                                              setEditItemStrengthValue(item.strengthValue || '');
-                                              setEditItemStrengthUnit(item.strengthUnit || '');
-                                              setEditItemRoute(item.route || '');
-                                              setEditItemDose(item.dose || '');
-                                              setEditItemIndication(item.indication || '');
-                                              setEditItemNotes(item.notes || '');
-                                              setEditItemMedicineId(item.medicineId || '');
-                                            } else {
-                                              setEditItemName(item.name);
-                                              setEditItemCode(item.code);
-                                              setEditItemShortDesc(item.shortDesc);
-                                              setEditItemSynonyms(item.synonyms);
-                                            }
-                                          }}
+                                          onClick={() => editPersonalizedDataItem(item.id)}
                                           variant="outline"
                                           size="sm"
                                           className="h-5 w-5 sm:h-6 sm:w-6 p-0"
@@ -823,7 +1000,36 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                                   </tr>
                                 ))}
                               </tbody>
-                            </table>
+                              </table>
+                            </div>
+                            <div className="flex items-center justify-between text-xs sm:text-sm">
+                              <div className="text-gray-600">
+                                Showing {filteredItems.length === 0 ? 0 : startIndex + 1}–{Math.min(startIndex + PAGE_SIZE, filteredItems.length)} of {filteredItems.length}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={page <= 1}
+                                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                  className="h-7 px-2"
+                                >
+                                  Prev
+                                </Button>
+                                <span className="text-gray-700">
+                                  Page {page} / {totalPages}
+                                </span>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={page >= totalPages}
+                                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                  className="h-7 px-2"
+                                >
+                                  Next
+                                </Button>
+                              </div>
+                            </div>
                           </div>
                         ) : (
                           <div className="flex flex-col items-center justify-center h-full text-gray-500 min-h-[200px]">
@@ -862,7 +1068,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
 
       {/* Add Item Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 pt-10 sm:pt-16">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col overflow-hidden">
             <div className="p-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
@@ -884,7 +1090,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                                           <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Generic Name</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Generic Name <span className="text-red-600">*</span></label>
                                             <Input
                         value={newItemGenericName}
                         onChange={(e) => setNewItemGenericName(e.target.value)}
@@ -961,72 +1167,62 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                       className="w-full"
                                           />
                                         </div>
-                                        <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                                          <Input
-                      value={newItemNotes}
-                      onChange={(e) => setNewItemNotes(e.target.value)}
-                      placeholder="e.g., if any"
-                      className="w-full"
-                                          />
-                                        </div>
-                                        <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Medicine ID</label>
-                                          <Input
-                      value={newItemMedicineId}
-                      onChange={(e) => setNewItemMedicineId(e.target.value)}
-                      placeholder="e.g., MED001"
-                      className="w-full"
-                                          />
+                                        <div className="grid grid-cols-2 gap-4">
+                                          <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                                            <Input
+                          value={newItemNotes}
+                          onChange={(e) => setNewItemNotes(e.target.value)}
+                          placeholder="Any special instructions"
+                          className="w-full"
+                                            />
+                                          </div>
+                                          <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Medicine ID</label>
+                                            <Input
+                          value={newItemMedicineId}
+                          onChange={(e) => setNewItemMedicineId(e.target.value)}
+                          placeholder="e.g., MED001"
+                          className="w-full"
+                                            />
+                                          </div>
                                         </div>
                                       </div>
                                     ) : (
                 <div className="space-y-4">
-                                          <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                                            <Input
-                      value={newItemName}
-                      onChange={(e) => setNewItemName(e.target.value)}
-                                              placeholder={getNamePlaceholder(selectedPersonalizedCategory)}
-                      className="w-full"
-                                              autoFocus
-                                            />
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="sm:col-span-2">
+                                              <label className="block text-sm font-medium text-gray-700 mb-1">Name <span className="text-red-600">*</span></label>
+                                              <Input
+                                                value={newItemName}
+                                                onChange={(e) => setNewItemName(e.target.value)}
+                                                placeholder={getNamePlaceholder(selectedPersonalizedCategory)}
+                                                className="w-full"
+                                                autoFocus
+                                              />
+                                            </div>
                                           </div>
+
                                           <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Code</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                                             <Input
-                      value={newItemCode}
-                      onChange={(e) => setNewItemCode(e.target.value)}
-                                              placeholder={getCodePlaceholder(selectedPersonalizedCategory)}
-                      className="w-full"
-                                            />
-                                          </div>
-                                          <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                                            <Input
-                      value={newItemShortDesc}
-                      onChange={(e) => setNewItemShortDesc(e.target.value)}
+                                              value={newItemShortDesc}
+                                              onChange={(e) => setNewItemShortDesc(e.target.value)}
                                               placeholder={getShortDescPlaceholder(selectedPersonalizedCategory)}
-                      className="w-full"
+                                              className="w-full"
                                             />
                                           </div>
-                                          <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Synonyms</label>
-                                            <Input
-                      value={newItemSynonyms}
-                      onChange={(e) => setNewItemSynonyms(e.target.value)}
-                                              placeholder={getSynonymsPlaceholder(selectedPersonalizedCategory)}
-                      className="w-full"
-                                            />
-                                          </div>
-                                    <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                    <Input
-                      value={newItemNotes}
-                      onChange={(e) => setNewItemNotes(e.target.value)}
-                      placeholder="Additional notes (optional)"
-                      className="w-full"
-                    />
+
+                                          <div className="grid grid-cols-1 gap-4">
+                                            <div>
+                                              <label className="block text-sm font-medium text-gray-700 mb-1">Synonyms</label>
+                                              <Input
+                                                value={newItemSynonyms}
+                                                onChange={(e) => setNewItemSynonyms(e.target.value)}
+                                                placeholder={getSynonymsPlaceholder(selectedPersonalizedCategory)}
+                                                className="w-full"
+                                              />
+                                            </div>
                                           </div>
                                     </div>
                                   )}
@@ -1034,20 +1230,32 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
             
             <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
                                     <Button
-                onClick={() => setShowAddModal(false)}
+                onClick={() => {
+                  setShowAddModal(false);
+                  setEditingItem(null);
+                  setNewItemPersonalId(null);
+                }}
                                       variant="outline"
                                     >
                 Cancel
                                     </Button>
                                     <Button
-                onClick={() => {
-                  addPersonalizedDataItem();
-                  setShowAddModal(false);
+                onClick={async () => {
+                  await addPersonalizedDataItem();
                 }}
+                disabled={
+                  isAddingItem ||
+                  (!isMedicationCategory && !newItemName.trim()) ||
+                  (isMedicationCategory && !newItemGenericName.trim() && !newItemBrandName.trim())
+                }
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
-                Add {personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label}
+                {isAddingItem 
+                  ? 'Saving...'
+                  : editingItem 
+                    ? `Update ${personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label}`
+                    : `Add ${personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label}`}
                                     </Button>
                                   </div>
           </div>
