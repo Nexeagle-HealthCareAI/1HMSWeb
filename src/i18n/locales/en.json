@@ -1631,12 +1631,16 @@
   "userManagement": {
     "title": "User Management",
     "subtitle": "Manage users, roles, permissions and track activities",
+    "tabs": {
+      "onboarded": "Registered Users",
+      "invited": "Invited Users"
+    },
     "onboardedUsersSubtitle": "Manage active users in the system",
     "invitedUsersSubtitle": "Track and manage user invitations",
     "activeUsers": "Active Users",
     "pendingInvitations": "Pending Invitations",
     "inviteUser": "Invite User",
-    "inviteNewUser": "Invite New User",
+    "inviteNewUser": "Invite a new user",
     "fullName": "Full Name",
     "phone": "Phone",
     "email": "Email",
@@ -1766,7 +1770,7 @@
         "statusLabel": "Status",
         "statusPlaceholder": "Filter by status",
         "status": {
-          "all": "All Status",
+          "all": "All Statuses",
           "active": "Active",
           "inactive": "Inactive"
         },

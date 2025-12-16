@@ -85,13 +85,13 @@ export const UserManagement: React.FC = () => {
   }> = [
     {
       value: 'onboarded',
-      title: t('userManagement.onboardedUsers'),
+      title: t('userManagement.tabs.onboarded'),
       description: t('userManagement.activeUsers'),
       Icon: Users,
     },
     {
       value: 'invited',
-      title: t('userManagement.invitedUsers'),
+      title: t('userManagement.tabs.invited'),
       description: t('userManagement.pendingInvitations'),
       Icon: Mail,
     }
