@@ -365,11 +365,11 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
           <div className="h-full flex flex-col">
             {/* Enhanced Fields Header - Mobile Responsive */}
             <div className="flex-shrink-0 p-2 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b border-blue-200 dark:border-blue-700">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                 <div className="flex items-center gap-2 sm:gap-3">
                   <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-600 rounded-full animate-pulse"></div>
                   <Stethoscope className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-            <div>
+                  <div>
                     <h3 className="text-base sm:text-lg font-semibold text-blue-900 dark:text-blue-200">Prescription Fields</h3>
                     <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 hidden sm:block">• Green = Active • Click ON/OFF to toggle</p>
                     {isLoadingPreferences && (
@@ -377,10 +377,24 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                     )}
                     {preferencesError && (
                       <p className="text-xs text-red-600">Failed to load preferences. Using defaults.</p>
-          )}
-            </div>
-          </div>
-        </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:ml-auto items-start sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                  <div className="text-xs sm:text-sm text-blue-800 dark:text-blue-200 bg-white/70 dark:bg-blue-900/30 rounded-md px-2.5 py-1 border border-blue-200/70 dark:border-blue-800/60">
+                    <span className="font-semibold">{fields.filter(f => f.enabled).length}</span> of <span className="font-semibold">{fields.length}</span> fields enabled
+                  </div>
+                  <Button 
+                    onClick={saveFieldConfiguration}
+                    disabled={isSaving}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 sm:px-5 py-2 text-xs sm:text-sm transition-colors w-full sm:w-auto disabled:opacity-50"
+                  >
+                    <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    {isSaving ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </div>
+              </div>
             </div>
 
             {/* Compact Field Grid - Mobile Responsive */}
@@ -423,22 +437,6 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
               </div>
             </div>
             
-            {/* Save Button for Fields - Mobile Responsive */}
-            <div className="flex-shrink-0 p-2 sm:p-3 border-t border-gray-200 bg-white">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
-                <div className="text-xs sm:text-sm text-gray-600">
-                  <span className="font-medium">{fields.filter(f => f.enabled).length}</span> of <span className="font-medium">{fields.length}</span> fields enabled
-                </div>
-                <Button 
-                  onClick={saveFieldConfiguration}
-                  disabled={isSaving}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 sm:px-6 py-2 text-xs sm:text-sm transition-colors w-full sm:w-auto disabled:opacity-50"
-                >
-                  <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  {isSaving ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </div>
-            </div>
           </div>
         ) : (
             <div className="h-full flex flex-col">
