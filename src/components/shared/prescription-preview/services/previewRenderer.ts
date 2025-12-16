@@ -129,16 +129,15 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   const rightPad = mmToPt(layout.margins.right);
   const templateHeaderPad = mmToPt(layout.margins.top + layout.headerHeight);
   const templateFooterPad = mmToPt(layout.margins.bottom + layout.footerHeight);
-  const blankHeaderPad = mmToPt(layout.margins.top + 0);
-  const blankFooterPad = mmToPt(layout.margins.bottom + 0);
+  const blankHeaderPad = mmToPt(layout.margins.top);
+  const blankFooterPad = mmToPt(layout.margins.bottom);
   const contentWidth = pageWidth - leftPad - rightPad;
 
   let currentPageIndex = -1;
   let activeHeaderPad = templateHeaderPad;
   let activeFooterPad = templateFooterPad;
   let page = await acquirePage();
-  // Move patient section up by reducing the initial header pad
-  let cursorY = page.getHeight() - (activeHeaderPad - mmToPt(10)); // move up by 8mm (adjust as needed)
+  let cursorY = page.getHeight() - activeHeaderPad;
 
   async function acquirePage() {
     currentPageIndex += 1;
