@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { usePrescriptionFieldConfig } from '@/features/prescription/hooks/usePrescriptionFieldConfig';
 import { useAuthStore } from '@/store/authStore';
@@ -132,6 +133,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
   const [isLoadingPersonalized, setIsLoadingPersonalized] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [pendingDeleteItem, setPendingDeleteItem] = useState<PersonalizedDataItem | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   const PAGE_SIZE = 8;
@@ -566,6 +568,19 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
     return placeholders[category] || 'Enter name';
   };
 
+  const getCodePlaceholder = (category: string) => {
+    const placeholders: { [key: string]: string } = {
+      chiefComplaint: 'e.g., CC001',
+      history: 'e.g., H001',
+      comorbidity: 'e.g., C001',
+      examination: 'e.g., EX001',
+      diagnosis: 'e.g., DX001',
+      investigations: 'e.g., INV001',
+      procedures: 'e.g., PROC001',
+    };
+    return placeholders[category] || 'Enter code';
+  };
+
   const getShortDescPlaceholder = (category: string) => {
     const placeholders: { [key: string]: string } = {
       chiefComplaint: 'e.g., Acute chest pain',
@@ -905,7 +920,9 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                               <thead>
                                 <tr className="bg-gray-50 border-b border-gray-200">
                                   <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm">Name</th>
-                                  <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden md:table-cell">Description</th>
+                                  {selectedPersonalizedCategory !== 'medications' && (
+                                    <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden sm:table-cell">Code</th>
+                                  )}
                                   <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">Usage</th>
                                   <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden xl:table-cell">Last Modified</th>
                                   {selectedPersonalizedCategory === 'medications' && (
@@ -918,6 +935,9 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                                       <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden 2xl:table-cell">Notes</th>
                                       <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden sm:table-cell">Medicine ID</th>
                                     </>
+                                  )}
+                                  {selectedPersonalizedCategory !== 'medications' && (
+                                    <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden md:table-cell">Description</th>
                                   )}
                                   <th className="text-right py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm">Actions</th>
                                 </tr>
@@ -935,22 +955,26 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                                         )}
                                       </div>
                                     </td>
-                                    <td className="py-2 sm:py-2.5 px-2 sm:px-3 hidden md:table-cell align-top">
-                                      <span className="text-gray-600 text-xs sm:text-sm">
-                                        {selectedPersonalizedCategory === 'medications' ? item.brandName || item.shortDesc : item.shortDesc}
-                                      </span>
-                                    </td>
+
+                                    {selectedPersonalizedCategory !== 'medications' && (
+                                      <td className="py-2 sm:py-2.5 px-2 sm:px-3 hidden sm:table-cell align-top">
+                                        <span className="inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-2 py-0.5 text-[11px] font-medium">{item.code || '-'}</span>
+                                      </td>
+                                    )}
+
                                     <td className="py-2 sm:py-2.5 px-2 sm:px-3 hidden lg:table-cell align-top">
                                       <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[11px] font-semibold">
                                         {item.usageCount ?? 0} used
                                       </span>
                                     </td>
+
                                     <td className="py-2 sm:py-2.5 px-2 sm:px-3 hidden xl:table-cell align-top">
                                       <span className="text-gray-500 text-[11px]">
                                         {item.modifiedAt ? new Date(item.modifiedAt).toLocaleDateString() : '—'}
                                       </span>
                                     </td>
-                                    {selectedPersonalizedCategory === 'medications' && (
+
+                                    {selectedPersonalizedCategory === 'medications' ? (
                                       <>
                                         <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden lg:table-cell">
                                           <span className="text-gray-600 text-xs sm:text-sm">
@@ -976,7 +1000,14 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                                           <span className="text-gray-600 text-xs sm:text-sm">{item.medicineId}</span>
                                         </td>
                                       </>
+                                    ) : (
+                                      <td className="py-2 sm:py-2.5 px-2 sm:px-3 hidden md:table-cell align-top">
+                                        <span className="text-gray-600 text-xs sm:text-sm">
+                                          {item.shortDesc}
+                                        </span>
+                                      </td>
                                     )}
+
                                     <td className="py-1.5 sm:py-2 px-2 sm:px-3">
                                       <div className="flex items-center justify-end gap-1">
                                         <Button
@@ -988,7 +1019,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                                           <Edit className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                                         </Button>
                                         <Button
-                                          onClick={() => deletePersonalizedDataItem(item.id)}
+                                          onClick={() => setPendingDeleteItem(item)}
                                           variant="outline"
                                           size="sm"
                                           className="h-5 w-5 sm:h-6 sm:w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -1065,6 +1096,39 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
           </div>
         </div>
       )}
+
+      {/* Delete confirmation dialog */}
+      <Dialog
+        open={!!pendingDeleteItem}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteItem(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label || 'item'}</DialogTitle>
+            <DialogDescription>
+              {`Are you sure you want to delete ${pendingDeleteItem?.name ? '"' + pendingDeleteItem.name + '"' : 'this item'}? This action cannot be undone.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingDeleteItem(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isLoadingPersonalized || !pendingDeleteItem}
+              onClick={async () => {
+                if (!pendingDeleteItem) return;
+                await deletePersonalizedDataItem(pendingDeleteItem.id);
+                setPendingDeleteItem(null);
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Item Modal */}
       {showAddModal && (
@@ -1191,7 +1255,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                                     ) : (
                 <div className="space-y-4">
                                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div className="sm:col-span-2">
+                                            <div>
                                               <label className="block text-sm font-medium text-gray-700 mb-1">Name <span className="text-red-600">*</span></label>
                                               <Input
                                                 value={newItemName}
@@ -1199,6 +1263,15 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                                                 placeholder={getNamePlaceholder(selectedPersonalizedCategory)}
                                                 className="w-full"
                                                 autoFocus
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-sm font-medium text-gray-700 mb-1">Code</label>
+                                              <Input
+                                                value={newItemCode}
+                                                onChange={(e) => setNewItemCode(e.target.value)}
+                                                placeholder={getCodePlaceholder(selectedPersonalizedCategory)}
+                                                className="w-full"
                                               />
                                             </div>
                                           </div>
