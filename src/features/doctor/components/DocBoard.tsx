@@ -120,6 +120,7 @@ export const ClinicalDashboard: React.FC = () => {
   const [headerHeight, setHeaderHeight] = useState(0);
   const [windowWidth, setWindowWidth] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1920));
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSettingsNavCollapsed, setIsSettingsNavCollapsed] = useState(false);
 
   // Live update states
   const [isLiveUpdateEnabled, setIsLiveUpdateEnabled] = useState(true);
@@ -673,6 +674,12 @@ export const ClinicalDashboard: React.FC = () => {
       setIsSidebarCollapsed(false);
     }
   }, [windowWidth, isSidebarCollapsed]);
+
+  useEffect(() => {
+    if (windowWidth < 768 && isSettingsNavCollapsed) {
+      setIsSettingsNavCollapsed(false);
+    }
+  }, [windowWidth, isSettingsNavCollapsed]);
 
   const tabBarStickyOffset = Math.max(headerHeight, 0) + 16;
   const computeScale = (width: number) => {
@@ -1780,67 +1787,133 @@ export const ClinicalDashboard: React.FC = () => {
 
           {/* Prescription Settings */}
           {activeNavButton === 'settings'  && (
-            <div className="w-full mx-auto px-3 sm:px-6 py-2 sm:py-4 space-y-4">
-              {/* Unified Prescription Settings Navigation - Mobile Responsive */}
-              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-2 sm:p-3 shadow-sm">
-                <Tabs value={settingsTab} onValueChange={(value) => handleSettingsTabChange(value as 'fields' | 'personalized' | 'layout')}>
-                  <TabsList className="grid w-full grid-cols-3 bg-gray-100 dark:bg-gray-700 h-auto">
-                    <TabsTrigger 
-                      value="fields" 
-                      className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-green-50 dark:hover:bg-green-900/20"
-                    >
-                      <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
-                      <span className="font-medium hidden sm:inline">{t('docBoard.settings.fields')}</span>
-                      <span className="font-medium sm:hidden">{t('docBoard.settings.fields')}</span>
-                      {settingsTab === 'fields' && (
-                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
-                      )}
-                    </TabsTrigger>
-                    <TabsTrigger 
-                      value="personalized" 
-                      className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-purple-50 dark:hover:bg-purple-900/20"
-                    >
-                      <Database className="h-3 w-3 sm:h-4 sm:w-4" />
-                      <span className="font-medium hidden sm:inline">{t('docBoard.settings.personalData')}</span>
-                      <span className="font-medium sm:hidden">{t('docBoard.settings.personalShort')}</span>
-                      {settingsTab === 'personalized' && (
-                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
-                      )}
-                    </TabsTrigger>
-                    <TabsTrigger 
-                      value="layout" 
-                      onClick={handleLayoutTabClick}
-                      className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105 transition-all duration-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                    >
-                      <LayoutDashboard className="h-3 w-3 sm:h-4 sm:w-4" />
-                      <span className="font-medium hidden sm:inline">{t('docBoard.settings.layoutLab')}</span>
-                      <span className="font-medium sm:hidden">{t('docBoard.settings.layoutShort')}</span>
-                      {settingsTab === 'layout' && (
-                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse"></div>
-                      )}
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
+            <div className="w-full mx-auto px-3 sm:px-6 py-2 sm:py-4">
+              <div className="p-2 sm:p-4">
+                <Tabs
+                  value={settingsTab}
+                  onValueChange={(value) => handleSettingsTabChange(value as 'fields' | 'personalized' | 'layout')}
+                  className="flex flex-col md:flex-row gap-4"
+                >
+                  <div className={`flex md:flex-col w-full ${isSettingsNavCollapsed ? 'md:w-16 lg:w-20' : 'md:w-60 lg:w-64'} gap-2 md:gap-3`}>
+                    <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-md p-3 md:min-h-[460px] flex flex-col gap-4">
+                      <div className="hidden md:flex items-center justify-end mb-10">
+                        <button
+                          type="button"
+                          onClick={() => setIsSettingsNavCollapsed((prev) => !prev)}
+                          className="inline-flex items-center justify-center rounded-full border border-gray-200 dark:border-gray-800 p-2 text-gray-500 dark:text-gray-300 hover:text-blue-600 hover:border-blue-200 dark:hover:text-blue-300 transition-colors"
+                          aria-pressed={isSettingsNavCollapsed}
+                          aria-expanded={!isSettingsNavCollapsed}
+                          aria-label={isSettingsNavCollapsed ? t('docBoard.tabs.expandSidebar') : t('docBoard.tabs.collapseSidebar')}
+                        >
+                          {isSettingsNavCollapsed ? <Expand className="h-4 w-4" aria-hidden /> : <X className="h-4 w-4" aria-hidden />}
+                          <span className="sr-only">{isSettingsNavCollapsed ? t('docBoard.tabs.expandSidebar') : t('docBoard.tabs.collapseSidebar')}</span>
+                        </button>
+                      </div>
 
-              {/* Prescription Settings Content - Mobile Responsive */}
-              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-                <Tabs value={settingsTab} onValueChange={(value) => handleSettingsTabChange(value as 'fields' | 'personalized' | 'layout')}>
-                  <TabsContent value="fields" className="m-0">
-                    <div className="p-2 sm:p-4">
-                      <PrescriptionCustomizePanel showCloseButton={false} defaultTab="fields" />
+                      <TooltipProvider delayDuration={150}>
+                        <TabsList
+                          className={`flex md:flex-col w-full bg-gray-100 dark:bg-gray-800/80 rounded-xl ${
+                            isSettingsNavCollapsed ? 'md:items-center md:gap-1.5 p-1.5' : 'md:items-stretch md:gap-3 p-2'
+                          }`}
+                        >
+                        {(isSettingsNavCollapsed ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <TabsTrigger
+                                value="fields"
+                                className={`w-full justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-green-50 dark:hover:bg-green-900/20 ${
+                                  isSettingsNavCollapsed ? 'md:justify-center md:px-2' : ''
+                                }`}
+                              >
+                                <Settings className="h-4 w-4" />
+                                <span className="sr-only">{t('docBoard.settings.fields')}</span>
+                              </TabsTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">{t('docBoard.settings.fields')}</TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <TabsTrigger
+                            value="fields"
+                            className="w-full justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-green-50 dark:hover:bg-green-900/20"
+                          >
+                            <Settings className="h-4 w-4" />
+                            <span className="font-medium">{t('docBoard.settings.fields')}</span>
+                          </TabsTrigger>
+                        ))}
+
+                        {(isSettingsNavCollapsed ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <TabsTrigger
+                                value="personalized"
+                                className={`w-full justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-purple-50 dark:hover:bg-purple-900/20 ${
+                                  isSettingsNavCollapsed ? 'md:justify-center md:px-2' : ''
+                                }`}
+                              >
+                                <Database className="h-4 w-4" />
+                                <span className="sr-only">{t('docBoard.settings.personalData')}</span>
+                              </TabsTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">{t('docBoard.settings.personalData')}</TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <TabsTrigger
+                            value="personalized"
+                            className="w-full justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                          >
+                            <Database className="h-4 w-4" />
+                            <span className="font-medium">{t('docBoard.settings.personalData')}</span>
+                          </TabsTrigger>
+                        ))}
+
+                        {(isSettingsNavCollapsed ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <TabsTrigger
+                                value="layout"
+                                onClick={handleLayoutTabClick}
+                                className={`w-full justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 ${
+                                  isSettingsNavCollapsed ? 'md:justify-center md:px-2' : ''
+                                }`}
+                              >
+                                <LayoutDashboard className="h-4 w-4" />
+                                <span className="sr-only">{t('docBoard.settings.layoutLab')}</span>
+                              </TabsTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">{t('docBoard.settings.layoutLab')}</TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <TabsTrigger
+                            value="layout"
+                            onClick={handleLayoutTabClick}
+                            className="w-full justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                          >
+                            <LayoutDashboard className="h-4 w-4" />
+                            <span className="font-medium">{t('docBoard.settings.layoutLab')}</span>
+                          </TabsTrigger>
+                        ))}
+                        </TabsList>
+                      </TooltipProvider>
                     </div>
-                  </TabsContent>
-                  <TabsContent value="personalized" className="m-0">
-                    <div className="p-2 sm:p-4">
-                      <PrescriptionCustomizePanel showCloseButton={false} defaultTab="personalized" />
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="layout" className="m-0">
-                    <div className="p-2 sm:p-4">
-                      <PrescriptionLayout refreshToken={layoutRefreshToken} />
-                    </div>
-                  </TabsContent>
+                  </div>
+
+                  <div className="flex-1 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+                    <TabsContent value="fields" className="m-0">
+                      <div className="p-2 sm:p-4">
+                        <PrescriptionCustomizePanel showCloseButton={false} defaultTab="fields" />
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="personalized" className="m-0">
+                      <div className="p-2 sm:p-4">
+                        <PrescriptionCustomizePanel showCloseButton={false} defaultTab="personalized" />
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="layout" className="m-0">
+                      <div className="p-2 sm:p-4">
+                        <PrescriptionLayout refreshToken={layoutRefreshToken} />
+                      </div>
+                    </TabsContent>
+                  </div>
                 </Tabs>
               </div>
             </div>

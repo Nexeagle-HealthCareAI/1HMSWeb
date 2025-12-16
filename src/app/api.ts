@@ -27,6 +27,8 @@ export const API_ENDPOINTS = {
       }
       return `/e-prescription/configuration/update-preference-setting/${params.join('&')}`;
     },
+    GET_PATIENT_VITALS: (patientId: string, appointmentId: string) =>
+      `/e-prescription/patient-details/vitals?patientId=${encodeURIComponent(patientId)}&appointmentId=${encodeURIComponent(appointmentId)}`,
   },
   AUTH: {
     LOGIN: 'auth/user/login',
@@ -84,7 +86,7 @@ export const API_ENDPOINTS = {
     VALIDATE_TOKEN: 'admin/user-onboarding/validate',
   },
   APPOINTMENTS: {
-    
+    SAVE_VITALS: 'appointments/patient-vitals',
   },
   PATIENTS: {
     // Patient Profile API endpoints

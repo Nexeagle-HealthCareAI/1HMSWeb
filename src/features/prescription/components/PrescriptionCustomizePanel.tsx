@@ -84,11 +84,13 @@ interface PersonalizedData {
 interface PrescriptionCustomizePanelProps {
   showCloseButton?: boolean;
   defaultTab?: 'fields' | 'personalized';
+  hidePersonalizedHeader?: boolean;
 }
 
 export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProps> = ({ 
   showCloseButton = true,
-  defaultTab = 'fields'
+  defaultTab = 'fields',
+  hidePersonalizedHeader = false
 }) => {
   const [customizeTab, setCustomizeTab] = useState<'fields' | 'playground'>(defaultTab === 'personalized' ? 'playground' : 'fields');
   
@@ -440,28 +442,6 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
           </div>
         ) : (
             <div className="h-full flex flex-col">
-            {/* Enhanced Personalized Data Header - Mobile Responsive */}
-            <div className="flex-shrink-0 p-2 sm:p-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-600 rounded-full animate-pulse"></div>
-                  <Database className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-                  <div>
-                    <h3 className="text-base sm:text-lg font-semibold text-green-900 dark:text-green-200">Personalized Data</h3>
-                    <span className="text-xs sm:text-sm text-green-700 dark:text-green-300 hidden sm:inline">• 8 categories available</span>
-                  </div>
-                </div>
-                    <Button
-                  onClick={() => setShowAddModal(true)}
-                  className="bg-green-600 hover:bg-green-700 h-7 sm:h-8 px-3 sm:px-4 text-xs sm:text-sm shadow-lg w-full sm:w-auto"
-                >
-                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Add {personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label}</span>
-                  <span className="sm:hidden">Add {personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label.split(' ')[0]}</span>
-                    </Button>
-                </div>
-              </div>
-
             {/* Sidebar Layout - Mobile Responsive */}
             <div className="flex-1 flex flex-col sm:flex-row overflow-hidden">
               {/* Enhanced Category Sidebar - Mobile Responsive */}
@@ -524,17 +504,27 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                         ({personalizedData[selectedPersonalizedCategory as keyof PersonalizedData]?.length || 0} templates)
                       </span>
                       </div>
-                    <div className="w-full sm:max-w-sm">
+                    <div className="w-full sm:max-w-md flex flex-col sm:flex-row gap-2 sm:gap-3">
+                      <div className="flex-1 min-w-0">
                         <div className="relative">
-                        <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3 sm:h-4 sm:w-4" />
+                          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3 sm:h-4 sm:w-4" />
                           <Input
-                          placeholder={`Search ${personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label.toLowerCase()} templates...`}
+                            placeholder={`Search ${personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label.toLowerCase()} templates...`}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                          className="pl-6 sm:pl-8 h-7 sm:h-8 text-xs sm:text-sm"
+                            className="pl-6 sm:pl-8 h-7 sm:h-8 text-xs sm:text-sm"
                           />
                         </div>
                       </div>
+                      <Button
+                        onClick={() => setShowAddModal(true)}
+                        className="bg-green-600 hover:bg-green-700 h-8 sm:h-8 px-3 sm:px-4 text-xs sm:text-sm shadow-lg"
+                      >
+                        <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                        <span className="hidden sm:inline">Add {personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label}</span>
+                        <span className="sm:hidden">Add</span>
+                      </Button>
+                    </div>
                     </div>
                   </div>
 
@@ -874,8 +864,8 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
 
       {/* Add Item Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col overflow-hidden">
             <div className="p-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">
@@ -891,8 +881,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                 </Button>
               </div>
             </div>
-            
-            <div className="p-4">
+            <div className="p-4 overflow-y-auto">
               {selectedPersonalizedCategory === 'medications' ? (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">

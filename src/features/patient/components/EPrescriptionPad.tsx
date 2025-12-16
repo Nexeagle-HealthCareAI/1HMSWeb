@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { usePrescriptionFieldConfig } from '@/features/prescription/hooks/usePrescriptionFieldConfig';
 import { useAuthStore } from '@/store/authStore';
 import { prescriptionFieldConfigApi } from '@/features/prescription/services/prescriptionFieldConfigApi';
@@ -11,7 +11,6 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Settings,
-  Save,
   Printer,
   Download,
   Plus,
@@ -36,9 +35,10 @@ import {
   X,
   ChevronDown,
   ChevronRight,
-  Search,
-  Check
+  Search
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { vitalsApi, PatientVitalsResponse } from '../services/vitalsApi';
 
 interface EPrescriptionData {
   vitals: {
@@ -141,11 +141,62 @@ interface EPrescriptionPadProps {
   prescriptionFieldPreferences?: any;
 }
 
+// Normalize vitals response shape to the fields this component expects.
+const normalizeVitals = (raw: any): PatientVitalsResponse => {
+  // Accept top-level, nested, and differently-cased payloads
+  const base = raw?.vitalsJson
+    || raw?.vitals
+    || raw?.Vitals
+    || raw?.data?.vitalsJson
+    || raw?.data?.vitals
+    || raw?.data?.Vitals
+    || raw?.data
+    || raw
+    || {};
+
+  // Map common alternative keys (case-insensitive-ish)
+  const bpObj = base.bp || base.Bp || base.bloodPressure || base.bpReading;
+  const sys = base.bpSys ?? base.bpSystolic ?? base.sys ?? base.Sys ?? base.systolic ?? bpObj?.sys ?? bpObj?.Sys;
+  const dia = base.bpDia ?? base.bpDiastolic ?? base.dia ?? base.Dia ?? base.diastolic ?? bpObj?.dia ?? bpObj?.Dia;
+  const bp = sys !== undefined || dia !== undefined ? { sys, dia } : bpObj;
+
+  return {
+    bp,
+    pulse: base.pulse ?? base.Pulse ?? base.heartRate ?? base.hr ?? base.pulseRate ?? undefined,
+    tempC: base.tempC ?? base.TempC ?? base.temperatureC ?? base.temperature ?? base.temp ?? undefined,
+    spo2: base.spo2 ?? base.Spo2 ?? base.oxygenSaturation ?? base.o2Sat ?? undefined,
+    heightCm: base.heightCm ?? base.HeightCm ?? base.height ?? base.heightInCm ?? undefined,
+    weightKg: base.weightKg ?? base.WeightKg ?? base.weight ?? base.weightInKg ?? undefined,
+    bmi: base.bmi ?? base.Bmi ?? undefined,
+  };
+};
+
+const calculateBmi = (weightKg: number, heightCm: number): number => {
+  if (!weightKg || !heightCm) return 0;
+  const heightM = heightCm / 100;
+  if (!heightM) return 0;
+  const bmi = weightKg / (heightM * heightM);
+  return Number.isFinite(bmi) ? Number(bmi.toFixed(1)) : 0;
+};
+
+const getBmiIndicator = (bmiValue: number) => {
+  if (!bmiValue) return { label: 'Not available', color: 'text-gray-500' };
+  if (bmiValue < 18.5) return { label: 'Underweight', color: 'text-amber-600' };
+  if (bmiValue < 25) return { label: 'Normal range', color: 'text-green-600' };
+  if (bmiValue < 30) return { label: 'Overweight', color: 'text-orange-600' };
+  return { label: 'Obesity', color: 'text-red-600' };
+};
+
 const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPreferences }) => {
   const { patientId } = useParams<{ patientId: string }>();
-  const { getDoctorId, getHospitalId } = useAuthStore();
+  const [searchParams] = useSearchParams();
+  const { getDoctorId, getHospitalId, getUserId } = useAuthStore();
+  const { toast } = useToast();
   const [apiPreferences, setApiPreferences] = useState<any>(null);
   const [isLoadingApiPreferences, setIsLoadingApiPreferences] = useState(false);
+  const [isLoadingVitals, setIsLoadingVitals] = useState(false);
+  const [isSavingVitals, setIsSavingVitals] = useState(false);
+  const [hasFetchedVitals, setHasFetchedVitals] = useState(false);
   const [prescriptionData, setPrescriptionData] = useState<EPrescriptionData>({
     vitals: {
       bloodPressure: '',
@@ -177,6 +228,18 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
     nonPharmacologicalAdvice: '',
     attachments: []
   });
+
+  const safeDecode = (value: string | null) => {
+    if (!value) return '';
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return value;
+    }
+  };
+
+  const resolvedPatientId = safeDecode(searchParams.get('patientId')) || patientId || '';
+  const resolvedAppointmentId = safeDecode(searchParams.get('appointmentId'));
 
   // Load prescription field preferences when component mounts
   useEffect(() => {
@@ -210,6 +273,125 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
 
     loadPrescriptionPreferences();
   }, [getDoctorId, getHospitalId]);
+
+  const loadVitals = useCallback(async () => {
+    if (!resolvedPatientId || !resolvedAppointmentId) return;
+    try {
+      setIsLoadingVitals(true);
+      const vitalsResponse = await vitalsApi.fetchVitals(resolvedPatientId, resolvedAppointmentId);
+      const vitals = normalizeVitals(vitalsResponse);
+      console.log('Vitals API raw response:', vitalsResponse);
+      console.log('Vitals normalized:', vitals);
+
+      if (vitals) {
+        const hasAnyValue = Boolean(
+          (vitals.bp && (vitals.bp.sys !== undefined || vitals.bp.dia !== undefined)) ||
+          vitals.pulse !== undefined ||
+          vitals.tempC !== undefined ||
+          vitals.spo2 !== undefined ||
+          vitals.heightCm !== undefined ||
+          vitals.weightKg !== undefined ||
+          vitals.bmi !== undefined
+        );
+        setPrescriptionData(prev => ({
+          ...prev,
+          vitals: {
+            bloodPressure: vitals.bp ? `${vitals.bp.sys ?? ''}${vitals.bp.dia !== undefined ? `/${vitals.bp.dia}` : ''}` : '',
+            heartRate: vitals.pulse !== undefined && vitals.pulse !== null ? String(vitals.pulse) : '',
+            temperature: vitals.tempC !== undefined && vitals.tempC !== null ? String(vitals.tempC) : '',
+            oxygenSaturation: vitals.spo2 !== undefined && vitals.spo2 !== null ? String(vitals.spo2) : '',
+            height: vitals.heightCm !== undefined && vitals.heightCm !== null ? String(vitals.heightCm) : '',
+            weight: vitals.weightKg !== undefined && vitals.weightKg !== null ? String(vitals.weightKg) : '',
+            bmi: vitals.bmi !== undefined && vitals.bmi !== null ? String(vitals.bmi) : '',
+          }
+        }));
+        setHasFetchedVitals(hasAnyValue);
+      } else {
+        setHasFetchedVitals(false);
+      }
+    } catch (error) {
+      console.error('Error fetching vitals:', error);
+      toast({
+        title: 'Unable to load vitals',
+        description: 'We could not fetch vitals for this visit. You can still enter them manually.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingVitals(false);
+    }
+  }, [resolvedPatientId, resolvedAppointmentId, toast]);
+
+  // Fetch vitals on entry
+  useEffect(() => {
+    loadVitals();
+  }, [loadVitals]);
+
+  const handleSaveVitals = async () => {
+    if (!resolvedPatientId || !resolvedAppointmentId) {
+      toast({
+        title: 'Missing info',
+        description: 'Patient or appointment is missing. Please reopen from the appointment flow.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const parseBp = (bp: string) => {
+      const [sysRaw, diaRaw] = (bp || '').split('/');
+      const sys = Number(sysRaw);
+      const dia = Number(diaRaw);
+      return {
+        sys: Number.isFinite(sys) ? sys : 0,
+        dia: Number.isFinite(dia) ? dia : 0,
+      };
+    };
+
+    const weightNum = Number(prescriptionData.vitals.weight) || 0;
+    const heightNum = Number(prescriptionData.vitals.height) || 0;
+    const computedBmi = calculateBmi(weightNum, heightNum);
+    const bmiToUse = computedBmi > 0 ? computedBmi : Number(prescriptionData.vitals.bmi) || 0;
+
+    if (computedBmi > 0 && String(computedBmi) !== prescriptionData.vitals.bmi) {
+      setPrescriptionData(prev => ({
+        ...prev,
+        vitals: { ...prev.vitals, bmi: String(computedBmi) }
+      }));
+    }
+
+    const payload = {
+      appointmentId: resolvedAppointmentId,
+      patientId: resolvedPatientId,
+      vitalsJson: {
+        bp: parseBp(prescriptionData.vitals.bloodPressure),
+        pulse: Number(prescriptionData.vitals.heartRate) || 0,
+        tempC: Number(prescriptionData.vitals.temperature) || 0,
+        spo2: Number(prescriptionData.vitals.oxygenSaturation) || 0,
+        heightCm: Number(prescriptionData.vitals.height) || 0,
+        weightKg: Number(prescriptionData.vitals.weight) || 0,
+        bmi: bmiToUse,
+      },
+      recordedBy: getDoctorId() || getUserId?.() || '',
+    };
+
+    try {
+      setIsSavingVitals(true);
+      await vitalsApi.saveVitals(payload);
+      toast({
+        title: 'Vitals saved',
+        description: 'Vitals have been saved for this appointment.',
+      });
+      await loadVitals();
+    } catch (error) {
+      console.error('Error saving vitals:', error);
+      toast({
+        title: 'Save failed',
+        description: 'Could not save vitals. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingVitals(false);
+    }
+  };
 
   // Get field preferences from API or passed props
   const { fields: fieldConfigs, isLoadingPreferences } = usePrescriptionFieldConfig();
@@ -260,9 +442,6 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
     nonPharmacologicalAdvice: false,
     attachments: false
   });
-
-  // Individual field save status
-  const [fieldSaveStatus, setFieldSaveStatus] = useState<{ [key: string]: 'idle' | 'saving' | 'saved' | 'error' }>({});
 
   // Field configuration is now handled by the API via usePrescriptionFieldConfig hook
   const renderFieldIcon = (fieldId: string) => {
@@ -358,27 +537,6 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
     </div>
   );
 
-  const saveFieldData = async (fieldId: string, data: any) => {
-    setFieldSaveStatus(prev => ({ ...prev, [fieldId]: 'saving' }));
-
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const savedData = JSON.parse(localStorage.getItem('eprescription-field-data') || '{}');
-      savedData[fieldId] = data;
-      localStorage.setItem('eprescription-field-data', JSON.stringify(savedData));
-
-      setFieldSaveStatus(prev => ({ ...prev, [fieldId]: 'saved' }));
-      setTimeout(() => {
-        setFieldSaveStatus(prev => ({ ...prev, [fieldId]: 'idle' }));
-      }, 2000);
-    } catch (error) {
-      setFieldSaveStatus(prev => ({ ...prev, [fieldId]: 'error' }));
-      setTimeout(() => {
-        setFieldSaveStatus(prev => ({ ...prev, [fieldId]: 'idle' }));
-      }, 3000);
-    }
-  };
-
   const renderCollapsibleSection = (
     fieldId: string,
     title: string,
@@ -399,7 +557,6 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
               <span>{title}</span>
             </CardTitle>
             <div className="flex items-center gap-2">
-              {fieldSaveStatus[fieldId] === 'saved' && <Check className="h-4 w-4 text-green-600" />}
               {collapsedSections[fieldId] ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </div>
           </div>
@@ -407,32 +564,6 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
         {!collapsedSections[fieldId] && (
           <CardContent>
             {content}
-            <div className="flex justify-end pt-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => saveFieldData(fieldId, prescriptionData[fieldId as keyof EPrescriptionData])}
-                disabled={fieldSaveStatus[fieldId] === 'saving'}
-                className="h-7 text-xs"
-              >
-                {fieldSaveStatus[fieldId] === 'saving' ? (
-                  <>
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-600 mr-1"></div>
-                    Saving...
-                  </>
-                ) : fieldSaveStatus[fieldId] === 'saved' ? (
-                  <>
-                    <Check className="h-3 w-3 mr-1" />
-                    Saved
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-3 w-3 mr-1" />
-                    Save for Later
-                  </>
-                )}
-              </Button>
-            </div>
           </CardContent>
         )}
       </Card>
@@ -531,13 +662,22 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
             {renderCollapsibleSection(
               'vitals',
               'Vitals',
-              <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+                {isLoadingVitals && (
+                  <div className="text-xs text-muted-foreground">Loading vitals...</div>
+                )}
+                {!isLoadingVitals && hasFetchedVitals && (
+                  <div className="flex items-center gap-2 text-xs text-green-600">
+                    <CheckCircle className="h-3 w-3" />
+                    <span>Vitals loaded from this visit</span>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
                   {/* Blood Pressure */}
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                      <Label className="text-xs font-medium text-gray-600">BP</Label>
+                      <Label className="text-xs font-medium text-gray-600">Blood Pressure (BP)</Label>
                     </div>
                     <Input
                       placeholder="120/80"
@@ -546,7 +686,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                         ...prev,
                         vitals: { ...prev.vitals, bloodPressure: e.target.value }
                       }))}
-                      className="h-8 text-sm border-gray-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
+                      className="h-8 text-sm border-gray-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-100 placeholder:text-gray-400 placeholder:opacity-70"
                     />
                   </div>
 
@@ -554,7 +694,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
-                      <Label className="text-xs font-medium text-gray-600">Temp</Label>
+                      <Label className="text-xs font-medium text-gray-600">Temperature (°F/°C)</Label>
                     </div>
                     <Input
                       placeholder="98.6°F"
@@ -563,7 +703,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                         ...prev,
                         vitals: { ...prev.vitals, temperature: e.target.value }
                       }))}
-                      className="h-8 text-sm border-gray-200 focus:border-red-400 focus:ring-1 focus:ring-red-100"
+                      className="h-8 text-sm border-gray-200 focus:border-red-400 focus:ring-1 focus:ring-red-100 placeholder:text-gray-400 placeholder:opacity-70"
                     />
                   </div>
 
@@ -571,7 +711,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                      <Label className="text-xs font-medium text-gray-600">HR</Label>
+                      <Label className="text-xs font-medium text-gray-600">Heart Rate (bpm)</Label>
                     </div>
                     <Input
                       placeholder="72 bpm"
@@ -580,7 +720,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                         ...prev,
                         vitals: { ...prev.vitals, heartRate: e.target.value }
                       }))}
-                      className="h-8 text-sm border-gray-200 focus:border-green-400 focus:ring-1 focus:ring-green-100"
+                      className="h-8 text-sm border-gray-200 focus:border-green-400 focus:ring-1 focus:ring-green-100 placeholder:text-gray-400 placeholder:opacity-70"
                     />
                   </div>
 
@@ -588,7 +728,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
-                      <Label className="text-xs font-medium text-gray-600">O2</Label>
+                      <Label className="text-xs font-medium text-gray-600">Oxygen Saturation (SpO₂)</Label>
                     </div>
                     <Input
                       placeholder="98%"
@@ -597,7 +737,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                         ...prev,
                         vitals: { ...prev.vitals, oxygenSaturation: e.target.value }
                       }))}
-                      className="h-8 text-sm border-gray-200 focus:border-purple-400 focus:ring-1 focus:ring-purple-100"
+                      className="h-8 text-sm border-gray-200 focus:border-purple-400 focus:ring-1 focus:ring-purple-100 placeholder:text-gray-400 placeholder:opacity-70"
                     />
                   </div>
 
@@ -605,7 +745,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className="w-1.5 h-1.5 bg-gray-500 rounded-full"></div>
-                      <Label className="text-xs font-medium text-gray-600">Weight</Label>
+                      <Label className="text-xs font-medium text-gray-600">Weight (kg)</Label>
                     </div>
                     <Input
                       placeholder="70 kg"
@@ -614,7 +754,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                         ...prev,
                         vitals: { ...prev.vitals, weight: e.target.value }
                       }))}
-                      className="h-8 text-sm border-gray-200 focus:border-gray-400 focus:ring-1 focus:ring-gray-100"
+                      className="h-8 text-sm border-gray-200 focus:border-gray-400 focus:ring-1 focus:ring-gray-100 placeholder:text-gray-400 placeholder:opacity-70"
                     />
                   </div>
 
@@ -622,7 +762,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className="w-1.5 h-1.5 bg-gray-500 rounded-full"></div>
-                      <Label className="text-xs font-medium text-gray-600">Height</Label>
+                      <Label className="text-xs font-medium text-gray-600">Height (cm)</Label>
                     </div>
                     <Input
                       placeholder="170 cm"
@@ -631,7 +771,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                         ...prev,
                         vitals: { ...prev.vitals, height: e.target.value }
                       }))}
-                      className="h-8 text-sm border-gray-200 focus:border-gray-400 focus:ring-1 focus:ring-gray-100"
+                      className="h-8 text-sm border-gray-200 focus:border-gray-400 focus:ring-1 focus:ring-gray-100 placeholder:text-gray-400 placeholder:opacity-70"
                     />
                   </div>
 
@@ -639,7 +779,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                      <Label className="text-xs font-medium text-gray-600">BMI</Label>
+                      <Label className="text-xs font-medium text-gray-600">BMI (kg/m²)</Label>
                     </div>
                     <Input
                       placeholder="24.2"
@@ -648,9 +788,35 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                         ...prev,
                         vitals: { ...prev.vitals, bmi: e.target.value }
                       }))}
-                      className="h-8 text-sm border-gray-200 focus:border-orange-400 focus:ring-1 focus:ring-orange-100"
+                      className="h-8 text-sm border-gray-200 focus:border-orange-400 focus:ring-1 focus:ring-orange-100 placeholder:text-gray-400 placeholder:opacity-70"
                     />
+                    <div className="text-[11px] mt-1 text-gray-600">
+                      {(() => {
+                        const bmiNum = Number(prescriptionData.vitals.bmi) || 0;
+                        const indicator = getBmiIndicator(bmiNum);
+                        return <span className={indicator.color}>{indicator.label}</span>;
+                      })()}
+                    </div>
                   </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    onClick={handleSaveVitals}
+                    disabled={isSavingVitals}
+                    className="h-8"
+                  >
+                    {isSavingVitals ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                        <span>Saving...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span>Save Vitals</span>
+                      </div>
+                    )}
+                  </Button>
                 </div>
               </div>
             )}
