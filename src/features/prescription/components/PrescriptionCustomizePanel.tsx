@@ -329,6 +329,9 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
 
       let success = false;
       try {
+        const existingMed = personalizedData.medications.find(m => m.id === editingItem);
+        const prefferedId = existingMed?.prefferedId ?? null;
+
         await personalizedMedicineApi.upsert(doctorId, hospitalId, {
           genericName: newItemGenericName,
           brandName: newItemBrandName,
@@ -340,7 +343,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
           indication: newItemIndication,
           notes: newItemNotes,
           medicineId: newItemMedicineId,
-        });
+        }, prefferedId);
 
         const refreshedMeds = await personalizedMedicineApi.list(doctorId, hospitalId);
         const normalizedMeds = (refreshedMeds || []).map((item, idx) => ({
@@ -360,6 +363,8 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
           code: item.medicineId || '',
           shortDesc: item.brandName || item.genericName || '',
           synonyms: '',
+          usageCount: typeof item.usageCount === 'number' ? item.usageCount : 0,
+          modifiedAt: item.modifiedAt || item.lastModifiedAt || '',
         }));
 
         setPersonalizedData(prev => ({
@@ -665,6 +670,8 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
             code: item.medicineId || '',
             shortDesc: item.brandName || item.genericName || '',
             synonyms: '',
+            usageCount: typeof item.usageCount === 'number' ? item.usageCount : 0,
+            modifiedAt: item.modifiedAt || item.lastModifiedAt || '',
           }));
 
           setPersonalizedData(prev => ({
@@ -915,7 +922,65 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                           </div>
                         ) : filteredItems.length > 0 ? (
                           <div className="space-y-3">
-                            <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+                            {/* Mobile cards */}
+                            <div className="sm:hidden space-y-2">
+                              {paginatedItems.map((item) => (
+                                <div key={item.id} className="border border-gray-200 rounded-lg p-3 shadow-sm bg-white">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-semibold text-gray-900 truncate">
+                                        {selectedPersonalizedCategory === 'medications' ? item.genericName || item.name : item.name}
+                                      </p>
+                                      {selectedPersonalizedCategory === 'medications' && item.brandName && (
+                                        <p className="text-xs text-gray-500 truncate">Brand: {item.brandName}</p>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <Button
+                                        onClick={() => editPersonalizedDataItem(item.id)}
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 px-2"
+                                      >
+                                        Edit
+                                      </Button>
+                                      <Button
+                                        onClick={() => setPendingDeleteItem(item)}
+                                        variant="destructive"
+                                        size="sm"
+                                        className="h-7 px-2"
+                                      >
+                                        Delete
+                                      </Button>
+                                    </div>
+                                  </div>
+
+                                  <div className="mt-2 space-y-1 text-xs text-gray-700">
+                                    {selectedPersonalizedCategory === 'medications' ? (
+                                      <>
+                                        <p><span className="font-semibold">Strength:</span> {item.strengthValue} {item.strengthUnit}</p>
+                                        <p><span className="font-semibold">Form:</span> {item.form}</p>
+                                        <p><span className="font-semibold">Route:</span> {item.route}</p>
+                                        <p><span className="font-semibold">Dose:</span> {item.dose}</p>
+                                        {item.indication && <p><span className="font-semibold">Indication:</span> {item.indication}</p>}
+                                        {item.notes && <p><span className="font-semibold">Notes:</span> {item.notes}</p>}
+                                        {item.medicineId && <p><span className="font-semibold">Medicine ID:</span> {item.medicineId}</p>}
+                                      </>
+                                    ) : (
+                                      <>
+                                        {item.code && <p><span className="font-semibold">Code:</span> {item.code}</p>}
+                                        {item.shortDesc && <p><span className="font-semibold">Description:</span> {item.shortDesc}</p>}
+                                      </>
+                                    )}
+                                    <p className="text-gray-500">Usage: {item.usageCount ?? 0}</p>
+                                    <p className="text-gray-500">Last Modified: {item.modifiedAt ? new Date(item.modifiedAt).toLocaleDateString() : '—'}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Desktop / tablet table */}
+                            <div className="hidden sm:block overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
                               <table className="w-full text-xs sm:text-sm text-gray-800">
                               <thead>
                                 <tr className="bg-gray-50 border-b border-gray-200">

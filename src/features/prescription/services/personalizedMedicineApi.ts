@@ -16,6 +16,9 @@ export interface PersonalizedMedicinePayload {
 
 export interface PersonalizedMedicineResponse extends Partial<PersonalizedMedicinePayload> {
   prefferedId?: number | string;
+  usageCount?: number;
+  lastModifiedAt?: string;
+  modifiedAt?: string;
 }
 
 const normalizeList = (data: any): PersonalizedMedicineResponse[] => {
@@ -37,6 +40,9 @@ const normalizeList = (data: any): PersonalizedMedicineResponse[] => {
     indication: item?.indication ?? '',
     notes: item?.notes ?? '',
     medicineId: item?.medicineId ?? '',
+    usageCount: typeof item?.usageCount === 'number' ? item.usageCount : 0,
+    lastModifiedAt: item?.lastModifiedAt ?? '',
+    modifiedAt: item?.modifiedAt ?? item?.lastModifiedAt ?? '',
   }));
 };
 
@@ -44,12 +50,12 @@ export const personalizedMedicineApi = {
   async upsert(
     doctorId: string,
     hospitalId: string,
-    payload: PersonalizedMedicinePayload
+    payload: PersonalizedMedicinePayload,
+    prefferedId: number | string | null
   ) {
-    return apiClient.put(
-      API_ENDPOINTS.E_PRESCRIPTION.PERSONALIZED_MEDICINE(doctorId, hospitalId),
-      payload
-    );
+    const baseUrl = API_ENDPOINTS.E_PRESCRIPTION.PERSONALIZED_MEDICINE(doctorId, hospitalId);
+    const url = `${baseUrl}?preferrredId=${encodeURIComponent(prefferedId ?? 'null')}`;
+    return apiClient.put(url, payload);
   },
 
   async list(
