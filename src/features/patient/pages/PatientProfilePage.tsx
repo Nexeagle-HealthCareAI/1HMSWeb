@@ -535,11 +535,8 @@ export const PatientProfilePage: React.FC = () => {
 
             {/* Lab Tests Tab */}
             {activeTab === 'lab-tests' && (
-              <div className="flex items-center justify-center h-64 text-muted-foreground">
-                <div className="text-center space-y-2">
-                  <div className="text-2xl font-semibold">Coming Soon</div>
-                  <p className="text-sm">Lab Tests will be available in an upcoming update.</p>
-                </div>
+              <div className="h-full">
+                <PatientLabTests labTests={labTests} appointments={appointments} />
               </div>
             )}
           </div>

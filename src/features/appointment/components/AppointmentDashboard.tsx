@@ -20,6 +20,7 @@ import {
   WifiOff,
   Activity,
   Loader2,
+  Upload,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -48,6 +49,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { AppointmentDetail, appointmentApi } from '../services/appointmentApi';
 import { PrescriptionPreviewModal, type GeneratePrescriptionDetailsRequest } from '@/components/shared/prescription-preview';
+import AttachmentsSection from '@/features/patient/components/AttachmentsSection';
 
 export const AppointmentDashboard = () => {
   const { t } = useTranslation();
@@ -78,6 +80,23 @@ export const AppointmentDashboard = () => {
   const [isCancelling, setIsCancelling] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewRequest, setPreviewRequest] = useState<GeneratePrescriptionDetailsRequest | null>(null);
+  const [showAddBillModal, setShowAddBillModal] = useState(false);
+  const [appointmentForBilling, setAppointmentForBilling] = useState<AppointmentDetail | null>(null);
+  const [labAttachmentModal, setLabAttachmentModal] = useState<{ open: boolean; patientId?: string; patientName?: string }>({ open: false });
+  const [labAttachments, setLabAttachments] = useState<Record<string, string[]>>({});
+
+  const handleOpenLabAttachments = (appointment: AppointmentDetail) => {
+    setLabAttachmentModal({
+      open: true,
+      patientId: appointment.patientId,
+      patientName: appointment.patientFullName,
+    });
+  };
+
+  const handleLabAttachmentsChange = (next: string[]) => {
+    if (!labAttachmentModal.patientId) return;
+    setLabAttachments((prev) => ({ ...prev, [labAttachmentModal.patientId]: next }));
+  };
 
   const getStatusBadge = (status: AppointmentDetail['finalStatusCode'], appointment?: AppointmentDetail) => {
     const statusLabels = {
@@ -155,6 +174,18 @@ export const AppointmentDashboard = () => {
   const handleTokenPrintClose = () => {
     setShowTokenPrint(false);
     setSelectedAppointmentForToken(null);
+  };
+
+  const handleAddBillClick = (appointment: AppointmentDetail) => {
+    setAppointmentForBilling(appointment);
+    setShowAddBillModal(true);
+  };
+
+  const handleAddBillModalChange = (open: boolean) => {
+    setShowAddBillModal(open);
+    if (!open) {
+      setAppointmentForBilling(null);
+    }
   };
 
   const handleBookingClick = () => {
@@ -1051,15 +1082,18 @@ export const AppointmentDashboard = () => {
                                  ? t('appointmentDashboard.table.lastCompletedStatus')
                                  : t('appointmentDashboard.table.currentStatus')}
                            </TableHead>
+                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">
+                             {t('appointmentDashboard.table.labReports', { defaultValue: 'Lab reports' })}
+                           </TableHead>
+                           {activeTab === 'current' && (
+                               <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">
+                                 {t('appointmentDashboard.table.addBill', { defaultValue: 'Add Bill' })}
+                               </TableHead>
+                           )}
                            {activeTab !== 'past' && (
                                <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.actions')}</TableHead>
                            )}
                              <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.printPrescription')}</TableHead>
-                                                       <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">
-                                {activeTab === 'past'
-                                  ? t('appointmentDashboard.table.nextFollowUpDate')
-                                  : t('appointmentDashboard.table.printToken')}
-                            </TableHead>
                             {activeTab === 'past' && (
                               <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.isCompleted')}</TableHead>
                             )}
@@ -1068,7 +1102,7 @@ export const AppointmentDashboard = () => {
                     <TableBody>
                       {filteredAppointments.length === 0 ? (
                         <TableRow>
-                                                           <TableCell colSpan={activeTab === 'past' ? 9 : 9} className="text-center py-6">
+                                                          <TableCell colSpan={activeTab === 'past' ? 9 : activeTab === 'current' ? 10 : 9} className="text-center py-6">
                               <div className="flex flex-col items-center gap-1.5">
                                 <div className="w-6 h-6 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
                                   <CalendarDays className="h-3 w-3 text-gray-400" />
@@ -1179,6 +1213,40 @@ export const AppointmentDashboard = () => {
                                <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                                  {getStatusBadge(appointment.finalStatusCode, appointment)}
                               </TableCell>
+
+                                 {/* Lab reports */}
+                                 <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
+                                   {['LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(
+                                     String(appointment.finalStatusCode || '').toUpperCase()
+                                   ) ? (
+                                     <Button
+                                       variant="outline"
+                                       size="sm"
+                                       onClick={() => handleOpenLabAttachments(appointment)}
+                                       className="h-6 px-2 text-xs text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                     >
+                                       <Upload className="h-2.5 w-2.5 mr-1" />
+                                       {t('appointmentDashboard.actionButtons.addLabReport', { defaultValue: 'Add lab report' })}
+                                     </Button>
+                                   ) : (
+                                     <span className="text-[11px] text-gray-400 dark:text-gray-500">—</span>
+                                   )}
+                                 </TableCell>
+
+                               {/* Add Bill - Only show for current tab */}
+                               {activeTab === 'current' && (
+                                 <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
+                                   <Button
+                                     variant="outline"
+                                     size="sm"
+                                     onClick={() => handleAddBillClick(appointment)}
+                                     className="h-6 px-2 text-xs text-indigo-600 border-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
+                                   >
+                                     <FileText className="h-2.5 w-2.5 mr-1" />
+                                     {t('appointmentDashboard.actionButtons.addBill', { defaultValue: 'Add Bill' })}
+                                   </Button>
+                                 </TableCell>
+                               )}
                                
                                                                {/* Actions - Only show for current and future tabs */}
                                 {activeTab !== 'past' && (
@@ -1236,25 +1304,6 @@ export const AppointmentDashboard = () => {
                                 </Button>
                               </TableCell>
                                
-                                                               {/* Print Token / Next Meet Required */}
-                                <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                                  {activeTab === 'past' ? (
-                                    <div className="text-center">
-                                      <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{t('appointmentDashboard.actionButtons.notApplicable')}</span>
-                </div>
-                                  ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                                      onClick={() => handleTokenPrintClick(appointment)}
-                                      className="h-6 px-2 text-xs text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                        >
-                                      <Printer className="h-2.5 w-2.5 mr-1" />
-                                  {t('appointmentDashboard.table.printToken')}
-                        </Button>
-                        )}
-                        </TableCell>
-                                
                                 {/* Past Completed Status - Only show for past tab */}
                                 {activeTab === 'past' && (
                                   <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'} text-center`}>
@@ -1407,6 +1456,64 @@ export const AppointmentDashboard = () => {
         onOpenChange={handlePreviewModalChange}
         request={previewRequest}
       />
+
+      <AttachmentsSection
+        open={labAttachmentModal.open}
+        onOpenChange={(open) => setLabAttachmentModal((prev) => ({ ...prev, open }))}
+        trigger={null}
+        attachments={labAttachments[labAttachmentModal.patientId || ''] || []}
+        onChange={handleLabAttachmentsChange}
+        patientId={labAttachmentModal.patientId}
+        patientName={labAttachmentModal.patientName}
+      />
+
+      {/* Add Bill Modal */}
+      <Dialog open={showAddBillModal} onOpenChange={handleAddBillModalChange}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t('appointmentDashboard.addBill.title', { defaultValue: 'Add Bill' })}</DialogTitle>
+            <DialogDescription>
+              {t('appointmentDashboard.addBill.description', {
+                defaultValue: 'Review the appointment details and proceed to add billing information.',
+              })}
+            </DialogDescription>
+          </DialogHeader>
+
+          {appointmentForBilling && (
+            <div className="space-y-3 text-sm text-gray-700 dark:text-gray-200">
+              <div className="flex justify-between gap-4">
+                <span className="font-medium">{t('appointmentDashboard.dialog.patient', { defaultValue: 'Patient' })}</span>
+                <span className="text-right">{appointmentForBilling.patientFullName}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="font-medium">{t('appointmentDashboard.table.patientId')}</span>
+                <span className="text-right font-mono">{appointmentForBilling.patientId}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="font-medium">{t('appointmentDashboard.table.doctorName')}</span>
+                <span className="text-right">{appointmentForBilling.doctorName || t('appointmentDashboard.actionButtons.notApplicable')}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="font-medium">{t('appointmentDashboard.table.appointmentTime')}</span>
+                <span className="text-right">{format(new Date(appointmentForBilling.startAt), 'PPpp')}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="font-medium">{t('appointmentDashboard.table.tokenNo')}</span>
+                <span className="text-right font-mono">{appointmentForBilling.token?.tokenNumber || t('appointmentDashboard.actionButtons.notApplicable')}</span>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => handleAddBillModalChange(false)}>
+              {t('common.close', { defaultValue: 'Close' })}
+            </Button>
+            <Button onClick={() => handleAddBillModalChange(false)} className="bg-indigo-600 text-white hover:bg-indigo-700">
+              {t('common.continue', { defaultValue: 'Proceed' })}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Cancel Confirmation Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>

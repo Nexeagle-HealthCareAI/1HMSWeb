@@ -2,59 +2,60 @@ import React, { useState, useMemo, useEffect, useLayoutEffect, useRef, lazy, Sus
 import type { AxiosError } from 'axios';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Calendar, 
-  Plus,
-  Search,
-  Heart,
-  UserCheck,
-  FlaskConical,
-  Clock,
-  User,
-  Bot,
-  CalendarDays,
-  Phone,
-  X,
-  FileText,
-  Printer,
-  ExternalLink,
-  RefreshCw,
-  Activity,
-  Wifi,
-  WifiOff,
-  Settings,
-  Database,
-  History,
-  TrendingUp,
-  TrendingDown,
-  CalendarCheck,
-  ClipboardCheck,
-  CircleCheck,
-  Expand,
-  LucideIcon,
-  LayoutDashboard
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious
-} from '@/components/ui/pagination';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { PrescriptionCustomizePanel } from '@/features/prescription/components/PrescriptionCustomizePanel';
-import { PrescriptionLayout } from '@/features/prescription/components/layout/PrescriptionLayout';
+  Activity,
+  Add,
+  AlertTriangle,
+  Archive,
+  ArrowLeft,
+  ArrowRight,
+  Bell,
+  Bot,
+  Calendar,
+  CalendarDays,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Clock,
+  Download,
+  ExternalLink,
+  Eye,
+  FileText,
+  Filter,
+  HeartPulse,
+  Layout,
+  ListChecks,
+  Loader2,
+  Lock,
+  Maximize2,
+  Menu,
+  Minimize2,
+  MoreVertical,
+  Plus,
+  RefreshCw,
+  Scan,
+  Search,
+  Settings,
+  ShieldCheck,
+  Signal,
+  Sparkles,
+  Star,
+  SunMedium,
+  TrendingUp,
+  Upload,
+  User,
+  UserCheck,
+  UserPlus,
+  Users,
+  Wifi,
+  X,
+  ZoomIn
+} from 'lucide-react';
 import { format, subDays, addDays } from 'date-fns';
 import { useAuthStore } from '@/store/authStore';
+  import AttachmentsSection from '@/features/patient/components/AttachmentsSection';
 import { appointmentApi } from '@/features/appointment/services/appointmentApi';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDoctorProfile } from '../hooks/useDoctorProfile';
@@ -116,6 +117,10 @@ export const ClinicalDashboard: React.FC = () => {
   const [layoutRefreshToken, setLayoutRefreshToken] = useState(0);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewRequest, setPreviewRequest] = useState<GeneratePrescriptionDetailsRequest | null>(null);
+  const [showAddBillModal, setShowAddBillModal] = useState(false);
+  const [appointmentForBilling, setAppointmentForBilling] = useState<PatientAppointment | null>(null);
+  const [labAttachmentModal, setLabAttachmentModal] = useState<{ open: boolean; patientId?: string; patientName?: string }>({ open: false });
+  const [labAttachments, setLabAttachments] = useState<Record<string, string[]>>({});
   const headerRef = useRef<HTMLDivElement>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
   const [windowWidth, setWindowWidth] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1920));
@@ -221,6 +226,31 @@ export const ClinicalDashboard: React.FC = () => {
     if (!open) {
       setPreviewRequest(null);
     }
+  };
+
+  const handleAddBillClick = (appointment: PatientAppointment) => {
+    setAppointmentForBilling(appointment);
+    setShowAddBillModal(true);
+  };
+
+  const handleAddBillModalChange = (open: boolean) => {
+    setShowAddBillModal(open);
+    if (!open) {
+      setAppointmentForBilling(null);
+    }
+  };
+
+  const handleOpenLabAttachments = (appointment: PatientAppointment) => {
+    setLabAttachmentModal({
+      open: true,
+      patientId: appointment.patientId,
+      patientName: appointment.patientFullName,
+    });
+  };
+
+  const handleLabAttachmentsChange = (next: string[]) => {
+    if (!labAttachmentModal.patientId) return;
+    setLabAttachments((prev) => ({ ...prev, [labAttachmentModal.patientId]: next }));
   };
 
   // Compute API date window based on tab
@@ -1299,6 +1329,12 @@ export const ClinicalDashboard: React.FC = () => {
                           <TableHead className="text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
                             {t('docBoard.table.status')}
                           </TableHead>
+                          <TableHead className="text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
+                            {t('docBoard.table.labReports', { defaultValue: 'Lab reports' })}
+                          </TableHead>
+                          <TableHead className="text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
+                            {t('docBoard.table.addBill', { defaultValue: 'Add Bill' })}
+                          </TableHead>
                           <TableHead className="hidden lg:table-cell text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
                             {t('docBoard.table.case')}
                           </TableHead>
@@ -1352,6 +1388,34 @@ export const ClinicalDashboard: React.FC = () => {
                               <TableCell className="py-4 px-4 align-middle">
                                 {getStatusBadge(appointment.finalStatusCode)}
                               </TableCell>
+                              <TableCell className="py-4 px-4 align-middle">
+                                {['LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(
+                                  String(appointment.finalStatusCode || '').toUpperCase()
+                                ) ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleOpenLabAttachments(appointment)}
+                                    className="h-8 px-3 text-xs font-semibold text-blue-600 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                                  >
+                                    <Upload className="h-3 w-3 mr-1" />
+                                    {t('docBoard.table.addLabReport', { defaultValue: 'Add lab report' })}
+                                  </Button>
+                                ) : (
+                                  <span className="text-[11px] text-gray-400 dark:text-gray-500">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="py-4 px-4">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleAddBillClick(appointment)}
+                                  className="h-8 px-3 text-xs font-semibold text-indigo-600 border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
+                                >
+                                  <FileText className="h-3 w-3 mr-1" />
+                                  {t('docBoard.table.addBill', { defaultValue: 'Add Bill' })}
+                                </Button>
+                              </TableCell>
                               <TableCell className="hidden lg:table-cell py-4 px-4">
                                 <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
                                   {t('docBoard.table.newCase')}
@@ -1392,7 +1456,7 @@ export const ClinicalDashboard: React.FC = () => {
                           ))
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={9} className="text-center py-10 text-gray-500 dark:text-gray-400">
+                            <TableCell colSpan={10} className="text-center py-10 text-gray-500 dark:text-gray-400">
                               {t('docBoard.empty.current')}
                             </TableCell>
                           </TableRow>
@@ -1921,6 +1985,16 @@ export const ClinicalDashboard: React.FC = () => {
 
       </div>
 
+      <AttachmentsSection
+        open={labAttachmentModal.open}
+        onOpenChange={(open) => setLabAttachmentModal((prev) => ({ ...prev, open }))}
+        trigger={null}
+        attachments={labAttachments[labAttachmentModal.patientId || ''] || []}
+        onChange={handleLabAttachmentsChange}
+        patientId={labAttachmentModal.patientId}
+        patientName={labAttachmentModal.patientName}
+      />
+
       <PrescriptionPreviewModal
         open={previewModalOpen}
         onOpenChange={handlePreviewModalChange}
@@ -1928,6 +2002,54 @@ export const ClinicalDashboard: React.FC = () => {
         title={t('docBoard.preview.title')}
         description={t('docBoard.preview.description')}
       />
+
+      {/* Add Bill Modal */}
+      <Dialog open={showAddBillModal} onOpenChange={handleAddBillModalChange}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t('docBoard.table.addBill', { defaultValue: 'Add Bill' })}</DialogTitle>
+            <DialogDescription>
+              {t('docBoard.addBill.description', {
+                defaultValue: 'Review the appointment details and proceed to billing.',
+              })}
+            </DialogDescription>
+          </DialogHeader>
+
+          {appointmentForBilling && (
+            <div className="space-y-3 text-sm text-gray-700 dark:text-gray-200">
+              <div className="flex justify-between gap-4">
+                <span className="font-medium">{t('docBoard.table.patientName')}</span>
+                <span className="text-right">{appointmentForBilling.patientFullName}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="font-medium">{t('docBoard.table.patient')}</span>
+                <span className="text-right font-mono">{appointmentForBilling.patientId}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="font-medium">{t('docBoard.table.doctorName', { defaultValue: 'Doctor' })}</span>
+                <span className="text-right">{appointmentForBilling.doctorName || t('docBoard.table.notAvailable')}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="font-medium">{t('docBoard.table.appointmentTime')}</span>
+                <span className="text-right">{format(new Date(appointmentForBilling.startAt), 'PPpp')}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="font-medium">{t('docBoard.table.token')}</span>
+                <span className="text-right font-mono">{appointmentForBilling.tokenDetails?.tokenNumber || t('docBoard.table.notAvailable')}</span>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => handleAddBillModalChange(false)}>
+              {t('common.close', { defaultValue: 'Close' })}
+            </Button>
+            <Button onClick={() => handleAddBillModalChange(false)} className="bg-indigo-600 text-white hover:bg-indigo-700">
+              {t('common.continue', { defaultValue: 'Proceed' })}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Cancel Confirmation Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>

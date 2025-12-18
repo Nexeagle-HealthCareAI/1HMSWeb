@@ -1,607 +1,399 @@
-import React, { useState } from 'react';
-import { 
-  TestTube, 
-  Upload, 
-  FileText, 
-  Plus, 
-  Eye, 
-  Download, 
-  Trash2, 
-  Calendar,
-  User,
-  AlertCircle,
-  CheckCircle,
-  Clock,
-  X,
-  ChevronDown,
-  ChevronUp
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from '@/hooks/use-toast';
-
-interface LabTestDocument {
-  id: string;
-  appointmentId: string;
-  fileName: string;
-  fileSize: string;
-  uploadDate: Date;
-  fileType: string;
-  uploadedBy: string;
-  description?: string;
-}
-
-interface LabTestResult {
-  id: string;
-  appointmentId: string;
-  testName: string;
-  testDate: Date;
-  orderedBy: string;
-  status: 'ordered' | 'collected' | 'completed' | 'cancelled';
-  results: {
-    parameter: string;
-    value: string;
-    unit: string;
-    normalRange: string;
-    status: 'normal' | 'high' | 'low' | 'critical';
-    notes?: string;
-  }[];
-  notes?: string;
-  attachments?: string[];
-}
-
-interface Appointment {
-  id: string;
-  date: Date;
-  time: string;
-  doctor: string;
-  type: string;
-}
+import React, { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
+import { FileImage, Plus, Eye, Upload, ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Trash } from "lucide-react";
 
 interface PatientLabTestsProps {
-  labTests: LabTestResult[];
-  appointments: Appointment[];
+  attachments?: string[];
+  onChange?: (next: string[]) => void;
+  patientId?: string;
+  patientName?: string;
 }
 
-export const PatientLabTests: React.FC<PatientLabTestsProps> = ({
-  labTests,
-  appointments
-}) => {
-  const [activeTab, setActiveTab] = useState('documents');
-  const [uploadedDocuments, setUploadedDocuments] = useState<LabTestDocument[]>([]);
-  const [manualTests, setManualTests] = useState<LabTestResult[]>(labTests);
-  const [isAddingTest, setIsAddingTest] = useState(false);
-  const [newTest, setNewTest] = useState<Partial<LabTestResult>>({
-    testName: '',
-    testDate: new Date(),
-    orderedBy: '',
-    status: 'ordered',
-    results: [],
-    notes: ''
-  });
-  const [newResult, setNewResult] = useState({
-    parameter: '',
-    value: '',
-    unit: '',
-    normalRange: '',
-    status: 'normal' as const,
-    notes: ''
-  });
+type AttachmentFile = {
+  name: string;
+  type: string;
+  url: string;
+  uploadedAt: string;
+  uploadedBy: string;
+};
 
-  const getStatusBadge = (status: LabTestResult['status']) => {
-    const variants = {
-      ordered: 'secondary',
-      collected: 'outline',
-      completed: 'default',
-      cancelled: 'destructive'
-    };
-    return <Badge variant={variants[status] as any}>{status.toUpperCase()}</Badge>;
-  };
+const reportTypes = [
+  "X-ray report",
+  "Lab test report",
+  "MRI / CT report",
+  "Ultrasound report",
+  "ECG report",
+  "Discharge summary",
+  "Other"
+];
 
-  const getResultStatus = (status: 'normal' | 'high' | 'low' | 'critical') => {
-    const colors = {
-      normal: 'text-green-600',
-      high: 'text-orange-600',
-      low: 'text-blue-600',
-      critical: 'text-red-600'
-    };
-    return colors[status];
-  };
+const PatientLabTests: React.FC<PatientLabTestsProps> = ({ attachments = [], onChange = () => {}, patientId, patientName }) => {
+  const [selectedType, setSelectedType] = useState(reportTypes[0]);
+  const [fileName, setFileName] = useState("");
+  const [fileType, setFileType] = useState("");
+  const [fileUrl, setFileUrl] = useState("");
+  const [error, setError] = useState("");
+  const [viewIndex, setViewIndex] = useState(0);
+  const [uploadedFiles, setUploadedFiles] = useState<AttachmentFile[]>([]);
+  const [page, setPage] = useState(1);
+  const pageSize = 3;
+  const objectUrlsRef = useRef<string[]>([]);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files) {
-      const newDocuments: LabTestDocument[] = Array.from(files).map((file, index) => ({
-        id: `doc-${Date.now()}-${index}`,
-        appointmentId: appointments[0]?.id || '',
-        fileName: file.name,
-        fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-        uploadDate: new Date(),
-        fileType: file.type,
-        uploadedBy: 'Dr. Sarah Johnson',
-        description: ''
-      }));
-      
-      setUploadedDocuments(prev => [...prev, ...newDocuments]);
-      toast({
-        title: "Documents Uploaded",
-        description: `${files.length} document(s) uploaded successfully.`,
-      });
+  const hasAttachments = attachments.length > 0;
+  const displayPatientName = patientName || "Unknown patient";
+  const displayPatientId = patientId || "N/A";
+
+  useEffect(() => {
+    if (attachments.length === 0) {
+      setViewIndex(0);
+      return;
     }
-  };
+    setViewIndex(prev => Math.min(prev, attachments.length - 1));
+  }, [attachments.length]);
 
-  const handleAddTest = () => {
-    if (!newTest.testName || !newTest.orderedBy) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields.",
-        variant: "destructive"
-      });
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(attachments.length / pageSize));
+    setPage(prev => Math.min(prev, totalPages));
+  }, [attachments.length, pageSize]);
+
+  useEffect(() => {
+    return () => {
+      objectUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, []);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      setError("Please select a file.");
       return;
     }
 
-    const testToAdd: LabTestResult = {
-      id: `test-${Date.now()}`,
-      appointmentId: appointments[0]?.id || '',
-      testName: newTest.testName!,
-      testDate: newTest.testDate!,
-      orderedBy: newTest.orderedBy!,
-      status: newTest.status!,
-      results: newTest.results || [],
-      notes: newTest.notes || ''
-    };
+    if (fileUrl) {
+      URL.revokeObjectURL(fileUrl);
+    }
 
-    setManualTests(prev => [...prev, testToAdd]);
-    setNewTest({
-      testName: '',
-      testDate: new Date(),
-      orderedBy: '',
-      status: 'ordered',
-      results: [],
-      notes: ''
-    });
-    setIsAddingTest(false);
-    toast({
-      title: "Test Added",
-      description: "Lab test has been added successfully.",
-    });
+    const newUrl = URL.createObjectURL(file);
+    objectUrlsRef.current.push(newUrl);
+    setFileName(file.name);
+    setFileType(file.type);
+    setFileUrl(newUrl);
+    setError("");
   };
 
-  const handleAddResult = () => {
-    if (!newResult.parameter || !newResult.value) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in parameter and value.",
-        variant: "destructive"
-      });
+  const handleAddAttachment = () => {
+    if (!fileName || !fileUrl) {
+      setError("Please select a file to upload.");
       return;
     }
 
-    setNewTest(prev => ({
+    const displayName = `${selectedType}: ${fileName}`;
+    onChange([...attachments, displayName]);
+    setUploadedFiles(prev => [
       ...prev,
-      results: [...(prev.results || []), { ...newResult }]
-    }));
-    setNewResult({
-      parameter: '',
-      value: '',
-      unit: '',
-      normalRange: '',
-      status: 'normal',
-      notes: ''
-    });
+      {
+        name: fileName,
+        type: fileType || "Unknown",
+        url: fileUrl,
+        uploadedAt: new Date().toISOString(),
+        uploadedBy: "You"
+      }
+    ]);
+
+    setFileName("");
+    setFileType("");
+    setFileUrl("");
+    setSelectedType(reportTypes[0]);
+    setError("");
   };
 
-  const removeResult = (index: number) => {
-    setNewTest(prev => ({
-      ...prev,
-      results: prev.results?.filter((_, i) => i !== index) || []
-    }));
+  const handleDeleteAttachment = (globalIndex: number, attName: string) => {
+    const next = attachments.filter((_, idx) => idx !== globalIndex);
+    onChange(next);
+    setUploadedFiles(prev => prev.filter(f => f.name !== attName));
+    const totalPages = Math.max(1, Math.ceil(next.length / pageSize));
+    setPage(prev => Math.min(prev, totalPages));
+    if (viewIndex >= next.length) {
+      setViewIndex(Math.max(0, next.length - 1));
+    }
   };
 
-  const deleteDocument = (docId: string) => {
-    setUploadedDocuments(prev => prev.filter(doc => doc.id !== docId));
-    toast({
-      title: "Document Deleted",
-      description: "Document has been removed successfully.",
-    });
-  };
+  const currentAttachment = attachments[viewIndex];
+  const currentAttachmentName = currentAttachment?.includes(":") ? currentAttachment.split(":").slice(1).join(":").trim() : currentAttachment;
+  const currentPreview = uploadedFiles.find(f => f.name === currentAttachmentName);
 
-  const deleteTest = (testId: string) => {
-    setManualTests(prev => prev.filter(test => test.id !== testId));
-    toast({
-      title: "Test Deleted",
-      description: "Lab test has been removed successfully.",
-    });
+  const renderUploadTable = () => {
+    const totalPages = Math.max(1, Math.ceil(attachments.length / pageSize));
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    const pagedAttachments = attachments.slice(start, end);
+
+    return (
+      <div className="rounded-lg border border-blue-100 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 space-y-3 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-semibold text-gray-800 dark:text-slate-100">Uploaded files</div>
+          <div className="text-[11px] text-gray-500 dark:text-slate-400">Page {page} of {totalPages} • Total: {attachments.length}</div>
+        </div>
+        <div className="overflow-auto max-h-[360px] border border-gray-100 dark:border-slate-800 rounded-md">
+          <table className="min-w-full text-xs">
+            <thead className="bg-gray-50 dark:bg-slate-800 text-gray-600 dark:text-slate-200">
+              <tr>
+                <th className="px-3 py-2 text-left font-semibold">S.No</th>
+                <th className="px-3 py-2 text-left font-semibold">File name</th>
+                <th className="px-3 py-2 text-left font-semibold">Uploaded at</th>
+                <th className="px-3 py-2 text-left font-semibold">Uploaded by</th>
+                <th className="px-3 py-2 text-left font-semibold text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
+              {pagedAttachments.length === 0 && (
+                <tr>
+                  <td className="px-3 py-3 text-center text-gray-500 dark:text-slate-400" colSpan={5}>No files yet</td>
+                </tr>
+              )}
+              {pagedAttachments.map((att, idx) => {
+                const attName = att.includes(":") ? att.split(":").slice(1).join(":").trim() : att;
+                const meta = uploadedFiles.find(f => f.name === attName);
+                const href = meta?.url;
+                return (
+                  <tr key={`${att}-${start + idx}`} className="odd:bg-white even:bg-gray-50 dark:odd:bg-slate-900 dark:even:bg-slate-800 text-gray-800 dark:text-slate-100">
+                    <td className="px-3 py-2 align-top">{start + idx + 1}</td>
+                    <td className="px-3 py-2 align-top">
+                      {href ? (
+                        <a href={href} target="_blank" rel="noreferrer" className="font-semibold text-[12px] text-blue-700 dark:text-blue-300 hover:underline" title={att}>
+                          {att}
+                        </a>
+                      ) : (
+                        <div className="font-semibold text-[12px]" title={att}>{att}</div>
+                      )}
+                      <div className="text-[11px] text-gray-500 dark:text-slate-400">{meta?.type || "•"}</div>
+                    </td>
+                    <td className="px-3 py-2 align-top text-[11px] text-gray-700 dark:text-slate-300">
+                      {meta?.uploadedAt ? new Date(meta.uploadedAt).toLocaleString() : "•"}
+                    </td>
+                    <td className="px-3 py-2 align-top text-[11px] text-gray-700 dark:text-slate-300">{meta?.uploadedBy || "•"}</td>
+                    <td className="px-3 py-2 align-top text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-gray-500 dark:text-slate-300 hover:text-red-600"
+                        onClick={() => handleDeleteAttachment(start + idx, attName)}
+                        aria-label="Delete attachment"
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {attachments.length > pageSize && (
+          <div className="flex items-center justify-between px-1 text-sm text-gray-600">
+            <button
+              className="flex items-center gap-1 rounded border border-gray-200 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400"
+              onClick={() => setPage(prev => Math.max(1, prev - 1))}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="h-4 w-4" /> Prev
+            </button>
+            <div className="flex items-center gap-2">
+              {Array.from({ length: totalPages }).map((_, idx) => {
+                const pageNumber = idx + 1;
+                const isActive = pageNumber === page;
+                return (
+                  <button
+                    key={pageNumber}
+                    className={`min-w-[32px] rounded px-2 py-1 text-xs font-medium ${
+                      isActive ? "bg-primary text-white" : "border border-gray-200 text-gray-700 hover:bg-gray-50"
+                    }`}
+                    onClick={() => setPage(pageNumber)}
+                  >
+                    {pageNumber}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              className="flex items-center gap-1 rounded border border-gray-200 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400"
+              onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={page === totalPages}
+            >
+              Next <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
-    <div className="space-y-4 lg:space-y-6">
-      <div className="flex items-center gap-2 mb-4 lg:mb-6">
-        <TestTube className="h-5 w-5 lg:h-6 lg:w-6 text-primary" />
-        <h2 className="text-xl lg:text-2xl font-bold">Lab Test Management</h2>
-      </div>
+    <Card>
+      <CardContent className="pt-6 space-y-4">
+        <Tabs defaultValue="upload" className="w-full">
+          <div className="flex flex-col gap-3">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+              <TabsList className="grid grid-cols-2 w-full md:w-auto bg-gray-50 dark:bg-slate-800 p-1 rounded-md self-start md:self-end gap-1">
+              <TabsTrigger
+                value="upload"
+                  className="text-sm gap-2 px-4 py-2 font-semibold data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm"
+              >
+                <Upload className="h-4 w-4" /> Upload report
+              </TabsTrigger>
+              <TabsTrigger
+                value="view"
+                  className="text-sm gap-2 px-4 py-2 font-semibold data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm"
+              >
+                <Eye className="h-4 w-4" /> View uploaded
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="documents" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm">
-            <Upload className="h-3 w-3 lg:h-4 lg:w-4" />
-            Upload Documents
-          </TabsTrigger>
-          <TabsTrigger value="manual" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm">
-            <FileText className="h-3 w-3 lg:h-4 lg:w-4" />
-            Manual Entry
-          </TabsTrigger>
-          <TabsTrigger value="view" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm">
-            <Eye className="h-3 w-3 lg:h-4 lg:w-4" />
-            View All Tests
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Documents Upload Tab */}
-        <TabsContent value="documents" className="space-y-4 lg:space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="h-4 w-4 lg:h-5 lg:w-5" />
-                <span className="text-lg lg:text-xl">Upload Lab Test Documents</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 lg:space-y-6">
-              {/* Upload Area */}
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 lg:p-8 text-center hover:border-gray-400 transition-colors">
-                <Upload className="h-10 w-10 lg:h-12 lg:w-12 text-gray-400 mx-auto mb-3 lg:mb-4" />
-                <h3 className="text-base lg:text-lg font-semibold mb-2">Upload Lab Test Documents</h3>
-                <p className="text-gray-600 mb-3 lg:mb-4 text-sm lg:text-base">
-                  Drag and drop files here, or click to select files
-                </p>
-                <input
-                  type="file"
-                  multiple
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  id="file-upload"
-                />
-                <label htmlFor="file-upload">
-                  <Button asChild>
-                    <span>Choose Files</span>
-                  </Button>
-                </label>
-                <p className="text-sm text-gray-500 mt-2">
-                  Supported formats: PDF, DOC, DOCX, JPG, PNG, XLS, XLSX (Max 10MB each)
-                </p>
-              </div>
-
-              {/* Uploaded Documents List */}
-              {uploadedDocuments.length > 0 && (
-                <div className="space-y-4">
-                  <h4 className="font-semibold">Uploaded Documents</h4>
-                  <div className="space-y-3">
-                    {uploadedDocuments.map((doc) => (
-                      <div key={doc.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <FileText className="h-8 w-8 text-blue-600" />
-                          <div>
-                            <p className="font-medium">{doc.fileName}</p>
-                            <p className="text-sm text-gray-600">
-                              {doc.fileSize} • {doc.uploadDate.toLocaleDateString()} • {doc.uploadedBy}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm">
-                            <Download className="h-4 w-4 mr-2" />
-                            Download
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => deleteDocument(doc.id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
+          <TabsContent value="upload" className="pt-1 space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/80 p-4 space-y-3 shadow-sm lg:col-span-1 min-h-[440px]">
+                <div className="space-y-2">
+                    <Label className="text-xs text-gray-600 dark:text-slate-300">Report type</Label>
+                  <select
+                    value={selectedType}
+                    onChange={(e) => setSelectedType(e.target.value)}
+                      className="h-10 text-sm border border-gray-300 dark:border-slate-600 rounded-md px-3 bg-white dark:bg-slate-900 dark:text-slate-100 focus:border-blue-400 focus:ring-1 focus:ring-blue-100 dark:focus:border-blue-500 dark:focus:ring-blue-900/50"
+                  >
+                    {reportTypes.map(type => (
+                      <option key={type} value={type}>{type}</option>
                     ))}
-                  </div>
+                  </select>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        {/* Manual Entry Tab */}
-        <TabsContent value="manual" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Manual Lab Test Entry
-                </div>
-                <Button onClick={() => setIsAddingTest(true)} disabled={isAddingTest}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add New Test
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isAddingTest ? (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label>Test Name *</Label>
-                      <Input
-                        value={newTest.testName}
-                        onChange={(e) => setNewTest(prev => ({ ...prev, testName: e.target.value }))}
-                        placeholder="e.g., Complete Blood Count"
-                      />
-                    </div>
-                    <div>
-                      <Label>Test Date</Label>
-                      <Input
-                        type="date"
-                        value={newTest.testDate?.toISOString().split('T')[0]}
-                        onChange={(e) => setNewTest(prev => ({ ...prev, testDate: new Date(e.target.value) }))}
-                      />
-                    </div>
-                    <div>
-                      <Label>Ordered By *</Label>
-                      <Input
-                        value={newTest.orderedBy}
-                        onChange={(e) => setNewTest(prev => ({ ...prev, orderedBy: e.target.value }))}
-                        placeholder="e.g., Dr. Sarah Johnson"
-                      />
-                    </div>
-                    <div>
-                      <Label>Status</Label>
-                      <Select
-                        value={newTest.status}
-                        onValueChange={(value) => setNewTest(prev => ({ ...prev, status: value as any }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="ordered">Ordered</SelectItem>
-                          <SelectItem value="collected">Collected</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label>Notes</Label>
-                    <Textarea
-                      value={newTest.notes}
-                      onChange={(e) => setNewTest(prev => ({ ...prev, notes: e.target.value }))}
-                      placeholder="Additional notes about the test..."
-                      rows={3}
+                <div className="space-y-2">
+                    <Label className="text-xs text-gray-600 dark:text-slate-300">Upload file</Label>
+                    <label className="border-2 border-dashed border-gray-300 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-400 rounded-md p-4 flex flex-col items-center gap-2 text-sm text-gray-600 dark:text-slate-200 cursor-pointer transition-colors bg-gray-50 dark:bg-slate-900">
+                    <input
+                      type="file"
+                      accept="application/pdf,image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
                     />
+                    <Upload className="h-5 w-5 text-gray-500" />
+                    <span>Drop a file here or click to browse</span>
+                      {fileName && <span className="text-[11px] text-gray-700 dark:text-slate-200">Selected: {fileName}</span>}
+                  </label>
+                    {error && <div className="text-[11px] text-red-400">{error}</div>}
+                </div>
+
+                  <div className="flex justify-center">
+                    <Button onClick={handleAddAttachment} className="h-9 text-sm">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Save attachment
+                  </Button>
+                </div>
+              </div>
+              <div className="lg:col-span-2">{renderUploadTable()}</div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="view" className="pt-1 space-y-3">
+            {!hasAttachments && (
+              <div className="text-sm text-gray-600 dark:text-slate-300">No attachments yet. Upload a report to view it here.</div>
+            )}
+            {hasAttachments && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-sm text-gray-700 dark:text-slate-200">Attachment {viewIndex + 1} of {attachments.length}</div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setViewIndex((idx) => Math.max(0, idx - 1))}
+                      disabled={viewIndex === 0}
+                      className="h-8 text-xs"
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-1" /> Prev
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setViewIndex((idx) => Math.min(attachments.length - 1, idx + 1))}
+                      disabled={viewIndex >= attachments.length - 1}
+                      className="h-8 text-xs"
+                    >
+                      Next <ArrowRight className="h-4 w-4 ml-1" />
+                    </Button>
                   </div>
+                </div>
 
-                  {/* Test Results Section */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-lg font-semibold">Test Results</Label>
-                      <Button variant="outline" size="sm" onClick={handleAddResult}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Result
-                      </Button>
-                    </div>
-
-                    {/* Add New Result Form */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-                      <div>
-                        <Label>Parameter *</Label>
-                        <Input
-                          value={newResult.parameter}
-                          onChange={(e) => setNewResult(prev => ({ ...prev, parameter: e.target.value }))}
-                          placeholder="e.g., Hemoglobin"
-                        />
-                      </div>
-                      <div>
-                        <Label>Value *</Label>
-                        <Input
-                          value={newResult.value}
-                          onChange={(e) => setNewResult(prev => ({ ...prev, value: e.target.value }))}
-                          placeholder="e.g., 14.2"
-                        />
-                      </div>
-                      <div>
-                        <Label>Unit</Label>
-                        <Input
-                          value={newResult.unit}
-                          onChange={(e) => setNewResult(prev => ({ ...prev, unit: e.target.value }))}
-                          placeholder="e.g., g/dL"
-                        />
-                      </div>
-                      <div>
-                        <Label>Normal Range</Label>
-                        <Input
-                          value={newResult.normalRange}
-                          onChange={(e) => setNewResult(prev => ({ ...prev, normalRange: e.target.value }))}
-                          placeholder="e.g., 12.0-16.0"
-                        />
-                      </div>
-                      <div>
-                        <Label>Status</Label>
-                        <Select
-                          value={newResult.status}
-                          onValueChange={(value) => setNewResult(prev => ({ ...prev, status: value as any }))}
+                <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 shadow-sm flex items-start gap-3">
+                  <Eye className="h-5 w-5 text-gray-500 dark:text-slate-300 mt-0.5" />
+                  <div className="w-full space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-sm font-semibold text-gray-800 dark:text-slate-100">{currentAttachment}</div>
+                      {currentPreview?.url && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs"
+                          onClick={() => window.open(currentPreview.url, "_blank")}
                         >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="normal">Normal</SelectItem>
-                            <SelectItem value="high">High</SelectItem>
-                            <SelectItem value="low">Low</SelectItem>
-                            <SelectItem value="critical">Critical</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Notes</Label>
-                        <Input
-                          value={newResult.notes}
-                          onChange={(e) => setNewResult(prev => ({ ...prev, notes: e.target.value }))}
-                          placeholder="Additional notes..."
-                        />
-                      </div>
+                          Full screen
+                        </Button>
+                      )}
                     </div>
-
-                    {/* Existing Results */}
-                    {newTest.results && newTest.results.length > 0 && (
-                      <div className="space-y-2">
-                        <Label>Added Results</Label>
-                        <div className="space-y-2">
-                          {newTest.results.map((result, index) => (
-                            <div key={index} className="flex items-center justify-between p-3 bg-white border rounded-lg">
-                              <div className="flex items-center gap-4">
-                                <span className="font-medium">{result.parameter}</span>
-                                <span className="text-lg">{result.value} {result.unit}</span>
-                                <Badge variant={result.status === 'normal' ? 'default' : 'destructive'}>
-                                  {result.status.toUpperCase()}
-                                </Badge>
-                                <span className="text-sm text-gray-600">{result.normalRange}</span>
-                              </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => removeResult(index)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
+                    {currentPreview && currentPreview.type.startsWith("image/") && (
+                      <div className="border border-gray-200 rounded-md overflow-hidden bg-gray-50">
+                        <img
+                          src={currentPreview.url}
+                          alt={currentAttachmentName}
+                          className="w-full max-h-[360px] object-contain bg-white"
+                        />
                       </div>
                     )}
-                  </div>
-
-                  <div className="flex gap-3">
-                    <Button onClick={handleAddTest}>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Save Test
-                    </Button>
-                    <Button variant="outline" onClick={() => setIsAddingTest(false)}>
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>No manual tests added yet. Click "Add New Test" to get started.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* View All Tests Tab */}
-        <TabsContent value="view" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Eye className="h-5 w-5" />
-                All Lab Tests
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {manualTests.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <TestTube className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                    <p>No lab tests found. Add tests manually or upload documents.</p>
-                  </div>
-                ) : (
-                  manualTests.map((test) => (
-                    <div key={test.id} className="border rounded-lg p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <h3 className="text-lg font-semibold">{test.testName}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {test.testDate.toLocaleDateString()} - {test.orderedBy}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {getStatusBadge(test.status)}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => deleteTest(test.id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                    {currentPreview && currentPreview.type === "application/pdf" && (
+                      <div className="border border-gray-200 rounded-md overflow-hidden bg-gray-50">
+                        <iframe
+                          title={`Preview ${currentAttachmentName}`}
+                          src={currentPreview.url}
+                          className="w-full h-[420px] bg-white"
+                        />
                       </div>
-
-                      {test.results && test.results.length > 0 && (
-                        <div className="space-y-4">
-                          <Label className="font-semibold">Results</Label>
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                              <thead>
-                                <tr className="border-b">
-                                  <th className="text-left p-2">Parameter</th>
-                                  <th className="text-left p-2">Value</th>
-                                  <th className="text-left p-2">Unit</th>
-                                  <th className="text-left p-2">Normal Range</th>
-                                  <th className="text-left p-2">Status</th>
-                                  <th className="text-left p-2">Notes</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {test.results.map((result, index) => (
-                                  <tr key={index} className="border-b">
-                                    <td className="p-2 font-medium">{result.parameter}</td>
-                                    <td className="p-2 font-semibold">{result.value}</td>
-                                    <td className="p-2 text-muted-foreground">{result.unit}</td>
-                                    <td className="p-2 text-muted-foreground">{result.normalRange}</td>
-                                    <td className="p-2">
-                                      <Badge 
-                                        variant={result.status === 'normal' ? 'default' : 'destructive'}
-                                        className={getResultStatus(result.status)}
-                                      >
-                                        {result.status.toUpperCase()}
-                                      </Badge>
-                                    </td>
-                                    <td className="p-2 text-sm">{result.notes}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      )}
-
-                      {test.notes && (
-                        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                          <Label className="font-semibold">Notes</Label>
-                          <p className="text-sm mt-1">{test.notes}</p>
-                        </div>
-                      )}
-                    </div>
-                  ))
-                )}
+                    )}
+                    {!currentPreview && (
+                      <div className="text-xs text-gray-500 dark:text-slate-300">Preview not available in this demo. Download/view will be wired to backend.</div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center justify-center gap-2 pt-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setViewIndex((idx) => Math.max(0, idx - 1))}
+                    disabled={viewIndex === 0}
+                    className="h-8 text-xs"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-1" /> Prev
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setViewIndex((idx) => Math.min(attachments.length - 1, idx + 1))}
+                    disabled={viewIndex >= attachments.length - 1}
+                    className="h-8 text-xs"
+                  >
+                    Next <ArrowRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            )}
+          </TabsContent>
+        </div>
       </Tabs>
-    </div>
+    </CardContent>
+  </Card>
   );
 };
+
+export default PatientLabTests;
+export { PatientLabTests };
