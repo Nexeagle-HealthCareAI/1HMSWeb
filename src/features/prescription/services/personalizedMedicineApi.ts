@@ -22,11 +22,15 @@ export interface PersonalizedMedicineResponse extends Partial<PersonalizedMedici
 }
 
 const normalizeList = (data: any): PersonalizedMedicineResponse[] => {
-  const items = Array.isArray(data?.data)
-    ? data.data
-    : Array.isArray(data)
-      ? data
-      : [];
+  const items = Array.isArray(data?.preferredMedicines)
+    ? data.preferredMedicines
+    : Array.isArray(data?.data?.preferredMedicines)
+      ? data.data.preferredMedicines
+      : Array.isArray(data?.data)
+        ? data.data
+        : Array.isArray(data)
+          ? data
+          : [];
 
   return items.map((item: any, idx: number) => ({
     prefferedId: item?.prefferedId ?? item?.medicineId ?? idx,
@@ -53,9 +57,23 @@ export const personalizedMedicineApi = {
     payload: PersonalizedMedicinePayload,
     prefferedId: number | string | null
   ) {
-    const baseUrl = API_ENDPOINTS.E_PRESCRIPTION.PERSONALIZED_MEDICINE(doctorId, hospitalId);
-    const url = `${baseUrl}?preferrredId=${encodeURIComponent(prefferedId ?? 'null')}`;
-    return apiClient.put(url, payload);
+    // New endpoint expects the identifiers in the body, not as query params
+    return apiClient.put(API_ENDPOINTS.E_PRESCRIPTION.MEDICINE_DOCTOR_PREFERENCE, {
+      preferrredId: prefferedId ?? null,
+      doctorId,
+      hospitalId,
+      medicine: payload,
+    });
+  },
+
+  async remove(doctorId: string, hospitalId: string, preferredId: number | string) {
+    return apiClient.delete(API_ENDPOINTS.E_PRESCRIPTION.MEDICINE_DOCTOR_PREFERENCE, {
+      data: {
+        preferredId,
+        doctorId,
+        hospitalId,
+      },
+    });
   },
 
   async list(
@@ -63,7 +81,7 @@ export const personalizedMedicineApi = {
     hospitalId: string,
   ): Promise<PersonalizedMedicineResponse[]> {
     const response = await apiClient.get(
-      API_ENDPOINTS.E_PRESCRIPTION.PERSONALIZED_MEDICINE(doctorId, hospitalId)
+      API_ENDPOINTS.E_PRESCRIPTION.MEDICINE_DOCTOR_PREFERENCE_LIST(doctorId, hospitalId)
     );
     return normalizeList(response);
   },

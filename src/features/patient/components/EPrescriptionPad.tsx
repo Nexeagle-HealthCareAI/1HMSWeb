@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { usePrescriptionFieldConfig } from '@/features/prescription/hooks/usePrescriptionFieldConfig';
 import { useAuthStore } from '@/store/authStore';
@@ -34,11 +34,12 @@ import {
   ArrowRight,
   X,
   ChevronDown,
-  ChevronRight,
-  Search
+  ChevronRight
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { vitalsApi, PatientVitalsResponse } from '../services/vitalsApi';
+import { chiefComplaintMock, filterChiefComplaints, ChiefComplaintItem } from '@/features/patient/services/chiefComplaintMock';
+import { LookupMultiSelect, LookupFetcher, LookupItem } from './LookupMultiSelect';
 
 interface EPrescriptionData {
   vitals: {
@@ -136,6 +137,71 @@ const convertPreferencesToFieldConfigs = (preferences: any) => {
   console.log('Converted field configs:', result);
   return result;
 };
+
+const makeLocalLookupFetcher = (items: LookupItem[]): LookupFetcher => {
+  return async (params, signal) => {
+    if (signal?.aborted) {
+      throw new DOMException('Aborted', 'AbortError');
+    }
+
+    const limit = params.limit ?? 10;
+    const term = params.q.trim().toLowerCase();
+    const pool = term ? items.filter((i) => i.name.toLowerCase().includes(term)) : items;
+    const personal = pool.filter((i) => i.source === 'personal').slice(0, limit);
+    const general = pool.filter((i) => i.source === 'general').slice(0, limit);
+
+    return {
+      query: params.q,
+      personal,
+      general,
+    };
+  };
+};
+
+const historyLookupData: LookupItem[] = [
+  { id: 'hist-1', name: 'Previous surgery', source: 'personal', shortDesc: 'Documented procedures' },
+  { id: 'hist-2', name: 'Family history of diabetes', source: 'personal' },
+  { id: 'hist-3', name: 'Smoking', source: 'general', shortDesc: 'Active smoker' },
+  { id: 'hist-4', name: 'Alcohol use', source: 'general' },
+  { id: 'hist-5', name: 'Past hospitalization', source: 'personal' },
+];
+
+const comorbidityLookupData: LookupItem[] = [
+  { id: 'co-1', name: 'Hypertension', source: 'personal', usageCount: 42 },
+  { id: 'co-2', name: 'Type 2 diabetes', source: 'personal', usageCount: 37 },
+  { id: 'co-3', name: 'COPD', source: 'general' },
+  { id: 'co-4', name: 'Hypothyroidism', source: 'general' },
+  { id: 'co-5', name: 'Chronic kidney disease', source: 'general' },
+];
+
+const examinationLookupData: LookupItem[] = [
+  { id: 'exam-1', name: 'Normal heart sounds', source: 'general' },
+  { id: 'exam-2', name: 'Wheezing', source: 'general' },
+  { id: 'exam-3', name: 'Pitting edema', source: 'general' },
+  { id: 'exam-4', name: 'Abdominal tenderness', source: 'general' },
+  { id: 'exam-5', name: 'Neurological exam normal', source: 'personal' },
+];
+
+const diagnosisLookupData: LookupItem[] = [
+  { id: 'dx-1', name: 'Hypertension', source: 'general', usageCount: 120 },
+  { id: 'dx-2', name: 'Type 2 diabetes mellitus', source: 'general', usageCount: 110 },
+  { id: 'dx-3', name: 'Asthma', source: 'general' },
+  { id: 'dx-4', name: 'Acute gastroenteritis', source: 'general' },
+  { id: 'dx-5', name: 'Migraine', source: 'personal' },
+  { id: 'dx-6', name: 'Low back pain', source: 'personal' },
+];
+
+const quickPicksBySection: Record<string, LookupItem[]> = {
+  history: historyLookupData.filter((i) => i.source === 'personal'),
+  comorbidity: comorbidityLookupData.filter((i) => i.source === 'personal'),
+  examination: examinationLookupData.filter((i) => i.source === 'personal'),
+  diagnosis: diagnosisLookupData.filter((i) => i.source === 'personal'),
+};
+
+const historyLookupFetcher = makeLocalLookupFetcher(historyLookupData);
+const comorbidityLookupFetcher = makeLocalLookupFetcher(comorbidityLookupData);
+const examinationLookupFetcher = makeLocalLookupFetcher(examinationLookupData);
+const diagnosisLookupFetcher = makeLocalLookupFetcher(diagnosisLookupData);
 
 interface EPrescriptionPadProps {
   prescriptionFieldPreferences?: any;
@@ -405,25 +471,17 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
   const shouldShowLoading = !apiPreferences && (isLoadingApiPreferences || isLoadingPreferences);
 
   // Search functionality state
-  const [searchSuggestions, setSearchSuggestions] = useState<{ [key: string]: string[] }>({
-    chiefComplaint: [
-      'Chest pain', 'Shortness of breath', 'Headache', 'Fever', 'Cough', 'Nausea', 'Vomiting',
-      'Abdominal pain', 'Back pain', 'Joint pain', 'Fatigue', 'Dizziness', 'Weight loss',
-      'Weight gain', 'Sleep problems', 'Anxiety', 'Depression'
-    ],
-    diagnosis: [
-      'Hypertension', 'Diabetes mellitus', 'Coronary artery disease', 'Asthma', 'COPD',
-      'Pneumonia', 'Urinary tract infection', 'Gastroenteritis', 'Migraine', 'Anxiety disorder',
-      'Depression', 'Osteoarthritis', 'Rheumatoid arthritis', 'Hyperthyroidism', 'Hypothyroidism'
-    ],
-    medications: [
-      'Metformin', 'Lisinopril', 'Amlodipine', 'Atorvastatin', 'Omeprazole', 'Paracetamol',
-      'Ibuprofen', 'Aspirin', 'Warfarin', 'Insulin', 'Levothyroxine', 'Albuterol'
-    ]
-  });
-
-  const [showSuggestions, setShowSuggestions] = useState<{ [key: string]: boolean }>({});
-  const [filteredSuggestions, setFilteredSuggestions] = useState<{ [key: string]: string[] }>({});
+  const [chiefComplaintOptions, setChiefComplaintOptions] = useState<ChiefComplaintItem[]>(chiefComplaintMock);
+  const [selectedChiefComplaints, setSelectedChiefComplaints] = useState<string[]>([]);
+  const [chiefComplaintOpen, setChiefComplaintOpen] = useState(false);
+  const [chiefComplaintQuery, setChiefComplaintQuery] = useState('');
+  const [chiefComplaintActiveIndex, setChiefComplaintActiveIndex] = useState(0);
+  const chiefComplaintInputRef = useRef<HTMLInputElement | null>(null);
+  const chiefComplaintRootRef = useRef<HTMLDivElement | null>(null);
+  const [historySelections, setHistorySelections] = useState<LookupItem[]>([]);
+  const [comorbiditySelections, setComorbiditySelections] = useState<LookupItem[]>([]);
+  const [examinationSelections, setExaminationSelections] = useState<LookupItem[]>([]);
+  const [diagnosisSelections, setDiagnosisSelections] = useState<LookupItem[]>([]);
 
   // Collapsible sections state
   const [collapsedSections, setCollapsedSections] = useState<{ [key: string]: boolean }>({
@@ -471,71 +529,82 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
     }));
   };
 
-  // Search functionality
-  const handleSearchInput = (fieldId: string, value: string) => {
-    const suggestions = searchSuggestions[fieldId] || [];
-    const filtered = suggestions.filter(suggestion =>
-      suggestion.toLowerCase().includes(value.toLowerCase())
-    );
-    setFilteredSuggestions(prev => ({ ...prev, [fieldId]: filtered }));
-    setShowSuggestions(prev => ({ ...prev, [fieldId]: value.length > 0 && filtered.length > 0 }));
+  const handleLookupChange = (
+    field: 'history' | 'comorbidity' | 'examination' | 'diagnosis',
+    setter: React.Dispatch<React.SetStateAction<LookupItem[]>>
+  ) => {
+    return (items: LookupItem[]) => {
+      setter(items);
+      setPrescriptionData(prev => ({
+        ...prev,
+        [field]: items.map((item) => item.name).join('; '),
+      }));
+    };
   };
 
-  const selectSuggestion = (fieldId: string, suggestion: string) => {
-    if (fieldId === 'chiefComplaint') {
-      setPrescriptionData(prev => ({ ...prev, chiefComplaint: suggestion }));
-    } else if (fieldId === 'diagnosis') {
-      setPrescriptionData(prev => ({ ...prev, diagnosis: suggestion }));
+  const handleLookupSave = (field: string, items: LookupItem[]) => {
+    toast({
+      title: `${field} saved`,
+      description: items.length > 0 ? `${items.length} item(s) captured.` : 'No items selected.',
+    });
+  };
+
+  const handleSaveChiefComplaint = () => {
+    const value = prescriptionData.chiefComplaint.trim();
+    if (!value) {
+      toast({
+        title: 'Nothing to save',
+        description: 'Please select or type a chief complaint first.',
+        variant: 'destructive',
+      });
+      return;
     }
-    setShowSuggestions(prev => ({ ...prev, [fieldId]: false }));
+
+    toast({
+      title: 'Chief complaint saved',
+      description: 'You can continue filling the prescription.',
+    });
   };
 
-  const SearchableInput = ({
-    fieldId,
-    value,
-    onChange,
-    placeholder,
-    className = ''
-  }: {
-    fieldId: string;
-    value: string;
-    onChange: (value: string) => void;
-    placeholder: string;
-    className?: string;
-  }) => (
-    <div className="relative">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <Input
-          value={value}
-          onChange={(e) => {
-            onChange(e.target.value);
-            handleSearchInput(fieldId, e.target.value);
-          }}
-          onFocus={() => {
-            if (value.length > 0) {
-              handleSearchInput(fieldId, value);
-            }
-          }}
-          placeholder={placeholder}
-          className={`pl-10 ${className}`}
-        />
-      </div>
-      {showSuggestions[fieldId] && filteredSuggestions[fieldId]?.length > 0 && (
-        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
-          {filteredSuggestions[fieldId].map((suggestion, index) => (
-            <div
-              key={index}
-              className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
-              onClick={() => selectSuggestion(fieldId, suggestion)}
-            >
-              {suggestion}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  const addChiefComplaint = (label: string) => {
+    const trimmed = label.trim();
+    if (!trimmed) return;
+
+    setSelectedChiefComplaints(prev => {
+      if (prev.includes(trimmed)) return prev;
+      const next = [...prev, trimmed];
+      setPrescriptionData(p => ({ ...p, chiefComplaint: next.join('; ') }));
+      return next;
+    });
+  };
+
+  const commitChiefComplaintSelection = (label: string) => {
+    addChiefComplaint(label);
+    setChiefComplaintQuery('');
+    setChiefComplaintOptions(chiefComplaintMock);
+    setChiefComplaintActiveIndex(0);
+    setChiefComplaintOpen(false);
+    chiefComplaintInputRef.current?.focus();
+  };
+
+  const removeChiefComplaint = (label: string) => {
+    setSelectedChiefComplaints(prev => {
+      const next = prev.filter(item => item !== label);
+      setPrescriptionData(p => ({ ...p, chiefComplaint: next.join('; ') }));
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    const onDocDown = (e: MouseEvent) => {
+      if (!chiefComplaintRootRef.current) return;
+      if (!chiefComplaintRootRef.current.contains(e.target as Node)) {
+        setChiefComplaintOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDocDown);
+    return () => document.removeEventListener('mousedown', onDocDown);
+  }, []);
 
   const renderCollapsibleSection = (
     fieldId: string,
@@ -826,25 +895,170 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
               'chiefComplaint',
               'Chief Complaint',
               <div className="space-y-3">
-                <SearchableInput
-                  fieldId="chiefComplaint"
-                  value={prescriptionData.chiefComplaint}
-                  onChange={(value) => setPrescriptionData(prev => ({
-                    ...prev,
-                    chiefComplaint: value
-                  }))}
-                  placeholder="Search or type the main reason for the visit..."
-                  className="text-sm"
-                />
-                <Textarea
-                  placeholder="Additional details about the complaint..."
-                  value={prescriptionData.chiefComplaint}
-                  onChange={(e) => setPrescriptionData(prev => ({
-                    ...prev,
-                    chiefComplaint: e.target.value
-                  }))}
-                  className="min-h-[60px] text-sm"
-                />
+                <div ref={chiefComplaintRootRef} className="space-y-2">
+                  {selectedChiefComplaints.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedChiefComplaints.map(item => (
+                        <div
+                          key={item}
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 text-xs font-medium text-gray-700"
+                        >
+                          <span>{item}</span>
+                          <button
+                            type="button"
+                            className="text-gray-500 hover:text-gray-800"
+                            onClick={() => removeChiefComplaint(item)}
+                            aria-label={`Remove ${item}`}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="relative">
+                    <Input
+                      ref={chiefComplaintInputRef}
+                      value={chiefComplaintQuery}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setChiefComplaintQuery(val);
+                        const next = val ? filterChiefComplaints(val) : chiefComplaintMock;
+                        setChiefComplaintOptions(next);
+                        setChiefComplaintActiveIndex(0);
+                        setChiefComplaintOpen(true);
+                      }}
+                      onFocus={() => {
+                        setChiefComplaintOpen(true);
+                        setChiefComplaintOptions(chiefComplaintMock);
+                        setChiefComplaintActiveIndex(0);
+                      }}
+                      onBlur={() => setTimeout(() => setChiefComplaintOpen(false), 50)}
+                      onKeyDown={(e) => {
+                        const personal = chiefComplaintOptions.filter(item => item.category === 'personal');
+                        const general = chiefComplaintOptions.filter(item => item.category === 'general');
+                        const combined = [...personal, ...general];
+                        const trimmed = (chiefComplaintQuery || '').trim();
+                        if (e.key === 'ArrowDown') {
+                          e.preventDefault();
+                          setChiefComplaintOpen(true);
+                          setChiefComplaintActiveIndex(prev => Math.min(prev + 1, Math.max(0, combined.length - 1)));
+                        } else if (e.key === 'ArrowUp') {
+                          e.preventDefault();
+                          setChiefComplaintActiveIndex(prev => Math.max(prev - 1, 0));
+                        } else if (e.key === 'Enter') {
+                          if (combined[chiefComplaintActiveIndex]) {
+                            e.preventDefault();
+                            commitChiefComplaintSelection(combined[chiefComplaintActiveIndex].label);
+                          } else if (trimmed) {
+                            e.preventDefault();
+                            commitChiefComplaintSelection(trimmed);
+                          }
+                        } else if (e.key === 'Escape') {
+                          setChiefComplaintOpen(false);
+                        }
+                      }}
+                      placeholder="Search or type the main reason for the visit..."
+                      className="text-sm"
+                    />
+
+                    {chiefComplaintOpen && (
+                      <div className="absolute left-0 right-0 top-full z-10 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto p-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <div className="text-[11px] font-semibold text-gray-600 uppercase">Personal</div>
+                            <div className="flex flex-col gap-1">
+                              {chiefComplaintOptions.filter(item => item.category === 'personal').map((item, idx) => {
+                                const isActive = chiefComplaintActiveIndex === idx;
+                                return (
+                                  <button
+                                    key={item.id}
+                                    type="button"
+                                    className={`flex items-center justify-between w-full rounded-md px-3 py-2 text-left text-sm border ${isActive ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
+                                    onMouseEnter={() => setChiefComplaintActiveIndex(idx)}
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      commitChiefComplaintSelection(item.label);
+                                    }}
+                                  >
+                                    <span>{item.label}</span>
+                                  </button>
+                                );
+                              })}
+                              {chiefComplaintOptions.filter(item => item.category === 'personal').length === 0 && (
+                                <div className="text-xs text-gray-500 px-3 py-2">No personal results</div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="text-[11px] font-semibold text-gray-600 uppercase">General</div>
+                            <div className="flex flex-col gap-1">
+                              {(() => {
+                                const personalCount = chiefComplaintOptions.filter(item => item.category === 'personal').length;
+                                return chiefComplaintOptions
+                                  .filter(item => item.category === 'general')
+                                  .map((item, idx) => {
+                                    const globalIdx = personalCount + idx;
+                                    const isActive = chiefComplaintActiveIndex === globalIdx;
+                                    return (
+                                      <button
+                                        key={item.id}
+                                        type="button"
+                                        className={`flex items-center justify-between w-full rounded-md px-3 py-2 text-left text-sm border ${isActive ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
+                                        onMouseEnter={() => setChiefComplaintActiveIndex(globalIdx)}
+                                        onMouseDown={(e) => {
+                                          e.preventDefault();
+                                          commitChiefComplaintSelection(item.label);
+                                        }}
+                                      >
+                                        <span>{item.label}</span>
+                                      </button>
+                                    );
+                                  });
+                              })()}
+                              {chiefComplaintOptions.filter(item => item.category === 'general').length === 0 && (
+                                <div className="text-xs text-gray-500 px-3 py-2">No general results</div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-xs font-semibold text-gray-600">Quick picks</div>
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
+                      {chiefComplaintOptions
+                        .filter(item => item.category === 'personal')
+                        .map(item => {
+                          const isSelected = selectedChiefComplaints.includes(item.label);
+                          return (
+                            <Button
+                              key={item.id}
+                              variant={isSelected ? 'default' : 'outline'}
+                              size="sm"
+                              className="justify-start h-auto min-h-8 text-xs md:text-sm rounded-full px-3 py-2"
+                              onClick={() => addChiefComplaint(item.label)}
+                            >
+                              {item.label}
+                            </Button>
+                          );
+                        })}
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      size="sm"
+                      className="h-8 px-3"
+                      onClick={handleSaveChiefComplaint}
+                    >
+                      Save chief complaint
+                    </Button>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -852,14 +1066,17 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
             {renderCollapsibleSection(
               'history',
               'History',
-              <Textarea
-                placeholder="Medical history, family history, social history..."
-                value={prescriptionData.history}
-                onChange={(e) => setPrescriptionData(prev => ({
-                  ...prev,
-                  history: e.target.value
-                }))}
-                className="min-h-[100px] text-sm"
+              <LookupMultiSelect
+                hospitalId={getHospitalId?.() || ''}
+                doctorId={getDoctorId() || ''}
+                section="history"
+                value={historySelections}
+                onChange={handleLookupChange('history', setHistorySelections)}
+                fetcher={historyLookupFetcher}
+                placeholder="Search or add history items..."
+                quickPicks={quickPicksBySection.history}
+                onSave={(items) => handleLookupSave('History', items)}
+                saveLabel="Save history"
               />
             )}
 
@@ -867,14 +1084,17 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
             {renderCollapsibleSection(
               'comorbidity',
               'Comorbidity',
-              <Textarea
-                placeholder="Existing medical conditions, comorbidities..."
-                value={prescriptionData.comorbidity}
-                onChange={(e) => setPrescriptionData(prev => ({
-                  ...prev,
-                  comorbidity: e.target.value
-                }))}
-                className="min-h-[80px] text-sm"
+              <LookupMultiSelect
+                hospitalId={getHospitalId?.() || ''}
+                doctorId={getDoctorId() || ''}
+                section="comorbidity"
+                value={comorbiditySelections}
+                onChange={handleLookupChange('comorbidity', setComorbiditySelections)}
+                fetcher={comorbidityLookupFetcher}
+                placeholder="Search or add comorbidities..."
+                quickPicks={quickPicksBySection.comorbidity}
+                onSave={(items) => handleLookupSave('Comorbidity', items)}
+                saveLabel="Save comorbidities"
               />
             )}
 
@@ -882,14 +1102,17 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
             {renderCollapsibleSection(
               'examination',
               'Examination',
-              <Textarea
-                placeholder="Physical examination findings..."
-                value={prescriptionData.examination}
-                onChange={(e) => setPrescriptionData(prev => ({
-                  ...prev,
-                  examination: e.target.value
-                }))}
-                className="min-h-[100px] text-sm"
+              <LookupMultiSelect
+                hospitalId={getHospitalId?.() || ''}
+                doctorId={getDoctorId() || ''}
+                section="examination"
+                value={examinationSelections}
+                onChange={handleLookupChange('examination', setExaminationSelections)}
+                fetcher={examinationLookupFetcher}
+                placeholder="Search or add exam findings..."
+                quickPicks={quickPicksBySection.examination}
+                onSave={(items) => handleLookupSave('Examination', items)}
+                saveLabel="Save examination"
               />
             )}
 
@@ -897,27 +1120,18 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
             {renderCollapsibleSection(
               'diagnosis',
               'Diagnosis',
-              <div className="space-y-3">
-                <SearchableInput
-                  fieldId="diagnosis"
-                  value={prescriptionData.diagnosis}
-                  onChange={(value) => setPrescriptionData(prev => ({
-                    ...prev,
-                    diagnosis: value
-                  }))}
-                  placeholder="Search or type diagnosis..."
-                  className="text-sm"
-                />
-                <Textarea
-                  placeholder="Additional diagnosis details..."
-                  value={prescriptionData.diagnosis}
-                  onChange={(e) => setPrescriptionData(prev => ({
-                    ...prev,
-                    diagnosis: e.target.value
-                  }))}
-                  className="min-h-[60px] text-sm"
-                />
-              </div>
+              <LookupMultiSelect
+                hospitalId={getHospitalId?.() || ''}
+                doctorId={getDoctorId() || ''}
+                section="diagnosis"
+                value={diagnosisSelections}
+                onChange={handleLookupChange('diagnosis', setDiagnosisSelections)}
+                fetcher={diagnosisLookupFetcher}
+                placeholder="Search or add diagnosis..."
+                quickPicks={quickPicksBySection.diagnosis}
+                onSave={(items) => handleLookupSave('Diagnosis', items)}
+                saveLabel="Save diagnosis"
+              />
             )}
 
             {/* Orders Section */}

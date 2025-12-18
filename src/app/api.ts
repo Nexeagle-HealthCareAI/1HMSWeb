@@ -39,6 +39,9 @@ export const API_ENDPOINTS = {
       }
       return `/e-prescription/configuration/personalized-data?${params.join('&')}`;
     },
+    MEDICINE_DOCTOR_PREFERENCE: '/medicines/doctor-preference',
+    MEDICINE_DOCTOR_PREFERENCE_LIST: (doctorId: string, hospitalId: string) =>
+      `/medicines/doctor-preference/doctorId=${encodeURIComponent(doctorId)}&hospitalId=${encodeURIComponent(hospitalId)}`,
     PERSONALIZED_MEDICINE: (doctorId: string, hospitalId: string) =>
       `/e-prescription/configuration/personalized-medicine/doctorId=${encodeURIComponent(doctorId)}&hospitalId=${encodeURIComponent(hospitalId)}`,
   },

@@ -135,6 +135,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [pendingDeleteItem, setPendingDeleteItem] = useState<PersonalizedDataItem | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortBy, setSortBy] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
 
   const PAGE_SIZE = 8;
 
@@ -482,7 +483,67 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
 
     const isMedication = selectedPersonalizedCategory === 'medications';
 
-    if (!target || isMedication || !doctorId || !hospitalId || !target.personalId) {
+    if (isMedication) {
+      // For medications, call the new DELETE endpoint when context is available
+      if (!doctorId || !hospitalId) {
+        setPersonalizedData(prev => ({
+          ...prev,
+          [selectedPersonalizedCategory]: prev[selectedPersonalizedCategory as keyof PersonalizedData].filter(item => item.id !== itemId)
+        }));
+        return;
+      }
+
+      try {
+        setIsLoadingPersonalized(true);
+        if (target?.prefferedId) {
+          await personalizedMedicineApi.remove(doctorId, hospitalId, target.prefferedId);
+        }
+        const refreshedMeds = await personalizedMedicineApi.list(doctorId, hospitalId);
+        const normalizedMeds = (refreshedMeds || []).map((item, idx) => ({
+          id: `${item.prefferedId ?? item.medicineId ?? idx}`,
+          prefferedId: item.prefferedId,
+          name: item.genericName || item.brandName || '',
+          genericName: item.genericName || '',
+          brandName: item.brandName || '',
+          form: item.form || '',
+          strengthValue: item.strengthValue || '',
+          strengthUnit: item.strengthUnit || '',
+          route: item.route || '',
+          dose: item.dose || '',
+          indication: item.indication || '',
+          notes: item.notes || '',
+          medicineId: item.medicineId || '',
+          code: item.medicineId || '',
+          shortDesc: item.brandName || item.genericName || '',
+          synonyms: '',
+          usageCount: typeof item.usageCount === 'number' ? item.usageCount : 0,
+          modifiedAt: item.modifiedAt || item.lastModifiedAt || '',
+        }));
+
+        setPersonalizedData(prev => ({
+          ...prev,
+          medications: normalizedMeds,
+        }));
+
+        toast({
+          title: 'Deleted',
+          description: 'Medication removed successfully.',
+        });
+      } catch (error) {
+        console.error('Failed to delete personalized medication', error);
+        toast({
+          title: 'Delete failed',
+          description: 'Could not delete medication. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoadingPersonalized(false);
+      }
+
+      return;
+    }
+
+    if (!target || !doctorId || !hospitalId || !target.personalId) {
       setPersonalizedData(prev => ({
         ...prev,
         [selectedPersonalizedCategory]: prev[selectedPersonalizedCategory as keyof PersonalizedData].filter(item => item.id !== itemId)
@@ -612,6 +673,38 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
       medications: 'e.g., Statin, Lipid drug'
     };
     return placeholders[category] || 'Enter synonyms';
+  };
+
+  const handleSort = (key: string) => {
+    setSortBy(prev => {
+      if (prev.key === key) {
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'asc' };
+    });
+  };
+
+  const renderSortIndicator = (key: string) => {
+    if (sortBy.key !== key) return null;
+    return <span className="ml-1">{sortBy.direction === 'asc' ? '▲' : '▼'}</span>;
+  };
+
+  const getSortValue = (item: PersonalizedDataItem, key: string): string | number => {
+    const value = (item as any)?.[key];
+    if (value === undefined || value === null) return '';
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') return value.toLowerCase();
+    return '';
+  };
+
+  const formatDisplayDate = (value?: string) => {
+    if (!value) return '—';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = date.toLocaleString('en-US', { month: 'short' });
+    const year = date.getFullYear();
+    return `${day} ${month}, ${year}`;
   };
 
   useEffect(() => {
@@ -908,10 +1001,18 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                         )
                       : items;
 
-                    const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
+                    const sortedItems = [...filteredItems].sort((a, b) => {
+                      const aVal = getSortValue(a, sortBy.key);
+                      const bVal = getSortValue(b, sortBy.key);
+                      if (aVal === bVal) return 0;
+                      if (aVal > bVal) return sortBy.direction === 'asc' ? 1 : -1;
+                      return sortBy.direction === 'asc' ? -1 : 1;
+                    });
+
+                    const totalPages = Math.max(1, Math.ceil(sortedItems.length / PAGE_SIZE));
                     const page = Math.min(currentPage, totalPages);
                     const startIndex = (page - 1) * PAGE_SIZE;
-                    const paginatedItems = filteredItems.slice(startIndex, startIndex + PAGE_SIZE);
+                    const paginatedItems = sortedItems.slice(startIndex, startIndex + PAGE_SIZE);
 
                     return (
                       <div className="p-2 sm:p-3">
@@ -973,7 +1074,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                                       </>
                                     )}
                                     <p className="text-gray-500">Usage: {item.usageCount ?? 0}</p>
-                                    <p className="text-gray-500">Last Modified: {item.modifiedAt ? new Date(item.modifiedAt).toLocaleDateString() : '—'}</p>
+                                    <p className="text-gray-500">Last Modified: {formatDisplayDate(item.modifiedAt)}</p>
                                   </div>
                                 </div>
                               ))}
@@ -984,26 +1085,65 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                               <table className="w-full text-xs sm:text-sm text-gray-800">
                               <thead>
                                 <tr className="bg-gray-50 border-b border-gray-200">
-                                  <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm">Name</th>
+                                  <th
+                                    className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm cursor-pointer select-none"
+                                    onClick={() => handleSort('name')}
+                                  >
+                                    Name {renderSortIndicator('name')}
+                                  </th>
                                   {selectedPersonalizedCategory !== 'medications' && (
-                                    <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden sm:table-cell">Code</th>
+                                    <th
+                                      className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden sm:table-cell cursor-pointer select-none"
+                                      onClick={() => handleSort('code')}
+                                    >
+                                      Code {renderSortIndicator('code')}
+                                    </th>
                                   )}
-                                  <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">Usage</th>
-                                  <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden xl:table-cell">Last Modified</th>
+                                  <th
+                                    className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell cursor-pointer select-none"
+                                    onClick={() => handleSort('usageCount')}
+                                  >
+                                    Usage {renderSortIndicator('usageCount')}
+                                  </th>
                                   {selectedPersonalizedCategory === 'medications' && (
                                     <>
-                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">Strength</th>
-                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell">Form</th>
-                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden xl:table-cell">Route</th>
-                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden xl:table-cell">Dose</th>
-                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden 2xl:table-cell">Indication</th>
-                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden 2xl:table-cell">Notes</th>
-                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden sm:table-cell">Medicine ID</th>
+                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell cursor-pointer select-none" onClick={() => handleSort('strengthValue')}>
+                                        Strength {renderSortIndicator('strengthValue')}
+                                      </th>
+                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden lg:table-cell cursor-pointer select-none" onClick={() => handleSort('form')}>
+                                        Form {renderSortIndicator('form')}
+                                      </th>
+                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden xl:table-cell cursor-pointer select-none" onClick={() => handleSort('route')}>
+                                        Route {renderSortIndicator('route')}
+                                      </th>
+                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden xl:table-cell cursor-pointer select-none" onClick={() => handleSort('dose')}>
+                                        Dose {renderSortIndicator('dose')}
+                                      </th>
+                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden 2xl:table-cell cursor-pointer select-none" onClick={() => handleSort('indication')}>
+                                        Indication {renderSortIndicator('indication')}
+                                      </th>
+                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden 2xl:table-cell cursor-pointer select-none" onClick={() => handleSort('notes')}>
+                                        Notes {renderSortIndicator('notes')}
+                                      </th>
+                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden sm:table-cell cursor-pointer select-none" onClick={() => handleSort('medicineId')}>
+                                        Medicine ID {renderSortIndicator('medicineId')}
+                                      </th>
                                     </>
                                   )}
                                   {selectedPersonalizedCategory !== 'medications' && (
-                                    <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden md:table-cell">Description</th>
+                                    <th
+                                      className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden md:table-cell cursor-pointer select-none"
+                                      onClick={() => handleSort('shortDesc')}
+                                    >
+                                      Description {renderSortIndicator('shortDesc')}
+                                    </th>
                                   )}
+                                  <th
+                                    className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm hidden xl:table-cell cursor-pointer select-none"
+                                    onClick={() => handleSort('modifiedAt')}
+                                  >
+                                    Last Modified {renderSortIndicator('modifiedAt')}
+                                  </th>
                                   <th className="text-right py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 text-xs sm:text-sm">Actions</th>
                                 </tr>
                               </thead>
@@ -1030,12 +1170,6 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                                     <td className="py-2 sm:py-2.5 px-2 sm:px-3 hidden lg:table-cell align-top">
                                       <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[11px] font-semibold">
                                         {item.usageCount ?? 0} used
-                                      </span>
-                                    </td>
-
-                                    <td className="py-2 sm:py-2.5 px-2 sm:px-3 hidden xl:table-cell align-top">
-                                      <span className="text-gray-500 text-[11px]">
-                                        {item.modifiedAt ? new Date(item.modifiedAt).toLocaleDateString() : '—'}
                                       </span>
                                     </td>
 
@@ -1072,6 +1206,12 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                                         </span>
                                       </td>
                                     )}
+
+                                    <td className="py-2 sm:py-2.5 px-2 sm:px-3 hidden xl:table-cell align-top">
+                                      <span className="text-gray-500 text-[11px]">
+                                        {formatDisplayDate(item.modifiedAt)}
+                                      </span>
+                                    </td>
 
                                     <td className="py-1.5 sm:py-2 px-2 sm:px-3">
                                       <div className="flex items-center justify-end gap-1">
