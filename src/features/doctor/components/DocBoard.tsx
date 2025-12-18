@@ -31,7 +31,6 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import {
   Activity,
-  Add,
   AlertTriangle,
   Archive,
   ArrowLeft,
