@@ -2,6 +2,33 @@ import React, { useState, useMemo, useEffect, useLayoutEffect, useRef, lazy, Sus
 import type { AxiosError } from 'axios';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider
+} from '@/components/ui/tooltip';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '@/components/ui/table';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious
+} from '@/components/ui/pagination';
+import type { LucideIcon } from 'lucide-react';
 import {
   Activity,
   Add,
@@ -18,14 +45,20 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
+  CircleCheck,
   Clock,
+  Database,
   Download,
+  Expand,
   ExternalLink,
   Eye,
   FileText,
   Filter,
+  FlaskConical,
+  Heart,
   HeartPulse,
   Layout,
+  LayoutDashboard,
   ListChecks,
   Loader2,
   Lock,
@@ -55,7 +88,8 @@ import {
 } from 'lucide-react';
 import { format, subDays, addDays } from 'date-fns';
 import { useAuthStore } from '@/store/authStore';
-  import AttachmentsSection from '@/features/patient/components/AttachmentsSection';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import AttachmentsSection from '@/features/patient/components/AttachmentsSection';
 import { appointmentApi } from '@/features/appointment/services/appointmentApi';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDoctorProfile } from '../hooks/useDoctorProfile';
@@ -65,6 +99,8 @@ import {
   PrescriptionPreviewModal,
   type GeneratePrescriptionDetailsRequest,
 } from '@/components/shared/prescription-preview';
+import PrescriptionCustomizePanel from '@/features/prescription/components/PrescriptionCustomizePanel';
+import { PrescriptionLayout } from '@/features/prescription/components/layout/PrescriptionLayout';
 
 // Lazy-load the calendar page so it only loads when the doctor opens it from the dashboard
 const DoctorCalendar = lazy(() => import('@/features/doctor-calendar/DoctorCalendarPage').then(module => ({ default: module.DoctorCalendarPage })));

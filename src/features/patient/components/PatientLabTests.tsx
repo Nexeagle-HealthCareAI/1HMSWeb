@@ -5,7 +5,37 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileImage, Plus, Eye, Upload, ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Trash } from "lucide-react";
 
+// Minimal shapes to satisfy upstream callers; UI here only uses attachments.
+type LabTestResult = {
+  id: string;
+  appointmentId: string;
+  testName: string;
+  testDate: Date;
+  orderedBy: string;
+  status: "ordered" | "collected" | "completed" | "cancelled";
+  results: Array<{
+    parameter: string;
+    value: string;
+    unit: string;
+    normalRange: string;
+    status: "normal" | "high" | "low" | "critical";
+    notes?: string;
+  }>;
+  notes?: string;
+  attachments?: string[];
+};
+
+type Appointment = {
+  id: string;
+  date: Date;
+  time: string;
+  doctor: string;
+  type: string;
+};
+
 interface PatientLabTestsProps {
+  labTests?: LabTestResult[];
+  appointments?: Appointment[];
   attachments?: string[];
   onChange?: (next: string[]) => void;
   patientId?: string;
@@ -30,7 +60,12 @@ const reportTypes = [
   "Other"
 ];
 
-const PatientLabTests: React.FC<PatientLabTestsProps> = ({ attachments = [], onChange = () => {}, patientId, patientName }) => {
+const PatientLabTests: React.FC<PatientLabTestsProps> = ({
+  attachments = [],
+  onChange = () => {},
+  patientId,
+  patientName,
+}) => {
   const [selectedType, setSelectedType] = useState(reportTypes[0]);
   const [fileName, setFileName] = useState("");
   const [fileType, setFileType] = useState("");

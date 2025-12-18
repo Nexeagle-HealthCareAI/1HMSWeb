@@ -153,11 +153,66 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
 
     return (
       <div className="rounded-lg border border-blue-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 space-y-3 shadow-sm">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
           <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">Uploaded files</div>
           <div className="text-[11px] text-gray-500 dark:text-gray-400">Page {page} of {totalPages} • Total: {attachments.length}</div>
         </div>
-        <div className="overflow-auto max-h-[360px] border border-gray-100 dark:border-gray-700 rounded-md">
+
+        {/* Mobile cards */}
+        <div className="space-y-2 md:hidden">
+          {pagedAttachments.length === 0 && (
+            <div className="text-center text-gray-500 dark:text-gray-400 text-sm py-3">No files yet</div>
+          )}
+          {pagedAttachments.map((att, idx) => {
+            const attName = att.includes(':') ? att.split(':').slice(1).join(':').trim() : att;
+            const meta = uploadedFiles.find(f => f.name === attName);
+            const href = meta?.url;
+            return (
+              <div
+                key={`${att}-${start + idx}`}
+                className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-850 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                      <span className="font-semibold text-gray-800 dark:text-gray-100">#{start + idx + 1}</span>
+                      <span>{meta?.type || '—'}</span>
+                    </div>
+                    {href ? (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block font-semibold text-[13px] text-blue-700 dark:text-blue-400 hover:underline"
+                        title={att}
+                      >
+                        {att}
+                      </a>
+                    ) : (
+                      <div className="font-semibold text-[13px] text-gray-900 dark:text-gray-100" title={att}>{att}</div>
+                    )}
+                    <div className="text-[11px] text-gray-600 dark:text-gray-300">
+                      {meta?.uploadedAt ? new Date(meta.uploadedAt).toLocaleString() : '—'}
+                    </div>
+                    <div className="text-[11px] text-gray-600 dark:text-gray-300">{meta?.uploadedBy || '—'}</div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                    onClick={() => handleDeleteAttachment(start + idx, attName)}
+                    aria-label="Delete attachment"
+                  >
+                    <Trash className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden md:block overflow-auto max-h-[360px] border border-gray-100 dark:border-gray-700 rounded-md">
           <table className="min-w-full text-xs">
             <thead className="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-200">
               <tr>
@@ -212,16 +267,17 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
             </tbody>
           </table>
         </div>
+
         {attachments.length > pageSize && (
-          <div className="flex items-center justify-between px-1 text-sm text-gray-600 dark:text-gray-300">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-1 text-sm text-gray-600 dark:text-gray-300">
             <button
-              className="flex items-center gap-1 rounded border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:cursor-not-allowed disabled:text-gray-400 dark:disabled:text-gray-600"
+              className="flex items-center justify-center gap-1 rounded border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:cursor-not-allowed disabled:text-gray-400 dark:disabled:text-gray-600"
               onClick={() => setPage(prev => Math.max(1, prev - 1))}
               disabled={page === 1}
             >
               <ChevronLeft className="h-4 w-4" /> Prev
             </button>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1 justify-center">
               {Array.from({ length: totalPages }).map((_, idx) => {
                 const pageNumber = idx + 1;
                 const isActive = pageNumber === page;
@@ -241,7 +297,7 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
               })}
             </div>
             <button
-              className="flex items-center gap-1 rounded border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:cursor-not-allowed disabled:text-gray-400 dark:disabled:text-gray-600"
+              className="flex items-center justify-center gap-1 rounded border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:cursor-not-allowed disabled:text-gray-400 dark:disabled:text-gray-600"
               onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
               disabled={page === totalPages}
             >
@@ -277,7 +333,7 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
         </div>
       )}
 
-      <DialogContent className="max-w-6xl w-[1100px] max-w-[98vw] h-[80vh] max-h-[90vh]">
+      <DialogContent className="w-[95vw] sm:w-[1100px] max-w-[98vw] sm:max-w-6xl h-[85vh] sm:h-[80vh] max-h-[90vh] overflow-hidden">
         <Tabs defaultValue="upload" className="w-full">
           <div className="flex flex-col gap-3">
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
@@ -331,7 +387,7 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
                     </Button>
                   </div>
                 </div>
-                <div className="lg:col-span-2">{renderUploadTable()}</div>
+                <div className="lg:col-span-2 overflow-hidden">{renderUploadTable()}</div>
               </div>
             </TabsContent>
 

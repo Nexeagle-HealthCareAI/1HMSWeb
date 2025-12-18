@@ -279,6 +279,10 @@ export const PatientProfilePage: React.FC = () => {
     }
   };
 
+  const handleSaveForLater = () => {
+    alert('Draft saved for later.');
+  };
+
   // Calculate risk level for patient header
   const getRiskLevel = () => {
     if (!patient) return { level: 'Low', color: 'text-green-600', bg: 'bg-green-50', icon: CheckCircle };
@@ -487,6 +491,14 @@ export const PatientProfilePage: React.FC = () => {
                       <div className="flex items-center gap-2">
                           <Button variant="outline" size="sm" className="text-xs sm:text-sm h-8 sm:h-9" onClick={handlePreview}>
                             Preview
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="text-xs sm:text-sm h-8 sm:h-9 border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-100 dark:hover:bg-amber-900/50"
+                            onClick={handleSaveForLater}
+                          >
+                            Save for later
                           </Button>
                           <Button size="sm" className="text-xs sm:text-sm h-8 sm:h-9" onClick={() => setShowSubmitConfirm(true)}>
                             Submit

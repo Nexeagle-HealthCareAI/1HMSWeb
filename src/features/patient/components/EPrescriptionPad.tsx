@@ -16,7 +16,6 @@ import {
   Plus,
   Trash2,
   Edit3,
-  Eye,
   FileText,
   Heart,
   Stethoscope,
@@ -28,9 +27,7 @@ import {
   Activity,
   AlertCircle,
   CheckCircle,
-  Clock,
   FileImage,
-  Send,
   ArrowRight,
   X,
   ChevronDown,
@@ -968,13 +965,13 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
     if (!field?.enabled) return null;
 
     return (
-      <Card key={fieldId}>
+      <Card key={fieldId} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm">
         <CardHeader
-          className="pb-3 cursor-pointer hover:bg-gray-50 transition-colors"
+          className="pb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/70 transition-colors"
           onClick={() => toggleSection(fieldId)}
         >
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-gray-900 dark:text-gray-100">
               {renderFieldIcon(fieldId)}
               <span>{title}</span>
             </CardTitle>
@@ -984,7 +981,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
           </div>
         </CardHeader>
         {!collapsedSections[fieldId] && (
-          <CardContent>
+          <CardContent className="bg-white dark:bg-gray-900">
             {content}
           </CardContent>
         )}
@@ -1178,32 +1175,30 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
   // Show loading state while fetching field preferences
   if (shouldShowLoading) {
     return (
-      <div className="h-full flex flex-col bg-gray-50">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading field preferences...</p>
-          </div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center px-4 py-6 text-gray-900 dark:text-gray-100">
+        <div className="text-center space-y-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-gray-600 dark:text-gray-300 text-sm">Loading field preferences...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-3 py-4 sm:px-6 lg:px-8 gap-4">
         {/* Main Content */}
-        <div className="flex-1 overflow-y-auto p-2">
-          <div className="w-full space-y-4">
+        <div className="flex-1 overflow-visible">
+          <div className="w-full space-y-4 sm:space-y-5">
 
             {/* Vitals Section */}
             {renderCollapsibleSection(
               'vitals',
               'Vitals',
-              <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-4 space-y-3">
                 {isLoadingVitals && (
-                  <div className="text-xs text-muted-foreground">Loading vitals...</div>
+                  <div className="text-xs text-muted-foreground text-gray-600 dark:text-gray-300">Loading vitals...</div>
                 )}
                 {!isLoadingVitals && hasFetchedVitals && (
                   <div className="flex items-center gap-2 text-xs text-green-600">
@@ -1216,7 +1211,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                      <Label className="text-xs font-medium text-gray-600">Blood Pressure (BP)</Label>
+                      <Label className="text-xs font-medium text-gray-600 dark:text-gray-200">Blood Pressure (BP)</Label>
                     </div>
                     <Input
                       placeholder="120/80"
@@ -1225,7 +1220,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                         ...prev,
                         vitals: { ...prev.vitals, bloodPressure: e.target.value }
                       }))}
-                      className="h-8 text-sm border-gray-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-100 placeholder:text-gray-400 placeholder:opacity-70"
+                      className="h-8 text-sm border-gray-200 dark:border-gray-700 focus:border-blue-400 dark:focus:border-blue-300 focus:ring-1 focus:ring-blue-100 dark:focus:ring-blue-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
                     />
                   </div>
 
@@ -1233,7 +1228,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
-                      <Label className="text-xs font-medium text-gray-600">Temperature (°F/°C)</Label>
+                      <Label className="text-xs font-medium text-gray-600 dark:text-gray-200">Temperature (°F/°C)</Label>
                     </div>
                     <Input
                       placeholder="98.6°F"
@@ -1242,7 +1237,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                         ...prev,
                         vitals: { ...prev.vitals, temperature: e.target.value }
                       }))}
-                      className="h-8 text-sm border-gray-200 focus:border-red-400 focus:ring-1 focus:ring-red-100 placeholder:text-gray-400 placeholder:opacity-70"
+                      className="h-8 text-sm border-gray-200 dark:border-gray-700 focus:border-red-400 dark:focus:border-red-300 focus:ring-1 focus:ring-red-100 dark:focus:ring-red-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
                     />
                   </div>
 
@@ -1250,7 +1245,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                      <Label className="text-xs font-medium text-gray-600">Heart Rate (bpm)</Label>
+                      <Label className="text-xs font-medium text-gray-600 dark:text-gray-200">Heart Rate (bpm)</Label>
                     </div>
                     <Input
                       placeholder="72 bpm"
@@ -1259,7 +1254,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                         ...prev,
                         vitals: { ...prev.vitals, heartRate: e.target.value }
                       }))}
-                      className="h-8 text-sm border-gray-200 focus:border-green-400 focus:ring-1 focus:ring-green-100 placeholder:text-gray-400 placeholder:opacity-70"
+                      className="h-8 text-sm border-gray-200 dark:border-gray-700 focus:border-green-400 dark:focus:border-green-300 focus:ring-1 focus:ring-green-100 dark:focus:ring-green-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
                     />
                   </div>
 
@@ -1267,7 +1262,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
-                      <Label className="text-xs font-medium text-gray-600">Oxygen Saturation (SpO₂)</Label>
+                      <Label className="text-xs font-medium text-gray-600 dark:text-gray-200">Oxygen Saturation (SpO₂)</Label>
                     </div>
                     <Input
                       placeholder="98%"
@@ -1276,7 +1271,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                         ...prev,
                         vitals: { ...prev.vitals, oxygenSaturation: e.target.value }
                       }))}
-                      className="h-8 text-sm border-gray-200 focus:border-purple-400 focus:ring-1 focus:ring-purple-100 placeholder:text-gray-400 placeholder:opacity-70"
+                      className="h-8 text-sm border-gray-200 dark:border-gray-700 focus:border-purple-400 dark:focus:border-purple-300 focus:ring-1 focus:ring-purple-100 dark:focus:ring-purple-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
                     />
                   </div>
 
@@ -1284,7 +1279,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className="w-1.5 h-1.5 bg-gray-500 rounded-full"></div>
-                      <Label className="text-xs font-medium text-gray-600">Weight (kg)</Label>
+                      <Label className="text-xs font-medium text-gray-600 dark:text-gray-200">Weight (kg)</Label>
                     </div>
                     <Input
                       placeholder="70 kg"
@@ -1293,7 +1288,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                         ...prev,
                         vitals: { ...prev.vitals, weight: e.target.value }
                       }))}
-                      className="h-8 text-sm border-gray-200 focus:border-gray-400 focus:ring-1 focus:ring-gray-100 placeholder:text-gray-400 placeholder:opacity-70"
+                      className="h-8 text-sm border-gray-200 dark:border-gray-700 focus:border-gray-400 dark:focus:border-gray-500 focus:ring-1 focus:ring-gray-100 dark:focus:ring-gray-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
                     />
                   </div>
 
@@ -1301,7 +1296,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className="w-1.5 h-1.5 bg-gray-500 rounded-full"></div>
-                      <Label className="text-xs font-medium text-gray-600">Height (cm)</Label>
+                      <Label className="text-xs font-medium text-gray-600 dark:text-gray-200">Height (cm)</Label>
                     </div>
                     <Input
                       placeholder="170 cm"
@@ -1310,7 +1305,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                         ...prev,
                         vitals: { ...prev.vitals, height: e.target.value }
                       }))}
-                      className="h-8 text-sm border-gray-200 focus:border-gray-400 focus:ring-1 focus:ring-gray-100 placeholder:text-gray-400 placeholder:opacity-70"
+                      className="h-8 text-sm border-gray-200 dark:border-gray-700 focus:border-gray-400 dark:focus:border-gray-500 focus:ring-1 focus:ring-gray-100 dark:focus:ring-gray-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
                     />
                   </div>
 
@@ -1318,7 +1313,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                      <Label className="text-xs font-medium text-gray-600">BMI (kg/m²)</Label>
+                      <Label className="text-xs font-medium text-gray-600 dark:text-gray-200">BMI (kg/m²)</Label>
                     </div>
                     <Input
                       placeholder="24.2"
@@ -1327,9 +1322,9 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                         ...prev,
                         vitals: { ...prev.vitals, bmi: e.target.value }
                       }))}
-                      className="h-8 text-sm border-gray-200 focus:border-orange-400 focus:ring-1 focus:ring-orange-100 placeholder:text-gray-400 placeholder:opacity-70"
+                      className="h-8 text-sm border-gray-200 dark:border-gray-700 focus:border-orange-400 dark:focus:border-orange-300 focus:ring-1 focus:ring-orange-100 dark:focus:ring-orange-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
                     />
-                    <div className="text-[11px] mt-1 text-gray-600">
+                    <div className="text-[11px] mt-1 text-gray-600 dark:text-gray-300">
                       {(() => {
                         const bmiNum = Number(prescriptionData.vitals.bmi) || 0;
                         const indicator = getBmiIndicator(bmiNum);
@@ -1371,12 +1366,12 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                       {selectedChiefComplaints.map(item => (
                         <div
                           key={item}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 text-xs font-medium text-gray-700"
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 text-xs font-medium text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
                         >
                           <span>{item}</span>
                           <button
                             type="button"
-                            className="text-gray-500 hover:text-gray-800"
+                            className="text-gray-500 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100"
                             onClick={() => removeChiefComplaint(item)}
                             aria-label={`Remove ${item}`}
                           >
@@ -1434,10 +1429,10 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                     />
 
                     {chiefComplaintOpen && (
-                      <div className="absolute left-0 right-0 top-full z-10 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto p-3">
+                      <div className="absolute left-0 right-0 top-full z-10 mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-md shadow-lg max-h-60 overflow-y-auto p-3">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <div className="text-[11px] font-semibold text-gray-600 uppercase">Personal</div>
+                            <div className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 uppercase">Personal</div>
                             <div className="flex flex-col gap-1">
                               {chiefComplaintOptions.filter(item => item.category === 'personal').map((item, idx) => {
                                 const isActive = chiefComplaintActiveIndex === idx;
@@ -1445,7 +1440,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                                   <button
                                     key={item.id}
                                     type="button"
-                                    className={`flex items-center justify-between w-full rounded-md px-3 py-2 text-left text-sm border ${isActive ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
+                                    className={`flex items-center justify-between w-full rounded-md px-3 py-2 text-left text-sm border ${isActive ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/40' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-gray-600 dark:hover:bg-gray-800'}`}
                                     onMouseEnter={() => setChiefComplaintActiveIndex(idx)}
                                     onMouseDown={(e) => {
                                       e.preventDefault();
@@ -1457,12 +1452,12 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                                 );
                               })}
                               {chiefComplaintOptions.filter(item => item.category === 'personal').length === 0 && (
-                                <div className="text-xs text-gray-500 px-3 py-2">No personal results</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 px-3 py-2">No personal results</div>
                               )}
                             </div>
                           </div>
                           <div className="space-y-2">
-                            <div className="text-[11px] font-semibold text-gray-600 uppercase">General</div>
+                            <div className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 uppercase">General</div>
                             <div className="flex flex-col gap-1">
                               {(() => {
                                 const personalCount = chiefComplaintOptions.filter(item => item.category === 'personal').length;
@@ -1475,7 +1470,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                                       <button
                                         key={item.id}
                                         type="button"
-                                        className={`flex items-center justify-between w-full rounded-md px-3 py-2 text-left text-sm border ${isActive ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
+                                        className={`flex items-center justify-between w-full rounded-md px-3 py-2 text-left text-sm border ${isActive ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/40' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-gray-600 dark:hover:bg-gray-800'}`}
                                         onMouseEnter={() => setChiefComplaintActiveIndex(globalIdx)}
                                         onMouseDown={(e) => {
                                           e.preventDefault();
@@ -1488,7 +1483,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                                   });
                               })()}
                               {chiefComplaintOptions.filter(item => item.category === 'general').length === 0 && (
-                                <div className="text-xs text-gray-500 px-3 py-2">No general results</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 px-3 py-2">No general results</div>
                               )}
                             </div>
                           </div>
@@ -1498,7 +1493,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <div className="text-xs font-semibold text-gray-600">Quick picks</div>
+                  <div className="text-xs font-semibold text-gray-600 dark:text-gray-300">Quick picks</div>
                   <div className="space-y-2">
                     <div className="flex flex-wrap gap-2">
                       {chiefComplaintOptions
@@ -2604,8 +2599,8 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                   const meds = prescriptionData.medications;
                   const canAdd = meds.length === 0 || isMedicationValid(meds[meds.length - 1]);
                   return (
-                    <div className="flex items-center justify-between border border-gray-200 rounded-lg bg-white px-3 py-2">
-                      <div className="text-sm font-semibold text-gray-700">Medications ({meds.length})</div>
+                    <div className="flex items-center justify-between border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 px-3 py-2">
+                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">Medications ({meds.length})</div>
                       <Button
                         variant="outline"
                         size="sm"
@@ -2621,9 +2616,9 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                 })()}
 
                 {prescriptionData.medications.length === 0 && (
-                  <div className="border border-dashed border-gray-300 rounded-lg bg-white px-4 py-6 text-center space-y-3">
-                    <div className="text-sm text-gray-700 font-medium">No medications yet</div>
-                    <div className="text-xs text-gray-500">Add the first medication to start building the plan.</div>
+                  <div className="border border-dashed border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 px-4 py-6 text-center space-y-3">
+                    <div className="text-sm text-gray-700 dark:text-gray-200 font-medium">No medications yet</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Add the first medication to start building the plan.</div>
                     <div className="flex justify-center">
                       <Button
                         size="sm"
@@ -2647,14 +2642,14 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                     return (
                       <div
                         key={medication.id}
-                        className={`border border-gray-200 rounded-lg bg-white p-3 space-y-3 ${isActive ? 'ring-1 ring-blue-200' : ''}`}
+                        className={`border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 p-3 space-y-3 ${isActive ? 'ring-1 ring-blue-200 dark:ring-blue-800/60' : ''}`}
                         onClick={() => setActiveMedicationId(medication.id)}
                       >
-                        <div className="flex items-center justify-between text-xs text-gray-600">
+                        <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300">
                           <span className="font-semibold">Medication {index + 1}</span>
                           <div className="flex items-center gap-2">
-                            {missingRequired && <span className="px-2 py-1 rounded-full bg-red-50 text-red-700 text-[11px] font-semibold">Missing required</span>}
-                            {isActive && <span className="text-blue-600 font-medium">Active</span>}
+                            {missingRequired && <span className="px-2 py-1 rounded-full bg-red-50 dark:bg-red-900/40 text-red-700 dark:text-red-200 text-[11px] font-semibold">Missing required</span>}
+                            {isActive && <span className="text-blue-600 dark:text-blue-300 font-medium">Active</span>}
                           </div>
                         </div>
 
