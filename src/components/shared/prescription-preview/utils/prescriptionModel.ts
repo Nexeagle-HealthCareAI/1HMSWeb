@@ -12,6 +12,10 @@ export interface PrescriptionPatient {
   phone: string;
   address?: string;
   contact?: string;
+  cityId: string;
+  state?: string;
+  country?: string;
+  pincode?: string;
 }
 
 export interface PrescriptionVitals {

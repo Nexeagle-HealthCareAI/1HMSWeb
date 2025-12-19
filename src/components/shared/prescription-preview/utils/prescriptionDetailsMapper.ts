@@ -55,6 +55,17 @@ const formatMetric = (value?: number | null, suffix = '', fractionDigits = 0) =>
   return `${formatted}${suffix}`;
 };
 
+const buildAddressLine = (rawAddress?: string | null, cityId?: string | null, state?: string | null, country?: string | null, pincode?: string | number | null) => {
+  const parts = [
+    rawAddress?.trim(),
+    cityId?.trim(),
+    state?.trim(),
+    country?.trim(),
+    typeof pincode === 'number' || (typeof pincode === 'string' && pincode.trim().length > 0) ? String(pincode).trim() : undefined,
+  ].filter(Boolean) as string[];
+  return parts.join(', ');
+};
+
 export const mapTemplateToPreviewConfig = (template?: PrescriptionTemplateDescriptor | null) => {
   const margins = {
     top: ensurePositiveNumber(template?.headerHeight, DEFAULT_PREVIEW_LAYOUT.margins.top),
@@ -112,7 +123,7 @@ export const buildPrescriptionDataFromResponse = (
     age: typeof firstPatient?.age === 'number' ? String(firstPatient.age) : '',
     gender: firstPatient?.sex ?? '',
     phone: firstPatient?.contact ?? '',
-    address: firstPatient?.address ?? '',
+    address: buildAddressLine(firstPatient?.address, firstPatient?.city, firstPatient?.state, firstPatient?.country, firstPatient?.pincode),
     contact: firstPatient?.contact ?? '',
     // Optionally add details if needed
   };

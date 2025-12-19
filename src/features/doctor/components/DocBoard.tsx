@@ -767,6 +767,8 @@ export const ClinicalDashboard: React.FC = () => {
     [uiScale]
   );
 
+  const isMobile = windowWidth < 768;
+
   return (
     <div
       className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col"
@@ -1155,7 +1157,7 @@ export const ClinicalDashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex-1 w-full lg:pl-4 xl:pl-6">
+              <div className="flex-1 w-full min-w-0 lg:pl-4 xl:pl-6">
                 {activeAppointmentTab && (
                   <div className="mb-3">
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{activeAppointmentTab.label}</h2>
@@ -1343,163 +1345,283 @@ export const ClinicalDashboard: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Table */}
-                <div className="rounded-3xl border border-gray-100/80 dark:border-gray-800/70 bg-white/95 dark:bg-gray-950/60 shadow-[0_30px_80px_-45px_rgba(37,99,235,0.65)] dark:shadow-[0_20px_70px_-40px_rgba(0,0,0,0.8)] backdrop-blur">
-                  <div className="overflow-x-auto rounded-3xl">
-                    <Table className="min-w-full text-sm">
-                      <TableHeader>
-                        <TableRow className="bg-gradient-to-r from-blue-50/80 via-indigo-50/80 to-purple-50/80 dark:from-gray-800 dark:via-gray-800 dark:to-gray-900">
-                          <TableHead className="text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
-                            {t('docBoard.table.patient')}
-                          </TableHead>
-                          <TableHead className="hidden xl:table-cell text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
-                            {t('docBoard.table.patientName')}
-                          </TableHead>
-                          <TableHead className="text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
-                            {t('docBoard.table.token')}
-                          </TableHead>
-                          <TableHead className="hidden md:table-cell text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
-                            {t('docBoard.table.appointmentTime')}
-                          </TableHead>
-                          <TableHead className="text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
-                            {t('docBoard.table.status')}
-                          </TableHead>
-                          <TableHead className="text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
-                            {t('docBoard.table.labReports', { defaultValue: 'Lab reports' })}
-                          </TableHead>
-                          <TableHead className="text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
-                            {t('docBoard.table.addBill', { defaultValue: 'Add Bill' })}
-                          </TableHead>
-                          <TableHead className="hidden lg:table-cell text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
-                            {t('docBoard.table.case')}
-                          </TableHead>
-                          <TableHead className="text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
-                            {t('docBoard.table.actions')}
-                          </TableHead>
-                          <TableHead className="hidden lg:table-cell text-[11px] font-semibold tracking-[0.2em] text-gray-600 dark:text-gray-300 uppercase py-4 px-4">
-                            {t('docBoard.table.printRx')}
-                          </TableHead>
-                          {/* Print Token column removed */}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {currentAppointments.length > 0 ? (
-                          currentAppointments.map((appointment) => (
-                            <TableRow
-                              key={appointment.appointmentId}
-                              className="group border-b border-gray-100/80 dark:border-gray-800/70 last:border-b-0 hover:bg-blue-50/50 dark:hover:bg-gray-800/50 transition-all duration-200"
+                {isMobile ? (
+                  <div className="space-y-3">
+                    {currentAppointments.length > 0 ? (
+                      currentAppointments.map((appointment) => (
+                        <div
+                          key={appointment.appointmentId}
+                          className="rounded-2xl border border-gray-200/80 dark:border-gray-800/70 bg-white dark:bg-gray-950 p-3 shadow-sm"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1 min-w-0">
+                              <button
+                                onClick={() => handlePatientIdClick(appointment)}
+                                className="text-sm font-semibold text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-200 inline-flex items-center gap-1 transition-colors"
+                              >
+                                {appointment.patientId}
+                                <ExternalLink className="h-3 w-3" />
+                              </button>
+                              <p className="text-sm text-gray-900 dark:text-white truncate">{appointment.patientFullName}</p>
+                              {appointment.phone && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{appointment.phone}</p>
+                              )}
+                            </div>
+                            <div className="flex flex-col items-end gap-1 text-right">
+                              {getStatusBadge(appointment.finalStatusCode)}
+                              <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                                {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
+                              </div>
+                              <div className="text-[11px] text-gray-400 dark:text-gray-500">
+                                {format(new Date(appointment.startAt), 'EEE, MMM dd')}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-100 px-3 py-1 text-xs font-semibold">
+                              <span className="text-[11px] uppercase tracking-wide">{t('docBoard.table.tokenLabel')}</span>
+                              <span>#{appointment.tokenDetails?.tokenNumber || t('docBoard.table.notAvailable')}</span>
+                            </div>
+                            <Badge variant="outline" className="text-[11px] bg-blue-50 text-blue-700 border-blue-200">
+                              {t('docBoard.table.newCase')}
+                            </Badge>
+                          </div>
+
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {['LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(String(appointment.finalStatusCode || '').toUpperCase()) && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenLabAttachments(appointment)}
+                                className="h-8 px-3 text-xs font-semibold text-blue-600 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                              >
+                                <Upload className="h-3 w-3 mr-1" />
+                                {t('docBoard.table.addLabReport', { defaultValue: 'Lab report' })}
+                              </Button>
+                            )}
+
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleAddBillClick(appointment)}
+                              className="h-8 px-3 text-xs font-semibold text-indigo-600 border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
                             >
-                              <TableCell className="py-4 px-4 align-top">
-                                <button
-                                  onClick={() => handlePatientIdClick(appointment)}
-                                  className="text-sm font-semibold text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-200 inline-flex items-center gap-1 transition-colors"
+                              <FileText className="h-3 w-3 mr-1" />
+                              {t('docBoard.table.addBill', { defaultValue: 'Add Bill' })}
+                            </Button>
+
+                            {!['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(
+                              appointment.finalStatusCode
+                            ) && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 px-3 text-xs font-semibold text-red-600 border-red-200 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
+                                onClick={() => handleCancelClick(appointment)}
+                              >
+                                <X className="h-3 w-3 mr-1" />
+                                {t('common.cancel')}
+                              </Button>
+                            )}
+
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-3 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                              disabled={!hospitalId || !doctorId}
+                              onClick={() => openPrescriptionPreview(appointment)}
+                            >
+                              <FileText className="h-3 w-3 mr-1" />
+                              {t('common.print')}
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/40 p-6 text-center text-gray-500 dark:text-gray-400">
+                        {t('docBoard.empty.current')}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100/80 dark:border-gray-800/70 shadow-[0_30px_80px_-45px_rgba(37,99,235,0.65)] dark:shadow-[0_20px_70px_-40px_rgba(0,0,0,0.8)] overflow-hidden">
+                      <div className="px-3 sm:px-4 py-2.5 border-b border-gray-200/80 dark:border-gray-800/70 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                          <p className="text-xs text-gray-600 dark:text-gray-400">
+                            {totalPages > 1
+                              ? `${t('common.page', { defaultValue: 'Page' })} ${currentPage} ${t('common.of', { defaultValue: 'of' })} ${totalPages}`
+                              : t('docBoard.table.summary', {
+                                  count: filteredAppointments.length,
+                                  defaultValue: `${filteredAppointments.length} records`
+                                })}
+                          </p>
+                          {totalPages > 1 && (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs px-2 py-1 border-blue-200">
+                              {currentPage}/{totalPages}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="overflow-x-auto w-full">
+                        <Table className="border-collapse min-w-[960px] md:min-w-full text-sm">
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 dark:bg-gray-900/60">
+                              <TableHead className="font-semibold text-gray-900 dark:text-gray-200 text-xs md:text-sm py-3 px-3">
+                                {t('docBoard.table.patient')}
+                              </TableHead>
+                              <TableHead className="hidden xl:table-cell font-semibold text-gray-900 dark:text-gray-200 text-xs md:text-sm py-3 px-3">
+                                {t('docBoard.table.patientName')}
+                              </TableHead>
+                              <TableHead className="font-semibold text-gray-900 dark:text-gray-200 text-xs md:text-sm py-3 px-3">
+                                {t('docBoard.table.token')}
+                              </TableHead>
+                              <TableHead className="hidden md:table-cell font-semibold text-gray-900 dark:text-gray-200 text-xs md:text-sm py-3 px-3">
+                                {t('docBoard.table.appointmentTime')}
+                              </TableHead>
+                              <TableHead className="font-semibold text-gray-900 dark:text-gray-200 text-xs md:text-sm py-3 px-3">
+                                {t('docBoard.table.status')}
+                              </TableHead>
+                              <TableHead className="font-semibold text-gray-900 dark:text-gray-200 text-xs md:text-sm py-3 px-3">
+                                {t('docBoard.table.labReports', { defaultValue: 'Lab reports' })}
+                              </TableHead>
+                              <TableHead className="font-semibold text-gray-900 dark:text-gray-200 text-xs md:text-sm py-3 px-3">
+                                {t('docBoard.table.addBill', { defaultValue: 'Add Bill' })}
+                              </TableHead>
+                              <TableHead className="hidden lg:table-cell font-semibold text-gray-900 dark:text-gray-200 text-xs md:text-sm py-3 px-3">
+                                {t('docBoard.table.case')}
+                              </TableHead>
+                              <TableHead className="font-semibold text-gray-900 dark:text-gray-200 text-xs md:text-sm py-3 px-3">
+                                {t('docBoard.table.actions')}
+                              </TableHead>
+                              <TableHead className="hidden lg:table-cell font-semibold text-gray-900 dark:text-gray-200 text-xs md:text-sm py-3 px-3">
+                                {t('docBoard.table.printRx')}
+                              </TableHead>
+                              {/* Print Token column removed */}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {currentAppointments.length > 0 ? (
+                              currentAppointments.map((appointment) => (
+                                <TableRow
+                                  key={appointment.appointmentId}
+                                  className="group border-b border-gray-100/80 dark:border-gray-800/70 last:border-b-0 hover:bg-blue-50/50 dark:hover:bg-gray-800/50 transition-all duration-200"
                                 >
-                                  {appointment.patientId}
-                                  <ExternalLink className="h-3 w-3" />
-                                </button>
-                              </TableCell>
-                              <TableCell className="hidden xl:table-cell py-4 px-4 text-sm text-gray-600 dark:text-gray-300">
-                                <div className="flex flex-col">
-                                  <span>{appointment.patientFullName}</span>
-                                  {appointment.phone && (
-                                    <span className="text-xs text-gray-400 dark:text-gray-500">{appointment.phone}</span>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell className="py-4 px-4">
-                                <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-100 px-3 py-1 text-xs font-semibold">
-                                  <span className="text-[11px] uppercase tracking-wide">{t('docBoard.table.tokenLabel')}</span>
-                                  <span>#{appointment.tokenDetails?.tokenNumber || t('docBoard.table.notAvailable')}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell className="hidden md:table-cell py-4 px-4">
-                                <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                                  {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
-                                </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                  {format(new Date(appointment.startAt), 'EEE, MMM dd')}
-                                </div>
-                              </TableCell>
-                              <TableCell className="py-4 px-4 align-middle">
-                                {getStatusBadge(appointment.finalStatusCode)}
-                              </TableCell>
-                              <TableCell className="py-4 px-4 align-middle">
-                                {['LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(
-                                  String(appointment.finalStatusCode || '').toUpperCase()
-                                ) ? (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleOpenLabAttachments(appointment)}
-                                    className="h-8 px-3 text-xs font-semibold text-blue-600 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/30"
-                                  >
-                                    <Upload className="h-3 w-3 mr-1" />
-                                    {t('docBoard.table.addLabReport', { defaultValue: 'Add lab report' })}
-                                  </Button>
-                                ) : (
-                                  <span className="text-[11px] text-gray-400 dark:text-gray-500">—</span>
-                                )}
-                              </TableCell>
-                              <TableCell className="py-4 px-4">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleAddBillClick(appointment)}
-                                  className="h-8 px-3 text-xs font-semibold text-indigo-600 border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
-                                >
-                                  <FileText className="h-3 w-3 mr-1" />
-                                  {t('docBoard.table.addBill', { defaultValue: 'Add Bill' })}
-                                </Button>
-                              </TableCell>
-                              <TableCell className="hidden lg:table-cell py-4 px-4">
-                                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                                  {t('docBoard.table.newCase')}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="py-4 px-4">
-                                <div className="flex flex-wrap gap-2">
-                                  {!['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(
-                                    appointment.finalStatusCode
-                                  ) && (
+                                  <TableCell className="py-4 px-3 align-top">
+                                    <button
+                                      onClick={() => handlePatientIdClick(appointment)}
+                                      className="text-sm font-semibold text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-200 inline-flex items-center gap-1 transition-colors"
+                                    >
+                                      {appointment.patientId}
+                                      <ExternalLink className="h-3 w-3" />
+                                    </button>
+                                  </TableCell>
+                                  <TableCell className="hidden xl:table-cell py-4 px-3 text-sm text-gray-600 dark:text-gray-300">
+                                    <div className="flex flex-col">
+                                      <span>{appointment.patientFullName}</span>
+                                      {appointment.phone && (
+                                        <span className="text-xs text-gray-400 dark:text-gray-500">{appointment.phone}</span>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-4 px-3">
+                                    <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-100 px-3 py-1 text-xs font-semibold">
+                                      <span className="text-[11px] uppercase tracking-wide">{t('docBoard.table.tokenLabel')}</span>
+                                      <span>#{appointment.tokenDetails?.tokenNumber || t('docBoard.table.notAvailable')}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="hidden md:table-cell py-4 px-3">
+                                    <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                                      {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
+                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                      {format(new Date(appointment.startAt), 'EEE, MMM dd')}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-4 px-3 align-middle">
+                                    {getStatusBadge(appointment.finalStatusCode)}
+                                  </TableCell>
+                                  <TableCell className="py-4 px-3 align-middle">
+                                    {['LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(
+                                      String(appointment.finalStatusCode || '').toUpperCase()
+                                    ) ? (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleOpenLabAttachments(appointment)}
+                                        className="h-8 px-3 text-xs font-semibold text-blue-600 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                                      >
+                                        <Upload className="h-3 w-3 mr-1" />
+                                        {t('docBoard.table.addLabReport', { defaultValue: 'Add lab report' })}
+                                      </Button>
+                                    ) : (
+                                      <span className="text-[11px] text-gray-400 dark:text-gray-500">—</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="py-4 px-3">
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="h-8 px-3 text-xs font-semibold text-red-600 border-red-200 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
-                                      onClick={() => handleCancelClick(appointment)}
+                                      onClick={() => handleAddBillClick(appointment)}
+                                      className="h-8 px-3 text-xs font-semibold text-indigo-600 border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
                                     >
-                                      <X className="h-3 w-3 mr-1" />
-                                      {t('common.cancel')}
+                                      <FileText className="h-3 w-3 mr-1" />
+                                      {t('docBoard.table.addBill', { defaultValue: 'Add Bill' })}
                                     </Button>
-                                  )}
-                                  {/* Vitals button removed */}
-                                </div>
-                              </TableCell>
-                              <TableCell className="hidden lg:table-cell py-4 px-4">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 px-3 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
-                                  disabled={!hospitalId || !doctorId}
-                                  onClick={() => openPrescriptionPreview(appointment)}
-                                >
-                                  <FileText className="h-3 w-3 mr-1" />
-                                  {t('common.print')}
-                                </Button>
-                              </TableCell>
-                              {/* Print Token cell removed */}
-                            </TableRow>
-                          ))
-                        ) : (
-                          <TableRow>
-                            <TableCell colSpan={10} className="text-center py-10 text-gray-500 dark:text-gray-400">
-                              {t('docBoard.empty.current')}
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
+                                  </TableCell>
+                                  <TableCell className="hidden lg:table-cell py-4 px-3">
+                                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                      {t('docBoard.table.newCase')}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="py-4 px-3">
+                                    <div className="flex flex-wrap gap-2">
+                                      {!['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(
+                                        appointment.finalStatusCode
+                                      ) && (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-8 px-3 text-xs font-semibold text-red-600 border-red-200 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
+                                          onClick={() => handleCancelClick(appointment)}
+                                        >
+                                          <X className="h-3 w-3 mr-1" />
+                                          {t('common.cancel')}
+                                        </Button>
+                                      )}
+                                      {/* Vitals button removed */}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="hidden lg:table-cell py-4 px-3">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8 px-3 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                                      disabled={!hospitalId || !doctorId}
+                                      onClick={() => openPrescriptionPreview(appointment)}
+                                    >
+                                      <FileText className="h-3 w-3 mr-1" />
+                                      {t('common.print')}
+                                    </Button>
+                                  </TableCell>
+                                  {/* Print Token cell removed */}
+                                </TableRow>
+                              ))
+                            ) : (
+                              <TableRow>
+                                <TableCell colSpan={10} className="text-center py-10 text-gray-500 dark:text-gray-400">
+                                  {t('docBoard.empty.current')}
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Past - Mobile Responsive */}
                 </TabsContent>
@@ -1550,7 +1672,7 @@ export const ClinicalDashboard: React.FC = () => {
                   </div>
 
                   <div className="rounded-3xl border border-gray-100/80 dark:border-gray-800/70 bg-white/95 dark:bg-gray-950/60 shadow-[0_25px_70px_-40px_rgba(15,23,42,0.9)] backdrop-blur">
-                    <div className="overflow-x-auto rounded-3xl">
+                    <div className="overflow-x-auto rounded-3xl w-full">
                       <Table className="border-collapse">
                         <TableHeader>
                           <TableRow className="bg-gray-50 dark:bg-gray-800/80">
@@ -1732,7 +1854,7 @@ export const ClinicalDashboard: React.FC = () => {
                   </div>
 
                   <div className="rounded-3xl border border-gray-100/80 dark:border-gray-800/70 bg-white/95 dark:bg-gray-950/60 shadow-[0_25px_70px_-40px_rgba(16,185,129,0.8)] backdrop-blur">
-                    <div className="overflow-x-auto rounded-3xl">
+                    <div className="overflow-x-auto rounded-3xl w-full">
                       <Table className="border-collapse">
                         <TableHeader>
                           <TableRow className="bg-gray-50 dark:bg-gray-800/80">

@@ -10,28 +10,23 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  Settings,
-  Printer,
-  Download,
-  Plus,
-  Trash2,
-  Edit3,
-  FileText,
-  Heart,
-  Stethoscope,
-  Pill,
-  Calendar,
-  Shield,
-  ClipboardList,
-  User,
   Activity,
   AlertCircle,
+  Calendar,
   CheckCircle,
-  FileImage,
-  ArrowRight,
-  X,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  ClipboardList,
+  Edit3,
+  FileImage,
+  FileText,
+  Heart,
+  Pill,
+  Plus,
+  Shield,
+  Stethoscope,
+  Trash2,
+  User
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { vitalsApi, PatientVitalsResponse } from '../services/vitalsApi';
@@ -552,6 +547,9 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
   const [chiefComplaintOpen, setChiefComplaintOpen] = useState(false);
   const [chiefComplaintQuery, setChiefComplaintQuery] = useState('');
   const [chiefComplaintActiveIndex, setChiefComplaintActiveIndex] = useState(0);
+  const [chiefComplaintDurationValue, setChiefComplaintDurationValue] = useState('');
+  const [chiefComplaintDurationUnit, setChiefComplaintDurationUnit] = useState<'day' | 'week' | 'month'>('day');
+  const [pendingChiefComplaintLabel, setPendingChiefComplaintLabel] = useState<string | null>(null);
   const chiefComplaintInputRef = useRef<HTMLInputElement | null>(null);
   const chiefComplaintRootRef = useRef<HTMLDivElement | null>(null);
 
@@ -649,23 +647,6 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
     }));
   };
 
-  const handleSaveChiefComplaint = () => {
-    const value = prescriptionData.chiefComplaint.trim();
-    if (!value) {
-      toast({
-        title: 'Nothing to save',
-        description: 'Please select or type a chief complaint first.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    toast({
-      title: 'Chief complaint saved',
-      description: 'You can continue filling the prescription.',
-    });
-  };
-
   const addExaminationItem = (label: string) => {
     const trimmed = label.trim();
     if (!trimmed) return;
@@ -692,23 +673,6 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
       const next = prev.filter(item => item !== label);
       setPrescriptionData(p => ({ ...p, examination: next.join('; ') }));
       return next;
-    });
-  };
-
-  const handleSaveExamination = () => {
-    const value = prescriptionData.examination.trim();
-    if (!value) {
-      toast({
-        title: 'Nothing to save',
-        description: 'Please select or type examination items first.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    toast({
-      title: 'Examination saved',
-      description: 'Examination captured for this visit.',
     });
   };
 
@@ -741,23 +705,6 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
     });
   };
 
-  const handleSaveDiagnosis = () => {
-    const value = prescriptionData.diagnosis.trim();
-    if (!value) {
-      toast({
-        title: 'Nothing to save',
-        description: 'Please select or type diagnosis items first.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    toast({
-      title: 'Diagnosis saved',
-      description: 'Diagnosis captured for this visit.',
-    });
-  };
-
   const addComorbidityItem = (label: string) => {
     const trimmed = label.trim();
     if (!trimmed) return;
@@ -784,23 +731,6 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
       const next = prev.filter(item => item !== label);
       setPrescriptionData(p => ({ ...p, comorbidity: next.join('; ') }));
       return next;
-    });
-  };
-
-  const handleSaveComorbidity = () => {
-    const value = prescriptionData.comorbidity.trim();
-    if (!value) {
-      toast({
-        title: 'Nothing to save',
-        description: 'Please select or type comorbidity items first.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    toast({
-      title: 'Comorbidity saved',
-      description: 'Comorbidity captured for this visit.',
     });
   };
 
@@ -833,23 +763,6 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
     });
   };
 
-  const handleSaveHistory = () => {
-    const value = prescriptionData.history.trim();
-    if (!value) {
-      toast({
-        title: 'Nothing to save',
-        description: 'Please select or type history items first.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    toast({
-      title: 'History saved',
-      description: 'History captured for this visit.',
-    });
-  };
-
   const addChiefComplaint = (label: string) => {
     const trimmed = label.trim();
     if (!trimmed) return;
@@ -862,13 +775,46 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
     });
   };
 
+  const updateChiefComplaintLabel = (original: string, nextLabel: string) => {
+    setSelectedChiefComplaints(prev => {
+      const updated = prev.map(item => (item === original ? nextLabel : item));
+      setPrescriptionData(p => ({ ...p, chiefComplaint: updated.join('; ') }));
+      return updated;
+    });
+  };
+
+  const formatChiefComplaintLabel = (label: string) => {
+    const trimmed = label.trim();
+    const duration = chiefComplaintDurationValue.trim();
+    if (!duration) return trimmed;
+
+    const pluralUnit = duration === '1' ? chiefComplaintDurationUnit : `${chiefComplaintDurationUnit}s`;
+    return `${trimmed} since ${duration} ${pluralUnit}`;
+  };
+
+  const applyPendingChiefComplaintWithDuration = () => {
+    if (!pendingChiefComplaintLabel) return;
+    const duration = chiefComplaintDurationValue.trim();
+    if (!duration) return;
+
+    const formatted = formatChiefComplaintLabel(pendingChiefComplaintLabel);
+    updateChiefComplaintLabel(pendingChiefComplaintLabel, formatted);
+    setPendingChiefComplaintLabel(null);
+    setChiefComplaintDurationValue('');
+  };
+
+  const skipPendingChiefComplaint = () => {
+    setPendingChiefComplaintLabel(null);
+    setChiefComplaintDurationValue('');
+  };
+
   const commitChiefComplaintSelection = (label: string) => {
     addChiefComplaint(label);
     setChiefComplaintQuery('');
     setChiefComplaintOptions(chiefComplaintMock);
     setChiefComplaintActiveIndex(0);
     setChiefComplaintOpen(false);
-    chiefComplaintInputRef.current?.focus();
+    setPendingChiefComplaintLabel(label.trim());
   };
 
   const removeChiefComplaint = (label: string) => {
@@ -1094,23 +1040,6 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
     });
   };
 
-  const handleSaveInvestigations = () => {
-    const hasValue = prescriptionData.orders.investigations.some(item => item.trim());
-    if (!hasValue) {
-      toast({
-        title: 'Nothing to save',
-        description: 'Please select or type investigation items first.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    toast({
-      title: 'Investigations saved',
-      description: 'Investigations captured for this visit.',
-    });
-  };
-
   const addProcedureItem = (label: string) => {
     const trimmed = label.trim();
     if (!trimmed) return;
@@ -1149,23 +1078,6 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
         }
       }));
       return next;
-    });
-  };
-
-  const handleSaveProcedures = () => {
-    const hasValue = prescriptionData.orders.procedures.some(item => item.trim());
-    if (!hasValue) {
-      toast({
-        title: 'Nothing to save',
-        description: 'Please select or type procedure items first.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    toast({
-      title: 'Procedures saved',
-      description: 'Procedures captured for this visit.',
     });
   };
 
@@ -1382,6 +1294,45 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                     </div>
                   )}
 
+                  {pendingChiefComplaintLabel && (
+                    <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-gray-700 dark:text-gray-200">
+                      <span className="font-medium">Add duration for "{pendingChiefComplaintLabel}"</span>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={chiefComplaintDurationValue}
+                        onChange={(e) => setChiefComplaintDurationValue(e.target.value)}
+                        className="h-8 w-20 text-xs border-gray-200 dark:border-gray-700 focus:border-blue-400 dark:focus:border-blue-300 focus:ring-1 focus:ring-blue-100 dark:focus:ring-blue-900/40 dark:bg-gray-900 dark:text-gray-100"
+                        placeholder="3"
+                      />
+                      <select
+                        value={chiefComplaintDurationUnit}
+                        onChange={(e) => setChiefComplaintDurationUnit(e.target.value as 'day' | 'week' | 'month')}
+                        className="h-8 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 text-xs text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800"
+                      >
+                        <option value="day">day</option>
+                        <option value="week">week</option>
+                        <option value="month">month</option>
+                      </select>
+                      <Button
+                        size="sm"
+                        className="h-7 px-2 text-[11px]"
+                        onClick={applyPendingChiefComplaintWithDuration}
+                        disabled={!chiefComplaintDurationValue.trim()}
+                      >
+                        Apply
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-[11px]"
+                        onClick={skipPendingChiefComplaint}
+                      >
+                        Skip
+                      </Button>
+                    </div>
+                  )}
+
                   <div className="relative">
                     <Input
                       ref={chiefComplaintInputRef}
@@ -1506,7 +1457,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                               variant={isSelected ? 'default' : 'outline'}
                               size="sm"
                               className="justify-start h-auto min-h-8 text-xs md:text-sm rounded-full px-3 py-2"
-                              onClick={() => addChiefComplaint(item.label)}
+                              onClick={() => commitChiefComplaintSelection(item.label)}
                             >
                               {item.label}
                             </Button>
@@ -1514,15 +1465,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                         })}
                     </div>
                   </div>
-                  <div className="flex justify-end">
-                    <Button
-                      size="sm"
-                      className="h-8 px-3"
-                      onClick={handleSaveChiefComplaint}
-                    >
-                      Save chief complaint
-                    </Button>
-                  </div>
+                  {/* Save chief complaint button removed */}
                 </div>
               </div>
             )}
@@ -1691,15 +1634,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                   </div>
                 </div>
 
-                <div className="flex justify-end">
-                  <Button
-                    size="sm"
-                    className="h-8 px-3"
-                    onClick={handleSaveHistory}
-                  >
-                    Save history
-                  </Button>
-                </div>
+                {/* Save history button removed */}
               </div>
             )}
 
@@ -1867,15 +1802,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                   </div>
                 </div>
 
-                <div className="flex justify-end">
-                  <Button
-                    size="sm"
-                    className="h-8 px-3"
-                    onClick={handleSaveComorbidity}
-                  >
-                    Save comorbidity
-                  </Button>
-                </div>
+                {/* Save comorbidity button removed */}
               </div>
             )}
 
@@ -2043,15 +1970,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                   </div>
                 </div>
 
-                <div className="flex justify-end">
-                  <Button
-                    size="sm"
-                    className="h-8 px-3"
-                    onClick={handleSaveExamination}
-                  >
-                    Save examination
-                  </Button>
-                </div>
+                {/* Save examination button removed */}
               </div>
             )}
 
@@ -2219,15 +2138,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                   </div>
                 </div>
 
-                <div className="flex justify-end">
-                  <Button
-                    size="sm"
-                    className="h-8 px-3"
-                    onClick={handleSaveDiagnosis}
-                  >
-                    Save diagnosis
-                  </Button>
-                </div>
+                {/* Save diagnosis button removed */}
               </div>
             )}
 
@@ -2401,15 +2312,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                     </div>
                   </div>
 
-                  <div className="flex justify-end">
-                    <Button
-                      size="sm"
-                      className="h-8 px-3"
-                      onClick={handleSaveInvestigations}
-                    >
-                      Save investigations
-                    </Button>
-                  </div>
+                  {/* Save investigations button removed */}
                 </div>
 
                 {/* Procedures */}
@@ -2577,15 +2480,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                     </div>
                   </div>
 
-                  <div className="flex justify-end">
-                    <Button
-                      size="sm"
-                      className="h-8 px-3"
-                      onClick={handleSaveProcedures}
-                    >
-                      Save procedures
-                    </Button>
-                  </div>
+                  {/* Save procedures button removed */}
                 </div>
               </div>
             )}
@@ -2638,19 +2533,41 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                     const doseMissing = !medication.dosage.trim();
                     const isActive = activeMedicationId === medication.id || (!activeMedicationId && index === prescriptionData.medications.length - 1);
                     const missingRequired = nameMissing || doseMissing;
+                    const summaryParts = [medication.name, medication.dosage, medication.route, medication.frequency]
+                      .filter(Boolean)
+                      .join(' · ');
+                    const quickFrequencies = ['OD', 'BD', 'TDS', 'HS'];
+                    const quickInstructions = ['After food', 'Before food', 'With water', 'At bedtime'];
 
                     return (
                       <div
                         key={medication.id}
-                        className={`border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 p-3 space-y-3 ${isActive ? 'ring-1 ring-blue-200 dark:ring-blue-800/60' : ''}`}
+                        className={`rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3 shadow-sm ${
+                          isActive ? 'ring-2 ring-blue-200 dark:ring-blue-800/60 shadow-md' : ''
+                        }`}
                         onClick={() => setActiveMedicationId(medication.id)}
                       >
-                        <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300">
-                          <span className="font-semibold">Medication {index + 1}</span>
-                          <div className="flex items-center gap-2">
-                            {missingRequired && <span className="px-2 py-1 rounded-full bg-red-50 dark:bg-red-900/40 text-red-700 dark:text-red-200 text-[11px] font-semibold">Missing required</span>}
-                            {isActive && <span className="text-blue-600 dark:text-blue-300 font-medium">Active</span>}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300">
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex h-6 min-w-[32px] items-center justify-center rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-200 px-2 font-semibold">
+                                #{index + 1}
+                              </span>
+                              <span className="font-semibold">Medication</span>
+                              {isActive && <span className="text-blue-600 dark:text-blue-300 font-medium">Active</span>}
+                              {missingRequired && (
+                                <span className="px-2 py-1 rounded-full bg-red-50 dark:bg-red-900/40 text-red-700 dark:text-red-200 text-[11px] font-semibold">
+                                  Name + dose required
+                                </span>
+                              )}
+                            </div>
+                            {summaryParts && (
+                              <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate max-w-[50%] text-right" title={summaryParts}>
+                                {summaryParts}
+                              </span>
+                            )}
                           </div>
+                          <div className="h-1 w-full rounded-full bg-gradient-to-r from-blue-500/20 via-indigo-500/20 to-purple-500/20" />
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-[1.8fr,0.8fr,0.8fr,0.8fr,0.9fr,0.9fr] gap-3">
@@ -2842,6 +2759,41 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                               className="h-9 text-sm"
                             />
                           </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-600 dark:text-gray-300">
+                          <span className="font-semibold">Quick frequency</span>
+                          {quickFrequencies.map(freq => (
+                            <Button
+                              key={freq}
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateMedication(medication.id, 'frequency', freq);
+                                setActiveMedicationId(medication.id);
+                              }}
+                            >
+                              {freq}
+                            </Button>
+                          ))}
+                          <span className="font-semibold ml-2">Quick instructions</span>
+                          {quickInstructions.map(instr => (
+                            <Button
+                              key={instr}
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateMedication(medication.id, 'instructions', instr);
+                                setActiveMedicationId(medication.id);
+                              }}
+                            >
+                              {instr}
+                            </Button>
+                          ))}
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-[1.2fr,1fr] gap-3">

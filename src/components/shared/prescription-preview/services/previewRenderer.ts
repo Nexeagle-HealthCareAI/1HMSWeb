@@ -110,6 +110,21 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   const templateDoc = await PDFDocument.load(templateBytes);
   const outputDoc = await PDFDocument.create();
 
+  // Format: 16th Dec,2025 (always current date)
+  function getFormattedDateLabel(date: Date): string {
+    const day = date.getDate();
+    const month = date.toLocaleString('default', { month: 'short' });
+    const year = date.getFullYear();
+    // Ordinal suffix
+    const j = day % 10, k = day % 100;
+    let suffix = 'th';
+    if (j === 1 && k !== 11) suffix = 'st';
+    else if (j === 2 && k !== 12) suffix = 'nd';
+    else if (j === 3 && k !== 13) suffix = 'rd';
+    return `${day}${suffix} ${month},${year}`;
+  }
+  const defaultPreviewDateLabel = getFormattedDateLabel(new Date());
+
   if (templateDoc.getPageCount() === 0) {
     throw new Error('Template PDF has no pages to render.');
   }
@@ -139,6 +154,11 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   let page = await acquirePage();
   let cursorY = page.getHeight() - activeHeaderPad;
 
+  // Remove the default date at the top margin (now only show with Patient Information)
+  function drawDefaultDate(targetPage: typeof page) {
+    // intentionally left blank to suppress top margin date
+  }
+
   async function acquirePage() {
     currentPageIndex += 1;
     const shouldReuseTemplate = currentPageIndex === 0 || layout.overflowStrategy === 'reuse-template' || currentPageIndex < templateDoc.getPageCount();
@@ -147,11 +167,15 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
       const [copied] = await outputDoc.copyPages(templateDoc, [sourceIndex]);
       activeHeaderPad = templateHeaderPad;
       activeFooterPad = templateFooterPad;
-      return outputDoc.addPage(copied);
+      const newPage = outputDoc.addPage(copied);
+      drawDefaultDate(newPage);
+      return newPage;
     }
     activeHeaderPad = blankHeaderPad;
     activeFooterPad = blankFooterPad;
-    return outputDoc.addPage([pageWidth, pageHeight]);
+    const newBlankPage = outputDoc.addPage([pageWidth, pageHeight]);
+    drawDefaultDate(newBlankPage);
+    return newBlankPage;
   }
 
   async function ensureRoom(required = lineHeight) {
@@ -211,11 +235,13 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
 
   // --- Patient Information Block ---
   if (patientFields.length) {
-    // Block title with underline
+    // Block title with underline and date at right
     await ensureRoom(lineHeight * 1.5);
     const patientTitle = 'Patient Information';
     const patientTitleFontSize = textSize + 2;
     const patientTitleWidth = boldFont.widthOfTextAtSize(patientTitle, patientTitleFontSize);
+    const dateLabelWidth = boldFont.widthOfTextAtSize(defaultPreviewDateLabel, textSize);
+    // Draw Patient Information at left
     page.drawText(patientTitle, {
       x: leftPad,
       y: cursorY,
@@ -223,7 +249,29 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
       font: boldFont,
       color,
     });
-    // Draw underline
+    // Draw date at right (same row, aligned right)
+    // Add extra right margin (e.g., 12pt) for more separation from content
+    const extraRightMargin = 12;
+    const dateFontSize = textSize + 2;
+    const dateX = pageWidth - rightPad - dateLabelWidth + extraRightMargin;
+    const dateY = cursorY + (patientTitleFontSize - textSize);
+    // Draw date (bolder and larger)
+    page.drawText(defaultPreviewDateLabel, {
+      x: dateX,
+      y: dateY,
+      size: dateFontSize,
+      font: boldFont,
+      color,
+    });
+    // Underline the date
+    const dateUnderlineY = dateY - 2;
+    page.drawLine({
+      start: { x: dateX, y: dateUnderlineY },
+      end: { x: dateX + dateLabelWidth, y: dateUnderlineY },
+      thickness: 1.2,
+      color,
+    });
+    // Draw underline under Patient Information only
     const patientTitleUnderlineY = cursorY - 2;
     page.drawLine({
       start: { x: leftPad, y: patientTitleUnderlineY },
