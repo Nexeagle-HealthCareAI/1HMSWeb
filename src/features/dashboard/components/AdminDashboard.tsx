@@ -1,3 +1,4 @@
+// ...imports...
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuthStore } from '@/store/authStore';
@@ -60,8 +61,22 @@ type KPIMetric = {
 
 
 export const AdminDashboard = () => {
+    // Badge renderer for status
+    const getStatusBadge = (status: string) => {
+      switch (status) {
+        case 'confirmed':
+          return <Badge className="bg-green-100 text-green-800">{t('admin.confirmed')}</Badge>;
+        case 'pending':
+          return <Badge className="bg-yellow-100 text-yellow-800">{t('admin.pending')}</Badge>;
+        case 'cancelled':
+          return <Badge className="bg-red-100 text-red-800">{t('admin.cancelled')}</Badge>;
+        default:
+          return <Badge variant="outline">{status}</Badge>;
+      }
+    };
   const { toast } = useToast();
   const { t } = useTranslation();
+  // Fix: Ensure setCurrentView is defined
   const [dateFilter, setDateFilter] = useState('today');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentView, setCurrentView] = useState('dashboard');
@@ -115,97 +130,6 @@ useEffect(() => {
     }
   }
 }, [hasCompletedHospitalProfileFetch, hospitalScore, hospitalAccessRestricted, setHospitalAccessRestriction, showHospitalRegistrationDialog, bannerDismissed]);
-
-  useEffect(() => {
-    if (!shouldShowPopupForIncompleteProfile && !shouldShowPopupForMissingHospital && showHospitalRegistrationDialog) {
-      setShowHospitalRegistrationDialog(false);
-    }
-  }, [shouldShowPopupForIncompleteProfile, shouldShowPopupForMissingHospital, showHospitalRegistrationDialog]);
-
-  useEffect(() => {
-    const handleDashboardNavigate = (event: Event) => {
-      const { view, focusTab, scrollToTop } = (event as CustomEvent<{
-        view?: string;
-        focusTab?: string;
-        scrollToTop?: boolean;
-      }>).detail || {};
-
-      if (focusTab) {
-        sessionStorage.setItem('admin-focus-tab', focusTab);
-      }
-
-      if (view) {
-        setCurrentView(view);
-      }
-
-      if (scrollToTop) {
-        requestAnimationFrame(() => {
-          if (dashboardRootRef.current) {
-            dashboardRootRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          } else {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }
-        });
-      }
-    };
-
-    window.addEventListener('dashboard:navigate', handleDashboardNavigate as EventListener);
-    return () => {
-      window.removeEventListener('dashboard:navigate', handleDashboardNavigate as EventListener);
-    };
-  }, []);
-
-  // Auto-scroll to Hospital Info section when navigating to hospital config
-  useEffect(() => {
-    if (currentView === 'system-config-hospital') {
-      // Use a timeout to ensure the component has rendered and tab has switched
-      const timer = setTimeout(() => {
-        // Try to find the Hospital Info content first (since the tab should be active)
-        const hospitalBrandingContent = document.querySelector('[data-testid="hospital-info-content"]');
-        const hospitalBrandingTab = document.querySelector('[data-testid="hospital-info-tab"]');
-        const systemConfigModule = document.querySelector('[data-module="system-config-hospital"]');
-        
-        // Priority order: content section, then tab, then module
-        const targetElement = hospitalBrandingContent || hospitalBrandingTab || systemConfigModule;
-        
-        if (targetElement) {
-          targetElement.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start',
-            inline: 'nearest' 
-          });
-        }
-      }, 500); // Allow extra time for tab switching and rendering
-
-      return () => clearTimeout(timer);
-    }
-  }, [currentView]);
-
-
-
-  const focusHospitalBranding = useCallback(() => {
-    setCurrentView('system-config-hospital');
-    sessionStorage.setItem('admin-focus-tab', 'hospital');
-    requestAnimationFrame(() => {
-      const event = new CustomEvent('dashboard:navigate', {
-        detail: { view: 'system-config-hospital', focusTab: 'hospital' },
-      });
-      window.dispatchEvent(event);
-    });
-  }, [setCurrentView]);
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return <Badge className="bg-green-100 text-green-800">{t('admin.confirmed')}</Badge>;
-      case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800">{t('admin.pending')}</Badge>;
-      case 'cancelled':
-        return <Badge className="bg-red-100 text-red-800">{t('admin.cancelled')}</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
 
   const renderKPICard = (title: string, icon: React.ReactNode, data: KPIMetric, isCurrency = false) => (
     <Card className="hover:shadow-lg transition-shadow">
@@ -345,32 +269,37 @@ useEffect(() => {
     }
   }, [hospitalId, toast, t]);
 
-  const quickActions = [
-    {
-      id: 'branding',
-      label: t('admin.quickActions.brandingLabel'),
-      description: t('admin.quickActions.brandingDescription'),
-      Icon: Building2,
-      action: focusHospitalBranding,
-      disabled: false
-    },
-    {
-      id: 'systemConfig',
-      label: t('admin.quickActions.systemConfigLabel'),
-      description: t('admin.quickActions.systemConfigDescription'),
-      Icon: Cog,
-      action: () => setCurrentView('system-config'),
-      disabled: false
-    },
-    {
-      id: 'userAccess',
-      label: t('admin.quickActions.userAccessLabel'),
-      description: t('admin.quickActions.userAccessDescription'),
-      Icon: Shield,
-      action: () => setCurrentView('user-management'),
-      disabled: !accessUnlocked
-    }
-  ];
+  // Add this function before quickActions
+  const focusHospitalBranding = useCallback(() => {
+    setCurrentView('system-config-hospital');
+  }, [setCurrentView]);
+  
+    const quickActions = [
+      {
+        id: 'branding',
+        label: t('admin.quickActions.brandingLabel'),
+        description: t('admin.quickActions.brandingDescription'),
+        Icon: Building2,
+        action: focusHospitalBranding,
+        disabled: false
+      },
+      {
+        id: 'systemConfig',
+        label: t('admin.quickActions.systemConfigLabel'),
+        description: t('admin.quickActions.systemConfigDescription'),
+        Icon: Cog,
+        action: () => setCurrentView('system-config'),
+        disabled: false
+      },
+      {
+        id: 'userAccess',
+        label: t('admin.quickActions.userAccessLabel'),
+        description: t('admin.quickActions.userAccessDescription'),
+        Icon: Shield,
+        action: () => setCurrentView('user-management'),
+        disabled: !accessUnlocked
+      }
+    ];
 
 
 
@@ -486,35 +415,38 @@ useEffect(() => {
         </DialogContent>
       </Dialog>
 
-      {/* Compact Top Navigation */}
-      <div className="flex flex-col gap-2 sm:gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between mb-4">
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          <h1 className="text-xl lg:text-2xl font-bold text-foreground">{t('admin.adminBoard')}</h1>
-          {hospitalAccessRestricted && (
-            <button
-              type="button"
-              onClick={focusHospitalBranding}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[10px] sm:text-xs font-semibold text-primary shadow-sm transition-colors hover:bg-primary/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-            >
-              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-primary/20 text-[9px] font-bold text-primary">
-                {Math.round(hospitalScore)}
-              </span>
-              <span className="hidden sm:inline">{hospitalAccessMessage || t('admin.hospitalAccessFallback')}</span>
-              <span className="sm:hidden">{Math.round(hospitalScore)}%</span>
-            </button>
-          )}
-          {hospitalScore === 100 && (
-            <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">
-              <CheckCircle2 className="h-3 w-3 mr-1" />
-              {t('admin.hospitalSetup100')}
-            </Badge>
-          )}
-        </div>
 
-        {hospitalId && (
-          <div className="flex w-full sm:w-auto items-center gap-2 text-xs sm:text-sm text-muted-foreground justify-between sm:justify-end sm:ml-auto">
-            <span className="font-medium text-foreground">{t('admin.hospitalIdLabel')}</span>
-            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+
+
+      {/* Compact Top Navigation with Hospital ID below Admin Board, nav at right */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2 mb-4">
+        {/* Left: Title, badges, hospital ID */}
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <h1 className="text-xl lg:text-2xl font-bold text-foreground">{t('admin.adminBoard')}</h1>
+            {hospitalAccessRestricted && (
+              <button
+                type="button"
+                onClick={focusHospitalBranding}
+                className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[10px] sm:text-xs font-semibold text-primary shadow-sm transition-colors hover:bg-primary/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              >
+                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-primary/20 text-[9px] font-bold text-primary">
+                  {Math.round(hospitalScore)}
+                </span>
+                <span className="hidden sm:inline">{hospitalAccessMessage || t('admin.hospitalAccessFallback')}</span>
+                <span className="sm:hidden">{Math.round(hospitalScore)}%</span>
+              </button>
+            )}
+            {hospitalScore === 100 && (
+              <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">
+                <CheckCircle2 className="h-3 w-3 mr-1" />
+                {t('admin.hospitalSetup100')}
+              </Badge>
+            )}
+          </div>
+          {hospitalId && (
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground pl-1 mt-1">
+              <span className="font-medium text-foreground">{t('admin.hospitalIdLabel')}</span>
               <Badge variant="outline" className="font-mono text-primary border-primary/40 bg-primary/5 max-w-full sm:max-w-none truncate">
                 {hospitalId}
               </Badge>
@@ -530,171 +462,53 @@ useEffect(() => {
                 <span className="sr-only">{t('admin.hospitalIdCopySr')}</span>
               </Button>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
-      
-
-      {/* Desktop Module Grid */}
-      <div className="hidden lg:grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
-        {adminModules.map((module) => {
-          const isLocked = !accessUnlocked && module.id !== 'dashboard' && module.id !== 'system-config';
-          const isActive = currentView === module.id;
-          return (
-            <button
-              key={module.id}
-              onClick={() => {
-                if (!isLocked) {
-                  setCurrentView(module.id);
-                } else {
-                  toast({
+        {/* Right: Navigation Tabs */}
+        <div className="flex flex-wrap gap-1.5 bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-1 shadow-inner shadow-white/60 dark:shadow-black/40 mt-2 sm:mt-0">
+          {adminModules.map((module) => {
+            const isActive = currentView === module.id;
+            const isLocked = !accessUnlocked && module.id !== 'dashboard' && module.id !== 'system-config';
+            return (
+              <button
+                key={module.id}
+                onClick={() => {
+                  if (!isLocked) setCurrentView(module.id);
+                  else toast({
                     title: t('admin.featureLocked'),
                     description: t('admin.completeHospitalRegistration'),
                     variant: 'destructive'
                   });
-                }
-              }}
-              disabled={isLocked}
-              className={`rounded-3xl border text-left p-4 transition-all duration-300 flex flex-col gap-3 shadow-sm ${
-                isActive
-                  ? 'border-blue-300 bg-blue-50/70 dark:border-blue-800 dark:bg-blue-950/40'
-                  : 'border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'
-              } ${isLocked ? 'opacity-60 cursor-not-allowed' : 'hover:-translate-y-1 hover:shadow-xl'}`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-2xl ${isActive ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-600'}`}>
-                  <module.icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">{module.name}</p>
-                  <p className="text-xs text-muted-foreground">{module.description}</p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{isLocked ? t('admin.adminFeaturesLocked') : t('admin.quickActions.openModule')}</span>
-                <ArrowRight className="h-4 w-4" />
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Enhanced Navigation Tabs - Mobile Optimized */}
-      <div className="relative mb-4 sm:mb-6 lg:hidden">
-        {/* Mobile: Horizontal Scrollable Tabs */}
-        <div className="border-b border-border/60 bg-white/50 dark:bg-gray-950/50 backdrop-blur-sm rounded-t-lg sm:rounded-lg overflow-visible">
-          <div 
-            className="flex gap-1 sm:gap-1.5 overflow-x-auto scrollbar-hide px-2 sm:px-3 py-2 sm:py-2.5 snap-x snap-mandatory" 
-            style={{ 
-              WebkitOverflowScrolling: 'touch',
-              scrollBehavior: 'smooth',
-              overflowX: 'auto',
-              overflowY: 'hidden'
-            }}
-          >
-            {adminModules.map((module) => {
-              const isLocked = !accessUnlocked && module.id !== 'dashboard' && module.id !== 'system-config';
-              const isActive = currentView === module.id;
-              
-              return (
-                <button
-                  key={module.id}
-                  onClick={() => {
-                    if (!isLocked) {
-                      setCurrentView(module.id);
-                    } else {
-                      toast({
-                        title: t('admin.featureLocked'),
-                        description: t('admin.completeHospitalRegistration'),
-                        variant: "destructive"
-                      });
-                    }
-                  }}
-                  disabled={isLocked}
-                  className={`
-                    group relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3 
-                    text-[10px] sm:text-xs md:text-sm font-medium transition-all duration-300 ease-out
-                    rounded-lg sm:rounded-lg whitespace-nowrap flex-shrink-0 snap-start
-                    min-w-[max-content] sm:min-w-auto
-                    ${isLocked 
-                      ? 'opacity-40 cursor-not-allowed text-muted-foreground' 
-                      : isActive
-                        ? 'text-primary bg-primary/10 shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/70 active:scale-95'
-                    }
-                  `}
-                >
-                  {/* Active indicator background */}
-                  {isActive && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 rounded-lg -z-0" />
-                  )}
-                  
-                  {/* Icon with smooth transitions */}
-                  <div className={`
-                    relative z-10 transition-transform duration-300 flex-shrink-0
-                    ${isActive ? 'scale-110' : 'group-hover:scale-105'}
-                  `}>
-                    <module.icon className={`
-                      h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-[18px] md:w-[18px] transition-colors duration-200
-                      ${isLocked 
-                        ? 'text-muted-foreground' 
-                        : isActive
-                          ? 'text-primary'
-                          : 'text-muted-foreground group-hover:text-foreground'
-                      }
-                    `} />
-                  </div>
-                  
-                  {/* Label - Responsive text */}
-                  <span className={`
-                    relative z-10 transition-colors duration-200
-                    ${isLocked 
-                      ? 'text-muted-foreground' 
-                      : isActive
-                        ? 'text-primary font-semibold'
-                        : 'text-muted-foreground group-hover:text-foreground'
-                    }
-                  `}>
-                    {/* Show full name on sm+ screens, abbreviated on mobile */}
-                    <span className="hidden sm:inline">{module.name}</span>
-                    <span className="sm:hidden">
-                      {module.id === 'system-config' 
-                        ? 'System Config' 
-                        : module.name.split(' ')[0]
-                      }
-                    </span>
+                }}
+                disabled={isLocked}
+                aria-disabled={isLocked}
+                aria-pressed={isActive}
+                tabIndex={isLocked ? -1 : 0}
+                title={isLocked ? t('admin.adminFeaturesLocked') : module.description}
+                className={`group flex-1 lg:flex-none min-w-[96px] flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-2.5 py-1.5 border transition-all duration-300 text-[12px] ${
+                  isActive
+                    ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white border-transparent shadow-xl shadow-blue-500/30'
+                    : 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800/70'
+                } ${isLocked ? 'opacity-40 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
+              >
+                <div className="flex items-center gap-1.5 text-[12px] font-semibold">
+                  <span className={`p-1 rounded-lg ${isActive ? 'bg-white/20' : 'bg-gray-100 dark:bg-slate-800'}`}> 
+                    <module.icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-blue-500 dark:text-blue-400'}`} />
                   </span>
-                  
-                  {/* Locked indicator */}
-                  {isLocked && (
-                    <div className="relative z-10 flex items-center flex-shrink-0">
-                      <X className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-red-500 ml-0.5 sm:ml-1" />
-                    </div>
-                  )}
-                  
-                  {/* Active bottom border indicator */}
-                  {isActive && (
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3/4 h-0.5 bg-primary rounded-full shadow-sm shadow-primary/50" />
-                  )}
-                  
-                  {/* Hover effect */}
-                  {!isLocked && !isActive && (
-                    <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-transparent via-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-0" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
+                  <span className="hidden sm:inline">{module.name}</span>
+                  <span className="sm:hidden">{module.name.split(' ')[0]}</span>
+                </div>
+                <span className={`hidden sm:block text-[10px] leading-snug ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'}`}> 
+                  {module.description}
+                </span>
+                <span className={`block text-[10px] leading-snug truncate w-full ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'} sm:hidden`}>
+                  {module.description}
+                </span>
+              </button>
+            );
+          })}
         </div>
-        
-        {/* Mobile: Scroll indicator gradients - Always visible to indicate scrollability */}
-        <div className="absolute left-0 top-0 bottom-0 w-6 sm:w-8 bg-gradient-to-r from-background via-background/80 to-transparent pointer-events-none sm:hidden" />
-        <div className="absolute right-0 top-0 bottom-0 w-6 sm:w-8 bg-gradient-to-l from-background via-background/80 to-transparent pointer-events-none sm:hidden" />
-        
-        {/* Desktop: Subtle gradient overlay at edges */}
-        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent pointer-events-none hidden sm:block" />
-        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none hidden sm:block" />
       </div>
 
       {/* Dashboard Content */}
