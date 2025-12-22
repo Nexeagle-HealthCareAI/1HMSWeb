@@ -787,9 +787,6 @@ export const ClinicalDashboard: React.FC = () => {
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-inner shadow-blue-500/40">
-                  <Calendar className="h-4 w-4 text-white" />
-                </div>
                 <div>
                   <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">{t('docBoard.header.title')}</h1>
                   {clampedProfileCompletion < 100 && (
@@ -873,7 +870,7 @@ export const ClinicalDashboard: React.FC = () => {
         <div className="w-full mx-auto px-3 sm:px-6 py-2 sm:py-4">
           {/* Loading - Mobile Responsive */}
           {isDataLoading && (
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 sm:p-12 text-center shadow-lg">
+            <div className="bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-4 sm:p-8 text-center shadow-lg">
               <div className="flex flex-col items-center gap-4 sm:gap-6">
                 <div className="relative">
                   <div className="w-8 h-8 sm:w-12 sm:h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
@@ -894,7 +891,7 @@ export const ClinicalDashboard: React.FC = () => {
 
           {/* Error - Mobile Responsive */}
           {shouldShowError && (
-            <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border border-red-200 dark:border-red-800 rounded-xl p-4 sm:p-8 text-center shadow-lg">
+            <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border border-red-200 dark:border-red-800 rounded-2xl p-4 sm:p-8 text-center shadow-lg">
               <div className="flex flex-col items-center gap-3 sm:gap-4">
                 <div className="w-12 h-12 sm:w-16 sm:h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center animate-pulse">
                   <X className="h-6 w-6 sm:h-8 sm:w-8 text-red-600 dark:text-red-400" />
@@ -1052,7 +1049,7 @@ export const ClinicalDashboard: React.FC = () => {
                 className={`w-full ${isSidebarCollapsed ? 'lg:w-[4.5rem] xl:w-20' : 'lg:w-64 xl:w-72'} lg:sticky lg:self-start transition-all duration-300`}
                 style={{ top: `${tabBarStickyOffset}px` }}
               >
-                <div className="bg-white dark:bg-gray-900 rounded-2xl p-3 shadow-xl border border-gray-200 dark:border-gray-800 h-full lg:min-h-[calc(100vh-160px)] flex flex-col">
+                <div className="bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-4 shadow-lg h-full lg:min-h-[calc(100vh-160px)] flex flex-col">
                   <div className={`mb-2 px-1 flex items-center justify-end gap-2 ${isSidebarCollapsed ? 'lg:flex-col lg:items-center lg:gap-1.5' : ''}`}>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-gray-400 lg:hidden">{t('docBoard.tabs.swipeHint')}</span>

@@ -65,11 +65,11 @@ export const AdminDashboard = () => {
     const getStatusBadge = (status: string) => {
       switch (status) {
         case 'confirmed':
-          return <Badge className="bg-green-100 text-green-800">{t('admin.confirmed')}</Badge>;
+          return <Badge className="bg-green-50 text-green-700 border-green-200 text-xs px-1.5 py-0.5 font-medium">{t('admin.confirmed')}</Badge>;
         case 'pending':
-          return <Badge className="bg-yellow-100 text-yellow-800">{t('admin.pending')}</Badge>;
+          return <Badge className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs px-1.5 py-0.5 font-medium">{t('admin.pending')}</Badge>;
         case 'cancelled':
-          return <Badge className="bg-red-100 text-red-800">{t('admin.cancelled')}</Badge>;
+          return <Badge className="bg-red-50 text-red-700 border-red-200 text-xs px-1.5 py-0.5 font-medium">{t('admin.cancelled')}</Badge>;
         default:
           return <Badge variant="outline">{status}</Badge>;
       }
@@ -304,7 +304,7 @@ useEffect(() => {
 
 
   return (
-  <div ref={dashboardRootRef} className="min-h-screen w-full p-3 sm:p-4 lg:p-6 space-y-5 sm:space-y-6 bg-gradient-subtle relative z-0">
+  <div ref={dashboardRootRef} className="min-h-screen w-full p-3 sm:p-4 lg:p-6 space-y-5 sm:space-y-6 bg-gray-50 dark:bg-gray-950 relative z-0">
       {/* Hospital Registration Progress Dialog/Popup */}
       <Dialog 
         open={showHospitalRegistrationDialog} 
@@ -418,98 +418,106 @@ useEffect(() => {
 
 
 
-      {/* Compact Top Navigation with Hospital ID below Admin Board, nav at right */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2 mb-4">
-        {/* Left: Title, badges, hospital ID */}
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            <h1 className="text-xl lg:text-2xl font-bold text-foreground">{t('admin.adminBoard')}</h1>
-            {hospitalAccessRestricted && (
-              <button
-                type="button"
-                onClick={focusHospitalBranding}
-                className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[10px] sm:text-xs font-semibold text-primary shadow-sm transition-colors hover:bg-primary/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-              >
-                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-primary/20 text-[9px] font-bold text-primary">
-                  {Math.round(hospitalScore)}
+      {/* Enhanced Top Navigation with Hospital ID and Modernized Nav Tabs */}
+      <section className="mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-gradient-to-br from-white via-blue-50/60 to-indigo-50 dark:from-slate-900 dark:via-slate-900/80 dark:to-slate-900 border-b border-white/70 dark:border-slate-800 rounded-2xl shadow-lg shadow-blue-100/30 dark:shadow-black/30 px-3 py-3 sm:px-6 sm:py-4">
+          {/* Left: Title, badges, hospital ID */}
+          <div className="flex flex-col gap-1 min-w-0">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
+                {t('admin.adminBoard')}
+              </h1>
+              {hospitalAccessRestricted && (
+                <button
+                  type="button"
+                  onClick={focusHospitalBranding}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-gradient-to-r from-primary/10 to-blue-100 px-3 py-1 text-xs font-semibold text-primary shadow-sm hover:bg-primary/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-all"
+                >
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/20 text-[10px] font-bold text-primary">
+                    {Math.round(hospitalScore)}
+                  </span>
+                  <span className="hidden sm:inline">{hospitalAccessMessage || t('admin.hospitalAccessFallback')}</span>
+                  <span className="sm:hidden">{Math.round(hospitalScore)}%</span>
+                </button>
+              )}
+              {hospitalScore === 100 && (
+                <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border-green-200 text-xs font-semibold shadow-sm">
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  {t('admin.hospitalSetup100')}
+                </Badge>
+              )}
+            </div>
+            {hospitalId && (
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground pl-1 mt-1 flex-wrap">
+                <span className="font-medium text-foreground whitespace-nowrap">{t('admin.hospitalIdLabel')}</span>
+                <span className="relative group">
+                  <Badge variant="outline" className="font-mono text-primary border-primary/40 bg-primary/5 max-w-[160px] sm:max-w-none truncate cursor-pointer transition-all group-hover:bg-primary/10" onClick={handleCopyHospitalId} title={t('admin.copyHospitalId') || t('admin.hospitalIdCopySr')}>
+                    {hospitalId}
+                  </Badge>
+                  <span className="absolute left-1/2 -translate-x-1/2 top-full mt-1 px-2 py-1 rounded bg-black/80 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap">
+                    {t('admin.copyHospitalId')}
+                  </span>
                 </span>
-                <span className="hidden sm:inline">{hospitalAccessMessage || t('admin.hospitalAccessFallback')}</span>
-                <span className="sm:hidden">{Math.round(hospitalScore)}%</span>
-              </button>
-            )}
-            {hospitalScore === 100 && (
-              <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">
-                <CheckCircle2 className="h-3 w-3 mr-1" />
-                {t('admin.hospitalSetup100')}
-              </Badge>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  onClick={handleCopyHospitalId}
+                  aria-label={t('admin.copyHospitalId') || t('admin.hospitalIdCopySr')}
+                  tabIndex={0}
+                >
+                  <Copy className="h-4 w-4" />
+                  <span className="sr-only">{t('admin.hospitalIdCopySr')}</span>
+                </Button>
+              </div>
             )}
           </div>
-          {hospitalId && (
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground pl-1 mt-1">
-              <span className="font-medium text-foreground">{t('admin.hospitalIdLabel')}</span>
-              <Badge variant="outline" className="font-mono text-primary border-primary/40 bg-primary/5 max-w-full sm:max-w-none truncate">
-                {hospitalId}
-              </Badge>
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7"
-                onClick={handleCopyHospitalId}
-                aria-label={t('admin.copyHospitalId') || t('admin.hospitalIdCopySr')}
-              >
-                <Copy className="h-4 w-4" />
-                <span className="sr-only">{t('admin.hospitalIdCopySr')}</span>
-              </Button>
-            </div>
-          )}
-        </div>
 
-        {/* Right: Navigation Tabs */}
-        <div className="flex flex-wrap gap-1.5 bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-1 shadow-inner shadow-white/60 dark:shadow-black/40 mt-2 sm:mt-0">
-          {adminModules.map((module) => {
-            const isActive = currentView === module.id;
-            const isLocked = !accessUnlocked && module.id !== 'dashboard' && module.id !== 'system-config';
-            return (
-              <button
-                key={module.id}
-                onClick={() => {
-                  if (!isLocked) setCurrentView(module.id);
-                  else toast({
-                    title: t('admin.featureLocked'),
-                    description: t('admin.completeHospitalRegistration'),
-                    variant: 'destructive'
-                  });
-                }}
-                disabled={isLocked}
-                aria-disabled={isLocked}
-                aria-pressed={isActive}
-                tabIndex={isLocked ? -1 : 0}
-                title={isLocked ? t('admin.adminFeaturesLocked') : module.description}
-                className={`group flex-1 lg:flex-none min-w-[96px] flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-2.5 py-1.5 border transition-all duration-300 text-[12px] ${
-                  isActive
-                    ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white border-transparent shadow-xl shadow-blue-500/30'
-                    : 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800/70'
-                } ${isLocked ? 'opacity-40 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
-              >
-                <div className="flex items-center gap-1.5 text-[12px] font-semibold">
-                  <span className={`p-1 rounded-lg ${isActive ? 'bg-white/20' : 'bg-gray-100 dark:bg-slate-800'}`}> 
-                    <module.icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-blue-500 dark:text-blue-400'}`} />
+          {/* Right: Navigation Tabs */}
+          <nav className="flex flex-wrap gap-2 bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-1 shadow-inner shadow-white/60 dark:shadow-black/40 mt-3 sm:mt-0 min-w-[220px] justify-end">
+            {adminModules.map((module) => {
+              const isActive = currentView === module.id;
+              const isLocked = !accessUnlocked && module.id !== 'dashboard' && module.id !== 'system-config';
+              return (
+                <button
+                  key={module.id}
+                  onClick={() => {
+                    if (!isLocked) setCurrentView(module.id);
+                    else toast({
+                      title: t('admin.featureLocked'),
+                      description: t('admin.completeHospitalRegistration'),
+                      variant: 'destructive'
+                    });
+                  }}
+                  disabled={isLocked}
+                  aria-disabled={isLocked}
+                  aria-pressed={isActive}
+                  tabIndex={isLocked ? -1 : 0}
+                  title={isLocked ? t('admin.adminFeaturesLocked') : module.description}
+                  className={`group flex-1 lg:flex-none min-w-[96px] flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-2.5 py-1.5 border transition-all duration-300 text-[12px] ${
+                    isActive
+                      ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white border-transparent shadow-xl shadow-blue-500/30'
+                      : 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800/70'
+                  } ${isLocked ? 'opacity-40 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
+                >
+                  <div className="flex items-center gap-1.5 text-[12px] font-semibold">
+                    <span className={`p-1 rounded-lg ${isActive ? 'bg-white/20' : 'bg-gray-100 dark:bg-slate-800'}`}>
+                      <module.icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-blue-500 dark:text-blue-400'}`} />
+                    </span>
+                    <span className="hidden sm:inline">{module.name}</span>
+                    <span className="sm:hidden">{module.name.split(' ')[0]}</span>
+                  </div>
+                  <span className={`hidden sm:block text-[10px] leading-snug ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'}`}>{module.description}</span>
+                  <span className={`block text-[10px] leading-snug truncate w-full ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'} sm:hidden`}>
+                    {module.description}
                   </span>
-                  <span className="hidden sm:inline">{module.name}</span>
-                  <span className="sm:hidden">{module.name.split(' ')[0]}</span>
-                </div>
-                <span className={`hidden sm:block text-[10px] leading-snug ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'}`}> 
-                  {module.description}
-                </span>
-                <span className={`block text-[10px] leading-snug truncate w-full ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'} sm:hidden`}>
-                  {module.description}
-                </span>
-              </button>
-            );
-          })}
+                </button>
+              );
+            })}
+          </nav>
         </div>
-      </div>
+      </section>
 
       {/* Dashboard Content */}
       {currentView === 'dashboard' && (
