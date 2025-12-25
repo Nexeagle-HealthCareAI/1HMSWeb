@@ -44,17 +44,21 @@ export const API_ENDPOINTS = {
       `/medicines/doctor-preference/doctorId=${encodeURIComponent(doctorId)}&hospitalId=${encodeURIComponent(hospitalId)}`,
     PERSONALIZED_MEDICINE: (doctorId: string, hospitalId: string) =>
       `/e-prescription/configuration/personalized-medicine/doctorId=${encodeURIComponent(doctorId)}&hospitalId=${encodeURIComponent(hospitalId)}`,
+    LOOKUP_SEARCH: (lookupType: string, hospitalId: string, doctorId: string, searchText: string) =>
+      `/e-prescription/lookup/search?lookupType=${encodeURIComponent(lookupType)}&hospitalId=${encodeURIComponent(hospitalId)}&doctorId=${encodeURIComponent(doctorId)}&searchText=${encodeURIComponent(searchText)}`,
+    LOOKUP_DETAILS: (hospitalId: string, doctorId: string) =>
+      `/e-prescription/lookup/details?hospitalId=${encodeURIComponent(hospitalId)}&doctorId=${encodeURIComponent(doctorId)}`,
   },
   AUTH: {
     LOGIN: 'auth/user/login',
     SEND_OTP: 'auth/otp/send',
     SIGN_UP: 'auth/user/register',
     ONBOARDING_REGISTER: 'auth/user/onboarding/register',
-    OTP_CHECKER: 'auth/otp/verify',    
+    OTP_CHECKER: 'auth/otp/verify',
     SET_PASSWORD: 'auth/user/password?scope=set-password',
     RESET_PASSWORD: 'auth/user/password?scope=reset-password',
   },
-  USER: {    
+  USER: {
     PERMISSIONS: 'user/permissions',
     GET_DETAILS: (userId: string) => `user/get-user-details?userId=${userId}`,
     UPDATE_DETAILS: 'user/update-user-details',
@@ -77,11 +81,11 @@ export const API_ENDPOINTS = {
     PROFILE: 'doctors',
     GET_ALL: 'doctors',
     GET_BY_ID: (id: string) => `doctors/${id}`,
-    CREATE: 'doctors',    
+    CREATE: 'doctors',
     GET_PROFILE: 'doctors/profile',
-    UPDATE_PROFILE: 'doctors/profile',    
-    GET_STATS: 'doctors/stats',    
-    GET_TODAY_APPOINTMENTS: 'doctors/appointments/today',    
+    UPDATE_PROFILE: 'doctors/profile',
+    GET_STATS: 'doctors/stats',
+    GET_TODAY_APPOINTMENTS: 'doctors/appointments/today',
     CREATE_PRESCRIPTION: 'doctors/prescriptions',
     GET_DASHBOARD: 'doctors/dashboard',
     UPDATE_AVAILABILITY: 'doctors/availability',
@@ -107,15 +111,15 @@ export const API_ENDPOINTS = {
     // Patient Profile API endpoints
     GET_PROFILE_DETAILS: (hospitalId: string, patientId: string) => `patient-profile?hospitalId=${hospitalId}&patientId=${patientId}`,
     UPDATE_PROFILE_DETAILS: (hospitalId: string, patientId: string) => `patient-profile?hospitalId=${hospitalId}&patientId=${patientId}`,
-  },  
+  },
   CALENDAR: {
-          GET_DOCTOR_TIMEOFF: (doctorId: string, hospitalId: string) => `calendar/doctor/timeoff?doctorId=${doctorId}&hospitalId=${hospitalId}`,
-              CREATE_DOCTOR_TIMEOFF: 'calendar/doctor/timeoff',
-              DELETE_DOCTOR_TIMEOFF: (timeOffId: string) => `calendar/doctor/timeoff/${timeOffId}`,
-              GET_DOCTOR_CONFIG: (doctorId: string, hospitalId: string, startDate: string, days: number) => `calendar/doctor/config?doctorId=${doctorId}&hospitalId=${hospitalId}&startDate=${encodeURIComponent(startDate)}&daysCount=${days}`,
+    GET_DOCTOR_TIMEOFF: (doctorId: string, hospitalId: string) => `calendar/doctor/timeoff?doctorId=${doctorId}&hospitalId=${hospitalId}`,
+    CREATE_DOCTOR_TIMEOFF: 'calendar/doctor/timeoff',
+    DELETE_DOCTOR_TIMEOFF: (timeOffId: string) => `calendar/doctor/timeoff/${timeOffId}`,
+    GET_DOCTOR_CONFIG: (doctorId: string, hospitalId: string, startDate: string, days: number) => `calendar/doctor/config?doctorId=${doctorId}&hospitalId=${hospitalId}&startDate=${encodeURIComponent(startDate)}&daysCount=${days}`,
     CREATE_DOCTOR_OVERRIDE: 'calendar/doctor/override',
     DELETE_DOCTOR_OVERRIDE: (overrideId: string) => `calendar/doctor/override/${overrideId}`,
-   },
+  },
   PRESCRIPTION: {
     UPLOAD_ASSET: 'prescription/assets/upload',
     GET_ASSETS: (doctorId: string) => `prescription/assets?doctorId=${doctorId}`,

@@ -34,8 +34,10 @@ import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/u
 import { useToast } from '@/hooks/use-toast';
 import { vitalsApi, PatientVitalsResponse } from '../services/vitalsApi';
 import { patientProfileApi, PatientProfileData } from '../services/patientProfileApi';
-import { chiefComplaintMock, filterChiefComplaints, ChiefComplaintItem } from '@/features/patient/services/chiefComplaintMock';
+
 import { LookupItem } from './LookupMultiSelect';
+
+import { eprescriptionApi, LookupData } from '../services/eprescriptionApi';
 import AttachmentsSection from './AttachmentsSection';
 import { SelectValue } from '@radix-ui/react-select';
 // @ts-ignore
@@ -207,57 +209,6 @@ const convertPreferencesToFieldConfigs = (preferences: any) => {
   return result;
 };
 
-const historyLookupData: LookupItem[] = [
-  { id: 'hist-1', name: 'Previous surgery', source: 'personal', shortDesc: 'Documented procedures' },
-  { id: 'hist-2', name: 'Family history of diabetes', source: 'personal' },
-  { id: 'hist-3', name: 'Smoking', source: 'general', shortDesc: 'Active smoker' },
-  { id: 'hist-4', name: 'Alcohol use', source: 'general' },
-  { id: 'hist-5', name: 'Past hospitalization', source: 'personal' },
-];
-
-const comorbidityLookupData: LookupItem[] = [
-  { id: 'co-1', name: 'Hypertension', source: 'personal', usageCount: 42 },
-  { id: 'co-2', name: 'Type 2 diabetes', source: 'personal', usageCount: 37 },
-  { id: 'co-3', name: 'COPD', source: 'general' },
-  { id: 'co-4', name: 'Hypothyroidism', source: 'general' },
-  { id: 'co-5', name: 'Chronic kidney disease', source: 'general' },
-];
-
-const examinationLookupData: LookupItem[] = [
-  { id: 'exam-1', name: 'Normal heart sounds', source: 'general' },
-  { id: 'exam-2', name: 'Wheezing', source: 'general' },
-  { id: 'exam-3', name: 'Pitting edema', source: 'general' },
-  { id: 'exam-4', name: 'Abdominal tenderness', source: 'general' },
-  { id: 'exam-5', name: 'Neurological exam normal', source: 'personal' },
-];
-
-const diagnosisLookupData: LookupItem[] = [
-  { id: 'dx-1', name: 'Hypertension', source: 'general', usageCount: 120 },
-  { id: 'dx-2', name: 'Type 2 diabetes mellitus', source: 'general', usageCount: 110 },
-  { id: 'dx-3', name: 'Asthma', source: 'general' },
-  { id: 'dx-4', name: 'Acute gastroenteritis', source: 'general' },
-  { id: 'dx-5', name: 'Migraine', source: 'personal' },
-  { id: 'dx-6', name: 'Low back pain', source: 'personal' },
-];
-
-const investigationLookupData: LookupItem[] = [
-  { id: 'inv-1', name: 'Complete blood count', source: 'personal', usageCount: 42 },
-  { id: 'inv-2', name: 'Lipid profile', source: 'personal', usageCount: 36 },
-  { id: 'inv-3', name: 'ECG', source: 'personal', usageCount: 58 },
-  { id: 'inv-4', name: 'Chest X-ray', source: 'general' },
-  { id: 'inv-5', name: 'Liver function test', source: 'general' },
-  { id: 'inv-6', name: 'Renal function test', source: 'general' },
-];
-
-const procedureLookupData: LookupItem[] = [
-  { id: 'proc-1', name: 'Nebulization', source: 'personal', usageCount: 21 },
-  { id: 'proc-2', name: 'Wound dressing', source: 'personal', usageCount: 14 },
-  { id: 'proc-3', name: 'IV cannulation', source: 'personal' },
-  { id: 'proc-4', name: 'Blood transfusion', source: 'general' },
-  { id: 'proc-5', name: 'Lumbar puncture', source: 'general' },
-  { id: 'proc-6', name: 'Ascitic tap', source: 'general' },
-];
-
 const medicationLookupData: LookupItem[] = [
   { id: 'med-1', name: 'Paracetamol 500 mg tablet', source: 'personal', shortDesc: 'Pain / fever' },
   { id: 'med-2', name: 'Ibuprofen 400 mg tablet', source: 'personal', shortDesc: 'NSAID' },
@@ -271,68 +222,7 @@ const medicationLookupData: LookupItem[] = [
   { id: 'med-10', name: 'Salbutamol inhaler 100 mcg', source: 'general', shortDesc: 'Bronchodilator' },
 ];
 
-const quickPicksBySection: Record<string, LookupItem[]> = {
-  history: historyLookupData.filter((i) => i.source === 'personal'),
-  comorbidity: comorbidityLookupData.filter((i) => i.source === 'personal'),
-  examination: examinationLookupData.filter((i) => i.source === 'personal'),
-  diagnosis: diagnosisLookupData.filter((i) => i.source === 'personal'),
-  investigations: investigationLookupData.filter((i) => i.source === 'personal'),
-  procedures: procedureLookupData.filter((i) => i.source === 'personal'),
-};
 
-const filterHistoryItems = (term: string) => {
-  const query = term.trim().toLowerCase();
-  if (!query) return historyLookupData;
-  return historyLookupData.filter((item) => {
-    const haystack = `${item.name || ''} ${item.shortDesc || ''}`.toLowerCase();
-    return haystack.includes(query);
-  });
-};
-
-const filterComorbidityItems = (term: string) => {
-  const query = term.trim().toLowerCase();
-  if (!query) return comorbidityLookupData;
-  return comorbidityLookupData.filter((item) => {
-    const haystack = `${item.name || ''} ${item.shortDesc || ''}`.toLowerCase();
-    return haystack.includes(query);
-  });
-};
-
-const filterExaminationItems = (term: string) => {
-  const query = term.trim().toLowerCase();
-  if (!query) return examinationLookupData;
-  return examinationLookupData.filter((item) => {
-    const haystack = `${item.name || ''} ${item.shortDesc || ''}`.toLowerCase();
-    return haystack.includes(query);
-  });
-};
-
-const filterDiagnosisItems = (term: string) => {
-  const query = term.trim().toLowerCase();
-  if (!query) return diagnosisLookupData;
-  return diagnosisLookupData.filter((item) => {
-    const haystack = `${item.name || ''} ${item.shortDesc || ''}`.toLowerCase();
-    return haystack.includes(query);
-  });
-};
-
-const filterInvestigationItems = (term: string) => {
-  const query = term.trim().toLowerCase();
-  if (!query) return investigationLookupData;
-  return investigationLookupData.filter((item) => {
-    const haystack = `${item.name || ''} ${item.shortDesc || ''}`.toLowerCase();
-    return haystack.includes(query);
-  });
-};
-
-const filterProcedureItems = (term: string) => {
-  const query = term.trim().toLowerCase();
-  if (!query) return procedureLookupData;
-  return procedureLookupData.filter((item) => {
-    const haystack = `${item.name || ''} ${item.shortDesc || ''}`.toLowerCase();
-    return haystack.includes(query);
-  });
-};
 
 const filterMedicationItems = (term: string) => {
   const query = term.trim().toLowerCase();
@@ -695,7 +585,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
   const shouldShowLoading = !apiPreferences && (isLoadingApiPreferences || isLoadingPreferences);
 
   // Search functionality state
-  const [chiefComplaintOptions, setChiefComplaintOptions] = useState<ChiefComplaintItem[]>(chiefComplaintMock);
+  const [chiefComplaintOptions, setChiefComplaintOptions] = useState<LookupItem[]>([]);
   const [selectedChiefComplaints, setSelectedChiefComplaints] = useState<string[]>([]);
   const [chiefComplaintOpen, setChiefComplaintOpen] = useState(false);
   const [chiefComplaintQuery, setChiefComplaintQuery] = useState('');
@@ -706,42 +596,42 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
   const chiefComplaintInputRef = useRef<HTMLInputElement | null>(null);
   const chiefComplaintRootRef = useRef<HTMLDivElement | null>(null);
 
-  const [historyOptions, setHistoryOptions] = useState<LookupItem[]>(historyLookupData);
+  const [historyOptions, setHistoryOptions] = useState<LookupItem[]>([]);
   const [selectedHistoryItems, setSelectedHistoryItems] = useState<string[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyQuery, setHistoryQuery] = useState('');
   const [historyActiveIndex, setHistoryActiveIndex] = useState(0);
   const historyInputRef = useRef<HTMLInputElement | null>(null);
   const historyRootRef = useRef<HTMLDivElement | null>(null);
-  const [comorbidityOptions, setComorbidityOptions] = useState<LookupItem[]>(comorbidityLookupData);
+  const [comorbidityOptions, setComorbidityOptions] = useState<LookupItem[]>([]);
   const [selectedComorbidities, setSelectedComorbidities] = useState<string[]>([]);
   const [comorbidityOpen, setComorbidityOpen] = useState(false);
   const [comorbidityQuery, setComorbidityQuery] = useState('');
   const [comorbidityActiveIndex, setComorbidityActiveIndex] = useState(0);
   const comorbidityInputRef = useRef<HTMLInputElement | null>(null);
   const comorbidityRootRef = useRef<HTMLDivElement | null>(null);
-  const [examinationOptions, setExaminationOptions] = useState<LookupItem[]>(examinationLookupData);
+  const [examinationOptions, setExaminationOptions] = useState<LookupItem[]>([]);
   const [selectedExaminations, setSelectedExaminations] = useState<string[]>([]);
   const [examinationOpen, setExaminationOpen] = useState(false);
   const [examinationQuery, setExaminationQuery] = useState('');
   const [examinationActiveIndex, setExaminationActiveIndex] = useState(0);
   const examinationInputRef = useRef<HTMLInputElement | null>(null);
   const examinationRootRef = useRef<HTMLDivElement | null>(null);
-  const [diagnosisOptions, setDiagnosisOptions] = useState<LookupItem[]>(diagnosisLookupData);
+  const [diagnosisOptions, setDiagnosisOptions] = useState<LookupItem[]>([]);
   const [selectedDiagnoses, setSelectedDiagnoses] = useState<string[]>([]);
   const [diagnosisOpen, setDiagnosisOpen] = useState(false);
   const [diagnosisQuery, setDiagnosisQuery] = useState('');
   const [diagnosisActiveIndex, setDiagnosisActiveIndex] = useState(0);
   const diagnosisInputRef = useRef<HTMLInputElement | null>(null);
   const diagnosisRootRef = useRef<HTMLDivElement | null>(null);
-  const [investigationOptions, setInvestigationOptions] = useState<LookupItem[]>(investigationLookupData);
+  const [investigationOptions, setInvestigationOptions] = useState<LookupItem[]>([]);
   const [selectedInvestigations, setSelectedInvestigations] = useState<string[]>([]);
   const [investigationOpen, setInvestigationOpen] = useState(false);
   const [investigationQuery, setInvestigationQuery] = useState('');
   const [investigationActiveIndex, setInvestigationActiveIndex] = useState(0);
   const investigationInputRef = useRef<HTMLInputElement | null>(null);
   const investigationRootRef = useRef<HTMLDivElement | null>(null);
-  const [procedureOptions, setProcedureOptions] = useState<LookupItem[]>(procedureLookupData);
+  const [procedureOptions, setProcedureOptions] = useState<LookupItem[]>([]);
   const [selectedProcedures, setSelectedProcedures] = useState<string[]>([]);
   const [procedureOpen, setProcedureOpen] = useState(false);
   const [procedureQuery, setProcedureQuery] = useState('');
@@ -793,6 +683,79 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
     return iconMap[fieldId] || <FileText className="h-4 w-4" />;
   };
 
+  // State for Quick Picks (fetched from API)
+  const [quickPicks, setQuickPicks] = useState<Record<string, LookupItem[]>>({
+    chiefComplaint: [],
+    history: [],
+    comorbidity: [],
+    examination: [],
+    diagnosis: [],
+    investigations: [],
+    procedures: []
+  });
+
+  // Fetch Lookup Details for Quick Picks
+  useEffect(() => {
+    const fetchQuickPicks = async () => {
+      try {
+        const hid = getHospitalId() || '4de8ea65-71aa-4800-8167-60147d78ea58';
+        const did = getDoctorId() || '9de6031b-7195-43f7-85b4-bba824585529';
+        const response = await eprescriptionApi.getLookupDetails(hid, did);
+
+        if (response.success && response.items) {
+          const newQuickPicks: Record<string, LookupItem[]> = {
+            chiefComplaint: [],
+            history: [],
+            comorbidity: [],
+            examination: [],
+            diagnosis: [],
+            investigations: [],
+            procedures: []
+          };
+
+          response.items.forEach(group => {
+            const mappedItems: LookupItem[] = group.personalData.map(pd => ({
+              id: pd.personalId || pd.code,
+              name: pd.name,
+              source: 'personal',
+              shortDesc: pd.shortDesc,
+              usageCount: pd.usageCount
+            }));
+
+            switch (group.lookupType) {
+              case 'CHIEF_COMPLAINT':
+                newQuickPicks.chiefComplaint = mappedItems;
+                break;
+              case 'HISTORY':
+                newQuickPicks.history = mappedItems;
+                break;
+              case 'COMORBIDITY':
+                newQuickPicks.comorbidity = mappedItems;
+                break;
+              case 'EXAMINATION':
+                newQuickPicks.examination = mappedItems;
+                break;
+              case 'DIAGNOSIS':
+                newQuickPicks.diagnosis = mappedItems;
+                break;
+              case 'INVESTIGATION':
+                newQuickPicks.investigations = mappedItems;
+                break;
+              case 'PROCEDURE':
+                newQuickPicks.procedures = mappedItems;
+                break;
+            }
+          });
+          setQuickPicks(newQuickPicks);
+        }
+      } catch (err) {
+        console.error('Failed to fetch lookup details for quick picks', err);
+      }
+    };
+
+    fetchQuickPicks();
+  }, []);
+
   const toggleSection = (sectionId: string) => {
     setCollapsedSections(prev => ({
       ...prev,
@@ -815,7 +778,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
   const commitExaminationSelection = (label: string) => {
     addExaminationItem(label);
     setExaminationQuery('');
-    setExaminationOptions(examinationLookupData);
+    setExaminationOptions(quickPicks.examination);
     setExaminationActiveIndex(0);
     setExaminationOpen(false);
     examinationInputRef.current?.focus();
@@ -844,7 +807,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
   const commitDiagnosisSelection = (label: string) => {
     addDiagnosisItem(label);
     setDiagnosisQuery('');
-    setDiagnosisOptions(diagnosisLookupData);
+    setDiagnosisOptions(quickPicks.diagnosis);
     setDiagnosisActiveIndex(0);
     setDiagnosisOpen(false);
     diagnosisInputRef.current?.focus();
@@ -873,7 +836,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
   const commitComorbiditySelection = (label: string) => {
     addComorbidityItem(label);
     setComorbidityQuery('');
-    setComorbidityOptions(comorbidityLookupData);
+    setComorbidityOptions(quickPicks.comorbidity);
     setComorbidityActiveIndex(0);
     setComorbidityOpen(false);
     comorbidityInputRef.current?.focus();
@@ -902,7 +865,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
   const commitHistorySelection = (label: string) => {
     addHistoryItem(label);
     setHistoryQuery('');
-    setHistoryOptions(historyLookupData);
+    setHistoryOptions(quickPicks.history);
     setHistoryActiveIndex(0);
     setHistoryOpen(false);
     historyInputRef.current?.focus();
@@ -964,7 +927,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
   const commitChiefComplaintSelection = (label: string) => {
     addChiefComplaint(label);
     setChiefComplaintQuery('');
-    setChiefComplaintOptions(chiefComplaintMock);
+    setChiefComplaintOptions(quickPicks.chiefComplaint);
     setChiefComplaintActiveIndex(0);
     setChiefComplaintOpen(false);
     setPendingChiefComplaintLabel(label.trim());
@@ -1173,7 +1136,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
   const commitInvestigationSelection = (label: string) => {
     addInvestigationItem(label);
     setInvestigationQuery('');
-    setInvestigationOptions(investigationLookupData);
+    setInvestigationOptions(quickPicks.investigations);
     setInvestigationActiveIndex(0);
     setInvestigationOpen(false);
     investigationInputRef.current?.focus();
@@ -1214,7 +1177,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
   const commitProcedureSelection = (label: string) => {
     addProcedureItem(label);
     setProcedureQuery('');
-    setProcedureOptions(procedureLookupData);
+    setProcedureOptions(quickPicks.procedures);
     setProcedureActiveIndex(0);
     setProcedureOpen(false);
     procedureInputRef.current?.focus();
@@ -1472,23 +1435,54 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                     <Input
                       ref={chiefComplaintInputRef}
                       value={chiefComplaintQuery}
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const val = e.target.value;
                         setChiefComplaintQuery(val);
-                        const next = val ? filterChiefComplaints(val) : chiefComplaintMock;
-                        setChiefComplaintOptions(next);
+
+                        // New dynamic search logic
+                        if (val && val.length > 1) { // Min 2 chars to search
+                          try {
+                            const hid = getHospitalId() || '4de8ea65-71aa-4800-8167-60147d78ea58';
+                            const did = getDoctorId() || '9de6031b-7195-43f7-85b4-bba824585529'; // Dynamic later
+                            const response = await eprescriptionApi.searchLookupParams('CHIEF_COMPLAINT', hid, did, val);
+
+                            if (response.success) {
+                              const personalItems: LookupItem[] = response.personalLookupData.map(item => ({
+                                id: item.personalId || item.code,
+                                name: item.name,
+                                source: 'personal',
+                              }));
+
+                              const masterItems: LookupItem[] = response.masterLookupData.map(item => ({
+                                id: item.lookupId || item.code,
+                                name: item.name,
+                                source: 'general',
+                              }));
+
+                              setChiefComplaintOptions([...personalItems, ...masterItems]);
+                            }
+                          } catch (err) {
+                            console.error('Failed to search lookups', err);
+                            // Fallback to empty if API fails
+                            setChiefComplaintOptions([]);
+                          }
+                        } else {
+                          // If empty or short, show empty
+                          setChiefComplaintOptions([]);
+                        }
+
                         setChiefComplaintActiveIndex(0);
                         setChiefComplaintOpen(true);
                       }}
                       onFocus={() => {
                         setChiefComplaintOpen(true);
-                        setChiefComplaintOptions(chiefComplaintMock);
+                        setChiefComplaintOptions([]);
                         setChiefComplaintActiveIndex(0);
                       }}
                       onBlur={() => setTimeout(() => setChiefComplaintOpen(false), 50)}
                       onKeyDown={(e) => {
-                        const personal = chiefComplaintOptions.filter(item => item.category === 'personal');
-                        const general = chiefComplaintOptions.filter(item => item.category === 'general');
+                        const personal = chiefComplaintOptions.filter(item => item.source === 'personal');
+                        const general = chiefComplaintOptions.filter(item => item.source === 'general');
                         const combined = [...personal, ...general];
                         const trimmed = (chiefComplaintQuery || '').trim();
                         if (e.key === 'ArrowDown') {
@@ -1501,7 +1495,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                         } else if (e.key === 'Enter') {
                           if (combined[chiefComplaintActiveIndex]) {
                             e.preventDefault();
-                            commitChiefComplaintSelection(combined[chiefComplaintActiveIndex].label);
+                            commitChiefComplaintSelection(combined[chiefComplaintActiveIndex].name);
                           } else if (trimmed) {
                             e.preventDefault();
                             commitChiefComplaintSelection(trimmed);
@@ -1520,7 +1514,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                           <div className="space-y-2">
                             <div className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 uppercase">Personal</div>
                             <div className="flex flex-col gap-1">
-                              {chiefComplaintOptions.filter(item => item.category === 'personal').map((item, idx) => {
+                              {chiefComplaintOptions.filter(item => item.source === 'personal').map((item, idx) => {
                                 const isActive = chiefComplaintActiveIndex === idx;
                                 return (
                                   <button
@@ -1530,14 +1524,14 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                                     onMouseEnter={() => setChiefComplaintActiveIndex(idx)}
                                     onMouseDown={(e) => {
                                       e.preventDefault();
-                                      commitChiefComplaintSelection(item.label);
+                                      commitChiefComplaintSelection(item.name);
                                     }}
                                   >
-                                    <span>{item.label}</span>
+                                    <span>{item.name}</span>
                                   </button>
                                 );
                               })}
-                              {chiefComplaintOptions.filter(item => item.category === 'personal').length === 0 && (
+                              {chiefComplaintOptions.filter(item => item.source === 'personal').length === 0 && (
                                 <div className="text-xs text-gray-500 dark:text-gray-400 px-3 py-2">No personal results</div>
                               )}
                             </div>
@@ -1546,9 +1540,9 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                             <div className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 uppercase">General</div>
                             <div className="flex flex-col gap-1">
                               {(() => {
-                                const personalCount = chiefComplaintOptions.filter(item => item.category === 'personal').length;
+                                const personalCount = chiefComplaintOptions.filter(item => item.source === 'personal').length;
                                 return chiefComplaintOptions
-                                  .filter(item => item.category === 'general')
+                                  .filter(item => item.source === 'general')
                                   .map((item, idx) => {
                                     const globalIdx = personalCount + idx;
                                     const isActive = chiefComplaintActiveIndex === globalIdx;
@@ -1560,15 +1554,15 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                                         onMouseEnter={() => setChiefComplaintActiveIndex(globalIdx)}
                                         onMouseDown={(e) => {
                                           e.preventDefault();
-                                          commitChiefComplaintSelection(item.label);
+                                          commitChiefComplaintSelection(item.name);
                                         }}
                                       >
-                                        <span>{item.label}</span>
+                                        <span>{item.name}</span>
                                       </button>
                                     );
                                   });
                               })()}
-                              {chiefComplaintOptions.filter(item => item.category === 'general').length === 0 && (
+                              {chiefComplaintOptions.filter(item => item.source === 'general').length === 0 && (
                                 <div className="text-xs text-gray-500 dark:text-gray-400 px-3 py-2">No general results</div>
                               )}
                             </div>
@@ -1582,22 +1576,20 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                   <div className="text-xs font-semibold text-gray-600 dark:text-gray-300">Quick picks</div>
                   <div className="space-y-2">
                     <div className="flex flex-wrap gap-2">
-                      {chiefComplaintOptions
-                        .filter(item => item.category === 'personal')
-                        .map(item => {
-                          const isSelected = selectedChiefComplaints.includes(item.label);
-                          return (
-                            <Button
-                              key={item.id}
-                              variant={isSelected ? 'default' : 'outline'}
-                              size="sm"
-                              className="justify-start h-auto min-h-8 text-xs md:text-sm rounded-full px-3 py-2"
-                              onClick={() => commitChiefComplaintSelection(item.label)}
-                            >
-                              {item.label}
-                            </Button>
-                          );
-                        })}
+                      {quickPicks.chiefComplaint.map(item => {
+                        const isSelected = selectedChiefComplaints.includes(item.name);
+                        return (
+                          <Button
+                            key={item.id}
+                            variant={isSelected ? 'default' : 'outline'}
+                            size="sm"
+                            className="justify-start h-auto min-h-8 text-xs md:text-sm rounded-full px-3 py-2"
+                            onClick={() => commitChiefComplaintSelection(item.name)}
+                          >
+                            {item.name}
+                          </Button>
+                        );
+                      })}
                     </div>
                   </div>
                   {/* Save chief complaint button removed */}
@@ -1636,17 +1628,44 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                     <Input
                       ref={historyInputRef}
                       value={historyQuery}
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const val = e.target.value;
                         setHistoryQuery(val);
-                        const next = val ? filterHistoryItems(val) : historyLookupData;
-                        setHistoryOptions(next);
+
+                        if (val && val.length > 1) {
+                          try {
+                            const hid = getHospitalId() || '4de8ea65-71aa-4800-8167-60147d78ea58';
+                            const did = getDoctorId() || '9de6031b-7195-43f7-85b4-bba824585529';
+                            const response = await eprescriptionApi.searchLookupParams('HISTORY', hid, did, val);
+
+                            if (response.success) {
+                              const personalItems: LookupItem[] = response.personalLookupData.map(item => ({
+                                id: item.personalId || item.code,
+                                name: item.name,
+                                source: 'personal',
+                                shortDesc: item.shortDesc
+                              }));
+                              const masterItems: LookupItem[] = response.masterLookupData.map(item => ({
+                                id: item.lookupId || item.code,
+                                name: item.name,
+                                source: 'general',
+                                shortDesc: item.shortDesc
+                              }));
+                              setHistoryOptions([...personalItems, ...masterItems]);
+                            }
+                          } catch (err) {
+                            console.error('Failed to search history', err);
+                            setHistoryOptions([]);
+                          }
+                        } else {
+                          setHistoryOptions([]);
+                        }
                         setHistoryActiveIndex(0);
                         setHistoryOpen(true);
                       }}
                       onFocus={() => {
                         setHistoryOpen(true);
-                        setHistoryOptions(historyLookupData);
+                        setHistoryOptions([]);
                         setHistoryActiveIndex(0);
                       }}
                       onBlur={() => setTimeout(() => setHistoryOpen(false), 50)}
@@ -1749,7 +1768,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                 <div className="space-y-2">
                   <div className="text-xs font-semibold text-gray-600">Quick picks</div>
                   <div className="flex flex-wrap gap-2">
-                    {quickPicksBySection.history.map(item => {
+                    {quickPicks.history.map(item => {
                       const isSelected = selectedHistoryItems.includes(item.name);
                       return (
                         <Button
@@ -1801,17 +1820,44 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                     <Input
                       ref={comorbidityInputRef}
                       value={comorbidityQuery}
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const val = e.target.value;
                         setComorbidityQuery(val);
-                        const next = val ? filterComorbidityItems(val) : comorbidityLookupData;
-                        setComorbidityOptions(next);
+
+                        if (val && val.length > 1) {
+                          try {
+                            const hid = getHospitalId() || '4de8ea65-71aa-4800-8167-60147d78ea58';
+                            const did = getDoctorId() || '9de6031b-7195-43f7-85b4-bba824585529';
+                            const response = await eprescriptionApi.searchLookupParams('COMORBIDITY', hid, did, val);
+
+                            if (response.success) {
+                              const personalItems: LookupItem[] = response.personalLookupData.map(item => ({
+                                id: item.personalId || item.code,
+                                name: item.name,
+                                source: 'personal',
+                                shortDesc: item.shortDesc
+                              }));
+                              const masterItems: LookupItem[] = response.masterLookupData.map(item => ({
+                                id: item.lookupId || item.code,
+                                name: item.name,
+                                source: 'general',
+                                shortDesc: item.shortDesc
+                              }));
+                              setComorbidityOptions([...personalItems, ...masterItems]);
+                            }
+                          } catch (err) {
+                            console.error('Failed to search comorbidity', err);
+                            setComorbidityOptions([]);
+                          }
+                        } else {
+                          setComorbidityOptions([]);
+                        }
                         setComorbidityActiveIndex(0);
                         setComorbidityOpen(true);
                       }}
                       onFocus={() => {
                         setComorbidityOpen(true);
-                        setComorbidityOptions(comorbidityLookupData);
+                        setComorbidityOptions([]);
                         setComorbidityActiveIndex(0);
                       }}
                       onBlur={() => setTimeout(() => setComorbidityOpen(false), 50)}
@@ -1914,7 +1960,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                 <div className="space-y-2">
                   <div className="text-xs font-semibold text-gray-600">Quick picks</div>
                   <div className="flex flex-wrap gap-2">
-                    {quickPicksBySection.comorbidity.map(item => {
+                    {quickPicks.comorbidity.map(item => {
                       const isSelected = selectedComorbidities.includes(item.name);
                       return (
                         <Button
@@ -1966,17 +2012,44 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                     <Input
                       ref={examinationInputRef}
                       value={examinationQuery}
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const val = e.target.value;
                         setExaminationQuery(val);
-                        const next = val ? filterExaminationItems(val) : examinationLookupData;
-                        setExaminationOptions(next);
+
+                        if (val && val.length > 1) {
+                          try {
+                            const hid = getHospitalId() || '4de8ea65-71aa-4800-8167-60147d78ea58';
+                            const did = getDoctorId() || '9de6031b-7195-43f7-85b4-bba824585529';
+                            const response = await eprescriptionApi.searchLookupParams('EXAMINATION', hid, did, val);
+
+                            if (response.success) {
+                              const personalItems: LookupItem[] = response.personalLookupData.map(item => ({
+                                id: item.personalId || item.code,
+                                name: item.name,
+                                source: 'personal',
+                                shortDesc: item.shortDesc
+                              }));
+                              const masterItems: LookupItem[] = response.masterLookupData.map(item => ({
+                                id: item.lookupId || item.code,
+                                name: item.name,
+                                source: 'general',
+                                shortDesc: item.shortDesc
+                              }));
+                              setExaminationOptions([...personalItems, ...masterItems]);
+                            }
+                          } catch (err) {
+                            console.error('Failed to search examination', err);
+                            setExaminationOptions([]);
+                          }
+                        } else {
+                          setExaminationOptions([]);
+                        }
                         setExaminationActiveIndex(0);
                         setExaminationOpen(true);
                       }}
                       onFocus={() => {
                         setExaminationOpen(true);
-                        setExaminationOptions(examinationLookupData);
+                        setExaminationOptions([]);
                         setExaminationActiveIndex(0);
                       }}
                       onBlur={() => setTimeout(() => setExaminationOpen(false), 50)}
@@ -2079,7 +2152,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                 <div className="space-y-2">
                   <div className="text-xs font-semibold text-gray-600">Quick picks</div>
                   <div className="flex flex-wrap gap-2">
-                    {quickPicksBySection.examination.map(item => {
+                    {quickPicks.examination.map(item => {
                       const isSelected = selectedExaminations.includes(item.name);
                       return (
                         <Button
@@ -2131,17 +2204,44 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                     <Input
                       ref={diagnosisInputRef}
                       value={diagnosisQuery}
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const val = e.target.value;
                         setDiagnosisQuery(val);
-                        const next = val ? filterDiagnosisItems(val) : diagnosisLookupData;
-                        setDiagnosisOptions(next);
+
+                        if (val && val.length > 1) {
+                          try {
+                            const hid = getHospitalId() || '4de8ea65-71aa-4800-8167-60147d78ea58';
+                            const did = getDoctorId() || '9de6031b-7195-43f7-85b4-bba824585529';
+                            const response = await eprescriptionApi.searchLookupParams('DIAGNOSIS', hid, did, val);
+
+                            if (response.success) {
+                              const personalItems: LookupItem[] = response.personalLookupData.map(item => ({
+                                id: item.personalId || item.code,
+                                name: item.name,
+                                source: 'personal',
+                                shortDesc: item.shortDesc
+                              }));
+                              const masterItems: LookupItem[] = response.masterLookupData.map(item => ({
+                                id: item.lookupId || item.code,
+                                name: item.name,
+                                source: 'general',
+                                shortDesc: item.shortDesc
+                              }));
+                              setDiagnosisOptions([...personalItems, ...masterItems]);
+                            }
+                          } catch (err) {
+                            console.error('Failed to search diagnosis', err);
+                            setDiagnosisOptions([]);
+                          }
+                        } else {
+                          setDiagnosisOptions([]);
+                        }
                         setDiagnosisActiveIndex(0);
                         setDiagnosisOpen(true);
                       }}
                       onFocus={() => {
                         setDiagnosisOpen(true);
-                        setDiagnosisOptions(diagnosisLookupData);
+                        setDiagnosisOptions([]);
                         setDiagnosisActiveIndex(0);
                       }}
                       onBlur={() => setTimeout(() => setDiagnosisOpen(false), 50)}
@@ -2244,7 +2344,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                 <div className="space-y-2">
                   <div className="text-xs font-semibold text-gray-600">Quick picks</div>
                   <div className="flex flex-wrap gap-2">
-                    {quickPicksBySection.diagnosis.map(item => {
+                    {quickPicks.diagnosis.map(item => {
                       const isSelected = selectedDiagnoses.includes(item.name);
                       return (
                         <Button
@@ -2302,17 +2402,45 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                       <Input
                         ref={investigationInputRef}
                         value={investigationQuery}
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const val = e.target.value;
                           setInvestigationQuery(val);
-                          const next = val ? filterInvestigationItems(val) : investigationLookupData;
-                          setInvestigationOptions(next);
+
+                          if (val && val.length > 1) {
+                            try {
+                              const hid = getHospitalId() || '4de8ea65-71aa-4800-8167-60147d78ea58';
+                              const did = getDoctorId() || '9de6031b-7195-43f7-85b4-bba824585529';
+                              // Note: The lookup type is traditionally singular in uppercase, so using 'INVESTIGATION'.
+                              const response = await eprescriptionApi.searchLookupParams('INVESTIGATION', hid, did, val);
+
+                              if (response.success) {
+                                const personalItems: LookupItem[] = response.personalLookupData.map(item => ({
+                                  id: item.personalId || item.code,
+                                  name: item.name,
+                                  source: 'personal',
+                                  shortDesc: item.shortDesc
+                                }));
+                                const masterItems: LookupItem[] = response.masterLookupData.map(item => ({
+                                  id: item.lookupId || item.code,
+                                  name: item.name,
+                                  source: 'general',
+                                  shortDesc: item.shortDesc
+                                }));
+                                setInvestigationOptions([...personalItems, ...masterItems]);
+                              }
+                            } catch (err) {
+                              console.error('Failed to search investigation', err);
+                              setInvestigationOptions([]);
+                            }
+                          } else {
+                            setInvestigationOptions([]);
+                          }
                           setInvestigationActiveIndex(0);
                           setInvestigationOpen(true);
                         }}
                         onFocus={() => {
                           setInvestigationOpen(true);
-                          setInvestigationOptions(investigationLookupData);
+                          setInvestigationOptions([]);
                           setInvestigationActiveIndex(0);
                         }}
                         onBlur={() => setTimeout(() => setInvestigationOpen(false), 50)}
@@ -2418,7 +2546,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                   <div className="space-y-2">
                     <div className="text-xs font-semibold text-gray-600">Quick picks</div>
                     <div className="flex flex-wrap gap-2">
-                      {quickPicksBySection.investigations.map(item => {
+                      {quickPicks.investigations.map(item => {
                         const isSelected = selectedInvestigations.includes(item.name);
                         return (
                           <Button
@@ -2470,17 +2598,45 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                       <Input
                         ref={procedureInputRef}
                         value={procedureQuery}
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const val = e.target.value;
                           setProcedureQuery(val);
-                          const next = val ? filterProcedureItems(val) : procedureLookupData;
-                          setProcedureOptions(next);
+
+                          if (val && val.length > 1) {
+                            try {
+                              const hid = getHospitalId() || '4de8ea65-71aa-4800-8167-60147d78ea58';
+                              const did = getDoctorId() || '9de6031b-7195-43f7-85b4-bba824585529';
+
+                              const response = await eprescriptionApi.searchLookupParams('PROCEDURE', hid, did, val);
+
+                              if (response.success) {
+                                const personalItems: LookupItem[] = response.personalLookupData.map(item => ({
+                                  id: item.personalId || item.code,
+                                  name: item.name,
+                                  source: 'personal',
+                                  shortDesc: item.shortDesc
+                                }));
+                                const masterItems: LookupItem[] = response.masterLookupData.map(item => ({
+                                  id: item.lookupId || item.code,
+                                  name: item.name,
+                                  source: 'general',
+                                  shortDesc: item.shortDesc
+                                }));
+                                setProcedureOptions([...personalItems, ...masterItems]);
+                              }
+                            } catch (err) {
+                              console.error('Failed to search procedures', err);
+                              setProcedureOptions([]);
+                            }
+                          } else {
+                            setProcedureOptions([]);
+                          }
                           setProcedureActiveIndex(0);
                           setProcedureOpen(true);
                         }}
                         onFocus={() => {
                           setProcedureOpen(true);
-                          setProcedureOptions(procedureLookupData);
+                          setProcedureOptions([]);
                           setProcedureActiveIndex(0);
                         }}
                         onBlur={() => setTimeout(() => setProcedureOpen(false), 50)}
@@ -2586,7 +2742,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                   <div className="space-y-2">
                     <div className="text-xs font-semibold text-gray-600">Quick picks</div>
                     <div className="flex flex-wrap gap-2">
-                      {quickPicksBySection.procedures.map(item => {
+                      {quickPicks.procedures.map(item => {
                         const isSelected = selectedProcedures.includes(item.name);
                         return (
                           <Button
