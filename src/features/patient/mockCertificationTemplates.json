@@ -1,0 +1,397 @@
+{
+  "version": "1.0",
+  "placeholders": [
+    "{{patientName}}",
+    "{{age}}",
+    "{{gender}}",
+    "{{patientId}}",
+    "{{uhid}}",
+    "{{appointmentDate}}",
+    "{{issuedDate}}",
+    "{{fromDate}}",
+    "{{toDate}}",
+    "{{diagnosis}}",
+    "{{complaints}}",
+    "{{findings}}",
+    "{{treatment}}",
+    "{{medications}}",
+    "{{investigations}}",
+    "{{procedure}}",
+    "{{restrictions}}",
+    "{{fitnessStatus}}",
+    "{{followUpDate}}"
+  ],
+  "categories": [
+    "Medical",
+    "Fitness",
+    "Leave/Rest",
+    "School/College",
+    "Travel",
+    "Referral",
+    "Insurance/Legal",
+    "Administrative",
+    "Procedure/Surgery",
+    "Other"
+  ],
+  "types": [
+    {
+      "typeCode": "SICK_LEAVE",
+      "displayName": "Sick Leave Certificate",
+      "category": "Leave/Rest",
+      "supportsValidityRange": true,
+      "showFields": {
+        "fromDate": true,
+        "toDate": true,
+        "fitnessStatus": false,
+        "remarks": true
+      },
+      "template": "SICK LEAVE CERTIFICATE\n\nDate of Issue: {{issuedDate}}\n\nThis is to certify that Mr/Ms {{patientName}}, Age {{age}}, Gender {{gender}} (Patient ID: {{patientId}}/{{uhid}}), was examined on {{appointmentDate}} and is advised rest/sick leave from {{fromDate}} to {{toDate}} due to {{diagnosis}}.\n\nRemarks: {{remarks}}",
+      "defaultRemarksHint": "Optional: duration, follow-up advice, any special instructions."
+    },
+    {
+      "typeCode": "BED_REST",
+      "displayName": "Rest / Bed Rest Advice Certificate",
+      "category": "Leave/Rest",
+      "supportsValidityRange": true,
+      "showFields": {
+        "fromDate": true,
+        "toDate": true,
+        "fitnessStatus": false,
+        "remarks": true
+      },
+      "template": "REST / BED REST ADVICE\n\nDate of Issue: {{issuedDate}}\n\nMr/Ms {{patientName}} (Age {{age}}, {{gender}}; Patient ID: {{patientId}}/{{uhid}}) was examined on {{appointmentDate}} and is advised rest/bed rest from {{fromDate}} to {{toDate}} for {{diagnosis}}.\n\nAdvice/Notes: {{remarks}}\nFollow-up: {{followUpDate}}"
+    },
+    {
+      "typeCode": "FIT_TO_JOIN",
+      "displayName": "Fitness Certificate (Fit to Join / Fit for Duty)",
+      "category": "Fitness",
+      "supportsValidityRange": true,
+      "showFields": {
+        "fromDate": true,
+        "toDate": false,
+        "fitnessStatus": true,
+        "remarks": true
+      },
+      "template": "FITNESS CERTIFICATE\n\nDate of Issue: {{issuedDate}}\n\nThis is to certify that Mr/Ms {{patientName}}, Age {{age}}, {{gender}} (Patient ID: {{patientId}}/{{uhid}}), was examined on {{appointmentDate}}.\n\nFitness Status: {{fitnessStatus}}\nFit to join/return to duty from: {{fromDate}}\nDiagnosis/Condition: {{diagnosis}}\n\nRemarks/Restrictions (if any): {{restrictions}}",
+      "fitnessStatusOptions": [
+        "Fit",
+        "Unfit",
+        "Restricted"
+      ]
+    },
+    {
+      "typeCode": "UNFIT_FOR_DUTY",
+      "displayName": "Fitness Certificate (Unfit for Duty)",
+      "category": "Fitness",
+      "supportsValidityRange": true,
+      "showFields": {
+        "fromDate": true,
+        "toDate": true,
+        "fitnessStatus": true,
+        "remarks": true
+      },
+      "template": "FITNESS CERTIFICATE (UNFIT)\n\nDate of Issue: {{issuedDate}}\n\nMr/Ms {{patientName}} (Age {{age}}, {{gender}}; Patient ID: {{patientId}}/{{uhid}}) was examined on {{appointmentDate}} and is certified as:\n\nFitness Status: {{fitnessStatus}}\nUnfit for duty/work from: {{fromDate}} to {{toDate}} due to {{diagnosis}}.\n\nRemarks: {{remarks}}",
+      "fitnessStatusOptions": [
+        "Unfit"
+      ]
+    },
+    {
+      "typeCode": "RESTRICTED_DUTY",
+      "displayName": "Fitness Certificate (Restricted / Light Duty)",
+      "category": "Fitness",
+      "supportsValidityRange": true,
+      "showFields": {
+        "fromDate": true,
+        "toDate": true,
+        "fitnessStatus": true,
+        "remarks": true
+      },
+      "template": "FITNESS CERTIFICATE (RESTRICTED DUTY)\n\nDate of Issue: {{issuedDate}}\n\nThis is to certify that Mr/Ms {{patientName}} (Age {{age}}, {{gender}}; Patient ID: {{patientId}}/{{uhid}}) was examined on {{appointmentDate}}.\n\nFitness Status: Restricted\nRecommended restricted/light duty from {{fromDate}} to {{toDate}}.\nRestrictions: {{restrictions}}\nCondition/Diagnosis: {{diagnosis}}\n\nFollow-up: {{followUpDate}}",
+      "fitnessStatusOptions": [
+        "Restricted"
+      ]
+    },
+    {
+      "typeCode": "RETURN_TO_WORK",
+      "displayName": "Return-to-Work Note",
+      "category": "Fitness",
+      "supportsValidityRange": false,
+      "showFields": {
+        "fromDate": true,
+        "toDate": false,
+        "fitnessStatus": true,
+        "remarks": true
+      },
+      "template": "RETURN TO WORK NOTE\n\nDate of Issue: {{issuedDate}}\n\nMr/Ms {{patientName}} (Patient ID: {{patientId}}/{{uhid}}) was reviewed on {{appointmentDate}} and is:\n\nFitness Status: {{fitnessStatus}}\nRecommended to return to work from: {{fromDate}}\nRestrictions (if any): {{restrictions}}"
+    },
+    {
+      "typeCode": "WORK_FROM_HOME",
+      "displayName": "Work From Home Recommendation",
+      "category": "Administrative",
+      "supportsValidityRange": true,
+      "showFields": {
+        "fromDate": true,
+        "toDate": true,
+        "fitnessStatus": false,
+        "remarks": true
+      },
+      "template": "WORK FROM HOME RECOMMENDATION\n\nDate of Issue: {{issuedDate}}\n\nMr/Ms {{patientName}} (Age {{age}}, {{gender}}; Patient ID: {{patientId}}/{{uhid}}) was examined on {{appointmentDate}} for {{diagnosis}}.\n\nWork-from-home is recommended from {{fromDate}} to {{toDate}}.\n\nRemarks: {{remarks}}"
+    },
+    {
+      "typeCode": "ATTENDANT_LEAVE",
+      "displayName": "Attendant / Caregiver Leave Note",
+      "category": "Leave/Rest",
+      "supportsValidityRange": true,
+      "showFields": {
+        "fromDate": true,
+        "toDate": true,
+        "fitnessStatus": false,
+        "remarks": true
+      },
+      "template": "ATTENDANT / CAREGIVER LEAVE NOTE\n\nDate of Issue: {{issuedDate}}\n\nThis is to certify that Mr/Ms {{patientName}} (Patient ID: {{patientId}}/{{uhid}}) was examined on {{appointmentDate}} and may require an attendant/caregiver from {{fromDate}} to {{toDate}} due to {{diagnosis}}.\n\nRemarks: {{remarks}}"
+    },
+    {
+      "typeCode": "SCHOOL_MEDICAL_LEAVE",
+      "displayName": "School/College Medical Leave Certificate",
+      "category": "School/College",
+      "supportsValidityRange": true,
+      "showFields": {
+        "fromDate": true,
+        "toDate": true,
+        "fitnessStatus": false,
+        "remarks": true
+      },
+      "template": "SCHOOL/COLLEGE MEDICAL LEAVE CERTIFICATE\n\nDate of Issue: {{issuedDate}}\n\nThis is to certify that student {{patientName}} (Age {{age}}, {{gender}}; Patient ID: {{patientId}}/{{uhid}}) was examined on {{appointmentDate}} and is advised medical leave/rest from {{fromDate}} to {{toDate}} due to {{diagnosis}}.\n\nRemarks: {{remarks}}"
+    },
+    {
+      "typeCode": "SCHOOL_FITNESS_SPORTS",
+      "displayName": "School Fitness Certificate (Sports/Physical Activity)",
+      "category": "School/College",
+      "supportsValidityRange": true,
+      "showFields": {
+        "fromDate": true,
+        "toDate": true,
+        "fitnessStatus": true,
+        "remarks": true
+      },
+      "template": "SCHOOL FITNESS CERTIFICATE\n\nDate of Issue: {{issuedDate}}\n\nStudent {{patientName}} (Age {{age}}, {{gender}}; Patient ID: {{patientId}}/{{uhid}}) was examined on {{appointmentDate}}.\n\nFitness Status: {{fitnessStatus}}\nFitness valid from {{fromDate}} to {{toDate}}.\nRestrictions (if any): {{restrictions}}"
+    },
+    {
+      "typeCode": "GYM_FITNESS",
+      "displayName": "Fitness Certificate for Gym/Exercise Program",
+      "category": "Fitness",
+      "supportsValidityRange": true,
+      "showFields": {
+        "fromDate": true,
+        "toDate": true,
+        "fitnessStatus": true,
+        "remarks": true
+      },
+      "template": "FITNESS CERTIFICATE (GYM/EXERCISE)\n\nDate of Issue: {{issuedDate}}\n\nMr/Ms {{patientName}} (Age {{age}}, {{gender}}; Patient ID: {{patientId}}/{{uhid}}) was examined on {{appointmentDate}}.\n\nFitness Status: {{fitnessStatus}}\nFit for exercise program from {{fromDate}} to {{toDate}}.\nRecommended restrictions/precautions: {{restrictions}}"
+    },
+    {
+      "typeCode": "DRIVING_FITNESS",
+      "displayName": "Fitness Certificate for Driving",
+      "category": "Fitness",
+      "supportsValidityRange": true,
+      "showFields": {
+        "fromDate": true,
+        "toDate": true,
+        "fitnessStatus": true,
+        "remarks": true
+      },
+      "template": "FITNESS CERTIFICATE (DRIVING)\n\nDate of Issue: {{issuedDate}}\n\nThis is to certify that Mr/Ms {{patientName}} (Age {{age}}, {{gender}}; Patient ID: {{patientId}}/{{uhid}}) was examined on {{appointmentDate}}.\n\nFitness Status: {{fitnessStatus}}\nFitness for driving valid from {{fromDate}} to {{toDate}}.\nRemarks/Limitations: {{restrictions}}",
+      "notes": "Some jurisdictions require specific government formats; use as a general note unless a mandated form is required."
+    },
+    {
+      "typeCode": "TRAVEL_FIT_TO_FLY",
+      "displayName": "Travel Fitness Certificate (Fit to Fly / Travel)",
+      "category": "Travel",
+      "supportsValidityRange": true,
+      "showFields": {
+        "fromDate": true,
+        "toDate": true,
+        "fitnessStatus": true,
+        "remarks": true
+      },
+      "template": "TRAVEL FITNESS CERTIFICATE\n\nDate of Issue: {{issuedDate}}\n\nMr/Ms {{patientName}} (Age {{age}}, {{gender}}; Patient ID: {{patientId}}/{{uhid}}) was examined on {{appointmentDate}}.\n\nFitness Status: {{fitnessStatus}}\nFit to travel/fly from {{fromDate}} to {{toDate}}.\nDiagnosis/Condition: {{diagnosis}}\nPrecautions/Restrictions: {{restrictions}}"
+    },
+    {
+      "typeCode": "COMMUNICABLE_ISOLATION",
+      "displayName": "Communicable Disease Isolation Advice Note",
+      "category": "Medical",
+      "supportsValidityRange": true,
+      "showFields": {
+        "fromDate": true,
+        "toDate": true,
+        "fitnessStatus": false,
+        "remarks": true
+      },
+      "template": "ISOLATION / HOME QUARANTINE ADVICE\n\nDate of Issue: {{issuedDate}}\n\nMr/Ms {{patientName}} (Patient ID: {{patientId}}/{{uhid}}) was examined on {{appointmentDate}} and is advised isolation/home quarantine from {{fromDate}} to {{toDate}} due to suspected/confirmed {{diagnosis}}.\n\nAdvice: Masking, hygiene measures, and follow-up if warning symptoms occur.\nRemarks: {{remarks}}"
+    },
+    {
+      "typeCode": "PREGNANCY_REST",
+      "displayName": "Pregnancy Rest / Antenatal Advice Certificate",
+      "category": "Medical",
+      "supportsValidityRange": true,
+      "showFields": {
+        "fromDate": true,
+        "toDate": true,
+        "fitnessStatus": false,
+        "remarks": true
+      },
+      "template": "PREGNANCY REST / ANTENATAL ADVICE\n\nDate of Issue: {{issuedDate}}\n\nMrs {{patientName}} (Age {{age}}; Patient ID: {{patientId}}/{{uhid}}) was examined on {{appointmentDate}}.\n\nAdvice: Rest advised from {{fromDate}} to {{toDate}}.\nReason/Diagnosis: {{diagnosis}}\nRemarks: {{remarks}}\nFollow-up: {{followUpDate}}"
+    },
+    {
+      "typeCode": "POST_NATAL_REST",
+      "displayName": "Post-natal Rest / Recovery Certificate",
+      "category": "Medical",
+      "supportsValidityRange": true,
+      "showFields": {
+        "fromDate": true,
+        "toDate": true,
+        "fitnessStatus": false,
+        "remarks": true
+      },
+      "template": "POST-NATAL REST / RECOVERY CERTIFICATE\n\nDate of Issue: {{issuedDate}}\n\nMrs {{patientName}} (Age {{age}}; Patient ID: {{patientId}}/{{uhid}}) was reviewed on {{appointmentDate}}.\n\nRest/recovery advised from {{fromDate}} to {{toDate}}.\nRemarks: {{remarks}}\nFollow-up: {{followUpDate}}"
+    },
+    {
+      "typeCode": "VACCINATION_NOTE",
+      "displayName": "Vaccination Note (Given/Advised)",
+      "category": "Medical",
+      "supportsValidityRange": false,
+      "showFields": {
+        "fromDate": false,
+        "toDate": false,
+        "fitnessStatus": false,
+        "remarks": true
+      },
+      "template": "VACCINATION NOTE\n\nDate of Issue: {{issuedDate}}\n\nPatient: {{patientName}} (Patient ID: {{patientId}}/{{uhid}})\nVisit Date: {{appointmentDate}}\n\nVaccine details: {{remarks}}",
+      "defaultRemarksHint": "Example: Vaccine name, dose number, route, site, batch/lot (if available), next due date."
+    },
+    {
+      "typeCode": "MEDICAL_SUMMARY",
+      "displayName": "Medical Summary / Treatment Summary",
+      "category": "Medical",
+      "supportsValidityRange": false,
+      "showFields": {
+        "fromDate": false,
+        "toDate": false,
+        "fitnessStatus": false,
+        "remarks": true
+      },
+      "template": "MEDICAL / TREATMENT SUMMARY\n\nDate of Issue: {{issuedDate}}\n\nPatient: {{patientName}} (Age {{age}}, {{gender}}; Patient ID: {{patientId}}/{{uhid}})\nConsultation Date: {{appointmentDate}}\n\nComplaints: {{complaints}}\nFindings: {{findings}}\nDiagnosis: {{diagnosis}}\nTreatment/Plan: {{treatment}}\nMedications: {{medications}}\nInvestigations (if any): {{investigations}}\nFollow-up: {{followUpDate}}\n\nAdditional Notes: {{remarks}}"
+    },
+    {
+      "typeCode": "CHRONIC_ILLNESS_CERT",
+      "displayName": "Chronic Illness Certificate",
+      "category": "Medical",
+      "supportsValidityRange": true,
+      "showFields": {
+        "fromDate": true,
+        "toDate": true,
+        "fitnessStatus": false,
+        "remarks": true
+      },
+      "template": "CHRONIC ILLNESS CERTIFICATE\n\nDate of Issue: {{issuedDate}}\n\nThis is to certify that Mr/Ms {{patientName}} (Age {{age}}, {{gender}}; Patient ID: {{patientId}}/{{uhid}}) is under my care/follow-up for {{diagnosis}}.\n\nThis certificate is issued for the period {{fromDate}} to {{toDate}} (as applicable).\nCurrent treatment: {{medications}}\nRemarks: {{remarks}}"
+    },
+    {
+      "typeCode": "REFERRAL_LETTER",
+      "displayName": "Referral Letter",
+      "category": "Referral",
+      "supportsValidityRange": false,
+      "showFields": {
+        "fromDate": false,
+        "toDate": false,
+        "fitnessStatus": false,
+        "remarks": true
+      },
+      "template": "REFERRAL LETTER\n\nDate: {{issuedDate}}\n\nTo,\nThe Consultant/Department: {{remarks}}\n\nPatient: {{patientName}} (Age {{age}}, {{gender}}; Patient ID: {{patientId}}/{{uhid}})\nSeen on: {{appointmentDate}}\n\nReason for referral: {{diagnosis}}\nClinical summary: {{complaints}} | {{findings}}\nTreatment given: {{treatment}}\nInvestigations: {{investigations}}\n\nKindly evaluate and manage further"
+    },
+    {
+      "typeCode": "ADMISSION_RECOMMENDATION",
+      "displayName": "Admission Recommendation Note",
+      "category": "Referral",
+      "supportsValidityRange": false,
+      "showFields": {
+        "fromDate": false,
+        "toDate": false,
+        "fitnessStatus": false,
+        "remarks": true
+      },
+      "template": "ADMISSION RECOMMENDATION\n\nDate: {{issuedDate}}\n\nPatient: {{patientName}} (Patient ID: {{patientId}}/{{uhid}})\nExamined on: {{appointmentDate}}\n\nProvisional diagnosis: {{diagnosis}}\nReason for admission: {{remarks}}\nCurrent status/findings: {{findings}}\nTreatment started: {{treatment}}"
+    },
+    {
+      "typeCode": "PRE_OP_CLEARANCE",
+      "displayName": "Pre-operative Fitness / Clearance Note",
+      "category": "Procedure/Surgery",
+      "supportsValidityRange": true,
+      "showFields": {
+        "fromDate": true,
+        "toDate": true,
+        "fitnessStatus": true,
+        "remarks": true
+      },
+      "template": "PRE-OPERATIVE FITNESS / CLEARANCE\n\nDate of Issue: {{issuedDate}}\n\nPatient: {{patientName}} (Age {{age}}, {{gender}}; Patient ID: {{patientId}}/{{uhid}})\nAssessed on: {{appointmentDate}}\n\nPlanned procedure/surgery: {{procedure}}\nFitness Status: {{fitnessStatus}}\nClearance valid from {{fromDate}} to {{toDate}}.\nConditions/Precautions: {{restrictions}}\nRemarks: {{remarks}}",
+      "fitnessStatusOptions": [
+        "Fit",
+        "Unfit",
+        "Restricted"
+      ]
+    },
+    {
+      "typeCode": "POST_OP_REST",
+      "displayName": "Post-procedure / Post-operative Rest Certificate",
+      "category": "Procedure/Surgery",
+      "supportsValidityRange": true,
+      "showFields": {
+        "fromDate": true,
+        "toDate": true,
+        "fitnessStatus": false,
+        "remarks": true
+      },
+      "template": "POST-PROCEDURE / POST-OPERATIVE REST CERTIFICATE\n\nDate: {{issuedDate}}\n\nPatient: {{patientName}} (Patient ID: {{patientId}}/{{uhid}})\nProcedure: {{procedure}}\nReviewed on: {{appointmentDate}}\n\nRest advised from {{fromDate}} to {{toDate}}.\nRemarks/Precautions: {{remarks}}\nFollow-up: {{followUpDate}}"
+    },
+    {
+      "typeCode": "INSURANCE_MEDICAL_NOTE",
+      "displayName": "Insurance Medical Note / Certificate",
+      "category": "Insurance/Legal",
+      "supportsValidityRange": false,
+      "showFields": {
+        "fromDate": false,
+        "toDate": false,
+        "fitnessStatus": false,
+        "remarks": true
+      },
+      "template": "INSURANCE MEDICAL NOTE\n\nDate: {{issuedDate}}\n\nPatient: {{patientName}} (Age {{age}}, {{gender}}; Patient ID: {{patientId}}/{{uhid}})\nSeen on: {{appointmentDate}}\n\nDiagnosis: {{diagnosis}}\nClinical summary: {{complaints}} | {{findings}}\nTreatment/Plan: {{treatment}}\n\nRemarks/Requested information: {{remarks}}",
+      "notes": "Insurance providers may require specific forms; use this as a supporting note unless a mandated format is provided."
+    },
+    {
+      "typeCode": "INJURY_CERTIFICATE_NOTE",
+      "displayName": "Injury / Accident Note (General)",
+      "category": "Insurance/Legal",
+      "supportsValidityRange": false,
+      "showFields": {
+        "fromDate": false,
+        "toDate": false,
+        "fitnessStatus": false,
+        "remarks": true
+      },
+      "template": "INJURY / ACCIDENT NOTE\n\nDate: {{issuedDate}}\n\nPatient: {{patientName}} (Patient ID: {{patientId}}/{{uhid}})\nExamined on: {{appointmentDate}}\n\nHistory (as stated): {{remarks}}\nFindings/Injuries: {{findings}}\nProvisional diagnosis: {{diagnosis}}\nTreatment given: {{treatment}}",
+      "notes": "For medico-legal cases, local hospital/authority protocols and MLC formats may apply."
+    },
+    {
+      "typeCode": "GENERAL_MEDICAL_CERT",
+      "displayName": "General Medical Certificate (Custom)",
+      "category": "Other",
+      "supportsValidityRange": true,
+      "showFields": {
+        "fromDate": true,
+        "toDate": true,
+        "fitnessStatus": true,
+        "remarks": true
+      },
+      "template": "MEDICAL CERTIFICATE\n\nDate: {{issuedDate}}\n\nThis is to certify that Mr/Ms {{patientName}} (Age {{age}}, {{gender}}; Patient ID: {{patientId}}/{{uhid}}) was examined on {{appointmentDate}}.\n\nDiagnosis/Assessment: {{diagnosis}}\nFitness Status (if applicable): {{fitnessStatus}}\nValidity/Period (if applicable): {{fromDate}} to {{toDate}}\n\nDetails/Notes: {{remarks}}"
+    }
+  ]
+}

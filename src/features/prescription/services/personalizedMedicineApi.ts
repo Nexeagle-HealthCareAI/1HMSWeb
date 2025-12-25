@@ -12,6 +12,8 @@ export interface PersonalizedMedicinePayload {
   indication: string;
   notes: string;
   medicineId: string;
+  usageDescription?: string;
+  sideEffects?: string;
 }
 
 export interface PersonalizedMedicineResponse extends Partial<PersonalizedMedicinePayload> {
@@ -44,6 +46,8 @@ const normalizeList = (data: any): PersonalizedMedicineResponse[] => {
     indication: item?.indication ?? '',
     notes: item?.notes ?? '',
     medicineId: item?.medicineId ?? '',
+    usageDescription: item?.usageDescription ?? '',
+    sideEffects: item?.sideEffects ?? '',
     usageCount: typeof item?.usageCount === 'number' ? item.usageCount : 0,
     lastModifiedAt: item?.lastModifiedAt ?? '',
     modifiedAt: item?.modifiedAt ?? item?.lastModifiedAt ?? '',

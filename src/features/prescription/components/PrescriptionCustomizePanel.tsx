@@ -9,9 +9,9 @@ import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/hooks/use-toast';
 import { personalizedDataApi, PersonalizedLookupType } from '@/features/prescription/services/personalizedDataApi';
 import { personalizedMedicineApi } from '@/features/prescription/services/personalizedMedicineApi';
-import { 
-  Settings, 
-  Save, 
+import {
+  Settings,
+  Save,
   X,
   CheckCircle,
   AlertCircle,
@@ -78,6 +78,8 @@ interface PersonalizedDataItem {
   indication?: string;
   notes?: string;
   medicineId?: string;
+  usageDescription?: string;
+  sideEffects?: string;
 }
 
 interface PersonalizedData {
@@ -97,7 +99,7 @@ interface PrescriptionCustomizePanelProps {
   hidePersonalizedHeader?: boolean;
 }
 
-export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProps> = ({ 
+export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProps> = ({
   showCloseButton = true,
   defaultTab = 'fields',
   hidePersonalizedHeader = false
@@ -105,7 +107,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
   const [customizeTab, setCustomizeTab] = useState<'fields' | 'playground'>(defaultTab === 'personalized' ? 'playground' : 'fields');
   const { hospitalId, doctorId } = useAuthStore();
   const { toast } = useToast();
-  
+
   // Use API hook for field configuration
   const {
     fields,
@@ -155,6 +157,8 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
   const [newItemIndication, setNewItemIndication] = useState('');
   const [newItemNotes, setNewItemNotes] = useState('');
   const [newItemMedicineId, setNewItemMedicineId] = useState('');
+  const [newItemUsageDescription, setNewItemUsageDescription] = useState('');
+  const [newItemSideEffects, setNewItemSideEffects] = useState('');
 
   // Edit item states
   const [editItemName, setEditItemName] = useState('');
@@ -212,9 +216,9 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
   const getFilteredPersonalizedDataItems = () => {
     const items = personalizedData[selectedPersonalizedCategory as keyof PersonalizedData] || [];
     if (!searchQuery.trim()) return items;
-    
+
     const query = searchQuery.toLowerCase();
-    return items.filter(item => 
+    return items.filter(item =>
       item.name.toLowerCase().includes(query) ||
       item.code.toLowerCase().includes(query) ||
       item.shortDesc.toLowerCase().includes(query) ||
@@ -280,10 +284,10 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
       strengthValue: newItemStrengthValue,
       strengthUnit: newItemStrengthUnit,
       route: newItemRoute,
-      dose: newItemDose,
-      indication: newItemIndication,
       notes: newItemNotes,
-      medicineId: newItemMedicineId
+      medicineId: newItemMedicineId,
+      usageDescription: newItemUsageDescription,
+      sideEffects: newItemSideEffects
     };
 
     const resetForm = () => {
@@ -302,6 +306,8 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
       setNewItemIndication('');
       setNewItemNotes('');
       setNewItemMedicineId('');
+      setNewItemUsageDescription('');
+      setNewItemSideEffects('');
       setEditingItem(null);
       setIsAddingItem(false);
     };
@@ -344,6 +350,8 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
           indication: newItemIndication,
           notes: newItemNotes,
           medicineId: newItemMedicineId,
+          usageDescription: newItemUsageDescription,
+          sideEffects: newItemSideEffects,
         }, prefferedId);
 
         const refreshedMeds = await personalizedMedicineApi.list(doctorId, hospitalId);
@@ -361,6 +369,8 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
           indication: item.indication || '',
           notes: item.notes || '',
           medicineId: item.medicineId || '',
+          usageDescription: item.usageDescription || '',
+          sideEffects: item.sideEffects || '',
           code: item.medicineId || '',
           shortDesc: item.brandName || item.genericName || '',
           synonyms: '',
@@ -571,9 +581,9 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
         code: item.code ?? '',
         shortDesc: item.shortDesc ?? '',
         synonyms: item.synonyms ?? '',
-            usageCount: typeof item.usageCount === 'number' ? item.usageCount : 0,
-            createdAt: item.createdAt ?? '',
-            modifiedAt: item.modifiedAt ?? '',
+        usageCount: typeof item.usageCount === 'number' ? item.usageCount : 0,
+        createdAt: item.createdAt ?? '',
+        modifiedAt: item.modifiedAt ?? '',
       }));
 
       setPersonalizedData(prev => ({
@@ -617,6 +627,8 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
       setNewItemIndication(item.indication || '');
       setNewItemNotes(item.notes || '');
       setNewItemMedicineId(item.medicineId || '');
+      setNewItemUsageDescription(item.usageDescription || '');
+      setNewItemSideEffects(item.sideEffects || '');
     }
   };
 
@@ -760,6 +772,8 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
             indication: item.indication || '',
             notes: item.notes || '',
             medicineId: item.medicineId || '',
+            usageDescription: item.usageDescription || '',
+            sideEffects: item.sideEffects || '',
             code: item.medicineId || '',
             shortDesc: item.brandName || item.genericName || '',
             synonyms: '',
@@ -809,10 +823,10 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
     const items = personalizedData[selectedPersonalizedCategory as keyof PersonalizedData] || [];
     const filtered = searchQuery.trim()
       ? items.filter(item =>
-          item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.shortDesc.toLowerCase().includes(searchQuery.toLowerCase())
-        )
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.shortDesc.toLowerCase().includes(searchQuery.toLowerCase())
+      )
       : items;
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
     if (currentPage > totalPages) {
@@ -854,7 +868,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                   <div className="text-xs sm:text-sm text-blue-800 dark:text-blue-200 bg-white/70 dark:bg-blue-900/30 rounded-md px-2.5 py-1 border border-blue-200/70 dark:border-blue-800/60">
                     <span className="font-semibold">{fields.filter(f => f.enabled).length}</span> of <span className="font-semibold">{fields.length}</span> fields enabled
                   </div>
-                  <Button 
+                  <Button
                     onClick={saveFieldConfiguration}
                     disabled={isSaving}
                     className="bg-green-600 hover:bg-green-700 text-white px-4 sm:px-5 py-2 text-xs sm:text-sm transition-colors w-full sm:w-auto disabled:opacity-50"
@@ -870,45 +884,42 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
             <div className="flex-1 p-2 sm:p-3 overflow-visible">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                 {fields.map((field) => (
-                <div 
-                  key={field.id} 
-                    className={`flex items-center justify-between p-2 sm:p-3 rounded-lg border transition-all duration-200 ${
-                    field.enabled 
-                        ? 'border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-900/30' 
-                        : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'
-                    }`}
+                  <div
+                    key={field.id}
+                    className={`flex items-center justify-between p-2 sm:p-3 rounded-lg border transition-all duration-200 ${field.enabled
+                      ? 'border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-900/30'
+                      : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'
+                      }`}
                   >
-                            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
-                      <div className={`p-1 sm:p-1.5 rounded-md flex-shrink-0 ${
-                        field.enabled ? 'bg-green-100 text-green-700 dark:bg-green-900/60 dark:text-green-200' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-200'
-                    }`}>
-                      {renderFieldIcon(field.id)}
-                    </div>
+                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+                      <div className={`p-1 sm:p-1.5 rounded-md flex-shrink-0 ${field.enabled ? 'bg-green-100 text-green-700 dark:bg-green-900/60 dark:text-green-200' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-200'
+                        }`}>
+                        {renderFieldIcon(field.id)}
+                      </div>
                       <div className="min-w-0 flex-1">
                         <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 truncate block">{field.label}</span>
+                      </div>
                     </div>
-                  </div>
-                    
+
                     <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                       <button
                         onClick={() => updateFieldConfig(field.id, !field.enabled)}
-                        className={`px-2 sm:px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                          field.enabled
-                            ? 'bg-green-500 text-white'
-                            : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-100'
-                        }`}
+                        className={`px-2 sm:px-3 py-1 rounded-md text-xs font-medium transition-colors ${field.enabled
+                          ? 'bg-green-500 text-white'
+                          : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-100'
+                          }`}
                       >
                         {field.enabled ? 'ON' : 'OFF'}
                       </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
               </div>
             </div>
-            
+
           </div>
         ) : (
-            <div className="h-full flex flex-col">
+          <div className="h-full flex flex-col">
             {/* Sidebar Layout - Mobile Responsive */}
             <div className="flex-1 flex flex-col sm:flex-row gap-3 sm:gap-4 overflow-visible">
               {/* Enhanced Category Sidebar - Mobile Responsive */}
@@ -919,50 +930,49 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                     <h4 className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200">Medical Categories</h4>
                   </div>
                   <div className="space-y-1 sm:space-y-2">
-                      {personalizedDataCategories.map((category) => {
-                        const IconComponent = category.icon;
-                        const isSelected = selectedPersonalizedCategory === category.id;
-                        
-                        return (
-                          <button
-                            key={category.id}
-                            onClick={() => setSelectedPersonalizedCategory(category.id)}
-                          className={`w-full flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg text-xs sm:text-sm transition-all duration-300 ${
-                              isSelected
-                              ? 'bg-green-100 dark:bg-green-900/30 text-green-900 dark:text-green-200 border-2 border-green-300 dark:border-green-600 shadow-lg scale-105'
-                              : 'hover:bg-white dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 hover:scale-102'
-                          }`}
+                    {personalizedDataCategories.map((category) => {
+                      const IconComponent = category.icon;
+                      const isSelected = selectedPersonalizedCategory === category.id;
+
+                      return (
+                        <button
+                          key={category.id}
+                          onClick={() => setSelectedPersonalizedCategory(category.id)}
+                          className={`w-full flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg text-xs sm:text-sm transition-all duration-300 ${isSelected
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-900 dark:text-green-200 border-2 border-green-300 dark:border-green-600 shadow-lg scale-105'
+                            : 'hover:bg-white dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 hover:scale-102'
+                            }`}
                         >
                           <div className={`p-1 rounded-md flex-shrink-0 ${isSelected ? 'bg-green-200 dark:bg-green-800' : 'bg-gray-100 dark:bg-gray-600'}`}>
                             <IconComponent className={`h-3 w-3 sm:h-4 sm:w-4 ${category.color}`} />
-                            </div>
+                          </div>
                           <span className="flex-1 text-left truncate font-medium">{category.label}</span>
                           {isSelected && (
                             <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-600 rounded-full animate-pulse"></div>
                           )}
-                          </button>
-                        );
-                      })}
-                    </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
+              </div>
 
               {/* Main Content Area - Mobile Responsive */}
-                <div className="flex-1 flex flex-col gap-3 sm:gap-4">
+              <div className="flex-1 flex flex-col gap-3 sm:gap-4">
                 {/* Content Header - Mobile Responsive */}
                 <div className="flex-shrink-0 p-3 sm:p-3 border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 rounded-lg shadow-sm">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
                     <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
                       {React.createElement(personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.icon || FileText, {
-                      className: `h-3 w-3 sm:h-4 sm:w-4 ${personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.color}`
+                        className: `h-3 w-3 sm:h-4 sm:w-4 ${personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.color}`
                       })}
                       <h3 className="text-sm sm:text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
-                          {personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label}
+                        {personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label}
                       </h3>
                       <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 hidden sm:inline">
                         ({personalizedData[selectedPersonalizedCategory as keyof PersonalizedData]?.length || 0} templates)
                       </span>
-                      </div>
+                    </div>
                     <div className="w-full sm:max-w-md flex flex-col sm:flex-row gap-2 sm:gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="relative">
@@ -984,8 +994,8 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                         <span className="sm:hidden">Add</span>
                       </Button>
                     </div>
-                    </div>
                   </div>
+                </div>
 
                 {/* legacy inline add form removed */}
 
@@ -993,12 +1003,12 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                 <div className="flex-1 overflow-visible bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm">
                   {(() => {
                     const items = personalizedData[selectedPersonalizedCategory as keyof PersonalizedData] || [];
-                    const filteredItems = searchQuery.trim() 
-                      ? items.filter(item => 
-                          item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          item.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          item.shortDesc.toLowerCase().includes(searchQuery.toLowerCase())
-                        )
+                    const filteredItems = searchQuery.trim()
+                      ? items.filter(item =>
+                        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        item.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        item.shortDesc.toLowerCase().includes(searchQuery.toLowerCase())
+                      )
                       : items;
 
                     const sortedItems = [...filteredItems].sort((a, b) => {
@@ -1083,159 +1093,159 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                             {/* Desktop / tablet table */}
                             <div className="hidden sm:block overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm">
                               <table className="w-full text-xs sm:text-sm text-gray-800 dark:text-gray-100">
-                              <thead>
-                                <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
-                                  <th
-                                    className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm cursor-pointer select-none"
-                                    onClick={() => handleSort('name')}
-                                  >
-                                    Name {renderSortIndicator('name')}
-                                  </th>
-                                  {selectedPersonalizedCategory !== 'medications' && (
+                                <thead>
+                                  <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
                                     <th
-                                      className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden sm:table-cell cursor-pointer select-none"
-                                      onClick={() => handleSort('code')}
+                                      className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm cursor-pointer select-none"
+                                      onClick={() => handleSort('name')}
                                     >
-                                      Code {renderSortIndicator('code')}
+                                      Name {renderSortIndicator('name')}
                                     </th>
-                                  )}
-                                  <th
-                                    className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden lg:table-cell cursor-pointer select-none"
-                                    onClick={() => handleSort('usageCount')}
-                                  >
-                                    Usage {renderSortIndicator('usageCount')}
-                                  </th>
-                                  {selectedPersonalizedCategory === 'medications' && (
-                                    <>
-                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden lg:table-cell cursor-pointer select-none" onClick={() => handleSort('strengthValue')}>
-                                        Strength {renderSortIndicator('strengthValue')}
-                                      </th>
-                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden lg:table-cell cursor-pointer select-none" onClick={() => handleSort('form')}>
-                                        Form {renderSortIndicator('form')}
-                                      </th>
-                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden xl:table-cell cursor-pointer select-none" onClick={() => handleSort('route')}>
-                                        Route {renderSortIndicator('route')}
-                                      </th>
-                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden xl:table-cell cursor-pointer select-none" onClick={() => handleSort('dose')}>
-                                        Dose {renderSortIndicator('dose')}
-                                      </th>
-                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden 2xl:table-cell cursor-pointer select-none" onClick={() => handleSort('indication')}>
-                                        Indication {renderSortIndicator('indication')}
-                                      </th>
-                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden 2xl:table-cell cursor-pointer select-none" onClick={() => handleSort('notes')}>
-                                        Notes {renderSortIndicator('notes')}
-                                      </th>
-                                      <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden sm:table-cell cursor-pointer select-none" onClick={() => handleSort('medicineId')}>
-                                        Medicine ID {renderSortIndicator('medicineId')}
-                                      </th>
-                                    </>
-                                  )}
-                                  {selectedPersonalizedCategory !== 'medications' && (
-                                    <th
-                                      className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden md:table-cell cursor-pointer select-none"
-                                      onClick={() => handleSort('shortDesc')}
-                                    >
-                                      Description {renderSortIndicator('shortDesc')}
-                                    </th>
-                                  )}
-                                  <th
-                                    className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden xl:table-cell cursor-pointer select-none"
-                                    onClick={() => handleSort('modifiedAt')}
-                                  >
-                                    Last Modified {renderSortIndicator('modifiedAt')}
-                                  </th>
-                                  <th className="text-right py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm">Actions</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                                {paginatedItems.map((item) => (
-                                  <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/70">
-                                    <td className="py-2 sm:py-2.5 px-2 sm:px-3 align-top">
-                                      <div className="flex flex-col gap-0.5">
-                                        <span className="font-semibold text-gray-900 dark:text-gray-100 text-xs sm:text-sm">
-                                          {selectedPersonalizedCategory === 'medications' ? item.genericName || item.name : item.name}
-                                        </span>
-                                        {selectedPersonalizedCategory === 'medications' && item.brandName && (
-                                          <span className="text-[11px] text-gray-500 dark:text-gray-400">Brand: {item.brandName}</span>
-                                        )}
-                                      </div>
-                                    </td>
-
                                     {selectedPersonalizedCategory !== 'medications' && (
-                                      <td className="py-2 sm:py-2.5 px-2 sm:px-3 hidden sm:table-cell align-top">
-                                        <span className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-2 py-0.5 text-[11px] font-medium">{item.code || '-'}</span>
-                                      </td>
+                                      <th
+                                        className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden sm:table-cell cursor-pointer select-none"
+                                        onClick={() => handleSort('code')}
+                                      >
+                                        Code {renderSortIndicator('code')}
+                                      </th>
                                     )}
-
-                                    <td className="py-2 sm:py-2.5 px-2 sm:px-3 hidden lg:table-cell align-top">
-                                      <span className="inline-flex items-center rounded-full bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-200 px-2 py-0.5 text-[11px] font-semibold">
-                                        {item.usageCount ?? 0} used
-                                      </span>
-                                    </td>
-
-                                    {selectedPersonalizedCategory === 'medications' ? (
+                                    <th
+                                      className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden lg:table-cell cursor-pointer select-none"
+                                      onClick={() => handleSort('usageCount')}
+                                    >
+                                      Usage {renderSortIndicator('usageCount')}
+                                    </th>
+                                    {selectedPersonalizedCategory === 'medications' && (
                                       <>
-                                        <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden lg:table-cell">
+                                        <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden lg:table-cell cursor-pointer select-none" onClick={() => handleSort('strengthValue')}>
+                                          Strength {renderSortIndicator('strengthValue')}
+                                        </th>
+                                        <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden lg:table-cell cursor-pointer select-none" onClick={() => handleSort('form')}>
+                                          Form {renderSortIndicator('form')}
+                                        </th>
+                                        <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden xl:table-cell cursor-pointer select-none" onClick={() => handleSort('route')}>
+                                          Route {renderSortIndicator('route')}
+                                        </th>
+                                        <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden xl:table-cell cursor-pointer select-none" onClick={() => handleSort('dose')}>
+                                          Dose {renderSortIndicator('dose')}
+                                        </th>
+                                        <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden 2xl:table-cell cursor-pointer select-none" onClick={() => handleSort('indication')}>
+                                          Indication {renderSortIndicator('indication')}
+                                        </th>
+                                        <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden 2xl:table-cell cursor-pointer select-none" onClick={() => handleSort('notes')}>
+                                          Notes {renderSortIndicator('notes')}
+                                        </th>
+                                        <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden sm:table-cell cursor-pointer select-none" onClick={() => handleSort('medicineId')}>
+                                          Medicine ID {renderSortIndicator('medicineId')}
+                                        </th>
+                                      </>
+                                    )}
+                                    {selectedPersonalizedCategory !== 'medications' && (
+                                      <th
+                                        className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden md:table-cell cursor-pointer select-none"
+                                        onClick={() => handleSort('shortDesc')}
+                                      >
+                                        Description {renderSortIndicator('shortDesc')}
+                                      </th>
+                                    )}
+                                    <th
+                                      className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden xl:table-cell cursor-pointer select-none"
+                                      onClick={() => handleSort('modifiedAt')}
+                                    >
+                                      Last Modified {renderSortIndicator('modifiedAt')}
+                                    </th>
+                                    <th className="text-right py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm">Actions</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                                  {paginatedItems.map((item) => (
+                                    <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/70">
+                                      <td className="py-2 sm:py-2.5 px-2 sm:px-3 align-top">
+                                        <div className="flex flex-col gap-0.5">
+                                          <span className="font-semibold text-gray-900 dark:text-gray-100 text-xs sm:text-sm">
+                                            {selectedPersonalizedCategory === 'medications' ? item.genericName || item.name : item.name}
+                                          </span>
+                                          {selectedPersonalizedCategory === 'medications' && item.brandName && (
+                                            <span className="text-[11px] text-gray-500 dark:text-gray-400">Brand: {item.brandName}</span>
+                                          )}
+                                        </div>
+                                      </td>
+
+                                      {selectedPersonalizedCategory !== 'medications' && (
+                                        <td className="py-2 sm:py-2.5 px-2 sm:px-3 hidden sm:table-cell align-top">
+                                          <span className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-2 py-0.5 text-[11px] font-medium">{item.code || '-'}</span>
+                                        </td>
+                                      )}
+
+                                      <td className="py-2 sm:py-2.5 px-2 sm:px-3 hidden lg:table-cell align-top">
+                                        <span className="inline-flex items-center rounded-full bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-200 px-2 py-0.5 text-[11px] font-semibold">
+                                          {item.usageCount ?? 0} used
+                                        </span>
+                                      </td>
+
+                                      {selectedPersonalizedCategory === 'medications' ? (
+                                        <>
+                                          <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden lg:table-cell">
+                                            <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">
+                                              {item.strengthValue} {item.strengthUnit}
+                                            </span>
+                                          </td>
+                                          <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden lg:table-cell">
+                                            <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{item.form}</span>
+                                          </td>
+                                          <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden xl:table-cell">
+                                            <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{item.route}</span>
+                                          </td>
+                                          <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden xl:table-cell">
+                                            <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{item.dose}</span>
+                                          </td>
+                                          <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden 2xl:table-cell">
+                                            <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{item.indication}</span>
+                                          </td>
+                                          <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden 2xl:table-cell">
+                                            <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{item.notes}</span>
+                                          </td>
+                                          <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden sm:table-cell">
+                                            <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{item.medicineId}</span>
+                                          </td>
+                                        </>
+                                      ) : (
+                                        <td className="py-2 sm:py-2.5 px-2 sm:px-3 hidden md:table-cell align-top">
                                           <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">
-                                            {item.strengthValue} {item.strengthUnit}
+                                            {item.shortDesc}
                                           </span>
                                         </td>
-                                        <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden lg:table-cell">
-                                          <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{item.form}</span>
-                                        </td>
-                                        <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden xl:table-cell">
-                                          <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{item.route}</span>
-                                        </td>
-                                        <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden xl:table-cell">
-                                          <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{item.dose}</span>
-                                        </td>
-                                        <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden 2xl:table-cell">
-                                          <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{item.indication}</span>
-                                        </td>
-                                        <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden 2xl:table-cell">
-                                          <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{item.notes}</span>
-                                        </td>
-                                        <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden sm:table-cell">
-                                          <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{item.medicineId}</span>
-                                        </td>
-                                      </>
-                                    ) : (
-                                      <td className="py-2 sm:py-2.5 px-2 sm:px-3 hidden md:table-cell align-top">
-                                        <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">
-                                          {item.shortDesc}
+                                      )}
+
+                                      <td className="py-2 sm:py-2.5 px-2 sm:px-3 hidden xl:table-cell align-top">
+                                        <span className="text-gray-500 dark:text-gray-400 text-[11px]">
+                                          {formatDisplayDate(item.modifiedAt)}
                                         </span>
                                       </td>
-                                    )}
 
-                                    <td className="py-2 sm:py-2.5 px-2 sm:px-3 hidden xl:table-cell align-top">
-                                      <span className="text-gray-500 dark:text-gray-400 text-[11px]">
-                                        {formatDisplayDate(item.modifiedAt)}
-                                      </span>
-                                    </td>
-
-                                    <td className="py-1.5 sm:py-2 px-2 sm:px-3">
-                                      <div className="flex items-center justify-end gap-1">
-                                        <Button
-                                          onClick={() => editPersonalizedDataItem(item.id)}
-                                          variant="outline"
-                                          size="sm"
-                                          className="h-5 w-5 sm:h-6 sm:w-6 p-0"
-                                        >
-                                          <Edit className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                                        </Button>
-                                        <Button
-                                          onClick={() => setPendingDeleteItem(item)}
-                                          variant="outline"
-                                          size="sm"
-                                          className="h-5 w-5 sm:h-6 sm:w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                        >
-                                          <Trash2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                                        </Button>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
+                                      <td className="py-1.5 sm:py-2 px-2 sm:px-3">
+                                        <div className="flex items-center justify-end gap-1">
+                                          <Button
+                                            onClick={() => editPersonalizedDataItem(item.id)}
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-5 w-5 sm:h-6 sm:w-6 p-0"
+                                          >
+                                            <Edit className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                                          </Button>
+                                          <Button
+                                            onClick={() => setPendingDeleteItem(item)}
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-5 w-5 sm:h-6 sm:w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                          >
+                                            <Trash2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                                          </Button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
                               </table>
                             </div>
                             <div className="flex items-center justify-between text-xs sm:text-sm">
@@ -1288,8 +1298,8 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
       {showCloseButton && (
         <div className="p-3 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
           <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                </div>
+            <div className="flex items-center gap-2">
+            </div>
             <Button
               onClick={() => console.log('Save configuration')}
               className="px-4 text-xs bg-blue-600 hover:bg-blue-700"
@@ -1342,7 +1352,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
             <div className="p-4 border-b border-gray-200 dark:border-gray-800">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  Add {personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label}
+                  Add Medicine
                 </h3>
                 <Button
                   onClick={() => setShowAddModal(false)}
@@ -1355,169 +1365,126 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
               </div>
             </div>
             <div className="p-4 overflow-y-auto">
-              {selectedPersonalizedCategory === 'medications' ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                                          <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Generic Name <span className="text-red-600">*</span></label>
-                                            <Input
-                        value={newItemGenericName}
-                        onChange={(e) => setNewItemGenericName(e.target.value)}
-                                              placeholder="e.g., Atorvastatin"
-                        className="w-full"
-                                              autoFocus
-                                            />
-                                          </div>
-                                          <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Brand Name</label>
-                                            <Input
-                        value={newItemBrandName}
-                        onChange={(e) => setNewItemBrandName(e.target.value)}
-                        placeholder="e.g., Lipitor"
-                        className="w-full"
-                                            />
-                                          </div>
-                                        </div>
-                  <div className="grid grid-cols-3 gap-4">
-                                          <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Form</label>
-                                            <Input
-                        value={newItemForm}
-                        onChange={(e) => setNewItemForm(e.target.value)}
-                                              placeholder="e.g., Tablet"
-                        className="w-full"
-                                            />
-                                          </div>
-                                          <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Strength Value</label>
-                                            <Input
-                        value={newItemStrengthValue}
-                        onChange={(e) => setNewItemStrengthValue(e.target.value)}
-                                              placeholder="e.g., 10"
-                        className="w-full"
-                                            />
-                                          </div>
-                                          <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Strength Unit</label>
-                                            <Input
-                        value={newItemStrengthUnit}
-                        onChange={(e) => setNewItemStrengthUnit(e.target.value)}
-                                              placeholder="e.g., mg"
-                        className="w-full"
-                                            />
-                                          </div>
-                                        </div>
-                  <div className="grid grid-cols-2 gap-4">
-                                          <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Route</label>
-                                            <Input
-                        value={newItemRoute}
-                        onChange={(e) => setNewItemRoute(e.target.value)}
-                        placeholder="e.g., Oral"
-                        className="w-full"
-                                            />
-                                          </div>
-                                          <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Dose</label>
-                                            <Input
-                        value={newItemDose}
-                        onChange={(e) => setNewItemDose(e.target.value)}
-                                              placeholder="e.g., 1 tab"
-                        className="w-full"
-                                            />
-                                          </div>
-                                        </div>
-                                        <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Indication</label>
-                                          <Input
-                      value={newItemIndication}
-                      onChange={(e) => setNewItemIndication(e.target.value)}
-                                            placeholder="e.g., Primary hypercholesterolemia"
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Medicine Name <span className="text-red-600">*</span></label>
+                    <Input
+                      value={newItemName}
+                      onChange={(e) => setNewItemName(e.target.value)}
+                      placeholder="e.g., Paracetamol"
                       className="w-full"
-                                          />
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                          <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Notes</label>
-                                            <Input
-                          value={newItemNotes}
-                          onChange={(e) => setNewItemNotes(e.target.value)}
-                          placeholder="Any special instructions"
-                          className="w-full"
-                                            />
-                                          </div>
-                                          <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Medicine ID</label>
-                                            <Input
-                          value={newItemMedicineId}
-                          onChange={(e) => setNewItemMedicineId(e.target.value)}
-                          placeholder="e.g., MED001"
-                          className="w-full"
-                                            />
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ) : (
-                <div className="space-y-4">
-                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div>
-                                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Name <span className="text-red-600">*</span></label>
-                                              <Input
-                                                value={newItemName}
-                                                onChange={(e) => setNewItemName(e.target.value)}
-                                                placeholder={getNamePlaceholder(selectedPersonalizedCategory)}
-                                                className="w-full"
-                                                autoFocus
-                                              />
-                                            </div>
-                                            <div>
-                                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Code</label>
-                                              <Input
-                                                value={newItemCode}
-                                                onChange={(e) => setNewItemCode(e.target.value)}
-                                                placeholder={getCodePlaceholder(selectedPersonalizedCategory)}
-                                                className="w-full"
-                                              />
-                                            </div>
-                                          </div>
+                      autoFocus
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Brand Name</label>
+                    <Input
+                      value={newItemBrandName}
+                      onChange={(e) => setNewItemBrandName(e.target.value)}
+                      placeholder="e.g., Crocin"
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Generic Name</label>
+                    <Input
+                      value={newItemGenericName}
+                      onChange={(e) => setNewItemGenericName(e.target.value)}
+                      placeholder="e.g., Acetaminophen"
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Manufacturer</label>
+                    <Input
+                      value={newItemForm}
+                      onChange={(e) => setNewItemForm(e.target.value)}
+                      placeholder="e.g., GSK"
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Dosage Form</label>
+                    <Input
+                      value={newItemRoute}
+                      onChange={(e) => setNewItemRoute(e.target.value)}
+                      placeholder="e.g., Tablet"
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Strength</label>
+                    <Input
+                      value={newItemStrengthValue}
+                      onChange={(e) => setNewItemStrengthValue(e.target.value)}
+                      placeholder="e.g., 500mg"
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Notes</label>
+                    <Input
+                      value={newItemNotes}
+                      onChange={(e) => setNewItemNotes(e.target.value)}
+                      placeholder="Any special instructions"
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Price</label>
+                    <Input
+                      type="number"
+                      value={newItemStrengthUnit}
+                      onChange={(e) => setNewItemStrengthUnit(e.target.value)}
+                      placeholder="e.g., 12.50"
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Usage Description</label>
+                    <Input
+                      value={newItemUsageDescription}
+                      onChange={(e) => setNewItemUsageDescription(e.target.value)}
+                      placeholder="e.g., Fever, mild pain"
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Side Effects</label>
+                    <Input
+                      value={newItemSideEffects}
+                      onChange={(e) => setNewItemSideEffects(e.target.value)}
+                      placeholder="e.g., Drowsiness"
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
 
-                                          <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Description</label>
-                                            <Input
-                                              value={newItemShortDesc}
-                                              onChange={(e) => setNewItemShortDesc(e.target.value)}
-                                              placeholder={getShortDescPlaceholder(selectedPersonalizedCategory)}
-                                              className="w-full"
-                                            />
-                                          </div>
-
-                                          <div className="grid grid-cols-1 gap-4">
-                                            <div>
-                                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Synonyms</label>
-                                              <Input
-                                                value={newItemSynonyms}
-                                                onChange={(e) => setNewItemSynonyms(e.target.value)}
-                                                placeholder={getSynonymsPlaceholder(selectedPersonalizedCategory)}
-                                                className="w-full"
-                                              />
-                                            </div>
-                                          </div>
-                                    </div>
-                                  )}
-                                </div>
-            
             <div className="p-4 border-t border-gray-200 dark:border-gray-800 flex justify-end gap-2">
-                                    <Button
+              <Button
                 onClick={() => {
                   setShowAddModal(false);
                   setEditingItem(null);
                   setNewItemPersonalId(null);
                 }}
-                                      variant="outline"
-                                    >
+                variant="outline"
+              >
                 Cancel
-                                    </Button>
-                                    <Button
+              </Button>
+              <Button
                 onClick={async () => {
                   await addPersonalizedDataItem();
                 }}
@@ -1529,13 +1496,13 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
-                {isAddingItem 
+                {isAddingItem
                   ? 'Saving...'
-                  : editingItem 
+                  : editingItem
                     ? `Update ${personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label}`
                     : `Add ${personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label}`}
-                                    </Button>
-                                  </div>
+              </Button>
+            </div>
           </div>
         </div>
       )}

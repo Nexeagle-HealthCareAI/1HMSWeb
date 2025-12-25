@@ -33,9 +33,13 @@ import {
 import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { vitalsApi, PatientVitalsResponse } from '../services/vitalsApi';
+import { patientProfileApi, PatientProfileData } from '../services/patientProfileApi';
 import { chiefComplaintMock, filterChiefComplaints, ChiefComplaintItem } from '@/features/patient/services/chiefComplaintMock';
 import { LookupItem } from './LookupMultiSelect';
 import AttachmentsSection from './AttachmentsSection';
+import { SelectValue } from '@radix-ui/react-select';
+// @ts-ignore
+import certificationTemplates from '../mockCertificationTemplates.json';
 
 
 interface EPrescriptionData {
@@ -107,17 +111,10 @@ interface EPrescriptionData {
   }>;
   followUp: {
     followUpOn: string;
-    followUpTimeSlot?: string;
     reason: string;
     patientInstructions?: string;
-    mode?: 'InPerson' | 'Teleconsult' | 'Phone' | 'Video';
-    reminderEnabled?: boolean;
-    reminderChannels?: string[];
-    reminderOffsetDays?: number;
-    assignedDoctorId?: string;
     referralEnabled?: boolean;
     referral?: {
-      referralType: 'Specialist' | 'Facility' | 'Diagnostic' | 'Emergency';
       referredTo: {
         specialty?: string;
         doctorId?: string;
@@ -131,6 +128,7 @@ interface EPrescriptionData {
       requestedAction?: string;
       attachments?: string[];
     };
+    attachments: string[];
   };
   nonPharmacologicalAdvice: Array<{
     advice: string;
@@ -181,7 +179,11 @@ const convertPreferencesToFieldConfigs = (preferences: any) => {
     let apiFieldName = field.id;
 
     if (field.id === 'certificates') {
-      apiFieldName = 'certificatesAndNotes';
+      const val = preferences.certificates !== undefined ? preferences.certificates : preferences.certificatesAndNotes;
+      return {
+        ...field,
+        enabled: val !== undefined ? Boolean(val) : true
+      };
     } else if (field.id === 'followUp') {
       apiFieldName = 'followUpAndReferral';
     } else if (field.id === 'orders') {
@@ -401,6 +403,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
   const [isLoadingApiPreferences, setIsLoadingApiPreferences] = useState(false);
   const [isLoadingVitals, setIsLoadingVitals] = useState(false);
   const [isSavingVitals, setIsSavingVitals] = useState(false);
+  const [patientProfile, setPatientProfile] = useState<PatientProfileData | null>(null);
   const [hasFetchedVitals, setHasFetchedVitals] = useState(false);
   const [prescriptionData, setPrescriptionData] = useState<EPrescriptionData>({
     vitals: {
@@ -427,17 +430,10 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
     immunizations: [],
     followUp: {
       followUpOn: '',
-      followUpTimeSlot: '',
       reason: '',
       patientInstructions: '',
-      mode: 'InPerson',
-      reminderEnabled: false,
-      reminderChannels: [],
-      reminderOffsetDays: 1,
-      assignedDoctorId: '',
       referralEnabled: false,
       referral: {
-        referralType: 'Specialist',
         referredTo: {
           specialty: '',
           doctorId: '',
@@ -450,11 +446,77 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
         clinicalSummary: '',
         requestedAction: '',
         attachments: []
-      }
+      },
+      attachments: []
     },
     nonPharmacologicalAdvice: [],
     attachments: []
   });
+
+  // Fetch Patient Profile
+  useEffect(() => {
+    const fetchProfile = async () => {
+      // Use resolvedPatientId from search params or route params
+      const pid = searchParams.get('patientId') || patientId;
+      if (pid) {
+        try {
+          const hid = getHospitalId?.() || searchParams.get('hospitalId') || '4de8ea65-71aa-4800-8167-60147d78ea58';
+          const data = await patientProfileApi.getPatientProfile(hid, pid);
+          setPatientProfile(data);
+        } catch (error) {
+          console.error('Failed to fetch patient profile', error);
+        }
+      }
+    };
+    fetchProfile();
+  }, [patientId, searchParams, getHospitalId]);
+
+  const resolveTemplateContent = (template: string, entry: any, profile: PatientProfileData | null, presData: EPrescriptionData) => {
+    if (!template) return '';
+    let text = template;
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+
+    // Profile Data
+    text = text.replace(/{{patientName}}/g, profile?.fullName || '_______');
+    text = text.replace(/{{age}}/g, profile?.ageYears?.toString() || '__');
+    text = text.replace(/{{gender}}/g, profile?.sex || '__');
+    text = text.replace(/{{patientId}}/g, profile?.patientId || '__');
+    text = text.replace(/{{uhid}}/g, profile?.registrationId || '__');
+
+    // Clinic/Doctor Data 
+    // Ideally this should come from a doctor/clinic profile store
+    text = text.replace(/{{doctorName}}/g, 'Dr. [Doctor Name]');
+    text = text.replace(/{{doctorQualification}}/g, '[Qualification]');
+    text = text.replace(/{{doctorRegNo}}/g, '[RegNo]');
+    text = text.replace(/{{clinicName}}/g, 'EasyHMS Clinic');
+    text = text.replace(/{{clinicAddress}}/g, 'Kolkata, India');
+    text = text.replace(/{{clinicPhone}}/g, '+91-XXXXXXXXXX');
+
+    // Prescription Context
+    text = text.replace(/{{diagnosis}}/g, presData.diagnosis || '________');
+    text = text.replace(/{{complaints}}/g, presData.chiefComplaint || '________');
+    text = text.replace(/{{findings}}/g, presData.examination || '________');
+    text = text.replace(/{{treatment}}/g, 'As per prescription');
+
+    const medSummary = presData.medications.map(m => m.name).join(', ') || '________';
+    text = text.replace(/{{medications}}/g, medSummary);
+    const invSummary = presData.orders.investigations.join(', ') || '________';
+    text = text.replace(/{{investigations}}/g, invSummary);
+
+    // Certificate Specific Fields
+    text = text.replace(/{{issuedDate}}/g, entry.issuedDate || todayStr);
+    text = text.replace(/{{appointmentDate}}/g, todayStr);
+    text = text.replace(/{{fromDate}}/g, entry.fromDate || '________');
+    text = text.replace(/{{toDate}}/g, entry.toDate || '________');
+    text = text.replace(/{{fitnessStatus}}/g, entry.fitnessStatus || '________');
+    text = text.replace(/{{remarks}}/g, entry.remarks || '________');
+    text = text.replace(/{{restrictions}}/g, entry.remarks || '________');
+    text = text.replace(/{{followUpDate}}/g, presData.followUp?.followUpOn || '________');
+    text = text.replace(/{{procedure}}/g, presData.orders.procedures.join(', ') || '________');
+
+    return text;
+  };
 
   const safeDecode = (value: string | null) => {
     if (!value) return '';
@@ -1336,25 +1398,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                     </div>
                   </div>
                 </div>
-                <div className="flex justify-end">
-                  <Button
-                    size="sm"
-                    onClick={handleSaveVitals}
-                    disabled={isSavingVitals}
-                    className="h-8"
-                  >
-                    {isSavingVitals ? (
-                      <div className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                        <span>Saving...</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <span>Save Vitals</span>
-                      </div>
-                    )}
-                  </Button>
-                </div>
+                {/* Save vitals button removed */}
               </div>
             )}
 
@@ -1687,9 +1731,6 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                                         }}
                                       >
                                         <span className="truncate">{item.name}</span>
-                                        {item.shortDesc && (
-                                          <span className="text-[11px] text-gray-500 ml-2 truncate">{item.shortDesc}</span>
-                                        )}
                                       </button>
                                     );
                                   });
@@ -1855,9 +1896,6 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                                         }}
                                       >
                                         <span className="truncate">{item.name}</span>
-                                        {item.shortDesc && (
-                                          <span className="text-[11px] text-gray-500 ml-2 truncate">{item.shortDesc}</span>
-                                        )}
                                       </button>
                                     );
                                   });
@@ -2023,9 +2061,6 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                                         }}
                                       >
                                         <span className="truncate">{item.name}</span>
-                                        {item.shortDesc && (
-                                          <span className="text-[11px] text-gray-500 ml-2 truncate">{item.shortDesc}</span>
-                                        )}
                                       </button>
                                     );
                                   });
@@ -2191,9 +2226,6 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                                         }}
                                       >
                                         <span className="truncate">{item.name}</span>
-                                        {item.shortDesc && (
-                                          <span className="text-[11px] text-gray-500 ml-2 truncate">{item.shortDesc}</span>
-                                        )}
                                       </button>
                                     );
                                   });
@@ -2633,9 +2665,8 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                     return (
                       <div
                         key={medication.id}
-                        className={`rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3 shadow-sm ${
-                          isActive ? 'ring-2 ring-blue-200 dark:ring-blue-800/60 shadow-md' : ''
-                        }`}
+                        className={`rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3 shadow-sm ${isActive ? 'ring-2 ring-blue-200 dark:ring-blue-800/60 shadow-md' : ''
+                          }`}
                         onClick={() => setActiveMedicationId(medication.id)}
                       >
                         <div className="flex flex-col gap-1">
@@ -2923,10 +2954,10 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
               'nonPharmacologicalAdvice',
               'Non-pharmacological Advice',
               <div className="space-y-4">
-                {(Array.isArray(prescriptionData.nonPharmacologicalAdvice) ? prescriptionData.nonPharmacologicalAdvice : []).map((entry, idx) => (
-                  <Card key={idx} className="bg-green-50/60 dark:bg-green-900/40 border border-green-200 dark:border-green-700 shadow-sm p-2">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div className="space-y-1">
+                <div className="space-y-2">
+                  {(Array.isArray(prescriptionData.nonPharmacologicalAdvice) ? prescriptionData.nonPharmacologicalAdvice : []).map((entry, idx) => (
+                    <div key={idx} className="flex flex-col md:flex-row md:items-center gap-2 bg-green-50/60 dark:bg-green-900/40 border border-green-200 dark:border-green-700 rounded p-2">
+                      <div className="flex-1 min-w-[180px]">
                         <Label className="text-xs text-gray-600">Advice / Instruction *</Label>
                         <Input
                           placeholder="e.g. Low salt diet, Walk 30 min daily"
@@ -2939,103 +2970,41 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                           className="h-8 text-xs bg-white dark:bg-slate-900"
                         />
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-gray-600">Category *</Label>
-                        <Select
-                          value={entry.category || ''}
-                          onValueChange={val => {
-                            const next = [...prescriptionData.nonPharmacologicalAdvice];
-                            next[idx] = { ...entry, category: val };
-                            setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
-                          }}
-                        >
-                          <SelectTrigger className="h-8 text-xs bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-700 rounded-md px-2 w-full" />
-                          <SelectContent>
-                            <SelectItem value="Diet">Diet</SelectItem>
-                            <SelectItem value="Exercise">Exercise</SelectItem>
-                            <SelectItem value="Weight">Weight</SelectItem>
-                            <SelectItem value="Sleep">Sleep</SelectItem>
-                            <SelectItem value="Habits">Habits (tobacco/alcohol)</SelectItem>
-                            <SelectItem value="Stress">Stress</SelectItem>
-                            <SelectItem value="Physio">Physio & ergonomics</SelectItem>
-                            <SelectItem value="Precautions">Precautions</SelectItem>
-                            <SelectItem value="Disease-specific">Disease-specific</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-gray-600">Frequency / Target</Label>
-                        <Input
-                          placeholder="e.g. daily, after meals"
-                          value={entry.frequency || ''}
-                          onChange={e => {
-                            const next = [...prescriptionData.nonPharmacologicalAdvice];
-                            next[idx] = { ...entry, frequency: e.target.value };
-                            setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
-                          }}
-                          className="h-8 text-xs bg-white dark:bg-slate-900"
-                        />
-                        <div className="flex gap-2 mt-1">
-                          <Input
-                            placeholder="Value"
-                            value={entry.targetValue || ''}
-                            onChange={e => {
-                              const next = [...prescriptionData.nonPharmacologicalAdvice];
-                              next[idx] = { ...entry, targetValue: e.target.value };
-                              setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
-                            }}
-                            className="h-8 text-xs w-20"
-                          />
-                          <Input
-                            placeholder="Unit (e.g. min/day, L/day)"
-                            value={entry.targetUnit || ''}
-                            onChange={e => {
-                              const next = [...prescriptionData.nonPharmacologicalAdvice];
-                              next[idx] = { ...entry, targetUnit: e.target.value };
-                              setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
-                            }}
-                            className="h-8 text-xs w-28"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-gray-600">Duration</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder="Value"
-                            value={entry.durationValue || ''}
-                            onChange={e => {
-                              const next = [...prescriptionData.nonPharmacologicalAdvice];
-                              next[idx] = { ...entry, durationValue: e.target.value, untilNextVisit: false };
-                              setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
-                            }}
-                            className="h-8 text-xs w-20"
-                          />
-                          <Input
-                            placeholder="Unit (e.g. days, weeks, months)"
-                            value={entry.durationUnit || ''}
-                            onChange={e => {
-                              const next = [...prescriptionData.nonPharmacologicalAdvice];
-                              next[idx] = { ...entry, durationUnit: e.target.value, untilNextVisit: false };
-                              setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
-                            }}
-                            className="h-8 text-xs w-28"
-                          />
-                          <label className="flex items-center gap-1 text-xs ml-2">
-                            <input
-                              type="checkbox"
-                              checked={!!entry.untilNextVisit}
+                      <div className="flex flex-col md:flex-row gap-2 items-center">
+                        <div>
+                          <Label className="text-xs text-gray-600">Duration</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Value"
+                              value={entry.durationValue || ''}
                               onChange={e => {
                                 const next = [...prescriptionData.nonPharmacologicalAdvice];
-                                next[idx] = { ...entry, untilNextVisit: e.target.checked, durationValue: '', durationUnit: '' };
+                                next[idx] = { ...entry, durationValue: e.target.value };
                                 setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
                               }}
+                              className="h-8 text-xs w-20"
                             />
-                            Until next visit
-                          </label>
+                            <Select
+                              value={entry.durationUnit || ''}
+                              onValueChange={val => {
+                                const next = [...prescriptionData.nonPharmacologicalAdvice];
+                                next[idx] = { ...entry, durationUnit: val };
+                                setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
+                              }}
+                            >
+                              <SelectTrigger className="h-8 text-xs bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-700 rounded-md px-2">
+                                <SelectValue placeholder="Unit" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="days">days</SelectItem>
+                                <SelectItem value="weeks">weeks</SelectItem>
+                                <SelectItem value="months">months</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                       </div>
-                      <div className="space-y-1 md:col-span-2">
+                      <div className="flex-1 min-w-[180px]">
                         <Label className="text-xs text-gray-600">Notes / Customization</Label>
                         <Input
                           placeholder="e.g. Avoid spicy food at night, Stop if dizziness"
@@ -3048,20 +3017,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                           className="h-8 text-xs"
                         />
                       </div>
-                      <div className="space-y-1 md:col-span-2">
-                        <Label className="text-xs text-gray-600">Review / Next follow-up</Label>
-                        <Input
-                          placeholder="e.g. Review in 2 weeks"
-                          value={entry.review || ''}
-                          onChange={e => {
-                            const next = [...prescriptionData.nonPharmacologicalAdvice];
-                            next[idx] = { ...entry, review: e.target.value };
-                            setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
-                          }}
-                          className="h-8 text-xs"
-                        />
-                      </div>
-                      <div className="flex items-end justify-end md:col-span-3">
+                      <div className="flex items-end justify-end">
                         <Button
                           variant="outline"
                           size="sm"
@@ -3072,13 +3028,12 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                           }}
                           className="h-8 px-3 text-xs hover:bg-red-50 hover:border-red-300 hover:text-red-700"
                         >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Remove
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
-                  </Card>
-                ))}
+                  ))}
+                </div>
                 <Button
                   type="button"
                   size="sm"
@@ -3100,48 +3055,11 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
               'privateNotes',
               <span className="flex items-center gap-2">Private Notes <span className="ml-2 px-2 py-0.5 rounded bg-yellow-200 text-yellow-900 text-xs font-semibold">Not printable</span></span>,
               <div className="space-y-4">
-                {/* Quick chips/templates */}
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {['Clinical reasoning','DDx','Safety-net','Consent/Refusal','Follow-up plan'].map(type => (
-                    <Button
-                      key={type}
-                      size="sm"
-                      variant="outline"
-                      className="h-7 px-2 text-xs"
-                      onClick={() => {
-                        const next = Array.isArray(prescriptionData.privateNotes) ? [...prescriptionData.privateNotes] : [];
-                        next.push({ content: '', type, sharedWithStaff: false, pinned: false });
-                        setPrescriptionData(prev => ({ ...prev, privateNotes: next }));
-                      }}
-                    >
-                      {type}
-                    </Button>
-                  ))}
-                </div>
+                {/* Quick chips/templates removed */}
                 {(Array.isArray(prescriptionData.privateNotes) ? prescriptionData.privateNotes : []).map((note, idx) => (
                   <Card key={idx} className="bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 shadow-sm p-2">
                     <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
-                      <div className="flex-1 min-w-[120px]">
-                        <Label className="text-xs text-gray-600">Type</Label>
-                        <Select
-                          value={note.type || ''}
-                          onValueChange={val => {
-                            const next = [...prescriptionData.privateNotes];
-                            next[idx] = { ...note, type: val };
-                            setPrescriptionData(prev => ({ ...prev, privateNotes: next }));
-                          }}
-                        >
-                          <SelectTrigger className="h-8 text-xs bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-700 rounded-md px-2 w-full" />
-                          <SelectContent>
-                            <SelectItem value="Clinical reasoning">Clinical reasoning</SelectItem>
-                            <SelectItem value="DDx">DDx</SelectItem>
-                            <SelectItem value="Safety-net">Safety-net</SelectItem>
-                            <SelectItem value="Consent/Refusal">Consent/Refusal</SelectItem>
-                            <SelectItem value="Follow-up plan">Follow-up plan</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      {/* Type field removed from private notes */}
                       <div className="flex-1 min-w-[200px]">
                         <Label className="text-xs text-gray-600">Note (max 500 chars)</Label>
                         <Textarea
@@ -3157,32 +3075,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                         />
                         <div className="text-[10px] text-gray-500 text-right">{(note.content || '').length}/500</div>
                       </div>
-                      <div className="flex flex-col gap-1 min-w-[120px]">
-                        <Label className="text-xs text-gray-600">Share with staff</Label>
-                        <input
-                          type="checkbox"
-                          checked={!!note.sharedWithStaff}
-                          onChange={e => {
-                            const next = [...prescriptionData.privateNotes];
-                            next[idx] = { ...note, sharedWithStaff: e.target.checked };
-                            setPrescriptionData(prev => ({ ...prev, privateNotes: next }));
-                          }}
-                        />
-                        <span className="text-[10px] text-gray-500">Doctor-only by default</span>
-                      </div>
-                      <div className="flex flex-col gap-1 min-w-[120px]">
-                        <Label className="text-xs text-gray-600">Pin for next visit</Label>
-                        <input
-                          type="checkbox"
-                          checked={!!note.pinned}
-                          onChange={e => {
-                            const next = [...prescriptionData.privateNotes];
-                            next[idx] = { ...note, pinned: e.target.checked };
-                            setPrescriptionData(prev => ({ ...prev, privateNotes: next }));
-                          }}
-                        />
-                        <span className="text-[10px] text-gray-500">Pinned notes show first next time</span>
-                      </div>
+                      {/* Share with staff, Doctor-only by default, Pin for next visit, and Pinned notes show first next time removed */}
                       {/* Timestamp and Author fields removed as requested */}
                       <div className="flex items-end justify-end">
                         <Button
@@ -3223,147 +3116,200 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
               'certificates',
               'Certificates & Notes',
               <div className="space-y-4">
-                {(Array.isArray(prescriptionData.certificates) ? prescriptionData.certificates : []).map((entry, idx) => (
-                  <Card key={idx} className="bg-yellow-50/60 dark:bg-yellow-900/40 border border-yellow-200 dark:border-yellow-700 shadow-sm p-2">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-2 md:gap-4">
-                      {/* Must-have */}
-                      <div className="space-y-1">
-                        <Label className="text-xs text-gray-600">Type *</Label>
-                        <Input
-                          placeholder="e.g. Sick Leave, Fitness, Medical"
-                          value={entry.type || ''}
-                          onChange={e => {
-                            const next = [...prescriptionData.certificates];
-                            next[idx] = { ...entry, type: e.target.value };
-                            setPrescriptionData(prev => ({ ...prev, certificates: next }));
-                          }}
-                          className="h-9 text-sm bg-white dark:bg-slate-900"
-                        />
+                {(Array.isArray(prescriptionData.certificates) ? prescriptionData.certificates : []).map((entry, idx) => {
+                  const templateOptions = certificationTemplates.types;
+                  const selectedTemplate = templateOptions.find(t => t.typeCode === entry.type);
+                  return (
+                    <Card key={idx} className="bg-yellow-50/60 dark:bg-yellow-900/40 border border-yellow-200 dark:border-yellow-700 shadow-sm p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Left Column: Inputs */}
+                        <div className="space-y-4">
+                          {/* Type Dropdown */}
+                          <div className="space-y-1">
+                            <Label className="text-xs text-gray-600">Type *</Label>
+                            <Select
+                              value={entry.type || ''}
+                              onValueChange={typeCode => {
+                                const template = templateOptions.find(t => t.typeCode === typeCode);
+                                const next = [...prescriptionData.certificates];
+                                next[idx] = {
+                                  ...entry,
+                                  type: typeCode,
+                                  category: template?.category || '',
+                                  issuedDate: entry.issuedDate || new Date().toISOString().slice(0, 10),
+                                  fromDate: template?.showFields.fromDate ? entry.fromDate || '' : undefined,
+                                  toDate: template?.showFields.toDate ? entry.toDate || '' : undefined,
+                                  fitnessStatus: template?.showFields.fitnessStatus ? entry.fitnessStatus || '' : undefined,
+                                  remarks: template?.showFields.remarks ? entry.remarks || '' : undefined,
+                                  content: template?.template || '',
+                                };
+                                setPrescriptionData(prev => ({ ...prev, certificates: next }));
+                              }}
+                            >
+                              <SelectTrigger className="h-9 text-sm bg-white dark:bg-slate-900 border rounded w-full">
+                                <SelectValue placeholder="Select type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {templateOptions.map(opt => (
+                                  <SelectItem key={opt.typeCode} value={opt.typeCode}>{opt.displayName}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            {/* Issued Date */}
+                            {selectedTemplate && (
+                              <div className="space-y-1">
+                                <Label className="text-xs text-gray-600">Issued date *</Label>
+                                <Input
+                                  type="date"
+                                  value={entry.issuedDate || ''}
+                                  onChange={e => {
+                                    const next = [...prescriptionData.certificates];
+                                    next[idx] = { ...entry, issuedDate: e.target.value };
+                                    setPrescriptionData(prev => ({ ...prev, certificates: next }));
+                                  }}
+                                  className="h-9 text-sm bg-white dark:bg-slate-900"
+                                />
+                              </div>
+                            )}
+                            {/* Category (read-only) */}
+                            {selectedTemplate && (
+                              <div className="space-y-1">
+                                <Label className="text-xs text-gray-600">Category</Label>
+                                <Input
+                                  value={entry.category || ''}
+                                  readOnly
+                                  className="h-9 text-sm bg-white dark:bg-slate-900"
+                                />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* From/To Date Row */}
+                          {selectedTemplate && (selectedTemplate.showFields.fromDate || selectedTemplate.showFields.toDate) && (
+                            <div className="grid grid-cols-2 gap-2">
+                              {selectedTemplate.showFields.fromDate && (
+                                <div className="space-y-1">
+                                  <Label className="text-xs text-gray-600">From date</Label>
+                                  <Input
+                                    type="date"
+                                    value={entry.fromDate || ''}
+                                    onChange={e => {
+                                      const next = [...prescriptionData.certificates];
+                                      next[idx] = { ...entry, fromDate: e.target.value };
+                                      setPrescriptionData(prev => ({ ...prev, certificates: next }));
+                                    }}
+                                    className="h-9 text-sm bg-white dark:bg-slate-900"
+                                  />
+                                </div>
+                              )}
+                              {selectedTemplate.showFields.toDate && (
+                                <div className="space-y-1">
+                                  <Label className="text-xs text-gray-600">To date</Label>
+                                  <Input
+                                    type="date"
+                                    value={entry.toDate || ''}
+                                    onChange={e => {
+                                      const next = [...prescriptionData.certificates];
+                                      next[idx] = { ...entry, toDate: e.target.value };
+                                      setPrescriptionData(prev => ({ ...prev, certificates: next }));
+                                    }}
+                                    className="h-9 text-sm bg-white dark:bg-slate-900"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Fitness Status */}
+                          {selectedTemplate && selectedTemplate.showFields.fitnessStatus && (
+                            <div className="space-y-1">
+                              <Label className="text-xs text-gray-600">Fitness status</Label>
+                              <Input
+                                placeholder="e.g. Fit, Unfit, Restricted"
+                                value={entry.fitnessStatus || ''}
+                                onChange={e => {
+                                  const next = [...prescriptionData.certificates];
+                                  next[idx] = { ...entry, fitnessStatus: e.target.value };
+                                  setPrescriptionData(prev => ({ ...prev, certificates: next }));
+                                }}
+                                className="h-9 text-sm bg-white dark:bg-slate-900"
+                              />
+                            </div>
+                          )}
+
+                          {/* Remarks */}
+                          {selectedTemplate && selectedTemplate.showFields.remarks && (
+                            <div className="space-y-1">
+                              <Label className="text-xs text-gray-600">Remarks/Restriction</Label>
+                              <Input
+                                placeholder={selectedTemplate.defaultRemarksHint || "Remarks..."}
+                                value={entry.remarks || ''}
+                                onChange={e => {
+                                  const next = [...prescriptionData.certificates];
+                                  next[idx] = { ...entry, remarks: e.target.value };
+                                  setPrescriptionData(prev => ({ ...prev, certificates: next }));
+                                }}
+                                className="h-9 text-sm bg-white dark:bg-slate-900"
+                              />
+                            </div>
+                          )}
+
+                          <div className="flex justify-end pt-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const next = [...prescriptionData.certificates];
+                                next.splice(idx, 1);
+                                setPrescriptionData(prev => ({ ...prev, certificates: next }));
+                              }}
+                              className="h-8 px-3 text-xs hover:bg-red-50 hover:border-red-300 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Remove
+                            </Button>
+                          </div>
+
+                        </div>
+
+                        {/* Right Column: Content */}
+                        {selectedTemplate && (
+                          <div className="flex flex-col h-full space-y-1">
+                            <Label className="text-xs text-gray-600">Content *</Label>
+                            <Textarea
+                              placeholder="Certificate or note content..."
+                              value={entry.content || ''}
+                              onChange={e => {
+                                const next = [...prescriptionData.certificates];
+                                next[idx] = { ...entry, content: e.target.value };
+                                setPrescriptionData(prev => ({ ...prev, certificates: next }));
+                              }}
+                              className="flex-1 text-sm bg-white dark:bg-slate-900 min-h-[250px] font-mono resize-none p-4 leading-relaxed"
+                            />
+                          </div>
+                        )}
                       </div>
-                      <div className="space-y-1 md:col-span-2">
-                        <Label className="text-xs text-gray-600">Content *</Label>
-                        <Textarea
-                          placeholder="Certificate or note content..."
-                          value={entry.content || ''}
-                          onChange={e => {
-                            const next = [...prescriptionData.certificates];
-                            next[idx] = { ...entry, content: e.target.value };
-                            setPrescriptionData(prev => ({ ...prev, certificates: next }));
-                          }}
-                          className="min-h-[40px] text-sm bg-white dark:bg-slate-900"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-gray-600">Issued date *</Label>
-                        <Input
-                          type="date"
-                          value={entry.issuedDate || ''}
-                          onChange={e => {
-                            const next = [...prescriptionData.certificates];
-                            next[idx] = { ...entry, issuedDate: e.target.value };
-                            setPrescriptionData(prev => ({ ...prev, certificates: next }));
-                          }}
-                          className="h-9 text-sm bg-white dark:bg-slate-900"
-                        />
-                      </div>
-                      {/* Contextual */}
-                      <div className="space-y-1">
-                        <Label className="text-xs text-gray-600">From date</Label>
-                        <Input
-                          type="date"
-                          value={entry.fromDate || ''}
-                          onChange={e => {
-                            const next = [...prescriptionData.certificates];
-                            next[idx] = { ...entry, fromDate: e.target.value };
-                            setPrescriptionData(prev => ({ ...prev, certificates: next }));
-                          }}
-                          className="h-9 text-sm bg-white dark:bg-slate-900"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-gray-600">To date</Label>
-                        <Input
-                          type="date"
-                          value={entry.toDate || ''}
-                          onChange={e => {
-                            const next = [...prescriptionData.certificates];
-                            next[idx] = { ...entry, toDate: e.target.value };
-                            setPrescriptionData(prev => ({ ...prev, certificates: next }));
-                          }}
-                          className="h-9 text-sm bg-white dark:bg-slate-900"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-gray-600">Fitness status</Label>
-                        <Input
-                          placeholder="e.g. Fit, Unfit, Restricted"
-                          value={entry.fitnessStatus || ''}
-                          onChange={e => {
-                            const next = [...prescriptionData.certificates];
-                            next[idx] = { ...entry, fitnessStatus: e.target.value };
-                            setPrescriptionData(prev => ({ ...prev, certificates: next }));
-                          }}
-                          className="h-9 text-sm bg-white dark:bg-slate-900"
-                        />
-                      </div>
-                      {/* Optional */}
-                      <div className="space-y-1">
-                        <Label className="text-xs text-gray-600">Remarks</Label>
-                        <Input
-                          placeholder="Remarks..."
-                          value={entry.remarks || ''}
-                          onChange={e => {
-                            const next = [...prescriptionData.certificates];
-                            next[idx] = { ...entry, remarks: e.target.value };
-                            setPrescriptionData(prev => ({ ...prev, certificates: next }));
-                          }}
-                          className="h-9 text-sm bg-white dark:bg-slate-900"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-gray-600">Category</Label>
-                        <Input
-                          placeholder="e.g. Medical, Fitness, Other"
-                          value={entry.category || ''}
-                          onChange={e => {
-                            const next = [...prescriptionData.certificates];
-                            next[idx] = { ...entry, category: e.target.value };
-                            setPrescriptionData(prev => ({ ...prev, certificates: next }));
-                          }}
-                          className="h-9 text-sm bg-white dark:bg-slate-900"
-                        />
-                      </div>
-                      <div className="flex items-end justify-end md:col-span-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const next = [...prescriptionData.certificates];
-                            next.splice(idx, 1);
-                            setPrescriptionData(prev => ({ ...prev, certificates: next }));
-                          }}
-                          className="h-9 px-3 text-sm hover:bg-red-50 hover:border-red-300 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Remove
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  className="mt-1 flex items-center gap-2"
-                  onClick={() => {
-                    const next = Array.isArray(prescriptionData.certificates) ? [...prescriptionData.certificates] : [];
-                    next.push({ type: '', content: '', issuedDate: '' });
-                    setPrescriptionData(prev => ({ ...prev, certificates: next }));
-                  }}
-                >
-                  <Plus className="h-4 w-4" /> Add Certificate/Note
-                </Button>
+                    </Card>
+                  );
+                })}
+                {(!prescriptionData.certificates || prescriptionData.certificates.length === 0) && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="mt-1 flex items-center gap-2"
+                    onClick={() => {
+                      const next = Array.isArray(prescriptionData.certificates) ? [...prescriptionData.certificates] : [];
+                      next.push({ type: '', content: '', issuedDate: '' });
+                      setPrescriptionData(prev => ({ ...prev, certificates: next }));
+                    }}
+                  >
+                    <Plus className="h-4 w-4" /> Add Certificate/Note
+                  </Button>
+                )}
               </div>
             )}
 
@@ -3379,11 +3325,11 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                       <thead className="bg-blue-100 dark:bg-slate-800">
                         <tr>
                           <th className="p-2 font-semibold text-left">Vaccine</th>
-                          <th className="p-2 font-semibold text-left">Status</th>
+                          <th className="p-2 font-semibold text-left w-40 md:w-56">Status</th>
                           <th className="p-2 font-semibold text-left">Date</th>
-                          <th className="p-2 font-semibold text-left">Dose</th>
+                          <th className="p-2 font-semibold text-left w-16 md:w-20">Dose</th>
                           <th className="p-2 font-semibold text-left">Next Due</th>
-                          <th className="p-2 font-semibold text-left">More</th>
+
                           <th className="p-2 font-semibold text-left"></th>
                         </tr>
                       </thead>
@@ -3403,7 +3349,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                                   className="h-8 text-xs bg-white dark:bg-slate-900"
                                 />
                               </td>
-                              <td className="p-2">
+                              <td className="p-2 w-40 md:w-56">
                                 <Select
                                   value={entry.status || 'given'}
                                   onValueChange={val => {
@@ -3412,7 +3358,9 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                                     setPrescriptionData(prev => ({ ...prev, immunizations: next }));
                                   }}
                                 >
-                                  <SelectTrigger className="h-8 text-xs bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-700 rounded-md px-2 w-full" />
+                                  <SelectTrigger className="h-8 text-xs bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-700 rounded-md px-2 w-full">
+                                    <SelectValue placeholder="Status" />
+                                  </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="given">Given</SelectItem>
                                     <SelectItem value="advised">Advised</SelectItem>
@@ -3436,7 +3384,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                                   className="h-8 text-xs bg-white dark:bg-slate-900"
                                 />
                               </td>
-                              <td className="p-2">
+                              <td className="p-2 w-16 md:w-20">
                                 <Input
                                   placeholder="Dose 1 / Booster"
                                   value={entry.doseNumber || ''}
@@ -3445,7 +3393,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                                     next[idx] = { ...entry, doseNumber: e.target.value };
                                     setPrescriptionData(prev => ({ ...prev, immunizations: next }));
                                   }}
-                                  className="h-8 text-xs bg-white dark:bg-slate-900"
+                                  className="h-8 text-xs bg-white dark:bg-slate-900 w-14 md:w-16"
                                 />
                               </td>
                               <td className="p-2">
@@ -3460,22 +3408,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                                   className="h-8 text-xs bg-white dark:bg-slate-900"
                                 />
                               </td>
-                              <td className="p-2">
-                                <Button
-                                  type="button"
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-8 w-8"
-                                  onClick={() => {
-                                    const next = [...prescriptionData.immunizations];
-                                    next[idx].expanded = !next[idx].expanded;
-                                    setPrescriptionData(prev => ({ ...prev, immunizations: next }));
-                                  }}
-                                  title="Show more details"
-                                >
-                                  <ChevronDown className={`h-4 w-4 transition-transform ${entry.expanded ? 'rotate-180' : ''}`} />
-                                </Button>
-                              </td>
+
                               <td className="p-2">
                                 <Button
                                   variant="outline"
@@ -3492,177 +3425,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                                 </Button>
                               </td>
                             </tr>
-                            {entry.expanded && (
-                              <tr className="bg-blue-50/40 dark:bg-slate-800/40">
-                                <td colSpan={7} className="p-3">
-                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    <div className="space-y-1">
-                                      <Label className="text-xs text-gray-600">Schedule label</Label>
-                                      <Input
-                                        placeholder="Primary / Booster / Catch-up"
-                                        value={entry.scheduleLabel || ''}
-                                        onChange={e => {
-                                          const next = [...prescriptionData.immunizations];
-                                          next[idx] = { ...entry, scheduleLabel: e.target.value };
-                                          setPrescriptionData(prev => ({ ...prev, immunizations: next }));
-                                        }}
-                                        className="h-8 text-xs bg-white dark:bg-slate-900"
-                                      />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <Label className="text-xs text-gray-600">Route</Label>
-                                      <Input
-                                        placeholder="IM / SC / Oral / ID / IN"
-                                        value={entry.route || ''}
-                                        onChange={e => {
-                                          const next = [...prescriptionData.immunizations];
-                                          next[idx] = { ...entry, route: e.target.value };
-                                          setPrescriptionData(prev => ({ ...prev, immunizations: next }));
-                                        }}
-                                        className="h-8 text-xs bg-white dark:bg-slate-900"
-                                      />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <Label className="text-xs text-gray-600">Site</Label>
-                                      <Input
-                                        placeholder="Left deltoid / Right deltoid / Thigh"
-                                        value={entry.site || ''}
-                                        onChange={e => {
-                                          const next = [...prescriptionData.immunizations];
-                                          next[idx] = { ...entry, site: e.target.value };
-                                          setPrescriptionData(prev => ({ ...prev, immunizations: next }));
-                                        }}
-                                        className="h-8 text-xs bg-white dark:bg-slate-900"
-                                      />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <Label className="text-xs text-gray-600">Batch/Lot number</Label>
-                                      <Input
-                                        placeholder="Batch/Lot number"
-                                        value={entry.batchNumber || ''}
-                                        onChange={e => {
-                                          const next = [...prescriptionData.immunizations];
-                                          next[idx] = { ...entry, batchNumber: e.target.value };
-                                          setPrescriptionData(prev => ({ ...prev, immunizations: next }));
-                                        }}
-                                        className="h-8 text-xs bg-white dark:bg-slate-900"
-                                      />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <Label className="text-xs text-gray-600">Manufacturer</Label>
-                                      <Input
-                                        placeholder="Manufacturer"
-                                        value={entry.manufacturer || ''}
-                                        onChange={e => {
-                                          const next = [...prescriptionData.immunizations];
-                                          next[idx] = { ...entry, manufacturer: e.target.value };
-                                          setPrescriptionData(prev => ({ ...prev, immunizations: next }));
-                                        }}
-                                        className="h-8 text-xs bg-white dark:bg-slate-900"
-                                      />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <Label className="text-xs text-gray-600">Provider</Label>
-                                      <Input
-                                        placeholder="Staff/Doctor name"
-                                        value={entry.provider || ''}
-                                        onChange={e => {
-                                          const next = [...prescriptionData.immunizations];
-                                          next[idx] = { ...entry, provider: e.target.value };
-                                          setPrescriptionData(prev => ({ ...prev, immunizations: next }));
-                                        }}
-                                        className="h-8 text-xs bg-white dark:bg-slate-900"
-                                      />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <Label className="text-xs text-gray-600">Facility</Label>
-                                      <Input
-                                        placeholder="Hospital/Clinic"
-                                        value={entry.facility || ''}
-                                        onChange={e => {
-                                          const next = [...prescriptionData.immunizations];
-                                          next[idx] = { ...entry, facility: e.target.value };
-                                          setPrescriptionData(prev => ({ ...prev, immunizations: next }));
-                                        }}
-                                        className="h-8 text-xs bg-white dark:bg-slate-900"
-                                      />
-                                    </div>
-                                    <div className="flex items-center gap-2 mt-2">
-                                      <input
-                                        type="checkbox"
-                                        checked={!!entry.givenOutside}
-                                        onChange={e => {
-                                          const next = [...prescriptionData.immunizations];
-                                          next[idx] = { ...entry, givenOutside: e.target.checked };
-                                          setPrescriptionData(prev => ({ ...prev, immunizations: next }));
-                                        }}
-                                      />
-                                      <Label className="text-xs text-gray-600">Given outside</Label>
-                                      {entry.givenOutside && (
-                                        <Input
-                                          placeholder="Where"
-                                          value={entry.givenOutsideWhere || ''}
-                                          onChange={e => {
-                                            const next = [...prescriptionData.immunizations];
-                                            next[idx] = { ...entry, givenOutsideWhere: e.target.value };
-                                            setPrescriptionData(prev => ({ ...prev, immunizations: next }));
-                                          }}
-                                          className="h-8 text-xs bg-white dark:bg-slate-900 ml-2"
-                                        />
-                                      )}
-                                    </div>
-                                    <div className="space-y-1">
-                                      <Label className="text-xs text-gray-600">Allergy/Contraindication note</Label>
-                                      <Input
-                                        placeholder="Reason or note"
-                                        value={entry.allergyNote || ''}
-                                        onChange={e => {
-                                          const next = [...prescriptionData.immunizations];
-                                          next[idx] = { ...entry, allergyNote: e.target.value };
-                                          setPrescriptionData(prev => ({ ...prev, immunizations: next }));
-                                        }}
-                                        className="h-8 text-xs bg-white dark:bg-slate-900"
-                                      />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <Label className="text-xs text-gray-600">AEFI (Adverse Event)</Label>
-                                      <div className="flex flex-wrap gap-2">
-                                        {['Fever','Rash','Local swelling','Anaphylaxis','Other'].map(opt => (
-                                          <label key={opt} className="flex items-center gap-1 text-xs">
-                                            <input
-                                              type="checkbox"
-                                              checked={Array.isArray(entry.aefi) && entry.aefi.includes(opt)}
-                                              onChange={e => {
-                                                const next = [...prescriptionData.immunizations];
-                                                let aefiArr = Array.isArray(entry.aefi) ? [...entry.aefi] : [];
-                                                if (e.target.checked) {
-                                                  aefiArr.push(opt);
-                                                } else {
-                                                  aefiArr = aefiArr.filter(x => x !== opt);
-                                                }
-                                                next[idx] = { ...entry, aefi: aefiArr };
-                                                setPrescriptionData(prev => ({ ...prev, immunizations: next }));
-                                              }}
-                                            />
-                                            {opt}
-                                          </label>
-                                        ))}
-                                        <Input
-                                          placeholder="AEFI note"
-                                          value={entry.aefiNote || ''}
-                                          onChange={e => {
-                                            const next = [...prescriptionData.immunizations];
-                                            next[idx] = { ...entry, aefiNote: e.target.value };
-                                            setPrescriptionData(prev => ({ ...prev, immunizations: next }));
-                                          }}
-                                          className="h-8 text-xs bg-white dark:bg-slate-900 ml-2"
-                                        />
-                                      </div>
-                                    </div>
-                                  </div>
-                                </td>
-                              </tr>
-                            )}
+
                           </React.Fragment>
                         ))}
                       </tbody>
@@ -3691,7 +3454,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
               'Follow-up & Referral',
               <div className="space-y-6 bg-blue-50/60 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
                 {/* Follow-up Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label className="text-xs text-gray-600">Follow-up Date *</Label>
                     <Input
@@ -3705,42 +3468,6 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                     />
                   </div>
                   <div>
-                    <Label className="text-xs text-gray-600">Time Slot</Label>
-                    <Select
-                      value={prescriptionData.followUp.followUpTimeSlot || 'Morning'}
-                      onValueChange={val => setPrescriptionData(prev => ({
-                        ...prev,
-                        followUp: { ...prev.followUp, followUpTimeSlot: val }
-                      }))}
-                    >
-                      <SelectTrigger className="h-8 text-sm bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-700 rounded-md px-2 w-full" />
-                      <SelectContent>
-                        <SelectItem value="Morning">Morning</SelectItem>
-                        <SelectItem value="Evening">Evening</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-gray-600">Mode</Label>
-                    <Select
-                      value={prescriptionData.followUp.mode || 'InPerson'}
-                      onValueChange={val => setPrescriptionData(prev => ({
-                        ...prev,
-                        followUp: { ...prev.followUp, mode: val as any }
-                      }))}
-                    >
-                      <SelectTrigger className="h-8 text-sm bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-700 rounded-md px-2 w-full" />
-                      <SelectContent>
-                        <SelectItem value="InPerson">In Person</SelectItem>
-                        <SelectItem value="Teleconsult">Teleconsult</SelectItem>
-                        <SelectItem value="Phone">Phone</SelectItem>
-                        <SelectItem value="Video">Video</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
                     <Label className="text-xs text-gray-600">Purpose / What to review *</Label>
                     <Input
                       placeholder="e.g. BP check, Lab review, Wound dressing"
@@ -3752,6 +3479,8 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                       className="h-8 text-sm"
                     />
                   </div>
+                </div>
+                <div className="grid grid-cols-1 gap-4">
                   <div>
                     <Label className="text-xs text-gray-600">Patient Instructions</Label>
                     <Input
@@ -3765,81 +3494,14 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label className="text-xs text-gray-600">Reminder</Label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <input
-                        type="checkbox"
-                        checked={!!prescriptionData.followUp.reminderEnabled}
-                        onChange={e => setPrescriptionData(prev => ({
-                          ...prev,
-                          followUp: { ...prev.followUp, reminderEnabled: e.target.checked }
-                        }))}
-                      />
-                      <span className="text-xs">Enable reminder</span>
-                    </div>
-                    {prescriptionData.followUp.reminderEnabled && (
-                      <div className="flex flex-col gap-2 mt-2">
-                        <Label className="text-xs text-gray-600">Channels</Label>
-                        <div className="flex flex-wrap gap-2">
-                          {['WhatsApp','SMS','Call'].map(channel => (
-                            <label key={channel} className="flex items-center gap-1 text-xs">
-                              <input
-                                type="checkbox"
-                                checked={Array.isArray(prescriptionData.followUp.reminderChannels) && prescriptionData.followUp.reminderChannels.includes(channel)}
-                                onChange={e => {
-                                  const next = Array.isArray(prescriptionData.followUp.reminderChannels) ? [...prescriptionData.followUp.reminderChannels] : [];
-                                  if (e.target.checked) {
-                                    next.push(channel);
-                                  } else {
-                                    const idx = next.indexOf(channel);
-                                    if (idx > -1) next.splice(idx, 1);
-                                  }
-                                  setPrescriptionData(prev => ({
-                                    ...prev,
-                                    followUp: { ...prev.followUp, reminderChannels: next }
-                                  }));
-                                }}
-                              />
-                              {channel}
-                            </label>
-                          ))}
-                        </div>
-                        <Label className="text-xs text-gray-600 mt-2">Remind how many days before?</Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={prescriptionData.followUp.reminderOffsetDays || 1}
-                          onChange={e => setPrescriptionData(prev => ({
-                            ...prev,
-                            followUp: { ...prev.followUp, reminderOffsetDays: Number(e.target.value) }
-                          }))}
-                          className="h-8 text-sm w-24"
-                        />
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <Label className="text-xs text-gray-600">Assigned Doctor</Label>
-                    <Input
-                      placeholder="Doctor ID or name"
-                      value={prescriptionData.followUp.assignedDoctorId || ''}
-                      onChange={e => setPrescriptionData(prev => ({
-                        ...prev,
-                        followUp: { ...prev.followUp, assignedDoctorId: e.target.value }
-                      }))}
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                </div>
+
                 {/* Referral Fields with enable radio */}
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                < div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4" >
                   <div className="flex items-center gap-4 mb-2">
                     <div className="text-sm font-semibold">Referral (if any)</div>
                     <label className="flex items-center gap-1 text-xs">
                       <input
-                        type="radio"
+                        type="checkbox"
                         checked={!!prescriptionData.followUp.referralEnabled}
                         onChange={e => setPrescriptionData(prev => ({
                           ...prev,
@@ -3850,154 +3512,60 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                     </label>
                   </div>
                   {!!prescriptionData.followUp.referralEnabled && (
-                  <>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label className="text-xs text-gray-600">Referral Type *</Label>
-                      <Select
-                        value={prescriptionData.followUp.referral?.referralType || 'Specialist'}
-                        onValueChange={val => setPrescriptionData(prev => ({
-                          ...prev,
-                          followUp: { ...prev.followUp, referral: { ...prev.followUp.referral, referralType: val as any } }
-                        }))}
-                      >
-                        <SelectTrigger className="h-8 text-sm bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-700 rounded-md px-2 w-full" />
-                        <SelectContent>
-                          <SelectItem value="Specialist">Specialist</SelectItem>
-                          <SelectItem value="Facility">Facility</SelectItem>
-                          <SelectItem value="Diagnostic">Diagnostic</SelectItem>
-                          <SelectItem value="Emergency">Emergency</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-gray-600">Specialty</Label>
-                      <Input
-                        placeholder="e.g. Cardiology, Ortho"
-                        value={prescriptionData.followUp.referral?.referredTo?.specialty || ''}
-                        onChange={e => setPrescriptionData(prev => ({
-                          ...prev,
-                          followUp: {
-                            ...prev.followUp,
-                            referral: {
-                              ...prev.followUp.referral,
-                              referredTo: { ...prev.followUp.referral?.referredTo, specialty: e.target.value }
-                            }
-                          }
-                        }))}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-gray-600">Doctor Name</Label>
-                      <Input
-                        placeholder="Doctor name"
-                        value={prescriptionData.followUp.referral?.referredTo?.doctorName || ''}
-                        onChange={e => setPrescriptionData(prev => ({
-                          ...prev,
-                          followUp: {
-                            ...prev.followUp,
-                            referral: {
-                              ...prev.followUp.referral,
-                              referredTo: { ...prev.followUp.referral?.referredTo, doctorName: e.target.value }
-                            }
-                          }
-                        }))}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
-                    <div>
-                      <Label className="text-xs text-gray-600">Facility Name</Label>
-                      <Input
-                        placeholder="Facility name"
-                        value={prescriptionData.followUp.referral?.referredTo?.facilityName || ''}
-                        onChange={e => setPrescriptionData(prev => ({
-                          ...prev,
-                          followUp: {
-                            ...prev.followUp,
-                            referral: {
-                              ...prev.followUp.referral,
-                              referredTo: { ...prev.followUp.referral?.referredTo, facilityName: e.target.value }
-                            }
-                          }
-                        }))}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-gray-600">Reason for Referral *</Label>
-                      <Input
-                        placeholder="e.g. Persistent chest pain, rule out cardiac cause"
-                        value={prescriptionData.followUp.referral?.reason || ''}
-                        onChange={e => setPrescriptionData(prev => ({
-                          ...prev,
-                          followUp: {
-                            ...prev.followUp,
-                            referral: { ...prev.followUp.referral, reason: e.target.value }
-                          }
-                        }))}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-gray-600">Urgency *</Label>
-                      <Select
-                        value={prescriptionData.followUp.referral?.urgency || 'Routine'}
-                        onValueChange={val => setPrescriptionData(prev => ({
-                          ...prev,
-                          followUp: { ...prev.followUp, referral: { ...prev.followUp.referral, urgency: val as any } }
-                        }))}
-                      >
-                        <SelectTrigger className="h-8 text-sm bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-700 rounded-md px-2 w-full" />
-                        <SelectContent>
-                          <SelectItem value="Routine">Routine</SelectItem>
-                          <SelectItem value="Urgent">Urgent</SelectItem>
-                          <SelectItem value="Emergency">Emergency</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                    <div>
-                      <Label className="text-xs text-gray-600">Clinical Summary</Label>
-                      <Textarea
-                        placeholder="Key symptoms, exam, diagnosis, meds, allergies..."
-                        value={prescriptionData.followUp.referral?.clinicalSummary || ''}
-                        onChange={e => setPrescriptionData(prev => ({
-                          ...prev,
-                          followUp: { ...prev.followUp, referral: { ...prev.followUp.referral, clinicalSummary: e.target.value } }
-                        }))}
-                        className="min-h-[40px] text-sm"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-gray-600">Requested Action</Label>
-                      <Input
-                        placeholder="e.g. Evaluate for angiography, confirm diagnosis"
-                        value={prescriptionData.followUp.referral?.requestedAction || ''}
-                        onChange={e => setPrescriptionData(prev => ({
-                          ...prev,
-                          followUp: { ...prev.followUp, referral: { ...prev.followUp.referral, requestedAction: e.target.value } }
-                        }))}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                  </div>
-                  <div className="mt-2">
-                    <Label className="text-xs text-gray-600">Attachments</Label>
-                    <Textarea
-                      placeholder="Report IDs, URLs, etc. (comma separated)"
-                      value={Array.isArray(prescriptionData.followUp.referral?.attachments) ? prescriptionData.followUp.referral.attachments.join(', ') : ''}
-                      onChange={e => setPrescriptionData(prev => ({
-                        ...prev,
-                        followUp: { ...prev.followUp, referral: { ...prev.followUp.referral, attachments: e.target.value.split(',').map(s => s.trim()).filter(Boolean) } }
-                      }))}
-                      className="min-h-[32px] text-sm"
-                    />
-                  </div>
-                  </>
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-xs text-gray-600">Specialty</Label>
+                          <Input
+                            placeholder="e.g. Cardiology, Ortho"
+                            value={prescriptionData.followUp.referral?.referredTo?.specialty || ''}
+                            onChange={e => setPrescriptionData(prev => ({
+                              ...prev,
+                              followUp: {
+                                ...prev.followUp,
+                                referral: {
+                                  ...prev.followUp.referral,
+                                  referredTo: { ...prev.followUp.referral?.referredTo, specialty: e.target.value }
+                                }
+                              }
+                            }))}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-600">Doctor Name</Label>
+                          <Input
+                            placeholder="Doctor name"
+                            value={prescriptionData.followUp.referral?.referredTo?.doctorName || ''}
+                            onChange={e => setPrescriptionData(prev => ({
+                              ...prev,
+                              followUp: {
+                                ...prev.followUp,
+                                referral: {
+                                  ...prev.followUp.referral,
+                                  referredTo: { ...prev.followUp.referral?.referredTo, doctorName: e.target.value }
+                                }
+                              }
+                            }))}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                        <div>
+                          <Label className="text-xs text-gray-600">Clinical Summary</Label>
+                          <Textarea
+                            placeholder="Key symptoms, exam, diagnosis, meds, allergies..."
+                            value={prescriptionData.followUp.referral?.clinicalSummary || ''}
+                            onChange={e => setPrescriptionData(prev => ({
+                              ...prev,
+                              followUp: { ...prev.followUp, referral: { ...prev.followUp.referral, clinicalSummary: e.target.value } }
+                            }))}
+                            className="min-h-[40px] text-sm"
+                          />
+                        </div>
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
