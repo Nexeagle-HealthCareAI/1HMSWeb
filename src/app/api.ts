@@ -135,6 +135,12 @@ export const API_ENDPOINTS = {
       return `prescription-settings?${params.join('&')}`;
     },
   },
+  ATTACHMENTS: {
+    UPLOAD: 'e-prescription/attachments/upload',
+    LIST: (appointmentId: string, hospitalId: string, doctorId: string, patientId: string) =>
+      `e-prescription/attachments/list?appointmentId=${encodeURIComponent(appointmentId)}&hospitalId=${encodeURIComponent(hospitalId)}&doctorId=${encodeURIComponent(doctorId)}&patientId=${encodeURIComponent(patientId)}`,
+    DELETE: (attachmentId: string) => `e-prescription/attachments/delete?AttachmentId=${encodeURIComponent(attachmentId)}`,
+  },
 } as const;
 
 // Default headers

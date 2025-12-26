@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { 
-  Calendar, 
-  Plus, 
-  Search, 
-  Heart, 
-  UserCheck, 
-  FlaskConical, 
+import {
+  Calendar,
+  Plus,
+  Search,
+  Heart,
+  UserCheck,
+  FlaskConical,
   Clock,
   Eye,
   User,
@@ -28,14 +28,14 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { 
-  Pagination, 
-  PaginationContent, 
-  PaginationEllipsis, 
-  PaginationItem, 
-  PaginationLink, 
-  PaginationNext, 
-  PaginationPrevious 
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious
 } from '@/components/ui/pagination';
 import { AppointmentBooking } from './AppointmentBooking';
 import { VitalsForm } from './VitalsForm';
@@ -82,7 +82,7 @@ export const AppointmentDashboard = () => {
   const [previewRequest, setPreviewRequest] = useState<GeneratePrescriptionDetailsRequest | null>(null);
   const [showAddBillModal, setShowAddBillModal] = useState(false);
   const [appointmentForBilling, setAppointmentForBilling] = useState<AppointmentDetail | null>(null);
-  const [labAttachmentModal, setLabAttachmentModal] = useState<{ open: boolean; patientId?: string; patientName?: string }>({ open: false });
+  const [labAttachmentModal, setLabAttachmentModal] = useState<{ open: boolean; patientId?: string; patientName?: string; appointmentId?: string }>({ open: false });
   const [labAttachments, setLabAttachments] = useState<Record<string, string[]>>({});
 
   const handleOpenLabAttachments = (appointment: AppointmentDetail) => {
@@ -90,6 +90,7 @@ export const AppointmentDashboard = () => {
       open: true,
       patientId: appointment.patientId,
       patientName: appointment.patientFullName,
+      appointmentId: appointment.appointmentId,
     });
   };
 
@@ -113,7 +114,7 @@ export const AppointmentDashboard = () => {
     switch (status) {
       case 'VITALS_REQUIRED':
         return (
-          <Badge 
+          <Badge
             className="bg-red-50 text-red-700 border-red-200 cursor-pointer hover:bg-red-100 transition-colors text-xs px-1.5 py-0.5 font-medium"
             onClick={() => appointment && handleVitalsClick(appointment)}
           >
@@ -146,12 +147,12 @@ export const AppointmentDashboard = () => {
 
   const handleVitalsSubmit = (vitalsData: any) => {
     console.log('Vitals submitted for patient:', selectedPatient?.patientFullName, vitalsData);
-    
+
     // Invalidate appointment details queries to refresh dashboard data
     queryClient.invalidateQueries({
       queryKey: ['appointmentDetails']
     });
-    
+
     setShowVitalsForm(false);
     setSelectedPatient(null);
   };
@@ -203,7 +204,7 @@ export const AppointmentDashboard = () => {
   // Manual refresh function
   const handleManualRefresh = async () => {
     if (!refetch) return;
-    
+
     setIsRefreshing(true);
     try {
       await refetch();
@@ -287,19 +288,19 @@ export const AppointmentDashboard = () => {
     !startDate &&
     !endDate;
 
-  const filteredAppointments = useMemo(() => {    
-    if (!appointments || appointments.length === 0) return [];    
+  const filteredAppointments = useMemo(() => {
+    if (!appointments || appointments.length === 0) return [];
     const today = new Date(); // Use actual current date
     const todayKey = formatDateKey(today);
     const todayDay = toDayDate(todayKey);
-    
+
     // If no appointments, return empty array
-    if (appointments.length === 0) {      
+    if (appointments.length === 0) {
       return [];
     }
-    
+
     console.log('Current selectedStatus in filter:', selectedStatus, 'Type:', typeof selectedStatus);
-    
+
     const filtered = appointments.filter(appointment => {
       const searchLower = searchTerm.toLowerCase();
       const nameLower = appointment.patientFullName?.toLowerCase() || '';
@@ -311,42 +312,42 @@ export const AppointmentDashboard = () => {
         (appointment.appointmentDate && appointment.appointmentDate.toLowerCase().includes(searchLower)) ||
         (tokenNumber && tokenNumber.includes(searchLower))
       );
-      
+
       const doctorValue = getDoctorFilterValue(appointment.doctorId, appointment.doctorName);
       const matchesDoctor = selectedDoctor === 'all' || (!!doctorValue && doctorValue === selectedDoctor);
-      
-             // Filter by status if on current tab
-       let matchesStatus = true;
-       if (activeTab === 'current' && selectedStatus !== 'all') {
-         // Convert both to strings and compare case-insensitively for better matching
-         const appointmentStatus = String(appointment.finalStatusCode || '').toUpperCase();
-         const selectedStatusUpper = String(selectedStatus || '').toUpperCase();
-         matchesStatus = appointmentStatus === selectedStatusUpper;
-         
-         // Debug log for status matching
-         console.log('Status comparison:', {
-           appointmentStatus,
-           selectedStatusUpper,
-           matchesStatus,
-           appointmentId: appointment.appointmentId,
-           patientName: appointment.patientFullName
-         });
-         
-         // Special debug for VITALS_REQUIRED
-         if (selectedStatusUpper === 'VITALS_REQUIRED') {
-           console.log('🔍 VITALS_REQUIRED filter debug:', {
-             appointmentStatus,
-             selectedStatusUpper,
-             matchesStatus,
-             appointmentId: appointment.appointmentId,
-             patientName: appointment.patientFullName
-           });
-         }
-       }
-      
+
+      // Filter by status if on current tab
+      let matchesStatus = true;
+      if (activeTab === 'current' && selectedStatus !== 'all') {
+        // Convert both to strings and compare case-insensitively for better matching
+        const appointmentStatus = String(appointment.finalStatusCode || '').toUpperCase();
+        const selectedStatusUpper = String(selectedStatus || '').toUpperCase();
+        matchesStatus = appointmentStatus === selectedStatusUpper;
+
+        // Debug log for status matching
+        console.log('Status comparison:', {
+          appointmentStatus,
+          selectedStatusUpper,
+          matchesStatus,
+          appointmentId: appointment.appointmentId,
+          patientName: appointment.patientFullName
+        });
+
+        // Special debug for VITALS_REQUIRED
+        if (selectedStatusUpper === 'VITALS_REQUIRED') {
+          console.log('🔍 VITALS_REQUIRED filter debug:', {
+            appointmentStatus,
+            selectedStatusUpper,
+            matchesStatus,
+            appointmentId: appointment.appointmentId,
+            patientName: appointment.patientFullName
+          });
+        }
+      }
+
       const appointmentDateKey = getAppointmentDateKey(appointment);
       const appointmentDay = toDayDate(appointmentDateKey);
-      
+
       // Filter by date range if on past or future tab
       let matchesDateRange = true;
       if ((activeTab === 'past' || activeTab === 'future') && appointmentDay) {
@@ -363,10 +364,10 @@ export const AppointmentDashboard = () => {
           }
         }
       }
-      
+
       // Filter by appointment type based on active tab
       let matchesType = true;
-      
+
       if (isDefaultFilterState) {
         switch (activeTab) {
           case 'current':
@@ -382,147 +383,147 @@ export const AppointmentDashboard = () => {
             matchesType = true;
         }
       }
-      
-             const result = matchesSearch && matchesDoctor && matchesStatus && matchesDateRange && matchesType;
-       
-       // Debug status filtering specifically
-       if (activeTab === 'current' && selectedStatus !== 'all') {
-         console.log('Status filtering debug:', {
-           patientName: appointment.patientFullName,
-           appointmentStatus: appointment.finalStatusCode,
-           selectedStatus,
-           matchesStatus,
-           result,
-           allFilters: {
-             matchesSearch,
-             matchesDoctor,
-             matchesStatus,
-             matchesDateRange,
-             matchesType
-           }
-         });
-         
-         // Special debug for VITALS_REQUIRED
-         if (selectedStatus === 'VITALS_REQUIRED') {
-           console.log('VITALS_REQUIRED filter debug:', {
-             patientName: appointment.patientFullName,
-             appointmentStatus: appointment.finalStatusCode,
-             appointmentStatusUpper: String(appointment.finalStatusCode || '').toUpperCase(),
-             selectedStatusUpper: String(selectedStatus || '').toUpperCase(),
-             matchesStatus,
-             willBeIncluded: result
-           });
-         }
-       }
-       
-       if (!result) {
-         console.log('Appointment filtered out:', {
-           patientName: appointment.patientFullName,
-           appointmentDate: appointment.appointmentDate,
-           finalStatusCode: appointment.finalStatusCode,
-           matchesSearch,
-           matchesDoctor,
-           matchesStatus,
-           matchesDateRange,
-           matchesType
-         });
-       }
-      
+
+      const result = matchesSearch && matchesDoctor && matchesStatus && matchesDateRange && matchesType;
+
+      // Debug status filtering specifically
+      if (activeTab === 'current' && selectedStatus !== 'all') {
+        console.log('Status filtering debug:', {
+          patientName: appointment.patientFullName,
+          appointmentStatus: appointment.finalStatusCode,
+          selectedStatus,
+          matchesStatus,
+          result,
+          allFilters: {
+            matchesSearch,
+            matchesDoctor,
+            matchesStatus,
+            matchesDateRange,
+            matchesType
+          }
+        });
+
+        // Special debug for VITALS_REQUIRED
+        if (selectedStatus === 'VITALS_REQUIRED') {
+          console.log('VITALS_REQUIRED filter debug:', {
+            patientName: appointment.patientFullName,
+            appointmentStatus: appointment.finalStatusCode,
+            appointmentStatusUpper: String(appointment.finalStatusCode || '').toUpperCase(),
+            selectedStatusUpper: String(selectedStatus || '').toUpperCase(),
+            matchesStatus,
+            willBeIncluded: result
+          });
+        }
+      }
+
+      if (!result) {
+        console.log('Appointment filtered out:', {
+          patientName: appointment.patientFullName,
+          appointmentDate: appointment.appointmentDate,
+          finalStatusCode: appointment.finalStatusCode,
+          matchesSearch,
+          matchesDoctor,
+          matchesStatus,
+          matchesDateRange,
+          matchesType
+        });
+      }
+
       return result;
     });
 
-         console.log('Filtered results:', {
-       filteredCount: filtered.length,
-       selectedStatus,
-       activeTab,
-       totalAppointments: appointments.length,
-       filteredAppointments: filtered.map(a => ({
-         patientName: a.patientFullName,
-         appointmentDate: a.appointmentDate,
-         finalStatusCode: a.finalStatusCode
-       })),
-       statusBreakdown: appointments.reduce((acc, apt) => {
-         const status = apt.finalStatusCode;
-         acc[status] = (acc[status] || 0) + 1;
-         return acc;
-       }, {} as Record<string, number>)
-     });
-     
-     // Additional debug: Show what appointments exist for the current tab and status
-     if (activeTab === 'current') {
-       const currentTabAppointments = appointments.filter(a => {
-         const appointmentStartDate = new Date(a.startAt);
-         const appointmentDay = new Date(appointmentStartDate.getFullYear(), appointmentStartDate.getMonth(), appointmentStartDate.getDate());
-         const todayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
-         return appointmentDay.getTime() === todayStart.getTime();
-       });
-       
-       console.log('Current tab appointments breakdown:', {
-         totalCurrent: currentTabAppointments.length,
-         byStatus: currentTabAppointments.reduce((acc, apt) => {
-           const status = String(apt.finalStatusCode || '').toUpperCase();
-           acc[status] = (acc[status] || 0) + 1;
-           return acc;
-         }, {} as Record<string, number>),
-         selectedStatus,
-         filteredCount: filtered.length
-       });
-     }
-     
-     // Final debug summary
-     console.log('🎯 FINAL FILTER RESULT:', {
-       selectedStatus,
-       activeTab,
-       totalAppointments: appointments.length,
-       filteredCount: filtered.length,
-       filteredAppointmentIds: filtered.map(a => a.appointmentId),
-       isEmpty: filtered.length === 0
-     });
-     
-     // Log the current status filter for debugging
-      if (activeTab === 'current') {
-       console.log('Current tab status filter:', {
-         selectedStatus,
-         totalAppointments: appointments.length,
-         filteredCount: filtered.length,
-         statusBreakdown: {
-           all: appointments.filter(a => {
-             const appointmentStartDate = new Date(a.startAt);
-             const appointmentDay = new Date(appointmentStartDate.getFullYear(), appointmentStartDate.getMonth(), appointmentStartDate.getDate());
-             const todayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
-             return appointmentDay.getTime() === todayStart.getTime();
-           }).length,
-           vitalsRequired: appointments.filter(a => {
-             const appointmentStartDate = new Date(a.startAt);
-             const appointmentDay = new Date(appointmentStartDate.getFullYear(), appointmentStartDate.getMonth(), appointmentStartDate.getDate());
-             const todayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
-             return appointmentDay.getTime() === todayStart.getTime() && String(a.finalStatusCode || '').toUpperCase() === 'VITALS_REQUIRED';
-           }).length,
-           ready: appointments.filter(a => {
-             const appointmentStartDate = new Date(a.startAt);
-             const appointmentDay = new Date(appointmentStartDate.getFullYear(), appointmentStartDate.getMonth(), appointmentStartDate.getDate());
-             const todayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
-             return appointmentDay.getTime() === todayStart.getTime() && String(a.finalStatusCode || '').toUpperCase() === 'READY';
-           }).length
-         }
-       });
-       
-                // Additional debug info for status filtering
-         if (selectedStatus !== 'all') {
-           console.log('Status filter details:', {
-             selectedStatus,
-             appointmentsWithStatus: appointments.filter(a => {
-               const appointmentStartDate = new Date(a.startAt);
-               const appointmentDay = new Date(appointmentStartDate.getFullYear(), appointmentStartDate.getMonth(), appointmentStartDate.getDate());
-               const todayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
-               return appointmentDay.getTime() === todayStart.getTime() && String(a.finalStatusCode || '').toUpperCase() === String(selectedStatus || '').toUpperCase();
-             }).length,
-             filteredAppointmentsWithStatus: filtered.filter(a => String(a.finalStatusCode || '').toUpperCase() === String(selectedStatus || '').toUpperCase()).length
-           });
-         }
-     }
+    console.log('Filtered results:', {
+      filteredCount: filtered.length,
+      selectedStatus,
+      activeTab,
+      totalAppointments: appointments.length,
+      filteredAppointments: filtered.map(a => ({
+        patientName: a.patientFullName,
+        appointmentDate: a.appointmentDate,
+        finalStatusCode: a.finalStatusCode
+      })),
+      statusBreakdown: appointments.reduce((acc, apt) => {
+        const status = apt.finalStatusCode;
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    });
 
-         // If filtering is too restrictive and no results, show all appointments for debugging
+    // Additional debug: Show what appointments exist for the current tab and status
+    if (activeTab === 'current') {
+      const currentTabAppointments = appointments.filter(a => {
+        const appointmentStartDate = new Date(a.startAt);
+        const appointmentDay = new Date(appointmentStartDate.getFullYear(), appointmentStartDate.getMonth(), appointmentStartDate.getDate());
+        const todayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+        return appointmentDay.getTime() === todayStart.getTime();
+      });
+
+      console.log('Current tab appointments breakdown:', {
+        totalCurrent: currentTabAppointments.length,
+        byStatus: currentTabAppointments.reduce((acc, apt) => {
+          const status = String(apt.finalStatusCode || '').toUpperCase();
+          acc[status] = (acc[status] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>),
+        selectedStatus,
+        filteredCount: filtered.length
+      });
+    }
+
+    // Final debug summary
+    console.log('🎯 FINAL FILTER RESULT:', {
+      selectedStatus,
+      activeTab,
+      totalAppointments: appointments.length,
+      filteredCount: filtered.length,
+      filteredAppointmentIds: filtered.map(a => a.appointmentId),
+      isEmpty: filtered.length === 0
+    });
+
+    // Log the current status filter for debugging
+    if (activeTab === 'current') {
+      console.log('Current tab status filter:', {
+        selectedStatus,
+        totalAppointments: appointments.length,
+        filteredCount: filtered.length,
+        statusBreakdown: {
+          all: appointments.filter(a => {
+            const appointmentStartDate = new Date(a.startAt);
+            const appointmentDay = new Date(appointmentStartDate.getFullYear(), appointmentStartDate.getMonth(), appointmentStartDate.getDate());
+            const todayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+            return appointmentDay.getTime() === todayStart.getTime();
+          }).length,
+          vitalsRequired: appointments.filter(a => {
+            const appointmentStartDate = new Date(a.startAt);
+            const appointmentDay = new Date(appointmentStartDate.getFullYear(), appointmentStartDate.getMonth(), appointmentStartDate.getDate());
+            const todayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+            return appointmentDay.getTime() === todayStart.getTime() && String(a.finalStatusCode || '').toUpperCase() === 'VITALS_REQUIRED';
+          }).length,
+          ready: appointments.filter(a => {
+            const appointmentStartDate = new Date(a.startAt);
+            const appointmentDay = new Date(appointmentStartDate.getFullYear(), appointmentStartDate.getMonth(), appointmentStartDate.getDate());
+            const todayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+            return appointmentDay.getTime() === todayStart.getTime() && String(a.finalStatusCode || '').toUpperCase() === 'READY';
+          }).length
+        }
+      });
+
+      // Additional debug info for status filtering
+      if (selectedStatus !== 'all') {
+        console.log('Status filter details:', {
+          selectedStatus,
+          appointmentsWithStatus: appointments.filter(a => {
+            const appointmentStartDate = new Date(a.startAt);
+            const appointmentDay = new Date(appointmentStartDate.getFullYear(), appointmentStartDate.getMonth(), appointmentStartDate.getDate());
+            const todayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+            return appointmentDay.getTime() === todayStart.getTime() && String(a.finalStatusCode || '').toUpperCase() === String(selectedStatus || '').toUpperCase();
+          }).length,
+          filteredAppointmentsWithStatus: filtered.filter(a => String(a.finalStatusCode || '').toUpperCase() === String(selectedStatus || '').toUpperCase()).length
+        });
+      }
+    }
+
+    // If filtering is too restrictive and no results, show all appointments for debugging
     // Sort by appointment time in increasing order
     const sortedFiltered = filtered.sort((a, b) => {
       // Sort only by appointment time
@@ -530,7 +531,7 @@ export const AppointmentDashboard = () => {
       const timeB = new Date(b.startAt).getTime();
       return timeA - timeB;
     });
-    
+
     if (
       sortedFiltered.length === 0 &&
       appointments.length > 0 &&
@@ -566,14 +567,14 @@ export const AppointmentDashboard = () => {
     yesterday.setDate(today.getDate() - 1);
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
-    
+
     if (activeTab === 'past') {
       setStartDate(yesterday.toISOString().split('T')[0]);
       setEndDate(yesterday.toISOString().split('T')[0]);
-      } else if (activeTab === 'future') {
+    } else if (activeTab === 'future') {
       setStartDate(tomorrow.toISOString().split('T')[0]);
       setEndDate(tomorrow.toISOString().split('T')[0]);
-        } else {
+    } else {
       setStartDate('');
       setEndDate('');
     }
@@ -597,7 +598,7 @@ export const AppointmentDashboard = () => {
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
@@ -612,7 +613,7 @@ export const AppointmentDashboard = () => {
     const interval = setInterval(async () => {
       setIsRefreshing(true);
       try {
-  await refetch();
+        await refetch();
       } catch (error) {
         console.error('Live update failed:', error);
       } finally {
@@ -712,28 +713,28 @@ export const AppointmentDashboard = () => {
     setIsCancelling(true);
     try {
       console.log('Cancelling appointment:', appointmentToCancel.appointmentId);
-      
+
       const response = await appointmentApi.cancelAppointment({
         appointmentId: appointmentToCancel.appointmentId,
         patientId: appointmentToCancel.patientId
       });
-      
+
       console.log('Cancel API response:', response);
-      
+
       // Close dialog and reset state
       setCancelDialogOpen(false);
       setAppointmentToCancel(null);
-      
+
       // Invalidate appointment details queries to refresh dashboard data
       queryClient.invalidateQueries({
         queryKey: ['appointmentDetails']
       });
-      
+
       // Refresh appointment data
       if (refetch) {
         refetch();
       }
-      
+
       console.log('Appointment cancelled successfully - status should be CANCELLED');
     } catch (error) {
       console.error('Error cancelling appointment:', error);
@@ -803,16 +804,16 @@ export const AppointmentDashboard = () => {
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3 shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <h1 className="text-lg font-semibold text-gray-900 dark:text-white">{t('appointmentDashboard.title')}</h1>
-              <Button 
+          <Button
             variant="outline"
-                onClick={handleBookingClick} 
+            onClick={handleBookingClick}
             className="group flex items-center gap-2 border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
-              >
+          >
             <Plus className="h-4 w-4 text-gray-600 dark:text-gray-300 transition-transform group-hover:translate-x-1" />
             <span className="text-gray-700 dark:text-gray-200 font-medium">{t('appointmentDashboard.bookAppointment')}</span>
-              </Button>
-            </div>
-        </div>                
+          </Button>
+        </div>
+      </div>
 
       {/* Main Dashboard Content */}
       <div className="max-w-7xl mx-auto p-2 sm:p-4 md:p-6">
@@ -828,51 +829,50 @@ export const AppointmentDashboard = () => {
                   { key: 'past', label: t('appointmentDashboard.tabs.past') },
                   { key: 'future', label: t('appointmentDashboard.tabs.future') },
                 ].map((tab) => (
-                   <button
-                     key={tab.key}
-                     onClick={() => setActiveTab(tab.key as 'current' | 'past' | 'future')}
-                     className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 relative ${
-                       activeTab === tab.key
-                         ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
-                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                     }`}
-                   >
-                     <div className="flex items-center justify-center gap-2">
-                       <span>{tab.label}</span>
-                       {tab.key === 'current' && (
-                         <div className="flex items-center gap-1">
-                           {isRefreshing ? (
-                             <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />
-                           ) : (
-                             <Activity className="h-3 w-3 text-green-500" />
-                           )}
-                           {connectionStatus === 'online' ? (
-                             <Wifi className="h-3 w-3 text-green-500" />
-                           ) : (
-                             <WifiOff className="h-3 w-3 text-red-500" />
-                           )}
-                         </div>
-                       )}
-                     </div>
-                   </button>
-                  ))}
-          </div>
-        </div>                
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key as 'current' | 'past' | 'future')}
+                    className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 relative ${activeTab === tab.key
+                      ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                      }`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <span>{tab.label}</span>
+                      {tab.key === 'current' && (
+                        <div className="flex items-center gap-1">
+                          {isRefreshing ? (
+                            <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />
+                          ) : (
+                            <Activity className="h-3 w-3 text-green-500" />
+                          )}
+                          {connectionStatus === 'online' ? (
+                            <Wifi className="h-3 w-3 text-green-500" />
+                          ) : (
+                            <WifiOff className="h-3 w-3 text-red-500" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* Compact Search Bar */}
             <div className="mb-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
                 {/* Search Input */}
                 <div className="relative w-full max-w-md">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                          <Input
-                        placeholder={t('appointmentDashboard.searchPlaceholder')}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 h-10"
-                          />
-                      </div>
-                      
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder={t('appointmentDashboard.searchPlaceholder')}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 h-10"
+                  />
+                </div>
+
                 {/* Doctor Filter Dropdown */}
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('appointmentDashboard.doctorLabel')}:</label>
@@ -917,104 +917,103 @@ export const AppointmentDashboard = () => {
                           placeholder={t('appointmentDashboard.dateRange.end')}
                           min={startDate || undefined}
                         />
+                      </div>
                     </div>
-                        </div>
-                        </div>
+                  </div>
                 )}
-                  </div>
-                  </div>
+              </div>
+            </div>
 
-                         {/* Status Navigation - Only show for Current tab */}
-             {activeTab === 'current' && (
-               <div className="mb-4">
-                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                   <div className="flex flex-wrap gap-2">
-                  {[
-                    { key: 'all', label: t('appointmentDashboard.statusFilters.all'), color: 'bg-gray-100 text-gray-700 border-gray-200' },
-                    { key: 'VITALS_REQUIRED', label: t('appointmentDashboard.statusFilters.vitalsRequired'), color: 'bg-red-100 text-red-700 border-red-200' },
-                    { key: 'READY', label: t('appointmentDashboard.statusFilters.ready'), color: 'bg-green-100 text-green-700 border-green-200' },
-                    { key: 'UNDER_CONSULT', label: t('appointmentDashboard.statusFilters.underConsult'), color: 'bg-blue-100 text-blue-700 border-blue-200' },
-                    { key: 'LAB_REQUIRED', label: t('appointmentDashboard.statusFilters.labRequired'), color: 'bg-orange-100 text-orange-700 border-orange-200' },
-                    { key: 'AWAITING_RECONSULT', label: t('appointmentDashboard.statusFilters.awaitingReconsult'), color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
-                    { key: 'COMPLETED', label: t('appointmentDashboard.statusFilters.completed'), color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-                    { key: 'CANCELLED', label: t('appointmentDashboard.statusFilters.cancelled'), color: 'bg-gray-100 text-gray-600 border-gray-300' }
-                  ].map((status) => {
-                    const count = appointments.filter(a => {
-                      const appointmentStartDate = new Date(a.startAt);
-                      const appointmentDay = new Date(appointmentStartDate.getFullYear(), appointmentStartDate.getMonth(), appointmentStartDate.getDate());
-                      const todayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
-                      
-                      // For "all" status, count all current appointments
-                      if (status.key === 'all') {
-                        return appointmentDay.getTime() === todayStart.getTime();
-                      }
-                      
-                      // For specific status, count appointments with that status (case-insensitive)
-                      return appointmentDay.getTime() === todayStart.getTime() && 
-                             String(a.finalStatusCode || '').toUpperCase() === String(status.key || '').toUpperCase();
-                    }).length;
-                    
-                    return (
-                <button
-                         key={status.key}
-                         onClick={() => {
-                           console.log('Status button clicked:', status.key);
-                           console.log('Current selectedStatus before update:', selectedStatus);
-                           setSelectedStatus(status.key);
-                           setCurrentPage(1);
-                           console.log('Status filter should now be:', status.key);
-                           
-                           // Debug: Check what appointments exist with this status
-                           const appointmentsWithThisStatus = appointments.filter(a => {
-                             const appointmentStartDate = new Date(a.startAt);
-                             const appointmentDay = new Date(appointmentStartDate.getFullYear(), appointmentStartDate.getMonth(), appointmentStartDate.getDate());
-                             const todayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
-                             
-                             return appointmentDay.getTime() === todayStart.getTime() && 
-                                    String(a.finalStatusCode || '').toUpperCase() === String(status.key || '').toUpperCase();
-                           });
-                           
-                           console.log(`Appointments with status ${status.key}:`, appointmentsWithThisStatus.map(a => ({
-                             patientName: a.patientFullName,
-                             finalStatusCode: a.finalStatusCode
-                           })));
-                         }}
-                         className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 hover:scale-105 ${
-                           selectedStatus === status.key
-                             ? `${status.color} shadow-sm ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-800 ring-current`
-                             : `${status.color} hover:opacity-80`
-                         }`}
-                       >
-                        <div className="flex items-center gap-1.5">
-                          <span>{status.label}</span>
-                          <span className="px-1.5 py-0.5 bg-white/50 rounded-full text-xs font-bold">
-                            {count}
-                          </span>
+            {/* Status Navigation - Only show for Current tab */}
+            {activeTab === 'current' && (
+              <div className="mb-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { key: 'all', label: t('appointmentDashboard.statusFilters.all'), color: 'bg-gray-100 text-gray-700 border-gray-200' },
+                      { key: 'VITALS_REQUIRED', label: t('appointmentDashboard.statusFilters.vitalsRequired'), color: 'bg-red-100 text-red-700 border-red-200' },
+                      { key: 'READY', label: t('appointmentDashboard.statusFilters.ready'), color: 'bg-green-100 text-green-700 border-green-200' },
+                      { key: 'UNDER_CONSULT', label: t('appointmentDashboard.statusFilters.underConsult'), color: 'bg-blue-100 text-blue-700 border-blue-200' },
+                      { key: 'LAB_REQUIRED', label: t('appointmentDashboard.statusFilters.labRequired'), color: 'bg-orange-100 text-orange-700 border-orange-200' },
+                      { key: 'AWAITING_RECONSULT', label: t('appointmentDashboard.statusFilters.awaitingReconsult'), color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
+                      { key: 'COMPLETED', label: t('appointmentDashboard.statusFilters.completed'), color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+                      { key: 'CANCELLED', label: t('appointmentDashboard.statusFilters.cancelled'), color: 'bg-gray-100 text-gray-600 border-gray-300' }
+                    ].map((status) => {
+                      const count = appointments.filter(a => {
+                        const appointmentStartDate = new Date(a.startAt);
+                        const appointmentDay = new Date(appointmentStartDate.getFullYear(), appointmentStartDate.getMonth(), appointmentStartDate.getDate());
+                        const todayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+
+                        // For "all" status, count all current appointments
+                        if (status.key === 'all') {
+                          return appointmentDay.getTime() === todayStart.getTime();
+                        }
+
+                        // For specific status, count appointments with that status (case-insensitive)
+                        return appointmentDay.getTime() === todayStart.getTime() &&
+                          String(a.finalStatusCode || '').toUpperCase() === String(status.key || '').toUpperCase();
+                      }).length;
+
+                      return (
+                        <button
+                          key={status.key}
+                          onClick={() => {
+                            console.log('Status button clicked:', status.key);
+                            console.log('Current selectedStatus before update:', selectedStatus);
+                            setSelectedStatus(status.key);
+                            setCurrentPage(1);
+                            console.log('Status filter should now be:', status.key);
+
+                            // Debug: Check what appointments exist with this status
+                            const appointmentsWithThisStatus = appointments.filter(a => {
+                              const appointmentStartDate = new Date(a.startAt);
+                              const appointmentDay = new Date(appointmentStartDate.getFullYear(), appointmentStartDate.getMonth(), appointmentStartDate.getDate());
+                              const todayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+
+                              return appointmentDay.getTime() === todayStart.getTime() &&
+                                String(a.finalStatusCode || '').toUpperCase() === String(status.key || '').toUpperCase();
+                            });
+
+                            console.log(`Appointments with status ${status.key}:`, appointmentsWithThisStatus.map(a => ({
+                              patientName: a.patientFullName,
+                              finalStatusCode: a.finalStatusCode
+                            })));
+                          }}
+                          className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 hover:scale-105 ${selectedStatus === status.key
+                            ? `${status.color} shadow-sm ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-800 ring-current`
+                            : `${status.color} hover:opacity-80`
+                            }`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span>{status.label}</span>
+                            <span className="px-1.5 py-0.5 bg-white/50 rounded-full text-xs font-bold">
+                              {count}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
-                </button>
-                    );
-                  })}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleManualRefresh}
+                    disabled={isRefreshing}
+                    className="h-9 px-4 text-xs md:self-start mt-2 sm:mt-0"
+                  >
+                    <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    {t('appointmentDashboard.refreshNow')}
+                  </Button>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleManualRefresh}
-                  disabled={isRefreshing}
-                  className="h-9 px-4 text-xs md:self-start mt-2 sm:mt-0"
-                >
-                  <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  {t('appointmentDashboard.refreshNow')}
-                </Button>
-               </div>
-             </div>
-             )}
+              </div>
+            )}
 
             {/* Loading State */}
             {isLoading && (
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8 text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
                 <p className="text-gray-600 dark:text-gray-400">{t('appointmentDashboard.loadingAppointments')}</p>
-                  </div>
+              </div>
             )}
 
 
@@ -1026,249 +1025,248 @@ export const AppointmentDashboard = () => {
                   <svg className="h-8 w-8 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                   </svg>
-                  </div>
-                  <p className="text-red-600 dark:text-red-400 font-medium mb-2">{t('appointmentDashboard.errorTitle')}</p>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">{error.message || t('appointmentDashboard.errorDescription')}</p>
-                <Button onClick={() => refetch()} variant="outline" size="sm">
-                    {t('appointmentDashboard.tryAgain')}
-                </Button>
                 </div>
+                <p className="text-red-600 dark:text-red-400 font-medium mb-2">{t('appointmentDashboard.errorTitle')}</p>
+                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">{error.message || t('appointmentDashboard.errorDescription')}</p>
+                <Button onClick={() => refetch()} variant="outline" size="sm">
+                  {t('appointmentDashboard.tryAgain')}
+                </Button>
+              </div>
             )}
 
             {/* Current Appointments Table */}
             {!isLoading && !error && (
-                <div className="space-y-4">
+              <div className="space-y-4">
                 <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-x-auto shadow-sm">
                   <div className="px-2 sm:px-4 py-2.5 border-b border-gray-200 dark:border-gray-600 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
                       <div>
                         <p className="text-xs text-gray-600 dark:text-gray-400">
                           {totalPages > 1 && `Page ${currentPage} of ${totalPages}`}
                         </p>
                       </div>
-                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
                         {totalPages > 1 && (
                           <Badge variant="outline" className="bg-green-50 text-green-700 text-xs px-2 py-1">
                             {currentPage}/{totalPages}
-                    </Badge>
-                      )}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-                
-                <div className="overflow-x-auto w-full">
-                  <Table className="border-collapse min-w-[700px] md:min-w-full text-xs md:text-sm">
-                                        <TableHeader>
-                         <TableRow className="bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700">
-                             <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">
-                             <div className="flex items-center gap-1.5">
-                               <User className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-                                 <span>{t('appointmentDashboard.table.patientId')}</span>
-                               <Eye className="h-2.5 w-2.5 text-gray-400" />
-                             </div>
-                           </TableHead>
-                             <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.patientName')}</TableHead>
-                             <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.doctorName')}</TableHead>
-                             <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.tokenNo')}</TableHead>
-                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">
-                               {activeTab === 'past'
-                                 ? t('appointmentDashboard.table.lastAppointmentDate')
-                                 : activeTab === 'future'
-                                   ? t('appointmentDashboard.table.appointmentDate')
-                                   : t('appointmentDashboard.table.appointmentTime')}
-                           </TableHead>
-                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">
-                               {activeTab === 'past'
-                                 ? t('appointmentDashboard.table.lastCompletedStatus')
-                                 : t('appointmentDashboard.table.currentStatus')}
-                           </TableHead>
-                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">
-                             {t('appointmentDashboard.table.labReports', { defaultValue: 'Lab reports' })}
-                           </TableHead>
-                           {activeTab === 'current' && (
-                               <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">
-                                 {t('appointmentDashboard.table.addBill', { defaultValue: 'Add Bill' })}
-                               </TableHead>
-                           )}
-                           {activeTab !== 'past' && (
-                               <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.actions')}</TableHead>
-                           )}
-                             <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.printPrescription')}</TableHead>
-                            {activeTab === 'past' && (
-                              <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.isCompleted')}</TableHead>
-                            )}
-                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredAppointments.length === 0 ? (
-                        <TableRow>
-                                                          <TableCell colSpan={activeTab === 'past' ? 9 : activeTab === 'current' ? 10 : 9} className="text-center py-6">
+
+                  <div className="overflow-x-auto w-full">
+                    <Table className="border-collapse min-w-[700px] md:min-w-full text-xs md:text-sm">
+                      <TableHeader>
+                        <TableRow className="bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700">
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">
+                            <div className="flex items-center gap-1.5">
+                              <User className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                              <span>{t('appointmentDashboard.table.patientId')}</span>
+                              <Eye className="h-2.5 w-2.5 text-gray-400" />
+                            </div>
+                          </TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.patientName')}</TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.doctorName')}</TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.tokenNo')}</TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">
+                            {activeTab === 'past'
+                              ? t('appointmentDashboard.table.lastAppointmentDate')
+                              : activeTab === 'future'
+                                ? t('appointmentDashboard.table.appointmentDate')
+                                : t('appointmentDashboard.table.appointmentTime')}
+                          </TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">
+                            {activeTab === 'past'
+                              ? t('appointmentDashboard.table.lastCompletedStatus')
+                              : t('appointmentDashboard.table.currentStatus')}
+                          </TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">
+                            {t('appointmentDashboard.table.labReports', { defaultValue: 'Lab reports' })}
+                          </TableHead>
+                          {activeTab === 'current' && (
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">
+                              {t('appointmentDashboard.table.addBill', { defaultValue: 'Add Bill' })}
+                            </TableHead>
+                          )}
+                          {activeTab !== 'past' && (
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.actions')}</TableHead>
+                          )}
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.printPrescription')}</TableHead>
+                          {activeTab === 'past' && (
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.isCompleted')}</TableHead>
+                          )}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredAppointments.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={activeTab === 'past' ? 9 : activeTab === 'current' ? 10 : 9} className="text-center py-6">
                               <div className="flex flex-col items-center gap-1.5">
                                 <div className="w-6 h-6 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
                                   <CalendarDays className="h-3 w-3 text-gray-400" />
-                              </div>
-                              <div>
+                                </div>
+                                <div>
                                   <p className="text-gray-900 dark:text-white font-medium text-xs">
-                                      {activeTab === 'current' && t('appointmentDashboard.emptyStates.current')}
-                                      {activeTab === 'past' && t('appointmentDashboard.emptyStates.past')}
-                                      {activeTab === 'future' && t('appointmentDashboard.emptyStates.future')}
+                                    {activeTab === 'current' && t('appointmentDashboard.emptyStates.current')}
+                                    {activeTab === 'past' && t('appointmentDashboard.emptyStates.past')}
+                                    {activeTab === 'future' && t('appointmentDashboard.emptyStates.future')}
                                   </p>
-                                    <p className="text-gray-500 dark:text-gray-400 text-xs">{t('appointmentDashboard.emptyStates.adjustFilters')}</p>
+                                  <p className="text-gray-500 dark:text-gray-400 text-xs">{t('appointmentDashboard.emptyStates.adjustFilters')}</p>
+                                </div>
                               </div>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                                                     currentAppointments.map((appointment) => (
-                             <TableRow key={appointment.appointmentId} className={`hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors border-b border-gray-100 dark:border-gray-700/50 ${compactMode ? 'h-10' : 'h-12'} text-xs md:text-sm`}>
-                               {/* Patient ID */}
-                               <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                                 <button
-                                   onClick={() => handlePatientIdClick(appointment)}
-                                   className="group relative font-mono bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600 px-3 py-2 rounded-md text-xs font-semibold text-blue-700 dark:text-blue-300 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md"
-                                   title={t('appointmentDashboard.tooltip.viewProfile')}
-                                 >
-                                   <div className="flex items-center gap-1.5">
-                                     <User className="h-3 w-3" />
-                                     <span>{appointment.patientId}</span>
-                                     <Eye className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                              </div>
-                                   <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                                     {t('appointmentDashboard.tooltip.viewProfile')}
-                </div>
-                                 </button>
-                               </TableCell>
-                               
-                               {/* Patient Name */}
-                               <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                                 <div className="min-w-0">
-                                   <div className="font-medium text-gray-900 dark:text-white text-xs truncate">
-                                     {appointment.patientFullName}
-                      </div>
-                                   <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                     <Phone className="h-2.5 w-2.5" />
-                                     <span className="truncate">{appointment.patientMobile}</span>
-                    </div>
-                  </div>
                             </TableCell>
-                               
-                               {/* Doctor Name */}
-                               <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                                 {/* Laptop/Desktop: show full info, else only doctor name */}
-                                 <div className="hidden lg:flex items-center gap-1.5">
-                                   <div className="w-5 h-5 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center flex-shrink-0">
-                                     <User className="h-2.5 w-2.5 text-green-600 dark:text-green-400" />
-                                   </div>
-                                   <span className="text-gray-700 dark:text-gray-300 text-xs truncate">
-                                     {appointment.doctorName || t('appointmentDashboard.actionButtons.notApplicable')}
-                                   </span>
-                                 </div>
-                                 <div className="lg:hidden">
-                                   <span className="text-gray-700 dark:text-gray-300 text-xs truncate">
-                                     {appointment.doctorName || t('appointmentDashboard.actionButtons.notApplicable')}
-                                   </span>
-                                 </div>
-                               </TableCell>
-                               
-                                                                                               {/* Token No */}
-                                <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                                  <span className="font-mono bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded text-xs font-medium">
-                                    {appointment.token?.tokenNumber || t('appointmentDashboard.actionButtons.notApplicable')}
-                                  </span>
-                              </TableCell>
-                                
-                                {/* Appointment Time / Last Appointment Date / Appointment Date */}
-                                <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                                  {activeTab === 'past' ? (
-                                    <div className="flex flex-col gap-0.5">
-                                      <span className="font-medium text-gray-900 dark:text-white text-xs">
-                                        {format(new Date(appointment.startAt), 'MMM dd, yyyy')}
-                                      </span>
-                                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                                        {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
-                                      </span>
+                          </TableRow>
+                        ) : (
+                          currentAppointments.map((appointment) => (
+                            <TableRow key={appointment.appointmentId} className={`hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors border-b border-gray-100 dark:border-gray-700/50 ${compactMode ? 'h-10' : 'h-12'} text-xs md:text-sm`}>
+                              {/* Patient ID */}
+                              <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
+                                <button
+                                  onClick={() => handlePatientIdClick(appointment)}
+                                  className="group relative font-mono bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600 px-3 py-2 rounded-md text-xs font-semibold text-blue-700 dark:text-blue-300 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md"
+                                  title={t('appointmentDashboard.tooltip.viewProfile')}
+                                >
+                                  <div className="flex items-center gap-1.5">
+                                    <User className="h-3 w-3" />
+                                    <span>{appointment.patientId}</span>
+                                    <Eye className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                                   </div>
-                                  ) : activeTab === 'future' ? (
-                                    <div className="flex flex-col gap-0.5">
-                                      <span className="font-medium text-gray-900 dark:text-white text-xs">
-                                        {format(new Date(appointment.startAt), 'MMM dd, yyyy')}
-                                      </span>
-                                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                                        {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
-                                      </span>
-                                </div>
-                                  ) : (
-                                    <div className="flex flex-col gap-0.5">
-                                      <span className="font-medium text-gray-900 dark:text-white text-xs">
-                                        {format(new Date(appointment.startAt), 'HH:mm')}
-                                      </span>
-                                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                                        {format(new Date(appointment.endAt), 'HH:mm')}
-                                      </span>
-                                </div>
-                                  )}
-                              </TableCell>
-                                
-                                {/* Current Status */}
-                               <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                                 {getStatusBadge(appointment.finalStatusCode, appointment)}
+                                  <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                                    {t('appointmentDashboard.tooltip.viewProfile')}
+                                  </div>
+                                </button>
                               </TableCell>
 
-                                 {/* Lab reports */}
-                                 <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                                   {['LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(
-                                     String(appointment.finalStatusCode || '').toUpperCase()
-                                   ) ? (
-                                     <Button
-                                       variant="outline"
-                                       size="sm"
-                                       onClick={() => handleOpenLabAttachments(appointment)}
-                                       className="h-6 px-2 text-xs text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                                     >
-                                       <Upload className="h-2.5 w-2.5 mr-1" />
-                                       {t('appointmentDashboard.actionButtons.addLabReport', { defaultValue: 'Add lab report' })}
-                                     </Button>
-                                   ) : (
-                                     <span className="text-[11px] text-gray-400 dark:text-gray-500">—</span>
-                                   )}
-                                 </TableCell>
+                              {/* Patient Name */}
+                              <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
+                                <div className="min-w-0">
+                                  <div className="font-medium text-gray-900 dark:text-white text-xs truncate">
+                                    {appointment.patientFullName}
+                                  </div>
+                                  <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                    <Phone className="h-2.5 w-2.5" />
+                                    <span className="truncate">{appointment.patientMobile}</span>
+                                  </div>
+                                </div>
+                              </TableCell>
 
-                               {/* Add Bill - Only show for current tab */}
-                               {activeTab === 'current' && (
-                                 <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                                   <Button
-                                     variant="outline"
-                                     size="sm"
-                                     onClick={() => handleAddBillClick(appointment)}
-                                     className="h-6 px-2 text-xs text-indigo-600 border-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
-                                   >
-                                     <FileText className="h-2.5 w-2.5 mr-1" />
-                                     {t('appointmentDashboard.actionButtons.addBill', { defaultValue: 'Add Bill' })}
-                                   </Button>
-                                 </TableCell>
-                               )}
-                               
-                                                               {/* Actions - Only show for current and future tabs */}
-                                {activeTab !== 'past' && (
-                                  <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                                    <div className="flex gap-1">
-                                      <Button 
-                                        variant="outline" 
-                                        size="sm"
-                                       disabled={['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
-                                       className={`h-6 px-2 text-xs ${
-                                         ['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)
-                                           ? 'text-gray-400 border-gray-200 cursor-not-allowed opacity-50'
-                                           : 'text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-900/20'
-                                       }`}
-                                       onClick={() => handleCancelClick(appointment)}
-                                     >
-                                       <X className="h-2.5 w-2.5 mr-1" />
+                              {/* Doctor Name */}
+                              <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
+                                {/* Laptop/Desktop: show full info, else only doctor name */}
+                                <div className="hidden lg:flex items-center gap-1.5">
+                                  <div className="w-5 h-5 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <User className="h-2.5 w-2.5 text-green-600 dark:text-green-400" />
+                                  </div>
+                                  <span className="text-gray-700 dark:text-gray-300 text-xs truncate">
+                                    {appointment.doctorName || t('appointmentDashboard.actionButtons.notApplicable')}
+                                  </span>
+                                </div>
+                                <div className="lg:hidden">
+                                  <span className="text-gray-700 dark:text-gray-300 text-xs truncate">
+                                    {appointment.doctorName || t('appointmentDashboard.actionButtons.notApplicable')}
+                                  </span>
+                                </div>
+                              </TableCell>
+
+                              {/* Token No */}
+                              <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
+                                <span className="font-mono bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded text-xs font-medium">
+                                  {appointment.token?.tokenNumber || t('appointmentDashboard.actionButtons.notApplicable')}
+                                </span>
+                              </TableCell>
+
+                              {/* Appointment Time / Last Appointment Date / Appointment Date */}
+                              <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
+                                {activeTab === 'past' ? (
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="font-medium text-gray-900 dark:text-white text-xs">
+                                      {format(new Date(appointment.startAt), 'MMM dd, yyyy')}
+                                    </span>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                      {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
+                                    </span>
+                                  </div>
+                                ) : activeTab === 'future' ? (
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="font-medium text-gray-900 dark:text-white text-xs">
+                                      {format(new Date(appointment.startAt), 'MMM dd, yyyy')}
+                                    </span>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                      {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="font-medium text-gray-900 dark:text-white text-xs">
+                                      {format(new Date(appointment.startAt), 'HH:mm')}
+                                    </span>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                      {format(new Date(appointment.endAt), 'HH:mm')}
+                                    </span>
+                                  </div>
+                                )}
+                              </TableCell>
+
+                              {/* Current Status */}
+                              <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
+                                {getStatusBadge(appointment.finalStatusCode, appointment)}
+                              </TableCell>
+
+                              {/* Lab reports */}
+                              <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
+                                {['LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(
+                                  String(appointment.finalStatusCode || '').toUpperCase()
+                                ) ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleOpenLabAttachments(appointment)}
+                                    className="h-6 px-2 text-xs text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                  >
+                                    <Upload className="h-2.5 w-2.5 mr-1" />
+                                    {t('appointmentDashboard.actionButtons.addLabReport', { defaultValue: 'Add lab report' })}
+                                  </Button>
+                                ) : (
+                                  <span className="text-[11px] text-gray-400 dark:text-gray-500">—</span>
+                                )}
+                              </TableCell>
+
+                              {/* Add Bill - Only show for current tab */}
+                              {activeTab === 'current' && (
+                                <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleAddBillClick(appointment)}
+                                    className="h-6 px-2 text-xs text-indigo-600 border-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
+                                  >
+                                    <FileText className="h-2.5 w-2.5 mr-1" />
+                                    {t('appointmentDashboard.actionButtons.addBill', { defaultValue: 'Add Bill' })}
+                                  </Button>
+                                </TableCell>
+                              )}
+
+                              {/* Actions - Only show for current and future tabs */}
+                              {activeTab !== 'past' && (
+                                <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      disabled={['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
+                                      className={`h-6 px-2 text-xs ${['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)
+                                        ? 'text-gray-400 border-gray-200 cursor-not-allowed opacity-50'
+                                        : 'text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-900/20'
+                                        }`}
+                                      onClick={() => handleCancelClick(appointment)}
+                                    >
+                                      <X className="h-2.5 w-2.5 mr-1" />
                                       {t('common.cancel')}
-                                      </Button>
+                                    </Button>
                                     {appointment.finalStatusCode === 'VITALS_REQUIRED' && (
-                                      <Button 
-                                        variant="outline" 
+                                      <Button
+                                        variant="outline"
                                         size="sm"
                                         onClick={() => handleVitalsClick(appointment)}
                                         className="h-6 px-2 text-xs text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20"
@@ -1276,62 +1274,62 @@ export const AppointmentDashboard = () => {
                                         <Heart className="h-2.5 w-2.5 mr-1" />
                                         {t('appointmentDashboard.actionButtons.vitals')}
                                       </Button>
-                                  )}
-                                </div>
-                              </TableCell>
-                                )}
-                               
-                               {/* Print Prescription */}
-                               <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                                <Button 
-                                  variant="outline" 
+                                    )}
+                                  </div>
+                                </TableCell>
+                              )}
+
+                              {/* Print Prescription */}
+                              <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
+                                <Button
+                                  variant="outline"
                                   size="sm"
                                   disabled={previewModalOpen && previewRequest?.appointmentId === appointment.appointmentId}
                                   onClick={() => handlePrintPrescription(appointment)}
                                   className="h-6 px-2 text-xs text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-900/20"
                                 >
-                                    {previewModalOpen && previewRequest?.appointmentId === appointment.appointmentId ? (
-                                      <>
-                                        <Loader2 className="h-2.5 w-2.5 mr-1 animate-spin" />
-                                        {t('appointmentDashboard.actionButtons.preparing')}
-                                      </>
-                                    ) : (
-                                      <>
-                                        <FileText className="h-2.5 w-2.5 mr-1" />
-                                        {t('common.print')}
-                                      </>
-                                    )}
+                                  {previewModalOpen && previewRequest?.appointmentId === appointment.appointmentId ? (
+                                    <>
+                                      <Loader2 className="h-2.5 w-2.5 mr-1 animate-spin" />
+                                      {t('appointmentDashboard.actionButtons.preparing')}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FileText className="h-2.5 w-2.5 mr-1" />
+                                      {t('common.print')}
+                                    </>
+                                  )}
                                 </Button>
                               </TableCell>
-                               
-                                {/* Past Completed Status - Only show for past tab */}
-                                {activeTab === 'past' && (
-                                  <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'} text-center`}>
-                                    <div className="flex justify-center items-center">
-                                      {appointment.finalStatusCode === 'COMPLETED' ? (
-                                      <Button 
-                                        variant="outline" 
+
+                              {/* Past Completed Status - Only show for past tab */}
+                              {activeTab === 'past' && (
+                                <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'} text-center`}>
+                                  <div className="flex justify-center items-center">
+                                    {appointment.finalStatusCode === 'COMPLETED' ? (
+                                      <Button
+                                        variant="outline"
                                         size="sm"
-                                          className="h-6 px-2 text-xs text-emerald-600 border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                                        className="h-6 px-2 text-xs text-emerald-600 border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
                                       >
-                                          <UserCheck className="h-2.5 w-2.5 mr-1" />
-                                          {t('appointmentDashboard.actionButtons.completed')}
+                                        <UserCheck className="h-2.5 w-2.5 mr-1" />
+                                        {t('appointmentDashboard.actionButtons.completed')}
                                       </Button>
-                                      ) : (
-                                        <div className="flex items-center justify-center w-8 h-8 bg-red-200 dark:bg-red-800/40 rounded-full border-2 border-red-300 dark:border-red-600 shadow-sm">
-                                          <X className="h-5 w-5 text-red-700 dark:text-red-300 font-bold" />
-                                </div>
-                                  )}
-                              </div>
-                          </TableCell>
-                                )}
-                      </TableRow>
-                        ))
-                      )}
-                  </TableBody>
-                </Table>
-              </div>
-                  
+                                    ) : (
+                                      <div className="flex items-center justify-center w-8 h-8 bg-red-200 dark:bg-red-800/40 rounded-full border-2 border-red-300 dark:border-red-600 shadow-sm">
+                                        <X className="h-5 w-5 text-red-700 dark:text-red-300 font-bold" />
+                                      </div>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              )}
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+
                   {/* User Guide */}
                   <div className="mt-4 px-4 py-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg">
                     <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
@@ -1353,32 +1351,32 @@ export const AppointmentDashboard = () => {
             {/* Pagination */}
             {totalPages > 1 && (
               <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
-                    <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600 dark:text-gray-400">
                     {t('appointmentDashboard.pagination.showing', {
                       from: startIndex + 1,
                       to: Math.min(endIndex, filteredAppointments.length),
                       total: filteredAppointments.length,
                     })}
-                      </div>
+                  </div>
                   <Pagination>
                     <PaginationContent>
                       <PaginationItem>
-                        <PaginationPrevious 
+                        <PaginationPrevious
                           onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                           className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                         />
                       </PaginationItem>
-                    
+
                       {/* Page numbers - show more pages for better navigation */}
                       {Array.from({ length: totalPages }, (_, i) => {
                         const page = i + 1;
                         // Show first 3 pages, last 3 pages, and pages around current
-                        const shouldShow = 
-                          page <= 3 || 
-                          page >= totalPages - 2 || 
+                        const shouldShow =
+                          page <= 3 ||
+                          page >= totalPages - 2 ||
                           Math.abs(page - currentPage) <= 1;
-                        
+
                         if (!shouldShow) {
                           // Show ellipsis between gaps
                           if (page === 4 || page === totalPages - 3) {
@@ -1390,10 +1388,10 @@ export const AppointmentDashboard = () => {
                           }
                           return null;
                         }
-                        
+
                         return (
                           <PaginationItem key={page}>
-                            <PaginationLink 
+                            <PaginationLink
                               onClick={() => handlePageChange(page)}
                               isActive={page === currentPage}
                               className="cursor-pointer"
@@ -1403,21 +1401,21 @@ export const AppointmentDashboard = () => {
                           </PaginationItem>
                         );
                       })}
-                      
+
                       <PaginationItem>
-                        <PaginationNext 
+                        <PaginationNext
                           onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                           className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                         />
                       </PaginationItem>
                     </PaginationContent>
                   </Pagination>
-                              </div>
-                              </div>
-                                )}
-                    </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-        </div>
+      </div>
 
       {/* Vitals Form Modal */}
       {showVitalsForm && selectedPatient && (
@@ -1431,12 +1429,12 @@ export const AppointmentDashboard = () => {
         />
       )}
 
-       {/* Token Print Modal */}
-       {showTokenPrint && selectedAppointmentForToken && (
-         <TokenPrintModal
-           appointment={selectedAppointmentForToken}
-           isOpen={showTokenPrint}
-           onClose={handleTokenPrintClose}
+      {/* Token Print Modal */}
+      {showTokenPrint && selectedAppointmentForToken && (
+        <TokenPrintModal
+          appointment={selectedAppointmentForToken}
+          isOpen={showTokenPrint}
+          onClose={handleTokenPrintClose}
         />
       )}
 
@@ -1532,28 +1530,38 @@ export const AppointmentDashboard = () => {
                   <div><span className="font-medium">{t('appointmentDashboard.dialog.patientId')}:</span> {appointmentToCancel.patientId}</div>
                   <div><span className="font-medium">{t('appointmentDashboard.dialog.doctor')}:</span> {appointmentToCancel.doctorName}</div>
                   <div><span className="font-medium">{t('appointmentDashboard.dialog.appointmentId')}:</span> {appointmentToCancel.appointmentId}</div>
-                      </div>
-                      </div>
-                    </div>
+                </div>
+              </div>
+            </div>
           )}
           <DialogFooter className="flex gap-2">
-                        <Button
-                          variant="outline"
+            <Button
+              variant="outline"
               onClick={handleCancelDialogClose}
               disabled={isCancelling}
-                        >
+            >
               {t('appointmentDashboard.dialog.keepAppointment')}
-                        </Button>
-                                  <Button 
+            </Button>
+            <Button
               variant="destructive"
               onClick={handleCancelConfirm}
               disabled={isCancelling}
             >
               {isCancelling ? t('appointmentDashboard.dialog.cancelling') : t('appointmentDashboard.dialog.confirmCancel')}
-                                  </Button>
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AttachmentsSection
+        open={labAttachmentModal.open}
+        onOpenChange={(open) => setLabAttachmentModal((prev) => ({ ...prev, open }))}
+        trigger={null}
+        attachments={labAttachments[labAttachmentModal.patientId || ''] || []}
+        onChange={handleLabAttachmentsChange}
+        patientId={labAttachmentModal.patientId}
+        patientName={labAttachmentModal.patientName}
+        appointmentId={labAttachmentModal.appointmentId}
+      />
     </div>
   );
 };
