@@ -167,7 +167,113 @@ export const ClinicalDashboard: React.FC = () => {
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // ... (lines 170-278 skipped)
+  const [connectionStatus, setConnectionStatus] = useState<'online' | 'offline'>('online');
+
+  // userId for doctor profile
+  const userId = authUserId || '';
+
+  type NavKey = 'appointments' | 'calendar' | 'assistant' | 'settings';
+
+  const { data: doctorProfileResponse, isLoading: doctorProfileLoading, error: doctorProfileError } = useDoctorProfile(userId);
+  const doctorId = doctorProfileResponse?.doctorId || '';
+  // Profile completion percentage for verified badge
+  const profileCompletionPercentage = doctorProfileResponse?.profileCompletionPercentage || 0;
+  const clampedProfileCompletion = Math.min(Math.max(profileCompletionPercentage, 0), 100);
+  // Check if doctor profile is restricted (204/404 means profile incomplete)
+  const doctorProfileRestricted = useAuthStore(state => state.doctorProfileRestricted);
+  const doctorProfileMessage = useAuthStore(state => state.doctorProfileMessage);
+  const canBypassDoctorRestriction = (userRole === 'AdminDoctor' || userRole === 'Doctor') && Boolean(hospitalId);
+  const isDoctorExperienceLocked = doctorProfileRestricted && !canBypassDoctorRestriction;
+
+  const doctorDisplayName = doctorProfileResponse?.userId || t('docBoard.header.defaultDoctorName');
+
+  const navButtons: Array<{ key: NavKey; label: string; shortLabel: string; Icon: LucideIcon; requiresProfile?: boolean; description: string; }> = [
+    {
+      key: 'appointments',
+      label: t('docBoard.nav.appointments.label'),
+      shortLabel: t('docBoard.nav.appointments.short'),
+      Icon: Calendar,
+      description: t('docBoard.nav.appointments.description')
+    },
+    {
+      key: 'calendar',
+      label: t('docBoard.nav.calendar.label'),
+      shortLabel: t('docBoard.nav.calendar.short'),
+      Icon: CalendarDays,
+      requiresProfile: true,
+      description: t('docBoard.nav.calendar.description')
+    },
+    {
+      key: 'assistant',
+      label: t('docBoard.nav.assistant.label'),
+      shortLabel: t('docBoard.nav.assistant.short'),
+      Icon: Bot,
+      requiresProfile: true,
+      description: t('docBoard.nav.assistant.description')
+    },
+    {
+      key: 'settings',
+      label: t('docBoard.nav.settings.label'),
+      shortLabel: t('docBoard.nav.settings.short'),
+      Icon: FileText,
+      requiresProfile: true,
+      description: t('docBoard.nav.settings.description')
+    }
+  ];
+
+  const handleSettingsTabChange = (value: 'fields' | 'personalized' | 'layout') => {
+    setSettingsTab(value);
+    if (value === 'layout') {
+      setLayoutRefreshToken((token) => token + 1);
+    }
+  };
+
+  const handleLayoutTabClick = () => {
+    if (settingsTab === 'layout') {
+      setLayoutRefreshToken((token) => token + 1);
+    }
+  };
+
+  const buildPreviewRequest = (appointment: PatientAppointment): GeneratePrescriptionDetailsRequest | null => {
+    if (!appointment?.appointmentId || !appointment?.patientId || !hospitalId || !doctorId) {
+      return null;
+    }
+    return {
+      appointmentId: appointment.appointmentId,
+      patientId: appointment.patientId,
+      hospitalId,
+      doctorId,
+    };
+  };
+
+  const openPrescriptionPreview = (appointment: PatientAppointment) => {
+    const requestPayload = buildPreviewRequest(appointment);
+    if (!requestPayload) {
+      alert(t('docBoard.alerts.previewMissingContext'));
+      return;
+    }
+    setPreviewRequest(requestPayload);
+    setPreviewModalOpen(true);
+  };
+
+  const handlePreviewModalChange = (open: boolean) => {
+    setPreviewModalOpen(open);
+    if (!open) {
+      setPreviewRequest(null);
+    }
+  };
+
+  const handleAddBillClick = (appointment: PatientAppointment) => {
+    setAppointmentForBilling(appointment);
+    setShowAddBillModal(true);
+  };
+
+  const handleAddBillModalChange = (open: boolean) => {
+    setShowAddBillModal(open);
+    if (!open) {
+      setAppointmentForBilling(null);
+    }
+  };
 
   const handleOpenLabAttachments = (appointment: PatientAppointment) => {
     setLabAttachmentModal({
