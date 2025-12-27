@@ -638,7 +638,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
   const [procedureActiveIndex, setProcedureActiveIndex] = useState(0);
   const procedureInputRef = useRef<HTMLInputElement | null>(null);
   const procedureRootRef = useRef<HTMLDivElement | null>(null);
-  const [medicationOptions, setMedicationOptions] = useState<LookupItem[]>(medicationLookupData);
+  const [medicationOptions, setMedicationOptions] = useState<(LookupItem & { original?: MedicineSearchItem })[]>([]);
   const [medicationQuery, setMedicationQuery] = useState('');
   const [medicationOpenForId, setMedicationOpenForId] = useState<string | null>(null);
   const [medicationActiveIndex, setMedicationActiveIndex] = useState(0);
@@ -1106,12 +1106,21 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
     }));
   };
 
-  const commitMedicationNameSelection = (id: string, name: string) => {
+  const commitMedicationNameSelection = (id: string, name: string, itemData?: MedicineSearchItem) => {
     const trimmed = name.trim();
     if (!trimmed) return;
     updateMedication(id, 'name', trimmed);
+
+    if (itemData) {
+      if (itemData.strength) {
+        updateMedication(id, 'dosage', itemData.strength);
+      }
+      // Map dosage form to route if possible or leave empty
+      // if (itemData.dosageForm) updateMedication(id, 'route', itemData.dosageForm);
+    }
+
     setMedicationQuery(trimmed);
-    setMedicationOptions(filterMedicationItems(trimmed));
+    setMedicationOptions([]);
     setMedicationOpenForId(null);
   };
 
@@ -2854,19 +2863,77 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                             <Input
                               placeholder="e.g., Paracetamol"
                               value={medication.name}
-                              onChange={(e) => {
+                              onChange={async (e) => {
                                 const val = e.target.value;
                                 updateMedication(medication.id, 'name', val);
                                 setMedicationQuery(val);
-                                setMedicationOptions(filterMedicationItems(val));
+
+                                if (val && val.length > 2) {
+                                  try {
+                                    const hid = getHospitalId?.() || '4de8ea65-71aa-4800-8167-60147d78ea58';
+                                    const did = getDoctorId() || '';
+                                    const results = await eprescriptionApi.searchMedicines(hid, did, val);
+
+                                    const personalItems = (results.personalMedicine || []).map(item => ({
+                                      id: item.id || `temp-${Math.random()}`,
+                                      name: item.medicineName || item.brandName || item.genericName,
+                                      source: 'personal' as const,
+                                      shortDesc: `${item.manufacturer || ''} ${item.strength || ''}`.trim(),
+                                      original: item
+                                    }));
+
+                                    const masterItems = (results.masterMedicine || []).map(item => ({
+                                      id: item.id || `temp-${Math.random()}`,
+                                      name: item.medicineName || item.brandName || item.genericName,
+                                      source: 'general' as const,
+                                      shortDesc: `${item.manufacturer || ''} ${item.strength || ''}`.trim(),
+                                      original: item
+                                    }));
+
+                                    setMedicationOptions([...personalItems, ...masterItems]);
+                                  } catch (error) {
+                                    console.error('Error searching medicines', error);
+                                    setMedicationOptions([]);
+                                  }
+                                } else {
+                                  setMedicationOptions([]);
+                                }
+
                                 setMedicationActiveIndex(0);
                                 setMedicationOpenForId(medication.id);
                               }}
                               onFocus={() => {
                                 setActiveMedicationId(medication.id);
                                 setMedicationOpenForId(medication.id);
-                                setMedicationOptions(filterMedicationItems(medication.name));
-                                setMedicationQuery(medication.name);
+                                if (medication.name && medication.name.length > 2) {
+                                  // Trigger search if already has value
+                                  const val = medication.name;
+                                  setMedicationQuery(val);
+                                  // Re-run search logic (duplicated for now, or extract to function)
+                                  eprescriptionApi.searchMedicines(getHospitalId?.() || '4de8ea65-71aa-4800-8167-60147d78ea58', getDoctorId() || '', val)
+                                    .then(results => {
+                                      const personalItems = (results.personalMedicine || []).map(item => ({
+                                        id: item.id || `temp-${Math.random()}`,
+                                        name: item.medicineName || item.brandName || item.genericName,
+                                        source: 'personal' as const,
+                                        shortDesc: `${item.manufacturer || ''} ${item.strength || ''}`.trim(),
+                                        original: item
+                                      }));
+
+                                      const masterItems = (results.masterMedicine || []).map(item => ({
+                                        id: item.id || `temp-${Math.random()}`,
+                                        name: item.medicineName || item.brandName || item.genericName,
+                                        source: 'general' as const,
+                                        shortDesc: `${item.manufacturer || ''} ${item.strength || ''}`.trim(),
+                                        original: item
+                                      }));
+
+                                      setMedicationOptions([...personalItems, ...masterItems]);
+                                    })
+                                    .catch(() => setMedicationOptions([]));
+                                } else {
+                                  setMedicationOptions([]);
+                                }
                                 setMedicationActiveIndex(0);
                               }}
                               onBlur={() => setTimeout(() => {
@@ -2887,7 +2954,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                                 } else if (e.key === 'Enter') {
                                   if (combined[medicationActiveIndex]) {
                                     e.preventDefault();
-                                    commitMedicationNameSelection(medication.id, combined[medicationActiveIndex].name);
+                                    commitMedicationNameSelection(medication.id, combined[medicationActiveIndex].name, combined[medicationActiveIndex].original);
                                   } else if (trimmed) {
                                     e.preventDefault();
                                     commitMedicationNameSelection(medication.id, trimmed);
@@ -2920,7 +2987,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                                                 onMouseEnter={() => setMedicationActiveIndex(idx)}
                                                 onMouseDown={(event) => {
                                                   event.preventDefault();
-                                                  commitMedicationNameSelection(medication.id, item.name);
+                                                  commitMedicationNameSelection(medication.id, item.name, item.original);
                                                 }}
                                               >
                                                 <span className="font-medium text-gray-800">{item.name}</span>
@@ -2947,7 +3014,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                                                 onMouseEnter={() => setMedicationActiveIndex(globalIdx)}
                                                 onMouseDown={(event) => {
                                                   event.preventDefault();
-                                                  commitMedicationNameSelection(medication.id, item.name);
+                                                  commitMedicationNameSelection(medication.id, item.name, item.original);
                                                 }}
                                               >
                                                 <span className="font-medium text-gray-800">{item.name}</span>

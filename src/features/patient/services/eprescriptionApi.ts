@@ -50,6 +50,32 @@ export interface LookupDetailsResponse {
 }
 
 
+export interface MedicineSearchItem {
+    id?: string;
+    medicineName: string;
+    brandName: string;
+    genericName: string;
+    manufacturer: string;
+    dosageForm: string;
+    strength: string;
+    usageDescription: string;
+    sideEffects: string;
+    price: number;
+    notes?: string;
+    isActive?: boolean;
+    usageCount?: number;
+    lastModifiedAt?: string;
+}
+
+export interface MedicineSearchResponse {
+    hospitalId: string;
+    doctorId: string;
+    personalMedicine: MedicineSearchItem[];
+    masterMedicine: MedicineSearchItem[];
+    success: boolean;
+    message: string;
+}
+
 export const eprescriptionApi = {
     searchLookupParams: async (
         lookupType: string,
@@ -71,5 +97,13 @@ export const eprescriptionApi = {
     ): Promise<LookupDetailsResponse> => {
         const endpoint = API_ENDPOINTS.E_PRESCRIPTION.LOOKUP_DETAILS(hospitalId, doctorId);
         return apiClient.get<LookupDetailsResponse>(endpoint);
+    },
+    searchMedicines: async (
+        hospitalId: string,
+        doctorId: string,
+        searchText: string
+    ): Promise<MedicineSearchResponse> => {
+        const endpoint = API_ENDPOINTS.E_PRESCRIPTION.MEDICINE_SEARCH(hospitalId, doctorId, searchText);
+        return apiClient.get<MedicineSearchResponse>(endpoint);
     },
 };
