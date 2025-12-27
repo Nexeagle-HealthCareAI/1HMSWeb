@@ -71,15 +71,14 @@ interface PersonalizedDataItem {
   genericName?: string;
   brandName?: string;
   form?: string;
-  strengthValue?: string;
-  strengthUnit?: string;
-  route?: string;
   dose?: string;
-  indication?: string;
   notes?: string;
-  medicineId?: string;
   usageDescription?: string;
   sideEffects?: string;
+  price?: number;
+  manufacturer?: string;
+  medicineName?: string;
+  strength?: string;
 }
 
 interface PersonalizedData {
@@ -158,7 +157,13 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
   const [newItemNotes, setNewItemNotes] = useState('');
   const [newItemMedicineId, setNewItemMedicineId] = useState('');
   const [newItemUsageDescription, setNewItemUsageDescription] = useState('');
+
   const [newItemSideEffects, setNewItemSideEffects] = useState('');
+
+  const [newItemMedicineName, setNewItemMedicineName] = useState('');
+  const [newItemManufacturer, setNewItemManufacturer] = useState('');
+  const [newItemStrength, setNewItemStrength] = useState('');
+  const [newItemPrice, setNewItemPrice] = useState('');
 
   // Edit item states
   const [editItemName, setEditItemName] = useState('');
@@ -241,10 +246,10 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
     const isMedication = selectedPersonalizedCategory === 'medications';
 
     if (isMedication) {
-      if (!newItemGenericName.trim() && !newItemBrandName.trim()) {
+      if (!newItemMedicineName.trim()) {
         toast({
-          title: 'Generic or brand required',
-          description: 'Please enter a generic name (preferred) or brand name.',
+          title: 'Medicine Name required',
+          description: 'Please enter the Medicine Name.',
           variant: 'destructive',
         });
         return false;
@@ -263,7 +268,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
     const nowIso = new Date().toISOString();
 
     const resolvedName = isMedication
-      ? (newItemGenericName.trim() || newItemBrandName.trim() || newItemMedicineId.trim() || 'Medication')
+      ? (newItemMedicineName.trim() || newItemGenericName.trim() || newItemBrandName.trim() || 'Medication')
       : newItemName;
 
     const resolvedCode = isMedication ? (newItemMedicineId || newItemCode) : newItemCode;
@@ -277,6 +282,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
       synonyms: newItemSynonyms,
       usageCount: 0,
       createdAt: nowIso,
+
       modifiedAt: nowIso,
       genericName: newItemGenericName,
       brandName: newItemBrandName,
@@ -287,7 +293,12 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
       notes: newItemNotes,
       medicineId: newItemMedicineId,
       usageDescription: newItemUsageDescription,
-      sideEffects: newItemSideEffects
+      sideEffects: newItemSideEffects,
+      price: newItemPrice ? Number(newItemPrice) : 0,
+      manufacturer: newItemManufacturer,
+      medicineName: newItemMedicineName,
+      strength: newItemStrength,
+      dosageForm: newItemForm, // Mapped to form field
     };
 
     const resetForm = () => {
@@ -307,7 +318,12 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
       setNewItemNotes('');
       setNewItemMedicineId('');
       setNewItemUsageDescription('');
+
       setNewItemSideEffects('');
+      setNewItemPrice('');
+      setNewItemManufacturer('');
+      setNewItemMedicineName('');
+      setNewItemStrength('');
       setEditingItem(null);
       setIsAddingItem(false);
     };
@@ -351,7 +367,12 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
           notes: newItemNotes,
           medicineId: newItemMedicineId,
           usageDescription: newItemUsageDescription,
+
+          manufacturer: newItemManufacturer,
+          medicineName: newItemMedicineName,
+          strength: newItemStrength,
           sideEffects: newItemSideEffects,
+          price: newItemPrice,
         }, prefferedId);
 
         const refreshedMeds = await personalizedMedicineApi.list(doctorId, hospitalId);
@@ -362,20 +383,20 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
           genericName: item.genericName || '',
           brandName: item.brandName || '',
           form: item.form || '',
-          strengthValue: item.strengthValue || '',
-          strengthUnit: item.strengthUnit || '',
-          route: item.route || '',
-          dose: item.dose || '',
-          indication: item.indication || '',
           notes: item.notes || '',
-          medicineId: item.medicineId || '',
           usageDescription: item.usageDescription || '',
+          manufacturer: item.manufacturer || '',
+          medicineName: item.medicineName || '',
+          strength: item.strength || '',
+          dosageForm: item.dosageForm || '',
+
           sideEffects: item.sideEffects || '',
+          price: item.price || 0,
           code: item.medicineId || '',
           shortDesc: item.brandName || item.genericName || '',
           synonyms: '',
           usageCount: typeof item.usageCount === 'number' ? item.usageCount : 0,
-          modifiedAt: item.modifiedAt || item.lastModifiedAt || '',
+          modifiedAt: item.lastModifiedAt || '',
         }));
 
         setPersonalizedData(prev => ({
@@ -516,18 +537,20 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
           genericName: item.genericName || '',
           brandName: item.brandName || '',
           form: item.form || '',
-          strengthValue: item.strengthValue || '',
-          strengthUnit: item.strengthUnit || '',
-          route: item.route || '',
-          dose: item.dose || '',
-          indication: item.indication || '',
           notes: item.notes || '',
-          medicineId: item.medicineId || '',
+          usageDescription: item.usageDescription || '',
+          sideEffects: item.sideEffects || '',
           code: item.medicineId || '',
           shortDesc: item.brandName || item.genericName || '',
           synonyms: '',
           usageCount: typeof item.usageCount === 'number' ? item.usageCount : 0,
-          modifiedAt: item.modifiedAt || item.lastModifiedAt || '',
+          manufacturer: item.manufacturer || '',
+          medicineName: item.medicineName || '',
+          strength: item.strength || '',
+          dosageForm: item.dosageForm || '',
+
+          modifiedAt: item.lastModifiedAt || '',
+          price: item.price || 0,
         }));
 
         setPersonalizedData(prev => ({
@@ -620,15 +643,14 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
       setNewItemGenericName(item.genericName || '');
       setNewItemBrandName(item.brandName || '');
       setNewItemForm(item.form || '');
-      setNewItemStrengthValue(item.strengthValue || '');
-      setNewItemStrengthUnit(item.strengthUnit || '');
-      setNewItemRoute(item.route || '');
       setNewItemDose(item.dose || '');
-      setNewItemIndication(item.indication || '');
       setNewItemNotes(item.notes || '');
-      setNewItemMedicineId(item.medicineId || '');
       setNewItemUsageDescription(item.usageDescription || '');
       setNewItemSideEffects(item.sideEffects || '');
+      setNewItemPrice(item.price ? String(item.price) : '');
+      setNewItemManufacturer(item.manufacturer || '');
+      setNewItemMedicineName(item.medicineName || '');
+      setNewItemStrength(item.strength || '');
     }
   };
 
@@ -778,7 +800,13 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
             shortDesc: item.brandName || item.genericName || '',
             synonyms: '',
             usageCount: typeof item.usageCount === 'number' ? item.usageCount : 0,
-            modifiedAt: item.modifiedAt || item.lastModifiedAt || '',
+
+            modifiedAt: item.lastModifiedAt || '',
+            price: item.price || 0,
+            manufacturer: item.manufacturer || '',
+            medicineName: item.medicineName || '',
+            strength: item.strength || item.strengthValue || '',
+            dosageForm: item.dosageForm || '',
           }));
 
           setPersonalizedData(prev => ({
@@ -1099,7 +1127,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                                       className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm cursor-pointer select-none"
                                       onClick={() => handleSort('name')}
                                     >
-                                      Name {renderSortIndicator('name')}
+                                      {selectedPersonalizedCategory === 'medications' ? 'Medicine Name' : 'Name'} {renderSortIndicator('name')}
                                     </th>
                                     {selectedPersonalizedCategory !== 'medications' && (
                                       <th
@@ -1113,30 +1141,27 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                                       className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden lg:table-cell cursor-pointer select-none"
                                       onClick={() => handleSort('usageCount')}
                                     >
-                                      Usage {renderSortIndicator('usageCount')}
+                                      UsageCount {renderSortIndicator('usageCount')}
                                     </th>
                                     {selectedPersonalizedCategory === 'medications' && (
                                       <>
-                                        <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden lg:table-cell cursor-pointer select-none" onClick={() => handleSort('strengthValue')}>
-                                          Strength {renderSortIndicator('strengthValue')}
+                                        <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden lg:table-cell cursor-pointer select-none" onClick={() => handleSort('genericName')}>
+                                          Generic {renderSortIndicator('genericName')}
                                         </th>
-                                        <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden lg:table-cell cursor-pointer select-none" onClick={() => handleSort('form')}>
-                                          Form {renderSortIndicator('form')}
+                                        <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden lg:table-cell cursor-pointer select-none" onClick={() => handleSort('dosageForm')}>
+                                          Form / Strength {renderSortIndicator('dosageForm')}
                                         </th>
-                                        <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden xl:table-cell cursor-pointer select-none" onClick={() => handleSort('route')}>
-                                          Route {renderSortIndicator('route')}
+                                        <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden xl:table-cell cursor-pointer select-none" onClick={() => handleSort('usageDescription')}>
+                                          Description {renderSortIndicator('usageDescription')}
                                         </th>
-                                        <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden xl:table-cell cursor-pointer select-none" onClick={() => handleSort('dose')}>
-                                          Dose {renderSortIndicator('dose')}
+                                        <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden xl:table-cell cursor-pointer select-none" onClick={() => handleSort('sideEffects')}>
+                                          Side Effects {renderSortIndicator('sideEffects')}
                                         </th>
-                                        <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden 2xl:table-cell cursor-pointer select-none" onClick={() => handleSort('indication')}>
-                                          Indication {renderSortIndicator('indication')}
+                                        <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden lg:table-cell cursor-pointer select-none" onClick={() => handleSort('price')}>
+                                          Price {renderSortIndicator('price')}
                                         </th>
                                         <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden 2xl:table-cell cursor-pointer select-none" onClick={() => handleSort('notes')}>
                                           Notes {renderSortIndicator('notes')}
-                                        </th>
-                                        <th className="text-left py-1.5 sm:py-2 px-2 sm:px-3 font-semibold text-gray-700 dark:text-gray-200 text-xs sm:text-sm hidden sm:table-cell cursor-pointer select-none" onClick={() => handleSort('medicineId')}>
-                                          Medicine ID {renderSortIndicator('medicineId')}
                                         </th>
                                       </>
                                     )}
@@ -1163,10 +1188,13 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                                       <td className="py-2 sm:py-2.5 px-2 sm:px-3 align-top">
                                         <div className="flex flex-col gap-0.5">
                                           <span className="font-semibold text-gray-900 dark:text-gray-100 text-xs sm:text-sm">
-                                            {selectedPersonalizedCategory === 'medications' ? item.genericName || item.name : item.name}
+                                            {selectedPersonalizedCategory === 'medications' ? item.medicineName || item.genericName || item.name : item.name}
                                           </span>
-                                          {selectedPersonalizedCategory === 'medications' && item.brandName && (
-                                            <span className="text-[11px] text-gray-500 dark:text-gray-400">Brand: {item.brandName}</span>
+                                          {selectedPersonalizedCategory === 'medications' && (
+                                            <>
+                                              {item.brandName && <span className="text-[11px] text-gray-500 dark:text-gray-400">Brand: {item.brandName}</span>}
+                                              {item.manufacturer && <span className="text-[11px] text-gray-400 dark:text-gray-500">Mfr: {item.manufacturer}</span>}
+                                            </>
                                           )}
                                         </div>
                                       </td>
@@ -1186,27 +1214,25 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                                       {selectedPersonalizedCategory === 'medications' ? (
                                         <>
                                           <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden lg:table-cell">
-                                            <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">
-                                              {item.strengthValue} {item.strengthUnit}
-                                            </span>
+                                            <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{item.genericName || '-'}</span>
                                           </td>
                                           <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden lg:table-cell">
-                                            <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{item.form}</span>
+                                            <div className="flex flex-col">
+                                              <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{item.dosageForm || item.form || '-'}</span>
+                                              {(item.strength || item.strengthValue) && <span className="text-[10px] text-gray-400 dark:text-gray-500">{item.strength || item.strengthValue}</span>}
+                                            </div>
                                           </td>
                                           <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden xl:table-cell">
-                                            <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{item.route}</span>
+                                            <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm truncate max-w-[150px] inline-block" title={item.usageDescription}>{item.usageDescription || '-'}</span>
                                           </td>
                                           <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden xl:table-cell">
-                                            <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{item.dose}</span>
+                                            <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm truncate max-w-[150px] inline-block" title={item.sideEffects}>{item.sideEffects || '-'}</span>
+                                          </td>
+                                          <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden lg:table-cell">
+                                            <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{item.price ? `₹${item.price}` : '-'}</span>
                                           </td>
                                           <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden 2xl:table-cell">
-                                            <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{item.indication}</span>
-                                          </td>
-                                          <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden 2xl:table-cell">
-                                            <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{item.notes}</span>
-                                          </td>
-                                          <td className="py-1.5 sm:py-2 px-2 sm:px-3 hidden sm:table-cell">
-                                            <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">{item.medicineId}</span>
+                                            <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm truncate max-w-[150px] inline-block" title={item.notes}>{item.notes || '-'}</span>
                                           </td>
                                         </>
                                       ) : (
@@ -1352,7 +1378,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
             <div className="p-4 border-b border-gray-200 dark:border-gray-800">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  Add Medicine
+                  {editingItem ? 'Edit' : 'Add'} {personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label}
                 </h3>
                 <Button
                   onClick={() => setShowAddModal(false)}
@@ -1366,110 +1392,166 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
             </div>
             <div className="p-4 overflow-y-auto">
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 mt-2">
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Medicine Name <span className="text-red-600">*</span></label>
-                    <Input
-                      value={newItemName}
-                      onChange={(e) => setNewItemName(e.target.value)}
-                      placeholder="e.g., Paracetamol"
-                      className="w-full"
-                      autoFocus
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Brand Name</label>
-                    <Input
-                      value={newItemBrandName}
-                      onChange={(e) => setNewItemBrandName(e.target.value)}
-                      placeholder="e.g., Crocin"
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Generic Name</label>
-                    <Input
-                      value={newItemGenericName}
-                      onChange={(e) => setNewItemGenericName(e.target.value)}
-                      placeholder="e.g., Acetaminophen"
-                      className="w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Manufacturer</label>
-                    <Input
-                      value={newItemForm}
-                      onChange={(e) => setNewItemForm(e.target.value)}
-                      placeholder="e.g., GSK"
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Dosage Form</label>
-                    <Input
-                      value={newItemRoute}
-                      onChange={(e) => setNewItemRoute(e.target.value)}
-                      placeholder="e.g., Tablet"
-                      className="w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Strength</label>
-                    <Input
-                      value={newItemStrengthValue}
-                      onChange={(e) => setNewItemStrengthValue(e.target.value)}
-                      placeholder="e.g., 500mg"
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Notes</label>
-                    <Input
-                      value={newItemNotes}
-                      onChange={(e) => setNewItemNotes(e.target.value)}
-                      placeholder="Any special instructions"
-                      className="w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Price</label>
-                    <Input
-                      type="number"
-                      value={newItemStrengthUnit}
-                      onChange={(e) => setNewItemStrengthUnit(e.target.value)}
-                      placeholder="e.g., 12.50"
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Usage Description</label>
-                    <Input
-                      value={newItemUsageDescription}
-                      onChange={(e) => setNewItemUsageDescription(e.target.value)}
-                      placeholder="e.g., Fever, mild pain"
-                      className="w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Side Effects</label>
-                    <Input
-                      value={newItemSideEffects}
-                      onChange={(e) => setNewItemSideEffects(e.target.value)}
-                      placeholder="e.g., Drowsiness"
-                      className="w-full"
-                    />
-                  </div>
-                </div>
+                {isMedicationCategory ? (
+                  <>
+                    {/* 1. Medicine Name & 2. Brand Name */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Medicine Name <span className="text-red-600">*</span></label>
+                        <Input
+                          value={newItemMedicineName}
+                          onChange={(e) => setNewItemMedicineName(e.target.value)}
+                          placeholder="e.g., Crocin Advance"
+                          className="w-full"
+                          autoFocus
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Brand Name</label>
+                        <Input
+                          value={newItemBrandName}
+                          onChange={(e) => setNewItemBrandName(e.target.value)}
+                          placeholder="e.g., Crocin"
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+
+                    {/* 3. Generic Name & 4. Manufacturer Name */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Generic Name</label>
+                        <Input
+                          value={newItemGenericName}
+                          onChange={(e) => setNewItemGenericName(e.target.value)}
+                          placeholder="e.g., Acetaminophen"
+                          className="w-full"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Manufacturer Name</label>
+                        <Input
+                          value={newItemManufacturer}
+                          onChange={(e) => setNewItemManufacturer(e.target.value)}
+                          placeholder="e.g., GSK"
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+
+
+                    {/* 5. Dosage Form, 6. Strength & 9. Price */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Dosage Form</label>
+                        <Input
+                          value={newItemForm}
+                          onChange={(e) => setNewItemForm(e.target.value)}
+                          placeholder="e.g., Tablet"
+                          className="w-full"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Strength</label>
+                        <Input
+                          value={newItemStrength}
+                          onChange={(e) => setNewItemStrength(e.target.value)}
+                          placeholder="e.g., 500 mg"
+                          className="w-full"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Price</label>
+                        <Input
+                          value={newItemPrice}
+                          onChange={(e) => setNewItemPrice(e.target.value)}
+                          placeholder="e.g., 12.50"
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+
+                    {/* 7. Usage Description */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Usage Description</label>
+                      <Input
+                        value={newItemUsageDescription}
+                        onChange={(e) => setNewItemUsageDescription(e.target.value)}
+                        placeholder="e.g., For Fever"
+                        className="w-full"
+                      />
+                    </div>
+
+                    {/* 8. Side Effects */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Side Effects</label>
+                      <Input
+                        value={newItemSideEffects}
+                        onChange={(e) => setNewItemSideEffects(e.target.value)}
+                        placeholder="e.g., Drowsiness"
+                        className="w-full"
+                      />
+                    </div>
+
+
+
+                    {/* 10. Notes */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Notes</label>
+                      <Input
+                        value={newItemNotes}
+                        onChange={(e) => setNewItemNotes(e.target.value)}
+                        placeholder="Any special instructions"
+                        className="w-full"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                          Name <span className="text-red-600">*</span>
+                        </label>
+                        <Input
+                          value={newItemName}
+                          onChange={(e) => setNewItemName(e.target.value)}
+                          placeholder={getNamePlaceholder(selectedPersonalizedCategory)}
+                          className="w-full"
+                          autoFocus
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Code</label>
+                        <Input
+                          value={newItemCode}
+                          onChange={(e) => setNewItemCode(e.target.value)}
+                          placeholder={getCodePlaceholder(selectedPersonalizedCategory)}
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Description</label>
+                      <Input
+                        value={newItemShortDesc}
+                        onChange={(e) => setNewItemShortDesc(e.target.value)}
+                        placeholder={getShortDescPlaceholder(selectedPersonalizedCategory)}
+                        className="w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Synonyms</label>
+                      <Input
+                        value={newItemSynonyms}
+                        onChange={(e) => setNewItemSynonyms(e.target.value)}
+                        placeholder={getSynonymsPlaceholder(selectedPersonalizedCategory)}
+                        className="w-full"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Comma adjusted (e.g., "fast pulse, tachycardia")</p>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

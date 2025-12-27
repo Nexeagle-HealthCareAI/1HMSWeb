@@ -135,6 +135,9 @@ export const API_ENDPOINTS = {
       return `prescription-settings?${params.join('&')}`;
     },
   },
+  TIMELINE: {
+    GET_EVENTS: (patientId: string) => `patient/timeline?patientId=${encodeURIComponent(patientId)}`,
+  },
   ATTACHMENTS: {
     UPLOAD: 'e-prescription/attachments/upload',
     LIST: (appointmentId: string, hospitalId: string, doctorId: string, patientId: string) =>

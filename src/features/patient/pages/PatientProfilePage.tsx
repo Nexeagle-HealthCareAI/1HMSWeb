@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { 
+import {
   ArrowLeft,
   ChevronRight,
   User,
@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { 
+import {
   PatientOverview,
   PatientTimeline,
   PatientLabTests,
@@ -150,10 +150,10 @@ export const PatientProfilePage: React.FC = () => {
     getHospitalId,
     getDoctorId,
   } = useAuthStore();
-  
+
   // Use patientId from route params or query params
   const patientId = routePatientId || queryPatientId;
-  
+
   const [patient, setPatient] = useState<PatientData | null>(null);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [labTests, setLabTests] = useState<LabTestResult[]>([]);
@@ -219,7 +219,7 @@ export const PatientProfilePage: React.FC = () => {
           medications: [],
           instructions: ''
         };
-        
+
         // Add the new prescription
         setPrescriptions([newPrescription]);
       }
@@ -286,20 +286,20 @@ export const PatientProfilePage: React.FC = () => {
   // Calculate risk level for patient header
   const getRiskLevel = () => {
     if (!patient) return { level: 'Low', color: 'text-green-600', bg: 'bg-green-50', icon: CheckCircle };
-    
+
     let riskScore = 0;
-    
+
     // Check age risk
     if (patient.age > 65) riskScore += 1;
     if (patient.age > 80) riskScore += 1;
-    
+
     // Check medical history
     if (patient.medicalHistory && patient.medicalHistory.length > 2) riskScore += 1;
     if (patient.allergies && patient.allergies.length > 1) riskScore += 1;
-    
+
     // Check current medications
     if (patient.currentMedications && patient.currentMedications.length > 3) riskScore += 1;
-    
+
     if (riskScore >= 4) return { level: 'High', color: 'text-red-600', bg: 'bg-red-50', icon: AlertTriangle };
     if (riskScore >= 2) return { level: 'Medium', color: 'text-yellow-600', bg: 'bg-yellow-50', icon: AlertCircle };
     return { level: 'Low', color: 'text-green-600', bg: 'bg-green-50', icon: CheckCircle };
@@ -342,14 +342,14 @@ export const PatientProfilePage: React.FC = () => {
           <div className={`${sidebarCollapsed ? 'p-3' : 'p-6'} border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 transition-all duration-200`}>
             <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} mb-4`}>
               {!sidebarCollapsed && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate(-1)}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(-1)}
                   className="flex items-center gap-1 bg-muted/50 border-border text-muted-foreground hover:bg-muted transition-all duration-200 text-xs"
-              >
-                <ArrowLeft className="h-3 w-3" />
-                Back
+                >
+                  <ArrowLeft className="h-3 w-3" />
+                  Back
                 </Button>
               )}
               <Button
@@ -367,128 +367,126 @@ export const PatientProfilePage: React.FC = () => {
                   <User className={`${sidebarCollapsed ? 'h-4 w-4' : 'h-5 w-5'} text-blue-600`} />
                 </div>
                 {!sidebarCollapsed && (
-                <div>
+                  <div>
                     <h1 className="text-base font-semibold text-foreground mb-1 transition-colors duration-200">Patient Profile</h1>
-                </div>
+                  </div>
                 )}
               </div>
             </div>
           </div>
-          
+
           {/* Navigation */}
           <nav className={`${sidebarCollapsed ? 'p-2' : 'p-4'} space-y-1 mt-2 transition-all duration-200`}>
-              {navigationItems.map((item) => {
-                const IconComponent = item.icon;
+            {navigationItems.map((item) => {
+              const IconComponent = item.icon;
               const isActive = activeTab === item.id;
-                return (
+              return (
                 <Button
                   key={item.id}
                   variant="ghost"
                   className={`
                     w-full group relative transition-all duration-200 flex items-center hover-lift
                     ${sidebarCollapsed ? 'justify-center px-2 h-11 w-11 mx-auto rounded-lg' : 'justify-start gap-2 h-11 px-2.5 rounded-lg'}
-                    ${isActive 
-                      ? 'ring-2 ring-primary bg-primary/5 text-primary border border-primary/20 shadow-sm' 
+                    ${isActive
+                      ? 'ring-2 ring-primary bg-primary/5 text-primary border border-primary/20 shadow-sm'
                       : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                     }
                   `}
-                      onClick={() => setActiveTab(item.id)}
+                  onClick={() => setActiveTab(item.id)}
                   title={sidebarCollapsed ? item.label : undefined}
                 >
-                  <IconComponent className={`${sidebarCollapsed ? 'h-5 w-5' : 'h-4 w-4'} transition-colors ${
-                    isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
-                  }`} />
-                  
+                  <IconComponent className={`${sidebarCollapsed ? 'h-5 w-5' : 'h-4 w-4'} transition-colors ${isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
+                    }`} />
+
                   {!sidebarCollapsed && (
-                    <span className={`font-medium text-sm transition-colors ${
-                      isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
-                    }`}>
+                    <span className={`font-medium text-sm transition-colors ${isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
+                      }`}>
                       {item.label}
                     </span>
                   )}
                 </Button>
-                );
-              })}
+              );
+            })}
           </nav>
         </div>
 
         {/* Scrollable Content Area */}
         <div className={`flex-1 ${sidebarCollapsed ? 'ml-16' : 'ml-64'} overflow-y-auto transition-all duration-300 ease-in-out bg-gray-50 dark:bg-gray-950`} style={{ height: '100vh' }}>
           <div className="ml-4">
-          {/* Patient Header - Show for all tabs */}
-          {patient && (
-            <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm sticky top-0 z-20">
-              <div className="px-6 py-4 text-gray-900 dark:text-gray-50">
-                <div className="flex items-center justify-between gap-4">
-                  {/* Left Section: Avatar + Basic Info + Actions */}
-                  <div className="flex items-center gap-4 min-w-0 flex-1">
-                    {/* Patient Avatar with Risk Indicator */}
-                    <div className="relative flex-shrink-0">
-                      <Avatar className="h-12 w-12 border-2 border-white shadow-md">
-                        <AvatarImage src="/api/placeholder/80/80" />
-                        <AvatarFallback className="text-sm font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                          {patient.name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className={`absolute -bottom-1 -right-1 border-2 border-white rounded-full p-0.5 ${riskLevel.bg}`}>
-                        <riskLevel.icon className={`h-2.5 w-2.5 ${riskLevel.color}`} />
+            {/* Patient Header - Show for all tabs */}
+            {patient && (
+              <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm sticky top-0 z-20">
+                <div className="px-6 py-4 text-gray-900 dark:text-gray-50">
+                  <div className="flex items-center justify-between gap-4">
+                    {/* Left Section: Avatar + Basic Info + Actions */}
+                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                      {/* Patient Avatar with Risk Indicator */}
+                      <div className="relative flex-shrink-0">
+                        <Avatar className="h-12 w-12 border-2 border-white shadow-md">
+                          <AvatarImage src="/api/placeholder/80/80" />
+                          <AvatarFallback className="text-sm font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                            {patient.name.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className={`absolute -bottom-1 -right-1 border-2 border-white rounded-full p-0.5 ${riskLevel.bg}`}>
+                          <riskLevel.icon className={`h-2.5 w-2.5 ${riskLevel.color}`} />
+                        </div>
+                      </div>
+
+                      {/* Patient Name and Basic Info */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-3 mb-1 flex-wrap">
+                          <h1 className="text-lg font-bold text-gray-900 dark:text-gray-50 truncate">{patient.name}</h1>
+                          <Badge className={`${riskLevel.bg} ${riskLevel.color} border-0 text-xs px-2 py-0.5`}>
+                            {riskLevel.level} Risk
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleEditProfile}
+                            className="gap-2 text-xs h-8 px-2 shadow-none hover:bg-transparent hover:text-primary"
+                          >
+                            <Edit className="h-3 w-3" />
+                            Edit
+                          </Button>
+                        </div>
+
+                        {/* Compact Info Row */}
+                        <div className="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-300">
+                          <span className="flex items-center gap-1">
+                            <span className="font-medium text-gray-800 dark:text-gray-200">ID:</span>
+                            <span className="text-blue-600 dark:text-blue-300 font-mono">{patient.id}</span>
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span className="font-medium text-gray-800 dark:text-gray-200">Age:</span>
+                            <span>{patient.age}y, {patient.gender}</span>
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Phone className="h-3 w-3" />
+                            <span className="truncate max-w-32">{patient.phone}</span>
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span>{patient.bloodGroup}</span>
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span className="truncate max-w-32">{patient.email}</span>
+                          </span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Patient Name and Basic Info */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-3 mb-1 flex-wrap">
-                        <h1 className="text-lg font-bold text-gray-900 dark:text-gray-50 truncate">{patient.name}</h1>
-                        <Badge className={`${riskLevel.bg} ${riskLevel.color} border-0 text-xs px-2 py-0.5`}>
-                          {riskLevel.level} Risk
-                        </Badge>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleEditProfile}
-                          className="gap-2 text-xs h-8 px-2 shadow-none hover:bg-transparent hover:text-primary"
-                        >
-                          <Edit className="h-3 w-3" />
-                          Edit
-                        </Button>
+                    {/* Right Section: Contextual Actions / Active Tab Indicator */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-800 dark:text-gray-100">
+                        {activeTabMeta && (
+                          <>
+                            <activeTabMeta.icon className="h-5 w-5 text-primary" />
+                            <span>{activeTabMeta.label}</span>
+                          </>
+                        )}
                       </div>
-                      
-                      {/* Compact Info Row */}
-                      <div className="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-300">
-                        <span className="flex items-center gap-1">
-                          <span className="font-medium text-gray-800 dark:text-gray-200">ID:</span>
-                          <span className="text-blue-600 dark:text-blue-300 font-mono">{patient.id}</span>
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <span className="font-medium text-gray-800 dark:text-gray-200">Age:</span>
-                          <span>{patient.age}y, {patient.gender}</span>
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
-                          <span className="truncate max-w-32">{patient.phone}</span>
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <span>{patient.bloodGroup}</span>
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <span className="truncate max-w-32">{patient.email}</span>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Section: Contextual Actions / Active Tab Indicator */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-800 dark:text-gray-100">
-                      {activeTabMeta && (
-                        <>
-                          <activeTabMeta.icon className="h-5 w-5 text-primary" />
-                          <span>{activeTabMeta.label}</span>
-                        </>
-                      )}
-                    </div>
-                    {activeTab === 'prescriptions' && (
-                      <div className="flex items-center gap-2">
+                      {activeTab === 'prescriptions' && (
+                        <div className="flex items-center gap-2">
                           <Button variant="outline" size="sm" className="text-xs sm:text-sm h-8 sm:h-9" onClick={handlePreview}>
                             Preview
                           </Button>
@@ -503,13 +501,13 @@ export const PatientProfilePage: React.FC = () => {
                           <Button size="sm" className="text-xs sm:text-sm h-8 sm:h-9" onClick={() => setShowSubmitConfirm(true)}>
                             Submit
                           </Button>
-                      </div>
-                    )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
             {/* Overview Tab */}
             {activeTab === 'overview' && (
@@ -523,11 +521,12 @@ export const PatientProfilePage: React.FC = () => {
 
             {/* Timeline Tab */}
             {activeTab === 'timeline' && (
-              <div className="flex items-center justify-center h-64 text-muted-foreground">
-                <div className="text-center space-y-2">
-                  <div className="text-2xl font-semibold">Coming Soon</div>
-                  <p className="text-sm">Patient Timeline will be available in an upcoming update.</p>
-                </div>
+              <div className="h-full p-6">
+                <PatientTimeline
+                  timelineEvents={timelineEvents}
+                  patientStatus="Active"
+                  lastVisitDate={new Date()}
+                />
               </div>
             )}
 
@@ -554,45 +553,45 @@ export const PatientProfilePage: React.FC = () => {
           </div>
         </div>
 
-      {/* Patient Profile Modal */}
-      {showPatientProfileModal && patientId && (
-        <PatientProfileModal
-          isOpen={showPatientProfileModal}
-          onClose={handleProfileModalClose}
-          hospitalId={hospitalId || ''}
-          patientId={patientId}
-          patientName={patient?.name || 'Unknown Patient'}
-        />
-      )}
+        {/* Patient Profile Modal */}
+        {showPatientProfileModal && patientId && (
+          <PatientProfileModal
+            isOpen={showPatientProfileModal}
+            onClose={handleProfileModalClose}
+            hospitalId={hospitalId || ''}
+            patientId={patientId}
+            patientName={patient?.name || 'Unknown Patient'}
+          />
+        )}
 
-      {/* Submit Confirmation Modal */}
-      <Dialog open={showSubmitConfirm} onOpenChange={setShowSubmitConfirm}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Submit E-Prescription</DialogTitle>
-            <DialogDescription>
-              Once you confirm, this patient’s e-prescription will be marked as completed.
-            </DialogDescription>
-          </DialogHeader>
+        {/* Submit Confirmation Modal */}
+        <Dialog open={showSubmitConfirm} onOpenChange={setShowSubmitConfirm}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Submit E-Prescription</DialogTitle>
+              <DialogDescription>
+                Once you confirm, this patient’s e-prescription will be marked as completed.
+              </DialogDescription>
+            </DialogHeader>
             <p className="text-sm text-muted-foreground">
               Are you sure you want to submit the prescription for this patient?
             </p>
-          <DialogFooter className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowSubmitConfirm(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmSubmit}>
-              Confirm & Complete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowSubmitConfirm(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleConfirmSubmit}>
+                Confirm & Complete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-      <PrescriptionPreviewModal
-        open={previewModalOpen}
-        onOpenChange={handlePreviewModalChange}
-        request={previewRequest}
-      />
+        <PrescriptionPreviewModal
+          open={previewModalOpen}
+          onOpenChange={handlePreviewModalChange}
+          request={previewRequest}
+        />
       </div>
     </div>
   );
