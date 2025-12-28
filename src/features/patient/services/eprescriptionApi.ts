@@ -76,6 +76,79 @@ export interface MedicineSearchResponse {
     message: string;
 }
 
+export interface EPrescriptionDraftReq {
+    prescriptionId: string | null;
+    appointmentId: string;
+    patientId: string;
+    doctorId: string;
+    hospitalId: string;
+    vitalsJson?: {
+        bp: { sys: number; dia: number };
+        pulse: number;
+        tempC: number;
+        spo2: number;
+        heightCm: number;
+        weightKg: number;
+        bmi: number;
+    };
+    chiefComplaint?: string;
+    history?: string;
+    comorbidity?: string;
+    examination?: string;
+    diagnosis?: string;
+    orders?: {
+        investigations: string[];
+        procedures: string[];
+    };
+    medications?: {
+        drugName: string;
+        dose: string;
+        route: string;
+        frequency: string;
+        duration: string;
+        instructions: string;
+        saltName: string;
+    }[];
+    nonPharmacologicalAdvice?: {
+        advice: string;
+        duration: string;
+        notes: string;
+    }[];
+    privateNotes?: string;
+    certificates?: {
+        type: string;
+        content: string;
+        issuedDate: string;
+        fromDate: string;
+        toDate: string;
+        fitnessStatus: string;
+        remarks: string;
+        category: string;
+    };
+    followUp?: {
+        followUpOn: string;
+        reason: string;
+        patientInstructions: string;
+        referralEnabled: boolean;
+        referral: {
+            referredTo: {
+                specialty: string;
+                doctorName: string;
+            };
+            clinicalSummary: string;
+        };
+    };
+    immunizations?: {
+        name: string;
+        status: string;
+        date: string;
+        nextDueDate: string;
+        doseNumber: number;
+        remarks: string;
+    }[];
+    loggedInUserName: string;
+}
+
 export const eprescriptionApi = {
     searchLookupParams: async (
         lookupType: string,
@@ -105,5 +178,18 @@ export const eprescriptionApi = {
     ): Promise<MedicineSearchResponse> => {
         const endpoint = API_ENDPOINTS.E_PRESCRIPTION.MEDICINE_SEARCH(hospitalId, doctorId, searchText);
         return apiClient.get<MedicineSearchResponse>(endpoint);
+    },
+    saveDraft: async (data: EPrescriptionDraftReq): Promise<{ success: boolean; message: string }> => {
+        const endpoint = API_ENDPOINTS.E_PRESCRIPTION.SAVE_DRAFT('draft');
+        return apiClient.post<{ success: boolean; message: string }>(endpoint, data);
+    },
+    getDraft: async (
+        appointmentId: string,
+        patientId: string,
+        doctorId: string,
+        hospitalId: string
+    ): Promise<{ success: boolean; message: string; data: EPrescriptionDraftReq }> => {
+        const endpoint = API_ENDPOINTS.E_PRESCRIPTION.GET_DRAFT(appointmentId, patientId, doctorId, hospitalId);
+        return apiClient.get<{ success: boolean; message: string; data: EPrescriptionDraftReq }>(endpoint);
     },
 };

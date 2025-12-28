@@ -32,6 +32,7 @@ import {
 import EPrescriptionPad from '@/features/patient/components/EPrescriptionPad';
 import PrescriptionCustomizePanel from '@/features/prescription/components/PrescriptionCustomizePanel';
 import { usePatientProfile } from '../hooks/usePatientProfile';
+import { appointmentApi } from '@/features/appointment/services/appointmentApi';
 import { useAuthStore } from '@/store/authStore';
 import { PatientProfileData } from '../services/patientProfileApi';
 import { PrescriptionPreviewModal, type GeneratePrescriptionDetailsRequest } from '@/components/shared/prescription-preview';
@@ -189,16 +190,46 @@ export const PatientProfilePage: React.FC = () => {
         age: patientProfile.ageYears,
         gender: patientProfile.sex,
         phone: patientProfile.mobile,
-        email: '', // Not available in API response
+        email: '',
         address: `${patientProfile.addressLine1}, ${patientProfile.city}, ${patientProfile.state || ''}, ${patientProfile.country} - ${patientProfile.pincode}`,
-        bloodGroup: '', // Not available in API response
-        emergencyContact: '', // Not available in API response
-        medicalHistory: [], // Not available in API response
-        allergies: [], // Not available in API response
-        currentMedications: [] // Not available in API response
+        bloodGroup: '',
+        emergencyContact: '',
+        medicalHistory: [],
+        allergies: [],
+        currentMedications: []
       });
     }
   }, [patientProfile]);
+
+  // Fetch active appointment ID for draft purposes
+  const [activeAppointmentId, setActiveAppointmentId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchActiveAppointment = async () => {
+      if (!patientId || appointmentId) return; // Skip if we already have appointmentId from URL
+
+      try {
+        // Use searchPatients to find the patient's record which includes appointmentId
+        const response = await appointmentApi.searchPatients({
+          by: 'patientId',
+          q: patientId,
+          scope: 'local'
+        });
+
+        if (response.items && response.items.length > 0) {
+          const match = response.items.find(item => item.patientId === patientId);
+          if (match && match.appointmentId) {
+            console.log('Found active appointment for patient:', match.appointmentId);
+            setActiveAppointmentId(match.appointmentId);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to look up active appointment for patient', err);
+      }
+    };
+
+    fetchActiveAppointment();
+  }, [patientId, appointmentId]);
 
   // Handle automatic new prescription creation when navigating to prescriptions tab
   useEffect(() => {
@@ -524,8 +555,6 @@ export const PatientProfilePage: React.FC = () => {
               <div className="h-full p-6">
                 <PatientTimeline
                   timelineEvents={timelineEvents}
-                  patientStatus="Active"
-                  lastVisitDate={new Date()}
                 />
               </div>
             )}
@@ -533,7 +562,7 @@ export const PatientProfilePage: React.FC = () => {
             {/* Prescriptions Tab */}
             {activeTab === 'prescriptions' && (
               <div className="h-full">
-                <EPrescriptionPad />
+                <EPrescriptionPad appointmentId={appointmentId || activeAppointmentId || undefined} />
               </div>
             )}
 

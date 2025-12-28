@@ -37,7 +37,7 @@ import { patientProfileApi, PatientProfileData } from '../services/patientProfil
 
 import { LookupItem } from './LookupMultiSelect';
 
-import { eprescriptionApi, LookupData } from '../services/eprescriptionApi';
+import { eprescriptionApi, LookupData, EPrescriptionDraftReq, MedicineSearchItem } from '../services/eprescriptionApi';
 import AttachmentsSection from './AttachmentsSection';
 import { SelectValue } from '@radix-ui/react-select';
 // @ts-ignore
@@ -209,20 +209,8 @@ const convertPreferencesToFieldConfigs = (preferences: any) => {
   return result;
 };
 
-const medicationLookupData: LookupItem[] = [
-  { id: 'med-1', name: 'Paracetamol 500 mg tablet', source: 'personal', shortDesc: 'Pain / fever' },
-  { id: 'med-2', name: 'Ibuprofen 400 mg tablet', source: 'personal', shortDesc: 'NSAID' },
-  { id: 'med-3', name: 'Pantoprazole 40 mg tablet', source: 'personal', shortDesc: 'PPI' },
-  { id: 'med-4', name: 'Amoxicillin 500 mg capsule', source: 'general', shortDesc: 'Antibiotic' },
-  { id: 'med-5', name: 'Azithromycin 500 mg tablet', source: 'general', shortDesc: 'Antibiotic' },
-  { id: 'med-6', name: 'Cefixime 200 mg tablet', source: 'general', shortDesc: 'Antibiotic' },
-  { id: 'med-7', name: 'Metformin 500 mg tablet', source: 'general', shortDesc: 'Diabetes' },
-  { id: 'med-8', name: 'Amlodipine 5 mg tablet', source: 'general', shortDesc: 'Hypertension' },
-  { id: 'med-9', name: 'Atorvastatin 10 mg tablet', source: 'general', shortDesc: 'Lipid-lowering' },
-  { id: 'med-10', name: 'Salbutamol inhaler 100 mcg', source: 'general', shortDesc: 'Bronchodilator' },
-];
-
-
+// Mock data to fix "Cannot find name 'medicationLookupData'" error
+const medicationLookupData: any[] = [];
 
 const filterMedicationItems = (term: string) => {
   const query = term.trim().toLowerCase();
@@ -277,14 +265,244 @@ const calculateBmi = (weightKg: number, heightCm: number): number => {
 };
 
 const getBmiIndicator = (bmiValue: number) => {
-  if (!bmiValue) return { label: 'Not available', color: 'text-gray-500' };
-  if (bmiValue < 18.5) return { label: 'Underweight', color: 'text-amber-600' };
-  if (bmiValue < 25) return { label: 'Normal range', color: 'text-green-600' };
-  if (bmiValue < 30) return { label: 'Overweight', color: 'text-orange-600' };
-  return { label: 'Obesity', color: 'text-red-600' };
+  if (!bmiValue) return { label: 'Not available', color: 'text-gray-500', bg: 'bg-gray-100' };
+  if (bmiValue < 16.0) return { label: 'Severe thinness', color: 'text-red-700', bg: 'bg-red-100' };
+  if (bmiValue < 17.0) return { label: 'Moderate thinness', color: 'text-orange-600', bg: 'bg-orange-100' };
+  if (bmiValue < 18.5) return { label: 'Mild thinness', color: 'text-amber-600', bg: 'bg-amber-100' };
+  if (bmiValue < 25.0) return { label: 'Normal', color: 'text-green-600', bg: 'bg-green-100' };
+  if (bmiValue < 30.0) return { label: 'Overweight', color: 'text-amber-700', bg: 'bg-amber-100' };
+  if (bmiValue < 35.0) return { label: 'Obesity Class I', color: 'text-orange-700', bg: 'bg-orange-100' };
+  if (bmiValue < 40.0) return { label: 'Obesity Class II', color: 'text-red-600', bg: 'bg-red-100' };
+  return { label: 'Obesity Class III', color: 'text-red-800', bg: 'bg-red-200' };
 };
 
-const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPreferences }) => {
+const getBpIndicator = (sys: number, dia: number) => {
+  if (!sys || !dia) return null;
+
+  // Prioritize typical hypertension grades (Highest severity first)
+  if (sys >= 180 || dia >= 120) return { label: 'Very high (Crisis)', color: 'text-red-700', bg: 'bg-red-100' };
+  if (sys >= 140 || dia >= 90) return { label: 'High (Hypertension)', color: 'text-red-600', bg: 'bg-red-100' };
+  if (sys >= 130 || dia >= 85) return { label: 'High-normal', color: 'text-orange-600', bg: 'bg-orange-100' };
+
+  // "Normal" range: 120-129 / 80-84
+  if ((sys >= 120 && sys <= 129) || (dia >= 80 && dia <= 84)) return { label: 'Normal', color: 'text-yellow-600', bg: 'bg-yellow-100' };
+
+  // Explicit Low check (Hypotension) - checked before Optimal to catch low values
+  if (sys < 90 || dia < 60) return { label: 'Low', color: 'text-blue-600', bg: 'bg-blue-100' };
+
+  // Optimal: < 120 AND < 80 (and not low)
+  if (sys < 120 && dia < 80) return { label: 'Optimal', color: 'text-green-600', bg: 'bg-green-100' };
+
+  return { label: 'Variable', color: 'text-gray-500', bg: 'bg-gray-100' };
+};
+
+const AutoSaveHandler: React.FC<{
+  prescriptionData: EPrescriptionData;
+  patientId: string;
+  appointmentId: string;
+  doctorId: string;
+  hospitalId: string;
+  userId: string;
+  onSaveSuccess?: () => void;
+  draftPrescriptionId: string | null;
+  onSectionStatusChange?: (section: string, status: 'saving' | 'saved' | 'error') => void;
+}> = ({ prescriptionData, patientId, appointmentId, doctorId, hospitalId, userId, draftPrescriptionId, onSaveSuccess, onSectionStatusChange }) => {
+  // Store the last saved JSON strings for each section
+  const lastSavedRefs = useRef<{ [key: string]: string }>({});
+  const initialized = useRef(false);
+
+  useEffect(() => {
+    // Initialize default reference with CURRENT prescriptionData on first run
+    if (!initialized.current) {
+      lastSavedRefs.current = {
+        vitalsJson: JSON.stringify({
+          bp: (() => {
+            const [sys, dia] = (prescriptionData.vitals.bloodPressure || '').split('/').map(Number);
+            return { sys: sys || 0, dia: dia || 0 };
+          })(),
+          pulse: Number(prescriptionData.vitals.heartRate) || 0,
+          tempC: Number(prescriptionData.vitals.temperature) || 0,
+          spo2: Number(prescriptionData.vitals.oxygenSaturation) || 0,
+          heightCm: Number(prescriptionData.vitals.height) || 0,
+          weightKg: Number(prescriptionData.vitals.weight) || 0,
+          bmi: Number(prescriptionData.vitals.bmi) || 0,
+        }),
+        chiefComplaint: JSON.stringify(prescriptionData.chiefComplaint),
+        history: JSON.stringify(prescriptionData.history),
+        comorbidity: JSON.stringify(prescriptionData.comorbidity),
+        examination: JSON.stringify(prescriptionData.examination),
+        diagnosis: JSON.stringify(prescriptionData.diagnosis),
+        orders: JSON.stringify({
+          investigations: prescriptionData.orders.investigations,
+          procedures: prescriptionData.orders.procedures
+        }),
+        medications: JSON.stringify(prescriptionData.medications.map(m => ({
+          drugName: m.name,
+          dose: m.dosage,
+          route: m.route,
+          frequency: m.frequency,
+          duration: m.duration ? `${m.duration} ${m.durationUnit || ''}`.trim() : '',
+          instructions: m.instructions,
+          saltName: m.saltName,
+        }))),
+        nonPharmacologicalAdvice: JSON.stringify(prescriptionData.nonPharmacologicalAdvice.map(a => ({
+          advice: a.advice,
+          duration: a.durationValue ? `${a.durationValue} ${a.durationUnit || ''}`.trim() : '',
+          notes: a.notes || '',
+        }))),
+        privateNotes: JSON.stringify((prescriptionData.privateNotes || []).map(n => n.content).join('\n')),
+        certificates: JSON.stringify((prescriptionData.certificates && prescriptionData.certificates.length > 0) ? prescriptionData.certificates[0] : undefined),
+        followUp: JSON.stringify({
+          followUpOn: prescriptionData.followUp.followUpOn,
+          reason: prescriptionData.followUp.reason,
+          patientInstructions: prescriptionData.followUp.patientInstructions || '',
+          referralEnabled: prescriptionData.followUp.referralEnabled || false,
+          referral: {
+            referredTo: {
+              specialty: prescriptionData.followUp.referral?.referredTo?.specialty || '',
+              doctorName: prescriptionData.followUp.referral?.referredTo?.doctorName || ''
+            },
+            clinicalSummary: prescriptionData.followUp.referral?.clinicalSummary || ''
+          }
+        }),
+        immunizations: JSON.stringify((prescriptionData.immunizations || []).map(i => ({
+          name: i.name,
+          status: i.status,
+          date: i.date,
+          nextDueDate: i.nextDueDate || '',
+          doseNumber: Number(i.doseNumber) || 0,
+          remarks: '',
+        }))),
+      };
+      initialized.current = true;
+    }
+
+    if (!patientId || !appointmentId) return;
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        const payload: Partial<EPrescriptionDraftReq> = {
+          // Use draftPrescriptionId if available, otherwise null (server will create new)
+          prescriptionId: draftPrescriptionId || null,
+          appointmentId,
+          patientId,
+          doctorId,
+          hospitalId,
+          loggedInUserName: userId || 'System',
+        };
+
+        const currentSections: { [key: string]: any } = {
+          vitalsJson: {
+            bp: (() => {
+              const [sys, dia] = (prescriptionData.vitals.bloodPressure || '').split('/').map(Number);
+              return { sys: sys || 0, dia: dia || 0 };
+            })(),
+            pulse: Number(prescriptionData.vitals.heartRate) || 0,
+            tempC: Number(prescriptionData.vitals.temperature) || 0,
+            spo2: Number(prescriptionData.vitals.oxygenSaturation) || 0,
+            heightCm: Number(prescriptionData.vitals.height) || 0,
+            weightKg: Number(prescriptionData.vitals.weight) || 0,
+            bmi: Number(prescriptionData.vitals.bmi) || 0,
+          },
+          chiefComplaint: prescriptionData.chiefComplaint,
+          history: prescriptionData.history,
+          comorbidity: prescriptionData.comorbidity,
+          examination: prescriptionData.examination,
+          diagnosis: prescriptionData.diagnosis,
+          orders: {
+            investigations: prescriptionData.orders.investigations,
+            procedures: prescriptionData.orders.procedures,
+          },
+          medications: prescriptionData.medications.map(m => ({
+            drugName: m.name,
+            dose: m.dosage,
+            route: m.route,
+            frequency: m.frequency,
+            duration: m.duration ? `${m.duration} ${m.durationUnit || ''}`.trim() : '',
+            instructions: m.instructions,
+            saltName: m.saltName,
+          })),
+          nonPharmacologicalAdvice: prescriptionData.nonPharmacologicalAdvice.map(a => ({
+            advice: a.advice,
+            duration: a.durationValue ? `${a.durationValue} ${a.durationUnit || ''}`.trim() : '',
+            notes: a.notes || '',
+          })),
+          privateNotes: (prescriptionData.privateNotes || []).map(n => n.content).join('\n'),
+          certificates: (prescriptionData.certificates && prescriptionData.certificates.length > 0) ? prescriptionData.certificates[0] : undefined,
+          followUp: {
+            followUpOn: prescriptionData.followUp.followUpOn,
+            reason: prescriptionData.followUp.reason,
+            patientInstructions: prescriptionData.followUp.patientInstructions || '',
+            referralEnabled: prescriptionData.followUp.referralEnabled || false,
+            referral: {
+              referredTo: {
+                specialty: prescriptionData.followUp.referral?.referredTo?.specialty || '',
+                doctorName: prescriptionData.followUp.referral?.referredTo?.doctorName || ''
+              },
+              clinicalSummary: prescriptionData.followUp.referral?.clinicalSummary || ''
+            }
+          },
+          immunizations: (prescriptionData.immunizations || []).map(i => ({
+            name: i.name,
+            status: i.status,
+            date: i.date,
+            nextDueDate: i.nextDueDate || '',
+            doseNumber: Number(i.doseNumber) || 0,
+            remarks: '',
+          })),
+        };
+
+        const changedSections: Partial<EPrescriptionDraftReq> = {};
+        let hasChanges = false;
+
+        Object.keys(currentSections).forEach(key => {
+          const currentJson = JSON.stringify(currentSections[key]);
+          if (currentJson !== lastSavedRefs.current[key]) {
+            // @ts-ignore
+            changedSections[key] = currentSections[key];
+            hasChanges = true;
+          }
+        });
+
+        if (hasChanges) {
+          if (onSectionStatusChange) {
+            Object.keys(changedSections).forEach(key => onSectionStatusChange(key, 'saving'));
+          }
+
+          const finalPayload = { ...payload, ...changedSections };
+          await eprescriptionApi.saveDraft(finalPayload as EPrescriptionDraftReq);
+
+          if (onSectionStatusChange) {
+            Object.keys(changedSections).forEach(key => onSectionStatusChange(key, 'saved'));
+          }
+
+          // Update last saved refs only for successfully sent sections
+          Object.keys(changedSections).forEach(key => {
+            lastSavedRefs.current[key] = JSON.stringify(currentSections[key]);
+          });
+          // Trigger success callback to refresh draft
+          if (onSaveSuccess) {
+            onSaveSuccess();
+          }
+        }
+
+      } catch (err) {
+        console.error('Failed to auto-save draft', err);
+      }
+    }, 2000); // 2 seconds debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [prescriptionData, patientId, appointmentId, doctorId, hospitalId, userId]);
+
+  return null;
+};
+
+interface EPrescriptionPadProps {
+  prescriptionFieldPreferences?: any;
+  appointmentId?: string;
+}
+
+const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPreferences, appointmentId: propAppointmentId }) => {
   const { patientId } = useParams<{ patientId: string }>();
   const [searchParams] = useSearchParams();
   const { getDoctorId, getHospitalId, getUserId } = useAuthStore();
@@ -292,6 +510,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
   const [apiPreferences, setApiPreferences] = useState<any>(null);
   const [isLoadingApiPreferences, setIsLoadingApiPreferences] = useState(false);
   const [isLoadingVitals, setIsLoadingVitals] = useState(false);
+  const [isLoadingDraft, setIsLoadingDraft] = useState(false);
   const [isSavingVitals, setIsSavingVitals] = useState(false);
   const [patientProfile, setPatientProfile] = useState<PatientProfileData | null>(null);
   const [hasFetchedVitals, setHasFetchedVitals] = useState(false);
@@ -418,8 +637,17 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
   };
 
   const resolvedPatientId = safeDecode(searchParams.get('patientId')) || patientId || '';
-  const resolvedAppointmentId = safeDecode(searchParams.get('appointmentId'));
+  const resolvedAppointmentId = propAppointmentId || safeDecode(searchParams.get('appointmentId'));
   const resolvedPatientName = safeDecode(searchParams.get('patientName')) || '';
+
+  console.log('[EPrescriptionPad Debug]', {
+    resolvedPatientId,
+    resolvedAppointmentId,
+    propAppointmentId,
+    paramsAppId: searchParams.get('appointmentId'),
+    paramsPatientId: searchParams.get('patientId'),
+    useParamsPatientId: patientId
+  });
 
   // Load prescription field preferences when component mounts
   useEffect(() => {
@@ -501,10 +729,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
     }
   }, [resolvedPatientId, resolvedAppointmentId, toast]);
 
-  // Fetch vitals on entry
-  useEffect(() => {
-    loadVitals();
-  }, [loadVitals]);
+
 
   const handleSaveVitals = async () => {
     if (!resolvedPatientId || !resolvedAppointmentId) {
@@ -631,6 +856,12 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
   const [investigationActiveIndex, setInvestigationActiveIndex] = useState(0);
   const investigationInputRef = useRef<HTMLInputElement | null>(null);
   const investigationRootRef = useRef<HTMLDivElement | null>(null);
+  const [draftPrescriptionId, setDraftPrescriptionId] = useState<string | null>(null);
+  const [sectionSaveStatus, setSectionSaveStatus] = useState<Record<string, 'saving' | 'saved' | 'error'>>({});
+
+  const handleSectionStatusChange = useCallback((section: string, status: 'saving' | 'saved' | 'error') => {
+    setSectionSaveStatus(prev => ({ ...prev, [section]: status }));
+  }, []);
   const [procedureOptions, setProcedureOptions] = useState<LookupItem[]>([]);
   const [selectedProcedures, setSelectedProcedures] = useState<string[]>([]);
   const [procedureOpen, setProcedureOpen] = useState(false);
@@ -638,6 +869,138 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
   const [procedureActiveIndex, setProcedureActiveIndex] = useState(0);
   const procedureInputRef = useRef<HTMLInputElement | null>(null);
   const procedureRootRef = useRef<HTMLDivElement | null>(null);
+
+  // Fetch Draft Data
+  // Fetch Draft Data
+  const fetchDraft = useCallback(async (silent = false) => {
+    const hid = getHospitalId?.() || '4de8ea65-71aa-4800-8167-60147d78ea58';
+    const did = getDoctorId() || '';
+
+    console.log('fetchDraft called', { silent, resolvedPatientId, resolvedAppointmentId, hid, did });
+
+    if (!resolvedPatientId || !resolvedAppointmentId) {
+      console.warn('fetchDraft aborted: missing IDs');
+      return;
+    }
+
+    try {
+      if (!silent) setIsLoadingDraft(true);
+      const response = await eprescriptionApi.getDraft(resolvedAppointmentId, resolvedPatientId, did, hid);
+
+      if (response.success && response.data) {
+        const draft = response.data;
+        console.log('Draft loaded:', draft);
+        // Store the prescription ID from the draft
+        setDraftPrescriptionId(draft.prescriptionId || null);
+
+        setPrescriptionData(prev => ({
+          ...prev,
+          chiefComplaint: draft.chiefComplaint || '',
+          history: draft.history || '',
+          comorbidity: draft.comorbidity || '',
+          examination: draft.examination || '',
+          diagnosis: draft.diagnosis || '',
+          privateNotes: draft.privateNotes ? [{ content: draft.privateNotes }] : [],
+          vitals: draft.vitalsJson ? {
+            bloodPressure: `${draft.vitalsJson.bp?.sys || ''}/${draft.vitalsJson.bp?.dia || ''}`,
+            heartRate: String(draft.vitalsJson.pulse || ''),
+            temperature: String(draft.vitalsJson.tempC || ''),
+            oxygenSaturation: String(draft.vitalsJson.spo2 || ''),
+            height: String(draft.vitalsJson.heightCm || ''),
+            weight: String(draft.vitalsJson.weightKg || ''),
+            bmi: String(draft.vitalsJson.bmi || ''),
+          } : prev.vitals,
+          orders: {
+            investigations: draft.orders?.investigations || [],
+            procedures: draft.orders?.procedures || []
+          },
+          medications: (draft.medications || []).map((m, idx) => ({
+            id: `draft-med-${idx}-${Date.now()}`,
+            name: m.drugName,
+            dosage: m.dose,
+            route: m.route,
+            frequency: m.frequency,
+            timing: '', // Not in draft
+            duration: m.duration ? m.duration.split(' ')[0] : '',
+            durationUnit: m.duration ? m.duration.split(' ')[1] || 'days' : 'days',
+            saltName: m.saltName,
+            instructions: m.instructions
+          })),
+          nonPharmacologicalAdvice: (draft.nonPharmacologicalAdvice || []).map(a => ({
+            advice: a.advice,
+            category: '',
+            durationValue: a.duration ? a.duration.split(' ')[0] : '',
+            durationUnit: a.duration ? a.duration.split(' ')[1] || 'days' : 'days',
+            notes: a.notes
+          })),
+          followUp: draft.followUp ? {
+            followUpOn: draft.followUp.followUpOn ? draft.followUp.followUpOn.split('T')[0] : '',
+            reason: draft.followUp.reason || '',
+            patientInstructions: draft.followUp.patientInstructions || '',
+            referralEnabled: draft.followUp.referralEnabled || false,
+            referral: {
+              referredTo: {
+                specialty: draft.followUp.referral?.referredTo?.specialty || '',
+                doctorName: draft.followUp.referral?.referredTo?.doctorName || ''
+              },
+              clinicalSummary: draft.followUp.referral?.clinicalSummary || '',
+              reason: '', urgency: 'Routine', requestedAction: '', attachments: []
+            },
+            attachments: []
+          } : prev.followUp,
+          immunizations: (draft.immunizations || []).map(i => ({
+            name: i.name,
+            status: i.status,
+            date: i.date ? i.date.split('T')[0] : '',
+            nextDueDate: i.nextDueDate ? i.nextDueDate.split('T')[0] : '',
+            doseNumber: String(i.doseNumber || ''),
+            expanded: false
+          })),
+          certificates: draft.certificates ? [{
+            type: draft.certificates.type,
+            content: draft.certificates.content,
+            issuedDate: draft.certificates.issuedDate ? draft.certificates.issuedDate.split('T')[0] : '',
+            fromDate: draft.certificates.fromDate ? draft.certificates.fromDate.split('T')[0] : '',
+            toDate: draft.certificates.toDate ? draft.certificates.toDate.split('T')[0] : '',
+            fitnessStatus: draft.certificates.fitnessStatus,
+            remarks: draft.certificates.remarks,
+            category: draft.certificates.category
+          }] : []
+        }));
+
+        // Sync UI states for multi-select fields
+        if (draft.chiefComplaint) {
+          setSelectedChiefComplaints(draft.chiefComplaint.split('; ').filter(Boolean));
+        }
+        if (draft.history) {
+          setSelectedHistoryItems(draft.history.split('; ').filter(Boolean));
+        }
+        if (draft.comorbidity) {
+          setSelectedComorbidities(draft.comorbidity.split('; ').filter(Boolean));
+        }
+        if (draft.examination) {
+          setSelectedExaminations(draft.examination.split('; ').filter(Boolean));
+        }
+        if (draft.diagnosis) {
+          setSelectedDiagnoses(draft.diagnosis.split('; ').filter(Boolean));
+        }
+        if (draft.orders?.investigations) {
+          setSelectedInvestigations(draft.orders.investigations);
+        }
+        if (draft.orders?.procedures) {
+          setSelectedProcedures(draft.orders.procedures);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch draft', error);
+    } finally {
+      if (!silent) setIsLoadingDraft(false);
+    }
+  }, [resolvedPatientId, resolvedAppointmentId, getDoctorId, getHospitalId]);
+
+  useEffect(() => {
+    fetchDraft();
+  }, [fetchDraft]);
   const [medicationOptions, setMedicationOptions] = useState<(LookupItem & { original?: MedicineSearchItem })[]>([]);
   const [medicationQuery, setMedicationQuery] = useState('');
   const [medicationOpenForId, setMedicationOpenForId] = useState<string | null>(null);
@@ -1026,8 +1389,11 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
     const field = finalFieldConfigs.find(f => f.id === fieldId);
     if (!field?.enabled) return null;
 
+    const saveStatusKey = fieldId === 'vitals' ? 'vitalsJson' : fieldId;
+    const saveStatus = sectionSaveStatus[saveStatusKey];
+
     return (
-      <Card key={fieldId} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm">
+      <Card key={fieldId} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm transition-all duration-200">
         <CardHeader
           className="pb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/70 transition-colors"
           onClick={() => toggleSection(fieldId)}
@@ -1036,6 +1402,18 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
             <CardTitle className="text-sm font-semibold flex items-center gap-2 text-gray-900 dark:text-gray-100">
               {renderFieldIcon(fieldId)}
               <span>{title}</span>
+              {saveStatus === 'saving' && (
+                <span className="ml-2 flex items-center gap-1 text-[10px] font-normal text-blue-600 animate-pulse">
+                  <div className="h-1.5 w-1.5 bg-blue-600 rounded-full animate-bounce"></div>
+                  Saving...
+                </span>
+              )}
+              {saveStatus === 'saved' && (
+                <span className="ml-2 flex items-center gap-1 text-[10px] font-normal text-green-600 animate-in fade-in duration-500">
+                  <CheckCircle className="h-3 w-3" />
+                  Saved
+                </span>
+              )}
             </CardTitle>
             <div className="flex items-center gap-2">
               {collapsedSections[fieldId] ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -1250,15 +1628,34 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                       <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
                       <Label className="text-xs font-medium text-gray-600 dark:text-gray-200">Blood Pressure (BP)</Label>
                     </div>
-                    <Input
-                      placeholder="120/80"
-                      value={prescriptionData.vitals.bloodPressure}
-                      onChange={(e) => setPrescriptionData(prev => ({
-                        ...prev,
-                        vitals: { ...prev.vitals, bloodPressure: e.target.value }
-                      }))}
-                      className="h-8 text-sm border-gray-200 dark:border-gray-700 focus:border-blue-400 dark:focus:border-blue-300 focus:ring-1 focus:ring-blue-100 dark:focus:ring-blue-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
-                    />
+                    <div className="relative">
+                      <Input
+                        placeholder="120/80"
+                        value={prescriptionData.vitals.bloodPressure}
+                        onChange={(e) => setPrescriptionData(prev => ({
+                          ...prev,
+                          vitals: { ...prev.vitals, bloodPressure: e.target.value }
+                        }))}
+                        className="h-8 text-sm border-gray-200 dark:border-gray-700 focus:border-blue-400 dark:focus:border-blue-300 focus:ring-1 focus:ring-blue-100 dark:focus:ring-blue-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
+                      />
+                    </div>
+                    <div className="h-4 mt-1">
+                      {(() => {
+                        const bpStr = prescriptionData.vitals.bloodPressure || '';
+                        const [sysStr, diaStr] = bpStr.split('/');
+                        const sys = parseInt(sysStr);
+                        const dia = parseInt(diaStr);
+
+                        const indicator = getBpIndicator(sys, dia);
+                        if (!indicator) return null;
+
+                        return (
+                          <div className={`text-[10px] font-medium px-2 py-0.5 rounded-full inline-flex items-center ${indicator.bg} ${indicator.color}`}>
+                            {indicator.label}
+                          </div>
+                        );
+                      })()}
+                    </div>
                   </div>
 
                   {/* Temperature */}
@@ -1321,10 +1718,22 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                     <Input
                       placeholder="70 kg"
                       value={prescriptionData.vitals.weight}
-                      onChange={(e) => setPrescriptionData(prev => ({
-                        ...prev,
-                        vitals: { ...prev.vitals, weight: e.target.value }
-                      }))}
+                      onChange={(e) => {
+                        const newWeight = e.target.value;
+                        setPrescriptionData(prev => {
+                          const weightVal = parseFloat(newWeight) || 0;
+                          const heightVal = parseFloat(prev.vitals.height) || 0;
+                          const newBmi = calculateBmi(weightVal, heightVal);
+                          return {
+                            ...prev,
+                            vitals: {
+                              ...prev.vitals,
+                              weight: newWeight,
+                              bmi: newBmi > 0 ? newBmi.toString() : prev.vitals.bmi
+                            }
+                          };
+                        });
+                      }}
                       className="h-8 text-sm border-gray-200 dark:border-gray-700 focus:border-gray-400 dark:focus:border-gray-500 focus:ring-1 focus:ring-gray-100 dark:focus:ring-gray-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
                     />
                   </div>
@@ -1338,10 +1747,22 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                     <Input
                       placeholder="170 cm"
                       value={prescriptionData.vitals.height}
-                      onChange={(e) => setPrescriptionData(prev => ({
-                        ...prev,
-                        vitals: { ...prev.vitals, height: e.target.value }
-                      }))}
+                      onChange={(e) => {
+                        const newHeight = e.target.value;
+                        setPrescriptionData(prev => {
+                          const weightVal = parseFloat(prev.vitals.weight) || 0;
+                          const heightVal = parseFloat(newHeight) || 0;
+                          const newBmi = calculateBmi(weightVal, heightVal);
+                          return {
+                            ...prev,
+                            vitals: {
+                              ...prev.vitals,
+                              height: newHeight,
+                              bmi: newBmi > 0 ? newBmi.toString() : prev.vitals.bmi
+                            }
+                          };
+                        });
+                      }}
                       className="h-8 text-sm border-gray-200 dark:border-gray-700 focus:border-gray-400 dark:focus:border-gray-500 focus:ring-1 focus:ring-gray-100 dark:focus:ring-gray-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
                     />
                   </div>
@@ -1352,20 +1773,24 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                       <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
                       <Label className="text-xs font-medium text-gray-600 dark:text-gray-200">BMI (kg/m²)</Label>
                     </div>
-                    <Input
-                      placeholder="24.2"
-                      value={prescriptionData.vitals.bmi}
-                      onChange={(e) => setPrescriptionData(prev => ({
-                        ...prev,
-                        vitals: { ...prev.vitals, bmi: e.target.value }
-                      }))}
-                      className="h-8 text-sm border-gray-200 dark:border-gray-700 focus:border-orange-400 dark:focus:border-orange-300 focus:ring-1 focus:ring-orange-100 dark:focus:ring-orange-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
-                    />
-                    <div className="text-[11px] mt-1 text-gray-600 dark:text-gray-300">
+                    <div className="relative">
+                      <Input
+                        placeholder="24.2"
+                        value={prescriptionData.vitals.bmi}
+                        readOnly
+                        className="h-8 text-sm border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-500 cursor-not-allowed"
+                      />
+                    </div>
+                    <div className="h-4 mt-1">
                       {(() => {
-                        const bmiNum = Number(prescriptionData.vitals.bmi) || 0;
+                        const bmiNum = Number(prescriptionData.vitals.bmi);
+                        if (!bmiNum) return null;
                         const indicator = getBmiIndicator(bmiNum);
-                        return <span className={indicator.color}>{indicator.label}</span>;
+                        return (
+                          <div className={`text-[10px] font-medium px-2 py-0.5 rounded-full inline-flex items-center ${indicator.bg} ${indicator.color}`}>
+                            {indicator.label}
+                          </div>
+                        );
                       })()}
                     </div>
                   </div>
@@ -3268,9 +3693,25 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                     setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
                   }}
                 >
-                  <Plus className="h-4 w-4" /> Add Advice
+                  <Plus className="h-4 w-4" />
+                  Add advice
                 </Button>
               </div>
+            )}
+
+            {/* Auto Save Logic - Only active when not loading draft */}
+            {!isLoadingDraft && (
+              <AutoSaveHandler
+                prescriptionData={prescriptionData}
+                patientId={resolvedPatientId}
+                appointmentId={resolvedAppointmentId || ''}
+                doctorId={getDoctorId() || ''}
+                hospitalId={getHospitalId?.() || ''}
+                userId={getUserId?.() || ''}
+                draftPrescriptionId={draftPrescriptionId}
+                onSaveSuccess={() => fetchDraft(true)}
+                onSectionStatusChange={handleSectionStatusChange}
+              />
             )}
 
             {/* Private Notes Section */}

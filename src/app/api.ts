@@ -46,6 +46,9 @@ export const API_ENDPOINTS = {
       `/e-prescription/configuration/personalized-medicine/doctorId=${encodeURIComponent(doctorId)}&hospitalId=${encodeURIComponent(hospitalId)}`,
     MEDICINE_SEARCH: (hospitalId: string, doctorId: string, searchText: string) =>
       `/medicines/search?hospitalId=${encodeURIComponent(hospitalId)}&doctorId=${encodeURIComponent(doctorId)}&searchText=${encodeURIComponent(searchText)}`,
+    SAVE_DRAFT: (actionType: string = 'draft') => `/e-prescription/details/actionType=${actionType}`,
+    GET_DRAFT: (appointmentId: string, patientId: string, doctorId: string, hospitalId: string) =>
+      `/e-prescription/details/appointmentId=${encodeURIComponent(appointmentId)}&patientId=${encodeURIComponent(patientId)}&doctorId=${encodeURIComponent(doctorId)}&hospitalId=${encodeURIComponent(hospitalId)}`,
     LOOKUP_SEARCH: (lookupType: string, hospitalId: string, doctorId: string, searchText: string) =>
       `/e-prescription/lookup/search?lookupType=${encodeURIComponent(lookupType)}&hospitalId=${encodeURIComponent(hospitalId)}&doctorId=${encodeURIComponent(doctorId)}&searchText=${encodeURIComponent(searchText)}`,
     LOOKUP_DETAILS: (hospitalId: string, doctorId: string) =>
@@ -128,7 +131,7 @@ export const API_ENDPOINTS = {
     DELETE_ASSET: 'prescription/assets/remove',
     UPLOAD_TEMPLATE: 'prescription-settings/upload-template',
     UPDATE_SETTINGS: 'prescription-settings',
-    GENERATE_DETAILS: 'e-prescription/generate-prescription-details',
+    GENERATE_DETAILS: 'e-prescription/details/generate-prescription',
     GET_SETTINGS: (doctorId: string, hospitalId?: string) => {
       const params = [`doctorId=${encodeURIComponent(doctorId)}`];
       if (hospitalId) {
