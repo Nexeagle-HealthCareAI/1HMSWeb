@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -29,7 +29,7 @@ import {
   PatientLabTests,
   PatientProfileModal
 } from '../components';
-import EPrescriptionPad from '@/features/patient/components/EPrescriptionPad';
+import EPrescriptionPad, { EPrescriptionPadRef } from '@/features/patient/components/EPrescriptionPad';
 import PrescriptionCustomizePanel from '@/features/prescription/components/PrescriptionCustomizePanel';
 import { usePatientProfile } from '../hooks/usePatientProfile';
 import { appointmentApi } from '@/features/appointment/services/appointmentApi';
@@ -154,8 +154,10 @@ export const PatientProfilePage: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [showPatientProfileModal, setShowPatientProfileModal] = useState(false);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const [showPostSubmitDialog, setShowPostSubmitDialog] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewRequest, setPreviewRequest] = useState<GeneratePrescriptionDetailsRequest | null>(null);
+  const ePrescriptionPadRef = useRef<EPrescriptionPadRef>(null);
 
   // Use the patient profile hook for real data
   const hospitalId = storedHospitalId || getHospitalId();
@@ -297,9 +299,26 @@ export const PatientProfilePage: React.FC = () => {
     setShowPatientProfileModal(false);
   };
 
-  const handleConfirmSubmit = () => {
-    // Placeholder for final submission logic
-    setShowSubmitConfirm(false);
+  const handleConfirmSubmit = async () => {
+    // Call the submit method on the EPrescriptionPad component
+    if (ePrescriptionPadRef.current) {
+      const success = await ePrescriptionPadRef.current.submitPrescription();
+      if (success) {
+        setShowSubmitConfirm(false);
+        setShowPostSubmitDialog(true);
+      }
+    } else {
+      setShowSubmitConfirm(false);
+    }
+  };
+
+  const handleNextPatient = () => {
+    setShowPostSubmitDialog(false);
+    navigate(-1); // Navigate back to list/queue
+  };
+
+  const handleContinueCurrent = () => {
+    setShowPostSubmitDialog(false);
   };
 
   const handlePreview = () => {
@@ -324,8 +343,10 @@ export const PatientProfilePage: React.FC = () => {
     }
   };
 
-  const handleSaveForLater = () => {
-    alert('Draft saved for later.');
+  const handleSaveForLater = async () => {
+    if (ePrescriptionPadRef.current) {
+      await ePrescriptionPadRef.current.saveDraft();
+    }
   };
 
   // Calculate risk level for patient header
@@ -582,7 +603,10 @@ export const PatientProfilePage: React.FC = () => {
             {/* Prescriptions Tab */}
             {activeTab === 'prescriptions' && (
               <div className="h-full">
-                <EPrescriptionPad appointmentId={appointmentId || activeAppointmentId || undefined} />
+                <EPrescriptionPad
+                  ref={ePrescriptionPadRef}
+                  appointmentId={appointmentId || activeAppointmentId || undefined}
+                />
               </div>
             )}
 
@@ -636,12 +660,40 @@ export const PatientProfilePage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
+        {/* Post-Submission Success Dialog */}
+        <Dialog open={showPostSubmitDialog} onOpenChange={setShowPostSubmitDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-green-600">
+                <CheckCircle className="h-5 w-5" />
+                Submission Successful
+              </DialogTitle>
+              <DialogDescription>
+                The prescription has been successfully submitted and saved.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                Would you like to continue with the current patient or check for the next patient?
+              </p>
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button variant="outline" onClick={handleContinueCurrent}>
+                Continue with Current
+              </Button>
+              <Button onClick={handleNextPatient}>
+                Check Next Patient
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <PrescriptionPreviewModal
           open={previewModalOpen}
           onOpenChange={handlePreviewModalChange}
           request={previewRequest}
         />
       </div>
-    </div>
+    </div >
   );
 };

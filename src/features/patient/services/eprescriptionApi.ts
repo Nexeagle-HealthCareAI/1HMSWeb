@@ -183,6 +183,10 @@ export const eprescriptionApi = {
         const endpoint = API_ENDPOINTS.E_PRESCRIPTION.SAVE_DRAFT('draft');
         return apiClient.post<{ success: boolean; message: string }>(endpoint, data);
     },
+    saveSubmit: async (data: EPrescriptionDraftReq): Promise<{ success: boolean; message: string }> => {
+        const endpoint = API_ENDPOINTS.E_PRESCRIPTION.SAVE_DRAFT('submit');
+        return apiClient.post<{ success: boolean; message: string }>(endpoint, data);
+    },
     getDraft: async (
         appointmentId: string,
         patientId: string,

@@ -14,6 +14,7 @@ import {
   AlertCircle,
   Calendar,
   CheckCircle,
+  Cloud,
   ChevronDown,
   ChevronRight,
   ClipboardList,
@@ -497,12 +498,19 @@ const AutoSaveHandler: React.FC<{
   return null;
 };
 
+import { forwardRef, useImperativeHandle } from 'react';
+
+export interface EPrescriptionPadRef {
+  submitPrescription: () => Promise<boolean>;
+  saveDraft: () => Promise<boolean>;
+}
+
 interface EPrescriptionPadProps {
   prescriptionFieldPreferences?: any;
   appointmentId?: string;
 }
 
-const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPreferences, appointmentId: propAppointmentId }) => {
+const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(({ prescriptionFieldPreferences, appointmentId: propAppointmentId }, ref) => {
   const { patientId } = useParams<{ patientId: string }>();
   const [searchParams] = useSearchParams();
   const { getDoctorId, getHospitalId, getUserId } = useAuthStore();
@@ -579,6 +587,235 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
     };
     fetchProfile();
   }, [patientId, searchParams, getHospitalId]);
+
+
+  /* Submit Logic exposed via ref */
+  useImperativeHandle(ref, () => ({
+    submitPrescription: async () => {
+      if (!resolvedPatientId || !resolvedAppointmentId) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Missing patient or appointment details for submission.',
+        });
+        return false;
+      }
+
+      try {
+        const hid = getHospitalId?.() || '4de8ea65-71aa-4800-8167-60147d78ea58';
+        const did = getDoctorId() || '';
+
+        const payload: EPrescriptionDraftReq = {
+          prescriptionId: draftPrescriptionId || null,
+          appointmentId: resolvedAppointmentId,
+          patientId: resolvedPatientId,
+          doctorId: did,
+          hospitalId: hid,
+          loggedInUserName: getUserId?.() || 'System',
+          vitalsJson: {
+            bp: (() => {
+              const [sys, dia] = (prescriptionData.vitals.bloodPressure || '').split('/').map(Number);
+              return { sys: sys || 0, dia: dia || 0 };
+            })(),
+            pulse: Number(prescriptionData.vitals.heartRate) || 0,
+            tempC: Number(prescriptionData.vitals.temperature) || 0,
+            spo2: Number(prescriptionData.vitals.oxygenSaturation) || 0,
+            heightCm: Number(prescriptionData.vitals.height) || 0,
+            weightKg: Number(prescriptionData.vitals.weight) || 0,
+            bmi: Number(prescriptionData.vitals.bmi) || 0,
+          },
+          chiefComplaint: prescriptionData.chiefComplaint,
+          history: prescriptionData.history,
+          comorbidity: prescriptionData.comorbidity,
+          examination: prescriptionData.examination,
+          diagnosis: prescriptionData.diagnosis,
+          orders: {
+            investigations: prescriptionData.orders.investigations,
+            procedures: prescriptionData.orders.procedures,
+          },
+          medications: prescriptionData.medications.map(m => ({
+            drugName: m.name,
+            dose: m.dosage,
+            route: m.route,
+            frequency: m.frequency,
+            duration: m.duration ? `${m.duration} ${m.durationUnit || ''}`.trim() : '',
+            instructions: m.instructions,
+            saltName: m.saltName,
+          })),
+          nonPharmacologicalAdvice: prescriptionData.nonPharmacologicalAdvice.map(a => ({
+            advice: a.advice,
+            duration: a.durationValue ? `${a.durationValue} ${a.durationUnit || ''}`.trim() : '',
+            notes: a.notes || '',
+          })),
+          privateNotes: (prescriptionData.privateNotes || []).map(n => n.content).join('\n'),
+          certificates: (prescriptionData.certificates && prescriptionData.certificates.length > 0) ? {
+            ...prescriptionData.certificates[0],
+            fromDate: prescriptionData.certificates[0].fromDate || '',
+            toDate: prescriptionData.certificates[0].toDate || '',
+            fitnessStatus: prescriptionData.certificates[0].fitnessStatus || '',
+            remarks: prescriptionData.certificates[0].remarks || '',
+            category: prescriptionData.certificates[0].category || ''
+          } : undefined,
+          followUp: {
+            followUpOn: prescriptionData.followUp.followUpOn,
+            reason: prescriptionData.followUp.reason,
+            patientInstructions: prescriptionData.followUp.patientInstructions || '',
+            referralEnabled: prescriptionData.followUp.referralEnabled || false,
+            referral: {
+              referredTo: {
+                specialty: prescriptionData.followUp.referral?.referredTo?.specialty || '',
+                doctorName: prescriptionData.followUp.referral?.referredTo?.doctorName || ''
+              },
+              clinicalSummary: prescriptionData.followUp.referral?.clinicalSummary || ''
+            }
+          },
+          immunizations: (prescriptionData.immunizations || []).map(i => ({
+            name: i.name,
+            status: i.status,
+            date: i.date,
+            nextDueDate: i.nextDueDate || '',
+            doseNumber: Number(i.doseNumber) || 0,
+            remarks: '',
+          })),
+        };
+
+        const response = await eprescriptionApi.saveSubmit(payload);
+        if (response.success) {
+          toast({
+            title: 'Submitted',
+            description: 'Prescription has been successfully submitted.',
+            variant: 'default',
+          });
+          return true;
+        } else {
+          toast({
+            variant: 'destructive',
+            title: 'Submission Failed',
+            description: response.message || 'Unknown error occurred.',
+          });
+          return false;
+        }
+      } catch (error) {
+        console.error('Submission error', error);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to submit prescription.',
+        });
+        return false;
+      }
+    },
+    saveDraft: async () => {
+      if (!resolvedPatientId || !resolvedAppointmentId) {
+        return false;
+      }
+
+      try {
+        const hid = getHospitalId?.() || '4de8ea65-71aa-4800-8167-60147d78ea58';
+        const did = getDoctorId() || '';
+
+        const payload: EPrescriptionDraftReq = {
+          prescriptionId: draftPrescriptionId || null,
+          appointmentId: resolvedAppointmentId,
+          patientId: resolvedPatientId,
+          doctorId: did,
+          hospitalId: hid,
+          loggedInUserName: getUserId?.() || 'System',
+          vitalsJson: {
+            bp: (() => {
+              const [sys, dia] = (prescriptionData.vitals.bloodPressure || '').split('/').map(Number);
+              return { sys: sys || 0, dia: dia || 0 };
+            })(),
+            pulse: Number(prescriptionData.vitals.heartRate) || 0,
+            tempC: Number(prescriptionData.vitals.temperature) || 0,
+            spo2: Number(prescriptionData.vitals.oxygenSaturation) || 0,
+            heightCm: Number(prescriptionData.vitals.height) || 0,
+            weightKg: Number(prescriptionData.vitals.weight) || 0,
+            bmi: Number(prescriptionData.vitals.bmi) || 0,
+          },
+          chiefComplaint: prescriptionData.chiefComplaint,
+          history: prescriptionData.history,
+          comorbidity: prescriptionData.comorbidity,
+          examination: prescriptionData.examination,
+          diagnosis: prescriptionData.diagnosis,
+          orders: {
+            investigations: prescriptionData.orders.investigations,
+            procedures: prescriptionData.orders.procedures,
+          },
+          medications: prescriptionData.medications.map(m => ({
+            drugName: m.name,
+            dose: m.dosage,
+            route: m.route,
+            frequency: m.frequency,
+            duration: m.duration ? `${m.duration} ${m.durationUnit || ''}`.trim() : '',
+            instructions: m.instructions,
+            saltName: m.saltName,
+          })),
+          nonPharmacologicalAdvice: prescriptionData.nonPharmacologicalAdvice.map(a => ({
+            advice: a.advice,
+            duration: a.durationValue ? `${a.durationValue} ${a.durationUnit || ''}`.trim() : '',
+            notes: a.notes || '',
+          })),
+          privateNotes: (prescriptionData.privateNotes || []).map(n => n.content).join('\n'),
+          certificates: (prescriptionData.certificates && prescriptionData.certificates.length > 0) ? {
+            ...prescriptionData.certificates[0],
+            fromDate: prescriptionData.certificates[0].fromDate || '',
+            toDate: prescriptionData.certificates[0].toDate || '',
+            fitnessStatus: prescriptionData.certificates[0].fitnessStatus || '',
+            remarks: prescriptionData.certificates[0].remarks || '',
+            category: prescriptionData.certificates[0].category || ''
+          } : undefined,
+          followUp: {
+            followUpOn: prescriptionData.followUp.followUpOn,
+            reason: prescriptionData.followUp.reason,
+            patientInstructions: prescriptionData.followUp.patientInstructions || '',
+            referralEnabled: prescriptionData.followUp.referralEnabled || false,
+            referral: {
+              referredTo: {
+                specialty: prescriptionData.followUp.referral?.referredTo?.specialty || '',
+                doctorName: prescriptionData.followUp.referral?.referredTo?.doctorName || ''
+              },
+              clinicalSummary: prescriptionData.followUp.referral?.clinicalSummary || ''
+            }
+          },
+          immunizations: (prescriptionData.immunizations || []).map(i => ({
+            name: i.name,
+            status: i.status,
+            date: i.date,
+            nextDueDate: i.nextDueDate || '',
+            doseNumber: Number(i.doseNumber) || 0,
+            remarks: '',
+          })),
+        };
+
+        const response = await eprescriptionApi.saveDraft(payload);
+        if (response.success) {
+          toast({
+            title: 'Saved',
+            description: 'Prescription draft saved successfully.',
+            variant: 'default',
+            className: 'border-l-4 border-green-500', // Add a visual cue
+          });
+          return true;
+        } else {
+          toast({
+            title: 'Save Failed',
+            description: response.message,
+            variant: 'destructive',
+          });
+          return false;
+        }
+      } catch (error) {
+        console.error('Save draft error', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to save draft.',
+          variant: 'destructive',
+        });
+        return false;
+      }
+    }
+  }));
 
   const resolveTemplateContent = (template: string, entry: any, profile: PatientProfileData | null, presData: EPrescriptionData) => {
     if (!template) return '';
@@ -1608,6 +1845,14 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
         {/* Main Content */}
         <div className="flex-1 overflow-visible">
           <div className="w-full space-y-4 sm:space-y-5">
+
+            {/* Auto-save Indicator */}
+            <div className="flex justify-end items-center px-1">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 shadow-sm transition-all hover:bg-gray-200 dark:hover:bg-gray-700">
+                <Cloud className="h-3.5 w-3.5 text-blue-500" />
+                <span>Auto-save enabled</span>
+              </div>
+            </div>
 
             {/* Vitals Section */}
             {renderCollapsibleSection(
@@ -3205,14 +3450,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
               'medications',
               'Medications',
               <div className="space-y-4">
-                {(() => {
-                  const meds = prescriptionData.medications;
-                  return (
-                    <div className="flex items-center justify-between border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 px-3 py-2">
-                      <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">Medications ({meds.length})</div>
-                    </div>
-                  );
-                })()}
+                {/* Header removed */}
 
                 {prescriptionData.medications.length === 0 && (
                   <div className="border border-dashed border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 px-4 py-6 text-center space-y-3">
@@ -4262,6 +4500,7 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
       </div>
     </div>
   );
-};
+});
 
 export default EPrescriptionPad;
+
