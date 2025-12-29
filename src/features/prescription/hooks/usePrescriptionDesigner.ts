@@ -75,6 +75,7 @@ export interface PrescriptionDesignerData {
   chiefComplaints: string[];
   comorbidities: string[];
   investigations: string[];
+  procedures: string[];
   medicines: PrescriptionMedicine[];
   advice: string[];
   notes: string;
@@ -119,6 +120,7 @@ const defaultDesignerData: PrescriptionDesignerData = {
   chiefComplaints: ['Intermittent chest discomfort', 'Shortness of breath on exertion'],
   comorbidities: ['Type 2 Diabetes Mellitus', 'Essential Hypertension'],
   investigations: ['ECG (resting)', 'Lipid profile', 'HbA1c', 'Chest X-ray'],
+  procedures: [],
   medicines: [
     {
       name: 'Atorvastatin 20 mg',
@@ -251,16 +253,16 @@ export const usePrescriptionDesigner = () => {
 
   const layoutSettingsSignature = layoutSettings
     ? JSON.stringify({
-        headerHeight: layoutSettings.headerHeight ?? null,
-        footerHeight: layoutSettings.footerHeight ?? null,
-        contentLeftMargin: layoutSettings.contentLeftMargin ?? null,
-        contentRightMargin: layoutSettings.contentRightMargin ?? null,
-        overFlowPage: layoutSettings.overFlowPage ?? null,
-        fontFamily: layoutSettings.fontFamily ?? null,
-        fontSize: layoutSettings.fontSize ?? null,
-        fontWeight: layoutSettings.fontWeight ?? null,
-        textColour: layoutSettings.textColour ?? null,
-      })
+      headerHeight: layoutSettings.headerHeight ?? null,
+      footerHeight: layoutSettings.footerHeight ?? null,
+      contentLeftMargin: layoutSettings.contentLeftMargin ?? null,
+      contentRightMargin: layoutSettings.contentRightMargin ?? null,
+      overFlowPage: layoutSettings.overFlowPage ?? null,
+      fontFamily: layoutSettings.fontFamily ?? null,
+      fontSize: layoutSettings.fontSize ?? null,
+      fontWeight: layoutSettings.fontWeight ?? null,
+      textColour: layoutSettings.textColour ?? null,
+    })
     : null;
 
   useEffect(() => {

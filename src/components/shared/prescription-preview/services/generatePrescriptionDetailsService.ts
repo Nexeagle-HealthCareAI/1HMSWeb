@@ -49,6 +49,12 @@ export interface PrescriptionPatientDetail {
   sex: string;
   address: string;
   contact: string;
+  mobile?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  pincode?: string;
+  insuranceId?: string;
 }
 
 export interface PrescriptionPatientData {
@@ -56,13 +62,83 @@ export interface PrescriptionPatientData {
   vitals: PrescriptionVitals;
 }
 
+export interface PrescriptionMedication {
+  drugName: string;
+  dose: string;
+  route: string;
+  frequency: string;
+  duration: string;
+  instructions: string;
+  saltName: string;
+}
+
+export interface PrescriptionNonPharmacologicalAdvice {
+  advice: string;
+  duration: string;
+  notes: string;
+}
+
+export interface PrescriptionCertificate {
+  type: string;
+  content: string;
+  issuedDate: string;
+  fromDate: string;
+  toDate: string;
+  fitnessStatus: string;
+  remarks: string;
+  category: string;
+}
+
+export interface PrescriptionReferral {
+  referredTo: {
+    specialty: string;
+    doctorName: string;
+  };
+  clinicalSummary: string;
+}
+
+export interface PrescriptionFollowUp {
+  followUpOn: string;
+  reason: string;
+  patientInstructions: string;
+  referralEnabled: boolean;
+  referral?: PrescriptionReferral;
+}
+
+export interface PrescriptionImmunization {
+  name: string;
+  status: string;
+  date: string;
+  nextDueDate: string;
+  doseNumber: number;
+  remarks: string;
+}
+
+export interface PrescriptionOrders {
+  investigations: string[];
+  procedures: string[];
+}
+
 export interface GeneratePrescriptionDetailsPayload {
   template: PrescriptionTemplateDescriptor;
   patientData: PrescriptionPatientData;
+  chiefComplaint: string;
+  history: string;
+  comorbidity: string;
+  examination: string;
+  diagnosis: string;
+  orders: PrescriptionOrders;
+  medications: PrescriptionMedication[];
+  nonPharmacologicalAdvice: PrescriptionNonPharmacologicalAdvice[];
+  privateNotes: string;
+  certificates: PrescriptionCertificate;
+  followUp: PrescriptionFollowUp;
+  immunizations: PrescriptionImmunization[];
 }
 
 export interface GeneratePrescriptionDetailsResponse {
   success: boolean;
+  message: string;
   appointmentId: string;
   data: GeneratePrescriptionDetailsPayload;
 }

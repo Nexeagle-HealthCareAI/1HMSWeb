@@ -1,16 +1,17 @@
-import { PrescriptionDesignerData, TypographySettings } from '@/features/prescription/hooks/usePrescriptionDesigner';
+import { TypographySettings } from '@/features/prescription/hooks/usePrescriptionDesigner';
 import { fetchTemplateAsFile } from '../utils/templateFile';
 import { buildTemplateBoundPreview, TemplateBoundLayoutConfig } from './previewRenderer';
 import {
   generatePrescriptionDetailsService,
   type GeneratePrescriptionDetailsRequest,
+  type GeneratePrescriptionDetailsPayload
 } from './generatePrescriptionDetailsService';
-import { buildPrescriptionDataFromResponse, mapTemplateToPreviewConfig } from '../utils/prescriptionDetailsMapper';
+import { mapTemplateToPreviewConfig } from '../utils/prescriptionDetailsMapper';
 
 export interface PrescriptionPreviewPayload {
   layout: TemplateBoundLayoutConfig;
   typography: TypographySettings;
-  prescription: PrescriptionDesignerData;
+  payload: GeneratePrescriptionDetailsPayload;
   templateFile?: File | null;
   templateUrl?: string | null;
   templateBackgroundDataUrl?: string | null;
@@ -30,13 +31,14 @@ export const prescriptionPreviewService = {
     }
 
     const templateConfig = mapTemplateToPreviewConfig(response.data.template);
-    console.log("TemplateConfif",templateConfig)
-    const prescription = buildPrescriptionDataFromResponse(response.data);
+
+    // We assume response.data IS the GeneratePrescriptionDetailsPayload structure
+    const payload = response.data;
 
     const blob = await this.buildPreviewBlob({
       layout: templateConfig.layout,
       typography: templateConfig.typography,
-      prescription,
+      payload,
       templateUrl: templateConfig.templateUrl,
     });
 
@@ -46,16 +48,17 @@ export const prescriptionPreviewService = {
     };
   },
 
-  async buildPreviewBlob(payload: PrescriptionPreviewPayload): Promise<Blob> {
-    const templateFile = payload.templateFile ?? (await fetchTemplateAsFile(payload.templateUrl));
-     console.log("buildPreviewBlob",payload.templateUrl)
+  async buildPreviewBlob(request: PrescriptionPreviewPayload): Promise<Blob> {
+    const templateFile = request.templateFile ?? (await fetchTemplateAsFile(request.templateUrl));
+
     if (templateFile) {
       return buildTemplateBoundPreview({
         templateFile,
-        layout: payload.layout,
-        typography: payload.typography,
-        prescription: payload.prescription,
+        layout: request.layout,
+        typography: request.typography,
+        payload: request.payload,
       });
     }
+    throw new Error('Template file could not be loaded.');
   },
 };

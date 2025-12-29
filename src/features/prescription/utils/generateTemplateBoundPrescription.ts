@@ -181,6 +181,7 @@ export const generateTemplateBoundPrescription = async ({ templateFile, layout, 
   const chiefComplaints = ensureStringArray(prescription.chiefComplaints);
   const comorbidities = ensureStringArray(prescription.comorbidities);
   const investigations = ensureStringArray(prescription.investigations);
+  const procedures = ensureStringArray(prescription.procedures);
   const advice = ensureStringArray(prescription.advice);
   const medicines = Array.isArray(prescription.medicines) ? prescription.medicines : [];
   const notes = prescription.notes ?? '';
@@ -212,6 +213,7 @@ export const generateTemplateBoundPrescription = async ({ templateFile, layout, 
   await writeList('Chief complaints:', chiefComplaints);
   await writeList('Comorbidities:', comorbidities);
   await writeList('Investigations:', investigations);
+  await writeList('Procedures:', procedures);
 
   if (medicines.length) {
     await writeLine('Medicines:', { bold: true });
