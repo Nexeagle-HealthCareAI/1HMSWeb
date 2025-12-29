@@ -871,12 +871,12 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
   const procedureRootRef = useRef<HTMLDivElement | null>(null);
 
   // Fetch Draft Data
-  // Fetch Draft Data
-  const fetchDraft = useCallback(async (silent = false) => {
+  /* Fetch Draft Data */
+  const fetchDraft = useCallback(async (silent = false, onlyUpdateId = false) => {
     const hid = getHospitalId?.() || '4de8ea65-71aa-4800-8167-60147d78ea58';
     const did = getDoctorId() || '';
 
-    console.log('fetchDraft called', { silent, resolvedPatientId, resolvedAppointmentId, hid, did });
+    console.log('fetchDraft called', { silent, onlyUpdateId, resolvedPatientId, resolvedAppointmentId, hid, did });
 
     if (!resolvedPatientId || !resolvedAppointmentId) {
       console.warn('fetchDraft aborted: missing IDs');
@@ -892,6 +892,8 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
         console.log('Draft loaded:', draft);
         // Store the prescription ID from the draft
         setDraftPrescriptionId(draft.prescriptionId || null);
+
+        if (onlyUpdateId) return;
 
         setPrescriptionData(prev => ({
           ...prev,
@@ -3205,20 +3207,9 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
               <div className="space-y-4">
                 {(() => {
                   const meds = prescriptionData.medications;
-                  const canAdd = meds.length === 0 || isMedicationValid(meds[meds.length - 1]);
                   return (
                     <div className="flex items-center justify-between border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 px-3 py-2">
                       <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">Medications ({meds.length})</div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addMedication()}
-                        disabled={!canAdd}
-                        className="h-9 text-sm"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add medication
-                      </Button>
                     </div>
                   );
                 })()}
@@ -3594,6 +3585,21 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                     );
                   })}
                 </div>
+                {/* Add Button at Bottom */}
+                {prescriptionData.medications.length > 0 && (
+                  <div className="flex justify-center pt-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => addMedication()}
+                      disabled={!prescriptionData.medications.length || (prescriptionData.medications.length > 0 && !isMedicationValid(prescriptionData.medications[prescriptionData.medications.length - 1]))}
+                      className="w-full md:w-auto min-w-[200px]"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add another medication
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -3709,7 +3715,11 @@ const EPrescriptionPad: React.FC<EPrescriptionPadProps> = ({ prescriptionFieldPr
                 hospitalId={getHospitalId?.() || ''}
                 userId={getUserId?.() || ''}
                 draftPrescriptionId={draftPrescriptionId}
-                onSaveSuccess={() => fetchDraft(true)}
+                onSaveSuccess={() => {
+                  if (!draftPrescriptionId) {
+                    fetchDraft(true, true);
+                  }
+                }}
                 onSectionStatusChange={handleSectionStatusChange}
               />
             )}
