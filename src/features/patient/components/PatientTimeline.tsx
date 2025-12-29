@@ -78,6 +78,75 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
     }
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'VITALS_REQUIRED': return 'bg-amber-100 text-amber-800 border-amber-200 ring-amber-500';
+      case 'LAB_REQUIRED': return 'bg-blue-100 text-blue-800 border-blue-200 ring-blue-500';
+      case 'COMPLETED': return 'bg-green-100 text-green-800 border-green-200 ring-green-500';
+      case 'DRAFT': return 'bg-gray-100 text-gray-800 border-gray-200 ring-gray-500';
+      default: return 'bg-gray-100 text-gray-600 border-gray-200 ring-gray-400';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    return status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const renderStatusTimeline = (history: TimelineEventData['statusJsonHistory']) => {
+    if (!history || history.length === 0) return null;
+
+    // Filter duplicates: keep only the latest timestamp for each status
+    const uniqueHistoryMap = new Map<string, TimelineEventData['statusJsonHistory'][0]>();
+
+    history.forEach(item => {
+      const existing = uniqueHistoryMap.get(item.status);
+      if (!existing || new Date(item.timestamp) > new Date(existing.timestamp)) {
+        uniqueHistoryMap.set(item.status, item);
+      }
+    });
+
+    const uniqueHistory = Array.from(uniqueHistoryMap.values()).sort((a, b) =>
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-100 dark:border-gray-800 ml-4">
+        {uniqueHistory.map((item, i) => {
+          const isLast = i === uniqueHistory.length - 1;
+          const colorClass = getStatusColor(item.status);
+          const date = new Date(item.timestamp);
+          const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+          const borderColor = colorClass.split(' ').find(c => c.startsWith('border')) || 'border-gray-200';
+          const ringColor = colorClass.split(' ').find(c => c.startsWith('ring')) || 'ring-gray-200';
+          const bgColor = colorClass.split(' ').find(c => c.startsWith('bg')) || 'bg-gray-100';
+
+          return (
+            <React.Fragment key={i}>
+              <div className="flex flex-col items-center min-w-[80px] relative group">
+                {/* Full Circle Dot */}
+                <div className={`w-4 h-4 rounded-full border-2 ${borderColor} ${bgColor} ring-2 ring-offset-2 ${ringColor} z-10 box-border`}></div>
+
+                {/* Label */}
+                <div className="mt-1.5 text-center">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                    {getStatusLabel(item.status)}
+                  </div>
+                  <div className="text-[9px] text-gray-400 font-medium">{timeStr}</div>
+                </div>
+              </div>
+              {/* Connector Line */}
+              {!isLast && (
+                <div className="h-[2px] w-full bg-gray-200 dark:bg-gray-700 -ml-6 -mr-6 relative top-[-26px] -z-0"></div>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    );
+  };
+
+
   return (
     <div className="space-y-6 relative ml-4">
       {/* Vertical Spine */}
@@ -101,10 +170,18 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
               {/* Content Card */}
               <Card className="flex-1 hover:shadow-md transition-shadow duration-200 border-l-4 border-l-primary/50 relative">
                 <CardHeader className="pb-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleExpand(eventId)}
+                    className="absolute top-4 right-4 text-primary hover:text-primary/80 hover:bg-primary/10 z-10"
+                  >
+                    {isExpanded ? 'Show Less' : 'View Details'}
+                  </Button>
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       {/* Meta Row: Private Notes & Follow-up */}
-                      <div className="flex justify-between items-start mb-3 text-sm">
+                      <div className="flex justify-between items-start mb-3 text-sm pr-24">
                         <div className="flex-1 mr-4">
                           <div className={`flex items-start gap-1.5 px-2 py-1 rounded text-xs font-medium border inline-block ${event.privateNotes ? 'text-amber-700 bg-amber-50 border-amber-100' : 'text-gray-500 bg-gray-50 border-gray-100'}`}>
                             <Lock className="w-3 h-3 mt-0.5" />
@@ -139,26 +216,25 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
                       )}
 
                       <div className="flex items-center justify-between mb-2">
-                        <CardTitle className="text-lg font-bold flex items-center gap-2">
-                          <span>Visit / Consultation</span>
-                          {event.status && (
-                            <Badge className={`text-xs px-2 py-0.5 ${event.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800 hover:bg-green-200 border-green-200' :
-                              event.status.toLowerCase() === 'in progress' ? 'bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-200' :
-                                event.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800 hover:bg-red-200 border-red-200' :
-                                  'bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-200'
-                              }`}>
-                              {event.status}
-                            </Badge>
-                          )}
-                        </CardTitle>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleExpand(eventId)}
-                          className="text-primary hover:text-primary/80 hover:bg-primary/10"
-                        >
-                          {isExpanded ? 'Show Less' : 'View Details'}
-                        </Button>
+                        <div className="flex flex-col md:flex-row md:items-center gap-2 flex-1 overflow-hidden">
+                          <CardTitle className="text-lg font-bold flex items-center gap-2 shrink-0">
+                            <span>Visit / Consultation</span>
+                            {event.status && (
+                              <Badge className={`text-xs px-2 py-0.5 ${event.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800 hover:bg-green-200 border-green-200' :
+                                event.status.toLowerCase() === 'in progress' ? 'bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-200' :
+                                  event.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800 hover:bg-red-200 border-red-200' :
+                                    'bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-200'
+                                }`}>
+                                {event.status}
+                              </Badge>
+                            )}
+                          </CardTitle>
+                          {/* Status Timeline Inline */}
+                          <div className="flex-1 min-w-0">
+                            {renderStatusTimeline(event.statusJsonHistory)}
+                          </div>
+                        </div>
+
                       </div>
 
                       {/* Clinical Cards Grid */}
