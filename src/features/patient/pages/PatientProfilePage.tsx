@@ -36,6 +36,7 @@ import { appointmentApi } from '@/features/appointment/services/appointmentApi';
 import { useAuthStore } from '@/store/authStore';
 import { PatientProfileData } from '../services/patientProfileApi';
 import { PrescriptionPreviewModal, type GeneratePrescriptionDetailsRequest } from '@/components/shared/prescription-preview';
+import { timelineApi, TimelineEventData } from '../services/timelineApi';
 
 interface PatientData {
   id: string;
@@ -103,18 +104,7 @@ interface Appointment {
   prescription?: Prescription;
 }
 
-interface TimelineEvent {
-  id: string;
-  date: Date;
-  type: 'appointment' | 'prescription' | 'lab-test' | 'vital-update' | 'consultation';
-  title: string;
-  description: string;
-  doctor: string;
-  status: string;
-  icon: React.ComponentType<any>;
-  color: string;
-  details?: any;
-}
+
 
 interface VitalSigns {
   date: string;
@@ -178,8 +168,32 @@ export const PatientProfilePage: React.FC = () => {
     refetch: refetchProfile
   } = usePatientProfile(hospitalId || '', patientId || '');
 
-  // Timeline events will be created from real data when available
-  const timelineEvents: TimelineEvent[] = [];
+  // Timeline state
+  const [timelineEvents, setTimelineEvents] = useState<TimelineEventData[]>([]);
+  const [isTimelineLoading, setIsTimelineLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'timeline' && patientId && hospitalId) {
+      fetchTimelineEvents();
+    }
+  }, [activeTab, patientId, hospitalId]);
+
+  const fetchTimelineEvents = async () => {
+    if (!patientId || !hospitalId) return;
+
+    setIsTimelineLoading(true);
+    try {
+      const targetDoctorId = doctorId || 'unknown';
+      const response = await timelineApi.getEvents(patientId, targetDoctorId, hospitalId);
+      if (response.success && response.data && response.data.length > 0) {
+        setTimelineEvents(response.data[0].timelineData || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch timeline events", error);
+    } finally {
+      setIsTimelineLoading(false);
+    }
+  };
 
   // Update local patient state when real profile data is loaded
   useEffect(() => {
@@ -553,9 +567,15 @@ export const PatientProfilePage: React.FC = () => {
             {/* Timeline Tab */}
             {activeTab === 'timeline' && (
               <div className="h-full p-6">
-                <PatientTimeline
-                  timelineEvents={timelineEvents}
-                />
+                {isTimelineLoading ? (
+                  <div className="flex justify-center items-center h-40">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : (
+                  <PatientTimeline
+                    timelineEvents={timelineEvents}
+                  />
+                )}
               </div>
             )}
 
