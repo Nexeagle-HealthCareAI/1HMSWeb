@@ -256,12 +256,31 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   }
 
   // -- Vitals Card (Right Side) --
-  const vitalsH = topSectionStartY - cursorY + 10;
   const vitalsX = leftPad + patientW + gap;
+
+  // Calculate vitals items first to determine height
+  const vitalItems = [
+    { l: 'BP', v: vitals.bp && (vitals.bp.sys || vitals.bp.dia) ? `${vitals.bp.sys}/${vitals.bp.dia}` : '' },
+    { l: 'Pulse', v: vitals.pulse ? `${vitals.pulse}` : '' },
+    { l: 'Temp', v: vitals.tempC ? `${vitals.tempC}` : '' },
+    { l: 'SpO2', v: vitals.spo2 ? `${vitals.spo2}%` : '' },
+    { l: 'Wt', v: vitals.weightKg ? `${vitals.weightKg}` : '' },
+    { l: 'BMI', v: vitals.bmi ? `${vitals.bmi}` : '' },
+  ].filter(x => x.v && x.v !== '0' && x.v !== '0/0' && x.v !== '0%');
+
+  // Calculate proper height for vitals card
+  const vitalsHeaderH = lineHeight + 4; // Reduced from 8
+  const vitalsContentH = vitalItems.length > 0 ? (vitalItems.length * lineHeight) : lineHeight;
+  const vitalsPadding = 4; // Reduced from 8
+  const vitalsH = vitalsHeaderH + vitalsContentH + vitalsPadding;
+
+  // Move vitals section up by adding offset (reduced for smaller margin below date)
+  const vitalsVerticalOffset = lineHeight * 0.5; // Reduced from 1.5
+  const vitalsTopY = topSectionStartY + vitalsVerticalOffset;
 
   page.drawRectangle({
     x: vitalsX,
-    y: cursorY, // rough bottom
+    y: vitalsTopY - vitalsH,
     width: vitalsW,
     height: vitalsH,
     color: COLORS.BgAccent,
@@ -271,22 +290,13 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   // Vitals Header
   page.drawText('VITALS', {
     x: vitalsX + 8,
-    y: topSectionStartY - 6,
+    y: vitalsTopY - 6,
     size: sizeSm,
     font: boldFont,
     color: COLORS.Primary
   });
 
-  const vitalItems = [
-    { l: 'BP', v: vitals.bp ? `${vitals.bp.sys}/${vitals.bp.dia}` : '' },
-    { l: 'Pulse', v: vitals.pulse ? `${vitals.pulse}` : '' },
-    { l: 'Temp', v: vitals.tempC ? `${vitals.tempC}` : '' },
-    { l: 'SpO2', v: vitals.spo2 ? `${vitals.spo2}%` : '' },
-    { l: 'Wt', v: vitals.weightKg ? `${vitals.weightKg}` : '' },
-    { l: 'BMI', v: vitals.bmi || '' },
-  ].filter(x => x.v && x.v !== '0' && x.v !== '0/0');
-
-  let vY = topSectionStartY - lineHeight - 4;
+  let vY = vitalsTopY - lineHeight - 4;
   const vX_Label = vitalsX + 8;
   const vX_Val = vitalsX + vitalsW - 10;
 
@@ -301,7 +311,10 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
     page.drawText('No vitals recorded', { x: vX_Label, y: vY, size: sizeSm, font: regularFont, color: COLORS.TextLight });
   }
 
-  cursorY -= lineHeight;
+  // Ensure cursorY is below both patient info and vitals card
+  const vitalsBottom = vitalsTopY - vitalsH;
+  cursorY = Math.min(cursorY, vitalsBottom) - lineHeight;
+
 
 
   // --- 2. Clinical Summary (Simplified Tabular) ---

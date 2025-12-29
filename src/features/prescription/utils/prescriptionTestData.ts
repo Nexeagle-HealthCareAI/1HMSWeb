@@ -47,8 +47,8 @@ export const samplePrescriptionPayload: GeneratePrescriptionDetailsPayload = {
         dia: 80
       },
       pulse: 88,
-      tempC: 0,
-      spo2: 0,
+      tempC: 99,
+      spo2: 99,
       heightCm: 180,
       weightKg: 90,
       bmi: 27.8
