@@ -251,7 +251,7 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
     drawLabelValue('Phone', pContact, leftPad, cursorY, gridW);
     // Truncate address if needed
     const address = [patient.address, patient.city].filter(Boolean).join(', ');
-    drawLabelValue('Location', address.substring(0, 30), leftPad + gridW, cursorY, gridW);
+    drawLabelValue('Address', address.substring(0, 30), leftPad + gridW, cursorY, gridW);
     cursorY -= lineHeight * 2;
   }
 
