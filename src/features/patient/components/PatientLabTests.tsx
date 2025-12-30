@@ -107,6 +107,9 @@ const PatientLabTests: React.FC<PatientLabTestsProps> = ({
   const [deleteSuccessOpen, setDeleteSuccessOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ index: number; name: string; id?: string } | null>(null);
 
+  // derived state for carousel and list
+  const displayAttachments = apiAttachments.length > 0 ? apiAttachments : uploadedFiles;
+
   const [searchParams] = useSearchParams();
   const rawPatientId = patientId || searchParams.get('patientId');
   const rawAppointmentId = appointmentId || searchParams.get('appointmentId');
@@ -119,17 +122,17 @@ const PatientLabTests: React.FC<PatientLabTestsProps> = ({
   const displayPatientId = effectivePatientId || "N/A";
 
   useEffect(() => {
-    if (attachments.length === 0) {
+    if (displayAttachments.length === 0) {
       setViewIndex(0);
       return;
     }
-    setViewIndex(prev => Math.min(prev, attachments.length - 1));
-  }, [attachments.length]);
+    setViewIndex(prev => Math.min(prev, displayAttachments.length - 1));
+  }, [displayAttachments.length]);
 
   useEffect(() => {
-    const totalPages = Math.max(1, Math.ceil(attachments.length / PAGE_SIZE));
+    const totalPages = Math.max(1, Math.ceil(displayAttachments.length / PAGE_SIZE));
     setPage(prev => Math.min(prev, totalPages));
-  }, [attachments.length]);
+  }, [displayAttachments.length]);
 
   const { hospitalId: storedHospitalId, doctorId: storedDoctorId } = useAuthStore();
   const hospitalId = storedHospitalId; // Fallback for dev
@@ -285,8 +288,7 @@ const PatientLabTests: React.FC<PatientLabTestsProps> = ({
 
 
 
-  // derived state for carousel
-  const displayAttachments = apiAttachments.length > 0 ? apiAttachments : uploadedFiles;
+
   const currentAttachmentData = displayAttachments[viewIndex];
 
   // Fetch secure blob when viewIndex changes
@@ -367,17 +369,16 @@ const PatientLabTests: React.FC<PatientLabTestsProps> = ({
   };
 
   const renderUploadTable = () => {
-    const listToRender = apiAttachments.length > 0 ? apiAttachments : uploadedFiles; // Prefer API data if available
-    const totalPages = Math.max(1, Math.ceil(listToRender.length / PAGE_SIZE));
+    const totalPages = Math.max(1, Math.ceil(displayAttachments.length / PAGE_SIZE));
     const start = (page - 1) * PAGE_SIZE;
     const end = start + PAGE_SIZE;
-    const pagedAttachments = listToRender.slice(start, end);
+    const pagedAttachments = displayAttachments.slice(start, end);
 
     return (
       <div className="rounded-lg border border-blue-100 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 space-y-3 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="text-sm font-semibold text-gray-800 dark:text-slate-100">Uploaded files</div>
-          <div className="text-[11px] text-gray-500 dark:text-slate-400">Page {page} of {totalPages} • Total: {listToRender.length}</div>
+          <div className="text-[11px] text-gray-500 dark:text-slate-400">Page {page} of {totalPages} • Total: {displayAttachments.length}</div>
         </div>
         <div className="overflow-auto max-h-[360px] border border-gray-100 dark:border-slate-800 rounded-md">
           <table className="min-w-full text-xs">
@@ -475,7 +476,7 @@ const PatientLabTests: React.FC<PatientLabTestsProps> = ({
           </table >
         </div >
         {
-          attachments.length > PAGE_SIZE && (
+          displayAttachments.length > PAGE_SIZE && (
             <div className="flex items-center justify-between px-1 text-sm text-gray-600">
               <button
                 className="flex items-center gap-1 rounded border border-gray-200 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400"
