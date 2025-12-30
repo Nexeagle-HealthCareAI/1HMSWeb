@@ -118,7 +118,7 @@ const generateTimeSlots = (doctorId: string, date: string): TimeSlot[] => {
   };
 
   const allTimes = [...shifts.morning, ...shifts.afternoon, ...shifts.evening, ...shifts.night];
-  
+
   return allTimes.map((time, index) => ({
     id: `${doctorId}-${date}-${time}`,
     time,
@@ -138,25 +138,25 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
   const userId = useAuthStore((state) => state.userId);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const storedHospitalId = useAuthStore((state) => state.hospitalId);
-  
+
   // Fetch hospital user information using the userId from auth store
-  const { 
-    data: hospitalUserResponse, 
-    isLoading: hospitalUserLoading, 
+  const {
+    data: hospitalUserResponse,
+    isLoading: hospitalUserLoading,
     error: hospitalUserError,
     refetch: refetchHospitalUser
   } = useHospitalUser(userId || '');
-  
+
   // Get hospital ID from the response
   const hospitalId = hospitalUserResponse?.hospitalId || storedHospitalId || '';
   const shouldShowHospitalLoader = hospitalUserLoading && !storedHospitalId;
-  
+
   // Finally, fetch departments using the hospital ID
-  const { data: departmentsResponse, 
-    isLoading: departmentsLoading, 
+  const { data: departmentsResponse,
+    isLoading: departmentsLoading,
     error: departmentsError,
     refetch: refetchDepartments } = useDepartments(hospitalId || '');
-  
+
   // State declarations
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
@@ -172,25 +172,25 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
   const [patientData, setPatientData] = useState<any>(null);
   const [showTimeSlotsLoading, setShowTimeSlotsLoading] = useState(false);
   const lastRefreshTokenRef = useRef<number | null>(null);
-  
+
   // Fetch doctors for the selected department
-  const { data: doctorsResponse, 
-    isLoading: doctorsLoading, 
+  const { data: doctorsResponse,
+    isLoading: doctorsLoading,
     error: doctorsError,
     refetch: refetchDoctors } = useDoctorsByDepartment(selectedDepartment, hospitalId);
-  
+
   // Format selected date for API
   const formattedDate = selectedDate.toISOString().split('T')[0]; // YYYY-MM-DD format
-  
+
   // Fetch doctor slots for the selected doctor and date
-  const { data: doctorSlotsResponse, 
-    isLoading: doctorSlotsLoading, 
+  const { data: doctorSlotsResponse,
+    isLoading: doctorSlotsLoading,
     error: doctorSlotsError,
     refetch: refetchDoctorSlots } = useDoctorSlots(selectedDoctor?.id || '', hospitalId, formattedDate);
 
   // Fetch booked slots for the selected doctor and date
-  const { data: bookedSlotsResponse, 
-    isLoading: bookedSlotsLoading, 
+  const { data: bookedSlotsResponse,
+    isLoading: bookedSlotsLoading,
     error: bookedSlotsError,
     refetch: refetchBookedSlots } = useBookedSlots(selectedDoctor?.id || '', hospitalId, formattedDate);
 
@@ -259,11 +259,11 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
     refetchDoctorSlots,
     refetchBookedSlots,
   ]);
-  
+
   // Transform API departments to match the component interface
   const departments: Department[] = React.useMemo(() => {
     if (!departmentsResponse?.departments) return [];
-    
+
     return departmentsResponse.departments.map((dept: ApiDepartment) => ({
       id: dept.departmentId,
       name: dept.departmentName,
@@ -275,7 +275,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
   // Generate shifts from API response
   const availableShifts = React.useMemo(() => {
     if (!doctorSlotsResponse?.shiftInfo?.[0]?.shiftDayDetails) return [];
-    
+
     return doctorSlotsResponse.shiftInfo[0].shiftDayDetails.map((shift, index) => ({
       id: shift.shiftName.toLowerCase(),
       label: shift.shiftName,
@@ -302,7 +302,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
       const firstDoctor = doctorsResponse.doctors[0];
       const newDoctor = {
         id: firstDoctor.doctorId,
-        name: firstDoctor.doctorName,       
+        name: firstDoctor.doctorName,
         specialization: firstDoctor.specializations?.length > 0 ? firstDoctor.specializations.join(', ') : t('appointmentBooking.generalSpecialization'),
         department: selectedDepartment,
         is_available: true
@@ -386,7 +386,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
       </div>
     );
   }
-  
+
   // Show error if hospital user data is not available
   if (hospitalUserError && !storedHospitalId) {
     return (
@@ -397,8 +397,8 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             {hospitalUserError instanceof Error ? hospitalUserError.message : t('appointmentBooking.errorOccurred')}
           </p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             {t('appointmentBooking.tryAgain')}
@@ -407,7 +407,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
       </div>
     );
   }
-  
+
   // Show loading if hospital user data is loading
   if (shouldShowHospitalLoader || !hospitalId) {
     return (
@@ -475,24 +475,24 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
 
   const handleVitalsComplete = (vitalsData: any) => {
     // Update the slot as booked with both patient and vitals data
-    setTimeSlots(prev => prev.map(slot => 
-      slot.id === selectedSlot?.id 
+    setTimeSlots(prev => prev.map(slot =>
+      slot.id === selectedSlot?.id
         ? { ...slot, isBooked: true, patientInfo: { ...patientData, vitals: vitalsData } }
         : slot
     ));
-    
+
     // Refresh booked slots data to reflect the new booking
     if (selectedDoctor?.id && formattedDate) {
       queryClient.invalidateQueries({
         queryKey: ['bookedSlots', selectedDoctor.id, formattedDate]
       });
     }
-    
+
     // Invalidate appointment details queries to refresh dashboard data
     queryClient.invalidateQueries({
       queryKey: ['appointmentDetails']
     });
-    
+
     setShowVitalsForm(false);
     setShowSuccess(true);
     setSelectedSlot(null);
@@ -501,24 +501,24 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
 
   const handleVitalsSkip = () => {
     // Update the slot as booked with only patient data
-    setTimeSlots(prev => prev.map(slot => 
-      slot.id === selectedSlot?.id 
+    setTimeSlots(prev => prev.map(slot =>
+      slot.id === selectedSlot?.id
         ? { ...slot, isBooked: true, patientInfo: patientData }
         : slot
     ));
-    
+
     // Refresh booked slots data to reflect the new booking
     if (selectedDoctor?.id && formattedDate) {
       queryClient.invalidateQueries({
         queryKey: ['bookedSlots', selectedDoctor.id, formattedDate]
       });
     }
-    
+
     // Invalidate appointment details queries to refresh dashboard data
     queryClient.invalidateQueries({
       queryKey: ['appointmentDetails']
     });
-    
+
     setShowVitalsForm(false);
     setShowSuccess(true);
     setSelectedSlot(null);
@@ -526,14 +526,14 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
   };
 
   const handleSlotUpdate = (updatedSlot: TimeSlot) => {
-    setTimeSlots(prev => prev.map(slot => 
+    setTimeSlots(prev => prev.map(slot =>
       slot.id === updatedSlot.id ? updatedSlot : slot
     ));
   };
 
   const handleSlotCancel = (slotId: string) => {
-    setTimeSlots(prev => prev.map(slot => 
-      slot.id === slotId 
+    setTimeSlots(prev => prev.map(slot =>
+      slot.id === slotId
         ? { ...slot, isBooked: false, patientInfo: undefined }
         : slot
     ));
@@ -569,13 +569,13 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-            {hospitalUserLoading 
+            {hospitalUserLoading
               ? t('appointmentBooking.loadingHospitalInfo')
               : t('appointmentBooking.loadingDepartments')
             }
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            {hospitalUserLoading 
+            {hospitalUserLoading
               ? t('appointmentBooking.loadingHospitalMessage')
               : t('appointmentBooking.loadingDepartmentsMessage')
             }
@@ -596,8 +596,8 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             {hospitalUserError instanceof Error ? hospitalUserError.message : t('appointmentBooking.errorOccurred')}
           </p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             {t('appointmentBooking.tryAgain')}
@@ -616,8 +616,8 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             {departmentsError instanceof Error ? departmentsError.message : t('appointmentBooking.errorOccurredDepartments')}
           </p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             {t('appointmentBooking.tryAgain')}
@@ -645,7 +645,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
 
   if (showSuccess) {
     return (
-      <BookingSuccess 
+      <BookingSuccess
         appointmentId={appointmentId}
         tokenNumber={tokenNumber}
         doctor={selectedDoctor!}
@@ -683,7 +683,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                 {format(selectedDate, 'MMM dd')}
               </div>
             </div>
-            
+
             {/* Compact Selection Row */}
             <div className="grid grid-cols-2 gap-2">
               {/* Department Dropdown */}
@@ -705,7 +705,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                   </SelectContent>
                 </Select>
               </div>
-              
+
               {/* Doctor Selection */}
               <div>
                 <label className="text-xs font-medium text-muted-foreground dark:text-gray-400 mb-1 block">{t('appointmentBooking.doctor')}</label>
@@ -717,7 +717,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                         id: selectedApiDoctor.doctorId,
                         name: selectedApiDoctor.doctorName,
                         department: selectedDepartmentData.name,
-                          specialization: selectedApiDoctor.specializations?.length > 0 ? selectedApiDoctor.specializations.join(', ') : t('appointmentBooking.generalSpecialization')
+                        specialization: selectedApiDoctor.specializations?.length > 0 ? selectedApiDoctor.specializations.join(', ') : t('appointmentBooking.generalSpecialization')
                       };
                       handleDoctorSelect(newDoctor);
                     }
@@ -738,23 +738,23 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                     ) : doctorsResponse?.doctors && doctorsResponse.doctors.length > 0 ? (
                       doctorsResponse.doctors.map((doctor) => (
                         <SelectItem key={doctor.doctorId} value={doctor.doctorId} className="text-xs">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center w-full gap-1 sm:gap-2">
-                          <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                            <div className="text-base sm:text-sm break-words whitespace-normal leading-tight">{doctor.doctorName}</div>
-                            <div className="hidden sm:block text-xs text-muted-foreground break-words whitespace-normal leading-tight">
-                              {doctor.qualifications?.length > 0 ? doctor.qualifications.join(', ') : t('appointmentBooking.defaultQualification')}
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center w-full gap-1 sm:gap-2">
+                            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                              <div className="text-base sm:text-sm break-words whitespace-normal leading-tight">{doctor.doctorName}</div>
+                              <div className="hidden sm:block text-xs text-muted-foreground break-words whitespace-normal leading-tight">
+                                {doctor.qualifications?.length > 0 ? doctor.qualifications.join(', ') : t('appointmentBooking.defaultQualification')}
+                              </div>
+                              <div className="hidden sm:block text-xs text-blue-600 break-words whitespace-normal leading-tight">
+                                {doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : t('appointmentBooking.generalSpecialization')}
+                              </div>
+                              <div className="hidden sm:block text-xs text-gray-500 break-words whitespace-normal leading-tight">
+                                {isDoctorOnTimeOff(doctor.doctorId) ? t('appointmentBooking.timeOff') : t('appointmentBooking.available')}
+                              </div>
                             </div>
-                            <div className="hidden sm:block text-xs text-blue-600 break-words whitespace-normal leading-tight">
-                              {doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : t('appointmentBooking.generalSpecialization')}
-                            </div>
-                            <div className="hidden sm:block text-xs text-gray-500 break-words whitespace-normal leading-tight">
-                              {isDoctorOnTimeOff(doctor.doctorId) ? t('appointmentBooking.timeOff') : t('appointmentBooking.available')}
-                            </div>
+                            {isDoctorOnTimeOff(doctor.doctorId) && (
+                              <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 ml-2 mt-1 sm:mt-0"></div>
+                            )}
                           </div>
-                          {isDoctorOnTimeOff(doctor.doctorId) && (
-                            <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 ml-2 mt-1 sm:mt-0"></div>
-                          )}
-                        </div>
                         </SelectItem>
                       ))
                     ) : (
@@ -773,21 +773,20 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
           {/* Desktop Sidebar */}
           <div className="hidden lg:block w-80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-r border-gray-200/50 dark:border-gray-700/50 shadow-sm">
             <div className="p-4">
-              <h3 className="text-sm font-semibold mb-3 text-gray-700 flex items-center gap-2">
+              <h3 className="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-200 flex items-center gap-2">
                 {t('appointmentBooking.departmentSelection')}
               </h3>
-              
+
               {/* Department Grid - Desktop */}
               <div className="grid grid-cols-2 gap-2 mb-4">
                 {departments.slice(0, 4).map((dept) => (
                   <button
                     key={dept.id}
                     onClick={() => handleDepartmentSelect(dept.id)}
-                    className={`flex flex-col items-center gap-2 p-3 rounded-lg border text-center transition-all text-xs ${
-                      selectedDepartment === dept.id
-                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500 shadow-md'
-                        : 'bg-gray-50 border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700'
-                    }`}
+                    className={`flex flex-col items-center gap-2 p-3 rounded-lg border text-center transition-all text-xs ${selectedDepartment === dept.id
+                      ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500 shadow-md'
+                      : 'bg-gray-50 border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
+                      }`}
                   >
                     <dept.icon className="h-5 w-5" />
                     <span className="font-medium">{dept.name}</span>
@@ -832,7 +831,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                     </div>
                   ) : doctorsResponse?.doctors && doctorsResponse.doctors.length > 0 ? (
                     doctorsResponse.doctors.map((doctor) => (
-                    <button
+                      <button
                         key={doctor.doctorId}
                         onClick={() => {
                           const newDoctor = {
@@ -843,31 +842,30 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                           };
                           handleDoctorSelect(newDoctor);
                         }}
-                      className={`w-full p-3 rounded-lg border text-left transition-all text-xs relative ${
-                          selectedDoctor?.id === doctor.doctorId
+                        className={`w-full p-3 rounded-lg border text-left transition-all text-xs relative ${selectedDoctor?.id === doctor.doctorId
                           ? 'border-blue-300 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 shadow-sm'
                           : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}
-                    >
+                          }`}
+                      >
                         <div className="flex flex-col gap-0.5">
-                          <div className="text-blue-600 text-base sm:text-sm break-words whitespace-normal leading-tight">{doctor.doctorName}</div>
-                          <div className="hidden sm:block text-xs text-gray-600 break-words whitespace-normal leading-tight">
+                          <div className="text-blue-600 dark:text-blue-400 text-base sm:text-sm break-words whitespace-normal leading-tight">{doctor.doctorName}</div>
+                          <div className="hidden sm:block text-xs text-gray-600 dark:text-gray-400 break-words whitespace-normal leading-tight">
                             {doctor.qualifications?.length > 0 ? doctor.qualifications.join(', ') : t('appointmentBooking.defaultQualification')}
                           </div>
-                          <div className="hidden sm:block text-xs text-blue-600 break-words whitespace-normal leading-tight">
+                          <div className="hidden sm:block text-xs text-blue-600 dark:text-blue-400 break-words whitespace-normal leading-tight">
                             {doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : t('appointmentBooking.generalSpecialization')}
                           </div>
-                          <div className="hidden sm:block text-xs text-gray-500 break-words whitespace-normal leading-tight">
+                          <div className="hidden sm:block text-xs text-gray-500 dark:text-gray-400 break-words whitespace-normal leading-tight">
                             {isDoctorOnTimeOff(doctor.doctorId) ? t('appointmentBooking.timeOff') : t('appointmentBooking.available')}
                           </div>
                         </div>
                         {isDoctorOnTimeOff(doctor.doctorId) && (
                           <div className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full"></div>
                         )}
-                    </button>
+                      </button>
                     ))
                   ) : (
-                    <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 text-center text-xs text-gray-500">
+                    <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 text-center text-xs text-gray-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400">
                       {t('appointmentBooking.noDoctorsAvailable')}
                     </div>
                   )}
@@ -920,16 +918,15 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                       date.setDate(date.getDate() + i);
                       const isToday = i === 0;
                       const isSelected = selectedDate.toDateString() === date.toDateString();
-                      
+
                       return (
                         <button
                           key={i}
                           onClick={() => handleDateSelect(date)}
-                          className={`px-2 py-1.5 rounded-md border text-center min-w-[60px] lg:min-w-[70px] flex-shrink-0 transition-all text-xs ${
-                            isSelected
-                              ? 'bg-primary text-primary-foreground border-primary shadow-md scale-105'
-                              : 'bg-card border-border hover:border-primary/50 hover:bg-accent hover:scale-105'
-                          }`}
+                          className={`px-2 py-1.5 rounded-md border text-center min-w-[60px] lg:min-w-[70px] flex-shrink-0 transition-all text-xs ${isSelected
+                            ? 'bg-primary text-primary-foreground border-primary shadow-md scale-105'
+                            : 'bg-card border-border hover:border-primary/50 hover:bg-accent hover:scale-105'
+                            }`}
                         >
                           <div className="font-medium">
                             {isToday ? t('appointmentBooking.today') : new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(date)}
@@ -940,7 +937,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                         </button>
                       );
                     })}
-                    
+
                     {/* Calendar Picker */}
                     <Popover>
                       <PopoverTrigger asChild>
@@ -969,31 +966,29 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                     ⏰ {t('appointmentBooking.shiftSelection')}
                   </h2>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                                        {availableShifts.length > 0 ? (
+                    {availableShifts.length > 0 ? (
                       availableShifts.map((shift) => (
-                      <button
-                        key={shift.id}
-                        onClick={() => setSelectedShift(shift.id)}
-                        className={`p-2 rounded-md border text-center transition-all text-xs shadow-sm animate-scale-in ${
-                          selectedShift === shift.id
+                        <button
+                          key={shift.id}
+                          onClick={() => setSelectedShift(shift.id)}
+                          className={`p-2 rounded-md border text-center transition-all text-xs shadow-sm animate-scale-in ${selectedShift === shift.id
                             ? `bg-gradient-to-r ${shift.gradient} text-white border-transparent shadow-md scale-105`
-                            : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md hover-scale'
-                        }`}
-                      >
-                        <div className="text-sm mb-0.5">{shift.icon}</div>
-                        <div className="font-medium text-xs">{shift.label}</div>
-                        <div className={`text-xs mt-0.5 ${
-                          selectedShift === shift.id ? 'text-white/90' : 'text-gray-600'
-                        }`}>
-                          {shift.time}
-                        </div>
-                      </button>
+                            : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md hover-scale dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700'
+                            }`}
+                        >
+                          <div className="text-sm mb-0.5">{shift.icon}</div>
+                          <div className="font-medium text-xs">{shift.label}</div>
+                          <div className={`text-xs mt-0.5 ${selectedShift === shift.id ? 'text-white/90' : 'text-gray-600 dark:text-gray-400'
+                            }`}>
+                            {shift.time}
+                          </div>
+                        </button>
                       ))
-                                         ) : (
-                       <div className="col-span-full text-center py-4 text-gray-500">
-                         {t('appointmentBooking.noShiftsAvailable')}
-                       </div>
-                     )}
+                    ) : (
+                      <div className="col-span-full text-center py-4 text-gray-500">
+                        {t('appointmentBooking.noShiftsAvailable')}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1046,40 +1041,37 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                             return slotHour >= startHour && slotHour < endHour;
                           })
                           .map((slot) => (
-                          <button
-                            key={slot.id}
-                            onClick={() => !slot.isBooked && handleSlotSelect(slot)}
-                            disabled={slot.isBooked}
-                            className={`p-1.5 rounded-md border text-center transition-all text-xs min-h-[45px] flex flex-col justify-center shadow-sm hover:shadow-md animate-fade-in ${
-                              slot.isBooked
+                            <button
+                              key={slot.id}
+                              onClick={() => !slot.isBooked && handleSlotSelect(slot)}
+                              disabled={slot.isBooked}
+                              className={`p-1.5 rounded-md border text-center transition-all text-xs min-h-[45px] flex flex-col justify-center shadow-sm hover:shadow-md animate-fade-in ${slot.isBooked
                                 ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-200 cursor-not-allowed opacity-60'
                                 : selectedSlot?.id === slot.id
-                                ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-blue-500 text-white shadow-lg scale-105'
-                                : 'bg-gradient-to-br from-teal-50 to-emerald-100 border-teal-200 hover:from-teal-100 hover:to-emerald-200 hover:border-teal-300 hover-scale'
-                            }`}
-                          >
-                            <div className={`font-bold text-xs mb-0.5 ${
-                              selectedSlot?.id === slot.id ? 'text-white' : slot.isBooked ? 'text-red-700' : 'text-teal-700'
-                            }`}>
-                              {slot.time}
-                            </div>
-                            <div className={`text-xs px-1 py-0.5 rounded-full font-medium ${
-                              slot.isBooked
+                                  ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-blue-500 text-white shadow-lg scale-105'
+                                  : 'bg-gradient-to-br from-teal-50 to-emerald-100 border-teal-200 hover:from-teal-100 hover:to-emerald-200 hover:border-teal-300 hover-scale dark:from-teal-900/40 dark:to-emerald-900/40 dark:border-teal-800/50 dark:hover:border-teal-700'
+                                }`}
+                            >
+                              <div className={`font-bold text-xs mb-0.5 ${selectedSlot?.id === slot.id ? 'text-white' : slot.isBooked ? 'text-red-700 dark:text-red-400' : 'text-teal-700 dark:text-teal-300'
+                                }`}>
+                                {slot.time}
+                              </div>
+                              <div className={`text-xs px-1 py-0.5 rounded-full font-medium ${slot.isBooked
                                 ? 'bg-red-200 text-red-800'
                                 : selectedSlot?.id === slot.id
-                                ? 'bg-white/20 text-white'
-                                : 'bg-teal-200 text-teal-800'
-                            }`}>
-                              {slot.isBooked ? '❌' : selectedSlot?.id === slot.id ? '✅' : '✓'}
-                            </div>
-                            {slot.isBooked && (
-                              <div className="flex justify-center gap-0.5 mt-0.5 opacity-60">
-                                <span className="text-xs">📋</span>
-                                <span className="text-xs">✏️</span>
+                                  ? 'bg-white/20 text-white'
+                                  : 'bg-teal-200 text-teal-800 dark:bg-teal-900/60 dark:text-teal-300'
+                                }`}>
+                                {slot.isBooked ? '❌' : selectedSlot?.id === slot.id ? '✅' : '✓'}
                               </div>
-                            )}
-                          </button>
-                        ))}
+                              {slot.isBooked && (
+                                <div className="flex justify-center gap-0.5 mt-0.5 opacity-60">
+                                  <span className="text-xs">📋</span>
+                                  <span className="text-xs">✏️</span>
+                                </div>
+                              )}
+                            </button>
+                          ))}
                       </div>
                       {/* Time-Off Message */}
                       {doctorSlotsResponse?.isTimeOff && (

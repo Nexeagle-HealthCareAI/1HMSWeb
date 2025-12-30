@@ -629,7 +629,7 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   }
 
   // Follow Up Box
-  if (payload.followUp) {
+  if (payload.followUp && payload.followUp.followUpOn) {
     const boxH = lineHeight * 2.5;
 
     page.drawRectangle({

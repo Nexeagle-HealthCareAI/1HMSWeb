@@ -243,17 +243,17 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
     setIsSearching(true);
     clearSearchError();
-    
+
     try {
       const response = await searchPatients({
         by: searchField,
         q: searchQuery.trim(),
         scope: 'local'
       });
-      
+
       setSearchResults(response.items);
       setShowSearchResults(true);
-      
+
       console.log('Search results:', response);
     } catch (error) {
       console.error('Search error:', error);
@@ -286,7 +286,13 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhoneNumber(e.target.value);
+    let formatted = formatPhoneNumber(e.target.value);
+
+    // Prevent first digit from being 0
+    if (formatted.startsWith('0')) {
+      formatted = formatted.replace(/^0+/, '');
+    }
+
     setFormData(prev => ({ ...prev, phone: formatted }));
     setErrors(prev => {
       const nextErrors = { ...prev };
@@ -318,7 +324,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     try {
       // Generate patient ID automatically before sending request
       const generatedPatientId = generatePatientId();
-      
+
       // Prepare the appointment request
       const appointmentRequest: RegisterAppointmentRequest = {
         patient: {
@@ -355,11 +361,11 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       console.log('Appointment booking response:', response);
       console.log('Using patientId from API response:', response.patientId);
       console.log('Fallback generated patientId:', generatedPatientId);
-      
+
       // Pass the response data to the parent component
       const finalPatientId = response.patientId || generatedPatientId;
       console.log('Final patientId being passed:', finalPatientId);
-      
+
       onSubmit({
         ...formData,
         age: parseInt(formData.age),
@@ -418,7 +424,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                   <span className="font-medium">{t('patientForm.appointmentDetails.fee')}</span>
                 </div>
               </div>
-              
+
               {/* Patient Search - Enhanced */}
               <div className="mt-4 pt-3 border-t border-healthcare-primary/20 dark:border-blue-400/20">
                 <h4 className="font-medium text-foreground dark:text-white mb-2 text-sm flex items-center gap-1">
@@ -440,7 +446,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   {/* Search Input */}
                   <Input
                     value={searchQuery}
@@ -448,15 +454,15 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     placeholder={getSearchPlaceholder(searchField)}
                     className="text-xs h-8 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm"
                   />
-                  
+
                   {/* Search Help Text */}
                   <div className="text-xs text-muted-foreground dark:text-gray-400 space-y-1">
                     <p>💡 <strong>{t('patientForm.search.helpTitle', { field: getSearchFieldLabel(searchField) })}</strong></p>
                     {getSearchHelpText(searchField)}
                   </div>
-                  
-                  <Button 
-                    type="button" 
+
+                  <Button
+                    type="button"
                     size="sm"
                     className="w-full h-7 text-xs"
                     onClick={handleSearch}
@@ -465,15 +471,15 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     <Search className="h-3 w-3 mr-1" />
                     {isSearching || isSearchLoading ? t('patientForm.search.searching') : t('patientForm.search.submit')}
                   </Button>
-                  
+
                   {/* Search Error Display */}
                   {searchError && (
                     <div className="text-red-500 text-xs bg-red-50 dark:bg-red-900/20 p-2 rounded border border-red-200 dark:border-red-800">
                       <p>{t('patientForm.search.error', { error: searchError })}</p>
-                      <Button 
-                        type="button" 
-                        size="sm" 
-                        variant="outline" 
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
                         className="mt-1 h-6 text-xs"
                         onClick={clearSearchError}
                       >
@@ -647,9 +653,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                         <Checkbox
                           id="hasInsurance"
                           checked={formData.hasInsurance}
-                          onCheckedChange={(checked) => setFormData(prev => ({ 
-                            ...prev, 
-                            hasInsurance: !!checked, 
+                          onCheckedChange={(checked) => setFormData(prev => ({
+                            ...prev,
+                            hasInsurance: !!checked,
                             insuranceId: !!checked ? prev.insuranceId : '',
                             insuranceType: !!checked ? prev.insuranceType : ''
                           }))}
@@ -752,8 +758,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({
             {searchResults.length > 0 ? (
               <div className="grid gap-3">
                 {searchResults.map((patient, index) => (
-                  <Card 
-                    key={patient.patientId} 
+                  <Card
+                    key={patient.patientId}
                     className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors border-2 hover:border-blue-300"
                     onClick={() => handlePatientSelect(patient)}
                   >
@@ -768,7 +774,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                             <p className="text-sm text-muted-foreground">{t('patientForm.searchResults.id', { id: patient.patientId })}</p>
                           </div>
                         </div>
-                        
+
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div>
                             <span className="text-muted-foreground">{t('patientForm.searchResults.phone')}</span>
@@ -787,7 +793,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                             <p className="font-medium">{patient.lastRegistrationAt ? dateFormatter.format(new Date(patient.lastRegistrationAt)) : t('patientForm.searchResults.notAvailable')}</p>
                           </div>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mt-2">
                           <div>
                             <span className="text-muted-foreground">{t('patientForm.searchResults.address')}</span>
@@ -802,12 +808,12 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                             <p className="font-medium">{patient.pincode || t('patientForm.searchResults.notAvailable')}</p>
                           </div>
                         </div>
-                        
+
                         <div className="mt-2">
                           <span className="text-muted-foreground text-sm">{t('patientForm.searchResults.matchedBy')}</span>
                           <p className="text-sm">{patient.matched.by}: {patient.matched.value}</p>
                         </div>
-                        
+
                         {patient.appointmentDate && (
                           <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border">
                             <span className="text-muted-foreground text-sm">{t('patientForm.searchResults.upcoming')}</span>
@@ -818,10 +824,10 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="flex items-center gap-2">
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="outline"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -847,14 +853,14 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setShowSearchResults(false)}
             >
               {t('patientForm.searchResults.close')}
             </Button>
             {searchResults.length === 0 && (
-              <Button 
+              <Button
                 onClick={() => {
                   setShowSearchResults(false);
                   // Optionally clear search and focus on form

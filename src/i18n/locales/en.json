@@ -523,14 +523,14 @@
     "medications": "Medications",
     "emergencyContact": "Emergency Contact",
     "male": "Male",
-    "female": "Female",    
-      "clinic": "Clinic",
-      "polyclinic": "Polyclinic",
-      "nursingHome": "Nursing Home",
-      "generalHospital": "General Hospital",
-      "multispecialityHospital": "Multispeciality Hospital",
-      "superSpecialityHospital": "Super Speciality Hospital",
-      "other": "Other",
+    "female": "Female",
+    "clinic": "Clinic",
+    "polyclinic": "Polyclinic",
+    "nursingHome": "Nursing Home",
+    "generalHospital": "General Hospital",
+    "multispecialityHospital": "Multispeciality Hospital",
+    "superSpecialityHospital": "Super Speciality Hospital",
+    "other": "Other",
     "addPatient": "Add Patient",
     "addNewPatient": "Add New Patient",
     "updatePatient": "Update Patient",
@@ -1758,54 +1758,54 @@
         "revokeConfirm": "Revoke Access"
       },
       "na": "N/A"
+    },
+    "onboardedUsers": {
+      "loading": "Loading onboarded users...",
+      "error": "Error loading onboarded users",
+      "searchLabel": "Search",
+      "searchPlaceholder": "Search users by name, email, or phone...",
+      "roleLabel": "Role",
+      "rolePlaceholder": "Filter by role",
+      "allRoles": "All Roles",
+      "statusLabel": "Status",
+      "statusPlaceholder": "Filter by status",
+      "status": {
+        "all": "All Statuses",
+        "active": "Active",
+        "inactive": "Inactive"
       },
-      "onboardedUsers": {
-        "loading": "Loading onboarded users...",
-        "error": "Error loading onboarded users",
-        "searchLabel": "Search",
-        "searchPlaceholder": "Search users by name, email, or phone...",
-        "roleLabel": "Role",
-        "rolePlaceholder": "Filter by role",
-        "allRoles": "All Roles",
-        "statusLabel": "Status",
-        "statusPlaceholder": "Filter by status",
-        "status": {
-          "all": "All Statuses",
-          "active": "Active",
-          "inactive": "Inactive"
-        },
-        "emptyTitle": "No users found",
-        "emptyFilters": "Try adjusting your search or filters",
-        "emptyDefault": "No onboarded users yet",
-        "labels": {
-          "phone": "Phone",
-          "role": "Role",
-          "id": "ID",
-          "employeeId": "Employee ID",
-          "primaryUser": "Primary User"
-        },
-        "badges": {
-          "primary": "Primary"
-        },
-        "actions": {
-          "viewTooltip": "View Details",
-          "cannotDeactivateSelf": "Cannot deactivate yourself",
-          "deactivateUser": "Deactivate User",
-          "alreadyInactive": "User already inactive",
-          "moreOptions": "More Options"
-        },
-        "view": {
-          "title": "User Details",
-          "description": "Complete snapshot of the selected team member.",
-          "fullNameLabel": "Full Name",
-          "notProvided": "Not provided",
-          "contact": "Contact",
-          "identity": "Identity",
-          "roles": "Roles",
-          "permissions": "Permissions"
-        },
-        "unknownRole": "Unknown",
-        "na": "N/A"
+      "emptyTitle": "No users found",
+      "emptyFilters": "Try adjusting your search or filters",
+      "emptyDefault": "No onboarded users yet",
+      "labels": {
+        "phone": "Phone",
+        "role": "Role",
+        "id": "ID",
+        "employeeId": "Employee ID",
+        "primaryUser": "Primary User"
+      },
+      "badges": {
+        "primary": "Primary"
+      },
+      "actions": {
+        "viewTooltip": "View Details",
+        "cannotDeactivateSelf": "Cannot deactivate yourself",
+        "deactivateUser": "Deactivate User",
+        "alreadyInactive": "User already inactive",
+        "moreOptions": "More Options"
+      },
+      "view": {
+        "title": "User Details",
+        "description": "Complete snapshot of the selected team member.",
+        "fullNameLabel": "Full Name",
+        "notProvided": "Not provided",
+        "contact": "Contact",
+        "identity": "Identity",
+        "roles": "Roles",
+        "permissions": "Permissions"
+      },
+      "unknownRole": "Unknown",
+      "na": "N/A"
     }
   },
   "appointmentBooking": {
@@ -2082,10 +2082,26 @@
       "defaultDoctorName": "Dr. Current User"
     },
     "nav": {
-      "appointments": { "label": "Appointments", "short": "Appts", "description": "Monitor today’s queue" },
-      "calendar": { "label": "My Calendar", "short": "Cal", "description": "Plan your week" },
-      "assistant": { "label": "AI Assistant", "short": "AI", "description": "Summaries & insights" },
-      "settings": { "label": "Prescription Settings", "short": "Settings", "description": "Personalize layouts" },
+      "appointments": {
+        "label": "Appointments",
+        "short": "Appts",
+        "description": "Monitor today’s queue"
+      },
+      "calendar": {
+        "label": "My Calendar",
+        "short": "Cal",
+        "description": "Plan your week"
+      },
+      "assistant": {
+        "label": "AI Assistant",
+        "short": "AI",
+        "description": "Summaries & insights"
+      },
+      "settings": {
+        "label": "Prescription Settings",
+        "short": "Settings",
+        "description": "Personalize layouts"
+      },
       "lockedMessage": "Complete your profile to unlock this section"
     },
     "alerts": {
@@ -2127,9 +2143,18 @@
       "swipeHint": "Swipe to explore",
       "expandSidebar": "Expand appointment sidebar",
       "collapseSidebar": "Collapse appointment sidebar",
-      "current": { "label": "Current Appointments", "subLabel": "Live queue & vitals" },
-      "past": { "label": "Past Visits", "subLabel": "History & follow-ups" },
-      "future": { "label": "Upcoming Schedule", "subLabel": "Next 7 days" }
+      "current": {
+        "label": "Current Appointments",
+        "subLabel": "Live queue & vitals"
+      },
+      "past": {
+        "label": "Past Visits",
+        "subLabel": "History & follow-ups"
+      },
+      "future": {
+        "label": "Upcoming Schedule",
+        "subLabel": "Next 7 days"
+      }
     },
     "statusBadge": {
       "vitalsRequired": "Vitals Required",
@@ -2440,14 +2465,14 @@
       "bmi": "BMI (Body Mass Index)"
     },
     "placeholders": {
-      "systolic": "120",
-      "diastolic": "80",
-      "heartRate": "72",
-      "respiratoryRate": "16",
-      "temperature": "37.0",
-      "oxygenSaturation": "98",
-      "height": "170",
-      "weight": "70"
+      "systolic": "e.g. 120",
+      "diastolic": "e.g. 80",
+      "heartRate": "e.g. 72",
+      "respiratoryRate": "e.g. 16",
+      "temperature": "e.g. 37.0",
+      "oxygenSaturation": "e.g. 98",
+      "height": "e.g. 170",
+      "weight": "e.g. 70"
     },
     "bmi": {
       "prompt": "Enter height & weight",
@@ -2459,8 +2484,8 @@
       }
     },
     "optionalStep": {
-      "title": "Optional Step:",
-      "description": "Vital signs help us provide better care, but you can proceed without entering them if you prefer."
+      "title": "Recording vital signs is optional but helps provide better care.",
+      "description": "You can skip this step if needed."
     },
     "actions": {
       "skip": "Skip This Step",
@@ -2845,23 +2870,51 @@
       "completion": "Profile completion {{percent}}%",
       "basic": {
         "title": "Basic Information",
-        "fullName": { "label": "Full Name" },
-        "email": { "label": "Email Address" },
-        "phone": { "label": "Phone Number" },
-        "dob": { "label": "Date of Birth" },
-        "gender": { "label": "Gender" },
-        "bloodGroup": { "label": "Blood Group" }
+        "fullName": {
+          "label": "Full Name"
+        },
+        "email": {
+          "label": "Email Address"
+        },
+        "phone": {
+          "label": "Phone Number"
+        },
+        "dob": {
+          "label": "Date of Birth"
+        },
+        "gender": {
+          "label": "Gender"
+        },
+        "bloodGroup": {
+          "label": "Blood Group"
+        }
       },
       "address": {
         "title": "Address & Contact",
-        "address1": { "label": "Address Line 1" },
-        "address2": { "label": "Address Line 2" },
-        "city": { "label": "City" },
-        "state": { "label": "State" },
-        "country": { "label": "Country" },
-        "pincode": { "label": "Pincode" },
-        "emergencyName": { "label": "Emergency Contact Name" },
-        "emergencyNumber": { "label": "Emergency Contact Number" }
+        "address1": {
+          "label": "Address Line 1"
+        },
+        "address2": {
+          "label": "Address Line 2"
+        },
+        "city": {
+          "label": "City"
+        },
+        "state": {
+          "label": "State"
+        },
+        "country": {
+          "label": "Country"
+        },
+        "pincode": {
+          "label": "Pincode"
+        },
+        "emergencyName": {
+          "label": "Emergency Contact Name"
+        },
+        "emergencyNumber": {
+          "label": "Emergency Contact Number"
+        }
       },
       "save": "Save Personal Information"
     },

@@ -31,7 +31,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
   const { mutate: saveVitals, isPending } = useSaveVitals();
   const { userId } = useAuthStore();
   const { t } = useTranslation();
-  
+
   const [vitalsData, setVitalsData] = useState({
     systolic: '',
     diastolic: '',
@@ -49,21 +49,21 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
   const calculateBMI = () => {
     const height = parseFloat(vitalsData.height);
     const weight = parseFloat(vitalsData.weight);
-    
+
     if (!height || !weight) return '';
-    
+
     let heightInMeters = height;
     if (vitalsData.heightUnit === 'cm') {
       heightInMeters = height / 100;
     } else if (vitalsData.heightUnit === 'ft') {
       heightInMeters = height * 0.3048;
     }
-    
+
     let weightInKg = weight;
     if (vitalsData.weightUnit === 'lbs') {
       weightInKg = weight * 0.453592;
     }
-    
+
     const bmi = weightInKg / (heightInMeters * heightInMeters);
     return bmi.toFixed(1);
   };
@@ -90,21 +90,21 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
           dia: parseInt(vitalsData.diastolic) || 0
         },
         pulse: parseInt(vitalsData.heartRate) || 0,
-        tempC: vitalsData.temperatureUnit === 'C' 
+        tempC: vitalsData.temperatureUnit === 'C'
           ? parseFloat(vitalsData.temperature) || 0
-          : ((parseFloat(vitalsData.temperature) || 0) - 32) * 5/9, // Convert F to C
+          : ((parseFloat(vitalsData.temperature) || 0) - 32) * 5 / 9, // Convert F to C
         spo2: parseInt(vitalsData.oxygenSaturation) || 0,
-        heightCm: vitalsData.heightUnit === 'cm' 
+        heightCm: vitalsData.heightUnit === 'cm'
           ? parseFloat(vitalsData.height) || 0
           : parseFloat(vitalsData.height) * 30.48, // Convert ft to cm
-        weightKg: vitalsData.weightUnit === 'kg' 
+        weightKg: vitalsData.weightUnit === 'kg'
           ? parseFloat(vitalsData.weight) || 0
           : parseFloat(vitalsData.weight) * 0.453592, // Convert lbs to kg
         bmi: parseFloat(bmi) || 0
       },
       recordedBy: userId || ''
     };
-    
+
     console.log('Sending vitals API request with:', apiVitalsData);
 
     // Call the API to save vitals
@@ -163,7 +163,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                   value={vitalsData.systolic}
                   onChange={(e) => setVitalsData(prev => ({ ...prev, systolic: e.target.value }))}
                   placeholder={t('vitalsForm.placeholders.systolic')}
-                  className="h-9"
+                  className="h-9 placeholder:text-muted-foreground/70"
                 />
               </div>
 
@@ -230,7 +230,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                     value={vitalsData.temperature}
                     onChange={(e) => setVitalsData(prev => ({ ...prev, temperature: e.target.value }))}
                     placeholder={t('vitalsForm.placeholders.temperature')}
-                    className="flex-1 h-9"
+                    className="flex-1 h-9 placeholder:text-muted-foreground/70"
                   />
                   <select
                     value={vitalsData.temperatureUnit}
@@ -278,7 +278,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                     value={vitalsData.height}
                     onChange={(e) => setVitalsData(prev => ({ ...prev, height: e.target.value }))}
                     placeholder={t('vitalsForm.placeholders.height')}
-                    className="flex-1 h-9"
+                    className="flex-1 h-9 placeholder:text-muted-foreground/70"
                   />
                   <select
                     value={vitalsData.heightUnit}
@@ -303,7 +303,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
                     value={vitalsData.weight}
                     onChange={(e) => setVitalsData(prev => ({ ...prev, weight: e.target.value }))}
                     placeholder={t('vitalsForm.placeholders.weight')}
-                    className="flex-1 h-9"
+                    className="flex-1 h-9 placeholder:text-muted-foreground/70"
                   />
                   <select
                     value={vitalsData.weightUnit}
@@ -341,9 +341,10 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
           </Card>
 
           {!hideSkipButton && (
-            <div className="bg-muted/50 p-3 rounded-lg border-l-4 border-healthcare-primary/50 mb-3">
-              <p className="text-sm text-muted-foreground">
-                💡 <strong>{t('vitalsForm.optionalStep.title')}</strong> {t('vitalsForm.optionalStep.description')}
+            <div className="flex items-start gap-2 mb-4 px-1 opacity-80 hover:opacity-100 transition-opacity">
+              <span className="text-base mt-0.5">💡</span>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                <span className="font-semibold text-foreground">{t('vitalsForm.optionalStep.title')}</span> {t('vitalsForm.optionalStep.description')}
               </p>
             </div>
           )}
