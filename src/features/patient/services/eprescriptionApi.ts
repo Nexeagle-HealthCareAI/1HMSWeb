@@ -127,13 +127,15 @@ export interface EPrescriptionDraftReq {
     };
     followUp?: {
         followUpOn: string;
-        reason: string;
-        patientInstructions: string;
-        referralEnabled: boolean;
+        reason: {
+            reason: string;
+            patientInstructions: string;
+        };
         referral: {
             referredTo: {
                 specialty: string;
                 doctorName: string;
+                referralEnabled: boolean;
             };
             clinicalSummary: string;
         };

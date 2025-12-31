@@ -355,13 +355,15 @@ const AutoSaveHandler: React.FC<{
         certificates: JSON.stringify((prescriptionData.certificates && prescriptionData.certificates.length > 0) ? prescriptionData.certificates[0] : undefined),
         followUp: JSON.stringify({
           followUpOn: prescriptionData.followUp.followUpOn,
-          reason: prescriptionData.followUp.reason,
-          patientInstructions: prescriptionData.followUp.patientInstructions || '',
-          referralEnabled: prescriptionData.followUp.referralEnabled || false,
+          reason: {
+            reason: prescriptionData.followUp.reason,
+            patientInstructions: prescriptionData.followUp.patientInstructions || ''
+          },
           referral: {
             referredTo: {
               specialty: prescriptionData.followUp.referral?.referredTo?.specialty || '',
-              doctorName: prescriptionData.followUp.referral?.referredTo?.doctorName || ''
+              doctorName: prescriptionData.followUp.referral?.referredTo?.doctorName || '',
+              referralEnabled: prescriptionData.followUp.referralEnabled || false
             },
             clinicalSummary: prescriptionData.followUp.referral?.clinicalSummary || ''
           }
@@ -432,13 +434,15 @@ const AutoSaveHandler: React.FC<{
           certificates: (prescriptionData.certificates && prescriptionData.certificates.length > 0) ? prescriptionData.certificates[0] : undefined,
           followUp: {
             followUpOn: prescriptionData.followUp.followUpOn,
-            reason: prescriptionData.followUp.reason,
-            patientInstructions: prescriptionData.followUp.patientInstructions || '',
-            referralEnabled: prescriptionData.followUp.referralEnabled || false,
+            reason: {
+              reason: prescriptionData.followUp.reason,
+              patientInstructions: prescriptionData.followUp.patientInstructions || '',
+            },
             referral: {
               referredTo: {
                 specialty: prescriptionData.followUp.referral?.referredTo?.specialty || '',
-                doctorName: prescriptionData.followUp.referral?.referredTo?.doctorName || ''
+                doctorName: prescriptionData.followUp.referral?.referredTo?.doctorName || '',
+                referralEnabled: prescriptionData.followUp.referralEnabled || false,
               },
               clinicalSummary: prescriptionData.followUp.referral?.clinicalSummary || ''
             }
@@ -658,13 +662,15 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
           } : undefined,
           followUp: {
             followUpOn: prescriptionData.followUp.followUpOn,
-            reason: prescriptionData.followUp.reason,
-            patientInstructions: prescriptionData.followUp.patientInstructions || '',
-            referralEnabled: prescriptionData.followUp.referralEnabled || false,
+            reason: {
+              reason: prescriptionData.followUp.reason,
+              patientInstructions: prescriptionData.followUp.patientInstructions || '',
+            },
             referral: {
               referredTo: {
                 specialty: prescriptionData.followUp.referral?.referredTo?.specialty || '',
-                doctorName: prescriptionData.followUp.referral?.referredTo?.doctorName || ''
+                doctorName: prescriptionData.followUp.referral?.referredTo?.doctorName || '',
+                referralEnabled: prescriptionData.followUp.referralEnabled || false,
               },
               clinicalSummary: prescriptionData.followUp.referral?.clinicalSummary || ''
             }
@@ -767,13 +773,15 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
           } : undefined,
           followUp: {
             followUpOn: prescriptionData.followUp.followUpOn,
-            reason: prescriptionData.followUp.reason,
-            patientInstructions: prescriptionData.followUp.patientInstructions || '',
-            referralEnabled: prescriptionData.followUp.referralEnabled || false,
+            reason: {
+              reason: prescriptionData.followUp.reason,
+              patientInstructions: prescriptionData.followUp.patientInstructions || '',
+            },
             referral: {
               referredTo: {
                 specialty: prescriptionData.followUp.referral?.referredTo?.specialty || '',
-                doctorName: prescriptionData.followUp.referral?.referredTo?.doctorName || ''
+                doctorName: prescriptionData.followUp.referral?.referredTo?.doctorName || '',
+                referralEnabled: prescriptionData.followUp.referralEnabled || false,
               },
               clinicalSummary: prescriptionData.followUp.referral?.clinicalSummary || ''
             }
@@ -1174,13 +1182,14 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
           })),
           followUp: draft.followUp ? {
             followUpOn: draft.followUp.followUpOn ? draft.followUp.followUpOn.split('T')[0] : '',
-            reason: draft.followUp.reason || '',
-            patientInstructions: draft.followUp.patientInstructions || '',
-            referralEnabled: draft.followUp.referralEnabled || false,
+            reason: draft.followUp.reason?.reason || '',
+            patientInstructions: draft.followUp.reason?.patientInstructions || '',
+            referralEnabled: draft.followUp.referral?.referredTo?.referralEnabled || false,
             referral: {
               referredTo: {
                 specialty: draft.followUp.referral?.referredTo?.specialty || '',
-                doctorName: draft.followUp.referral?.referredTo?.doctorName || ''
+                doctorName: draft.followUp.referral?.referredTo?.doctorName || '',
+                facilityId: '', facilityName: ''
               },
               clinicalSummary: draft.followUp.referral?.clinicalSummary || '',
               reason: '', urgency: 'Routine', requestedAction: '', attachments: []
@@ -1714,6 +1723,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
   };
 
   const updateMedication = (id: string, field: keyof EPrescriptionData['medications'][number], value: string) => {
+    // console.log(`[updateMedication] id=${id} field=${field} value=${value}`);
     setActiveMedicationId(id);
     setPrescriptionData(prev => ({
       ...prev,
@@ -3511,7 +3521,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           <div className="h-1 w-full rounded-full bg-gradient-to-r from-blue-500/20 via-indigo-500/20 to-purple-500/20" />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-[1.8fr,0.8fr,0.8fr,0.8fr,0.9fr,0.9fr] gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-[1.5fr,0.7fr,0.7fr,0.7fr,1.4fr,1fr] gap-3">
                           <div className="space-y-1 relative">
                             <Label className="text-xs text-gray-600">Name *</Label>
                             <Input
@@ -3727,19 +3737,19 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
 
                           <div className="space-y-1">
                             <Label className="text-xs text-gray-600">Duration</Label>
-                            <div className="flex">
+                            <div className="flex gap-2">
                               <Input
-                                placeholder="e.g., 5"
+                                placeholder="5"
                                 value={medication.duration}
                                 onChange={(e) => updateMedication(medication.id, 'duration', e.target.value)}
                                 onFocus={() => setActiveMedicationId(medication.id)}
-                                className="h-9 text-sm rounded-r-none focus:z-10"
+                                className="h-9 text-sm flex-1 min-w-0 border-gray-200 dark:border-gray-700 focus:border-blue-400 dark:focus:border-blue-300 dark:bg-gray-900 dark:text-gray-100"
                               />
                               <select
                                 value={medication.durationUnit || 'days'}
                                 onChange={(e) => updateMedication(medication.id, 'durationUnit', e.target.value)}
                                 onFocus={() => setActiveMedicationId(medication.id)}
-                                className="h-9 text-sm border border-gray-200 rounded-l-none rounded-r-md px-2 text-gray-700 bg-white -ml-px focus:z-10"
+                                className="h-9 text-sm border border-gray-200 dark:border-gray-700 rounded-md px-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40"
                               >
                                 <option value="days">Days</option>
                                 <option value="weeks">Weeks</option>
@@ -3749,7 +3759,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           </div>
 
                           <div className="space-y-1">
-                            <Label className="text-xs text-gray-600">Instructions</Label>
+                            <Label className="text-xs text-gray-600 dark:text-gray-400">Instructions</Label>
                             <Input
                               placeholder="e.g., After food"
                               value={medication.instructions}
