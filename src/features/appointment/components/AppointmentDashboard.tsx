@@ -800,18 +800,76 @@ export const AppointmentDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3 shadow-sm">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-white">{t('appointmentDashboard.title')}</h1>
-          <Button
-            variant="outline"
-            onClick={handleBookingClick}
-            className="group flex items-center gap-2 border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
-          >
-            <Plus className="h-4 w-4 text-gray-600 dark:text-gray-300 transition-transform group-hover:translate-x-1" />
-            <span className="text-gray-700 dark:text-gray-200 font-medium">{t('appointmentDashboard.bookAppointment')}</span>
-          </Button>
+      {/* Header - AdminDashboard Style */}
+      <div className="px-3 sm:px-4 lg:px-6 py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-gradient-to-br from-white via-blue-50/60 to-indigo-50 dark:from-slate-900 dark:via-slate-900/80 dark:to-slate-900 border-b border-white/70 dark:border-slate-800 rounded-2xl shadow-lg shadow-blue-100/30 dark:shadow-black/30 px-3 py-3 sm:px-6 sm:py-4">
+
+          {/* Left: Title and Actions */}
+          <div className="flex flex-col gap-1 min-w-0">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
+                {t('appointmentDashboard.title')}
+              </h1>
+
+              <Button
+                onClick={handleBookingClick}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 rounded-full px-5 sm:px-6 h-9 sm:h-10 gap-2 ml-2 transition-all duration-300 hover:-translate-y-0.5"
+              >
+                <div className="bg-white/20 rounded-full p-1">
+                  <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
+                </div>
+                <span className="hidden sm:inline font-semibold tracking-wide">{t('appointmentDashboard.bookAppointment')}</span>
+                <span className="sm:hidden font-semibold">Book</span>
+              </Button>
+            </div>
+
+            {/* Live Status Indicators */}
+            {activeTab === 'current' && (
+              <div className="flex items-center gap-2 mt-1 px-1">
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/50 dark:bg-slate-800/50 border border-blue-100 dark:border-slate-700 text-[10px] sm:text-xs font-medium text-gray-600 dark:text-gray-300">
+                  {isRefreshing ? <RefreshCw className="h-3 w-3 animate-spin text-blue-500" /> : <Activity className="h-3 w-3 text-emerald-500" />}
+                  <span>{isRefreshing ? 'Updating...' : 'Live System'}</span>
+                  <div className="w-px h-3 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+                  {connectionStatus === 'online' ? <Wifi className="h-3 w-3 text-emerald-500" /> : <WifiOff className="h-3 w-3 text-red-500" />}
+                  <span className={connectionStatus === 'online' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>
+                    {connectionStatus === 'online' ? 'Online' : 'Offline'}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right: Navigation Tabs */}
+          <nav className="flex flex-wrap gap-2 bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-1 shadow-inner shadow-white/60 dark:shadow-black/40 mt-3 sm:mt-0 min-w-[220px] justify-end">
+            {[
+              { key: 'current', label: t('appointmentDashboard.tabs.current'), Icon: Clock, desc: 'Active Queue' },
+              { key: 'past', label: t('appointmentDashboard.tabs.past'), Icon: Calendar, desc: 'History' },
+              { key: 'future', label: t('appointmentDashboard.tabs.future'), Icon: CalendarDays, desc: 'Upcoming' },
+            ].map((tab) => {
+              const isActive = activeTab === tab.key;
+              const Icon = tab.Icon;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key as any)}
+                  className={`group flex-1 lg:flex-none min-w-[96px] flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-2.5 py-1.5 border transition-all duration-300 text-[12px] ${isActive
+                    ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white border-transparent shadow-xl shadow-blue-500/30'
+                    : 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800/70'
+                    } hover:-translate-y-0.5`}
+                >
+                  <div className="flex items-center gap-1.5 text-[12px] font-semibold">
+                    <span className={`p-1 rounded-lg ${isActive ? 'bg-white/20' : 'bg-gray-100 dark:bg-slate-800'}`}>
+                      <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-blue-500 dark:text-blue-400'}`} />
+                    </span>
+                    <span>{tab.label}</span>
+                  </div>
+                  <span className={`hidden sm:block text-[10px] leading-snug ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'}`}>
+                    {tab.desc}
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
         </div>
       </div>
 
@@ -821,43 +879,7 @@ export const AppointmentDashboard = () => {
         <div className="w-full">
           {/* Current Appointments Section */}
           <div className="space-y-4">
-            {/* Appointment Type Tabs */}
-            <div className="mb-2 sm:mb-4">
-              <div className="flex flex-col sm:flex-row sm:space-x-1 space-y-2 sm:space-y-0 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
-                {[
-                  { key: 'current', label: t('appointmentDashboard.tabs.current') },
-                  { key: 'past', label: t('appointmentDashboard.tabs.past') },
-                  { key: 'future', label: t('appointmentDashboard.tabs.future') },
-                ].map((tab) => (
-                  <button
-                    key={tab.key}
-                    onClick={() => setActiveTab(tab.key as 'current' | 'past' | 'future')}
-                    className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 relative ${activeTab === tab.key
-                      ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                      }`}
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      <span>{tab.label}</span>
-                      {tab.key === 'current' && (
-                        <div className="flex items-center gap-1">
-                          {isRefreshing ? (
-                            <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />
-                          ) : (
-                            <Activity className="h-3 w-3 text-green-500" />
-                          )}
-                          {connectionStatus === 'online' ? (
-                            <Wifi className="h-3 w-3 text-green-500" />
-                          ) : (
-                            <WifiOff className="h-3 w-3 text-red-500" />
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
+
 
             {/* Compact Search Bar */}
             <div className="mb-4">

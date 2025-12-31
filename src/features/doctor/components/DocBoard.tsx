@@ -59,6 +59,7 @@ import {
   Layout,
   LayoutDashboard,
   ListChecks,
+  PrinterIcon,
   Loader2,
   Lock,
   Maximize2,
@@ -747,7 +748,7 @@ export const ClinicalDashboard: React.FC = () => {
     }
   }, [windowWidth, isSettingsNavCollapsed]);
 
-  const tabBarStickyOffset = Math.max(headerHeight, 0) + 16;
+  const tabBarStickyOffset = 16;
   const computeScale = (width: number) => {
     if (width < 1024) return 1;
     if (width >= 1600) return 1;
@@ -779,89 +780,81 @@ export const ClinicalDashboard: React.FC = () => {
         className="flex flex-col flex-1 w-full"
         style={{ pointerEvents: isDoctorExperienceLocked ? 'none' : 'auto', opacity: isDoctorExperienceLocked ? 0.5 : 1 }}
       >
-        {/* Header - Mobile Responsive */}
-        <div
-          ref={headerRef}
-          className="bg-gradient-to-br from-white via-blue-50/60 to-indigo-50 dark:from-slate-900 dark:via-slate-900/80 dark:to-slate-900 border-b border-white/70 dark:border-slate-800 px-3 sm:px-6 py-4 shadow-lg flex-shrink-0 sticky top-0 z-30 backdrop-blur"
-        >
-          <div className="w-full mx-auto">
-            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">{t('docBoard.header.title')}</h1>
-                    {clampedProfileCompletion < 100 && (
-                      <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2 text-[11px] sm:text-xs">
-                        <button
-                          type="button"
-                          onClick={() => navigate('/profile?tab=professional')}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white/80 dark:bg-slate-900/70 border border-blue-100 dark:border-slate-800 shadow-inner transition-transform hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
-                          title={t('docBoard.header.viewProfessionalProfile')}
-                        >
-                          <span className="uppercase tracking-wide text-blue-600 dark:text-blue-300 font-semibold">{t('docBoard.header.professionalProfile')}</span>
-                          <div className="flex items-center gap-1 text-gray-900 dark:text-white font-bold">
-                            {clampedProfileCompletion}%
-                            {clampedProfileCompletion === 100 && <CircleCheck className="h-3.5 w-3.5 text-emerald-500" />}
-                          </div>
-                        </button>
-                        <div className="h-1.5 w-full sm:w-48 bg-blue-100/70 dark:bg-slate-800 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full transition-all duration-500"
-                            style={{ width: `${clampedProfileCompletion}%` }}
-                            aria-label={`Professional profile completion ${clampedProfileCompletion}%`}
-                          />
-                        </div>
-                      </div>
-                    )}
+        {/* Header - Matches AdminDashboard */}
+        <div ref={headerRef} className="px-3 sm:px-4 lg:px-6 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-gradient-to-br from-white via-blue-50/60 to-indigo-50 dark:from-slate-900 dark:via-slate-900/80 dark:to-slate-900 border-b border-white/70 dark:border-slate-800 rounded-2xl shadow-lg shadow-blue-100/30 dark:shadow-black/30 px-3 py-3 sm:px-6 sm:py-4">
+
+            {/* Left: Title and Profile Stats */}
+            <div className="flex flex-col gap-1 min-w-0">
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
+                  {t('docBoard.header.title')}
+                </h1>
+
+                {clampedProfileCompletion < 100 && (
+                  <div className="flex items-center gap-2 text-[11px] sm:text-xs">
+                    <button
+                      type="button"
+                      onClick={() => navigate('/profile?tab=professional')}
+                      className="flex items-center gap-2 px-3 py-1 text-xs rounded-full bg-white/50 dark:bg-slate-800/50 border border-blue-100 dark:border-slate-700 hover:bg-blue-50 transition-colors"
+                      title={t('docBoard.header.viewProfessionalProfile')}
+                    >
+                      <span className="font-semibold text-blue-700 dark:text-blue-300">
+                        {clampedProfileCompletion}%
+                      </span>
+                      <span className="text-gray-500 dark:text-gray-400">Complete</span>
+                    </button>
+                    {/* Progress bar removed to match cleaner admin look, or could be kept if compact */}
                   </div>
-                  {!doctorProfileRestricted && profileCompletionPercentage === 100 && (
-                    <Badge className="ml-2 bg-white/80 dark:bg-slate-800/80 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-500/40 flex items-center gap-1 px-2.5 py-1 text-xs font-semibold shadow-sm">
-                      <UserCheck className="h-3.5 w-3.5 text-green-600" />
-                      {t('docBoard.header.verified')}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-              <div className="w-full lg:w-auto">
-                <div className="flex flex-wrap gap-1.5 bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-1 shadow-inner shadow-white/60 dark:shadow-black/40">
-                  {navButtons.map(({ key, label, shortLabel, Icon, requiresProfile, description }) => {
-                    const isActive = activeNavButton === key;
-                    const locked = requiresProfile && doctorProfileRestricted;
-                    return (
-                      <button
-                        key={key}
-                        onClick={() => {
-                          if (!locked) setActiveNavButton(key);
-                        }}
-                        disabled={locked}
-                        aria-disabled={locked}
-                        aria-pressed={isActive}
-                        tabIndex={locked ? -1 : 0}
-                        title={locked ? (doctorProfileMessage || t('docBoard.nav.lockedMessage')) : description}
-                        className={`group flex-1 lg:flex-none min-w-[96px] flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-2.5 py-1.5 border transition-all duration-300 text-[12px] ${isActive
-                          ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white border-transparent shadow-xl shadow-blue-500/30'
-                          : 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800/70'
-                          } ${locked ? 'opacity-40 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
-                      >
-                        <div className="flex items-center gap-1.5 text-[12px] font-semibold">
-                          <span className={`p-1 rounded-lg ${isActive ? 'bg-white/20' : 'bg-gray-100 dark:bg-slate-800'}`}>
-                            <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-blue-500 dark:text-blue-400'}`} />
-                          </span>
-                          <span className="hidden sm:inline">{label}</span>
-                          <span className="sm:hidden">{shortLabel}</span>
-                        </div>
-                        <span className={`hidden sm:block text-[10px] leading-snug ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'}`}>
-                          {description}
-                        </span>
-                        <span className={`block text-[10px] leading-snug truncate w-full ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'} sm:hidden`}>
-                          {description}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                )}
+
+                {!doctorProfileRestricted && profileCompletionPercentage === 100 && (
+                  <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border-green-200 text-xs font-semibold shadow-sm">
+                    <UserCheck className="h-3 w-3 mr-1" />
+                    {t('docBoard.header.verified')}
+                  </Badge>
+                )}
               </div>
             </div>
+
+            {/* Right: Navigation Tabs */}
+            <nav className="flex flex-wrap gap-2 bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-1 shadow-inner shadow-white/60 dark:shadow-black/40 mt-3 sm:mt-0 min-w-[220px] justify-end">
+              {navButtons.map(({ key, label, shortLabel, Icon, requiresProfile, description }) => {
+                const isActive = activeNavButton === key;
+                const locked = requiresProfile && doctorProfileRestricted;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      if (!locked) setActiveNavButton(key);
+                    }}
+                    disabled={locked}
+                    aria-disabled={locked}
+                    aria-pressed={isActive}
+                    tabIndex={locked ? -1 : 0}
+                    title={locked ? (doctorProfileMessage || t('docBoard.nav.lockedMessage')) : description}
+                    className={`group flex-1 lg:flex-none min-w-[96px] flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-2.5 py-1.5 border transition-all duration-300 text-[12px] ${isActive
+                      ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white border-transparent shadow-xl shadow-blue-500/30'
+                      : 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800/70'
+                      } ${locked ? 'opacity-40 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
+                  >
+                    <div className="flex items-center gap-1.5 text-[12px] font-semibold">
+                      <span className={`p-1 rounded-lg ${isActive ? 'bg-white/20' : 'bg-gray-100 dark:bg-slate-800'}`}>
+                        <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-blue-500 dark:text-blue-400'}`} />
+                      </span>
+                      <span className="hidden sm:inline">{label}</span>
+                      <span className="sm:hidden">{shortLabel}</span>
+                    </div>
+                    <span className={`hidden sm:block text-[10px] leading-snug ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'}`}>
+                      {description}
+                    </span>
+                    <span className={`block text-[10px] leading-snug truncate w-full ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'} sm:hidden`}>
+                      {description}
+                    </span>
+                  </button>
+                );
+              })}
+            </nav>
           </div>
         </div>
 
@@ -1046,85 +1039,55 @@ export const ClinicalDashboard: React.FC = () => {
                 className="flex flex-col lg:flex-row gap-3 lg:gap-6 items-start"
               >
                 <div
-                  className={`w-full ${isSidebarCollapsed ? 'lg:w-[4.5rem] xl:w-20' : 'lg:w-64 xl:w-72'} lg:sticky lg:self-start transition-all duration-300`}
+                  className={`w-full ${isSidebarCollapsed ? 'lg:w-[4.5rem] xl:w-20' : 'lg:w-64 xl:w-72'} lg:sticky lg:self-start transition-all duration-300 z-10`}
                   style={{ top: `${tabBarStickyOffset}px` }}
                 >
-                  <div className="bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-4 shadow-lg h-full lg:min-h-[calc(100vh-160px)] flex flex-col">
-                    <div className={`mb-2 px-1 flex items-center justify-end gap-2 ${isSidebarCollapsed ? 'lg:flex-col lg:items-center lg:gap-1.5' : ''}`}>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-gray-400 lg:hidden">{t('docBoard.tabs.swipeHint')}</span>
-                        <button
-                          type="button"
-                          onClick={() => setIsSidebarCollapsed((prev) => !prev)}
-                          className="hidden lg:inline-flex items-center justify-center rounded-full border border-gray-200 dark:border-gray-800 p-1.5 text-gray-500 dark:text-gray-300 hover:text-blue-600 hover:border-blue-200 dark:hover:text-blue-300 transition-colors"
-                          aria-pressed={isSidebarCollapsed}
-                          aria-expanded={!isSidebarCollapsed}
-                          aria-controls="appointment-views-nav"
-                          aria-label={isSidebarCollapsed ? t('docBoard.tabs.expandSidebar') : t('docBoard.tabs.collapseSidebar')}
-                        >
-                          {isSidebarCollapsed ? (
-                            <Expand className="h-3.5 w-3.5" aria-hidden />
-                          ) : (
-                            <X className="h-3.5 w-3.5" aria-hidden />
-                          )}
-                          <span className="sr-only">{isSidebarCollapsed ? t('docBoard.tabs.expandSidebar') : t('docBoard.tabs.collapseSidebar')}</span>
-                        </button>
-                      </div>
+                  <div className="bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl shadow-sm h-full lg:min-h-[calc(100vh-160px)] flex flex-col backdrop-blur-md">
+                    <div className={`p-4 flex items-center ${isSidebarCollapsed ? 'justify-center lg:flex-col lg:gap-4' : 'justify-between'}`}>
+                      {!isSidebarCollapsed && (
+                        <div className="hidden lg:block text-xs font-bold text-gray-400 uppercase tracking-widest pl-2">
+                          Views
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setIsSidebarCollapsed((prev) => !prev)}
+                        className="hidden lg:inline-flex items-center justify-center rounded-xl bg-gray-50 dark:bg-gray-800 p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-300 transition-all hover:shadow-md"
+                        aria-label={isSidebarCollapsed ? t('docBoard.tabs.expandSidebar') : t('docBoard.tabs.collapseSidebar')}
+                      >
+                        {isSidebarCollapsed ? (
+                          <Expand className="h-4 w-4" />
+                        ) : (
+                          <Minimize2 className="h-4 w-4" />
+                        )}
+                      </button>
                     </div>
-                    <TooltipProvider delayDuration={150}>
+
+                    <TooltipProvider delayDuration={0}>
                       <TabsList
                         id="appointment-views-nav"
-                        className={`grid grid-cols-1 sm:grid-cols-2 gap-1.5 w-full bg-transparent h-auto lg:flex lg:flex-col ${isSidebarCollapsed ? 'lg:items-stretch lg:gap-1.5' : 'lg:gap-2'
-                          } lg:overflow-visible lg:justify-start`}
+                        className={`flex flex-col w-full bg-transparent h-auto gap-2 p-3`}
                       >
                         {appointmentTabsConfig.map(({ value, label, subLabel, Icon, accent, iconColor }) => {
                           const isActive = activeTab === value;
-                          const iconChip = (
-                            <div
-                              className={`relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border bg-white/90 dark:bg-gray-900/70 shadow-sm transition-colors ${isActive
-                                ? 'border-blue-200 text-blue-600 dark:text-blue-300'
-                                : `border-gray-100/80 dark:border-gray-800/70 ${iconColor}`
-                                }`}
-                            >
-                              <Icon className="h-4 w-4" aria-hidden />
-                              {isSidebarCollapsed && <span className="sr-only">{label}</span>}
-                            </div>
-                          );
-
-                          const triggerBody = isSidebarCollapsed ? (
-                            iconChip
-                          ) : (
-                            <div className="flex items-center gap-2 w-full">
-                              {iconChip}
-                              <div className="flex flex-col flex-1 min-w-0 text-left">
-                                <p className="font-semibold leading-tight text-[13px]">{label}</p>
-                                <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{subLabel}</p>
-                              </div>
-                              <span
-                                className={`absolute inset-x-4 top-1 h-1 rounded-full opacity-0 transition-opacity duration-300 ${isActive ? 'opacity-100' : 'group-hover:opacity-70'
-                                  } bg-gradient-to-r ${accent}`}
-                              />
-                            </div>
-                          );
 
                           if (isSidebarCollapsed) {
                             return (
-                              <Tooltip key={value} delayDuration={150}>
+                              <Tooltip key={value}>
                                 <TooltipTrigger asChild>
                                   <TabsTrigger
                                     value={value}
                                     disabled={isDoctorExperienceLocked}
-                                    className={`group relative flex items-center justify-center px-1.5 py-1.5 rounded-xl border transition-all duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 ${isActive
-                                      ? 'bg-white text-gray-900 dark:bg-gray-800/80 dark:text-white border-blue-200 shadow-lg shadow-blue-100/60 dark:shadow-none'
-                                      : 'bg-white/70 dark:bg-gray-900/20 border-transparent text-gray-600 dark:text-gray-400 hover:border-gray-200 hover:bg-white/90 dark:hover:border-gray-800 dark:hover:bg-gray-900/40'
+                                    className={`relative flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-300 ${isActive
+                                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                                      : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400'
                                       } ${isDoctorExperienceLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                   >
-                                    {triggerBody}
+                                    <Icon className="h-5 w-5" />
                                   </TabsTrigger>
                                 </TooltipTrigger>
-                                <TooltipContent side="right" className="max-w-[220px] text-xs">
-                                  <p className="font-semibold text-gray-900 dark:text-gray-100">{label}</p>
-                                  <p className="text-gray-500 dark:text-gray-400">{subLabel}</p>
+                                <TooltipContent side="right" className="ml-2 font-medium bg-gray-900 text-white border-0">
+                                  {label}
                                 </TooltipContent>
                               </Tooltip>
                             );
@@ -1135,12 +1098,27 @@ export const ClinicalDashboard: React.FC = () => {
                               key={value}
                               value={value}
                               disabled={isDoctorExperienceLocked}
-                              className={`group relative flex w-full items-center gap-2 px-3 py-2.5 rounded-xl border text-left text-sm transition-all duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 ${isActive
-                                ? 'bg-white text-gray-900 dark:bg-gray-800/80 dark:text-white border-blue-200 shadow-lg shadow-blue-100/60 dark:shadow-none'
-                                : 'bg-white/60 dark:bg-gray-900/20 border-transparent text-gray-600 dark:text-gray-400 hover:border-gray-200 hover:bg-white/90 dark:hover:border-gray-800 dark:hover:bg-gray-900/40'
+                              className={`group relative flex w-full items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-300 border border-transparent ${isActive
+                                ? 'bg-white dark:bg-gray-800 shadow-md border-gray-100 dark:border-gray-700'
+                                : 'hover:bg-gray-100/50 dark:hover:bg-gray-800/50'
                                 } ${isDoctorExperienceLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                              {triggerBody}
+                              <div className={`p-2 rounded-lg transition-colors ${isActive ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
+                                <Icon className="h-5 w-5" />
+                              </div>
+
+                              <div className="flex flex-col flex-1 min-w-0">
+                                <span className={`font-semibold text-sm ${isActive ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}>
+                                  {label}
+                                </span>
+                                <span className="text-xs text-gray-400 truncate">
+                                  {subLabel}
+                                </span>
+                              </div>
+
+                              {isActive && (
+                                <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-lg bg-blue-600`}></div>
+                              )}
                             </TabsTrigger>
                           );
                         })}
@@ -1430,60 +1408,61 @@ export const ClinicalDashboard: React.FC = () => {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100/80 dark:border-gray-800/70 shadow-[0_30px_80px_-45px_rgba(37,99,235,0.65)] dark:shadow-[0_20px_70px_-40px_rgba(0,0,0,0.8)] overflow-hidden">
-                          <div className="px-3 sm:px-4 py-2.5 border-b border-gray-200/80 dark:border-gray-800/70 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                              <p className="text-xs text-gray-600 dark:text-gray-400">
-                                {totalPages > 1
-                                  ? `${t('common.page', { defaultValue: 'Page' })} ${currentPage} ${t('common.of', { defaultValue: 'of' })} ${totalPages}`
-                                  : t('docBoard.table.summary', {
-                                    count: filteredAppointments.length,
-                                    defaultValue: `${filteredAppointments.length} records`
-                                  })}
-                              </p>
-                              {totalPages > 1 && (
-                                <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs px-2 py-1 border-blue-200">
-                                  {currentPage}/{totalPages}
-                                </Badge>
-                              )}
+                        <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200/60 dark:border-gray-800/60 shadow-xl shadow-gray-100/50 dark:shadow-black/20 overflow-hidden backdrop-blur-sm">
+                          {/* Table Header/Toolbar - Optional */}
+                          <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-gray-50/50 dark:bg-gray-900/50">
+                            <div className="flex items-center gap-2">
+                              <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg text-blue-600 dark:text-blue-400">
+                                <ListChecks className="h-4 w-4" />
+                              </div>
+                              <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                                Appointments List
+                              </h3>
                             </div>
+                            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-700 shadow-sm">
+                              {totalPages > 1
+                                ? `${t('common.page', { defaultValue: 'Page' })} ${currentPage} ${t('common.of', { defaultValue: 'of' })} ${totalPages}`
+                                : t('docBoard.table.summary', {
+                                  count: filteredAppointments.length,
+                                  defaultValue: `${filteredAppointments.length} records`
+                                })}
+                            </p>
                           </div>
 
                           <div className="overflow-x-auto w-full">
-                            <Table className="border-collapse min-w-[960px] md:min-w-full text-sm">
+                            <Table className="w-full text-sm">
                               <TableHeader>
-                                <TableRow className="bg-gray-50 dark:bg-gray-900/60">
-                                  <TableHead className="font-semibold text-gray-900 dark:text-gray-200 text-xs md:text-sm py-3 px-3">
+                                <TableRow className="bg-gray-50/80 dark:bg-gray-900/80 hover:bg-gray-50/80 dark:hover:bg-gray-900/80 border-b border-gray-200 dark:border-gray-800">
+                                  <TableHead className="w-[180px] font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4 pl-6">
                                     {t('docBoard.table.patient')}
                                   </TableHead>
-                                  <TableHead className="hidden xl:table-cell font-semibold text-gray-900 dark:text-gray-200 text-xs md:text-sm py-3 px-3">
+                                  <TableHead className="hidden xl:table-cell font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4">
                                     {t('docBoard.table.patientName')}
                                   </TableHead>
-                                  <TableHead className="font-semibold text-gray-900 dark:text-gray-200 text-xs md:text-sm py-3 px-3">
+                                  <TableHead className="font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4">
                                     {t('docBoard.table.token')}
                                   </TableHead>
-                                  <TableHead className="hidden md:table-cell font-semibold text-gray-900 dark:text-gray-200 text-xs md:text-sm py-3 px-3">
+                                  <TableHead className="hidden md:table-cell font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4">
                                     {t('docBoard.table.appointmentTime')}
                                   </TableHead>
-                                  <TableHead className="font-semibold text-gray-900 dark:text-gray-200 text-xs md:text-sm py-3 px-3">
+                                  <TableHead className="font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4">
                                     {t('docBoard.table.status')}
                                   </TableHead>
-                                  <TableHead className="font-semibold text-gray-900 dark:text-gray-200 text-xs md:text-sm py-3 px-3">
+                                  <TableHead className="font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4 text-center">
                                     {t('docBoard.table.labReports', { defaultValue: 'Lab reports' })}
                                   </TableHead>
-                                  <TableHead className="font-semibold text-gray-900 dark:text-gray-200 text-xs md:text-sm py-3 px-3">
+                                  <TableHead className="font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4 text-center">
                                     {t('docBoard.table.addBill', { defaultValue: 'Add Bill' })}
                                   </TableHead>
-                                  <TableHead className="hidden lg:table-cell font-semibold text-gray-900 dark:text-gray-200 text-xs md:text-sm py-3 px-3">
+                                  <TableHead className="hidden lg:table-cell font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4">
                                     {t('docBoard.table.case')}
                                   </TableHead>
-                                  <TableHead className="font-semibold text-gray-900 dark:text-gray-200 text-xs md:text-sm py-3 px-3">
+                                  <TableHead className="font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4 text-center">
                                     {t('docBoard.table.actions')}
                                   </TableHead>
-                                  <TableHead className="hidden lg:table-cell font-semibold text-gray-900 dark:text-gray-200 text-xs md:text-sm py-3 px-3">
+                                  <TableHead className="hidden lg:table-cell font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4 text-center">
                                     {t('docBoard.table.printRx')}
                                   </TableHead>
-                                  {/* Print Token column removed */}
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -1491,112 +1470,129 @@ export const ClinicalDashboard: React.FC = () => {
                                   currentAppointments.map((appointment) => (
                                     <TableRow
                                       key={appointment.appointmentId}
-                                      className="group border-b border-gray-100/80 dark:border-gray-800/70 last:border-b-0 hover:bg-blue-50/50 dark:hover:bg-gray-800/50 transition-all duration-200"
+                                      className="group border-b border-gray-100 dark:border-gray-800/50 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors duration-200"
                                     >
-                                      <TableCell className="py-4 px-3 align-top">
+                                      <TableCell className="py-4 pl-6 align-middle font-medium">
                                         <button
                                           onClick={() => handlePatientIdClick(appointment)}
-                                          className="text-sm font-semibold text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-200 inline-flex items-center gap-1 transition-colors"
+                                          className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 inline-flex items-center gap-1.5 transition-colors group-hover:underline decoration-blue-300 underline-offset-4"
                                         >
                                           {appointment.patientId}
-                                          <ExternalLink className="h-3 w-3" />
+                                          <ExternalLink className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />
                                         </button>
                                       </TableCell>
-                                      <TableCell className="hidden xl:table-cell py-4 px-3 text-sm text-gray-600 dark:text-gray-300">
+                                      <TableCell className="hidden xl:table-cell py-4 align-middle text-sm text-gray-700 dark:text-gray-300">
                                         <div className="flex flex-col">
-                                          <span>{appointment.patientFullName}</span>
+                                          <span className="font-medium text-gray-900 dark:text-white">{appointment.patientFullName}</span>
                                           {appointment.phone && (
-                                            <span className="text-xs text-gray-400 dark:text-gray-500">{appointment.phone}</span>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">{appointment.phone}</span>
                                           )}
                                         </div>
                                       </TableCell>
-                                      <TableCell className="py-4 px-3">
-                                        <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-100 px-3 py-1 text-xs font-semibold">
-                                          <span className="text-[11px] uppercase tracking-wide">{t('docBoard.table.tokenLabel')}</span>
-                                          <span>#{appointment.tokenDetails?.tokenNumber || t('docBoard.table.notAvailable')}</span>
+                                      <TableCell className="py-4 align-middle">
+                                        <div className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1 text-xs font-bold border border-gray-200 dark:border-gray-700">
+                                          <span className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider">#</span>
+                                          <span>{appointment.tokenDetails?.tokenNumber || '-'}</span>
                                         </div>
                                       </TableCell>
-                                      <TableCell className="hidden md:table-cell py-4 px-3">
-                                        <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                                          {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
-                                        </div>
-                                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                                          {format(new Date(appointment.startAt), 'EEE, MMM dd')}
+                                      <TableCell className="hidden md:table-cell py-4 align-middle">
+                                        <div className="flex flex-col">
+                                          <div className="text-sm font-semibold text-gray-900 dark:text-white tabular-nums tracking-tight">
+                                            {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
+                                          </div>
+                                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                            {format(new Date(appointment.startAt), 'EEE, MMM dd')}
+                                          </div>
                                         </div>
                                       </TableCell>
-                                      <TableCell className="py-4 px-3 align-middle">
-                                        {getStatusBadge(appointment.finalStatusCode)}
+                                      <TableCell className="py-4 align-middle">
+                                        <div className="transform transition-transform duration-200 hover:scale-105 origin-left">
+                                          {getStatusBadge(appointment.finalStatusCode)}
+                                        </div>
                                       </TableCell>
-                                      <TableCell className="py-4 px-3 align-middle">
+                                      <TableCell className="py-4 align-middle text-center">
                                         {['LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(
                                           String(appointment.finalStatusCode || '').toUpperCase()
                                         ) ? (
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleOpenLabAttachments(appointment)}
-                                            className="h-8 px-3 text-xs font-semibold text-blue-600 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/30"
-                                          >
-                                            <Upload className="h-3 w-3 mr-1" />
-                                            {t('docBoard.table.addLabReport', { defaultValue: 'Add lab report' })}
-                                          </Button>
+                                          <TooltipProvider>
+                                            <Tooltip delayDuration={300}>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  onClick={() => handleOpenLabAttachments(appointment)}
+                                                  className="h-8 w-8 rounded-full text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                                >
+                                                  <FlaskConical className="h-4 w-4" />
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent>Add Lab Report</TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
                                         ) : (
-                                          <span className="text-[11px] text-gray-400 dark:text-gray-500">—</span>
+                                          <span className="text-gray-300 dark:text-gray-700 text-xl font-light">·</span>
                                         )}
                                       </TableCell>
-                                      <TableCell className="py-4 px-3">
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => handleAddBillClick(appointment)}
-                                          className="h-8 px-3 text-xs font-semibold text-indigo-600 border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
-                                        >
-                                          <FileText className="h-3 w-3 mr-1" />
-                                          {t('docBoard.table.addBill', { defaultValue: 'Add Bill' })}
-                                        </Button>
+                                      <TableCell className="py-4 align-middle text-center">
+                                        <TooltipProvider>
+                                          <Tooltip delayDuration={300}>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => handleAddBillClick(appointment)}
+                                                className="h-8 w-8 rounded-full text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
+                                              >
+                                                <FileText className="h-4 w-4" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Add Bill</TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
                                       </TableCell>
-                                      <TableCell className="hidden lg:table-cell py-4 px-3">
-                                        <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                                          {t('docBoard.table.newCase')}
+                                      <TableCell className="hidden lg:table-cell py-4 align-middle">
+                                        <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-wider bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800">
+                                          NEW
                                         </Badge>
                                       </TableCell>
-                                      <TableCell className="py-4 px-3">
-                                        <div className="flex flex-wrap gap-2">
-                                          {!['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(
-                                            appointment.finalStatusCode
-                                          ) && (
-                                              <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="h-8 px-3 text-xs font-semibold text-red-600 border-red-200 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
-                                                onClick={() => handleCancelClick(appointment)}
-                                              >
-                                                <X className="h-3 w-3 mr-1" />
-                                                {t('common.cancel')}
-                                              </Button>
-                                            )}
-                                          {/* Vitals button removed */}
-                                        </div>
+                                      <TableCell className="py-4 align-middle text-center">
+                                        {!['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(
+                                          appointment.finalStatusCode
+                                        ) && (
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-8 px-2 text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                              onClick={() => handleCancelClick(appointment)}
+                                            >
+                                              <span className="sr-only">{t('common.cancel')}</span>
+                                              <X className="h-4 w-4" />
+                                            </Button>
+                                          )}
                                       </TableCell>
-                                      <TableCell className="hidden lg:table-cell py-4 px-3">
+                                      <TableCell className="hidden lg:table-cell py-4 align-middle text-center">
                                         <Button
-                                          variant="outline"
-                                          size="sm"
-                                          className="h-8 px-3 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8 rounded-full text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:text-gray-400 dark:hover:text-blue-400 dark:hover:bg-blue-900/20"
                                           disabled={!hospitalId || !doctorId}
                                           onClick={() => openPrescriptionPreview(appointment)}
                                         >
-                                          <FileText className="h-3 w-3 mr-1" />
-                                          {t('common.print')}
+                                          <PrinterIcon className="h-4 w-4" />
                                         </Button>
                                       </TableCell>
-                                      {/* Print Token cell removed */}
                                     </TableRow>
                                   ))
                                 ) : (
                                   <TableRow>
-                                    <TableCell colSpan={10} className="text-center py-10 text-gray-500 dark:text-gray-400">
-                                      {t('docBoard.empty.current')}
+                                    <TableCell colSpan={10} className="h-96 text-center">
+                                      <div className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
+                                        <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-full mb-4">
+                                          <Calendar className="h-12 w-12 opacity-50" />
+                                        </div>
+                                        <p className="text-lg font-medium text-gray-900 dark:text-gray-200">{t('docBoard.empty.current')}</p>
+                                        <p className="text-sm max-w-xs mx-auto mt-1">No appointments found matching your filters.</p>
+                                      </div>
                                     </TableCell>
                                   </TableRow>
                                 )}
