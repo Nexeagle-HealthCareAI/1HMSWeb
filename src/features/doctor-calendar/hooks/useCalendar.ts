@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { timeOffApi } from '../api/timeOffApi';
 import { overrideApi } from '../api/overrideApi';
-import { 
+import {
   CalendarEvent,
   GetTimeOffResponse,
   DoctorCalendarConfigResponse
@@ -19,15 +19,15 @@ export const calendarKeys = {
     configFingerprint: string
   ) => [...calendarKeys.all, 'events', doctorId, hospitalId, fromISO, toISO, configFingerprint] as const,
   timeOff: (doctorId: string) => [...calendarKeys.all, 'timeOff', doctorId] as const,
-  config: (doctorId: string, hospitalId: string, startDate: string, days: number) => 
+  config: (doctorId: string, hospitalId: string, startDate: string, days: number) =>
     [...calendarKeys.all, 'config', doctorId, hospitalId, startDate, days] as const,
 };
 
 // Time-off hooks
-export function useTimeOff(doctorId: string,hospitalId:string) {
+export function useTimeOff(doctorId: string, hospitalId: string) {
   return useQuery<GetTimeOffResponse>({
     queryKey: calendarKeys.timeOff(doctorId),
-    queryFn: () => timeOffApi.getDoctorTimeOff(doctorId,hospitalId),
+    queryFn: () => timeOffApi.getDoctorTimeOff(doctorId, hospitalId),
     enabled: !!doctorId,
   });
 }
@@ -79,7 +79,7 @@ export function useCalendarEvents(
       // Fetch time-off data
       let timeOffData: GetTimeOffResponse | null = null;
       try {
-        timeOffData = await timeOffApi.getDoctorTimeOff(doctorId,hospitalId);
+        timeOffData = await timeOffApi.getDoctorTimeOff(doctorId, hospitalId);
       } catch (error) {
         timeOffData = null;
       }
@@ -93,7 +93,15 @@ export function useCalendarEvents(
 
             const eventStart = buildShiftDate(shiftInfo.shiftDate, startTimeStr);
             const eventEnd = buildShiftDate(shiftInfo.shiftDate, endTimeStr);
-           
+
+            console.log('DEBUG_CALENDAR:', {
+              date: shiftInfo.shiftDate,
+              startStr: startTimeStr,
+              endStr: endTimeStr,
+              startISO: eventStart.toISOString(),
+              endISO: eventEnd.toISOString()
+            });
+
             const dataSource = resolveShiftDataSource({
               explicitSource: shiftDetail.dataSource || shiftInfo.dataSource || calendarConfig.dataSource,
               overrideId: shiftDetail.overrideId,
@@ -121,14 +129,14 @@ export function useCalendarEvents(
               }
             };
 
-    allEvents.push(shiftBlockEvent);
+            allEvents.push(shiftBlockEvent);
           });
         });
-      } 
+      }
       // Handle legacy API response structure (days array)
       else if ((calendarConfig as any)?.days) {
         (calendarConfig as any).days.forEach((day: any, dayIndex: number) => {
-          
+
           if (day.effectiveShifts) {
             day.effectiveShifts.forEach((shift: any, shiftIndex: number) => {
               const eventStart = buildShiftDate(day.date, shift.startTime);
@@ -171,7 +179,7 @@ export function useCalendarEvents(
           // Parse dates
           const fromDate = new Date(timeOff.fromDate);
           const toDate = new Date(timeOff.toDate);
-          
+
           // Create time-off event
           const timeOffEvent: CalendarEvent = {
             id: `timeoff-${timeOff.timeOffId}`,
@@ -202,13 +210,13 @@ export function useCalendarEvents(
         const eventEnd = new Date(event.end);
         const rangeStart = new Date(fromISO);
         const rangeEnd = new Date(toISO);
-        
+
         // Event should be visible if it overlaps with the date range
         const isVisible = eventStart <= rangeEnd && eventEnd >= rangeStart;
-        
+
         return isVisible;
       });
-      
+
       return filteredEvents;
     },
     enabled: !!doctorId && !!hospitalId && !!fromISO && !!toISO && (calendarConfig !== undefined),
@@ -240,15 +248,19 @@ function resolveShiftDataSource({
 
 function buildShiftDate(dateStr: string, timeStr: string) {
   const [hourStr = '0', minuteStr = '0', secondStr = '0'] = timeStr.split(':');
-  const date = new Date(dateStr);
-  date.setHours(Number(hourStr) || 0, Number(minuteStr) || 0, Number(secondStr) || 0, 0);
+  const [year, month, day] = dateStr.split('-').map(Number);
+
+  // Create date in local time using the constructor with individual components
+  // month is 0-indexed in Date constructor
+  const date = new Date(year, month - 1, day, Number(hourStr) || 0, Number(minuteStr) || 0, Number(secondStr) || 0, 0);
+
   return date;
 }
 
 // Time-off mutations
 export function useCreateTimeOff() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: timeOffApi.createDoctorTimeOff,
     onSuccess: (data, variables) => {
@@ -256,7 +268,7 @@ export function useCreateTimeOff() {
       queryClient.invalidateQueries({
         queryKey: calendarKeys.timeOff(variables.doctorId)
       });
-      
+
       // Invalidate calendar events
       queryClient.invalidateQueries({
         queryKey: [...calendarKeys.all, 'events', variables.doctorId]
@@ -267,7 +279,7 @@ export function useCreateTimeOff() {
 
 export function useDeleteTimeOff() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: ({ doctorId, hospitalId, timeOffId }: { doctorId: string; hospitalId: string; timeOffId: string }) =>
       timeOffApi.deleteDoctorTimeOff(timeOffId),
@@ -276,7 +288,7 @@ export function useDeleteTimeOff() {
       queryClient.invalidateQueries({
         queryKey: calendarKeys.timeOff(variables.doctorId)
       });
-      
+
       // Invalidate all calendar events (partial key match)
       queryClient.invalidateQueries({
         queryKey: [...calendarKeys.all, 'events']

@@ -1,281 +1,54 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Users, Sparkles, Activity } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import {
-  Users,
-  Search,
-  Plus,
-  Eye,
-  Edit,
-  Phone,
-  Mail,
-  Calendar,
-  Filter,
-  MoreHorizontal
-} from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { patientApi, Patient, PatientFilters } from '../services/patientApi';
 
 export const PatientsPage: React.FC = () => {
-  const navigate = useNavigate();
   const { t } = useTranslation();
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [genderFilter, setGenderFilter] = useState<string>('all');
-  const [bloodTypeFilter, setBloodTypeFilter] = useState<string>('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPatients, setTotalPatients] = useState(0);
-
-  const fetchPatients = async () => {
-    try {
-      setLoading(true);
-      const filters: PatientFilters = {
-        page: currentPage,
-        limit: 10,
-        search: searchTerm || undefined,
-        gender: genderFilter !== 'all' ? genderFilter : undefined,
-        blood_type: bloodTypeFilter !== 'all' ? bloodTypeFilter : undefined,
-      };
-      
-      const response = await patientApi.getAll(filters);
-      setPatients(response.data || []);
-      setTotalPatients(response.pagination?.total || 0);
-    } catch (error) {
-      console.error('Error fetching patients:', error);
-      setPatients([]);
-      setTotalPatients(0);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchPatients();
-  }, [searchTerm, genderFilter, bloodTypeFilter, currentPage]);
-
-  const handleSearch = (value: string) => {
-    setSearchTerm(value);
-    setCurrentPage(1);
-  };
-
-  const handleFilterChange = (filterType: string, value: string) => {
-    if (filterType === 'gender') {
-      setGenderFilter(value);
-    } else if (filterType === 'bloodType') {
-      setBloodTypeFilter(value);
-    }
-    setCurrentPage(1);
-  };
-
-  const handlePatientClick = (patientId: string) => {
-    navigate(`/patient/${patientId}`);
-  };
-
-  const getAge = (dateOfBirth: string) => {
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    
-    return age;
-  };
-
-  const getGenderColor = (gender: string) => {
-    switch (gender.toLowerCase()) {
-      case 'male': return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'female': return 'bg-pink-100 text-pink-800 border-pink-300';
-      default: return 'bg-gray-100 text-gray-800 border-gray-300';
-    }
-  };
-
-  const getBloodTypeColor = (bloodType: string) => {
-    switch (bloodType) {
-      case 'O+': return 'bg-red-100 text-red-800 border-red-300';
-      case 'O-': return 'bg-red-50 text-red-700 border-red-200';
-      case 'A+': return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'A-': return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'B+': return 'bg-green-100 text-green-800 border-green-300';
-      case 'B-': return 'bg-green-50 text-green-700 border-green-200';
-      case 'AB+': return 'bg-purple-100 text-purple-800 border-purple-300';
-      case 'AB-': return 'bg-purple-50 text-purple-700 border-purple-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-300';
-    }
-  };
 
   return (
-    <div className="space-y-6 transition-all duration-300">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Users className="h-6 w-6 text-healthcare-primary" />
-          <h1 className="text-2xl font-bold">{t('patients.title')}</h1>
-        </div>
-        <Button 
-          onClick={() => navigate('/patient/new')}
-          className="bg-healthcare-primary hover:bg-healthcare-primary/90"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          {t('patients.addNewPatient')}
-        </Button>
-      </div>
+    <div className="flex items-center justify-center min-h-[80vh] px-4">
+      <Card className="w-full max-w-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-0 shadow-2xl overflow-hidden relative group">
 
-      {/* Search and Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Search className="h-5 w-5" />
-            {t('patients.searchPatients')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="md:col-span-2">
-              <Input
-                placeholder={t('patients.searchPatients')}
-                value={searchTerm}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="w-full"
-              />
+        {/* Decorative background elements */}
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all duration-700"></div>
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl group-hover:bg-purple-500/20 transition-all duration-700"></div>
+
+        <CardContent className="flex flex-col items-center justify-center p-16 text-center relative z-10">
+          <div className="mb-8 relative">
+            <div className="absolute inset-0 bg-blue-500/20 blur-2xl rounded-full scale-150 animate-pulse"></div>
+            <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-6 rounded-2xl shadow-lg relative transform group-hover:scale-110 transition-transform duration-500">
+              <Users className="h-12 w-12 text-white" />
             </div>
-            <Select value={genderFilter} onValueChange={(value) => handleFilterChange('gender', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder={t('patients.gender')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('common.all')}</SelectItem>
-                <SelectItem value="Male">{t('patients.male')}</SelectItem>
-                <SelectItem value="Female">{t('patients.female')}</SelectItem>
-                <SelectItem value="Other">{t('patients.other')}</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={bloodTypeFilter} onValueChange={(value) => handleFilterChange('bloodType', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder={t('patients.bloodType')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('common.all')}</SelectItem>
-                <SelectItem value="O+">O+</SelectItem>
-                <SelectItem value="O-">O-</SelectItem>
-                <SelectItem value="A+">A+</SelectItem>
-                <SelectItem value="A-">A-</SelectItem>
-                <SelectItem value="B+">B+</SelectItem>
-                <SelectItem value="B-">B-</SelectItem>
-                <SelectItem value="AB+">AB+</SelectItem>
-                <SelectItem value="AB-">AB-</SelectItem>
-              </SelectContent>
-            </Select>
+
+            {/* Floating particles */}
+            <Activity className="absolute -top-4 -right-6 h-6 w-6 text-blue-400 animate-bounce delay-100" />
+            <Sparkles className="absolute -bottom-2 -left-6 h-5 w-5 text-purple-400 animate-pulse delay-700" />
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Patients List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {t('patients.title')} ({totalPatients})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-healthcare-primary"></div>
-            </div>
-          ) : patients.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>{t('patients.noPatientsFound')}</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {patients.map((patient) => (
-                <div
-                  key={patient.id}
-                  className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => handlePatientClick(patient.id)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-healthcare-primary/10 rounded-full flex items-center justify-center">
-                        <span className="text-healthcare-primary font-semibold">
-                          {patient.name.split(' ').map(n => n[0]).join('')}
-                        </span>
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-lg">
-                            {patient.name}
-                          </h3>
-                          <Badge variant="outline" className="text-xs">
-                            {t('patients.patientId')}: {patient.id}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            {patient.email}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            {patient.phone}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {getAge(patient.date_of_birth)} {t('common.years')}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge className={getGenderColor(patient.gender)}>
-                        {patient.gender}
-                      </Badge>
-                      <Badge className={getBloodTypeColor(patient.blood_type || '')}>
-                        {patient.blood_type}
-                      </Badge>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handlePatientClick(patient.id)}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            {t('patients.viewDetails')}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate(`/patient/${patient.id}/edit`)}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            {t('common.edit')}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 mb-4 tracking-tight">
+            Patient 360
+          </h1>
+
+          <div className="h-1 w-24 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mb-6"></div>
+
+          <p className="text-xl text-gray-600 dark:text-gray-300 font-medium mb-2">
+            A Comprehensive View is Coming Soon
+          </p>
+
+          <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto leading-relaxed">
+            We are crafting a unified experience to visualize patient history, vitals, and appointments all in one place.
+          </p>
+
+          <div className="mt-10 flex gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 ring-1 ring-inset ring-blue-700/10">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+              </span>
+              In Development
+            </span>
+          </div>
         </CardContent>
       </Card>
     </div>
