@@ -2864,198 +2864,6 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
               </div>
             )}
 
-            {/* Diagnosis Section */}
-            {renderCollapsibleSection(
-              'diagnosis',
-              'Diagnosis',
-              <div className="space-y-3 bg-cyan-50/60 dark:bg-cyan-900/40 border border-cyan-200 dark:border-cyan-700 rounded-lg p-4">
-                <div ref={diagnosisRootRef} className="space-y-2">
-                  {selectedDiagnoses.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedDiagnoses.map(item => (
-                        <div
-                          key={item}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 text-xs font-medium text-gray-700"
-                        >
-                          <span>{item}</span>
-                          <button
-                            type="button"
-                            className="text-gray-500 hover:text-gray-800"
-                            onClick={() => removeDiagnosisItem(item)}
-                            aria-label={`Remove ${item}`}
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="relative">
-                    <Input
-                      ref={diagnosisInputRef}
-                      value={diagnosisQuery}
-                      onChange={async (e) => {
-                        const val = e.target.value;
-                        setDiagnosisQuery(val);
-
-                        if (val && val.length > 1) {
-                          try {
-                            const hid = getHospitalId() || '4de8ea65-71aa-4800-8167-60147d78ea58';
-                            const did = getDoctorId() || '9de6031b-7195-43f7-85b4-bba824585529';
-                            const response = await eprescriptionApi.searchLookupParams('DIAGNOSIS', hid, did, val);
-
-                            if (response.success) {
-                              const personalItems: LookupItem[] = response.personalLookupData.map(item => ({
-                                id: item.personalId || item.code,
-                                name: item.name,
-                                source: 'personal',
-                                shortDesc: item.shortDesc
-                              }));
-                              const masterItems: LookupItem[] = response.masterLookupData.map(item => ({
-                                id: item.lookupId || item.code,
-                                name: item.name,
-                                source: 'general',
-                                shortDesc: item.shortDesc
-                              }));
-                              setDiagnosisOptions([...personalItems, ...masterItems]);
-                            }
-                          } catch (err) {
-                            console.error('Failed to search diagnosis', err);
-                            setDiagnosisOptions([]);
-                          }
-                        } else {
-                          setDiagnosisOptions([]);
-                        }
-                        setDiagnosisActiveIndex(0);
-                        setDiagnosisOpen(true);
-                      }}
-                      onFocus={() => {
-                        setDiagnosisOpen(true);
-                        setDiagnosisOptions([]);
-                        setDiagnosisActiveIndex(0);
-                      }}
-                      onBlur={() => setTimeout(() => setDiagnosisOpen(false), 50)}
-                      onKeyDown={(e) => {
-                        const personal = diagnosisOptions.filter(item => item.source === 'personal');
-                        const general = diagnosisOptions.filter(item => item.source === 'general');
-                        const combined = [...personal, ...general];
-                        const trimmed = (diagnosisQuery || '').trim();
-                        if (e.key === 'ArrowDown') {
-                          e.preventDefault();
-                          setDiagnosisOpen(true);
-                          setDiagnosisActiveIndex(prev => Math.min(prev + 1, Math.max(0, combined.length - 1)));
-                        } else if (e.key === 'ArrowUp') {
-                          e.preventDefault();
-                          setDiagnosisActiveIndex(prev => Math.max(prev - 1, 0));
-                        } else if (e.key === 'Enter') {
-                          if (combined[diagnosisActiveIndex]) {
-                            e.preventDefault();
-                            commitDiagnosisSelection(combined[diagnosisActiveIndex].name);
-                          } else if (trimmed) {
-                            e.preventDefault();
-                            commitDiagnosisSelection(trimmed);
-                          }
-                        } else if (e.key === 'Escape') {
-                          setDiagnosisOpen(false);
-                        }
-                      }}
-                      placeholder="Search or type diagnosis..."
-                      className="text-sm"
-                    />
-
-                    {diagnosisOpen && (
-                      <div className="absolute left-0 right-0 top-full z-10 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto p-3">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <div className="text-[11px] font-semibold text-gray-600 uppercase">Personal</div>
-                            <div className="flex flex-col gap-1">
-                              {diagnosisOptions.filter(item => item.source === 'personal').map((item, idx) => {
-                                const isActive = diagnosisActiveIndex === idx;
-                                return (
-                                  <button
-                                    key={item.id}
-                                    type="button"
-                                    className={`flex items-center justify-between w-full rounded-md px-3 py-2 text-left text-sm border ${isActive ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
-                                    onMouseEnter={() => setDiagnosisActiveIndex(idx)}
-                                    onMouseDown={(event) => {
-                                      event.preventDefault();
-                                      commitDiagnosisSelection(item.name);
-                                    }}
-                                  >
-                                    <span className="truncate">{item.name}</span>
-                                    {item.usageCount !== undefined && (
-                                      <span className="text-[11px] text-gray-500 ml-2">{item.usageCount}</span>
-                                    )}
-                                  </button>
-                                );
-                              })}
-                              {diagnosisOptions.filter(item => item.source === 'personal').length === 0 && (
-                                <div className="text-xs text-gray-500 px-3 py-2">No personal results</div>
-                              )}
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <div className="text-[11px] font-semibold text-gray-600 uppercase">General</div>
-                            <div className="flex flex-col gap-1">
-                              {(() => {
-                                const personalCount = diagnosisOptions.filter(item => item.source === 'personal').length;
-                                return diagnosisOptions
-                                  .filter(item => item.source === 'general')
-                                  .map((item, idx) => {
-                                    const globalIdx = personalCount + idx;
-                                    const isActive = diagnosisActiveIndex === globalIdx;
-                                    return (
-                                      <button
-                                        key={item.id}
-                                        type="button"
-                                        className={`flex items-center justify-between w-full rounded-md px-3 py-2 text-left text-sm border ${isActive ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
-                                        onMouseEnter={() => setDiagnosisActiveIndex(globalIdx)}
-                                        onMouseDown={(event) => {
-                                          event.preventDefault();
-                                          commitDiagnosisSelection(item.name);
-                                        }}
-                                      >
-                                        <span className="truncate">{item.name}</span>
-                                      </button>
-                                    );
-                                  });
-                              })()}
-                              {diagnosisOptions.filter(item => item.source === 'general').length === 0 && (
-                                <div className="text-xs text-gray-500 px-3 py-2">No general results</div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="text-xs font-semibold text-gray-600">Quick picks</div>
-                  <div className="flex flex-wrap gap-2">
-                    {quickPicks.diagnosis.map(item => {
-                      const isSelected = selectedDiagnoses.includes(item.name);
-                      return (
-                        <Button
-                          key={item.id}
-                          variant={isSelected ? 'default' : 'outline'}
-                          size="sm"
-                          className="justify-start h-auto min-h-8 text-xs md:text-sm rounded-full px-3 py-2"
-                          onClick={() => addDiagnosisItem(item.name)}
-                        >
-                          {item.name}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Save diagnosis button removed */}
-              </div>
-            )}
-
             {/* Orders Section */}
             {renderCollapsibleSection(
               'orders',
@@ -3452,6 +3260,198 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
 
                   {/* Save procedures button removed */}
                 </div>
+              </div>
+            )}
+
+            {/* Diagnosis Section */}
+            {renderCollapsibleSection(
+              'diagnosis',
+              'Diagnosis',
+              <div className="space-y-3 bg-cyan-50/60 dark:bg-cyan-900/40 border border-cyan-200 dark:border-cyan-700 rounded-lg p-4">
+                <div ref={diagnosisRootRef} className="space-y-2">
+                  {selectedDiagnoses.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedDiagnoses.map(item => (
+                        <div
+                          key={item}
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 text-xs font-medium text-gray-700"
+                        >
+                          <span>{item}</span>
+                          <button
+                            type="button"
+                            className="text-gray-500 hover:text-gray-800"
+                            onClick={() => removeDiagnosisItem(item)}
+                            aria-label={`Remove ${item}`}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="relative">
+                    <Input
+                      ref={diagnosisInputRef}
+                      value={diagnosisQuery}
+                      onChange={async (e) => {
+                        const val = e.target.value;
+                        setDiagnosisQuery(val);
+
+                        if (val && val.length > 1) {
+                          try {
+                            const hid = getHospitalId() || '4de8ea65-71aa-4800-8167-60147d78ea58';
+                            const did = getDoctorId() || '9de6031b-7195-43f7-85b4-bba824585529';
+                            const response = await eprescriptionApi.searchLookupParams('DIAGNOSIS', hid, did, val);
+
+                            if (response.success) {
+                              const personalItems: LookupItem[] = response.personalLookupData.map(item => ({
+                                id: item.personalId || item.code,
+                                name: item.name,
+                                source: 'personal',
+                                shortDesc: item.shortDesc
+                              }));
+                              const masterItems: LookupItem[] = response.masterLookupData.map(item => ({
+                                id: item.lookupId || item.code,
+                                name: item.name,
+                                source: 'general',
+                                shortDesc: item.shortDesc
+                              }));
+                              setDiagnosisOptions([...personalItems, ...masterItems]);
+                            }
+                          } catch (err) {
+                            console.error('Failed to search diagnosis', err);
+                            setDiagnosisOptions([]);
+                          }
+                        } else {
+                          setDiagnosisOptions([]);
+                        }
+                        setDiagnosisActiveIndex(0);
+                        setDiagnosisOpen(true);
+                      }}
+                      onFocus={() => {
+                        setDiagnosisOpen(true);
+                        setDiagnosisOptions([]);
+                        setDiagnosisActiveIndex(0);
+                      }}
+                      onBlur={() => setTimeout(() => setDiagnosisOpen(false), 50)}
+                      onKeyDown={(e) => {
+                        const personal = diagnosisOptions.filter(item => item.source === 'personal');
+                        const general = diagnosisOptions.filter(item => item.source === 'general');
+                        const combined = [...personal, ...general];
+                        const trimmed = (diagnosisQuery || '').trim();
+                        if (e.key === 'ArrowDown') {
+                          e.preventDefault();
+                          setDiagnosisOpen(true);
+                          setDiagnosisActiveIndex(prev => Math.min(prev + 1, Math.max(0, combined.length - 1)));
+                        } else if (e.key === 'ArrowUp') {
+                          e.preventDefault();
+                          setDiagnosisActiveIndex(prev => Math.max(prev - 1, 0));
+                        } else if (e.key === 'Enter') {
+                          if (combined[diagnosisActiveIndex]) {
+                            e.preventDefault();
+                            commitDiagnosisSelection(combined[diagnosisActiveIndex].name);
+                          } else if (trimmed) {
+                            e.preventDefault();
+                            commitDiagnosisSelection(trimmed);
+                          }
+                        } else if (e.key === 'Escape') {
+                          setDiagnosisOpen(false);
+                        }
+                      }}
+                      placeholder="Search or type diagnosis..."
+                      className="text-sm"
+                    />
+
+                    {diagnosisOpen && (
+                      <div className="absolute left-0 right-0 top-full z-10 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto p-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <div className="text-[11px] font-semibold text-gray-600 uppercase">Personal</div>
+                            <div className="flex flex-col gap-1">
+                              {diagnosisOptions.filter(item => item.source === 'personal').map((item, idx) => {
+                                const isActive = diagnosisActiveIndex === idx;
+                                return (
+                                  <button
+                                    key={item.id}
+                                    type="button"
+                                    className={`flex items-center justify-between w-full rounded-md px-3 py-2 text-left text-sm border ${isActive ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
+                                    onMouseEnter={() => setDiagnosisActiveIndex(idx)}
+                                    onMouseDown={(event) => {
+                                      event.preventDefault();
+                                      commitDiagnosisSelection(item.name);
+                                    }}
+                                  >
+                                    <span className="truncate">{item.name}</span>
+                                    {item.usageCount !== undefined && (
+                                      <span className="text-[11px] text-gray-500 ml-2">{item.usageCount}</span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                              {diagnosisOptions.filter(item => item.source === 'personal').length === 0 && (
+                                <div className="text-xs text-gray-500 px-3 py-2">No personal results</div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="text-[11px] font-semibold text-gray-600 uppercase">General</div>
+                            <div className="flex flex-col gap-1">
+                              {(() => {
+                                const personalCount = diagnosisOptions.filter(item => item.source === 'personal').length;
+                                return diagnosisOptions
+                                  .filter(item => item.source === 'general')
+                                  .map((item, idx) => {
+                                    const globalIdx = personalCount + idx;
+                                    const isActive = diagnosisActiveIndex === globalIdx;
+                                    return (
+                                      <button
+                                        key={item.id}
+                                        type="button"
+                                        className={`flex items-center justify-between w-full rounded-md px-3 py-2 text-left text-sm border ${isActive ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
+                                        onMouseEnter={() => setDiagnosisActiveIndex(globalIdx)}
+                                        onMouseDown={(event) => {
+                                          event.preventDefault();
+                                          commitDiagnosisSelection(item.name);
+                                        }}
+                                      >
+                                        <span className="truncate">{item.name}</span>
+                                      </button>
+                                    );
+                                  });
+                              })()}
+                              {diagnosisOptions.filter(item => item.source === 'general').length === 0 && (
+                                <div className="text-xs text-gray-500 px-3 py-2">No general results</div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="text-xs font-semibold text-gray-600">Quick picks</div>
+                  <div className="flex flex-wrap gap-2">
+                    {quickPicks.diagnosis.map(item => {
+                      const isSelected = selectedDiagnoses.includes(item.name);
+                      return (
+                        <Button
+                          key={item.id}
+                          variant={isSelected ? 'default' : 'outline'}
+                          size="sm"
+                          className="justify-start h-auto min-h-8 text-xs md:text-sm rounded-full px-3 py-2"
+                          onClick={() => addDiagnosisItem(item.name)}
+                        >
+                          {item.name}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Save diagnosis button removed */}
               </div>
             )}
 

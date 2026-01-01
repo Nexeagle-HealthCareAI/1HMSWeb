@@ -385,7 +385,7 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
       // Reset Y for second col
       const afterH_Y = cursorY; // Where cursor would be
       cursorY = startY;
-      const hC = await renderTabularItem('Past History', payload.comorbidity, leftPad + colW + midGap, colW);
+      const hC = await renderTabularItem('Comorbidity', payload.comorbidity, leftPad + colW + midGap, colW);
 
       const maxH = Math.max(hH, hC);
       cursorY = startY - maxH - 15;
@@ -395,7 +395,7 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
       const hHist = await renderTabularItem('History', payload.history, leftPad, contentWidth);
       if (hHist) cursorY -= (hHist + 15);
 
-      const hCom = await renderTabularItem('Past History', payload.comorbidity, leftPad, contentWidth);
+      const hCom = await renderTabularItem('Comorbidity', payload.comorbidity, leftPad, contentWidth);
       if (hCom) cursorY -= (hCom + 15);
     }
 
