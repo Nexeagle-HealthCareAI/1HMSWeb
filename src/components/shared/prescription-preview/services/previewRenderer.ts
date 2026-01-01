@@ -641,11 +641,14 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   let rightY = initialBottomY;
 
   // Advice
-  if (payload.nonPharmacologicalAdvice?.length) {
+  // Advice
+  const adviceItems = (payload.nonPharmacologicalAdvice || []).filter(item => item.advice && item.advice.trim());
+
+  if (adviceItems.length > 0) {
     page.drawText('ADVICE / INSTRUCTIONS', { x: col2X, y: rightY, size: sizeSm, font: boldFont, color: COLORS.Primary });
     rightY -= lineHeight;
 
-    for (const item of payload.nonPharmacologicalAdvice) {
+    for (const item of adviceItems) {
       let t = item.advice;
       if (item.duration) t += ` (${item.duration})`;
       if (item.notes) t += ` - ${item.notes}`;
@@ -693,7 +696,7 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
 
     // Instructions
     if (instructionsText && typeof instructionsText === 'string' && instructionsText.trim()) {
-      instructions.push({ type: 'subLabel', text: 'Patient Instructions:' });
+      instructions.push({ type: 'subLabel', text: 'Instructions:' });
       instructions.push({ type: 'text', text: instructionsText });
     }
 

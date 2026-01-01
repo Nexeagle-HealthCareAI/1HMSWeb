@@ -115,16 +115,7 @@ export interface EPrescriptionDraftReq {
         notes: string;
     }[];
     privateNotes?: string;
-    certificates?: {
-        type: string;
-        content: string;
-        issuedDate: string;
-        fromDate: string;
-        toDate: string;
-        fitnessStatus: string;
-        remarks: string;
-        category: string;
-    };
+    certificates?: any;
     followUp?: {
         followUpOn: string;
         reason: {

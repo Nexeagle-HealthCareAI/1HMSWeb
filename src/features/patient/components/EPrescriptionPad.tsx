@@ -352,7 +352,7 @@ const AutoSaveHandler: React.FC<{
           notes: a.notes || '',
         }))),
         privateNotes: JSON.stringify((prescriptionData.privateNotes || []).map(n => n.content).join('\n')),
-        certificates: JSON.stringify((prescriptionData.certificates && prescriptionData.certificates.length > 0) ? prescriptionData.certificates[0] : undefined),
+        certificates: JSON.stringify((prescriptionData.certificates && prescriptionData.certificates.length > 0) ? prescriptionData.certificates[0] : { type: "", content: "", issuedDate: "" }),
         followUp: JSON.stringify({
           followUpOn: prescriptionData.followUp.followUpOn,
           reason: {
@@ -431,7 +431,7 @@ const AutoSaveHandler: React.FC<{
             notes: a.notes || '',
           })),
           privateNotes: (prescriptionData.privateNotes || []).map(n => n.content).join('\n'),
-          certificates: (prescriptionData.certificates && prescriptionData.certificates.length > 0) ? prescriptionData.certificates[0] : undefined,
+          certificates: (prescriptionData.certificates && prescriptionData.certificates.length > 0) ? prescriptionData.certificates[0] : { type: "", content: "", issuedDate: "" },
           followUp: {
             followUpOn: prescriptionData.followUp.followUpOn,
             reason: {
