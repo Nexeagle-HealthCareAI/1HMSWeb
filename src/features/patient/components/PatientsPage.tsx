@@ -54,7 +54,7 @@ import { mockCurrentAppointments, StatusTransitionStep } from '../utils/mockCurr
 import { mockPatientListResponse } from '../utils/mockPatientList';
 
 type Tab = 'today' | 'patient360';
-type SortOption = 'name' | 'time' | 'status';
+
 
 export const PatientsPage: React.FC = () => {
   const { t } = useTranslation();
@@ -62,7 +62,6 @@ export const PatientsPage: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('today');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<SortOption>('time');
   const [selectedDoctor, setSelectedDoctor] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4;
@@ -72,6 +71,25 @@ export const PatientsPage: React.FC = () => {
   const [selectedTimePeriod, setSelectedTimePeriod] = useState<'today' | 'week' | 'month' | 'year'>('month');
   const [selectedPatient, setSelectedPatient] = useState<typeof mockPatientListResponse.Patient[0] | null>(null);
   const [isPatientDialogOpen, setIsPatientDialogOpen] = useState(false);
+  const [patient360SearchQuery, setPatient360SearchQuery] = useState('');
+  const [sortConfig, setSortConfig] = useState<{ key: keyof typeof mockPatientListResponse.Patient[0] | 'RegistrationDate', direction: 'asc' | 'desc' } | null>(null);
+  const [todaySortConfig, setTodaySortConfig] = useState<{ key: 'patientName' | 'contact' | 'doctorName' | 'currentStatus', direction: 'asc' | 'desc' } | null>(null);
+
+  const handleTodaySort = (key: 'patientName' | 'contact' | 'doctorName' | 'currentStatus') => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (todaySortConfig && todaySortConfig.key === key && todaySortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setTodaySortConfig({ key, direction });
+  };
+
+  const handleSort = (key: keyof typeof mockPatientListResponse.Patient[0] | 'RegistrationDate') => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
 
   // Compute Doctor Counts
   const doctorStats = useMemo(() => {
@@ -269,20 +287,31 @@ export const PatientsPage: React.FC = () => {
     }
 
     // Sort
-    result.sort((a, b) => {
-      switch (sortBy) {
-        case 'name':
-          return a.patientName.localeCompare(b.patientName);
-        case 'status':
-          return a.currentStatus.localeCompare(b.currentStatus);
-        case 'time':
-        default:
-          return 0; // Assuming mock data is already time-sorted
-      }
-    });
+    // Sort
+    if (todaySortConfig) {
+      result.sort((a, b) => {
+        const aValue = a[todaySortConfig.key];
+        const bValue = b[todaySortConfig.key];
+
+        if (aValue < bValue) {
+          return todaySortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return todaySortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    } else {
+      // Default sort (fallback to time or existing sortBy if you want to keep legacy support, 
+      // but usually column sort replaces generic sort)
+      // Keeping simple default time sort if no column selected
+      result.sort((a, b) => 0);
+    }
 
     return result;
-  }, [searchQuery, sortBy, selectedDoctor]);
+  }, [searchQuery, selectedDoctor, todaySortConfig]);
+
+
 
 
   return (
@@ -479,22 +508,7 @@ export const PatientsPage: React.FC = () => {
                   </Select>
                 </div>
 
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <span className="text-sm text-gray-500 whitespace-nowrap hidden sm:inline">Sort by:</span>
-                  <Select value={sortBy} onValueChange={(val) => setSortBy(val as SortOption)}>
-                    <SelectTrigger className="w-full sm:w-[160px] bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-                      <div className="flex items-center gap-2">
-                        <ArrowUpDown className="h-3.5 w-3.5 text-gray-500" />
-                        <SelectValue placeholder="Sort by" />
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="time">Time (Default)</SelectItem>
-                      <SelectItem value="name">Patient Name</SelectItem>
-                      <SelectItem value="status">Status</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+
               </div>
             </div>
 
@@ -502,10 +516,42 @@ export const PatientsPage: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <TableHead className="w-[250px]">Patient</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Doctor</TableHead>
-                    <TableHead>CurrStatus</TableHead>
+                    <TableHead
+                      className="w-[250px] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors select-none"
+                      onClick={() => handleTodaySort('patientName')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Patient
+                        <ArrowUpDown className="h-3 w-3 text-gray-400" />
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors select-none"
+                      onClick={() => handleTodaySort('contact')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Contact
+                        <ArrowUpDown className="h-3 w-3 text-gray-400" />
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors select-none"
+                      onClick={() => handleTodaySort('doctorName')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Doctor
+                        <ArrowUpDown className="h-3 w-3 text-gray-400" />
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors select-none"
+                      onClick={() => handleTodaySort('currentStatus')}
+                    >
+                      <div className="flex items-center gap-1">
+                        CurrStatus
+                        <ArrowUpDown className="h-3 w-3 text-gray-400" />
+                      </div>
+                    </TableHead>
                     <TableHead>Workflow</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -639,88 +685,280 @@ export const PatientsPage: React.FC = () => {
         )
         }
 
-        {
-          activeTab === 'patient360' && (
-            <div className="max-w-5xl mx-auto space-y-6">
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Patient 360</h1>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Comprehensive view of all registered patients.</p>
+        {activeTab === 'patient360' && (
+          <div className="h-[calc(100vh-140px)] flex flex-col space-y-4">
+            <div className="flex items-center justify-between px-1 shrink-0">
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Patient 360</h1>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">Comprehensive view of all registered patients.</p>
+              </div>
+              <div className="relative w-72">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                <Input
+                  placeholder="Search name, ID or phone..."
+                  className="pl-8 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-blue-500"
+                  value={patient360SearchQuery}
+                  onChange={(e) => setPatient360SearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Top Stats Row */}
+            <div className="grid grid-cols-4 gap-4 shrink-0">
+              {/* Total Patients */}
+              <Card className="bg-gradient-to-br from-blue-500 to-blue-600 border-none text-white shadow-md">
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-blue-100 text-xs font-medium mb-1 uppercase tracking-wide">Total Patients</p>
+                    <h3 className="text-3xl font-bold">{patientStats.total}</h3>
+                  </div>
+                  <div className="bg-white/20 p-2.5 rounded-lg">
+                    <Users className="h-5 w-5 text-white" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Male Patients */}
+              <Card
+                className={cn(
+                  "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover:border-blue-300 transition-colors",
+                  selectedGender === 'male' && "ring-2 ring-blue-500 border-transparent"
+                )}
+                onClick={() => setSelectedGender(selectedGender === 'male' ? 'all' : 'male')}
+              >
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs font-medium mb-1 uppercase tracking-wide">Male</p>
+                    <h3 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{patientStats.males}</h3>
+                  </div>
+                  <div className="bg-blue-100 dark:bg-blue-900/30 p-2.5 rounded-lg">
+                    <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Female Patients */}
+              <Card
+                className={cn(
+                  "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover:border-pink-300 transition-colors",
+                  selectedGender === 'female' && "ring-2 ring-pink-500 border-transparent"
+                )}
+                onClick={() => setSelectedGender(selectedGender === 'female' ? 'all' : 'female')}
+              >
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs font-medium mb-1 uppercase tracking-wide">Female</p>
+                    <h3 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{patientStats.females}</h3>
+                  </div>
+                  <div className="bg-pink-100 dark:bg-pink-900/30 p-2.5 rounded-lg">
+                    <Users className="h-5 w-5 text-pink-600 dark:text-pink-400" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Cities */}
+              <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm">
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs font-medium mb-1 uppercase tracking-wide">Cities</p>
+                    <h3 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{patientStats.cities}</h3>
+                  </div>
+                  <div className="bg-orange-100 dark:bg-orange-900/30 p-2.5 rounded-lg">
+                    <MapPin className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-12 gap-6 flex-1 min-h-0 overflow-hidden">
+              {/* Main Content: Table (Left) */}
+              <div className="col-span-12 xl:col-span-9 flex flex-col h-full overflow-hidden order-2 xl:order-1">
+                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/60 dark:border-gray-800 shadow-sm flex flex-col h-full overflow-hidden">
+                  <div className="flex-1 overflow-auto custom-scrollbar">
+                    <Table>
+                      <TableHeader className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 shadow-sm">
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead
+                            className="font-semibold text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors select-none"
+                            onClick={() => handleSort('Name')}
+                          >
+                            <div className="flex items-center gap-1">
+                              Patient
+                              <ArrowUpDown className="h-3 w-3 text-gray-400" />
+                            </div>
+                          </TableHead>
+                          <TableHead
+                            className="font-semibold text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors select-none"
+                            onClick={() => handleSort('Age')}
+                          >
+                            <div className="flex items-center gap-1">
+                              Demographics
+                              <ArrowUpDown className="h-3 w-3 text-gray-400" />
+                            </div>
+                          </TableHead>
+                          <TableHead
+                            className="font-semibold text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors select-none"
+                            onClick={() => handleSort('Contact')}
+                          >
+                            <div className="flex items-center gap-1">
+                              Contact
+                              <ArrowUpDown className="h-3 w-3 text-gray-400" />
+                            </div>
+                          </TableHead>
+                          <TableHead
+                            className="font-semibold text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors select-none"
+                            onClick={() => handleSort('RegistrationDate')}
+                          >
+                            <div className="flex items-center gap-1">
+                              Registered On
+                              <ArrowUpDown className="h-3 w-3 text-gray-400" />
+                            </div>
+                          </TableHead>
+                          <TableHead
+                            className="font-semibold text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors select-none"
+                            onClick={() => handleSort('AddressLine')}
+                          >
+                            <div className="flex items-center gap-1">
+                              Address
+                              <ArrowUpDown className="h-3 w-3 text-gray-400" />
+                            </div>
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(() => {
+                          let filteredPatients = mockPatientListResponse.Patient.filter(p =>
+                            p.Name.toLowerCase().includes(patient360SearchQuery.toLowerCase()) ||
+                            p.PatientId.toLowerCase().includes(patient360SearchQuery.toLowerCase()) ||
+                            p.Contact.includes(patient360SearchQuery)
+                          );
+
+                          let sortedPatients = [...filteredPatients];
+                          if (sortConfig !== null) {
+                            sortedPatients.sort((a, b) => {
+                              if (sortConfig.key === 'Age') {
+                                return sortConfig.direction === 'asc'
+                                  ? parseInt(a.Age) - parseInt(b.Age)
+                                  : parseInt(b.Age) - parseInt(a.Age);
+                              }
+                              if (a[sortConfig.key] < b[sortConfig.key]) {
+                                return sortConfig.direction === 'asc' ? -1 : 1;
+                              }
+                              if (a[sortConfig.key] > b[sortConfig.key]) {
+                                return sortConfig.direction === 'asc' ? 1 : -1;
+                              }
+                              return 0;
+                            });
+                          }
+
+                          const startIndex = (patient360Page - 1) * patient360ItemsPerPage;
+                          const endIndex = startIndex + patient360ItemsPerPage;
+                          const paginatedPatients = sortedPatients.slice(startIndex, endIndex);
+
+                          if (paginatedPatients.length === 0) {
+                            return (
+                              <TableRow>
+                                <TableCell colSpan={5} className="h-24 text-center text-gray-500 dark:text-gray-400">
+                                  No patients found matching your search.
+                                </TableCell>
+                              </TableRow>
+                            );
+                          }
+
+                          return paginatedPatients.map((patient) => (
+                            <TableRow key={patient.PatientId} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
+                              <TableCell>
+                                <div className="flex flex-col">
+                                  <span className="font-medium text-gray-900 dark:text-gray-100">{patient.Name}</span>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedPatient(patient);
+                                      setIsPatientDialogOpen(true);
+                                    }}
+                                    className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1 cursor-pointer hover:underline transition-colors w-fit"
+                                  >
+                                    <Users className="h-3 w-3" />
+                                    {patient.PatientId}
+                                  </button>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                  <UserCheck className="h-3.5 w-3.5" />
+                                  {patient.Age} yrs / {patient.Sex}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                  <Phone className="h-3.5 w-3.5" />
+                                  {patient.Contact}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm text-gray-600 dark:text-gray-400">
+                                  {new Date(patient.RegistrationDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ /g, ' ').replace(/(?<=\w) (?=\d{4})/, ', ')}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm text-gray-500 dark:text-gray-400 max-w-[200px] truncate" title={patient.AddressLine}>
+                                  {patient.AddressLine}, {patient.PinCode}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ));
+                        })()}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Pagination Controls - Fixed at Bottom */}
+                  {mockPatientListResponse.Patient.length > 0 && (
+                    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 shrink-0">
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        Showing <span className="font-medium">{(patient360Page - 1) * patient360ItemsPerPage + 1}</span> to <span className="font-medium">{Math.min(patient360Page * patient360ItemsPerPage, mockPatientListResponse.Patient.length)}</span> of <span className="font-medium">{mockPatientListResponse.Patient.length}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setPatient360Page(p => Math.max(1, p - 1))}
+                          disabled={patient360Page === 1}
+                          className="h-8 text-xs"
+                        >
+                          <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+                          Prev
+                        </Button>
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100 min-w-[3rem] text-center">
+                          {patient360Page} / {Math.ceil(mockPatientListResponse.Patient.length / patient360ItemsPerPage)}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setPatient360Page(p => Math.min(Math.ceil(mockPatientListResponse.Patient.length / patient360ItemsPerPage), p + 1))}
+                          disabled={patient360Page === Math.ceil(mockPatientListResponse.Patient.length / patient360ItemsPerPage)}
+                          className="h-8 text-xs"
+                        >
+                          Next
+                          <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Patient Stats Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-                <Card className="bg-gradient-to-br from-blue-500 to-blue-600 border-none text-white shadow-lg shadow-blue-500/20">
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div>
-                      <p className="text-blue-100 text-sm font-medium mb-1">Total Registered</p>
-                      <h3 className="text-3xl font-bold">{patientStats.total}</h3>
-                    </div>
-                    <div className="bg-white/20 p-3 rounded-xl">
-                      <Users className="h-6 w-6 text-white" />
-                    </div>
-                  </CardContent>
-                </Card>
+              {/* Sidebar: KPIs & Analytics (Right) */}
+              <div className="col-span-12 xl:col-span-3 h-full overflow-y-auto pr-2 custom-scrollbar space-y-4 pb-2 order-1 xl:order-2">
 
-                <Card
-                  className={cn(
-                    "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer transition-all hover:shadow-md",
-                    selectedGender === 'male' && "ring-2 ring-blue-500"
-                  )}
-                  onClick={() => setSelectedGender(selectedGender === 'male' ? 'all' : 'male')}
-                >
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div>
-                      <p className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Male Patients</p>
-                      <h3 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{patientStats.males}</h3>
-                    </div>
-                    <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-xl">
-                      <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card
-                  className={cn(
-                    "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer transition-all hover:shadow-md",
-                    selectedGender === 'female' && "ring-2 ring-pink-500"
-                  )}
-                  onClick={() => setSelectedGender(selectedGender === 'female' ? 'all' : 'female')}
-                >
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div>
-                      <p className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Female Patients</p>
-                      <h3 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{patientStats.females}</h3>
-                    </div>
-                    <div className="bg-pink-100 dark:bg-pink-900/30 p-3 rounded-xl">
-                      <Users className="h-6 w-6 text-pink-600 dark:text-pink-400" />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm">
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div>
-                      <p className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Cities Covered</p>
-                      <h3 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{patientStats.cities}</h3>
-                    </div>
-                    <div className="bg-orange-100 dark:bg-orange-900/30 p-3 rounded-xl">
-                      <MapPin className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* New Patient Registrations KPI */}
-                <Card className="bg-gradient-to-br from-emerald-500 to-teal-600 border-none text-white shadow-lg shadow-emerald-500/20">
-                  <CardHeader className="pb-2">
+                {/* New Reg - Full Width */}
+                <Card className="bg-gradient-to-br from-emerald-500 to-teal-600 border-none text-white shadow-md">
+                  <CardHeader className="p-3 pb-0">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-                        <CalendarDays className="h-4 w-4" />
+                      <CardTitle className="text-xs font-semibold flex items-center gap-1.5 uppercase tracking-wide text-emerald-100">
                         New Registrations
                       </CardTitle>
                       <Select value={selectedTimePeriod} onValueChange={(value: any) => setSelectedTimePeriod(value)}>
-                        <SelectTrigger className="w-[100px] h-7 bg-white/20 border-white/30 text-white hover:bg-white/30 text-xs">
+                        <SelectTrigger className="w-[80px] h-6 bg-white/20 border-white/30 text-white hover:bg-white/30 text-[10px] px-2">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -732,50 +970,50 @@ export const PatientsPage: React.FC = () => {
                       </Select>
                     </div>
                   </CardHeader>
-                  <CardContent className="p-4 pt-2">
-                    <h3 className="text-3xl font-bold mb-1">
-                      {selectedTimePeriod === 'today' ? patientAnalytics.registrationStats.today :
-                        selectedTimePeriod === 'week' ? patientAnalytics.registrationStats.thisWeek :
-                          selectedTimePeriod === 'month' ? patientAnalytics.registrationStats.thisMonth :
-                            patientAnalytics.registrationStats.thisYear}
-                    </h3>
-                    <p className="text-emerald-100 text-xs">
-                      {selectedTimePeriod === 'today' ? 'Today' :
-                        selectedTimePeriod === 'week' ? 'This Week' :
-                          selectedTimePeriod === 'month' ? 'This Month' :
-                            'This Year'}
-                    </p>
+                  <CardContent className="p-3 pt-1">
+                    <div className="flex items-baseline gap-2">
+                      <h3 className="text-2xl font-bold">
+                        {selectedTimePeriod === 'today' ? patientAnalytics.registrationStats.today :
+                          selectedTimePeriod === 'week' ? patientAnalytics.registrationStats.thisWeek :
+                            selectedTimePeriod === 'month' ? patientAnalytics.registrationStats.thisMonth :
+                              patientAnalytics.registrationStats.thisYear}
+                      </h3>
+                      <p className="text-emerald-100 text-xs">
+                        {selectedTimePeriod === 'today' ? 'Today' :
+                          selectedTimePeriod === 'week' ? 'This Week' :
+                            selectedTimePeriod === 'month' ? 'This Month' :
+                              'This Year'}
+                      </p>
+                    </div>
                   </CardContent>
                 </Card>
-              </div>
 
-              {/* Analytics Widgets */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-                {/* Age Band Distribution */}
+                {/* Analytics - Stacked */}
+
+                {/* Age Band */}
                 <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm">
-                  <CardHeader className="pb-3">
+                  <CardHeader className="p-3 pb-2">
                     <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {selectedGender === 'all' ? 'Age Band Distribution' :
-                        selectedGender === 'male' ? 'Male Age Distribution' : 'Female Age Distribution'}
+                      Age Distribution ({selectedGender === 'all' ? 'All' : selectedGender === 'male' ? 'M' : 'F'})
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2">
+                  <CardContent className="p-3 pt-0 space-y-2">
                     {Object.entries(
                       selectedGender === 'male' ? patientAnalytics.maleAgeBands :
                         selectedGender === 'female' ? patientAnalytics.femaleAgeBands :
                           patientAnalytics.ageBands
                     ).map(([band, count]) => (
-                      <div key={band} className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">{band} years</span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-24 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div key={band} className="flex items-center justify-between text-xs">
+                        <span className="text-gray-600 dark:text-gray-400">{band}</span>
+                        <div className="flex items-center gap-2 flex-1 mx-2">
+                          <div className="flex-1 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-blue-500 rounded-full transition-all"
+                              className="h-full bg-blue-500 rounded-full"
                               style={{ width: `${(count / patientStats.total) * 100}%` }}
                             />
                           </div>
-                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100 w-6 text-right">{count}</span>
                         </div>
+                        <span className="font-medium text-gray-900 dark:text-gray-100">{count}</span>
                       </div>
                     ))}
                   </CardContent>
@@ -783,153 +1021,52 @@ export const PatientsPage: React.FC = () => {
 
                 {/* Top Cities */}
                 <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">Top 10 Cities</CardTitle>
+                  <CardHeader className="p-3 pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">Top Cities</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2">
+                  <CardContent className="p-3 pt-0 space-y-1.5">
                     {patientAnalytics.topCities.slice(0, 5).map(([city, count]) => (
-                      <div key={city} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-3.5 w-3.5 text-orange-500" />
-                          <span className="text-sm text-gray-600 dark:text-gray-400 truncate">{city}</span>
+                      <div key={city} className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5 overflow-hidden">
+                          <MapPin className="h-3 w-3 text-orange-500 shrink-0" />
+                          <span className="text-gray-600 dark:text-gray-400 truncate max-w-[120px]">{city}</span>
                         </div>
-                        <Badge variant="outline" className="text-xs">{count}</Badge>
+                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5">{count}</Badge>
                       </div>
                     ))}
                   </CardContent>
                 </Card>
 
-                {/* Data Completeness & Top Pincodes */}
+                {/* Data Quality */}
                 <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">Data Quality</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Completeness Score</span>
-                        <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{patientAnalytics.completenessScore}%</span>
-                      </div>
-                      <div className="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full transition-all"
-                          style={{ width: `${patientAnalytics.completenessScore}%` }}
-                        />
-                      </div>
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Data Completeness</span>
+                      <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{patientAnalytics.completenessScore}%</span>
                     </div>
-                    <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Top Pincodes</p>
-                      <div className="space-y-1">
-                        {patientAnalytics.topPincodes.slice(0, 3).map(([pincode, count]) => (
-                          <div key={pincode} className="flex items-center justify-between text-xs">
-                            <span className="text-gray-600 dark:text-gray-400">{pincode}</span>
-                            <span className="text-gray-900 dark:text-gray-100 font-medium">{count}</span>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mb-3">
+                      <div
+                        className="h-full bg-emerald-500 rounded-full"
+                        style={{ width: `${patientAnalytics.completenessScore}%` }}
+                      />
+                    </div>
+
+                    <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">Top Pincodes</p>
+                    <div className="grid grid-cols-3 gap-1">
+                      {patientAnalytics.topPincodes.slice(0, 3).map(([pincode, count]) => (
+                        <div key={pincode} className="bg-gray-50 dark:bg-gray-800/50 rounded px-1.5 py-1 text-center">
+                          <div className="text-[10px] font-bold text-gray-900 dark:text-gray-100">{pincode}</div>
+                          <div className="text-[9px] text-gray-500">{count}</div>
+                        </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
-              </div>
 
-              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/60 dark:border-gray-800 shadow-sm overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                      <TableHead>Patient</TableHead>
-                      <TableHead>Demographics</TableHead>
-                      <TableHead>Contact</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Address</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(() => {
-                      const startIndex = (patient360Page - 1) * patient360ItemsPerPage;
-                      const endIndex = startIndex + patient360ItemsPerPage;
-                      const paginatedPatients = mockPatientListResponse.Patient.slice(startIndex, endIndex);
-
-                      return paginatedPatients.map((patient) => (
-                        <TableRow key={patient.PatientId} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
-                          <TableCell>
-                            <div className="flex flex-col">
-                              <span className="font-medium text-gray-900 dark:text-gray-100">{patient.Name}</span>
-                              <button
-                                onClick={() => {
-                                  setSelectedPatient(patient);
-                                  setIsPatientDialogOpen(true);
-                                }}
-                                className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1 cursor-pointer hover:underline transition-colors w-fit"
-                              >
-                                <Users className="h-3 w-3" />
-                                {patient.PatientId}
-                              </button>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                              <UserCheck className="h-3.5 w-3.5" />
-                              {patient.Age} yrs / {patient.Sex}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                              <Phone className="h-3.5 w-3.5" />
-                              {patient.Contact}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm text-gray-600 dark:text-gray-400">
-                              {patient.City}, {patient.State}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm text-gray-500 dark:text-gray-400 max-w-[200px] truncate" title={patient.AddressLine}>
-                              {patient.AddressLine}, {patient.PinCode}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ));
-                    })()}
-                  </TableBody>
-                </Table>
-
-                {/* Pagination Controls */}
-                {mockPatientListResponse.Patient.length > patient360ItemsPerPage && (
-                  <div className="flex items-center justify-between px-4 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      Showing <span className="font-medium">{(patient360Page - 1) * patient360ItemsPerPage + 1}</span> to <span className="font-medium">{Math.min(patient360Page * patient360ItemsPerPage, mockPatientListResponse.Patient.length)}</span> of <span className="font-medium">{mockPatientListResponse.Patient.length}</span> patients
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPatient360Page(p => Math.max(1, p - 1))}
-                        disabled={patient360Page === 1}
-                        className="h-8 text-xs"
-                      >
-                        <ChevronLeft className="h-3.5 w-3.5 mr-1" />
-                        Previous
-                      </Button>
-                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100 min-w-[3rem] text-center">
-                        Page {patient360Page} of {Math.ceil(mockPatientListResponse.Patient.length / patient360ItemsPerPage)}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPatient360Page(p => Math.min(Math.ceil(mockPatientListResponse.Patient.length / patient360ItemsPerPage), p + 1))}
-                        disabled={patient360Page === Math.ceil(mockPatientListResponse.Patient.length / patient360ItemsPerPage)}
-                        className="h-8 text-xs"
-                      >
-                        Next
-                        <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
-          )
+          </div>
+        )
         }
       </main >
 

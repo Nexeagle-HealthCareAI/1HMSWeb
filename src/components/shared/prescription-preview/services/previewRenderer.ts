@@ -37,7 +37,7 @@ const COLORS = {
 };
 
 const wrapText = (text: string, font: PDFFont, fontSize: number, maxWidth: number) => {
-  const safeText = text ?? '';
+  const safeText = String(text || '');
   const words = safeText.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   if (!words.length) return [''];
@@ -227,7 +227,7 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   const pName = patient.name || 'Unknown Patient';
   const pAgeSex = [patient.age ? `${patient.age} Y` : '', patient.sex].filter(Boolean).join(' / ');
   const pUhid = patient.patientId ? `ID: ${patient.patientId}` : '';
-  const pContact = patient.mobile || patient.contact || '';
+
 
   // Name (Large)
   page.drawText(pName, {
@@ -247,12 +247,23 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   cursorY -= lineHeight * 2;
 
   // Row 2 (if exists)
-  if (pContact || patient.address) {
-    drawLabelValue('Phone', pContact, leftPad, cursorY, gridW);
-    // Truncate address if needed
+  if (patient.address) {
     const address = [patient.address, patient.city].filter(Boolean).join(', ');
-    drawLabelValue('Address', address.substring(0, 30), leftPad + gridW, cursorY, gridW);
-    cursorY -= lineHeight * 2;
+
+    // Draw Label manually
+    page.drawText('Address', { x: leftPad, y: cursorY, size: sizeSm, font: boldFont, color: COLORS.TextLight });
+
+    // Wrap Address Value
+    const addressLines = wrapText(address, regularFont, sizeBase, patientW);
+    let addressY = cursorY - sizeBase - 2;
+
+    addressLines.forEach((line) => {
+      page.drawText(line, { x: leftPad, y: addressY, size: sizeBase, font: regularFont, color: COLORS.TextMain });
+      addressY -= lineHeight; // Move down for next line
+    });
+
+    // Update cursorY based on the number of lines, ensuring enough spacing
+    cursorY = addressY - lineHeight;
   }
 
   // -- Vitals Card (Right Side) --
@@ -278,100 +289,170 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   const vitalsVerticalOffset = lineHeight * 0.5; // Reduced from 1.5
   const vitalsTopY = topSectionStartY + vitalsVerticalOffset;
 
-  page.drawRectangle({
-    x: vitalsX,
-    y: vitalsTopY - vitalsH,
-    width: vitalsW,
-    height: vitalsH,
-    color: COLORS.BgAccent,
-    borderRadius: 4,
-  });
-
-  // Vitals Header
-  page.drawText('VITALS', {
-    x: vitalsX + 8,
-    y: vitalsTopY - 6,
-    size: sizeSm,
-    font: boldFont,
-    color: COLORS.Primary
-  });
-
-  let vY = vitalsTopY - lineHeight - 4;
-  const vX_Label = vitalsX + 8;
-  const vX_Val = vitalsX + vitalsW - 10;
-
   if (vitalItems.length > 0) {
+    page.drawRectangle({
+      x: vitalsX,
+      y: vitalsTopY - vitalsH,
+      width: vitalsW,
+      height: vitalsH,
+      color: COLORS.BgAccent,
+      borderRadius: 4,
+    });
+
+    // Vitals Header
+    page.drawText('VITALS', {
+      x: vitalsX + 8,
+      y: vitalsTopY - 6,
+      size: sizeSm,
+      font: boldFont,
+      color: COLORS.Primary
+    });
+
+    let vY = vitalsTopY - lineHeight - 4;
+    const vX_Label = vitalsX + 8;
+    const vX_Val = vitalsX + vitalsW - 10;
+
     vitalItems.forEach((vit) => {
       page.drawText(vit.l, { x: vX_Label, y: vY, size: sizeSm, font: regularFont, color: COLORS.TextLight });
       const valW = boldFont.widthOfTextAtSize(vit.v.toString(), sizeBase);
       page.drawText(vit.v.toString(), { x: vX_Val - valW, y: vY, size: sizeBase, font: boldFont, color: COLORS.TextMain });
       vY -= lineHeight;
     });
-  } else {
-    page.drawText('No vitals recorded', { x: vX_Label, y: vY, size: sizeSm, font: regularFont, color: COLORS.TextLight });
-  }
 
-  // Ensure cursorY is below both patient info and vitals card
-  const vitalsBottom = vitalsTopY - vitalsH;
-  cursorY = Math.min(cursorY, vitalsBottom) - lineHeight;
+    // Ensure cursorY is below both patient info and vitals card
+    const vitalsBottom = vitalsTopY - vitalsH;
+    cursorY = Math.min(cursorY, vitalsBottom) - lineHeight;
+  } else {
+    // If no vitals, just ensure padding below patient info
+    cursorY = cursorY - lineHeight;
+  }
 
 
 
   // --- 2. Clinical Summary (Simplified Tabular) ---
 
-  // Helper to draw a clean tabular cell (Simplified)
+  // Helper to draw a clean tabular cell (Simplified & Compact Inline)
   const renderTabularItem = async (title: string, content: string | undefined, x: number, w: number, isBoldValues = false): Promise<number> => {
     if (!content || !content.trim()) return 0;
 
-    const label = title;
+    const labelFull = `${title.toUpperCase()}: `;
     const contentFont = isBoldValues ? boldFont : regularFont;
     const contentSize = isBoldValues ? sizeLg : sizeBase;
+    const bulletChar = '•';
+    const bulletWidth = contentFont.widthOfTextAtSize(bulletChar + ' ', contentSize);
 
-    const pad = 0; // No padding needed for simple text
-    const innerW = w;
+    // Prepare content string
+    const items = content.split(/[,;]/).map(s => s.trim()).filter(Boolean);
+    const separator = ', ';
+    const combinedContent = items.length > 0 ? items.join(separator) : content.trim();
 
-    const wrappedC = wrapText(content, contentFont, contentSize, innerW);
-    const contentH = wrappedC.length * (contentSize * 1.3);
-    const totalH = contentH + sizeBase + 8;
+    // Measurement for inline layout
+    const labelW = boldFont.widthOfTextAtSize(labelFull, sizeSm);
+    let currentX = x + labelW;
+    let currentY = 0; // Relative Y
+
+    // Custom wrapping for mixed style (Label + Content)
+    const words = combinedContent.split(' ');
+    const lines: { text: string; x: number; yOffset: number; isLabel?: boolean }[] = [];
+
+    // Push Label
+    lines.push({ text: labelFull, x: x, yOffset: 0, isLabel: true });
+
+    let currentLine = '';
+
+    words.forEach((word) => {
+      const wordW = contentFont.widthOfTextAtSize(word + ' ', contentSize);
+      const availableW = w - (currentX - x);
+
+      if (wordW <= availableW) {
+        currentLine += word + ' ';
+        currentX += wordW;
+      } else {
+        // Push current line chunk
+        if (currentLine) {
+          lines.push({ text: currentLine, x: x + (currentX - wordW - contentFont.widthOfTextAtSize(currentLine, contentSize)), yOffset: currentY }); // x calc is tricky, simplifying
+          // Actually, we just need to store the line content and where it started. 
+          // But since we are building word by word, easier to just push completed lines.
+          // Let's restart logic: accumulate words, if fail, push line.
+        }
+      }
+    });
+
+    // REWRITE WRAPPING LOGIC FOR SIMPLICITY AND CORRECTNESS
+    const flowLines: { text: string; x: number; yOffset: number; font: PDFFont; size: number; color: RGB }[] = [];
+
+    // Add Label
+    flowLines.push({ text: labelFull, x: x, yOffset: 0, font: boldFont, size: sizeSm, color: COLORS.TextLight });
+
+    let lineWords: string[] = [];
+    let lineW = labelW; // Start with label width used on first line
+    let lineIndex = 0;
+
+    words.forEach(word => {
+      const wordW = contentFont.widthOfTextAtSize(word + ' ', contentSize);
+      if (lineW + wordW <= w) {
+        lineWords.push(word);
+        lineW += wordW;
+      } else {
+        // Flush current line
+        flowLines.push({
+          text: lineWords.join(' '),
+          x: x + (lineIndex === 0 ? labelW : 0),
+          yOffset: lineIndex * (contentSize * 1.3),
+          font: contentFont,
+          size: contentSize,
+          color: COLORS.TextMain
+        });
+
+        // Start next line
+        lineWords = [word];
+        lineW = wordW; // Reset width (no label offset)
+        lineIndex++;
+      }
+    });
+
+    // Flush last line
+    if (lineWords.length > 0) {
+      flowLines.push({
+        text: lineWords.join(' '),
+        x: x + (lineIndex === 0 ? labelW : 0),
+        yOffset: lineIndex * (contentSize * 1.3),
+        font: contentFont,
+        size: contentSize,
+        color: COLORS.TextMain
+      });
+    }
+
+    // Calculate total height
+    const totalLines = lineIndex + 1;
+    const totalH = (totalLines * (contentSize * 1.3)) + 4; // reduced padding
 
     if (cursorY - totalH < activeFooterPad) {
       page = await acquirePage();
       cursorY = page.getHeight() - activeHeaderPad;
     }
 
-    const topY = cursorY;
+    const startY = cursorY;
 
-    // Label
-    page.drawText(label.toUpperCase(), {
-      x: x,
-      y: topY - sizeBase + 2,
-      size: sizeSm,
-      font: boldFont,
-      color: COLORS.TextLight
-    });
-
-    // Content
-    let textY = topY - sizeBase - 4 - sizeBase;
-    for (const line of wrappedC) {
-      page.drawText(line, {
-        x: x,
-        y: textY,
-        size: contentSize,
-        font: contentFont,
-        color: COLORS.TextMain
+    for (const item of flowLines) {
+      page.drawText(item.text, {
+        x: item.x,
+        y: startY - sizeBase - item.yOffset, // Adjust baseline
+        size: item.size,
+        font: item.font,
+        color: item.color
       });
-      textY -= (contentSize * 1.3);
     }
 
     return totalH;
   };
 
-  if (payload.chiefComplaint || payload.history || payload.comorbidity || payload.examination || payload.diagnosis) {
+  if (payload.chiefComplaint || payload.history || payload.comorbidity || payload.examination) {
     await ensureRoom(lineHeight * 3);
 
     // 1. C/O
     const h1 = await renderTabularItem('Chief Complaint', payload.chiefComplaint, leftPad, contentWidth);
-    if (h1 > 0) cursorY -= (h1 + 15);
+    if (h1 > 0) cursorY -= (h1 + 6);
 
     // 2. History & Comorbidities (Split Row)
     if (payload.history && payload.comorbidity && payload.history.trim() && payload.comorbidity.trim()) {
@@ -388,26 +469,20 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
       const hC = await renderTabularItem('Comorbidity', payload.comorbidity, leftPad + colW + midGap, colW);
 
       const maxH = Math.max(hH, hC);
-      cursorY = startY - maxH - 15;
+      cursorY = startY - maxH - 6;
 
     } else {
       // Sequential
       const hHist = await renderTabularItem('History', payload.history, leftPad, contentWidth);
-      if (hHist) cursorY -= (hHist + 15);
+      if (hHist) cursorY -= (hHist + 6);
 
       const hCom = await renderTabularItem('Comorbidity', payload.comorbidity, leftPad, contentWidth);
-      if (hCom) cursorY -= (hCom + 15);
+      if (hCom) cursorY -= (hCom + 6);
     }
 
     // 3. Examination
     const hExam = await renderTabularItem('Examination', payload.examination, leftPad, contentWidth);
-    if (hExam) cursorY -= (hExam + 15);
-
-    // 4. Diagnosis
-    const hDiag = await renderTabularItem('Diagnosis', payload.diagnosis, leftPad, contentWidth, true);
-    if (hDiag) cursorY -= (hDiag + 15);
-
-    cursorY -= 10;
+    if (hExam) cursorY -= (hExam + 6);
   }
 
   // --- 2.5. Clinical Orders: Investigations & Procedures ---
@@ -415,98 +490,49 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   const procedures = payload.orders?.procedures || [];
 
   if (investigations.length > 0 || procedures.length > 0) {
-    // We treat this similar to the clinical summary section but bulleted
     await ensureRoom(lineHeight * 3);
 
-    const drawOrderList = async (title: string, items: string[], x: number, width: number, simulate: boolean = false): Promise<number> => {
-      if (!items.length) return 0;
-
-      let localCursorY = cursorY;
-      let usedHeight = 0;
-
-      // Check room (Header + 1 item)
-      if (!simulate && localCursorY - (lineHeight * 2) < activeFooterPad) {
-        page = await acquirePage();
-        localCursorY = page.getHeight() - activeHeaderPad;
-        cursorY = localCursorY;
-      }
-
-      // Draw Title
-      if (!simulate) {
-        page.drawText(title.toUpperCase(), {
-          x: x,
-          y: localCursorY,
-          size: sizeSm,
-          font: boldFont,
-          color: COLORS.Primary
-        });
-      }
-      localCursorY -= lineHeight;
-      usedHeight += lineHeight;
-
-      // Draw Items
-      for (const item of items) {
-        if (!simulate && localCursorY - lineHeight < activeFooterPad) {
-          page = await acquirePage();
-          localCursorY = page.getHeight() - activeHeaderPad;
-          cursorY = localCursorY;
-        }
-
-        if (!simulate) {
-          page.drawText(`• ${item}`, {
-            x: x + 4,
-            y: localCursorY,
-            size: sizeBase,
-            font: regularFont,
-            color: COLORS.TextMain
-          });
-        }
-        localCursorY -= lineHeight;
-        usedHeight += lineHeight;
-      }
-
-      return usedHeight;
-    };
+    const invStr = investigations.join(', ');
+    const procStr = procedures.join(', ');
 
     if (investigations.length > 0 && procedures.length > 0) {
       // Side by Side
-      const colW = (contentWidth / 2) - 10;
-      const leftX = leftPad;
-      const rightX = leftPad + (contentWidth / 2) + 10;
+      const midGap = 10;
+      const colW = (contentWidth - midGap) / 2;
 
       const startY = cursorY;
 
-      const hInv = await drawOrderList('Investigations', investigations, leftX, colW, true);
-      const hProc = await drawOrderList('Procedures', procedures, rightX, colW, true);
+      const hInv = await renderTabularItem('Investigations', invStr, leftPad, colW, true); // Bold values? User didn't specify, but Diagnos is bold. Clinical Summary is not. Investigations usually not. Let's keep `false` for `isBoldValues` to match general text style, or `true` if emphasize. Previous drawOrderList used regularFont for items. So isBoldValues=false.
+      // Wait, renderTabularItem defaults to false.
+
+      // Reset Y for second col
+      const afterInv_Y = cursorY;
+      cursorY = startY;
+      const hProc = await renderTabularItem('Procedures', procStr, leftPad + colW + midGap, colW, false);
 
       const maxH = Math.max(hInv, hProc);
+      cursorY = startY - maxH - 15;
 
-      // Simple page break check for the block
-      if (cursorY - maxH < activeFooterPad) {
-        page = await acquirePage();
-        cursorY = page.getHeight() - activeHeaderPad;
-      }
-
-      const finalY = cursorY;
-      await drawOrderList('Investigations', investigations, leftX, colW, false);
-      cursorY = finalY; // Reset for right col
-      await drawOrderList('Procedures', procedures, rightX, colW, false);
-
-      cursorY = finalY - maxH - (lineHeight / 2);
     } else {
       // Sequential
       if (investigations.length > 0) {
-        const h = await drawOrderList('Investigations', investigations, leftPad, contentWidth, false);
-        cursorY -= (h + (lineHeight / 2)); // drawOrderList returns height used including items
+        const hInv = await renderTabularItem('Investigations', invStr, leftPad, contentWidth, false);
+        if (hInv) cursorY -= (hInv + 6);
       }
 
       if (procedures.length > 0) {
-        const h = await drawOrderList('Procedures', procedures, leftPad, contentWidth, false);
-        cursorY -= (h + (lineHeight / 2));
+        const hProc = await renderTabularItem('Procedures', procStr, leftPad, contentWidth, false);
+        if (hProc) cursorY -= (hProc + 6);
       }
     }
+  }
 
-    cursorY -= 6;
+  // --- 2.7. Diagnosis (Moved after Investigations) ---
+  if (payload.diagnosis) {
+    await ensureRoom(lineHeight * 3);
+    const hDiag = await renderTabularItem('Diagnosis', payload.diagnosis, leftPad, contentWidth, true);
+    if (hDiag) cursorY -= (hDiag + 6);
+    cursorY -= 4;
   }
 
   // --- 3. Rx: Medications Table ---
@@ -622,33 +648,109 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
     for (const item of payload.nonPharmacologicalAdvice) {
       let t = item.advice;
       if (item.duration) t += ` (${item.duration})`;
-      page.drawText(`• ${t}`, { x: col2X + 4, y: rightY, size: sizeBase, font: regularFont, color: COLORS.TextMain });
-      rightY -= lineHeight;
+      if (item.notes) t += ` - ${item.notes}`;
+
+      const wrapped = wrapText(t, regularFont, sizeBase, colWidth - 8);
+
+      wrapped.forEach((line, idx) => {
+        // Verify space? Just render for now to match local pattern
+        const prefix = idx === 0 ? '• ' : '  ';
+        page.drawText(`${prefix}${line}`, { x: col2X + 4, y: rightY, size: sizeBase, font: regularFont, color: COLORS.TextMain });
+        rightY -= lineHeight;
+      });
+      rightY -= 2; // small gap between items
     }
-    rightY -= lineHeight;
+    rightY -= (lineHeight - 2); // adjust remaining gap
   }
 
   // Follow Up Box
+  // Follow Up Box
   if (payload.followUp && payload.followUp.followUpOn) {
-    const boxH = lineHeight * 2.5;
+    // 1. Calculate Content
+    const instructions = [];
 
+    // Date
+    instructions.push({ type: 'header', text: 'NEXT FOLLOW UP' });
+    instructions.push({ type: 'date', text: getFormattedDate(payload.followUp.followUpOn) });
+
+    // Reason & Instructions Handling
+    let reasonText = payload.followUp.reason;
+    let instructionsText = payload.followUp.patientInstructions;
+
+    // Handle case where reason is an object (unexpected payload structure)
+    if (typeof reasonText === 'object' && reasonText !== null) {
+      const rObj = reasonText as any;
+      reasonText = rObj.reason || '';
+      if (!instructionsText && rObj.patientInstructions) {
+        instructionsText = rObj.patientInstructions;
+      }
+    }
+
+    if (reasonText && typeof reasonText === 'string' && reasonText.trim()) {
+      instructions.push({ type: 'subLabel', text: 'Reason:' });
+      instructions.push({ type: 'text', text: reasonText });
+    }
+
+    // Instructions
+    if (instructionsText && typeof instructionsText === 'string' && instructionsText.trim()) {
+      instructions.push({ type: 'subLabel', text: 'Patient Instructions:' });
+      instructions.push({ type: 'text', text: instructionsText });
+    }
+
+    // 2. Measure Height
+    let contentH = 8; // Top padding
+    const innerW = colWidth - 20;
+
+    const renderLines: { text: string; size: number; font: PDFFont; color: RGB; yOff: number }[] = [];
+
+    for (const item of instructions) {
+      if (item.type === 'header') {
+        renderLines.push({ text: item.text, size: sizeSm, font: boldFont, color: COLORS.Primary, yOff: contentH });
+        contentH += lineHeight;
+      } else if (item.type === 'date') {
+        renderLines.push({ text: item.text, size: sizeLg, font: boldFont, color: COLORS.TextMain, yOff: contentH });
+        contentH += lineHeight * 1.5;
+      } else if (item.type === 'subLabel') {
+        renderLines.push({ text: item.text, size: sizeSm, font: boldFont, color: COLORS.TextLight, yOff: contentH });
+        contentH += lineHeight;
+      } else {
+        // Text Body
+        const lines = wrapText(item.text, regularFont, sizeBase, innerW);
+        lines.forEach(l => {
+          renderLines.push({ text: l, size: sizeBase, font: regularFont, color: COLORS.TextMain, yOff: contentH });
+          contentH += lineHeight;
+        });
+        contentH += 4; // Gap after block
+      }
+    }
+
+    contentH += 4; // Bottom padding
+
+    // 3. Draw Box
     page.drawRectangle({
       x: col2X,
-      y: rightY - boxH + 8,
+      y: rightY - contentH + 8,
       width: colWidth,
-      height: boxH,
+      height: contentH,
       color: COLORS.BgAccent,
       borderWidth: 0.5,
       borderColor: COLORS.Primary
     });
 
-    const nextY = rightY - 4;
-    page.drawText('NEXT FOLLOW UP', { x: col2X + 10, y: nextY, size: sizeSm, font: boldFont, color: COLORS.Primary });
+    // 4. Draw Content
+    const startBoxY = rightY + 4; // Adjust baseline slightly relative
 
-    const dateStr = getFormattedDate(payload.followUp.followUpOn);
-    page.drawText(dateStr, { x: col2X + 10, y: nextY - sizeLg - 2, size: sizeLg, font: boldFont, color: COLORS.TextMain });
+    for (const line of renderLines) {
+      page.drawText(line.text, {
+        x: col2X + 10,
+        y: startBoxY - line.yOff - 4,
+        size: line.size,
+        font: line.font,
+        color: line.color
+      });
+    }
 
-    rightY -= boxH + lineHeight;
+    rightY -= contentH + lineHeight;
   }
 
   cursorY = rightY;
