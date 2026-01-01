@@ -27,7 +27,8 @@ import {
   PatientOverview,
   PatientTimeline,
   PatientLabTests,
-  PatientProfileModal
+  PatientProfileModal,
+  PatientAnalytics
 } from '../components';
 import EPrescriptionPad, { EPrescriptionPadRef } from '@/features/patient/components/EPrescriptionPad';
 import PrescriptionCustomizePanel from '@/features/prescription/components/PrescriptionCustomizePanel';
@@ -175,7 +176,7 @@ export const PatientProfilePage: React.FC = () => {
   const [isTimelineLoading, setIsTimelineLoading] = useState(false);
 
   useEffect(() => {
-    if (activeTab === 'timeline' && patientId && hospitalId) {
+    if ((activeTab === 'timeline' || activeTab === 'overview') && patientId && hospitalId) {
       fetchTimelineEvents();
     }
   }, [activeTab, patientId, hospitalId]);
@@ -577,11 +578,14 @@ export const PatientProfilePage: React.FC = () => {
 
             {/* Overview Tab */}
             {activeTab === 'overview' && (
-              <div className="flex items-center justify-center h-64 text-muted-foreground">
-                <div className="text-center space-y-2">
-                  <div className="text-2xl font-semibold">Coming Soon</div>
-                  <p className="text-sm">Overview will be available in an upcoming update.</p>
-                </div>
+              <div className="h-full px-6">
+                {isTimelineLoading ? (
+                  <div className="flex justify-center items-center h-64">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : (
+                  <PatientAnalytics timelineEvents={timelineEvents} />
+                )}
               </div>
             )}
 
