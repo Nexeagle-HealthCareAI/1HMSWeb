@@ -27,7 +27,6 @@ import {
   PatientOverview,
   PatientTimeline,
   PatientLabTests,
-  PatientProfileModal,
   PatientAnalytics
 } from '../components';
 import EPrescriptionPad, { EPrescriptionPadRef } from '@/features/patient/components/EPrescriptionPad';
@@ -153,7 +152,7 @@ export const PatientProfilePage: React.FC = () => {
   const [vitalSigns, setVitalSigns] = useState<VitalSigns[]>([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
-  const [showPatientProfileModal, setShowPatientProfileModal] = useState(false);
+
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [showPostSubmitDialog, setShowPostSubmitDialog] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
@@ -285,20 +284,7 @@ export const PatientProfilePage: React.FC = () => {
   const activeTabMeta = navigationItems.find((item) => item.id === activeTab) || navigationItems[0];
 
   // Handle edit profile click
-  const handleEditProfile = () => {
-    setShowPatientProfileModal(true);
-  };
 
-  // Handle profile modal close
-  const handleProfileModalClose = () => {
-    setShowPatientProfileModal(false);
-  };
-
-  // Handle profile update success
-  const handleProfileUpdateSuccess = () => {
-    refetchProfile();
-    setShowPatientProfileModal(false);
-  };
 
   const handleConfirmSubmit = async () => {
     // Call the submit method on the EPrescriptionPad component
@@ -507,15 +493,7 @@ export const PatientProfilePage: React.FC = () => {
                           <Badge className={`${riskLevel.bg} ${riskLevel.color} border-0 text-xs px-2 py-0.5`}>
                             {riskLevel.level} Risk
                           </Badge>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleEditProfile}
-                            className="gap-2 text-xs h-8 px-2 shadow-none hover:bg-transparent hover:text-primary"
-                          >
-                            <Edit className="h-3 w-3" />
-                            Edit
-                          </Button>
+
                         </div>
 
                         {/* Compact Info Row */}
@@ -630,16 +608,7 @@ export const PatientProfilePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Patient Profile Modal */}
-        {showPatientProfileModal && patientId && (
-          <PatientProfileModal
-            isOpen={showPatientProfileModal}
-            onClose={handleProfileModalClose}
-            hospitalId={hospitalId || ''}
-            patientId={patientId}
-            patientName={patient?.name || 'Unknown Patient'}
-          />
-        )}
+
 
         {/* Submit Confirmation Modal */}
         <Dialog open={showSubmitConfirm} onOpenChange={setShowSubmitConfirm}>

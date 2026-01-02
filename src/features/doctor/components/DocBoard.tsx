@@ -36,7 +36,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Bell,
-  Bot,
+  BarChart,
   Calendar,
   CalendarDays,
   Check,
@@ -104,8 +104,7 @@ import { PrescriptionLayout } from '@/features/prescription/components/layout/Pr
 
 // Lazy-load the calendar page so it only loads when the doctor opens it from the dashboard
 const DoctorCalendar = lazy(() => import('@/features/doctor-calendar/DoctorCalendarPage').then(module => ({ default: module.DoctorCalendarPage })));
-// Lazy-load the AI assistant so it only loads when opened from the dashboard
-const DocAI = lazy(() => import('@/features/ai/components/DocAI').then(module => ({ default: module.DocAI })));
+const DoctorAnalyticsPage = lazy(() => import('./DoctorAnalyticsPage').then(module => ({ default: module.DoctorAnalyticsPage })));
 
 interface PatientAppointment {
   appointmentId: string;
@@ -148,7 +147,7 @@ export const ClinicalDashboard: React.FC = () => {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [appointmentToCancel, setAppointmentToCancel] = useState<PatientAppointment | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
-  const [activeNavButton, setActiveNavButton] = useState<'appointments' | 'settings' | 'calendar' | 'assistant'>('appointments');
+  const [activeNavButton, setActiveNavButton] = useState<'appointments' | 'settings' | 'calendar' | 'analytics'>('appointments');
   const [settingsTab, setSettingsTab] = useState<'fields' | 'personalized' | 'layout'>('fields');
   const [layoutRefreshToken, setLayoutRefreshToken] = useState(0);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
@@ -173,7 +172,7 @@ export const ClinicalDashboard: React.FC = () => {
   // userId for doctor profile
   const userId = authUserId || '';
 
-  type NavKey = 'appointments' | 'calendar' | 'assistant' | 'settings';
+  type NavKey = 'appointments' | 'calendar' | 'analytics' | 'settings';
 
   const { data: doctorProfileResponse, isLoading: doctorProfileLoading, error: doctorProfileError } = useDoctorProfile(userId);
   const doctorId = doctorProfileResponse?.doctorId || '';
@@ -205,12 +204,12 @@ export const ClinicalDashboard: React.FC = () => {
       description: t('docBoard.nav.calendar.description')
     },
     {
-      key: 'assistant',
-      label: t('docBoard.nav.assistant.label'),
-      shortLabel: t('docBoard.nav.assistant.short'),
-      Icon: Bot,
+      key: 'analytics',
+      label: t('docBoard.nav.analytics.label', { defaultValue: 'Analytics' }),
+      shortLabel: t('docBoard.nav.analytics.short', { defaultValue: 'Analytics' }),
+      Icon: BarChart,
       requiresProfile: true,
-      description: t('docBoard.nav.assistant.description')
+      description: t('docBoard.nav.analytics.description', { defaultValue: 'View practice analytics' })
     },
     {
       key: 'settings',
@@ -1410,57 +1409,38 @@ export const ClinicalDashboard: React.FC = () => {
                       <div className="space-y-3">
                         <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200/60 dark:border-gray-800/60 shadow-xl shadow-gray-100/50 dark:shadow-black/20 overflow-hidden backdrop-blur-sm">
                           {/* Table Header/Toolbar - Optional */}
-                          <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-gray-50/50 dark:bg-gray-900/50">
-                            <div className="flex items-center gap-2">
-                              <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg text-blue-600 dark:text-blue-400">
-                                <ListChecks className="h-4 w-4" />
-                              </div>
-                              <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                                Appointments List
-                              </h3>
-                            </div>
-                            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-700 shadow-sm">
-                              {totalPages > 1
-                                ? `${t('common.page', { defaultValue: 'Page' })} ${currentPage} ${t('common.of', { defaultValue: 'of' })} ${totalPages}`
-                                : t('docBoard.table.summary', {
-                                  count: filteredAppointments.length,
-                                  defaultValue: `${filteredAppointments.length} records`
-                                })}
-                            </p>
-                          </div>
+
 
                           <div className="overflow-x-auto w-full">
                             <Table className="w-full text-sm">
                               <TableHeader>
-                                <TableRow className="bg-gray-50/80 dark:bg-gray-900/80 hover:bg-gray-50/80 dark:hover:bg-gray-900/80 border-b border-gray-200 dark:border-gray-800">
-                                  <TableHead className="w-[180px] font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4 pl-6">
+                                <TableRow className="bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-900/50">
+                                  <TableHead className="w-[180px] font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5 pl-8">
                                     {t('docBoard.table.patient')}
                                   </TableHead>
-                                  <TableHead className="hidden xl:table-cell font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4">
+                                  <TableHead className="hidden xl:table-cell font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5">
                                     {t('docBoard.table.patientName')}
                                   </TableHead>
-                                  <TableHead className="font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4">
+                                  <TableHead className="font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5">
                                     {t('docBoard.table.token')}
                                   </TableHead>
-                                  <TableHead className="hidden md:table-cell font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4">
+                                  <TableHead className="hidden md:table-cell font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5">
                                     {t('docBoard.table.appointmentTime')}
                                   </TableHead>
-                                  <TableHead className="font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4">
+                                  <TableHead className="font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5">
                                     {t('docBoard.table.status')}
                                   </TableHead>
-                                  <TableHead className="font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4 text-center">
+                                  <TableHead className="font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5 text-center">
                                     {t('docBoard.table.labReports', { defaultValue: 'Lab reports' })}
                                   </TableHead>
-                                  <TableHead className="font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4 text-center">
-                                    {t('docBoard.table.addBill', { defaultValue: 'Add Bill' })}
-                                  </TableHead>
-                                  <TableHead className="hidden lg:table-cell font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4">
+
+                                  <TableHead className="hidden lg:table-cell font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5">
                                     {t('docBoard.table.case')}
                                   </TableHead>
-                                  <TableHead className="font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4 text-center">
+                                  <TableHead className="font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5 text-center">
                                     {t('docBoard.table.actions')}
                                   </TableHead>
-                                  <TableHead className="hidden lg:table-cell font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4 text-center">
+                                  <TableHead className="hidden lg:table-cell font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5 text-center">
                                     {t('docBoard.table.printRx')}
                                   </TableHead>
                                 </TableRow>
@@ -1470,7 +1450,7 @@ export const ClinicalDashboard: React.FC = () => {
                                   currentAppointments.map((appointment) => (
                                     <TableRow
                                       key={appointment.appointmentId}
-                                      className="group border-b border-gray-100 dark:border-gray-800/50 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors duration-200"
+                                      className="group border-b border-gray-100 dark:border-gray-800 hover:bg-blue-50/40 dark:hover:bg-blue-900/10 transition-all duration-200"
                                     >
                                       <TableCell className="py-4 pl-6 align-middle font-medium">
                                         <button
@@ -1533,23 +1513,7 @@ export const ClinicalDashboard: React.FC = () => {
                                           <span className="text-gray-300 dark:text-gray-700 text-xl font-light">·</span>
                                         )}
                                       </TableCell>
-                                      <TableCell className="py-4 align-middle text-center">
-                                        <TooltipProvider>
-                                          <Tooltip delayDuration={300}>
-                                            <TooltipTrigger asChild>
-                                              <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => handleAddBillClick(appointment)}
-                                                className="h-8 w-8 rounded-full text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
-                                              >
-                                                <FileText className="h-4 w-4" />
-                                              </Button>
-                                            </TooltipTrigger>
-                                            <TooltipContent>Add Bill</TooltipContent>
-                                          </Tooltip>
-                                        </TooltipProvider>
-                                      </TableCell>
+
                                       <TableCell className="hidden lg:table-cell py-4 align-middle">
                                         <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-wider bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800">
                                           NEW
@@ -1675,16 +1639,16 @@ export const ClinicalDashboard: React.FC = () => {
                         <div className="overflow-x-auto w-full">
                           <Table className="w-full text-sm">
                             <TableHeader>
-                              <TableRow className="bg-gray-50/80 dark:bg-gray-900/80 hover:bg-gray-50/80 dark:hover:bg-gray-900/80 border-b border-gray-200 dark:border-gray-800">
-                                <TableHead className="w-[140px] font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4 pl-6">{t('docBoard.table.patientId')}</TableHead>
-                                <TableHead className="font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4">{t('docBoard.table.patientName')}</TableHead>
-                                <TableHead className="font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4">{t('docBoard.table.token')}</TableHead>
-                                <TableHead className="font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4">{t('docBoard.table.lastVisit')}</TableHead>
-                                <TableHead className="font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4">{t('docBoard.table.status')}</TableHead>
-                                <TableHead className="font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4">{t('docBoard.table.case')}</TableHead>
-                                <TableHead className="font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4">{t('docBoard.table.printRx')}</TableHead>
-                                <TableHead className="font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4">{t('docBoard.table.followUp')}</TableHead>
-                                <TableHead className="font-semibold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider py-4 text-center">{t('docBoard.table.completed')}</TableHead>
+                              <TableRow className="bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-900/50">
+                                <TableHead className="w-[140px] font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5 pl-8">{t('docBoard.table.patientId')}</TableHead>
+                                <TableHead className="font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5">{t('docBoard.table.patientName')}</TableHead>
+                                <TableHead className="font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5">{t('docBoard.table.token')}</TableHead>
+                                <TableHead className="font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5">{t('docBoard.table.lastVisit')}</TableHead>
+                                <TableHead className="font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5">{t('docBoard.table.status')}</TableHead>
+                                <TableHead className="font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5">{t('docBoard.table.case')}</TableHead>
+                                <TableHead className="font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5">{t('docBoard.table.printRx')}</TableHead>
+                                <TableHead className="font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5">{t('docBoard.table.followUp')}</TableHead>
+                                <TableHead className="font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5 text-center">{t('docBoard.table.completed')}</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -1692,7 +1656,7 @@ export const ClinicalDashboard: React.FC = () => {
                                 currentAppointments.map((appointment) => (
                                   <TableRow
                                     key={appointment.appointmentId}
-                                    className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-100 dark:border-gray-800 last:border-0"
+                                    className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/80 transition-all duration-200 border-b border-gray-100 dark:border-gray-800 last:border-0"
                                   >
                                     <TableCell className="font-medium py-4 pl-6">
                                       <button
@@ -2033,11 +1997,11 @@ export const ClinicalDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* AI Assistant - embedded in DocBoard */}
-        {activeNavButton === 'assistant' && (
+        {/* Analytics Page */}
+        {activeNavButton === 'analytics' && (
           <div className="w-full mx-auto px-3 sm:px-6 py-2 sm:py-4">
-            <Suspense fallback={<div className="p-6 text-center">{t('docBoard.assistant.loading')}</div>}>
-              <DocAI />
+            <Suspense fallback={<div className="p-6 text-center">{t('common.loading')}</div>}>
+              <DoctorAnalyticsPage />
             </Suspense>
           </div>
         )}

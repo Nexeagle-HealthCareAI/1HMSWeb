@@ -67,6 +67,7 @@ export interface PrescriptionLayoutSettings {
   fontSize?: number | null;
   fontWeight?: string | null;
   textColour?: string | null;
+  validUpto?: number | null;
   uri?: string | null;
   createdAtUtc?: string | null;
   updatedAtUtc?: string | null;
@@ -103,6 +104,7 @@ export interface UpdatePrescriptionLayoutSettingsRequest {
   fontSize: number;
   fontWeight: string;
   textColour: string;
+  validUpto: number;
   loggedInUserId: string;
 }
 
@@ -138,14 +140,14 @@ export const prescriptionFieldConfigApi = {
     hospitalId: string | undefined,
     preferences: UpdatePrescriptionFieldPreferenceRequest
   ): Promise<UpdatePrescriptionFieldPreferenceResponse> {
-    try {      
+    try {
       const response = await apiClient.put(
         API_ENDPOINTS.E_PRESCRIPTION.UPDATE_FIELD_PREFERENCES(doctorId, hospitalId),
         preferences
       );
-     
+
       return response;
-    } catch (error) {     
+    } catch (error) {
       throw error;
     }
   },

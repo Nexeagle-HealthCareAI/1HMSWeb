@@ -70,7 +70,7 @@ export const usePrescriptionFieldConfig = () => {
   const hospitalId = storedHospitalId || getHospitalId?.() || '';
 
   // Create fields from API preferences
-  const updateFieldsFromPreferences = useCallback((preferences: PrescriptionFieldPreference) => {   
+  const updateFieldsFromPreferences = useCallback((preferences: PrescriptionFieldPreference) => {
     const fieldDefinitions = [
       { id: 'vitals', label: 'Vitals' },
       { id: 'chiefComplaint', label: 'Chief Complaint' },
@@ -90,7 +90,7 @@ export const usePrescriptionFieldConfig = () => {
 
     const fieldsFromApi = fieldDefinitions.map(field => {
       let apiFieldName = field.id;
-      
+
       // Map component field IDs to API field names
       if (field.id === 'certificates') {
         apiFieldName = 'certificatesAndNotes';
@@ -106,15 +106,15 @@ export const usePrescriptionFieldConfig = () => {
           enabled: investigationsEnabled || proceduresEnabled
         };
       }
-      
+
       const enabled = preferences[apiFieldName as keyof PrescriptionFieldPreference];
-      
+
       return {
         ...field,
         enabled: enabled !== undefined ? Boolean(enabled) : false
       };
-    });    
-    
+    });
+
     setFields(fieldsFromApi);
   }, []);
 
@@ -126,11 +126,11 @@ export const usePrescriptionFieldConfig = () => {
     refetch: refetchPreferences
   } = useQuery({
     queryKey: ['prescriptionFieldPreferences', doctorId, hospitalId],
-    queryFn: async () => {      
+    queryFn: async () => {
       try {
-        const result = await prescriptionFieldConfigApi.getFieldPreferences(doctorId, hospitalId);     
+        const result = await prescriptionFieldConfigApi.getFieldPreferences(doctorId, hospitalId);
         return result;
-      } catch (error) {       
+      } catch (error) {
         return {
           success: false,
           message: 'Failed to fetch preferences',
@@ -152,7 +152,7 @@ export const usePrescriptionFieldConfig = () => {
 
   // Update field configuration
   const updateFieldConfig = (fieldId: string, enabled: boolean) => {
-    setFields(prev => prev.map(field => 
+    setFields(prev => prev.map(field =>
       field.id === fieldId ? { ...field, enabled } : field
     ));
   };
@@ -215,7 +215,7 @@ export const usePrescriptionFieldConfig = () => {
     fields,
     isLoadingPreferences,
     preferencesError,
-    
+
     // Actions
     updateFieldConfig,
     saveFieldConfiguration,
@@ -238,6 +238,7 @@ const normalizeLayoutSettings = (data: PrescriptionLayoutSettings | null): Presc
     footerHeight: typeof data.footerHeight === 'number' && data.footerHeight > 0 ? data.footerHeight : defaultLayoutSettings.footerHeight,
     contentLeftMargin: typeof data.contentLeftMargin === 'number' && data.contentLeftMargin > 0 ? data.contentLeftMargin : defaultLayoutSettings.contentLeftMargin,
     contentRightMargin: typeof data.contentRightMargin === 'number' && data.contentRightMargin > 0 ? data.contentRightMargin : defaultLayoutSettings.contentRightMargin,
+    validUpto: typeof data.validUpto === 'number' && data.validUpto >= 0 ? data.validUpto : 0,
   };
 };
 

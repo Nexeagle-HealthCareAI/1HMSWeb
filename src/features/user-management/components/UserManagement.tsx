@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTranslation } from 'react-i18next';
 
-import { Users, UserPlus, Mail, AlertCircle } from 'lucide-react';
+import { Users, UserPlus, Mail, AlertCircle, ChevronLeft, ChevronRight, LayoutDashboard } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useUserManagementApi } from '../hooks/useUserManagementApi';
 import { RolesResponse, InviteUserRequest } from '../services/userManagementApi';
@@ -23,17 +23,18 @@ export const UserManagement: React.FC = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('onboarded');
   const [invitedUsersScope, setInvitedUsersScope] = useState<'Pending' | 'Accepted' | 'Revoked' | 'ALL'>('ALL');
-  
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
   // API hooks
   const { getAllRoles, inviteUser } = useUserManagementApi();
   const { data: rolesResponse, isLoading: rolesLoading, error: rolesError } = getAllRoles();
   const typedRolesResponse = rolesResponse as RolesResponse | undefined;
-  
+
   // Auth store
   const authStore = useAuthStore.getState();
   const currentUserId = authStore.getUserId();
   const hospitalId = authStore.getHospitalId();
-  
+
   // User management states
   const [showAddUser, setShowAddUser] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -43,7 +44,7 @@ export const UserManagement: React.FC = () => {
     role: ''
   });
   const [inviteErrorModal, setInviteErrorModal] = useState({ open: false, message: '' });
-  
+
   // Form states
   const [newUser, setNewUser] = useState({
     name: '',
@@ -83,19 +84,19 @@ export const UserManagement: React.FC = () => {
     description: string;
     Icon: LucideIcon;
   }> = [
-    {
-      value: 'onboarded',
-      title: t('userManagement.tabs.onboarded'),
-      description: t('userManagement.activeUsers'),
-      Icon: Users,
-    },
-    {
-      value: 'invited',
-      title: t('userManagement.tabs.invited'),
-      description: t('userManagement.pendingInvitations'),
-      Icon: Mail,
-    }
-  ];
+      {
+        value: 'onboarded',
+        title: t('userManagement.tabs.onboarded'),
+        description: t('userManagement.activeUsers'),
+        Icon: Users,
+      },
+      {
+        value: 'invited',
+        title: t('userManagement.tabs.invited'),
+        description: t('userManagement.pendingInvitations'),
+        Icon: Mail,
+      }
+    ];
 
 
 
@@ -161,47 +162,84 @@ export const UserManagement: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full p-4 lg:p-6 space-y-6 bg-gradient-subtle">
-      <div className="grid gap-6 lg:grid-cols-[280px,1fr]">
-        <aside className="hidden lg:flex">
-          <div className="w-full rounded-2xl border border-border/60 bg-card/60 p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('userManagement.userAreas')}</p>
-            <div className="mt-3 space-y-3">
-              {navigationItems.map((item) => (
-                <button
-                  key={item.value}
-                  type="button"
-                  onClick={() => setActiveTab(item.value)}
-                  className={cn(
-                    'w-full rounded-xl border px-3 py-3 text-left transition-all',
-                    activeTab === item.value
-                      ? 'border-primary/40 bg-primary/5 shadow-sm'
-                      : 'border-transparent hover:border-border'
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={cn(
-                        'flex h-10 w-10 items-center justify-center rounded-xl border text-primary',
-                        activeTab === item.value
-                          ? 'border-primary/40 bg-white'
-                          : 'border-border/60 bg-muted/40'
-                      )}
-                    >
-                      <item.Icon className="h-5 w-5" />
-                    </span>
-                    <div>
-                      <p className="text-sm font-semibold">{item.title}</p>
-                      <p className="text-xs text-muted-foreground">{item.description}</p>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </aside>
+    <div className="flex h-[calc(100vh-4rem)] bg-gray-50 dark:bg-gray-900 overflow-hidden">
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          "bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-300 ease-in-out flex flex-col z-20 relative hidden lg:flex",
+          isSidebarCollapsed ? "w-16" : "w-64"
+        )}
+      >
+        {/* Toggle Button */}
+        <div className="absolute -right-3 top-6 z-30">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-6 w-6 rounded-full shadow-md border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800"
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          >
+            {isSidebarCollapsed ? (
+              <ChevronRight className="h-3 w-3" />
+            ) : (
+              <ChevronLeft className="h-3 w-3" />
+            )}
+          </Button>
+        </div>
 
-        <section className="rounded-2xl border border-border/60 bg-card/70 p-4 sm:p-6 shadow-sm space-y-6">
+        {/* Sidebar Header */}
+        <div className={cn(
+          "h-16 flex items-center border-b border-dashed border-gray-200 dark:border-gray-800",
+          isSidebarCollapsed ? "justify-center px-0" : "px-6"
+        )}>
+          <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+            <LayoutDashboard className="h-6 w-6" />
+            {!isSidebarCollapsed && (
+              <span className="font-bold text-lg tracking-tight">Workspace</span>
+            )}
+          </div>
+        </div>
+
+        {/* Nav Items */}
+        <div className="flex-1 py-6 px-3 space-y-2 overflow-y-auto">
+          {navigationItems.map((item) => {
+            const isActive = activeTab === item.value;
+            return (
+              <button
+                key={item.value}
+                onClick={() => setActiveTab(item.value)}
+                className={cn(
+                  "flex items-center w-full p-3 rounded-xl transition-all duration-200 group relative",
+                  isActive
+                    ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-gray-200",
+                  isSidebarCollapsed ? "justify-center" : "gap-3"
+                )}
+                title={isSidebarCollapsed ? item.title : undefined}
+              >
+                <item.Icon className={cn(
+                  "h-5 w-5 flex-shrink-0 transition-colors",
+                  isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300"
+                )} />
+
+                {!isSidebarCollapsed && (
+                  <div className="text-left overflow-hidden">
+                    <p className="font-medium text-sm whitespace-nowrap">{item.title}</p>
+                    <p className="text-[10px] text-gray-400 truncate max-w-[140px]">{item.description}</p>
+                  </div>
+                )}
+
+                {isActive && !isSidebarCollapsed && (
+                  <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto relative w-full h-full bg-gray-50/50 dark:bg-black/20 p-4 lg:p-6">
+        <div className="max-w-6xl mx-auto space-y-6">
           <div className="flex justify-end">
             <Button className="gap-2" onClick={() => setShowAddUser(true)}>
               <Mail className="h-4 w-4" />
@@ -233,8 +271,9 @@ export const UserManagement: React.FC = () => {
               <InvitedUsers initialScope={invitedUsersScope} />
             </TabsContent>
           </Tabs>
-        </section>
-      </div>
+        </div>
+      </main>
+
 
       {/* Add User Dialog */}
       <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
@@ -254,7 +293,7 @@ export const UserManagement: React.FC = () => {
                 <Input
                   id="name"
                   value={newUser.name}
-                  onChange={(e) => setNewUser({...newUser, name: e.target.value})}
+                  onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
                   placeholder={t('userManagement.enterFullName')}
                   required
                 />
@@ -267,7 +306,7 @@ export const UserManagement: React.FC = () => {
                   id="phone"
                   value={newUser.phone}
                   onChange={(e) => {
-                    setNewUser({...newUser, phone: e.target.value});
+                    setNewUser({ ...newUser, phone: e.target.value });
                     setPhoneError(validatePhone(e.target.value));
                   }}
                   placeholder={t('userManagement.enterPhoneNumber')}
@@ -285,7 +324,7 @@ export const UserManagement: React.FC = () => {
                 type="email"
                 value={newUser.email}
                 onChange={(e) => {
-                  setNewUser({...newUser, email: e.target.value});
+                  setNewUser({ ...newUser, email: e.target.value });
                   setEmailError(validateEmail(e.target.value));
                 }}
                 placeholder={t('userManagement.enterEmailAddress')}
@@ -311,7 +350,7 @@ export const UserManagement: React.FC = () => {
               ) : (
                 <RadioGroup
                   value={newUser.selectedRole}
-                  onValueChange={(value) => setNewUser({...newUser, selectedRole: value})}
+                  onValueChange={(value) => setNewUser({ ...newUser, selectedRole: value })}
                   className="space-y-3"
                 >
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -335,7 +374,7 @@ export const UserManagement: React.FC = () => {
               <Button variant="outline" onClick={() => setShowAddUser(false)}>
                 {t('userManagement.cancel')}
               </Button>
-              <Button 
+              <Button
                 onClick={handleAddUser}
                 disabled={!isFormValid || inviteUser.isPending}
                 className="gap-2"

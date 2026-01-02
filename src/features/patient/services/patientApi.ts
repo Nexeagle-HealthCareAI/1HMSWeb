@@ -128,8 +128,34 @@ export interface CreateMedicalRecordRequest {
   date: string;
 }
 
+export interface PatientData {
+  patientId: string;
+  name: string;
+  age: number;
+  sex: string;
+  contact: string;
+  addressLine: string;
+  city: string;
+  state: string;
+  country: string;
+  pinCode: string;
+  registrationDate: string;
+}
+
+export interface PatientListResponse {
+  hospitalId: string;
+  patientsData: PatientData[];
+  success: boolean;
+  message: string;
+}
+
 // Patient API service
 export const patientApi = {
+  // Get all patients by hospital ID
+  getAllPatients: (hospitalId: string): Promise<PatientListResponse> => {
+    return apiClient.get(`/patient/hospitalId=${hospitalId}`);
+  },
+
   // Get all patients with pagination and filters
   getAll: (filters?: PatientFilters): Promise<PaginatedResponse<Patient>> => {
     const params = new URLSearchParams();

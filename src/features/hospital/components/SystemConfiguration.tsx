@@ -1,12 +1,16 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { 
+import { Button } from '@/components/ui/button';
+import {
   Settings,
   CreditCard,
   Palette,
   Calendar,
   Wallet,
-  Receipt
+  Receipt,
+  ChevronLeft,
+  ChevronRight,
+  LayoutDashboard
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,6 +31,8 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
     handleBrandingChange
   } = useSystemConfiguration(focusTab);
 
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
   const navigationItems = useMemo(
     () => [
       {
@@ -46,45 +52,90 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
   );
 
   return (
-    <div className="space-y-8">
-      <div className="grid gap-6 lg:grid-cols-[280px,1fr]">
-        <aside className="hidden lg:flex">
-          <div className="w-full rounded-2xl border border-border/60 bg-card/60 p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {t('systemConfiguration.navigation.configurationAreas')}
-            </p>
-            <div className="mt-3 space-y-3">
-              {navigationItems.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setActiveTab(item.id)}
-                  className={cn(
-                    'w-full rounded-xl border px-3 py-3 text-left transition-all',
-                    activeTab === item.id
-                      ? 'border-primary/40 bg-primary/5 shadow-sm'
-                      : 'border-transparent hover:border-border'
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className={cn(
-                      'flex h-10 w-10 items-center justify-center rounded-xl border text-primary',
-                      activeTab === item.id ? 'border-primary/40 bg-white' : 'border-border/60 bg-muted/40'
-                    )}>
-                      <item.icon className="h-5 w-5" />
-                    </span>
-                    <div>
-                      <p className="text-sm font-semibold">{item.label}</p>
-                      <p className="text-xs text-muted-foreground">{item.description}</p>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </aside>
+    <div className="flex h-[calc(100vh-4rem)] bg-gray-50 dark:bg-gray-900 overflow-hidden">
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          "bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-300 ease-in-out flex flex-col z-20 relative hidden lg:flex",
+          isSidebarCollapsed ? "w-16" : "w-64"
+        )}
+      >
+        {/* Toggle Button */}
+        <div className="absolute -right-3 top-6 z-30">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-6 w-6 rounded-full shadow-md border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800"
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          >
+            {isSidebarCollapsed ? (
+              <ChevronRight className="h-3 w-3" />
+            ) : (
+              <ChevronLeft className="h-3 w-3" />
+            )}
+          </Button>
+        </div>
 
-        <section className="rounded-2xl border border-border/60 bg-card/70 p-4 sm:p-6 shadow-sm">
+        {/* Sidebar Header */}
+        <div className={cn(
+          "h-16 flex items-center border-b border-dashed border-gray-200 dark:border-gray-800",
+          isSidebarCollapsed ? "justify-center px-0" : "px-6"
+        )}>
+          <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+            <LayoutDashboard className="h-6 w-6" />
+            {!isSidebarCollapsed && (
+              <span className="font-bold text-lg tracking-tight">Configuration</span>
+            )}
+          </div>
+        </div>
+
+        <div className="w-full p-4 border-b border-gray-100 dark:border-gray-800">
+          <p className={cn(
+            "text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-all duration-300",
+            isSidebarCollapsed ? "text-center opacity-0 h-0 overflow-hidden" : "opacity-100"
+          )}>
+            {t('systemConfiguration.navigation.configurationAreas')}
+          </p>
+        </div>
+
+        <div className="flex-1 py-4 px-3 space-y-2 overflow-y-auto">
+          {navigationItems.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setActiveTab(item.id)}
+              className={cn(
+                "flex items-center w-full p-3 rounded-xl transition-all duration-200 group relative",
+                activeTab === item.id
+                  ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 shadow-sm"
+                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-gray-200",
+                isSidebarCollapsed ? "justify-center" : "gap-3"
+              )}
+              title={isSidebarCollapsed ? item.label : undefined}
+            >
+              <item.icon className={cn(
+                "h-5 w-5 flex-shrink-0 transition-colors",
+                activeTab === item.id ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300"
+              )} />
+
+              {!isSidebarCollapsed && (
+                <div className="text-left overflow-hidden">
+                  <p className="font-medium text-sm whitespace-nowrap">{item.label}</p>
+                  <p className="text-[10px] text-gray-400 truncate max-w-[140px]">{item.description}</p>
+                </div>
+              )}
+
+              {activeTab === item.id && !isSidebarCollapsed && (
+                <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+              )}
+            </button>
+          ))}
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto relative w-full h-full bg-gray-50/50 dark:bg-black/20 p-4 lg:p-6">
+        <div className="max-w-6xl mx-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <div className="lg:hidden">
               <TabsList className="flex gap-2 rounded-2xl bg-muted/40 p-1">
@@ -169,8 +220,8 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
               />
             </TabsContent>
           </Tabs>
-        </section>
-      </div>
+        </div>
+      </main>
     </div>
   );
 };

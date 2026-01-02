@@ -42,14 +42,17 @@ export const PrescriptionLayout = ({ refreshToken }: PrescriptionLayoutProps) =>
             typography={designer.typography}
             onTypographyChange={designer.updateTypography}
             onSaveLayout={designer.saveLayoutSettings}
+
             isSavingLayout={designer.isSavingLayout}
+            validUpto={designer.validUpto}
+            onValidUptoChange={designer.setValidUpto}
           />
         </div>
         <PreviewPanel
           previewUrl={designer.previewUrl}
-          zoom={designer.zoom}
+
           isGenerating={designer.isGeneratingPreview}
-          onZoomChange={(value) => designer.setZoom(value)}
+
           onOpen={designer.openPreviewInNewTab}
           isTestEnabled={Boolean(designer.templateMeta || designer.serverTemplateUri)}
           margins={designer.layoutMargins}

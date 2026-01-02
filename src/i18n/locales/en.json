@@ -2073,7 +2073,7 @@
       "followUpScheduledDescription": "Follow-up scheduled for {{date}}"
     }
   },
-  "docBoard": {
+  "__docBoard_old__": {
     "header": {
       "title": "Dashboard",
       "viewProfessionalProfile": "View professional profile",
@@ -2983,5 +2983,158 @@
     "patients": "Patients",
     "support": "Support",
     "signingIn": "Signing you in..."
+  },
+  "docBoard": {
+    "header": {
+      "title": "Clinical Dashboard",
+      "subtitle": "Overview of your daily tasks and patient queue",
+      "defaultDoctorName": "Doctor",
+      "viewProfessionalProfile": "View Professional Profile",
+      "verified": "Verified"
+    },
+    "nav": {
+      "appointments": {
+        "label": "Appointments",
+        "short": "Appts",
+        "description": "Manage patient appointments"
+      },
+      "calendar": {
+        "label": "Calendar",
+        "short": "Cal",
+        "description": "View monthly schedule"
+      },
+      "analytics": {
+        "label": "Analytics",
+        "short": "Stats",
+        "description": "View practice insights"
+      },
+      "settings": {
+        "label": "My Library",
+        "short": "Lib",
+        "description": "Manage prescriptions & profile"
+      },
+      "assistant": {
+        "label": "Analytics",
+        "short": "Stats",
+        "description": "View practice insights"
+      },
+      "lockedMessage": "Complete profile to unlock"
+    },
+    "tabs": {
+      "current": {
+        "label": "Current",
+        "subLabel": "Today's Queue"
+      },
+      "past": {
+        "label": "Past",
+        "subLabel": "History"
+      },
+      "future": {
+        "label": "Upcoming",
+        "subLabel": "Schedule"
+      },
+      "expandSidebar": "Expand Sidebar",
+      "collapseSidebar": "Collapse Sidebar"
+    },
+    "search": {
+      "currentPlaceholder": "Search current patients..."
+    },
+    "filters": {
+      "all": "All ({{count}})",
+      "vitalsRequired": "Vitals ({{count}})",
+      "ready": "Ready ({{count}})",
+      "consulting": "Consulting ({{count}})",
+      "labRequired": "Lab ({{count}})",
+      "reconsult": "Reconsult ({{count}})",
+      "completed": "Completed ({{count}})",
+      "cancelled": "Cancelled ({{count}})"
+    },
+    "statusBadge": {
+      "vitalsRequired": "Vitals Required",
+      "ready": "Ready",
+      "consulting": "Under Consult",
+      "labRequired": "Lab Required",
+      "reconsult": "Awaiting Reconsult",
+      "completed": "Completed",
+      "scheduled": "Scheduled",
+      "cancelled": "Cancelled",
+      "default": "{{status}}"
+    },
+    "sync": {
+      "lastSynced": "Last synced:",
+      "refresh": "Refresh List"
+    },
+    "loading": {
+      "doctorProfile": "Loading Doctor Profile...",
+      "appointments": "Refreshing Appointments...",
+      "helper": "Please wait while we fetch the latest data"
+    },
+    "error": {
+      "doctorProfile": "Profile Error",
+      "appointments": "Appointment Error",
+      "missingData": "Missing critical data: {{fields}}",
+      "generic": "Unknown error occurred",
+      "refreshPage": "Refresh Page",
+      "missingHospitalId": "Hospital ID",
+      "missingDoctorId": "Doctor ID"
+    },
+    "restriction": {
+      "title": "Complete Your Profile",
+      "subtitle": "Access to clinical features is restricted until your profile is complete.",
+      "requiredInfoTitle": "Required Information:",
+      "requiredItems": {
+        "license": "Medical License Number",
+        "department": "Primary Department",
+        "qualifications": "Qualifications",
+        "experience": "Years of Experience"
+      },
+      "benefits": {
+        "calendar": "Manage Schedule",
+        "prescriptions": "E-Prescriptions",
+        "appointments": "Appointment Queue"
+      },
+      "completeProfileCta": "Complete Profile Now",
+      "ctaHelper": "Use the settings tab to update your details"
+    },
+    "addBill": {
+      "description": "Create a bill for this appointment"
+    },
+    "table": {
+      "addBill": "Add Bill",
+      "patientName": "Patient Name",
+      "patient": "Patient ID",
+      "doctorName": "Doctor",
+      "notAvailable": "N/A",
+      "appointmentTime": "Time",
+      "token": "Token",
+      "status": "Status",
+      "labReports": "Lab reports",
+      "case": "Case",
+      "actions": "Actions",
+      "printRx": "Print Rx"
+    },
+    "cancelDialog": {
+      "title": "Cancel Appointment",
+      "description": "Are you sure? This will remove the appointment from your active queue.",
+      "patient": "Patient",
+      "patientId": "ID",
+      "doctor": "Doctor",
+      "appointmentId": "Appt ID",
+      "keepAppointment": "No, Keep It",
+      "cancelling": "Cancelling...",
+      "confirmCancel": "Yes, Cancel Appointment"
+    },
+    "settings": {
+      "fields": "Prescription Fields",
+      "personalData": "My Library",
+      "layoutLab": "Layout & Lab"
+    },
+    "preview": {
+      "title": "Prescription Preview",
+      "description": "Review before finalizing"
+    },
+    "alerts": {
+      "previewMissingContext": "Cannot preview: Missing patient or doctor context"
+    }
   }
 }

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
   DialogTitle,
-  DialogFooter 
+  DialogFooter
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +26,7 @@ interface PatientProfileModalProps {
   patientName?: string;
 }
 
-export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
+export const c: React.FC<PatientProfileModalProps> = ({
   isOpen,
   onClose,
   hospitalId,
@@ -378,15 +378,15 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
             <div className="flex gap-2">
               {isEditing ? (
                 <>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={handleCancel}
                     disabled={isUpdating}
                     className="px-3 py-1 text-xs"
                   >
                     Cancel
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleSubmit}
                     disabled={isUpdating}
                     className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs"

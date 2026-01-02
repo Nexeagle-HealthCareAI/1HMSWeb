@@ -206,14 +206,15 @@ export const usePrescriptionDesigner = () => {
   const [isAnalyzingTemplate, setIsAnalyzingTemplate] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
-  const [zoom, setZoom] = useState(100);
   const [overflowStrategy, setOverflowStrategy] = useState<'reuse-template' | 'blank'>('reuse-template');
   const [templateFile, setTemplateFile] = useState<File | null>(null);
   const [templateUploadSuccessOpen, setTemplateUploadSuccessOpen] = useState(false);
   const [templateUploadSuccessMessage, setTemplateUploadSuccessMessage] = useState('Template uploaded successfully.');
   const [isSavingLayout, setIsSavingLayout] = useState(false);
   const [layoutSaveSuccessOpen, setLayoutSaveSuccessOpen] = useState(false);
+
   const [layoutSaveSuccessMessage, setLayoutSaveSuccessMessage] = useState('Layout settings saved successfully.');
+  const [validUpto, setValidUpto] = useState<number>(0);
   const lastServerTemplateUriRef = useRef<string | null>(null);
   const lastAppliedLayoutSettingsRef = useRef<string | null>(null);
 
@@ -261,7 +262,9 @@ export const usePrescriptionDesigner = () => {
       fontFamily: layoutSettings.fontFamily ?? null,
       fontSize: layoutSettings.fontSize ?? null,
       fontWeight: layoutSettings.fontWeight ?? null,
+
       textColour: layoutSettings.textColour ?? null,
+      validUpto: layoutSettings.validUpto ?? null,
     })
     : null;
 
@@ -287,6 +290,7 @@ export const usePrescriptionDesigner = () => {
     const resolvedSize = resolvePositiveNumber(layoutSettings.fontSize, typography.size);
     const resolvedWeight = resolveFontWeight(layoutSettings.fontWeight, typography.weight);
     const resolvedColor = layoutSettings.textColour && layoutSettings.textColour.trim().length > 0 ? layoutSettings.textColour : typography.color;
+    const resolvedValidUpto = typeof layoutSettings.validUpto === 'number' ? layoutSettings.validUpto : 0;
 
     updateTypography({
       family: resolvedFamily,
@@ -294,6 +298,7 @@ export const usePrescriptionDesigner = () => {
       weight: resolvedWeight,
       color: resolvedColor,
     });
+    setValidUpto(resolvedValidUpto);
   }, [layoutSettings, layoutSettingsSignature, typography, updateMargins, setOverflowStrategy, updateTypography]);
 
   const ensureA4Compatibility = useCallback(async (file: File): Promise<A4CompatibilityResult> => {
@@ -706,7 +711,9 @@ export const usePrescriptionDesigner = () => {
         fontFamily: typography.family,
         fontSize: typography.size,
         fontWeight: typography.weight,
+
         textColour: typography.color,
+        validUpto,
         loggedInUserId: userId,
       });
 
@@ -729,7 +736,7 @@ export const usePrescriptionDesigner = () => {
     } finally {
       setIsSavingLayout(false);
     }
-  }, [doctorId, hospitalId, layoutMargins.bottom, layoutMargins.left, layoutMargins.right, layoutMargins.top, overflowStrategy, refetchLayoutSettings, toast, typography.color, typography.family, typography.size, typography.weight, userId]);
+  }, [doctorId, hospitalId, layoutMargins.bottom, layoutMargins.left, layoutMargins.right, layoutMargins.top, overflowStrategy, refetchLayoutSettings, toast, typography.color, typography.family, typography.size, typography.weight, validUpto, userId]);
 
   const serverTemplateUri = layoutSettings?.uri ?? null;
 
@@ -745,8 +752,6 @@ export const usePrescriptionDesigner = () => {
     generatePreview,
     previewUrl,
     isGeneratingPreview,
-    zoom,
-    setZoom,
     openPreviewInNewTab,
     overflowStrategy,
     setOverflowStrategy,
@@ -761,6 +766,9 @@ export const usePrescriptionDesigner = () => {
     serverTemplateUri,
     serverLayoutSettings: layoutSettings,
     saveLayoutSettings,
+
     isSavingLayout,
+    validUpto,
+    setValidUpto,
   };
 };

@@ -10,9 +10,8 @@ import { MarginConfig, TypographySettings } from '@/features/prescription/hooks/
 
 interface PreviewPanelProps {
   previewUrl: string | null;
-  zoom: number;
   isGenerating: boolean;
-  onZoomChange: (value: number) => void;
+
   onOpen: () => void;
   isTestEnabled?: boolean;
   margins: MarginConfig;
@@ -22,7 +21,7 @@ interface PreviewPanelProps {
   templateUrl?: string | null;
 }
 
-export const PreviewPanel = ({ previewUrl, zoom, isGenerating, onZoomChange, onOpen, isTestEnabled = false, margins, typography, overflowStrategy, templateFile, templateUrl }: PreviewPanelProps) => {
+export const PreviewPanel = ({ previewUrl, isGenerating, onOpen, isTestEnabled = false, margins, typography, overflowStrategy, templateFile, templateUrl }: PreviewPanelProps) => {
   const [isTestModalOpen, setIsTestModalOpen] = useState(false);
   const openTestModal = () => {
     if (!isTestEnabled) return;
@@ -54,13 +53,7 @@ export const PreviewPanel = ({ previewUrl, zoom, isGenerating, onZoomChange, onO
           </AspectRatio>
         </div>
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-1 flex-col gap-2">
-            <div className="flex items-center justify-between text-sm font-medium">
-              <span>Zoom</span>
-              <span>{zoom}%</span>
-            </div>
-            <Slider value={[zoom]} min={50} max={150} step={5} onValueChange={(value) => onZoomChange(value[0])} />
-          </div>
+
           <Button type="button" variant="secondary" size="sm" onClick={onOpen} disabled={!previewUrl}>
             Open preview
           </Button>

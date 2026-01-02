@@ -40,7 +40,6 @@ import {
 import { AppointmentBooking } from './AppointmentBooking';
 import { VitalsForm } from './VitalsForm';
 import { TokenPrintModal } from './TokenPrintModal';
-import { PatientProfileModal } from '@/features/patient/components/PatientProfileModal';
 import { ArrowUp, Minimize2, Maximize2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAppointmentDetails } from '../hooks/useAppointmentDetails';
@@ -66,10 +65,8 @@ export const AppointmentDashboard = () => {
   const [bookingRefreshToken, setBookingRefreshToken] = useState(0);
   const [showVitalsForm, setShowVitalsForm] = useState(false);
   const [showTokenPrint, setShowTokenPrint] = useState(false);
-  const [showPatientProfile, setShowPatientProfile] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<AppointmentDetail | null>(null);
   const [selectedAppointmentForToken, setSelectedAppointmentForToken] = useState<AppointmentDetail | null>(null);
-  const [selectedPatientForProfile, setSelectedPatientForProfile] = useState<AppointmentDetail | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -167,10 +164,7 @@ export const AppointmentDashboard = () => {
     setShowTokenPrint(true);
   };
 
-  const handlePatientIdClick = (appointment: AppointmentDetail) => {
-    setSelectedPatientForProfile(appointment);
-    setShowPatientProfile(true);
-  };
+
 
   const handleTokenPrintClose = () => {
     setShowTokenPrint(false);
@@ -1106,11 +1100,7 @@ export const AppointmentDashboard = () => {
                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">
                             {t('appointmentDashboard.table.labReports', { defaultValue: 'Lab reports' })}
                           </TableHead>
-                          {activeTab === 'current' && (
-                            <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">
-                              {t('appointmentDashboard.table.addBill', { defaultValue: 'Add Bill' })}
-                            </TableHead>
-                          )}
+
                           {activeTab !== 'past' && (
                             <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.actions')}</TableHead>
                           )}
@@ -1144,20 +1134,14 @@ export const AppointmentDashboard = () => {
                             <TableRow key={appointment.appointmentId} className={`hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors border-b border-gray-100 dark:border-gray-700/50 ${compactMode ? 'h-10' : 'h-12'} text-xs md:text-sm`}>
                               {/* Patient ID */}
                               <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                                <button
-                                  onClick={() => handlePatientIdClick(appointment)}
-                                  className="group relative font-mono bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600 px-3 py-2 rounded-md text-xs font-semibold text-blue-700 dark:text-blue-300 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md"
-                                  title={t('appointmentDashboard.tooltip.viewProfile')}
+                                <div
+                                  className="group relative font-mono bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 shadow-sm"
                                 >
                                   <div className="flex items-center gap-1.5">
                                     <User className="h-3 w-3" />
                                     <span>{appointment.patientId}</span>
-                                    <Eye className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                                   </div>
-                                  <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                                    {t('appointmentDashboard.tooltip.viewProfile')}
-                                  </div>
-                                </button>
+                                </div>
                               </TableCell>
 
                               {/* Patient Name */}
@@ -1254,20 +1238,7 @@ export const AppointmentDashboard = () => {
                                 )}
                               </TableCell>
 
-                              {/* Add Bill - Only show for current tab */}
-                              {activeTab === 'current' && (
-                                <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleAddBillClick(appointment)}
-                                    className="h-6 px-2 text-xs text-indigo-600 border-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
-                                  >
-                                    <FileText className="h-2.5 w-2.5 mr-1" />
-                                    {t('appointmentDashboard.actionButtons.addBill', { defaultValue: 'Add Bill' })}
-                                  </Button>
-                                </TableCell>
-                              )}
+
 
                               {/* Actions - Only show for current and future tabs */}
                               {activeTab !== 'past' && (
@@ -1460,16 +1431,7 @@ export const AppointmentDashboard = () => {
         />
       )}
 
-      {/* Patient Profile Modal */}
-      {showPatientProfile && selectedPatientForProfile && (
-        <PatientProfileModal
-          isOpen={showPatientProfile}
-          onClose={() => setShowPatientProfile(false)}
-          hospitalId={hospitalId}
-          patientId={selectedPatientForProfile.patientId}
-          patientName={selectedPatientForProfile.patientFullName}
-        />
-      )}
+
 
       <PrescriptionPreviewModal
         open={previewModalOpen}

@@ -21,6 +21,10 @@ interface LayoutControlsPanelProps {
   onTemplateUpload: (file: File) => void;
   typography: TypographySettings;
   onTypographyChange: (next: Partial<TypographySettings>) => void;
+
+
+  validUpto: number;
+  onValidUptoChange: (days: number) => void;
   onSaveLayout?: () => void;
   isSavingLayout?: boolean;
 }
@@ -48,6 +52,9 @@ export const LayoutControlsPanel = ({
   onTemplateUpload,
   typography,
   onTypographyChange,
+
+  validUpto,
+  onValidUptoChange,
   onSaveLayout,
   isSavingLayout,
 }: LayoutControlsPanelProps) => {
@@ -247,6 +254,39 @@ export const LayoutControlsPanel = ({
                   onChange={(event) => onTypographyChange({ color: event.target.value })}
                 />
                 <Input value={typography.color} onChange={(event) => onTypographyChange({ color: event.target.value })} />
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          <Separator />
+
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/10">
+            <div className="space-y-4">
+              <div>
+                <p className="flex items-center gap-2 text-sm font-semibold text-amber-900 dark:text-amber-100">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-800 dark:text-amber-300">
+                    <FileText className="h-3 w-3" />
+                  </span>
+                  Prescription Validity
+                </p>
+                <p className="mt-1 text-xs text-amber-700 dark:text-amber-300/80">
+                  Set a default expiration period for your prescriptions. Set to 0 if they don't expire.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="valid-upto" className="text-amber-900 dark:text-amber-100">
+                  Valid Upto (Days)
+                </Label>
+                <Input
+                  id="valid-upto"
+                  type="number"
+                  min={0}
+                  value={validUpto}
+                  onChange={(e) => onValidUptoChange(Number(e.target.value))}
+                  className="bg-white dark:bg-gray-950 border-amber-200 dark:border-amber-800 focus-visible:ring-amber-500"
+                />
               </div>
             </div>
           </div>

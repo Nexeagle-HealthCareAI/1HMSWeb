@@ -1576,54 +1576,54 @@
         "revokeConfirm": "पहुंच निरस्त करें"
       },
       "na": "उपलब्ध नहीं"
+    },
+    "onboardedUsers": {
+      "loading": "पंजीकृत उपयोगकर्ता लोड हो रहे हैं...",
+      "error": "पंजीकृत उपयोगकर्ता लोड करने में त्रुटि",
+      "searchLabel": "खोजें",
+      "searchPlaceholder": "नाम, ईमेल या फ़ोन से उपयोगकर्ताओं को खोजें...",
+      "roleLabel": "भूमिका",
+      "rolePlaceholder": "भूमिका के अनुसार फ़िल्टर करें",
+      "allRoles": "सभी भूमिकाएं",
+      "statusLabel": "स्थिति",
+      "statusPlaceholder": "स्थिति के अनुसार फ़िल्टर करें",
+      "status": {
+        "all": "सभी स्थितियां",
+        "active": "सक्रिय",
+        "inactive": "निष्क्रिय"
       },
-      "onboardedUsers": {
-        "loading": "पंजीकृत उपयोगकर्ता लोड हो रहे हैं...",
-        "error": "पंजीकृत उपयोगकर्ता लोड करने में त्रुटि",
-        "searchLabel": "खोजें",
-        "searchPlaceholder": "नाम, ईमेल या फ़ोन से उपयोगकर्ताओं को खोजें...",
-        "roleLabel": "भूमिका",
-        "rolePlaceholder": "भूमिका के अनुसार फ़िल्टर करें",
-        "allRoles": "सभी भूमिकाएं",
-        "statusLabel": "स्थिति",
-        "statusPlaceholder": "स्थिति के अनुसार फ़िल्टर करें",
-        "status": {
-          "all": "सभी स्थितियां",
-          "active": "सक्रिय",
-          "inactive": "निष्क्रिय"
-        },
-        "emptyTitle": "कोई उपयोगकर्ता नहीं मिला",
-        "emptyFilters": "खोज या फ़िल्टर बदलकर देखें",
-        "emptyDefault": "अभी तक कोई पंजीकृत उपयोगकर्ता नहीं",
-        "labels": {
-          "phone": "फ़ोन",
-          "role": "भूमिका",
-          "id": "आईडी",
-          "employeeId": "कर्मचारी आईडी",
-          "primaryUser": "प्राथमिक उपयोगकर्ता"
-        },
-        "badges": {
-          "primary": "प्राथमिक"
-        },
-        "actions": {
-          "viewTooltip": "विवरण देखें",
-          "cannotDeactivateSelf": "आप स्वयं को निष्क्रिय नहीं कर सकते",
-          "deactivateUser": "उपयोगकर्ता निष्क्रिय करें",
-          "alreadyInactive": "उपयोगकर्ता पहले से निष्क्रिय है",
-          "moreOptions": "अधिक विकल्प"
-        },
-        "view": {
-          "title": "उपयोगकर्ता विवरण",
-          "description": "चयनित टीम सदस्य का पूरा स्नैपशॉट।",
-          "fullNameLabel": "पूरा नाम",
-          "notProvided": "प्रदान नहीं किया गया",
-          "contact": "संपर्क",
-          "identity": "पहचान",
-          "roles": "भूमिकाएं",
-          "permissions": "अनुमतियां"
-        },
-        "unknownRole": "अज्ञात",
-        "na": "उपलब्ध नहीं"
+      "emptyTitle": "कोई उपयोगकर्ता नहीं मिला",
+      "emptyFilters": "खोज या फ़िल्टर बदलकर देखें",
+      "emptyDefault": "अभी तक कोई पंजीकृत उपयोगकर्ता नहीं",
+      "labels": {
+        "phone": "फ़ोन",
+        "role": "भूमिका",
+        "id": "आईडी",
+        "employeeId": "कर्मचारी आईडी",
+        "primaryUser": "प्राथमिक उपयोगकर्ता"
+      },
+      "badges": {
+        "primary": "प्राथमिक"
+      },
+      "actions": {
+        "viewTooltip": "विवरण देखें",
+        "cannotDeactivateSelf": "आप स्वयं को निष्क्रिय नहीं कर सकते",
+        "deactivateUser": "उपयोगकर्ता निष्क्रिय करें",
+        "alreadyInactive": "उपयोगकर्ता पहले से निष्क्रिय है",
+        "moreOptions": "अधिक विकल्प"
+      },
+      "view": {
+        "title": "उपयोगकर्ता विवरण",
+        "description": "चयनित टीम सदस्य का पूरा स्नैपशॉट।",
+        "fullNameLabel": "पूरा नाम",
+        "notProvided": "प्रदान नहीं किया गया",
+        "contact": "संपर्क",
+        "identity": "पहचान",
+        "roles": "भूमिकाएं",
+        "permissions": "अनुमतियां"
+      },
+      "unknownRole": "अज्ञात",
+      "na": "उपलब्ध नहीं"
     }
   },
   "appointmentDashboard": {
@@ -1967,10 +1967,26 @@
       "defaultDoctorName": "डॉ. वर्तमान उपयोगकर्ता"
     },
     "nav": {
-      "appointments": { "label": "अपॉइंटमेंट", "short": "अपॉइंट", "description": "आज की कतार देखें" },
-      "calendar": { "label": "मेरा कैलेंडर", "short": "कैल", "description": "अपना सप्ताह प्लान करें" },
-      "assistant": { "label": "एआई सहायक", "short": "एआई", "description": "सारांश और इनसाइट्स" },
-      "settings": { "label": "प्रिस्क्रिप्शन सेटिंग्स", "short": "सेटिंग्स", "description": "लेआउट पर्सनलाइज़ करें" },
+      "appointments": {
+        "label": "अपॉइंटमेंट",
+        "short": "अपॉइंट",
+        "description": "आज की कतार देखें"
+      },
+      "calendar": {
+        "label": "मेरा कैलेंडर",
+        "short": "कैल",
+        "description": "अपना सप्ताह प्लान करें"
+      },
+      "assistant": {
+        "label": "एआई सहायक",
+        "short": "एआई",
+        "description": "सारांश और इनसाइट्स"
+      },
+      "settings": {
+        "label": "प्रिस्क्रिप्शन सेटिंग्स",
+        "short": "सेटिंग्स",
+        "description": "लेआउट पर्सनलाइज़ करें"
+      },
       "lockedMessage": "इस सेक्शन को अनलॉक करने के लिए प्रोफ़ाइल पूरा करें"
     },
     "alerts": {
@@ -2012,9 +2028,18 @@
       "swipeHint": "एक्सप्लोर करने के लिए स्वाइप करें",
       "expandSidebar": "अपॉइंटमेंट साइडबार विस्तृत करें",
       "collapseSidebar": "अपॉइंटमेंट साइडबार संकुचित करें",
-      "current": { "label": "वर्तमान अपॉइंटमेंट", "subLabel": "लाइव कतार व वाइटल्स" },
-      "past": { "label": "पिछली विज़िट", "subLabel": "इतिहास और फॉलो-अप" },
-      "future": { "label": "आगामी शेड्यूल", "subLabel": "अगले 7 दिन" }
+      "current": {
+        "label": "वर्तमान अपॉइंटमेंट",
+        "subLabel": "लाइव कतार व वाइटल्स"
+      },
+      "past": {
+        "label": "पिछली विज़िट",
+        "subLabel": "इतिहास और फॉलो-अप"
+      },
+      "future": {
+        "label": "आगामी शेड्यूल",
+        "subLabel": "अगले 7 दिन"
+      }
     },
     "statusBadge": {
       "vitalsRequired": "वाइटल्स आवश्यक",
@@ -2369,774 +2394,774 @@
     },
     "personalized": "व्यक्तिगत"
   },
-      "templates": {
-      "standardOPD": "मानक OPD",
-      "emergencySchedule": "आपातकालीन अनुसूची",
-      "partTimeSchedule": "अंशकालिक अनुसूची",
-      "standardOPDDescription": "मानक आउटपेशेंट विभाग अनुसूची",
-      "emergencyScheduleDescription": "24/7 आपातकालीन विभाग अनुसूची",
-      "partTimeScheduleDescription": "अंशकालिक सुबह की अनुसूची"
+  "templates": {
+    "standardOPD": "मानक OPD",
+    "emergencySchedule": "आपातकालीन अनुसूची",
+    "partTimeSchedule": "अंशकालिक अनुसूची",
+    "standardOPDDescription": "मानक आउटपेशेंट विभाग अनुसूची",
+    "emergencyScheduleDescription": "24/7 आपातकालीन विभाग अनुसूची",
+    "partTimeScheduleDescription": "अंशकालिक सुबह की अनुसूची"
+  },
+  "weeklyTemplates": {
+    "title": "साप्ताहिक टेम्पलेट",
+    "description": "आवर्ती साप्ताहिक शिफ्ट कॉन्फ़िगर करें। केवल सक्रिय टेम्पलेट लागू होंगे।",
+    "labels": {
+      "start": "प्रारंभ",
+      "end": "समाप्ति",
+      "slotMinutes": "स्लॉट (मिनट)",
+      "maxPatients": "अधिकतम मरीज़"
     },
-    "weeklyTemplates": {
-      "title": "साप्ताहिक टेम्पलेट",
-      "description": "आवर्ती साप्ताहिक शिफ्ट कॉन्फ़िगर करें। केवल सक्रिय टेम्पलेट लागू होंगे।",
-      "labels": {
-        "start": "प्रारंभ",
-        "end": "समाप्ति",
-        "slotMinutes": "स्लॉट (मिनट)",
-        "maxPatients": "अधिकतम मरीज़"
-      },
-      "placeholders": {
-        "maxPatients": "∞"
-      },
-      "actions": {
-        "reset": "रीसेट",
-        "save": "सहेजें",
-        "saving": "सहेजा जा रहा है..."
-      },
-      "errors": {
-        "endAfterStart": "समाप्ति समय प्रारंभ के बाद होना चाहिए",
-        "slotDurationPositive": "स्लॉट अवधि 0 से अधिक होनी चाहिए",
-        "maxPatientsPositive": "अधिकतम मरीज़ संख्या 0 से अधिक होनी चाहिए"
-      },
-      "toast": {
-        "presetAppliedTitle": "प्रिसेट लागू हुआ",
-        "presetAppliedDescription": "\"{{preset}}\" शेड्यूल लागू कर दिया गया है। समीक्षा करें और पुष्टि के लिए सहेजें।",
-        "dayCopiedTitle": "दिन कॉपी हुआ",
-        "dayCopiedDescription": "{{day}} शेड्यूल अन्य सभी दिनों में कॉपी किया गया।",
-        "validationTitle": "मान्यकरण त्रुटियां",
-        "validationDescription": "सहेजने से पहले कृपया त्रुटियां ठीक करें।",
-        "saveSuccessTitle": "टेम्पलेट सहेजे गए",
-        "saveSuccessDescription": "साप्ताहिक टेम्पलेट सफलतापूर्वक अपडेट कर दिए गए हैं।",
-        "saveFailedTitle": "सहेजना विफल",
-        "saveFailedDescription": "टेम्पलेट सहेजने में विफल। कृपया पुनः प्रयास करें।"
-      }
+    "placeholders": {
+      "maxPatients": "∞"
     },
-    "shiftDetails": {
-      "calendarGuide": "कैलेंडर गाइड",
-      "dataSource": "डेटा स्रोत",
-      "personalizedSchedule": "व्यक्तिगत अनुसूची",
-      "personalizedScheduleActive": "व्यक्तिगत अनुसूची सक्रिय",
-      "usingDefaultSchedule": "डिफ़ॉल्ट अनुसूची का उपयोग कर रहे हैं",
-      "timeOffStatus": "समय बंद स्थिति",
-      "active": "सक्रिय",
-      "workingShiftsNotApplicable": "⚠️ कार्य शिफ्ट लागू नहीं",
-      "timeOffOverlapMessage": "समय बंद अवधि निर्धारित शिफ्ट के साथ ओवरलैप होती है। इन समयों के दौरान कोई अपॉइंटमेंट बुक नहीं किया जा सकता।",
-      "timeOffPeriodsActive": "📅 समय बंद अवधि सक्रिय",
-      "timeOffAffectsShifts": "आपके पास निर्धारित समय बंद अवधि है। नियमित शिफ्ट प्रभावित हो सकते हैं।",
-      "timeOff": "समय बंद",
-      "timeOffUnknown": "तिथि तय नहीं",
-      "timeOffSummary": "आगामी समय बंद",
-      "entries": "प्रविष्टियाँ",
-      "timeOffConflictLabel": "(समय बंद)",
-      "untitledShift": "शिफ्ट",
-      "customTiming": "कस्टम समय",
-      "shiftOverview": "शिफ्ट अवलोकन",
-      "timeRanges": "स्लॉट",
-      "slots": "स्लॉट",
-      "patients": "मरीज़",
-      "noTimeRanges": "कोई समय सीमा कॉन्फ़िगर नहीं",
-      "defaultShiftNotice": "यह आपके डिफ़ॉल्ट शेड्यूल का हिस्सा है और हटाया नहीं जा सकता।",
-      "allDay": "पूरा दिन",
-      "partial": "आंशिक",
-      "activeShifts": "सक्रिय शिफ्ट",
-      "types": "प्रकार",
-      "loadingShifts": "शिफ्ट लोड हो रहे हैं...",
-      "noShiftsScheduled": "कोई शिफ्ट निर्धारित नहीं",
-      "howToUse": "कैसे उपयोग करें",
-      "clickShiftToScroll": "किसी भी शिफ्ट पर क्लिक करके उस समय तक स्क्रॉल करें",
-      "doubleClickToEdit": "शिफ्ट विवरण संपादित करने के लिए डबल-क्लिक करें",
-      "useHeaderButtons": "तिथियों को नेविगेट करने के लिए हेडर बटन का उपयोग करें",
-      "clickTimeOffToCancel": "समय बंद इवेंट को रद्द करने के लिए क्लिक करें",
-      "quickStats": "त्वरित आंकड़े",
-      "totalEvents": "कुल इवेंट:",
-      "shiftTypes": "शिफ्ट प्रकार:",
-      "timeOffPeriods": "समय बंद अवधि:",
-      "scheduleType": "अनुसूची प्रकार:",
-      "colorGuide": "रंग गाइड",
-      "timeOffPeriodsLabel": "समय बंद अवधि"
+    "actions": {
+      "reset": "रीसेट",
+      "save": "सहेजें",
+      "saving": "सहेजा जा रहा है..."
     },
-    "patientForm": {
-      "title": "अपॉइंटमेंट बुक करें",
-      "description": "अपॉइंटमेंट शेड्यूल करने के लिए मरीज़ की जानकारी भरें।",
-      "reason": {
-        "general": "सामान्य परामर्श",
-        "followUp": "फॉलो-अप परामर्श"
-      },
-      "appointmentDetails": {
-        "title": "अपॉइंटमेंट विवरण",
-        "duration": "अवधि: {{minutes}} मिनट",
-        "fee": "शुल्क: ₹500"
-      },
-      "search": {
-        "title": "मौजूदा मरीज़ खोजें",
-        "fieldPlaceholder": "खोज फ़ील्ड चुनें",
-        "fields": {
-          "patientId": "मरीज़ आईडी",
-          "name": "मरीज़ का नाम",
-          "appointmentId": "अपॉइंटमेंट आईडी",
-          "contact": "संपर्क",
-          "default": "खोज फ़ील्ड"
-        },
-        "placeholder": {
-          "patientId": "मरीज़ आईडी दर्ज करें (जैसे, P001, PAT123)",
-          "name": "मरीज़ का नाम दर्ज करें (जैसे, राम कुमार)",
-          "appointmentId": "अपॉइंटमेंट आईडी दर्ज करें (जैसे, APT001, APT123)",
-          "contact": "संपर्क नंबर दर्ज करें (जैसे, 9876543210)",
-          "default": "खोज शब्द दर्ज करें"
-        },
-        "helpTitle": "{{field}} से खोजें:",
-        "help": {
-          "patientId": {
-            "line1": "• मरीज़ आईडी: P001, PAT123, P2024001",
-            "line2": "• प्रत्येक मरीज़ का यूनिक पहचानकर्ता"
-          },
-          "name": {
-            "line1": "• पूरा नाम: राम कुमार, सीमा शर्मा",
-            "line2": "• आंशिक नाम: राम, सीमा"
-          },
-          "appointmentId": {
-            "line1": "• अपॉइंटमेंट आईडी: APT000001, APT0000123",
-            "line2": "• PatientId: PT0000012, PT0000011"
-          },
-          "contact": {
-            "line1": "• फोन: 9876XXXXXX",
-            "line2": "• मोबाइल: 8074XXXXXX"
-          },
-          "default": "• खोज शब्द दर्ज करें"
-        },
-        "searching": "खोज हो रही है...",
-        "submit": "मरीज़ खोजें",
-        "error": "खोज त्रुटि: {{error}}",
-        "clearError": "त्रुटि साफ़ करें"
-      },
-      "personal": {
-        "title": "व्यक्तिगत जानकारी",
-        "name": "मरीज़ का नाम",
-        "namePlaceholder": "मरीज़ का नाम दर्ज करें",
-        "phone": "फोन नंबर",
-        "phonePlaceholder": "10 अंकों का मोबाइल नंबर दर्ज करें",
-        "age": "आयु",
-        "agePlaceholder": "आयु",
-        "gender": "लिंग",
-        "genderPlaceholder": "लिंग चुनें",
-        "genderOptions": {
-          "male": "पुरुष",
-          "female": "महिला",
-          "other": "अन्य"
-        }
-      },
-      "address": {
-        "title": "पता जानकारी",
-        "address": "पता",
-        "addressPlaceholder": "पूरा पता दर्ज करें",
-        "city": "शहर",
-        "cityPlaceholder": "शहर दर्ज करें",
-        "pincode": "पिनकोड",
-        "pincodePlaceholder": "6 अंकों का पिनकोड"
-      },
-      "insurance": {
-        "title": "बीमा और भुगतान",
-        "hasInsurance": "बीमा है",
-        "typePlaceholder": "प्रकार",
-        "types": {
-          "insurance": "बीमा आईडी",
-          "abha": "आभा आईडी"
-        }
-      },
-      "payment": {
-        "completed": "भुगतान पूरा",
-        "modePlaceholder": "भुगतान मोड",
-        "modes": {
-          "cash": "नकद",
-          "upi": "यूपीआई",
-          "card": "कार्ड"
-        }
-      },
-      "actions": {
-        "cancel": "रद्द करें",
-        "submit": "अपॉइंटमेंट बुक करें",
-        "submitting": "अपॉइंटमेंट बुक हो रहा है..."
-      },
-      "searchResults": {
-        "title": "खोज परिणाम",
-        "description": "खोज मानदंड से मेल खाते {{count}} मरीज़ मिले। सही मरीज़ चुनें।",
-        "id": "आईडी: {{id}}",
-        "phone": "फोन:",
-        "gender": "लिंग:",
-        "age": "आयु:",
-        "ageValue": "{{age}} वर्ष",
-        "lastVisit": "अंतिम यात्रा:",
-        "notAvailable": "उपलब्ध नहीं",
-        "address": "पता:",
-        "city": "शहर:",
-        "pincode": "पिनकोड:",
-        "matchedBy": "मेल किया गया:",
-        "upcoming": "आगामी अपॉइंटमेंट:",
-        "token": "टोकन: {{token}}",
-        "selectPatient": "मरीज़ चुनें",
-        "emptyTitle": "कोई मरीज़ नहीं मिला",
-        "emptyDescription": "खोज मानदंड से कोई मरीज़ मेल नहीं खाता। अलग खोज करें या नया मरीज़ बनाएं।",
-        "close": "बंद करें",
-        "createNew": "नया मरीज़ बनाएं"
-      },
-      "errors": {
-        "nameRequired": "मरीज़ का नाम आवश्यक है",
-        "phoneRequired": "फोन नंबर आवश्यक है",
-        "phoneInvalid": "कृपया वैध 10 अंकों का मोबाइल नंबर दर्ज करें",
-        "ageRequired": "आयु आवश्यक है",
-        "ageInvalid": "कृपया वैध आयु दर्ज करें",
-        "genderRequired": "लिंग आवश्यक है",
-        "addressRequired": "पता आवश्यक है",
-        "cityRequired": "शहर आवश्यक है",
-        "pincodeRequired": "पिनकोड आवश्यक है",
-        "pincodeInvalid": "पिनकोड ठीक 6 अंकों का होना चाहिए",
-        "paymentModeRequired": "भुगतान होने पर भुगतान मोड आवश्यक है"
-      }
+    "errors": {
+      "endAfterStart": "समाप्ति समय प्रारंभ के बाद होना चाहिए",
+      "slotDurationPositive": "स्लॉट अवधि 0 से अधिक होनी चाहिए",
+      "maxPatientsPositive": "अधिकतम मरीज़ संख्या 0 से अधिक होनी चाहिए"
     },
-    "rescheduleDialog": {
-      "title": "अपॉइंटमेंट पुनर्निर्धारित करें",
-      "current": {
-        "title": "वर्तमान अपॉइंटमेंट",
-        "patient": "मरीज़:",
-        "date": "तिथि:",
-        "time": "समय:"
-      },
-      "steps": {
-        "date": "1. तिथि चुनें",
-        "time": "2. समय चुनें"
-      },
-      "selectNewDate": "नई तिथि चुनें",
-      "selectNewTime": "नया समय चुनें",
-      "selectedDateLabel": "चयनित तिथि:",
-      "changeDate": "तिथि बदलें",
-      "slot": {
-        "available": "उपलब्ध",
-        "booked": "बुक्ड"
-      },
-      "actions": {
-        "cancel": "रद्द करें",
-        "confirm": "पुनर्निर्धारण की पुष्टि करें"
-      }
+    "toast": {
+      "presetAppliedTitle": "प्रिसेट लागू हुआ",
+      "presetAppliedDescription": "\"{{preset}}\" शेड्यूल लागू कर दिया गया है। समीक्षा करें और पुष्टि के लिए सहेजें।",
+      "dayCopiedTitle": "दिन कॉपी हुआ",
+      "dayCopiedDescription": "{{day}} शेड्यूल अन्य सभी दिनों में कॉपी किया गया।",
+      "validationTitle": "मान्यकरण त्रुटियां",
+      "validationDescription": "सहेजने से पहले कृपया त्रुटियां ठीक करें।",
+      "saveSuccessTitle": "टेम्पलेट सहेजे गए",
+      "saveSuccessDescription": "साप्ताहिक टेम्पलेट सफलतापूर्वक अपडेट कर दिए गए हैं।",
+      "saveFailedTitle": "सहेजना विफल",
+      "saveFailedDescription": "टेम्पलेट सहेजने में विफल। कृपया पुनः प्रयास करें।"
+    }
+  },
+  "shiftDetails": {
+    "calendarGuide": "कैलेंडर गाइड",
+    "dataSource": "डेटा स्रोत",
+    "personalizedSchedule": "व्यक्तिगत अनुसूची",
+    "personalizedScheduleActive": "व्यक्तिगत अनुसूची सक्रिय",
+    "usingDefaultSchedule": "डिफ़ॉल्ट अनुसूची का उपयोग कर रहे हैं",
+    "timeOffStatus": "समय बंद स्थिति",
+    "active": "सक्रिय",
+    "workingShiftsNotApplicable": "⚠️ कार्य शिफ्ट लागू नहीं",
+    "timeOffOverlapMessage": "समय बंद अवधि निर्धारित शिफ्ट के साथ ओवरलैप होती है। इन समयों के दौरान कोई अपॉइंटमेंट बुक नहीं किया जा सकता।",
+    "timeOffPeriodsActive": "📅 समय बंद अवधि सक्रिय",
+    "timeOffAffectsShifts": "आपके पास निर्धारित समय बंद अवधि है। नियमित शिफ्ट प्रभावित हो सकते हैं।",
+    "timeOff": "समय बंद",
+    "timeOffUnknown": "तिथि तय नहीं",
+    "timeOffSummary": "आगामी समय बंद",
+    "entries": "प्रविष्टियाँ",
+    "timeOffConflictLabel": "(समय बंद)",
+    "untitledShift": "शिफ्ट",
+    "customTiming": "कस्टम समय",
+    "shiftOverview": "शिफ्ट अवलोकन",
+    "timeRanges": "स्लॉट",
+    "slots": "स्लॉट",
+    "patients": "मरीज़",
+    "noTimeRanges": "कोई समय सीमा कॉन्फ़िगर नहीं",
+    "defaultShiftNotice": "यह आपके डिफ़ॉल्ट शेड्यूल का हिस्सा है और हटाया नहीं जा सकता।",
+    "allDay": "पूरा दिन",
+    "partial": "आंशिक",
+    "activeShifts": "सक्रिय शिफ्ट",
+    "types": "प्रकार",
+    "loadingShifts": "शिफ्ट लोड हो रहे हैं...",
+    "noShiftsScheduled": "कोई शिफ्ट निर्धारित नहीं",
+    "howToUse": "कैसे उपयोग करें",
+    "clickShiftToScroll": "किसी भी शिफ्ट पर क्लिक करके उस समय तक स्क्रॉल करें",
+    "doubleClickToEdit": "शिफ्ट विवरण संपादित करने के लिए डबल-क्लिक करें",
+    "useHeaderButtons": "तिथियों को नेविगेट करने के लिए हेडर बटन का उपयोग करें",
+    "clickTimeOffToCancel": "समय बंद इवेंट को रद्द करने के लिए क्लिक करें",
+    "quickStats": "त्वरित आंकड़े",
+    "totalEvents": "कुल इवेंट:",
+    "shiftTypes": "शिफ्ट प्रकार:",
+    "timeOffPeriods": "समय बंद अवधि:",
+    "scheduleType": "अनुसूची प्रकार:",
+    "colorGuide": "रंग गाइड",
+    "timeOffPeriodsLabel": "समय बंद अवधि"
+  },
+  "patientForm": {
+    "title": "अपॉइंटमेंट बुक करें",
+    "description": "अपॉइंटमेंट शेड्यूल करने के लिए मरीज़ की जानकारी भरें।",
+    "reason": {
+      "general": "सामान्य परामर्श",
+      "followUp": "फॉलो-अप परामर्श"
     },
-    "shiftTabs": {
-      "title": "समय शिफ्ट चुनें",
-      "shifts": {
-        "morning": {
-          "name": "सुबह",
-          "time": "सुबह 8 - दोपहर 12"
-        },
-        "afternoon": {
-          "name": "दोपहर",
-          "time": "दोपहर 12 - शाम 4"
-        },
-        "evening": {
-          "name": "शाम",
-          "time": "शाम 4 - रात 8"
-        },
-        "night": {
-          "name": "रात",
-          "time": "रात 8 - 11"
-        }
-      }
+    "appointmentDetails": {
+      "title": "अपॉइंटमेंट विवरण",
+      "duration": "अवधि: {{minutes}} मिनट",
+      "fee": "शुल्क: ₹500"
     },
-    "timeSlots": {
-      "title": "उपलब्ध समय स्लॉट",
-      "status": {
-        "booked": "बुक्ड",
-        "available": "उपलब्ध"
-      },
-      "tooltip": {
-        "patient": "मरीज़:",
-        "phone": "फ़ोन:",
-        "age": "आयु:",
-        "gender": "लिंग:"
-      },
-      "empty": "इस शिफ्ट के लिए कोई समय स्लॉट उपलब्ध नहीं है"
-    },
-    "vitalsForm": {
-      "title": "वाइटल्स अपडेट करें - {{patientName}}",
-      "description": "वाइटल साइन रिकॉर्ड करना वैकल्पिक है, लेकिन बेहतर देखभाल में मदद करता है। आवश्यकता होने पर आप इस चरण को छोड़ सकते हैं।",
-      "sections": {
-        "cardio": "कार्डियोवास्कुलर वाइटल्स",
-        "respiratory": "श्वसन और तापमान",
-        "physical": "शारीरिक माप"
-      },
+    "search": {
+      "title": "मौजूदा मरीज़ खोजें",
+      "fieldPlaceholder": "खोज फ़ील्ड चुनें",
       "fields": {
-        "systolic": "सिस्टोलिक बीपी (mmHg)",
-        "diastolic": "डायस्टोलिक बीपी (mmHg)",
-        "heartRate": "हृदय गति (bpm)",
-        "respiratoryRate": "श्वसन दर (सांस/मिनट)",
-        "temperature": "शरीर का तापमान",
-        "oxygenSaturation": "ऑक्सीजन संतृप्ति (%)",
-        "height": "ऊंचाई",
-        "weight": "वजन",
-        "bmi": "बीएमआई (बॉडी मास इंडेक्स)"
-      },
-      "placeholders": {
-        "systolic": "120",
-        "diastolic": "80",
-        "heartRate": "72",
-        "respiratoryRate": "16",
-        "temperature": "37.0",
-        "oxygenSaturation": "98",
-        "height": "170",
-        "weight": "70"
-      },
-      "bmi": {
-        "prompt": "ऊंचाई और वजन दर्ज करें",
-        "category": {
-          "underweight": "कम वजन",
-          "normal": "सामान्य वजन",
-          "overweight": "अधिक वजन",
-          "obesity": "मोटापा"
-        }
-      },
-      "optionalStep": {
-        "title": "वैकल्पिक चरण:",
-        "description": "वाइटल साइन बेहतर देखभाल में मदद करते हैं, लेकिन यदि आप चाहें तो इन्हें दर्ज किए बिना आगे बढ़ सकते हैं।"
-      },
-      "actions": {
-        "skip": "इस चरण को छोड़ें",
-        "save": "वाइटल्स सहेजें",
-        "saving": "सहेजा जा रहा है..."
-      },
-      "toast": {
-        "success": "वाइटल्स सफलतापूर्वक सहेजे गए!",
-        "error": "वाइटल्स सहेजने में विफल",
-        "errorTryAgain": "वाइटल्स सहेजने में विफल। कृपया पुनः प्रयास करें।"
-      }
-    },
-    "docProfile": {
-      "sectionTitle": "व्यावसायिक विवरण",
-      "completionLabel": "व्यावसायिक पूर्णता {{percent}}%",
-      "complete": "पूर्ण",
-      "fields": {
-        "department": {
-          "label": "प्राथमिक विभाग",
-          "loading": "विभाग लोड हो रहे हैं...",
-          "placeholder": "विभाग चुनें",
-          "loadError": "विभाग लोड करने में विफल",
-          "empty": "कोई विभाग उपलब्ध नहीं"
-        },
-        "specializations": {
-          "label": "विशेषताएं"
-        },
-        "qualifications": {
-          "label": "योग्यताएं"
-        },
-        "licenseNumber": {
-          "label": "लाइसेंस नंबर"
-        },
-        "experienceYears": {
-          "label": "अनुभव (वर्ष)"
-        },
-        "medicalCouncil": {
-          "label": "मेडिकल काउंसिल"
-        },
-        "registrationYear": {
-          "label": "पंजीकरण वर्ष"
-        },
-        "bio": {
-          "label": "व्यावसायिक बायो",
-          "placeholder": "अपना अनुभव, विशेषज्ञता और रोगी देखभाल का दृष्टिकोण साझा करें...",
-          "tip": "30-70 शब्द रखने की कोशिश करें। इसे मरीज-अनुकूल रखें।",
-          "wordCount": "{{count}} शब्द"
-        }
-      },
-      "actions": {
-        "saving": "सहेजा जा रहा है...",
-        "save": "व्यावसायिक विवरण सहेजें"
-      },
-      "errors": {
-        "licenseRequired": "लाइसेंस नंबर आवश्यक है",
-        "qualificationsRequired": "कम से कम एक योग्यता चुनें",
-        "specializationsRequired": "कम से कम एक विशेषता चुनें",
-        "experienceInvalid": "अनुभव एक मान्य गैर-नकारात्मक संख्या होना चाहिए",
-        "medicalCouncilRequired": "मेडिकल काउंसिल आवश्यक है",
-        "medicalCouncilTooLong": "मेडिकल काउंसिल का नाम बहुत लंबा है",
-        "registrationYearInvalid": "कृपया वैध पंजीकरण वर्ष दर्ज करें"
-      },
-      "toast": {
-        "missingHospital": "सहेजने से पहले कृपया एक हॉस्पिटल चुनें।",
-        "missingDepartment": "सहेजने से पहले प्राथमिक विभाग चुनें।",
-        "missingDoctorId": "डॉक्टर आईडी नहीं मिली। कृपया पेज रिफ्रेश करें।",
-        "createSuccess": "डॉक्टर प्रोफ़ाइल सफलतापूर्वक बनाई गई।",
-        "updateSuccess": "डॉक्टर प्रोफ़ाइल सफलतापूर्वक अपडेट की गई।",
-        "genericError": "डॉक्टर प्रोफ़ाइल सहेजने में विफल।",
-        "invalidData": "कुछ फ़ील्ड मान्य नहीं हैं। कृपया जांचें।",
-        "licenseConflict": "इस लाइसेंस के साथ डॉक्टर पहले से मौजूद है।",
-        "notFound": "डॉक्टर प्रोफ़ाइल नहीं मिली।"
-      },
-      "success": {
-        "title": "व्यावसायिक विवरण अपडेट हो गए",
-        "description": "आपकी प्रोफ़ाइल नवीनतम जानकारी से सिंक हो गई है। अब आप क्या करना चाहेंगे?",
-        "profileCompletion": "प्रोफ़ाइल पूर्णता",
-        "completeMessage": "शानदार! आपकी व्यावसायिक प्रोफ़ाइल पूरी तरह पूर्ण है।",
-        "incompleteMessage": "पूरा अनुभव पाने के लिए शेष फ़ील्ड पूरी करें।",
-        "continueEditing": "संपादन जारी रखें",
-        "goToDashboard": "डैशबोर्ड पर जाएं"
-      }
-    },
-    "patientDetailsModal": {
-      "title": "मरीज़ विवरण",
-      "basicInfo": "मूल जानकारी",
-      "labels": {
         "patientId": "मरीज़ आईडी",
-        "name": "नाम",
-        "phone": "फ़ोन",
-        "appointmentTime": "अपॉइंटमेंट समय",
-        "tokenNumber": "टोकन नंबर",
-        "currentStatus": "वर्तमान स्थिति"
+        "name": "मरीज़ का नाम",
+        "appointmentId": "अपॉइंटमेंट आईडी",
+        "contact": "संपर्क",
+        "default": "खोज फ़ील्ड"
       },
-      "tabs": {
-        "vitals": "वाइटल्स",
-        "clinical": "क्लिनिकल नोट्स",
-        "actions": "क्रियाएं"
+      "placeholder": {
+        "patientId": "मरीज़ आईडी दर्ज करें (जैसे, P001, PAT123)",
+        "name": "मरीज़ का नाम दर्ज करें (जैसे, राम कुमार)",
+        "appointmentId": "अपॉइंटमेंट आईडी दर्ज करें (जैसे, APT001, APT123)",
+        "contact": "संपर्क नंबर दर्ज करें (जैसे, 9876543210)",
+        "default": "खोज शब्द दर्ज करें"
       },
-      "statuses": {
-        "vitalsRequired": "❤️ वाइटल्स आवश्यक",
-        "readyConsultation": "✅ परामर्श के लिए तैयार",
-        "underConsultation": "👨‍⚕️ परामर्श जारी",
-        "labTestRequired": "🧪 लैब टेस्ट आवश्यक",
-        "awaitingReconsultation": "⏳ पुनः परामर्श की प्रतीक्षा",
-        "completed": "🏁 पूर्ण"
-      },
-      "vitals": {
-        "title": "वाइटल साइन",
-        "edit": "संपादित करें",
-        "cancel": "रद्द करें",
-        "save": "वाइटल्स सहेजें",
-        "notRecorded": "रिकॉर्ड नहीं किया गया",
-        "fields": {
-          "bloodPressure": "ब्लड प्रेशर",
-          "temperature": "तापमान (°C)",
-          "pulse": "पल्स रेट (bpm)",
-          "weight": "वजन (kg)"
+      "helpTitle": "{{field}} से खोजें:",
+      "help": {
+        "patientId": {
+          "line1": "• मरीज़ आईडी: P001, PAT123, P2024001",
+          "line2": "• प्रत्येक मरीज़ का यूनिक पहचानकर्ता"
         },
-        "placeholders": {
-          "bloodPressure": "उदा., 120/80",
-          "temperature": "उदा., 36.8",
-          "pulse": "उदा., 72",
-          "weight": "उदा., 65"
-        }
-      },
-      "clinical": {
-        "title": "क्लिनिकल नोट्स",
-        "label": "नोट्स",
-        "placeholder": "क्लिनिकल नोट्स, अवलोकन या अनुशंसाएं दर्ज करें...",
-        "save": "नोट्स सहेजें"
-      },
-      "actions": {
-        "title": "स्टेटस क्रियाएं",
-        "markReady": "तैयार चिह्नित करें",
-        "startConsultation": "परामर्श शुरू करें",
-        "requestLabTest": "लैब टेस्ट अनुरोध करें",
-        "scheduleFollowUp": "फॉलो-अप शेड्यूल करें",
-        "completeConsultation": "परामर्श पूर्ण करें"
-      },
-      "defaults": {
-        "clinicalNotesSample": "मरीज़ हल्के लक्षणों के साथ आया है। ब्लड प्रेशर सामान्य सीमा में है। तापमान सामान्य है। पल्स रेट नियमित है। वजन स्थिर है।"
-      }
-    },
-    "patientFlow": {
-      "tabs": {
-        "current": "वर्तमान मरीज़",
-        "past": "पिछले अपॉइंटमेंट",
-        "future": "भविष्य के मरीज़"
-      },
-      "statusLabels": {
-        "all": "सभी",
-        "vitals-required": "वाइटल्स",
-        "ready-consultation": "तैयार",
-        "under-consultation": "परामर्श",
-        "lab-test-required": "लैब टेस्ट",
-        "awaiting-reconsultation": "फॉलो-अप",
-        "completed": "पूर्ण"
-      },
-      "statusBadges": {
-        "vitals-required": "❤️ वाइटल्स",
-        "ready-consultation": "✅ तैयार",
-        "under-consultation": "👨‍⚕️ परामर्श",
-        "lab-test-required": "🧪 लैब टेस्ट",
-        "awaiting-reconsultation": "⏳ फॉलो-अप",
-        "completed": "🏁 पूर्ण"
-      },
-      "current": {
-        "title": "वर्तमान मरीज़",
-        "subtitle": "आज के मरीज़ प्रवाह का प्रबंधन करें और प्रगति ट्रैक करें",
-        "live": "लाइव अपडेट",
-        "totalToday": "आज कुल",
-        "searchLabel": "मरीज़ खोजें",
-        "searchPlaceholder": "मरीज़ का नाम, आईडी या फ़ोन से खोजें...",
-        "journeyTitle": "मरीज़ यात्रा स्थिति",
-        "journeyHint": "फ़िल्टर करने के लिए किसी भी स्थिति पर क्लिक करें",
-        "tiles": {
-          "all": {
-            "title": "सभी मरीज़",
-            "subtitle": "आज कुल"
-          },
-          "vitals": {
-            "title": "वाइटल्स",
-            "subtitle": "अपडेट आवश्यक"
-          },
-          "ready": {
-            "title": "तैयार",
-            "subtitle": "परामर्श के लिए"
-          },
-          "consulting": {
-            "title": "परामर्श",
-            "subtitle": "जारी"
-          },
-          "lab": {
-            "title": "लैब टेस्ट",
-            "subtitle": "आवश्यक"
-          },
-          "followups": {
-            "title": "फॉलो-अप",
-            "subtitle": "प्रतीक्षा"
-          },
-          "completed": {
-            "title": "पूर्ण",
-            "subtitle": "समाप्त"
-          }
-        }
-      },
-      "past": {
-        "title": "पिछले अपॉइंटमेंट",
-        "subtitle": "पूर्ण हुए परामर्श और ऐतिहासिक डेटा देखें",
-        "chip": "ऐतिहासिक डेटा",
-        "badge": "पूर्ण",
-        "searchLabel": "पिछले अपॉइंटमेंट खोजें",
-        "searchPlaceholder": "मरीज़ का नाम, आईडी या डॉक्टर से खोजें..."
-      },
-      "future": {
-        "title": "भविष्य के अपॉइंटमेंट",
-        "subtitle": "आगामी अपॉइंटमेंट और शेड्यूल परामर्श देखें",
-        "chip": "आगामी",
-        "badge": "तैयार",
-        "searchLabel": "भविष्य के अपॉइंटमेंट खोजें",
-        "searchPlaceholder": "मरीज़ का नाम, आईडी या डॉक्टर से खोजें..."
-      },
-      "filters": {
-        "dateRangeTitle": "तिथि सीमा के अनुसार फ़िल्टर करें",
-        "startDate": "आरंभ तिथि",
-        "endDate": "समाप्ति तिथि",
-        "clear": "साफ़ करें",
-        "summaryBetween": "{{start}} से {{end}} तक के अपॉइंटमेंट दिखा रहे हैं",
-        "summaryFrom": "{{start}} से आगे के अपॉइंटमेंट दिखा रहे हैं",
-        "summaryUntil": "{{end}} तक के अपॉइंटमेंट दिखा रहे हैं"
-      },
-      "table": {
-        "headers": {
-          "token": "टोकन",
-          "patientId": "मरीज़ आईडी",
-          "patientName": "मरीज़ का नाम",
-          "contact": "संपर्क",
-          "time": "समय",
-          "date": "तिथि",
-          "status": "स्थिति",
-          "actions": "क्रियाएं"
+        "name": {
+          "line1": "• पूरा नाम: राम कुमार, सीमा शर्मा",
+          "line2": "• आंशिक नाम: राम, सीमा"
         },
-        "view": "देखें",
-        "patientIdTitle": "मरीज़ प्रोफ़ाइल देखने के लिए क्लिक करें",
-        "rowId": "आईडी: {{id}}"
-      },
-      "empty": {
-        "current": "कोई मरीज़ नहीं मिला",
-        "currentByStatus": "कोई {{status}} मरीज़ नहीं मिला",
-        "past": "चयनित मानदंड के लिए कोई पिछले अपॉइंटमेंट नहीं मिले",
-        "future": "चयनित मानदंड के लिए कोई भविष्य के अपॉइंटमेंट नहीं मिले"
-      }
-    },
-    "qualificationSelector": {
-      "label": "योग्यताएं",
-      "description": "सामान्य योग्यताओं में से चुनें या कस्टम जोड़ें",
-      "selected": "चयनित योग्यताएं",
-      "common": "सामान्य योग्यताएं",
-      "custom": {
-        "button": "कस्टम योग्यता जोड़ें",
-        "label": "कस्टम योग्यता जोड़ें",
-        "placeholder": "कस्टम योग्यता दर्ज करें (जैसे, MBBS, MD Cardiology, आदि)",
-        "add": "जोड़ें",
-        "cancel": "रद्द करें"
-      },
-      "help": "आप कई योग्यताएं जोड़ सकते हैं। सामान्य सूची से चुनें या आवश्यकता अनुसार कस्टम जोड़ें।"
-    },
-    "specializationSelector": {
-      "label": "विशेषताएं",
-      "description": "उपलब्ध विशेषताओं में से चुनें या {{department}} के लिए कस्टम जोड़ें",
-      "selected": "चयनित विशेषताएं",
-      "available": "उपलब्ध विशेषताएं",
-      "availableCount": "{{filtered}} में से {{total}} उपलब्ध",
-      "searchPlaceholder": "विशेषताओं में खोजें...",
-      "loading": "विशेषताएं लोड हो रही हैं...",
-      "loadError": "विशेषताएं लोड करने में विफल। आप कस्टम जोड़ सकते हैं।",
-      "empty": {
-        "noSearch": "इस विभाग के लिए कोई विशेषता उपलब्ध नहीं",
-        "noSearchHint": "आप नीचे कस्टम विशेषताएं जोड़ सकते हैं",
-        "noResults": "\"{{term}}\" के लिए कोई विशेषता नहीं मिली",
-        "noResultsHint": "अलग खोज शब्द आजमाएं या कस्टम विशेषता जोड़ें"
-      },
-      "custom": {
-        "button": "कस्टम विशेषता जोड़ें",
-        "label": "कस्टम विशेषता जोड़ें",
-        "placeholder": "कस्टम विशेषता दर्ज करें...",
-        "add": "जोड़ें",
-        "cancel": "रद्द करें"
-      },
-      "help": "आप कई विशेषताएं चुन सकते हैं। यदि आवश्यक विशेषता नहीं मिलती, तो कस्टम जोड़ें।"
-    },
-    "hospitalBranding": {
-      "title": "अस्पताल जानकारी",
-      "subtitle": "अपने अस्पताल की पूरी जानकारी कॉन्फ़िगर करें",
-      "loading": {
-        "title": "अस्पताल जानकारी लोड हो रही है...",
-        "message": "कृपया प्रतीक्षा करें, हम आपकी अस्पताल जानकारी ला रहे हैं।"
-      },
-      "error": {
-        "title": "अस्पताल जानकारी लोड करने में विफल",
-        "message": "कृपया पेज रिफ्रेश करने का प्रयास करें"
-      },
-      "buttons": {
-        "editDetails": "विवरण संपादित करें",
-        "cancel": "रद्द करें",
-        "saveChanges": "परिवर्तन सहेजें",
-        "saving": "सहेजा जा रहा है...",
-        "saveInfo": "अस्पताल जानकारी सहेजें",
-        "continue": "जारी रखें"
-      },
-        "modal": {
-          "headerTitle": "अस्पताल जानकारी पूर्ण करें",
-          "headerSubtitle": "शुरू करने के लिए अपना अस्पताल प्रोफ़ाइल सेट करें",
-          "steps": {
-            "basicInfo": "मूल जानकारी",
-            "location": "स्थान",
-            "registration": "पंजीकरण"
-          },
-          "nextStep": "अगला चरण",
-          "saveAndComplete": "सहेजें और पूर्ण करें"
-        },
-      "sections": {
-        "core": {
-          "title": "मुख्य जानकारी",
-          "subtitle": "मूल अस्पताल विवरण और पहचान"
+        "appointmentId": {
+          "line1": "• अपॉइंटमेंट आईडी: APT000001, APT0000123",
+          "line2": "• PatientId: PT0000012, PT0000011"
         },
         "contact": {
-          "title": "संपर्क जानकारी",
-          "subtitle": "प्राथमिक और द्वितीयक संपर्क विवरण"
+          "line1": "• फोन: 9876XXXXXX",
+          "line2": "• मोबाइल: 8074XXXXXX"
         },
-        "location": {
-          "title": "स्थान जानकारी",
-          "subtitle": "पूरा पता और स्थान विवरण"
-        },
-        "config": {
-          "title": "कॉन्फ़िगरेशन और मेटाडेटा",
-          "subtitle": "सिस्टम कॉन्फ़िगरेशन और नियामक जानकारी"
-        }
+        "default": "• खोज शब्द दर्ज करें"
       },
-      "labels": {
-        "name": "अस्पताल का नाम",
-        "type": "अस्पताल प्रकार",
-        "email": "ईमेल पता",
-        "contact": "प्राथमिक संपर्क",
-        "alternateContact": "वैकल्पिक संपर्क",
-        "website": "वेबसाइट",
-        "location": "सड़क का पता",
-        "city": "शहर",
-        "state": "राज्य/प्रांत",
-        "country": "देश",
-        "pincode": "पिन कोड",
-        "timeZone": "समय क्षेत्र",
-        "registrationNumber": "पंजीकरण संख्या"
-      },
-      "placeholders": {
-        "name": "अस्पताल का नाम दर्ज करें",
-        "type": "अस्पताल प्रकार चुनें",
-        "email": "ईमेल पता दर्ज करें",
-        "contact": "प्राथमिक फोन नंबर दर्ज करें",
-        "alternateContact": "वैकल्पिक फोन नंबर दर्ज करें",
-        "website": "वेबसाइट URL दर्ज करें",
-        "location": "पूरा सड़क पता दर्ज करें",
-        "city": "शहर का नाम दर्ज करें",
-        "state": "राज्य या प्रांत दर्ज करें",
-        "country": "देश का नाम दर्ज करें",
-        "pincode": "पिन कोड दर्ज करें",
-        "registrationNumber": "अस्पताल पंजीकरण संख्या दर्ज करें",
-        "timeZone": "समय क्षेत्र चुनें"
-      },
-      "helpers": {
-        "name": "अधिकतम 150 अक्षर",
-        "primaryContact": "मुख्य संपर्क नंबर",
-        "alternateContact": "द्वितीयक संपर्क नंबर",
-        "email": "संचार के लिए प्राथमिक ईमेल",
-        "website": "अस्पताल की आधिकारिक वेबसाइट",
-        "location": "विस्तृत सड़क का पता",
-        "registrationNumber": "आधिकारिक अस्पताल पंजीकरण संख्या",
-        "timeZone": "अस्पताल का परिचालन समय क्षेत्र"
-      },
-      "hospitalTypes": {
-        "clinic": "क्लिनिक",
-        "polyclinic": "पॉलीक्लिनिक",
-        "nursingHome": "नर्सिंग होम",
-        "generalHospital": "जनरल हॉस्पिटल",
-        "multispecialityHospital": "मल्टीस्पेशलिटी हॉस्पिटल",
-        "superSpecialityHospital": "सुपर स्पेशलिटी हॉस्पिटल",
-        "other": "अन्य",
-        "clinic_en": "Clinic",
-        "polyclinic_en": "Polyclinic",
-        "nursingHome_en": "Nursing Home",
-        "generalHospital_en": "General Hospital",
-        "multispecialityHospital_en": "Multispeciality Hospital",
-        "superSpecialityHospital_en": "Super Speciality Hospital",
-        "other_en": "Other",
-        "Clinic_hi": "क्लिनिक",
-        "Polyclinic_hi": "पॉलीक्लिनिक",
-        "Nursing Home_hi": "नर्सिंग होम",
-        "General Hospital_hi": "जनरल हॉस्पिटल",
-        "Multispeciality Hospital_hi": "मल्टीस्पेशलिटी हॉस्पिटल",
-        "Super Speciality Hospital_hi": "सुपर स्पेशलिटी हॉस्पिटल",
-        "Other_hi": "अन्य"
-      },
-      "timeZones": {
-        "asiaKolkata": "एशिया/कोलकाता (IST)",
-        "americaNewYork": "अमेरिका/न्यूयॉर्क (EST)",
-        "americaLosAngeles": "अमेरिका/लॉस एंजिलिस (PST)",
-        "europeLondon": "यूरोप/लंदन (GMT)",
-        "asiaDubai": "एशिया/दुबई (GST)",
-        "asiaSingapore": "एशिया/सिंगापुर (SGT)",
-        "asiaTokyo": "एशिया/टोक्यो (JST)",
-        "australiaSydney": "ऑस्ट्रेलिया/सिडनी (AEST)"
-      },
-      "completion": {
-        "title": "अस्पताल प्रोफ़ाइल पूर्ण!",
-        "description": "सभी आवश्यक अस्पताल विवरण सत्यापित हो गए हैं। एडमिन सुविधाएँ अब पूरी तरह अनलॉक हैं।",
-        "score": "पूर्णता स्कोर",
-        "basicInfo": "मूल जानकारी",
-        "locationInfo": "स्थान विवरण",
-        "contactInfo": "संपर्क जानकारी",
-        "statusComplete": "पूर्ण",
-        "statusPending": "लंबित"
-      },
-      "toast": {
-        "errorTitle": "त्रुटि",
-        "missingUser": "यूज़र आईडी नहीं मिली। कृपया दोबारा लॉगिन करें।",
-        "validationTitle": "मान्यकरण त्रुटि",
-        "validationDescription": "कृपया सहेजने से पहले सभी आवश्यक फ़ील्ड पूरा करें।",
-        "successTitle": "सफल!",
-        "successDescription": "अस्पताल जानकारी सफलतापूर्वक सहेजी गई।",
-        "errorDescription": "अस्पताल जानकारी सहेजने में विफल। कृपया पुनः प्रयास करें।"
-      },
-      "validation": {
-        "required": "{{field}} आवश्यक है",
-        "emailRequired": "ईमेल पता आवश्यक है",
-        "emailInvalid": "कृपया मान्य ईमेल पता दर्ज करें",
-        "contactRequired": "प्राथमिक संपर्क आवश्यक है",
-        "phoneInvalid": "कृपया मान्य फ़ोन नंबर दर्ज करें",
-        "websiteInvalid": "कृपया मान्य वेबसाइट URL दर्ज करें",
-        "pincodeInvalid": "कृपया मान्य पिन कोड दर्ज करें (4-10 अंक)"
+      "searching": "खोज हो रही है...",
+      "submit": "मरीज़ खोजें",
+      "error": "खोज त्रुटि: {{error}}",
+      "clearError": "त्रुटि साफ़ करें"
+    },
+    "personal": {
+      "title": "व्यक्तिगत जानकारी",
+      "name": "मरीज़ का नाम",
+      "namePlaceholder": "मरीज़ का नाम दर्ज करें",
+      "phone": "फोन नंबर",
+      "phonePlaceholder": "10 अंकों का मोबाइल नंबर दर्ज करें",
+      "age": "आयु",
+      "agePlaceholder": "आयु",
+      "gender": "लिंग",
+      "genderPlaceholder": "लिंग चुनें",
+      "genderOptions": {
+        "male": "पुरुष",
+        "female": "महिला",
+        "other": "अन्य"
       }
     },
+    "address": {
+      "title": "पता जानकारी",
+      "address": "पता",
+      "addressPlaceholder": "पूरा पता दर्ज करें",
+      "city": "शहर",
+      "cityPlaceholder": "शहर दर्ज करें",
+      "pincode": "पिनकोड",
+      "pincodePlaceholder": "6 अंकों का पिनकोड"
+    },
+    "insurance": {
+      "title": "बीमा और भुगतान",
+      "hasInsurance": "बीमा है",
+      "typePlaceholder": "प्रकार",
+      "types": {
+        "insurance": "बीमा आईडी",
+        "abha": "आभा आईडी"
+      }
+    },
+    "payment": {
+      "completed": "भुगतान पूरा",
+      "modePlaceholder": "भुगतान मोड",
+      "modes": {
+        "cash": "नकद",
+        "upi": "यूपीआई",
+        "card": "कार्ड"
+      }
+    },
+    "actions": {
+      "cancel": "रद्द करें",
+      "submit": "अपॉइंटमेंट बुक करें",
+      "submitting": "अपॉइंटमेंट बुक हो रहा है..."
+    },
+    "searchResults": {
+      "title": "खोज परिणाम",
+      "description": "खोज मानदंड से मेल खाते {{count}} मरीज़ मिले। सही मरीज़ चुनें।",
+      "id": "आईडी: {{id}}",
+      "phone": "फोन:",
+      "gender": "लिंग:",
+      "age": "आयु:",
+      "ageValue": "{{age}} वर्ष",
+      "lastVisit": "अंतिम यात्रा:",
+      "notAvailable": "उपलब्ध नहीं",
+      "address": "पता:",
+      "city": "शहर:",
+      "pincode": "पिनकोड:",
+      "matchedBy": "मेल किया गया:",
+      "upcoming": "आगामी अपॉइंटमेंट:",
+      "token": "टोकन: {{token}}",
+      "selectPatient": "मरीज़ चुनें",
+      "emptyTitle": "कोई मरीज़ नहीं मिला",
+      "emptyDescription": "खोज मानदंड से कोई मरीज़ मेल नहीं खाता। अलग खोज करें या नया मरीज़ बनाएं।",
+      "close": "बंद करें",
+      "createNew": "नया मरीज़ बनाएं"
+    },
+    "errors": {
+      "nameRequired": "मरीज़ का नाम आवश्यक है",
+      "phoneRequired": "फोन नंबर आवश्यक है",
+      "phoneInvalid": "कृपया वैध 10 अंकों का मोबाइल नंबर दर्ज करें",
+      "ageRequired": "आयु आवश्यक है",
+      "ageInvalid": "कृपया वैध आयु दर्ज करें",
+      "genderRequired": "लिंग आवश्यक है",
+      "addressRequired": "पता आवश्यक है",
+      "cityRequired": "शहर आवश्यक है",
+      "pincodeRequired": "पिनकोड आवश्यक है",
+      "pincodeInvalid": "पिनकोड ठीक 6 अंकों का होना चाहिए",
+      "paymentModeRequired": "भुगतान होने पर भुगतान मोड आवश्यक है"
+    }
+  },
+  "rescheduleDialog": {
+    "title": "अपॉइंटमेंट पुनर्निर्धारित करें",
+    "current": {
+      "title": "वर्तमान अपॉइंटमेंट",
+      "patient": "मरीज़:",
+      "date": "तिथि:",
+      "time": "समय:"
+    },
+    "steps": {
+      "date": "1. तिथि चुनें",
+      "time": "2. समय चुनें"
+    },
+    "selectNewDate": "नई तिथि चुनें",
+    "selectNewTime": "नया समय चुनें",
+    "selectedDateLabel": "चयनित तिथि:",
+    "changeDate": "तिथि बदलें",
+    "slot": {
+      "available": "उपलब्ध",
+      "booked": "बुक्ड"
+    },
+    "actions": {
+      "cancel": "रद्द करें",
+      "confirm": "पुनर्निर्धारण की पुष्टि करें"
+    }
+  },
+  "shiftTabs": {
+    "title": "समय शिफ्ट चुनें",
+    "shifts": {
+      "morning": {
+        "name": "सुबह",
+        "time": "सुबह 8 - दोपहर 12"
+      },
+      "afternoon": {
+        "name": "दोपहर",
+        "time": "दोपहर 12 - शाम 4"
+      },
+      "evening": {
+        "name": "शाम",
+        "time": "शाम 4 - रात 8"
+      },
+      "night": {
+        "name": "रात",
+        "time": "रात 8 - 11"
+      }
+    }
+  },
+  "timeSlots": {
+    "title": "उपलब्ध समय स्लॉट",
+    "status": {
+      "booked": "बुक्ड",
+      "available": "उपलब्ध"
+    },
+    "tooltip": {
+      "patient": "मरीज़:",
+      "phone": "फ़ोन:",
+      "age": "आयु:",
+      "gender": "लिंग:"
+    },
+    "empty": "इस शिफ्ट के लिए कोई समय स्लॉट उपलब्ध नहीं है"
+  },
+  "vitalsForm": {
+    "title": "वाइटल्स अपडेट करें - {{patientName}}",
+    "description": "वाइटल साइन रिकॉर्ड करना वैकल्पिक है, लेकिन बेहतर देखभाल में मदद करता है। आवश्यकता होने पर आप इस चरण को छोड़ सकते हैं।",
+    "sections": {
+      "cardio": "कार्डियोवास्कुलर वाइटल्स",
+      "respiratory": "श्वसन और तापमान",
+      "physical": "शारीरिक माप"
+    },
+    "fields": {
+      "systolic": "सिस्टोलिक बीपी (mmHg)",
+      "diastolic": "डायस्टोलिक बीपी (mmHg)",
+      "heartRate": "हृदय गति (bpm)",
+      "respiratoryRate": "श्वसन दर (सांस/मिनट)",
+      "temperature": "शरीर का तापमान",
+      "oxygenSaturation": "ऑक्सीजन संतृप्ति (%)",
+      "height": "ऊंचाई",
+      "weight": "वजन",
+      "bmi": "बीएमआई (बॉडी मास इंडेक्स)"
+    },
+    "placeholders": {
+      "systolic": "120",
+      "diastolic": "80",
+      "heartRate": "72",
+      "respiratoryRate": "16",
+      "temperature": "37.0",
+      "oxygenSaturation": "98",
+      "height": "170",
+      "weight": "70"
+    },
+    "bmi": {
+      "prompt": "ऊंचाई और वजन दर्ज करें",
+      "category": {
+        "underweight": "कम वजन",
+        "normal": "सामान्य वजन",
+        "overweight": "अधिक वजन",
+        "obesity": "मोटापा"
+      }
+    },
+    "optionalStep": {
+      "title": "वैकल्पिक चरण:",
+      "description": "वाइटल साइन बेहतर देखभाल में मदद करते हैं, लेकिन यदि आप चाहें तो इन्हें दर्ज किए बिना आगे बढ़ सकते हैं।"
+    },
+    "actions": {
+      "skip": "इस चरण को छोड़ें",
+      "save": "वाइटल्स सहेजें",
+      "saving": "सहेजा जा रहा है..."
+    },
+    "toast": {
+      "success": "वाइटल्स सफलतापूर्वक सहेजे गए!",
+      "error": "वाइटल्स सहेजने में विफल",
+      "errorTryAgain": "वाइटल्स सहेजने में विफल। कृपया पुनः प्रयास करें।"
+    }
+  },
+  "docProfile": {
+    "sectionTitle": "व्यावसायिक विवरण",
+    "completionLabel": "व्यावसायिक पूर्णता {{percent}}%",
+    "complete": "पूर्ण",
+    "fields": {
+      "department": {
+        "label": "प्राथमिक विभाग",
+        "loading": "विभाग लोड हो रहे हैं...",
+        "placeholder": "विभाग चुनें",
+        "loadError": "विभाग लोड करने में विफल",
+        "empty": "कोई विभाग उपलब्ध नहीं"
+      },
+      "specializations": {
+        "label": "विशेषताएं"
+      },
+      "qualifications": {
+        "label": "योग्यताएं"
+      },
+      "licenseNumber": {
+        "label": "लाइसेंस नंबर"
+      },
+      "experienceYears": {
+        "label": "अनुभव (वर्ष)"
+      },
+      "medicalCouncil": {
+        "label": "मेडिकल काउंसिल"
+      },
+      "registrationYear": {
+        "label": "पंजीकरण वर्ष"
+      },
+      "bio": {
+        "label": "व्यावसायिक बायो",
+        "placeholder": "अपना अनुभव, विशेषज्ञता और रोगी देखभाल का दृष्टिकोण साझा करें...",
+        "tip": "30-70 शब्द रखने की कोशिश करें। इसे मरीज-अनुकूल रखें।",
+        "wordCount": "{{count}} शब्द"
+      }
+    },
+    "actions": {
+      "saving": "सहेजा जा रहा है...",
+      "save": "व्यावसायिक विवरण सहेजें"
+    },
+    "errors": {
+      "licenseRequired": "लाइसेंस नंबर आवश्यक है",
+      "qualificationsRequired": "कम से कम एक योग्यता चुनें",
+      "specializationsRequired": "कम से कम एक विशेषता चुनें",
+      "experienceInvalid": "अनुभव एक मान्य गैर-नकारात्मक संख्या होना चाहिए",
+      "medicalCouncilRequired": "मेडिकल काउंसिल आवश्यक है",
+      "medicalCouncilTooLong": "मेडिकल काउंसिल का नाम बहुत लंबा है",
+      "registrationYearInvalid": "कृपया वैध पंजीकरण वर्ष दर्ज करें"
+    },
+    "toast": {
+      "missingHospital": "सहेजने से पहले कृपया एक हॉस्पिटल चुनें।",
+      "missingDepartment": "सहेजने से पहले प्राथमिक विभाग चुनें।",
+      "missingDoctorId": "डॉक्टर आईडी नहीं मिली। कृपया पेज रिफ्रेश करें।",
+      "createSuccess": "डॉक्टर प्रोफ़ाइल सफलतापूर्वक बनाई गई।",
+      "updateSuccess": "डॉक्टर प्रोफ़ाइल सफलतापूर्वक अपडेट की गई।",
+      "genericError": "डॉक्टर प्रोफ़ाइल सहेजने में विफल।",
+      "invalidData": "कुछ फ़ील्ड मान्य नहीं हैं। कृपया जांचें।",
+      "licenseConflict": "इस लाइसेंस के साथ डॉक्टर पहले से मौजूद है।",
+      "notFound": "डॉक्टर प्रोफ़ाइल नहीं मिली।"
+    },
+    "success": {
+      "title": "व्यावसायिक विवरण अपडेट हो गए",
+      "description": "आपकी प्रोफ़ाइल नवीनतम जानकारी से सिंक हो गई है। अब आप क्या करना चाहेंगे?",
+      "profileCompletion": "प्रोफ़ाइल पूर्णता",
+      "completeMessage": "शानदार! आपकी व्यावसायिक प्रोफ़ाइल पूरी तरह पूर्ण है।",
+      "incompleteMessage": "पूरा अनुभव पाने के लिए शेष फ़ील्ड पूरी करें।",
+      "continueEditing": "संपादन जारी रखें",
+      "goToDashboard": "डैशबोर्ड पर जाएं"
+    }
+  },
+  "patientDetailsModal": {
+    "title": "मरीज़ विवरण",
+    "basicInfo": "मूल जानकारी",
+    "labels": {
+      "patientId": "मरीज़ आईडी",
+      "name": "नाम",
+      "phone": "फ़ोन",
+      "appointmentTime": "अपॉइंटमेंट समय",
+      "tokenNumber": "टोकन नंबर",
+      "currentStatus": "वर्तमान स्थिति"
+    },
+    "tabs": {
+      "vitals": "वाइटल्स",
+      "clinical": "क्लिनिकल नोट्स",
+      "actions": "क्रियाएं"
+    },
+    "statuses": {
+      "vitalsRequired": "❤️ वाइटल्स आवश्यक",
+      "readyConsultation": "✅ परामर्श के लिए तैयार",
+      "underConsultation": "👨‍⚕️ परामर्श जारी",
+      "labTestRequired": "🧪 लैब टेस्ट आवश्यक",
+      "awaitingReconsultation": "⏳ पुनः परामर्श की प्रतीक्षा",
+      "completed": "🏁 पूर्ण"
+    },
+    "vitals": {
+      "title": "वाइटल साइन",
+      "edit": "संपादित करें",
+      "cancel": "रद्द करें",
+      "save": "वाइटल्स सहेजें",
+      "notRecorded": "रिकॉर्ड नहीं किया गया",
+      "fields": {
+        "bloodPressure": "ब्लड प्रेशर",
+        "temperature": "तापमान (°C)",
+        "pulse": "पल्स रेट (bpm)",
+        "weight": "वजन (kg)"
+      },
+      "placeholders": {
+        "bloodPressure": "उदा., 120/80",
+        "temperature": "उदा., 36.8",
+        "pulse": "उदा., 72",
+        "weight": "उदा., 65"
+      }
+    },
+    "clinical": {
+      "title": "क्लिनिकल नोट्स",
+      "label": "नोट्स",
+      "placeholder": "क्लिनिकल नोट्स, अवलोकन या अनुशंसाएं दर्ज करें...",
+      "save": "नोट्स सहेजें"
+    },
+    "actions": {
+      "title": "स्टेटस क्रियाएं",
+      "markReady": "तैयार चिह्नित करें",
+      "startConsultation": "परामर्श शुरू करें",
+      "requestLabTest": "लैब टेस्ट अनुरोध करें",
+      "scheduleFollowUp": "फॉलो-अप शेड्यूल करें",
+      "completeConsultation": "परामर्श पूर्ण करें"
+    },
+    "defaults": {
+      "clinicalNotesSample": "मरीज़ हल्के लक्षणों के साथ आया है। ब्लड प्रेशर सामान्य सीमा में है। तापमान सामान्य है। पल्स रेट नियमित है। वजन स्थिर है।"
+    }
+  },
+  "patientFlow": {
+    "tabs": {
+      "current": "वर्तमान मरीज़",
+      "past": "पिछले अपॉइंटमेंट",
+      "future": "भविष्य के मरीज़"
+    },
+    "statusLabels": {
+      "all": "सभी",
+      "vitals-required": "वाइटल्स",
+      "ready-consultation": "तैयार",
+      "under-consultation": "परामर्श",
+      "lab-test-required": "लैब टेस्ट",
+      "awaiting-reconsultation": "फॉलो-अप",
+      "completed": "पूर्ण"
+    },
+    "statusBadges": {
+      "vitals-required": "❤️ वाइटल्स",
+      "ready-consultation": "✅ तैयार",
+      "under-consultation": "👨‍⚕️ परामर्श",
+      "lab-test-required": "🧪 लैब टेस्ट",
+      "awaiting-reconsultation": "⏳ फॉलो-अप",
+      "completed": "🏁 पूर्ण"
+    },
+    "current": {
+      "title": "वर्तमान मरीज़",
+      "subtitle": "आज के मरीज़ प्रवाह का प्रबंधन करें और प्रगति ट्रैक करें",
+      "live": "लाइव अपडेट",
+      "totalToday": "आज कुल",
+      "searchLabel": "मरीज़ खोजें",
+      "searchPlaceholder": "मरीज़ का नाम, आईडी या फ़ोन से खोजें...",
+      "journeyTitle": "मरीज़ यात्रा स्थिति",
+      "journeyHint": "फ़िल्टर करने के लिए किसी भी स्थिति पर क्लिक करें",
+      "tiles": {
+        "all": {
+          "title": "सभी मरीज़",
+          "subtitle": "आज कुल"
+        },
+        "vitals": {
+          "title": "वाइटल्स",
+          "subtitle": "अपडेट आवश्यक"
+        },
+        "ready": {
+          "title": "तैयार",
+          "subtitle": "परामर्श के लिए"
+        },
+        "consulting": {
+          "title": "परामर्श",
+          "subtitle": "जारी"
+        },
+        "lab": {
+          "title": "लैब टेस्ट",
+          "subtitle": "आवश्यक"
+        },
+        "followups": {
+          "title": "फॉलो-अप",
+          "subtitle": "प्रतीक्षा"
+        },
+        "completed": {
+          "title": "पूर्ण",
+          "subtitle": "समाप्त"
+        }
+      }
+    },
+    "past": {
+      "title": "पिछले अपॉइंटमेंट",
+      "subtitle": "पूर्ण हुए परामर्श और ऐतिहासिक डेटा देखें",
+      "chip": "ऐतिहासिक डेटा",
+      "badge": "पूर्ण",
+      "searchLabel": "पिछले अपॉइंटमेंट खोजें",
+      "searchPlaceholder": "मरीज़ का नाम, आईडी या डॉक्टर से खोजें..."
+    },
+    "future": {
+      "title": "भविष्य के अपॉइंटमेंट",
+      "subtitle": "आगामी अपॉइंटमेंट और शेड्यूल परामर्श देखें",
+      "chip": "आगामी",
+      "badge": "तैयार",
+      "searchLabel": "भविष्य के अपॉइंटमेंट खोजें",
+      "searchPlaceholder": "मरीज़ का नाम, आईडी या डॉक्टर से खोजें..."
+    },
+    "filters": {
+      "dateRangeTitle": "तिथि सीमा के अनुसार फ़िल्टर करें",
+      "startDate": "आरंभ तिथि",
+      "endDate": "समाप्ति तिथि",
+      "clear": "साफ़ करें",
+      "summaryBetween": "{{start}} से {{end}} तक के अपॉइंटमेंट दिखा रहे हैं",
+      "summaryFrom": "{{start}} से आगे के अपॉइंटमेंट दिखा रहे हैं",
+      "summaryUntil": "{{end}} तक के अपॉइंटमेंट दिखा रहे हैं"
+    },
+    "table": {
+      "headers": {
+        "token": "टोकन",
+        "patientId": "मरीज़ आईडी",
+        "patientName": "मरीज़ का नाम",
+        "contact": "संपर्क",
+        "time": "समय",
+        "date": "तिथि",
+        "status": "स्थिति",
+        "actions": "क्रियाएं"
+      },
+      "view": "देखें",
+      "patientIdTitle": "मरीज़ प्रोफ़ाइल देखने के लिए क्लिक करें",
+      "rowId": "आईडी: {{id}}"
+    },
+    "empty": {
+      "current": "कोई मरीज़ नहीं मिला",
+      "currentByStatus": "कोई {{status}} मरीज़ नहीं मिला",
+      "past": "चयनित मानदंड के लिए कोई पिछले अपॉइंटमेंट नहीं मिले",
+      "future": "चयनित मानदंड के लिए कोई भविष्य के अपॉइंटमेंट नहीं मिले"
+    }
+  },
+  "qualificationSelector": {
+    "label": "योग्यताएं",
+    "description": "सामान्य योग्यताओं में से चुनें या कस्टम जोड़ें",
+    "selected": "चयनित योग्यताएं",
+    "common": "सामान्य योग्यताएं",
+    "custom": {
+      "button": "कस्टम योग्यता जोड़ें",
+      "label": "कस्टम योग्यता जोड़ें",
+      "placeholder": "कस्टम योग्यता दर्ज करें (जैसे, MBBS, MD Cardiology, आदि)",
+      "add": "जोड़ें",
+      "cancel": "रद्द करें"
+    },
+    "help": "आप कई योग्यताएं जोड़ सकते हैं। सामान्य सूची से चुनें या आवश्यकता अनुसार कस्टम जोड़ें।"
+  },
+  "specializationSelector": {
+    "label": "विशेषताएं",
+    "description": "उपलब्ध विशेषताओं में से चुनें या {{department}} के लिए कस्टम जोड़ें",
+    "selected": "चयनित विशेषताएं",
+    "available": "उपलब्ध विशेषताएं",
+    "availableCount": "{{filtered}} में से {{total}} उपलब्ध",
+    "searchPlaceholder": "विशेषताओं में खोजें...",
+    "loading": "विशेषताएं लोड हो रही हैं...",
+    "loadError": "विशेषताएं लोड करने में विफल। आप कस्टम जोड़ सकते हैं।",
+    "empty": {
+      "noSearch": "इस विभाग के लिए कोई विशेषता उपलब्ध नहीं",
+      "noSearchHint": "आप नीचे कस्टम विशेषताएं जोड़ सकते हैं",
+      "noResults": "\"{{term}}\" के लिए कोई विशेषता नहीं मिली",
+      "noResultsHint": "अलग खोज शब्द आजमाएं या कस्टम विशेषता जोड़ें"
+    },
+    "custom": {
+      "button": "कस्टम विशेषता जोड़ें",
+      "label": "कस्टम विशेषता जोड़ें",
+      "placeholder": "कस्टम विशेषता दर्ज करें...",
+      "add": "जोड़ें",
+      "cancel": "रद्द करें"
+    },
+    "help": "आप कई विशेषताएं चुन सकते हैं। यदि आवश्यक विशेषता नहीं मिलती, तो कस्टम जोड़ें।"
+  },
+  "hospitalBranding": {
+    "title": "अस्पताल जानकारी",
+    "subtitle": "अपने अस्पताल की पूरी जानकारी कॉन्फ़िगर करें",
+    "loading": {
+      "title": "अस्पताल जानकारी लोड हो रही है...",
+      "message": "कृपया प्रतीक्षा करें, हम आपकी अस्पताल जानकारी ला रहे हैं।"
+    },
+    "error": {
+      "title": "अस्पताल जानकारी लोड करने में विफल",
+      "message": "कृपया पेज रिफ्रेश करने का प्रयास करें"
+    },
+    "buttons": {
+      "editDetails": "विवरण संपादित करें",
+      "cancel": "रद्द करें",
+      "saveChanges": "परिवर्तन सहेजें",
+      "saving": "सहेजा जा रहा है...",
+      "saveInfo": "अस्पताल जानकारी सहेजें",
+      "continue": "जारी रखें"
+    },
+    "modal": {
+      "headerTitle": "अस्पताल जानकारी पूर्ण करें",
+      "headerSubtitle": "शुरू करने के लिए अपना अस्पताल प्रोफ़ाइल सेट करें",
+      "steps": {
+        "basicInfo": "मूल जानकारी",
+        "location": "स्थान",
+        "registration": "पंजीकरण"
+      },
+      "nextStep": "अगला चरण",
+      "saveAndComplete": "सहेजें और पूर्ण करें"
+    },
+    "sections": {
+      "core": {
+        "title": "मुख्य जानकारी",
+        "subtitle": "मूल अस्पताल विवरण और पहचान"
+      },
+      "contact": {
+        "title": "संपर्क जानकारी",
+        "subtitle": "प्राथमिक और द्वितीयक संपर्क विवरण"
+      },
+      "location": {
+        "title": "स्थान जानकारी",
+        "subtitle": "पूरा पता और स्थान विवरण"
+      },
+      "config": {
+        "title": "कॉन्फ़िगरेशन और मेटाडेटा",
+        "subtitle": "सिस्टम कॉन्फ़िगरेशन और नियामक जानकारी"
+      }
+    },
+    "labels": {
+      "name": "अस्पताल का नाम",
+      "type": "अस्पताल प्रकार",
+      "email": "ईमेल पता",
+      "contact": "प्राथमिक संपर्क",
+      "alternateContact": "वैकल्पिक संपर्क",
+      "website": "वेबसाइट",
+      "location": "सड़क का पता",
+      "city": "शहर",
+      "state": "राज्य/प्रांत",
+      "country": "देश",
+      "pincode": "पिन कोड",
+      "timeZone": "समय क्षेत्र",
+      "registrationNumber": "पंजीकरण संख्या"
+    },
+    "placeholders": {
+      "name": "अस्पताल का नाम दर्ज करें",
+      "type": "अस्पताल प्रकार चुनें",
+      "email": "ईमेल पता दर्ज करें",
+      "contact": "प्राथमिक फोन नंबर दर्ज करें",
+      "alternateContact": "वैकल्पिक फोन नंबर दर्ज करें",
+      "website": "वेबसाइट URL दर्ज करें",
+      "location": "पूरा सड़क पता दर्ज करें",
+      "city": "शहर का नाम दर्ज करें",
+      "state": "राज्य या प्रांत दर्ज करें",
+      "country": "देश का नाम दर्ज करें",
+      "pincode": "पिन कोड दर्ज करें",
+      "registrationNumber": "अस्पताल पंजीकरण संख्या दर्ज करें",
+      "timeZone": "समय क्षेत्र चुनें"
+    },
+    "helpers": {
+      "name": "अधिकतम 150 अक्षर",
+      "primaryContact": "मुख्य संपर्क नंबर",
+      "alternateContact": "द्वितीयक संपर्क नंबर",
+      "email": "संचार के लिए प्राथमिक ईमेल",
+      "website": "अस्पताल की आधिकारिक वेबसाइट",
+      "location": "विस्तृत सड़क का पता",
+      "registrationNumber": "आधिकारिक अस्पताल पंजीकरण संख्या",
+      "timeZone": "अस्पताल का परिचालन समय क्षेत्र"
+    },
+    "hospitalTypes": {
+      "clinic": "क्लिनिक",
+      "polyclinic": "पॉलीक्लिनिक",
+      "nursingHome": "नर्सिंग होम",
+      "generalHospital": "जनरल हॉस्पिटल",
+      "multispecialityHospital": "मल्टीस्पेशलिटी हॉस्पिटल",
+      "superSpecialityHospital": "सुपर स्पेशलिटी हॉस्पिटल",
+      "other": "अन्य",
+      "clinic_en": "Clinic",
+      "polyclinic_en": "Polyclinic",
+      "nursingHome_en": "Nursing Home",
+      "generalHospital_en": "General Hospital",
+      "multispecialityHospital_en": "Multispeciality Hospital",
+      "superSpecialityHospital_en": "Super Speciality Hospital",
+      "other_en": "Other",
+      "Clinic_hi": "क्लिनिक",
+      "Polyclinic_hi": "पॉलीक्लिनिक",
+      "Nursing Home_hi": "नर्सिंग होम",
+      "General Hospital_hi": "जनरल हॉस्पिटल",
+      "Multispeciality Hospital_hi": "मल्टीस्पेशलिटी हॉस्पिटल",
+      "Super Speciality Hospital_hi": "सुपर स्पेशलिटी हॉस्पिटल",
+      "Other_hi": "अन्य"
+    },
+    "timeZones": {
+      "asiaKolkata": "एशिया/कोलकाता (IST)",
+      "americaNewYork": "अमेरिका/न्यूयॉर्क (EST)",
+      "americaLosAngeles": "अमेरिका/लॉस एंजिलिस (PST)",
+      "europeLondon": "यूरोप/लंदन (GMT)",
+      "asiaDubai": "एशिया/दुबई (GST)",
+      "asiaSingapore": "एशिया/सिंगापुर (SGT)",
+      "asiaTokyo": "एशिया/टोक्यो (JST)",
+      "australiaSydney": "ऑस्ट्रेलिया/सिडनी (AEST)"
+    },
+    "completion": {
+      "title": "अस्पताल प्रोफ़ाइल पूर्ण!",
+      "description": "सभी आवश्यक अस्पताल विवरण सत्यापित हो गए हैं। एडमिन सुविधाएँ अब पूरी तरह अनलॉक हैं।",
+      "score": "पूर्णता स्कोर",
+      "basicInfo": "मूल जानकारी",
+      "locationInfo": "स्थान विवरण",
+      "contactInfo": "संपर्क जानकारी",
+      "statusComplete": "पूर्ण",
+      "statusPending": "लंबित"
+    },
+    "toast": {
+      "errorTitle": "त्रुटि",
+      "missingUser": "यूज़र आईडी नहीं मिली। कृपया दोबारा लॉगिन करें।",
+      "validationTitle": "मान्यकरण त्रुटि",
+      "validationDescription": "कृपया सहेजने से पहले सभी आवश्यक फ़ील्ड पूरा करें।",
+      "successTitle": "सफल!",
+      "successDescription": "अस्पताल जानकारी सफलतापूर्वक सहेजी गई।",
+      "errorDescription": "अस्पताल जानकारी सहेजने में विफल। कृपया पुनः प्रयास करें।"
+    },
+    "validation": {
+      "required": "{{field}} आवश्यक है",
+      "emailRequired": "ईमेल पता आवश्यक है",
+      "emailInvalid": "कृपया मान्य ईमेल पता दर्ज करें",
+      "contactRequired": "प्राथमिक संपर्क आवश्यक है",
+      "phoneInvalid": "कृपया मान्य फ़ोन नंबर दर्ज करें",
+      "websiteInvalid": "कृपया मान्य वेबसाइट URL दर्ज करें",
+      "pincodeInvalid": "कृपया मान्य पिन कोड दर्ज करें (4-10 अंक)"
+    }
+  },
   "appointmentCancelDialog": {
     "title": "अपॉइंटमेंट रद्द करें",
     "warningLabel": "चेतावनी:",
@@ -3269,23 +3294,51 @@
       "completion": "प्रोफ़ाइल पूर्णता {{percent}}%",
       "basic": {
         "title": "मूल जानकारी",
-        "fullName": { "label": "पूरा नाम" },
-        "email": { "label": "ईमेल पता" },
-        "phone": { "label": "फोन नंबर" },
-        "dob": { "label": "जन्म तिथि" },
-        "gender": { "label": "लिंग" },
-        "bloodGroup": { "label": "रक्त समूह" }
+        "fullName": {
+          "label": "पूरा नाम"
+        },
+        "email": {
+          "label": "ईमेल पता"
+        },
+        "phone": {
+          "label": "फोन नंबर"
+        },
+        "dob": {
+          "label": "जन्म तिथि"
+        },
+        "gender": {
+          "label": "लिंग"
+        },
+        "bloodGroup": {
+          "label": "रक्त समूह"
+        }
       },
       "address": {
         "title": "पता और संपर्क",
-        "address1": { "label": "पता पंक्ति 1" },
-        "address2": { "label": "पता पंक्ति 2" },
-        "city": { "label": "शहर" },
-        "state": { "label": "राज्य" },
-        "country": { "label": "देश" },
-        "pincode": { "label": "पिन कोड" },
-        "emergencyName": { "label": "आपातकालीन संपर्क नाम" },
-        "emergencyNumber": { "label": "आपातकालीन संपर्क नंबर" }
+        "address1": {
+          "label": "पता पंक्ति 1"
+        },
+        "address2": {
+          "label": "पता पंक्ति 2"
+        },
+        "city": {
+          "label": "शहर"
+        },
+        "state": {
+          "label": "राज्य"
+        },
+        "country": {
+          "label": "देश"
+        },
+        "pincode": {
+          "label": "पिन कोड"
+        },
+        "emergencyName": {
+          "label": "आपातकालीन संपर्क नाम"
+        },
+        "emergencyNumber": {
+          "label": "आपातकालीन संपर्क नंबर"
+        }
       },
       "save": "व्यक्तिगत जानकारी सहेजें"
     },
@@ -3398,5 +3451,158 @@
     "mustBePositive": "सकारात्मक संख्या होना चाहिए",
     "mustBeFuture": "भविष्य की तिथि होना चाहिए",
     "mustBePast": "अतीत की तिथि होना चाहिए"
+  },
+  "docBoard": {
+    "header": {
+      "title": "क्लीनिकल डैशबोर्ड",
+      "subtitle": "अपने दैनिक कार्यों और रोगी कतार का अवलोकन करें",
+      "defaultDoctorName": "डॉक्टर",
+      "viewProfessionalProfile": "पेशेवर प्रोफ़ाइल देखें",
+      "verified": "सत्यापित"
+    },
+    "nav": {
+      "appointments": {
+        "label": "अपॉइंटमेंट्स",
+        "short": "अपॉइंटमेंट्स",
+        "description": "मरीज़ों के अपॉइंटमेंट प्रबंधित करें"
+      },
+      "calendar": {
+        "label": "कैलेंडर",
+        "short": "कैलेंडर",
+        "description": "मासिक शेड्यूल देखें"
+      },
+      "analytics": {
+        "label": "विश्लेषण",
+        "short": "आंकड़े",
+        "description": "क्लिनिक का प्रदर्शन और रुझान देखें"
+      },
+      "settings": {
+        "label": "मेरी लाइब्रेरी",
+        "short": "लाइब्रेरी",
+        "description": "प्रिस्क्रिप्शन और प्रोफ़ाइल प्रबंधित करें"
+      },
+      "assistant": {
+        "label": "एनालिटिक्स",
+        "short": "स्टैट्स",
+        "description": "अभ्यास अंतर्दृष्टि देखें"
+      },
+      "lockedMessage": "अनलॉक करने के लिए प्रोफ़ाइल पूरी करें"
+    },
+    "tabs": {
+      "current": {
+        "label": "वर्तमान",
+        "subLabel": "आज की कतार"
+      },
+      "past": {
+        "label": "पुराने",
+        "subLabel": "इतिहास"
+      },
+      "future": {
+        "label": "आगामी",
+        "subLabel": "शेड्यूल"
+      },
+      "expandSidebar": "साइडबार बढ़ाएं",
+      "collapseSidebar": "साइडबार छोटा करें"
+    },
+    "search": {
+      "currentPlaceholder": "वर्तमान मरीज़ों को खोजें..."
+    },
+    "filters": {
+      "all": "सभी ({{count}})",
+      "vitalsRequired": "वाइटल्स ({{count}})",
+      "ready": "तैयार ({{count}})",
+      "consulting": "परामर्श ({{count}})",
+      "labRequired": "लैब ({{count}})",
+      "reconsult": "पुनः परामर्श ({{count}})",
+      "completed": "पूर्ण ({{count}})",
+      "cancelled": "रद्द ({{count}})"
+    },
+    "statusBadge": {
+      "vitalsRequired": "वाइटल्स आवश्यक",
+      "ready": "तैयार",
+      "consulting": "परामर्श जारी",
+      "labRequired": "लैब आवश्यक",
+      "reconsult": "पुनः परामर्श प्रतीक्षित",
+      "completed": "पूर्ण",
+      "scheduled": "शेड्यूल किया गया",
+      "cancelled": "रद्द",
+      "default": "{{status}}"
+    },
+    "sync": {
+      "lastSynced": "अंतिम सिंक:",
+      "refresh": "सूची ताज़ा करें"
+    },
+    "loading": {
+      "doctorProfile": "डॉक्टर प्रोफ़ाइल लोड हो रही है...",
+      "appointments": "अपॉइंटमेंट्स ताज़ा हो रहे हैं...",
+      "helper": "कृपया प्रतीक्षा करें, हम नवीनतम डेटा ला रहे हैं"
+    },
+    "error": {
+      "doctorProfile": "प्रोफ़ाइल त्रुटि",
+      "appointments": "अपॉइंटमेंट त्रुटि",
+      "missingData": "महत्वपूर्ण डेटा गायब है: {{fields}}",
+      "generic": "अज्ञात त्रुटि हुई",
+      "refreshPage": "पृष्ठ ताज़ा करें",
+      "missingHospitalId": "अस्पताल आईडी",
+      "missingDoctorId": "डॉक्टर आईडी"
+    },
+    "restriction": {
+      "title": "अपनी प्रोफ़ाइल पूरी करें",
+      "subtitle": "प्रोफ़ाइल पूरी होने तक क्लिनिकल सुविधाओं तक पहुँच प्रतिबंधित है।",
+      "requiredInfoTitle": "आवश्यक जानकारी:",
+      "requiredItems": {
+        "license": "मेडिकल लाइसेंस नंबर",
+        "department": "प्राथमिक विभाग",
+        "qualifications": "योग्यताएं",
+        "experience": "अनुभव के वर्ष"
+      },
+      "benefits": {
+        "calendar": "शेड्यूल प्रबंधित करें",
+        "prescriptions": "ई-प्रिस्क्रिप्शन",
+        "appointments": "अपॉइंटमेंट कतार"
+      },
+      "completeProfileCta": "अभी प्रोफ़ाइल पूरी करें",
+      "ctaHelper": "अपना विवरण अपडेट करने के लिए सेटिंग्स टैब का उपयोग करें"
+    },
+    "addBill": {
+      "description": "इस अपॉइंटमेंट के लिए बिल बनाएं"
+    },
+    "table": {
+      "addBill": "बिल जोड़ें",
+      "patientName": "मरीज़ का नाम",
+      "patient": "मरीज़ आईडी",
+      "doctorName": "डॉक्टर",
+      "notAvailable": "अनुपलब्ध",
+      "appointmentTime": "समय",
+      "token": "टोकन",
+      "status": "स्थिति",
+      "labReports": "लैब रिपोर्ट्स",
+      "case": "केस",
+      "actions": "कार्रवाई",
+      "printRx": "Rx प्रिंट करें"
+    },
+    "cancelDialog": {
+      "title": "अपॉइंटमेंट रद्द करें",
+      "description": "क्या आप निश्चित हैं? यह आपकी सक्रिय कतार से अपॉइंटमेंट हटा देगा।",
+      "patient": "मरीज़",
+      "patientId": "आईडी",
+      "doctor": "डॉक्टर",
+      "appointmentId": "अपॉइंटमेंट आईडी",
+      "keepAppointment": "नहीं, इसे रखें",
+      "cancelling": "रद्द किया जा रहा है...",
+      "confirmCancel": "हाँ, अपॉइंटमेंट रद्द करें"
+    },
+    "settings": {
+      "fields": "प्रिस्क्रिप्शन फ़ील्ड्स",
+      "personalData": "मेरी लाइब्रेरी",
+      "layoutLab": "लेआउट और लैब"
+    },
+    "preview": {
+      "title": "प्रिस्क्रिप्शन पूर्वावलोकन",
+      "description": "अंतिम रूप देने से पहले समीक्षा करें"
+    },
+    "alerts": {
+      "previewMissingContext": "पूर्वावलोकन नहीं कर सकते: मरीज़ या डॉक्टर संदर्भ गायब है"
+    }
   }
 }

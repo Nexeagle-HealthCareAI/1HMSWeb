@@ -42,22 +42,24 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+
 import { cn } from '@/lib/utils';
 import { mockCurrentAppointments, StatusTransitionStep } from '../utils/mockCurrentAppointments';
-import { mockPatientListResponse } from '../utils/mockPatientList';
+
+import { appointmentApi, AppointmentDetail } from '@/features/appointment/services/appointmentApi';
+import { patientApi, PatientData } from '@/features/patient/services/patientApi';
+import { useQuery } from '@tanstack/react-query';
+import { useAuthStore } from '@/store/authStore';
+import { format } from 'date-fns';
+
+import { Patient360Analysis } from './Patient360Analysis';
 
 type Tab = 'today' | 'patient360';
-
+type ViewMode = 'list' | 'analysis';
 
 export const PatientsPage: React.FC = () => {
   const { t } = useTranslation();
+
   const navigate = useNavigate();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('today');
@@ -69,11 +71,99 @@ export const PatientsPage: React.FC = () => {
   const [patient360Page, setPatient360Page] = useState(1);
   const patient360ItemsPerPage = 10;
   const [selectedTimePeriod, setSelectedTimePeriod] = useState<'today' | 'week' | 'month' | 'year'>('month');
-  const [selectedPatient, setSelectedPatient] = useState<typeof mockPatientListResponse.Patient[0] | null>(null);
-  const [isPatientDialogOpen, setIsPatientDialogOpen] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<any | null>(null);
+
   const [patient360SearchQuery, setPatient360SearchQuery] = useState('');
-  const [sortConfig, setSortConfig] = useState<{ key: keyof typeof mockPatientListResponse.Patient[0] | 'RegistrationDate', direction: 'asc' | 'desc' } | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: 'Name' | 'PatientId' | 'RegistrationDate' | 'Age' | 'Contact', direction: 'asc' | 'desc' } | null>(null);
   const [todaySortConfig, setTodaySortConfig] = useState<{ key: 'patientName' | 'contact' | 'doctorName' | 'currentStatus', direction: 'asc' | 'desc' } | null>(null);
+
+  const { hospitalId } = useAuthStore();
+
+  // Fetch Appointments
+  const { data: appointmentsResponse, isLoading: isAppointmentsLoading } = useQuery({
+    queryKey: ['patientAppointmentDetails', hospitalId, selectedTimePeriod],
+    queryFn: async () => {
+      if (!hospitalId) return { items: [] };
+
+      const now = new Date();
+      // For now, defaulting to today as per requirements, but can be expanded based on selectedTimePeriod if needed
+      // ensuring YYYY-MM-DD format
+      const todayStr = format(now, 'yyyy-MM-dd');
+
+      const response = await appointmentApi.getAppointmentDetails({
+        status: 'All',
+        startDate: todayStr,
+        endDate: todayStr,
+        hospitalId: hospitalId
+      });
+      return response;
+    },
+    enabled: !!hospitalId,
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
+  // Transform API data to UI format
+  const currentAppointments = useMemo(() => {
+    if (!appointmentsResponse?.items) return [];
+
+    return appointmentsResponse.items.map((apiAppt: AppointmentDetail) => {
+      // Generate status transition steps based on finalStatusCode
+      const statusSteps: StatusTransitionStep[] = [
+        { status: 'VITALS_REQUIRED', label: 'Vitals', isCompleted: false, isCurrent: false },
+        { status: 'READY', label: 'Ready', isCompleted: false, isCurrent: false },
+        { status: 'UNDER_CONSULT', label: 'Consult', isCompleted: false, isCurrent: false },
+        { status: 'LAB_REQUIRED', label: 'Lab', isCompleted: false, isCurrent: false }, // Optional step visually
+        { status: 'COMPLETED', label: 'Done', isCompleted: false, isCurrent: false }
+      ];
+
+      // Simple mapping logic for visualization - can be refined based on actual business rules
+      let currentStepIndex = -1;
+      const status = apiAppt.finalStatusCode as StatusTransitionStep['status'];
+
+      switch (status) {
+        case 'VITALS_REQUIRED': currentStepIndex = 0; break;
+        case 'READY': currentStepIndex = 1; break;
+        case 'UNDER_CONSULT': currentStepIndex = 2; break;
+        case 'LAB_REQUIRED': currentStepIndex = 3; break;
+        case 'AWAITING_RECONSULT': currentStepIndex = 2; break; // Map back to consult area or add step
+        case 'COMPLETED': currentStepIndex = 4; break;
+        case 'CANCELLED': currentStepIndex = -1; break;
+        default: currentStepIndex = 0;
+      }
+
+      const transitions = statusSteps.map((step, idx) => ({
+        ...step,
+        isCompleted: idx < currentStepIndex,
+        isCurrent: idx === currentStepIndex
+      }));
+
+      return {
+        appointmentId: apiAppt.appointmentId,
+        patientId: apiAppt.patientId,
+        patientName: apiAppt.patientFullName,
+        contact: apiAppt.patientMobile,
+        doctorName: apiAppt.doctorName || 'Unknown Doctor',
+        currentStatus: apiAppt.finalStatusCode as StatusTransitionStep['status'],
+        statusTransition: transitions
+      };
+    });
+  }, [appointmentsResponse]);
+
+  // New state for 360 view navigation
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+
+  const handlePatientClick = (patientId: string) => {
+    setSelectedPatientId(patientId);
+    setActiveTab('patient360');
+    setViewMode('analysis');
+  };
+
+  const handleBackTo360List = () => {
+    setViewMode('list');
+    setSelectedPatientId(null);
+  };
+
 
   const handleTodaySort = (key: 'patientName' | 'contact' | 'doctorName' | 'currentStatus') => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -83,7 +173,7 @@ export const PatientsPage: React.FC = () => {
     setTodaySortConfig({ key, direction });
   };
 
-  const handleSort = (key: keyof typeof mockPatientListResponse.Patient[0] | 'RegistrationDate') => {
+  const handleSort = (key: 'Name' | 'PatientId' | 'RegistrationDate' | 'Age' | 'Contact') => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
@@ -94,39 +184,72 @@ export const PatientsPage: React.FC = () => {
   // Compute Doctor Counts
   const doctorStats = useMemo(() => {
     const stats: Record<string, number> = {};
-    mockCurrentAppointments.forEach(apt => {
+    currentAppointments.forEach(apt => {
       if (apt.doctorName) {
         stats[apt.doctorName] = (stats[apt.doctorName] || 0) + 1;
       }
     });
     return stats;
-  }, []);
+  }, [currentAppointments]);
 
   // Compute Overall Stats
   const dashboardStats = useMemo(() => {
     return {
-      totalPatients: mockCurrentAppointments.length,
+      totalPatients: currentAppointments.length,
       activeDoctors: Object.keys(doctorStats).length,
-      pendingVitals: mockCurrentAppointments.filter(a => a.currentStatus === 'VITALS_REQUIRED').length,
-      underConsult: mockCurrentAppointments.filter(a => a.currentStatus === 'UNDER_CONSULT').length,
-      completed: mockCurrentAppointments.filter(a => a.currentStatus === 'COMPLETED').length,
-      cancelled: mockCurrentAppointments.filter(a => a.currentStatus === 'CANCELLED').length
+      pendingVitals: currentAppointments.filter(a => a.currentStatus === 'VITALS_REQUIRED').length,
+      underConsult: currentAppointments.filter(a => a.currentStatus === 'UNDER_CONSULT').length,
+      completed: currentAppointments.filter(a => a.currentStatus === 'COMPLETED').length,
+      cancelled: currentAppointments.filter(a => a.currentStatus === 'CANCELLED').length
     };
-  }, [doctorStats]);
+  }, [doctorStats, currentAppointments]);
+
+  // Fetch Patient 360 Data
+  const { data: patient360Response, isLoading: isPatient360Loading } = useQuery({
+    queryKey: ['patient360', hospitalId],
+    queryFn: async () => {
+      if (!hospitalId) return { patientsData: [] };
+      return patientApi.getAllPatients(hospitalId);
+    },
+    enabled: !!hospitalId,
+  });
+
+  const patientList = useMemo(() => {
+    if (!patient360Response?.patientsData) return [];
+
+    return patient360Response.patientsData.map((p: PatientData) => ({
+      PatientId: p.patientId,
+      Name: p.name,
+      Age: p.age.toString(),
+      Sex: p.sex,
+      Contact: p.contact,
+      AddressLine: p.addressLine,
+      City: p.city,
+      State: p.state,
+      Country: p.country,
+      PinCode: p.pinCode,
+      RegistrationDate: p.registrationDate,
+      // Default/Placeholder values for fields not in API yet but required by UI/Sort
+      LastVisit: p.registrationDate,
+      NextAppointment: null,
+      Status: 'Active',
+      Avatar: ''
+    }));
+  }, [patient360Response]);
 
   const patientStats = useMemo(() => {
-    const patients = mockPatientListResponse.Patient;
+    const patients = patientList;
     return {
       total: patients.length,
       males: patients.filter(p => p.Sex.toLowerCase() === 'male').length,
       females: patients.filter(p => p.Sex.toLowerCase() === 'female').length,
       cities: new Set(patients.map(p => p.City)).size
     };
-  }, []);
+  }, [patientList]);
 
   // Advanced Analytics
   const patientAnalytics = useMemo(() => {
-    const patients = mockPatientListResponse.Patient;
+    const patients = patientList;
 
     // Age band distribution
     const ageBands = {
@@ -268,8 +391,45 @@ export const PatientsPage: React.FC = () => {
     return 'bg-gray-200';
   };
 
+  // Filter and Sort Patient 360 List
+  const filteredAndSortedPatients = useMemo(() => {
+    let result = [...patientList];
+
+    if (patient360SearchQuery) {
+      const query = patient360SearchQuery.toLowerCase();
+      result = result.filter(p =>
+        p.Name.toLowerCase().includes(query) ||
+        p.PatientId.toLowerCase().includes(query) ||
+        p.Contact.includes(query)
+      );
+    }
+
+    if (selectedGender !== 'all') {
+      result = result.filter(p => p.Sex.toLowerCase() === selectedGender);
+    }
+
+    if (sortConfig) {
+      result.sort((a, b) => {
+        // @ts-ignore
+        const aValue = a[sortConfig.key];
+        // @ts-ignore
+        const bValue = b[sortConfig.key];
+
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+
+    return result;
+  }, [patientList, patient360SearchQuery, selectedGender, sortConfig]);
+
   const filteredAndSortedAppointments = useMemo(() => {
-    let result = [...mockCurrentAppointments];
+    let result = [...currentAppointments];
 
     // Filter
     if (searchQuery) {
@@ -309,7 +469,7 @@ export const PatientsPage: React.FC = () => {
     }
 
     return result;
-  }, [searchQuery, selectedDoctor, todaySortConfig]);
+  }, [searchQuery, selectedDoctor, todaySortConfig, currentAppointments]);
 
 
 
@@ -359,7 +519,14 @@ export const PatientsPage: React.FC = () => {
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  // Reset to list view when switching tabs manually
+                  if (item.id === 'patient360') {
+                    setViewMode('list');
+                    setSelectedPatientId(null);
+                  }
+                }}
                 className={cn(
                   "flex items-center w-full p-3 rounded-xl transition-all duration-200 group relative",
                   isActive
@@ -393,7 +560,16 @@ export const PatientsPage: React.FC = () => {
           <div className="max-w-5xl mx-auto space-y-6">
             <div className="flex items-center justify-between mb-2">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Today's Appointments</h1>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Today's Appointments</h1>
+                  <Badge variant="outline" className="gap-1.5 bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    Live
+                  </Badge>
+                </div>
                 <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Manage and track patient flows effectively.</p>
               </div>
 
@@ -490,7 +666,7 @@ export const PatientsPage: React.FC = () => {
                         <span className="flex items-center justify-between gap-2 w-full">
                           <span>All Doctors</span>
                           <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-gray-100 text-gray-600">
-                            {mockCurrentAppointments.length}
+                            {currentAppointments.length}
                           </Badge>
                         </span>
                       </SelectItem>
@@ -569,10 +745,13 @@ export const PatientsPage: React.FC = () => {
                           <TableCell>
                             <div className="flex flex-col">
                               <span className="font-medium text-gray-900 dark:text-gray-100">{appointment.patientName}</span>
-                              <span className="text-xs text-gray-500 flex items-center gap-1">
+                              <button
+                                onClick={() => handlePatientClick(appointment.patientId)}
+                                className="text-xs text-gray-500 flex items-center gap-1 hover:text-blue-600 hover:underline transition-colors focus:outline-none"
+                              >
                                 <Users className="h-3 w-3" />
                                 {appointment.patientId}
-                              </span>
+                              </button>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -685,7 +864,16 @@ export const PatientsPage: React.FC = () => {
         )
         }
 
-        {activeTab === 'patient360' && (
+        {activeTab === 'patient360' && viewMode === 'analysis' && selectedPatientId && (
+          <div className="h-full">
+            <Patient360Analysis
+              patientId={selectedPatientId}
+              onBack={handleBackTo360List}
+            />
+          </div>
+        )}
+
+        {activeTab === 'patient360' && viewMode === 'list' && (
           <div className="h-[calc(100vh-140px)] flex flex-col space-y-4">
             <div className="flex items-center justify-between px-1 shrink-0">
               <div>
@@ -773,185 +961,123 @@ export const PatientsPage: React.FC = () => {
             <div className="grid grid-cols-12 gap-6 flex-1 min-h-0 overflow-hidden">
               {/* Main Content: Table (Left) */}
               <div className="col-span-12 xl:col-span-9 flex flex-col h-full overflow-hidden order-2 xl:order-1">
-                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/60 dark:border-gray-800 shadow-sm flex flex-col h-full overflow-hidden">
-                  <div className="flex-1 overflow-auto custom-scrollbar">
-                    <Table>
-                      <TableHeader className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 shadow-sm">
-                        <TableRow className="hover:bg-transparent">
-                          <TableHead
-                            className="font-semibold text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors select-none"
-                            onClick={() => handleSort('Name')}
-                          >
-                            <div className="flex items-center gap-1">
-                              Patient
-                              <ArrowUpDown className="h-3 w-3 text-gray-400" />
-                            </div>
-                          </TableHead>
-                          <TableHead
-                            className="font-semibold text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors select-none"
-                            onClick={() => handleSort('Age')}
-                          >
-                            <div className="flex items-center gap-1">
-                              Demographics
-                              <ArrowUpDown className="h-3 w-3 text-gray-400" />
-                            </div>
-                          </TableHead>
-                          <TableHead
-                            className="font-semibold text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors select-none"
-                            onClick={() => handleSort('Contact')}
-                          >
-                            <div className="flex items-center gap-1">
-                              Contact
-                              <ArrowUpDown className="h-3 w-3 text-gray-400" />
-                            </div>
-                          </TableHead>
-                          <TableHead
-                            className="font-semibold text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors select-none"
-                            onClick={() => handleSort('RegistrationDate')}
-                          >
-                            <div className="flex items-center gap-1">
-                              Registered On
-                              <ArrowUpDown className="h-3 w-3 text-gray-400" />
-                            </div>
-                          </TableHead>
-                          <TableHead
-                            className="font-semibold text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors select-none"
-                            onClick={() => handleSort('AddressLine')}
-                          >
-                            <div className="flex items-center gap-1">
-                              Address
-                              <ArrowUpDown className="h-3 w-3 text-gray-400" />
-                            </div>
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {(() => {
-                          let filteredPatients = mockPatientListResponse.Patient.filter(p =>
-                            p.Name.toLowerCase().includes(patient360SearchQuery.toLowerCase()) ||
-                            p.PatientId.toLowerCase().includes(patient360SearchQuery.toLowerCase()) ||
-                            p.Contact.includes(patient360SearchQuery)
-                          );
+                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/60 dark:border-gray-800 shadow-sm overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                        <TableHead className="w-[200px] cursor-pointer" onClick={() => handleSort('Name')}>
+                          <div className="flex items-center gap-1">Name <ArrowUpDown className="h-3 w-3" /></div>
+                        </TableHead>
+                        <TableHead className="cursor-pointer" onClick={() => handleSort('Age')}>
+                          <div className="flex items-center gap-1">Age/Sex <ArrowUpDown className="h-3 w-3" /></div>
+                        </TableHead>
+                        <TableHead className="cursor-pointer" onClick={() => handleSort('Contact')}>
+                          <div className="flex items-center gap-1">Contact <ArrowUpDown className="h-3 w-3" /></div>
+                        </TableHead>
+                        <TableHead className="cursor-pointer" onClick={() => handleSort('RegistrationDate')}>
+                          <div className="flex items-center gap-1">Registered <ArrowUpDown className="h-3 w-3" /></div>
+                        </TableHead>
+                        <TableHead>Address</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(() => {
+                        const startIndex = (patient360Page - 1) * patient360ItemsPerPage;
+                        const paginatedPatients = filteredAndSortedPatients.slice(startIndex, startIndex + patient360ItemsPerPage);
 
-                          let sortedPatients = [...filteredPatients];
-                          if (sortConfig !== null) {
-                            sortedPatients.sort((a, b) => {
-                              if (sortConfig.key === 'Age') {
-                                return sortConfig.direction === 'asc'
-                                  ? parseInt(a.Age) - parseInt(b.Age)
-                                  : parseInt(b.Age) - parseInt(a.Age);
-                              }
-                              if (a[sortConfig.key] < b[sortConfig.key]) {
-                                return sortConfig.direction === 'asc' ? -1 : 1;
-                              }
-                              if (a[sortConfig.key] > b[sortConfig.key]) {
-                                return sortConfig.direction === 'asc' ? 1 : -1;
-                              }
-                              return 0;
-                            });
-                          }
-
-                          const startIndex = (patient360Page - 1) * patient360ItemsPerPage;
-                          const endIndex = startIndex + patient360ItemsPerPage;
-                          const paginatedPatients = sortedPatients.slice(startIndex, endIndex);
-
-                          if (paginatedPatients.length === 0) {
-                            return (
-                              <TableRow>
-                                <TableCell colSpan={5} className="h-24 text-center text-gray-500 dark:text-gray-400">
-                                  No patients found matching your search.
-                                </TableCell>
-                              </TableRow>
-                            );
-                          }
-
-                          return paginatedPatients.map((patient) => (
-                            <TableRow key={patient.PatientId} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
-                              <TableCell>
-                                <div className="flex flex-col">
-                                  <span className="font-medium text-gray-900 dark:text-gray-100">{patient.Name}</span>
-                                  <button
-                                    onClick={() => {
-                                      setSelectedPatient(patient);
-                                      setIsPatientDialogOpen(true);
-                                    }}
-                                    className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1 cursor-pointer hover:underline transition-colors w-fit"
-                                  >
-                                    <Users className="h-3 w-3" />
-                                    {patient.PatientId}
-                                  </button>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                                  <UserCheck className="h-3.5 w-3.5" />
-                                  {patient.Age} yrs / {patient.Sex}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                                  <Phone className="h-3.5 w-3.5" />
-                                  {patient.Contact}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="text-sm text-gray-600 dark:text-gray-400">
-                                  {new Date(patient.RegistrationDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ /g, ' ').replace(/(?<=\w) (?=\d{4})/, ', ')}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="text-sm text-gray-500 dark:text-gray-400 max-w-[200px] truncate" title={patient.AddressLine}>
-                                  {patient.AddressLine}, {patient.PinCode}
-                                </div>
+                        if (paginatedPatients.length === 0) {
+                          return (
+                            <TableRow>
+                              <TableCell colSpan={5} className="h-24 text-center text-gray-500 dark:text-gray-400">
+                                No patients found matching your search.
                               </TableCell>
                             </TableRow>
-                          ));
-                        })()}
-                      </TableBody>
-                    </Table>
-                  </div>
+                          );
+                        }
 
-                  {/* Pagination Controls - Fixed at Bottom */}
-                  {mockPatientListResponse.Patient.length > 0 && (
-                    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 shrink-0">
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
-                        Showing <span className="font-medium">{(patient360Page - 1) * patient360ItemsPerPage + 1}</span> to <span className="font-medium">{Math.min(patient360Page * patient360ItemsPerPage, mockPatientListResponse.Patient.length)}</span> of <span className="font-medium">{mockPatientListResponse.Patient.length}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setPatient360Page(p => Math.max(1, p - 1))}
-                          disabled={patient360Page === 1}
-                          className="h-8 text-xs"
-                        >
-                          <ChevronLeft className="h-3.5 w-3.5 mr-1" />
-                          Prev
-                        </Button>
-                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100 min-w-[3rem] text-center">
-                          {patient360Page} / {Math.ceil(mockPatientListResponse.Patient.length / patient360ItemsPerPage)}
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setPatient360Page(p => Math.min(Math.ceil(mockPatientListResponse.Patient.length / patient360ItemsPerPage), p + 1))}
-                          disabled={patient360Page === Math.ceil(mockPatientListResponse.Patient.length / patient360ItemsPerPage)}
-                          className="h-8 text-xs"
-                        >
-                          Next
-                          <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+                        return paginatedPatients.map((patient) => (
+                          <TableRow key={patient.PatientId} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-medium text-gray-900 dark:text-gray-100">{patient.Name}</span>
+                                <button
+                                  onClick={() => handlePatientClick(patient.PatientId)}
+                                  className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1 cursor-pointer hover:underline transition-colors w-fit"
+                                >
+                                  <Users className="h-3 w-3" />
+                                  {patient.PatientId}
+                                </button>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                <UserCheck className="h-3.5 w-3.5" />
+                                {patient.Age} yrs / {patient.Sex}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                <Phone className="h-3.5 w-3.5" />
+                                {patient.Contact}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm text-gray-600 dark:text-gray-400">
+                                {new Date(patient.RegistrationDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ /g, ' ').replace(/(?<=\w) (?=\d{4})/, ', ')}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm text-gray-500 dark:text-gray-400 max-w-[200px] truncate" title={patient.AddressLine}>
+                                {patient.AddressLine}, {patient.PinCode}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ));
+                      })()}
+                    </TableBody>
+                  </Table>
                 </div>
+
+                {/* Pagination Controls - Fixed at Bottom */}
+                {filteredAndSortedPatients.length > 0 && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 shrink-0">
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      Showing <span className="font-medium">{(patient360Page - 1) * patient360ItemsPerPage + 1}</span> to <span className="font-medium">{Math.min(patient360Page * patient360ItemsPerPage, filteredAndSortedPatients.length)}</span> of <span className="font-medium">{filteredAndSortedPatients.length}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPatient360Page(p => Math.max(1, p - 1))}
+                        disabled={patient360Page === 1}
+                        className="h-8 text-xs"
+                      >
+                        <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+                        Prev
+                      </Button>
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100 min-w-[3rem] text-center">
+                        {patient360Page} / {Math.ceil(filteredAndSortedPatients.length / patient360ItemsPerPage)}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPatient360Page(p => Math.min(Math.ceil(filteredAndSortedPatients.length / patient360ItemsPerPage), p + 1))}
+                        disabled={patient360Page === Math.ceil(filteredAndSortedPatients.length / patient360ItemsPerPage)}
+                        className="h-8 text-xs"
+                      >
+                        Next
+                        <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Sidebar: KPIs & Analytics (Right) */}
-              <div className="col-span-12 xl:col-span-3 h-full overflow-y-auto pr-2 custom-scrollbar space-y-4 pb-2 order-1 xl:order-2">
+              < div className="col-span-12 xl:col-span-3 h-full overflow-y-auto pr-2 custom-scrollbar space-y-4 pb-2 order-1 xl:order-2" >
 
                 {/* New Reg - Full Width */}
-                <Card className="bg-gradient-to-br from-emerald-500 to-teal-600 border-none text-white shadow-md">
+                < Card className="bg-gradient-to-br from-emerald-500 to-teal-600 border-none text-white shadow-md" >
                   <CardHeader className="p-3 pb-0">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-xs font-semibold flex items-center gap-1.5 uppercase tracking-wide text-emerald-100">
@@ -986,7 +1112,7 @@ export const PatientsPage: React.FC = () => {
                       </p>
                     </div>
                   </CardContent>
-                </Card>
+                </Card >
 
                 {/* Analytics - Stacked */}
 
@@ -1062,112 +1188,13 @@ export const PatientsPage: React.FC = () => {
                     </div>
                   </CardContent>
                 </Card>
-
               </div>
             </div>
           </div>
         )
         }
+
       </main >
-
-      {/* Patient Details Dialog */}
-      <Dialog open={isPatientDialogOpen} onOpenChange={setIsPatientDialogOpen}>
-        <DialogContent className="max-w-7xl w-[95vw]">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-              <Users className="h-6 w-6 text-blue-600" />
-              Patient Details
-            </DialogTitle>
-            <DialogDescription>
-              Complete information for {selectedPatient?.Name}
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedPatient && (
-            <div className="space-y-6">
-              {/* Patient ID and Name */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Patient ID</label>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedPatient.PatientId}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Full Name</label>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedPatient.Name}</p>
-                </div>
-              </div>
-
-              {/* Demographics */}
-              <div className="border-t pt-4">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                  <UserCheck className="h-4 w-4" />
-                  Demographics
-                </h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Age</label>
-                    <p className="text-base text-gray-900 dark:text-gray-100">{selectedPatient.Age} years</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Sex</label>
-                    <p className="text-base text-gray-900 dark:text-gray-100">{selectedPatient.Sex}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Registration Date</label>
-                    <p className="text-base text-gray-900 dark:text-gray-100">
-                      {new Date(selectedPatient.RegistrationDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Contact Information */}
-              <div className="border-t pt-4">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                  <Phone className="h-4 w-4" />
-                  Contact Information
-                </h3>
-                <div>
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Phone Number</label>
-                  <p className="text-base text-gray-900 dark:text-gray-100">{selectedPatient.Contact}</p>
-                </div>
-              </div>
-
-              {/* Address */}
-              <div className="border-t pt-4">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  Address
-                </h3>
-                <div className="space-y-2">
-                  <div>
-                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Street Address</label>
-                    <p className="text-base text-gray-900 dark:text-gray-100">{selectedPatient.AddressLine}</p>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-500 dark:text-gray-400">City</label>
-                      <p className="text-base text-gray-900 dark:text-gray-100">{selectedPatient.City}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500 dark:text-gray-400">State</label>
-                      <p className="text-base text-gray-900 dark:text-gray-100">{selectedPatient.State}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500 dark:text-gray-400">PIN Code</label>
-                      <p className="text-base text-gray-900 dark:text-gray-100">{selectedPatient.PinCode}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Country</label>
-                    <p className="text-base text-gray-900 dark:text-gray-100">{selectedPatient.Country}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div >
   );
 };
