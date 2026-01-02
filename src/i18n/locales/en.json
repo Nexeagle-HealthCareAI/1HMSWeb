@@ -3009,8 +3009,8 @@
         "description": "View practice insights"
       },
       "settings": {
-        "label": "My Library",
-        "short": "Lib",
+        "label": "Prescription Settings",
+        "short": "Settings",
         "description": "Manage prescriptions & profile"
       },
       "assistant": {
@@ -3125,8 +3125,8 @@
       "confirmCancel": "Yes, Cancel Appointment"
     },
     "settings": {
-      "fields": "Prescription Fields",
-      "personalData": "My Library",
+      "fields": "Prescription Sections",
+      "personalData": "My Clinical Library",
       "layoutLab": "Layout & Lab"
     },
     "preview": {
