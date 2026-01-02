@@ -214,7 +214,26 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
     font: boldFont,
     color: COLORS.TextMain
   });
-  cursorY -= lineHeight * 1.5;
+
+  // B. Valid Upto (Below Date, Top Right) - Only display if validUpto > 0
+  // validUpto is in the template object from the API response
+  const validUptoDays = payload.template?.validUpto ?? 10;
+  if (validUptoDays > 0) {
+    const validUptoDate = new Date();
+    validUptoDate.setDate(validUptoDate.getDate() + validUptoDays);
+    const validUptoLabel = `Valid Upto: ${getFormattedDate(validUptoDate)}`;
+    const validUptoW = regularFont.widthOfTextAtSize(validUptoLabel, sizeSm);
+    page.drawText(validUptoLabel, {
+      x: pageWidth - rightPad - validUptoW,
+      y: cursorY - lineHeight,
+      size: sizeSm,
+      font: regularFont,
+      color: COLORS.TextLight
+    });
+    cursorY -= lineHeight * 2.5;
+  } else {
+    cursorY -= lineHeight * 1.5;
+  }
 
   // B. Patient / Vitals Split
   const gap = 20;

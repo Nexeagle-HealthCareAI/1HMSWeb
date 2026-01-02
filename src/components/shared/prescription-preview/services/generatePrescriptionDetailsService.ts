@@ -22,6 +22,7 @@ export interface PrescriptionTemplateDescriptor {
   fontWeight: string | null;
   textColour: string | null;
   uri: string | null;
+  validUpto?: number; // Number of days the prescription is valid
   createdBy: string | null;
   createdAtUtc: string;
   updatedAtUtc: string;
@@ -134,6 +135,7 @@ export interface GeneratePrescriptionDetailsPayload {
   certificates: PrescriptionCertificate;
   followUp: PrescriptionFollowUp;
   immunizations: PrescriptionImmunization[];
+  validUpto?: number; // Number of days the prescription is valid
 }
 
 export interface GeneratePrescriptionDetailsResponse {
