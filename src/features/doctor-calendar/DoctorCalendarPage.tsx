@@ -12,7 +12,8 @@ import {
   CancelOverrideDialog,
   OverrideActionDialog,
   ShiftDetailsCard,
-  AppointmentCancelDialog
+  AppointmentCancelDialog,
+  CalendarEventContent
 } from './components';
 import { useCalendarEvents, useCreateOverride, useDeleteOverride, useCreateTimeOff, useDeleteTimeOff, useDoctorCalendarConfig, useAppointmentCancel } from './hooks/useCalendar';
 import { CalendarEvent, CreateOverridePayload, CreateBlockPayload, ShiftName, CreateTimeOffRequest } from './api/types';
@@ -677,46 +678,12 @@ export const DoctorCalendarPage: React.FC = () => {
       // No additional event listeners needed
     },
     eventContent: (arg: any) => {
-      const eventType = arg.event.extendedProps?.type;
-
-      const renderContent = (content: string, timeText?: string, subtext?: string, badge?: string) => `
-        <div class="fc-event-main-content h-full flex flex-col justify-between p-1">
-          <div class="flex flex-col gap-0.5">
-            ${badge ? `<span class="text-[10px] uppercase tracking-[0.16em] text-white/80">${badge}</span>` : ''}
-            <div class="text-xs font-bold leading-tight truncate">${content}</div>
-            ${subtext ? `<span class="text-[10px] text-white/80 truncate">${subtext}</span>` : ''}
-          </div>
-          ${timeText ? `<div class="text-[10px] opacity-90 mt-1 font-medium">${timeText}</div>` : ''}
-        </div>
-      `;
-
-      if (eventType === 'shift') {
-        const isOverride = arg.event.extendedProps?.isOverride;
-        if (isOverride) {
-          return { html: renderContent(arg.event.title, arg.timeText, clickToManageHint, overrideBadgeLabel) };
-        } else {
-          return { html: renderContent(arg.event.title, arg.timeText) };
-        }
-      } else if (eventType === 'appointment') {
-        const tokenNumber = arg.event.extendedProps?.tokenNumber || '#';
-        const patientName = arg.event.extendedProps?.patientName || arg.event.title;
-        return {
-          html: `
-            <div class="fc-event-main-content h-full flex flex-col justify-between p-1">
-              <div class="text-xs font-bold">Token: ${tokenNumber}</div>
-              <div class="text-[10px] truncate">${patientName}</div>
-              <div class="text-[10px] opacity-90">${arg.timeText}</div>
-            </div>
-          `
-        };
-      } else if (eventType === 'timeoff') {
-        return { html: renderContent(arg.event.title, arg.timeText) };
-      } else if (eventType === 'block') {
-        // Use generic content for blocks
-        return { html: renderContent(arg.event.title, arg.timeText) };
-      }
-
-      return { html: renderContent(arg.event.title, arg.timeText) };
+      return (
+        <CalendarEventContent
+          event={arg.event}
+          timeText={arg.timeText}
+        />
+      );
     },
     eventClassNames: (arg: any) => {
       const eventType = arg.event.extendedProps?.type;

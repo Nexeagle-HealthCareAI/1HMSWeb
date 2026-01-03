@@ -3502,10 +3502,19 @@
         "subLabel": "शेड्यूल"
       },
       "expandSidebar": "साइडबार बढ़ाएं",
-      "collapseSidebar": "साइडबार छोटा करें"
+      "collapseSidebar": "साइडबार छोटा करें",
+      "pastHistory": "पिछली यात्राओं का इतिहास",
+      "futureUpcoming": "आगामी अपॉइंटमेंट"
     },
     "search": {
-      "currentPlaceholder": "वर्तमान मरीज़ों को खोजें..."
+      "currentPlaceholder": "वर्तमान मरीज़ों को खोजें...",
+      "pastPlaceholder": "पिछले रोगियों को खोजें...",
+      "futurePlaceholder": "भविष्य के अपॉइंटमेंट खोजें..."
+    },
+    "empty": {
+      "current": "वर्तमान अपॉइंटमेंट नहीं हैं",
+      "past": "पिछले अपॉइंटमेंट नहीं हैं",
+      "future": "कोई आगामी अपॉइंटमेंट नहीं"
     },
     "filters": {
       "all": "सभी ({{count}})",
@@ -3579,7 +3588,13 @@
       "labReports": "लैब रिपोर्ट्स",
       "case": "केस",
       "actions": "कार्रवाई",
-      "printRx": "Rx प्रिंट करें"
+      "printRx": "Rx प्रिंट करें",
+      "patientId": "मरीज़ आईडी",
+      "lastVisit": "पिछली यात्रा",
+      "followUp": "फॉलो-अप",
+      "completed": "पूर्ण",
+      "newCase": "नया केस",
+      "notApplicable": "लागू नहीं"
     },
     "cancelDialog": {
       "title": "अपॉइंटमेंट रद्द करें",

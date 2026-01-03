@@ -3034,10 +3034,19 @@
         "subLabel": "Schedule"
       },
       "expandSidebar": "Expand Sidebar",
-      "collapseSidebar": "Collapse Sidebar"
+      "collapseSidebar": "Collapse Sidebar",
+      "pastHistory": "Past Visits History",
+      "futureUpcoming": "Upcoming Appointments"
     },
     "search": {
-      "currentPlaceholder": "Search current patients..."
+      "currentPlaceholder": "Search current patients...",
+      "pastPlaceholder": "Search past patients...",
+      "futurePlaceholder": "Search future appointments..."
+    },
+    "empty": {
+      "current": "No Current Appointments",
+      "past": "No Past Appointments",
+      "future": "No Upcoming Appointments"
     },
     "filters": {
       "all": "All ({{count}})",
@@ -3111,7 +3120,13 @@
       "labReports": "Lab reports",
       "case": "Case",
       "actions": "Actions",
-      "printRx": "Print Rx"
+      "printRx": "Print Rx",
+      "patientId": "Patient ID",
+      "lastVisit": "Last Visit",
+      "followUp": "Follow Up",
+      "completed": "Completed",
+      "newCase": "New Case",
+      "notApplicable": "N/A"
     },
     "cancelDialog": {
       "title": "Cancel Appointment",
