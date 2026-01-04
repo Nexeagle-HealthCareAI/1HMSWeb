@@ -622,6 +622,66 @@ export const ClinicalDashboard: React.FC = () => {
   const endIndex = startIndex + itemsPerPage;
   const currentAppointments = filteredAppointments.slice(startIndex, endIndex);
 
+  // Pagination helper
+  const renderPaginationItems = () => {
+    if (totalPages <= 0) return null;
+
+    const items = [];
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    if (startPage > 1) {
+      items.push(
+        <PaginationItem key="1">
+          <PaginationLink onClick={() => handlePageChange(1)} isActive={currentPage === 1} className="cursor-pointer">
+            1
+          </PaginationLink>
+        </PaginationItem>
+      );
+      if (startPage > 2) {
+        items.push(
+          <PaginationItem key="ellipsis-start">
+            <span className="flex h-9 w-9 items-center justify-center">...</span>
+          </PaginationItem>
+        );
+      }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      items.push(
+        <PaginationItem key={i}>
+          <PaginationLink onClick={() => handlePageChange(i)} isActive={currentPage === i} className="cursor-pointer">
+            {i}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        items.push(
+          <PaginationItem key="ellipsis-end">
+            <span className="flex h-9 w-9 items-center justify-center">...</span>
+          </PaginationItem>
+        );
+      }
+      items.push(
+        <PaginationItem key={totalPages}>
+          <PaginationLink onClick={() => handlePageChange(totalPages)} isActive={currentPage === totalPages} className="cursor-pointer">
+            {totalPages}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+
+    return items;
+  };
+
   const handlePageChange = (page: number) => {
     if (page < 1 || (totalPages > 0 && page > totalPages)) return;
     setCurrentPage(page);
@@ -1564,6 +1624,25 @@ export const ClinicalDashboard: React.FC = () => {
                             </Table>
                           </div>
                         </div>
+                        <div className="flex justify-center mt-4 pb-2">
+                          <Pagination>
+                            <PaginationContent>
+                              <PaginationItem>
+                                <PaginationPrevious
+                                  onClick={() => handlePageChange(currentPage - 1)}
+                                  className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                />
+                              </PaginationItem>
+                              {renderPaginationItems()}
+                              <PaginationItem>
+                                <PaginationNext
+                                  onClick={() => handlePageChange(currentPage + 1)}
+                                  className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                />
+                              </PaginationItem>
+                            </PaginationContent>
+                          </Pagination>
+                        </div>
                       </div>
                     )}
 
@@ -1750,19 +1829,7 @@ export const ClinicalDashboard: React.FC = () => {
                                 className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                               />
                             </PaginationItem>
-                            {totalPages > 0 ? (
-                              Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map((page) => (
-                                <PaginationItem key={page}>
-                                  <PaginationLink onClick={() => handlePageChange(page)} isActive={currentPage === page} className="cursor-pointer">
-                                    {page}
-                                  </PaginationLink>
-                                </PaginationItem>
-                              ))
-                            ) : (
-                              <PaginationItem>
-                                <PaginationLink className="opacity-50">1</PaginationLink>
-                              </PaginationItem>
-                            )}
+                            {renderPaginationItems()}
                             <PaginationItem>
                               <PaginationNext
                                 onClick={() => handlePageChange(currentPage + 1)}
@@ -1958,19 +2025,7 @@ export const ClinicalDashboard: React.FC = () => {
                                 className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                               />
                             </PaginationItem>
-                            {totalPages > 0 ? (
-                              Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map((page) => (
-                                <PaginationItem key={page}>
-                                  <PaginationLink onClick={() => handlePageChange(page)} isActive={currentPage === page} className="cursor-pointer">
-                                    {page}
-                                  </PaginationLink>
-                                </PaginationItem>
-                              ))
-                            ) : (
-                              <PaginationItem>
-                                <PaginationLink className="opacity-50">1</PaginationLink>
-                              </PaginationItem>
-                            )}
+                            {renderPaginationItems()}
                             <PaginationItem>
                               <PaginationNext
                                 onClick={() => handlePageChange(currentPage + 1)}
