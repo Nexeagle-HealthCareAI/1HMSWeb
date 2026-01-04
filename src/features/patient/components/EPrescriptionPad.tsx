@@ -3455,6 +3455,108 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
               </div>
             )}
 
+            {/* Non-pharmacological Advice Section */}
+            {renderCollapsibleSection(
+              'nonPharmacologicalAdvice',
+              'Non-pharmacological Advice',
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  {(Array.isArray(prescriptionData.nonPharmacologicalAdvice) ? prescriptionData.nonPharmacologicalAdvice : []).map((entry, idx) => (
+                    <div key={idx} className="flex flex-col md:flex-row md:items-center gap-2 bg-green-50/60 dark:bg-green-900/40 border border-green-200 dark:border-green-700 rounded p-2">
+                      <div className="flex-1 min-w-[180px]">
+                        <Label className="text-xs text-gray-600">Advice / Instruction *</Label>
+                        <Input
+                          placeholder="e.g. Low salt diet, Walk 30 min daily"
+                          value={entry.advice || ''}
+                          onChange={e => {
+                            const next = [...prescriptionData.nonPharmacologicalAdvice];
+                            next[idx] = { ...entry, advice: e.target.value };
+                            setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
+                          }}
+                          className="h-8 text-xs bg-white dark:bg-slate-900"
+                        />
+                      </div>
+                      <div className="flex flex-col md:flex-row gap-2 items-center">
+                        <div>
+                          <Label className="text-xs text-gray-600">Duration</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Value"
+                              value={entry.durationValue || ''}
+                              onChange={e => {
+                                const next = [...prescriptionData.nonPharmacologicalAdvice];
+                                next[idx] = { ...entry, durationValue: e.target.value };
+                                setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
+                              }}
+                              className="h-8 text-xs w-20"
+                            />
+                            <Select
+                              value={entry.durationUnit || ''}
+                              onValueChange={val => {
+                                const next = [...prescriptionData.nonPharmacologicalAdvice];
+                                next[idx] = { ...entry, durationUnit: val };
+                                setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
+                              }}
+                            >
+                              <SelectTrigger className="h-8 text-xs bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-700 rounded-md px-2">
+                                <SelectValue placeholder="Unit" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="days">days</SelectItem>
+                                <SelectItem value="weeks">weeks</SelectItem>
+                                <SelectItem value="months">months</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-[180px]">
+                        <Label className="text-xs text-gray-600">Notes / Customization</Label>
+                        <Input
+                          placeholder="e.g. Avoid spicy food at night, Stop if dizziness"
+                          value={entry.notes || ''}
+                          onChange={e => {
+                            const next = [...prescriptionData.nonPharmacologicalAdvice];
+                            next[idx] = { ...entry, notes: e.target.value };
+                            setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
+                          }}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div className="flex items-end justify-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const next = [...prescriptionData.nonPharmacologicalAdvice];
+                            next.splice(idx, 1);
+                            setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
+                          }}
+                          className="h-8 px-3 text-xs hover:bg-red-50 hover:border-red-300 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="mt-1 flex items-center gap-2"
+                  onClick={() => {
+                    const next = Array.isArray(prescriptionData.nonPharmacologicalAdvice) ? [...prescriptionData.nonPharmacologicalAdvice] : [];
+                    next.push({ advice: '', category: '' });
+                    setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add advice
+                </Button>
+              </div>
+            )}
+
             {/* Medications Section */}
             {renderCollapsibleSection(
               'medications',
@@ -3848,108 +3950,6 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                     </Button>
                   </div>
                 )}
-              </div>
-            )}
-
-            {/* Non-pharmacological Advice Section */}
-            {renderCollapsibleSection(
-              'nonPharmacologicalAdvice',
-              'Non-pharmacological Advice',
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  {(Array.isArray(prescriptionData.nonPharmacologicalAdvice) ? prescriptionData.nonPharmacologicalAdvice : []).map((entry, idx) => (
-                    <div key={idx} className="flex flex-col md:flex-row md:items-center gap-2 bg-green-50/60 dark:bg-green-900/40 border border-green-200 dark:border-green-700 rounded p-2">
-                      <div className="flex-1 min-w-[180px]">
-                        <Label className="text-xs text-gray-600">Advice / Instruction *</Label>
-                        <Input
-                          placeholder="e.g. Low salt diet, Walk 30 min daily"
-                          value={entry.advice || ''}
-                          onChange={e => {
-                            const next = [...prescriptionData.nonPharmacologicalAdvice];
-                            next[idx] = { ...entry, advice: e.target.value };
-                            setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
-                          }}
-                          className="h-8 text-xs bg-white dark:bg-slate-900"
-                        />
-                      </div>
-                      <div className="flex flex-col md:flex-row gap-2 items-center">
-                        <div>
-                          <Label className="text-xs text-gray-600">Duration</Label>
-                          <div className="flex gap-2">
-                            <Input
-                              placeholder="Value"
-                              value={entry.durationValue || ''}
-                              onChange={e => {
-                                const next = [...prescriptionData.nonPharmacologicalAdvice];
-                                next[idx] = { ...entry, durationValue: e.target.value };
-                                setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
-                              }}
-                              className="h-8 text-xs w-20"
-                            />
-                            <Select
-                              value={entry.durationUnit || ''}
-                              onValueChange={val => {
-                                const next = [...prescriptionData.nonPharmacologicalAdvice];
-                                next[idx] = { ...entry, durationUnit: val };
-                                setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
-                              }}
-                            >
-                              <SelectTrigger className="h-8 text-xs bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-700 rounded-md px-2">
-                                <SelectValue placeholder="Unit" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="days">days</SelectItem>
-                                <SelectItem value="weeks">weeks</SelectItem>
-                                <SelectItem value="months">months</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-[180px]">
-                        <Label className="text-xs text-gray-600">Notes / Customization</Label>
-                        <Input
-                          placeholder="e.g. Avoid spicy food at night, Stop if dizziness"
-                          value={entry.notes || ''}
-                          onChange={e => {
-                            const next = [...prescriptionData.nonPharmacologicalAdvice];
-                            next[idx] = { ...entry, notes: e.target.value };
-                            setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
-                          }}
-                          className="h-8 text-xs"
-                        />
-                      </div>
-                      <div className="flex items-end justify-end">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const next = [...prescriptionData.nonPharmacologicalAdvice];
-                            next.splice(idx, 1);
-                            setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
-                          }}
-                          className="h-8 px-3 text-xs hover:bg-red-50 hover:border-red-300 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  className="mt-1 flex items-center gap-2"
-                  onClick={() => {
-                    const next = Array.isArray(prescriptionData.nonPharmacologicalAdvice) ? [...prescriptionData.nonPharmacologicalAdvice] : [];
-                    next.push({ advice: '', category: '' });
-                    setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
-                  }}
-                >
-                  <Plus className="h-4 w-4" />
-                  Add advice
-                </Button>
               </div>
             )}
 

@@ -3497,6 +3497,10 @@
         "label": "पुराने",
         "subLabel": "इतिहास"
       },
+      "date": {
+        "from": "से",
+        "to": "तक"
+      },
       "future": {
         "label": "आगामी",
         "subLabel": "शेड्यूल"

@@ -3038,6 +3038,10 @@
       "pastHistory": "Past Visits History",
       "futureUpcoming": "Upcoming Appointments"
     },
+    "date": {
+      "from": "From",
+      "to": "To"
+    },
     "search": {
       "currentPlaceholder": "Search current patients...",
       "pastPlaceholder": "Search past patients...",
