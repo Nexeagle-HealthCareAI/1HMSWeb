@@ -129,7 +129,14 @@ export const AppointmentDashboard = () => {
           </Badge>
         );
       case 'READY':
-        return <Badge className="bg-green-50 text-green-700 border-green-200 text-xs px-1.5 py-0.5 font-medium">{statusLabels.READY}</Badge>;
+        return (
+          <Badge
+            className="bg-green-50 text-green-700 border-green-200 cursor-pointer hover:bg-green-100 transition-colors text-xs px-1.5 py-0.5 font-medium"
+            onClick={() => appointment && handleVitalsClick(appointment)}
+          >
+            {statusLabels.READY}
+          </Badge>
+        );
       case 'UNDER_CONSULT':
         return <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-xs px-1.5 py-0.5 font-medium">{statusLabels.UNDER_CONSULT}</Badge>;
       case 'LAB_REQUIRED':
@@ -1278,7 +1285,7 @@ export const AppointmentDashboard = () => {
                                       <X className="h-2.5 w-2.5 mr-1" />
                                       {t('common.cancel')}
                                     </Button>
-                                    {appointment.finalStatusCode === 'VITALS_REQUIRED' && (
+                                    {(appointment.finalStatusCode === 'VITALS_REQUIRED' || appointment.finalStatusCode === 'READY') && (
                                       <Button
                                         variant="outline"
                                         size="sm"
