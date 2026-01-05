@@ -344,7 +344,7 @@ export const PatientsPage: React.FC = () => {
       completenessScore,
       registrationStats
     };
-  }, []);
+  }, [patientList]);
 
   const navItems = [
     {

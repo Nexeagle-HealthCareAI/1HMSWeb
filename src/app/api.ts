@@ -147,6 +147,8 @@ export const API_ENDPOINTS = {
     GET_EVENTS: (patientId: string, doctorId: string, hospitalId: string) =>
       `e-prescription/patient-details/timeline?patientId=${encodeURIComponent(patientId)}&doctorId=${encodeURIComponent(doctorId)}&hospitalId=${encodeURIComponent(hospitalId)}`,
   },
+  PATIENT_ANALYSIS: (hospitalId: string, patientId: string) =>
+    `patient/analysis/hospitalId=${encodeURIComponent(hospitalId)}&patientId=${encodeURIComponent(patientId)}`,
   ATTACHMENTS: {
     UPLOAD: 'e-prescription/attachments/upload',
     LIST: (appointmentId: string, hospitalId: string, doctorId: string, patientId: string) =>
