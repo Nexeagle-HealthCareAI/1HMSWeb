@@ -1683,7 +1683,8 @@
       "tokenNo": "टोकन नंबर",
       "status": "स्थिति",
       "phone": "फ़ोन",
-      "actions": "कार्य"
+      "actions": "कार्य",
+      "case": "केस"
     }
   },
   "appointmentBooking": {
@@ -2093,7 +2094,7 @@
       "lastVisit": "अंतिम विज़िट",
       "followUp": "फॉलो-अप",
       "completed": "पूर्ण",
-      "newCase": "नया केस",
+      "newCase": "नया / शुल्क",
       "vitals": "वाइटल्स",
       "notApplicable": "प्रासंगिक नहीं",
       "noPhone": "कोई मोबाइल उपलब्ध नहीं"
@@ -3597,7 +3598,7 @@
       "lastVisit": "पिछली यात्रा",
       "followUp": "फॉलो-अप",
       "completed": "पूर्ण",
-      "newCase": "नया केस",
+      "newCase": "नया / शुल्क",
       "notApplicable": "लागू नहीं"
     },
     "cancelDialog": {

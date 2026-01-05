@@ -26,7 +26,7 @@ interface PatientProfileModalProps {
   patientName?: string;
 }
 
-export const c: React.FC<PatientProfileModalProps> = ({
+export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
   isOpen,
   onClose,
   hospitalId,

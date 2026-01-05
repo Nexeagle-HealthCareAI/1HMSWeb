@@ -37,6 +37,7 @@ import { useAuthStore } from '@/store/authStore';
 import { PatientProfileData } from '../services/patientProfileApi';
 import { PrescriptionPreviewModal, type GeneratePrescriptionDetailsRequest } from '@/components/shared/prescription-preview';
 import { timelineApi, TimelineEventData } from '../services/timelineApi';
+import { PatientProfileModal } from '../components/PatientProfileModal';
 
 interface PatientData {
   id: string;
@@ -157,6 +158,7 @@ export const PatientProfilePage: React.FC = () => {
   const [showPostSubmitDialog, setShowPostSubmitDialog] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewRequest, setPreviewRequest] = useState<GeneratePrescriptionDetailsRequest | null>(null);
+  const [showPatientProfileModal, setShowPatientProfileModal] = useState(false);
   const ePrescriptionPadRef = useRef<EPrescriptionPadRef>(null);
 
   // Use the patient profile hook for real data
@@ -493,7 +495,15 @@ export const PatientProfilePage: React.FC = () => {
                           <Badge className={`${riskLevel.bg} ${riskLevel.color} border-0 text-xs px-2 py-0.5`}>
                             {riskLevel.level} Risk
                           </Badge>
-
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowPatientProfileModal(true)}
+                            className="h-6 w-6 p-0 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+                            title="Edit Profile"
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
 
                         {/* Compact Info Row */}
@@ -665,6 +675,14 @@ export const PatientProfilePage: React.FC = () => {
           open={previewModalOpen}
           onOpenChange={handlePreviewModalChange}
           request={previewRequest}
+        />
+
+        <PatientProfileModal
+          isOpen={showPatientProfileModal}
+          onClose={() => setShowPatientProfileModal(false)}
+          hospitalId={hospitalId || ''}
+          patientId={patientId || ''}
+          patientName={patient?.name}
         />
       </div>
     </div >

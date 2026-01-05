@@ -77,6 +77,7 @@ export interface PrescriptionNonPharmacologicalAdvice {
   advice: string;
   duration: string;
   notes: string;
+  isBold?: boolean;
 }
 
 export interface PrescriptionCertificate {

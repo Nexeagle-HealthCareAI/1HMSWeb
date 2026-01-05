@@ -49,6 +49,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AppointmentDetail, appointmentApi } from '../services/appointmentApi';
 import { PrescriptionPreviewModal, type GeneratePrescriptionDetailsRequest } from '@/components/shared/prescription-preview';
 import AttachmentsSection from '@/features/patient/components/AttachmentsSection';
+import { PatientProfileModal } from '@/features/patient/components/PatientProfileModal';
 
 export const AppointmentDashboard = () => {
   const { t } = useTranslation();
@@ -81,6 +82,9 @@ export const AppointmentDashboard = () => {
   const [appointmentForBilling, setAppointmentForBilling] = useState<AppointmentDetail | null>(null);
   const [labAttachmentModal, setLabAttachmentModal] = useState<{ open: boolean; patientId?: string; patientName?: string; appointmentId?: string }>({ open: false });
   const [labAttachments, setLabAttachments] = useState<Record<string, string[]>>({});
+  const [showPatientProfileModal, setShowPatientProfileModal] = useState(false);
+  const [patientProfileId, setPatientProfileId] = useState<string | null>(null);
+  const [patientProfileName, setPatientProfileName] = useState<string | undefined>(undefined);
 
   const handleOpenLabAttachments = (appointment: AppointmentDetail) => {
     setLabAttachmentModal({
@@ -89,6 +93,12 @@ export const AppointmentDashboard = () => {
       patientName: appointment.patientFullName,
       appointmentId: appointment.appointmentId,
     });
+  };
+
+  const handlePatientClick = (appointment: AppointmentDetail) => {
+    setPatientProfileId(appointment.patientId);
+    setPatientProfileName(appointment.patientFullName);
+    setShowPatientProfileModal(true);
   };
 
   const handleLabAttachmentsChange = (next: string[]) => {
@@ -1100,6 +1110,9 @@ export const AppointmentDashboard = () => {
                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">
                             {t('appointmentDashboard.table.labReports', { defaultValue: 'Lab reports' })}
                           </TableHead>
+                          <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">
+                            {t('appointmentDashboard.table.case', { defaultValue: 'Case' })}
+                          </TableHead>
 
                           {activeTab !== 'past' && (
                             <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.actions')}</TableHead>
@@ -1135,7 +1148,8 @@ export const AppointmentDashboard = () => {
                               {/* Patient ID */}
                               <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                                 <div
-                                  className="group relative font-mono bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 shadow-sm"
+                                  onClick={() => handlePatientClick(appointment)}
+                                  className="group relative font-mono bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-md text-xs font-semibold text-gray-700 dark:text-gray-300 shadow-sm cursor-pointer hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-colors"
                                 >
                                   <div className="flex items-center gap-1.5">
                                     <User className="h-3 w-3" />
@@ -1146,8 +1160,8 @@ export const AppointmentDashboard = () => {
 
                               {/* Patient Name */}
                               <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                                <div className="min-w-0">
-                                  <div className="font-medium text-gray-900 dark:text-white text-xs truncate">
+                                <div className="min-w-0 cursor-pointer" onClick={() => handlePatientClick(appointment)}>
+                                  <div className="font-medium text-gray-900 dark:text-white text-xs truncate hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                                     {appointment.patientFullName}
                                   </div>
                                   <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -1236,6 +1250,13 @@ export const AppointmentDashboard = () => {
                                 ) : (
                                   <span className="text-[11px] text-gray-400 dark:text-gray-500">—</span>
                                 )}
+                              </TableCell>
+
+                              {/* Case */}
+                              <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
+                                <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-xs px-2 py-0.5 font-medium hover:bg-blue-100">
+                                  New / Fee
+                                </Badge>
                               </TableCell>
 
 
@@ -1545,6 +1566,14 @@ export const AppointmentDashboard = () => {
         patientId={labAttachmentModal.patientId}
         patientName={labAttachmentModal.patientName}
         appointmentId={labAttachmentModal.appointmentId}
+      />
+
+      <PatientProfileModal
+        isOpen={showPatientProfileModal}
+        onClose={() => setShowPatientProfileModal(false)}
+        hospitalId={hospitalId || ''}
+        patientId={patientProfileId || ''}
+        patientName={patientProfileName}
       />
     </div>
   );

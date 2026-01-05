@@ -144,6 +144,7 @@ interface EPrescriptionData {
     untilNextVisit?: boolean;
     notes?: string;
     review?: string;
+    isBold?: boolean;
   }>;
   attachments: string[];
 }
@@ -3463,8 +3464,47 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                 <div className="space-y-2">
                   {(Array.isArray(prescriptionData.nonPharmacologicalAdvice) ? prescriptionData.nonPharmacologicalAdvice : []).map((entry, idx) => (
                     <div key={idx} className="flex flex-col md:flex-row md:items-center gap-2 bg-green-50/60 dark:bg-green-900/40 border border-green-200 dark:border-green-700 rounded p-2">
-                      <div className="flex-1 min-w-[180px]">
-                        <Label className="text-xs text-gray-600">Advice / Instruction *</Label>
+                      <div className="flex-1 min-w-[220px]">
+                        <div className="flex items-center justify-between mb-1">
+                          <Label className="text-xs text-gray-600">Advice / Instruction *</Label>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={`h-5 w-5 p-0 ${entry.isBold ? 'bg-gray-200 text-black font-bold' : 'text-gray-400'}`}
+                              title="Bold"
+                              onMouseDown={(e) => {
+                                e.preventDefault(); // Prevent losing focus/selection
+                                const inputId = `advice-input-${idx}`;
+                                const el = document.getElementById(inputId) as HTMLInputElement;
+                                if (el) {
+                                  const start = el.selectionStart;
+                                  const end = el.selectionEnd;
+                                  if (start !== null && end !== null && start !== end) {
+                                    // Wrap selection
+                                    const text = entry.advice || '';
+                                    const before = text.substring(0, start);
+                                    const selected = text.substring(start, end);
+                                    const after = text.substring(end);
+                                    const newText = `${before}*${selected}*${after}`;
+
+                                    const next = [...prescriptionData.nonPharmacologicalAdvice];
+                                    next[idx] = { ...entry, advice: newText };
+                                    setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
+                                    return;
+                                  }
+                                }
+
+                                // Fallback: Global toggle
+                                const next = [...prescriptionData.nonPharmacologicalAdvice];
+                                next[idx] = { ...entry, isBold: !entry.isBold };
+                                setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
+                              }}
+                            >
+                              B
+                            </Button>
+                          </div>
+                        </div>
                         <Input
                           placeholder="e.g. Low salt diet, Walk 30 min daily"
                           value={entry.advice || ''}
@@ -3474,6 +3514,10 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                             setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
                           }}
                           className="h-8 text-xs bg-white dark:bg-slate-900"
+                          id={`advice-input-${idx}`}
+                          style={{
+                            fontWeight: entry.isBold ? 'bold' : 'normal'
+                          }}
                         />
                       </div>
                       <div className="flex flex-col md:flex-row gap-2 items-center">

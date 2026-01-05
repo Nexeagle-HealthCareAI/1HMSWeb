@@ -465,7 +465,8 @@
       "printPrescription": "Print Prescription",
       "printToken": "Print Token",
       "nextFollowUpDate": "Next Follow-up Date",
-      "isCompleted": "Is Completed"
+      "isCompleted": "Is Completed",
+      "case": "Case"
     },
     "emptyStates": {
       "current": "No current appointments found",
@@ -2208,7 +2209,7 @@
       "lastVisit": "Last Visit",
       "followUp": "Follow Up",
       "completed": "Completed",
-      "newCase": "New Case",
+      "newCase": "New / Fee",
       "vitals": "Vitals",
       "notApplicable": "NA",
       "noPhone": "No mobile on file"
@@ -3129,7 +3130,7 @@
       "lastVisit": "Last Visit",
       "followUp": "Follow Up",
       "completed": "Completed",
-      "newCase": "New Case",
+      "newCase": "New / Fee",
       "notApplicable": "N/A"
     },
     "cancelDialog": {
