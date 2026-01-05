@@ -51,10 +51,11 @@ export const personalizedDataApi = {
     doctorId: string,
     hospitalId: string,
     lookupType: PersonalizedLookupType,
-    payload: PersonalizedDataPayload
+    payload: PersonalizedDataPayload,
+    source?: string
   ) {
     return apiClient.put(
-      API_ENDPOINTS.E_PRESCRIPTION.PERSONALIZED_DATA(doctorId, hospitalId, lookupType),
+      API_ENDPOINTS.E_PRESCRIPTION.PERSONALIZED_DATA(doctorId, hospitalId, lookupType, source),
       payload
     );
   },

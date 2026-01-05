@@ -142,6 +142,21 @@ export interface EPrescriptionDraftReq {
     loggedInUserName: string;
 }
 
+export interface DoctorPreferenceReq {
+    preferrredId: number | null;
+    doctorId: string;
+    hospitalId: string;
+    source: string;
+    medicine: {
+        medicineName: string;
+        manufacturer: string;
+        genericName: string;
+        brandName: string;
+        dosageForm: string;
+        strength: string;
+    };
+}
+
 export const eprescriptionApi = {
     searchLookupParams: async (
         lookupType: string,
@@ -171,6 +186,10 @@ export const eprescriptionApi = {
     ): Promise<MedicineSearchResponse> => {
         const endpoint = API_ENDPOINTS.E_PRESCRIPTION.MEDICINE_SEARCH(hospitalId, doctorId, searchText);
         return apiClient.get<MedicineSearchResponse>(endpoint);
+    },
+    saveDoctorPreference: async (data: DoctorPreferenceReq): Promise<{ success: boolean; message: string }> => {
+        const endpoint = API_ENDPOINTS.E_PRESCRIPTION.MEDICINE_DOCTOR_PREFERENCE(data.source);
+        return apiClient.put<{ success: boolean; message: string }>(endpoint, data);
     },
     saveDraft: async (data: EPrescriptionDraftReq): Promise<{ success: boolean; message: string }> => {
         const endpoint = API_ENDPOINTS.E_PRESCRIPTION.SAVE_DRAFT('draft');

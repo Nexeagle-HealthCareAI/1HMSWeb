@@ -105,11 +105,11 @@ export const personalizedMedicineApi = {
       apiPayload.preferrredId = Number(prefferedId);
     }
 
-    return apiClient.put(API_ENDPOINTS.E_PRESCRIPTION.MEDICINE_DOCTOR_PREFERENCE, apiPayload);
+    return apiClient.put(API_ENDPOINTS.E_PRESCRIPTION.MEDICINE_DOCTOR_PREFERENCE('prescription'), apiPayload);
   },
 
   async remove(doctorId: string, hospitalId: string, preferredId: number | string) {
-    return apiClient.delete(API_ENDPOINTS.E_PRESCRIPTION.MEDICINE_DOCTOR_PREFERENCE, {
+    return apiClient.delete(API_ENDPOINTS.E_PRESCRIPTION.MEDICINE_DOCTOR_PREFERENCE(), {
       data: {
         preferredId: Number(preferredId),
         doctorId,

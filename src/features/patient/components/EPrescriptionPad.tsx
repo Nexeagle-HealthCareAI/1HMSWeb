@@ -694,6 +694,16 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             description: 'Prescription has been successfully submitted.',
             variant: 'default',
           });
+
+          // Save medicine preferences in background
+          if (prescriptionData.medications && prescriptionData.medications.length > 0) {
+            prescriptionData.medications.forEach(med => {
+              if (med.name && med.name.trim()) {
+                saveMedicineToDrPreference(med.name.trim(), undefined, med.dosage);
+              }
+            });
+          }
+
           return true;
         } else {
           toast({
@@ -1509,7 +1519,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
           code: "", // Keep as requested
           shortDesc: "",
           synonyms: ""
-        });
+        }, 'prescription');
         console.log(`Saved new personalised item [${lookupType}]: ${cleanName}`);
 
         // Optimistically update quickPicks to prevent immediate re-save if user types it again?
@@ -1917,9 +1927,35 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
       // if (itemData.dosageForm) updateMedication(id, 'route', itemData.dosageForm);
     }
 
-    setMedicationQuery(trimmed);
-    setMedicationOptions([]);
+    // saveMedicineToDrPreference(trimmed, itemData);
+
     setMedicationOpenForId(null);
+  };
+
+  const saveMedicineToDrPreference = (name: string, itemData?: MedicineSearchItem, dosage?: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    // Check if we should save? (Maybe avoid duplicates if recently saved? API handles it hopefully)
+
+    const did = getDoctorId() || '';
+    const hid = getHospitalId?.() || '';
+    if (did) {
+      eprescriptionApi.saveDoctorPreference({
+        preferrredId: null,
+        doctorId: did,
+        hospitalId: hid,
+        source: 'prescription',
+        medicine: {
+          medicineName: trimmed,
+          manufacturer: itemData?.manufacturer || '',
+          genericName: itemData?.genericName || '',
+          brandName: itemData?.brandName || '',
+          dosageForm: itemData?.dosageForm || '',
+          strength: dosage || itemData?.strength || ''
+        }
+      }).catch(err => console.error('Failed to save medicine preference', err));
+    }
   };
 
   const addInvestigationItem = (label: string) => {
@@ -3929,9 +3965,11 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                                 }
                                 setMedicationActiveIndex(0);
                               }}
-                              onBlur={() => setTimeout(() => {
-                                setMedicationOpenForId(current => current === medication.id ? null : current);
-                              }, 50)}
+                              onBlur={() => {
+                                setTimeout(() => {
+                                  setMedicationOpenForId(current => current === medication.id ? null : current);
+                                }, 50);
+                              }}
                               onKeyDown={(e) => {
                                 const personal = medicationOptions.filter(item => item.source === 'personal');
                                 const general = medicationOptions.filter(item => item.source === 'general');
@@ -4045,7 +4083,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           <div className="space-y-1">
                             <Label className="text-xs text-gray-600">Route</Label>
                             <Input
-                              placeholder="Oral / IV / IM / SC / Topical"
+                              placeholder="e.g. Oral, IV, IM"
                               value={medication.route}
                               onChange={(e) => updateMedication(medication.id, 'route', e.target.value)}
                               onFocus={() => setActiveMedicationId(medication.id)}
@@ -4068,7 +4106,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                             <Label className="text-xs text-gray-600">Duration</Label>
                             <div className="flex gap-2">
                               <Input
-                                placeholder="5"
+                                placeholder="e.g. 5"
                                 value={medication.duration}
                                 onChange={(e) => updateMedication(medication.id, 'duration', e.target.value)}
                                 onFocus={() => setActiveMedicationId(medication.id)}
@@ -4109,7 +4147,9 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                               className="h-7 px-2"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                updateMedication(medication.id, 'frequency', freq);
+                                const current = medication.frequency || '';
+                                const newVal = current ? `${current}, ${freq}` : freq;
+                                updateMedication(medication.id, 'frequency', newVal);
                                 setActiveMedicationId(medication.id);
                               }}
                             >
@@ -4125,7 +4165,9 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                               className="h-7 px-2"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                updateMedication(medication.id, 'instructions', instr);
+                                const current = medication.instructions || '';
+                                const newVal = current ? `${current}, ${instr}` : instr;
+                                updateMedication(medication.id, 'instructions', newVal);
                                 setActiveMedicationId(medication.id);
                               }}
                             >
