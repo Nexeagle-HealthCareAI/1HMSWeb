@@ -260,6 +260,7 @@ export interface AppointmentDetail {
   insuranceId: string | null;
   paymentMode: string;
   lastStatusAt: string;
+  appointmentType: string | null;
   createdAt: string;
   token: {
     tokenId: string;
@@ -270,12 +271,12 @@ export interface AppointmentDetail {
 }
 
 // Appointment API service
-export const appointmentApi = {   
+export const appointmentApi = {
 
-   // Get all departments
+  // Get all departments
   getDepartments: (hospitalId: string): Promise<{ departments: Department[] }> => {
-       const url = `/appointments/departments?hospitalId=${hospitalId}`;
-    
+    const url = `/appointments/departments?hospitalId=${hospitalId}`;
+
     return apiClient.get(url);
   },
 
@@ -285,11 +286,11 @@ export const appointmentApi = {
     return apiClient.get(url);
   },
 
-    // Get doctors by department
-    getDoctorsByDepartment: (departmentId: string, hospitalId: string): Promise<{ doctors: ApiDoctor[] }> => {
-      const url = `/appointments/department-doctor?departmentId=${departmentId}&hospitalId=${hospitalId}`;    
-       return apiClient.get(url);
-   },
+  // Get doctors by department
+  getDoctorsByDepartment: (departmentId: string, hospitalId: string): Promise<{ doctors: ApiDoctor[] }> => {
+    const url = `/appointments/department-doctor?departmentId=${departmentId}&hospitalId=${hospitalId}`;
+    return apiClient.get(url);
+  },
 
   // Get doctor slots
   getDoctorSlots: (doctorId: string, hospitalId: string, date: string): Promise<DoctorSlotsResponse> => {
@@ -315,7 +316,7 @@ export const appointmentApi = {
     let hospitalId = '';
     try {
       hospitalId = useAuthStore.getState().getHospitalId();
-    } catch (e) {}
+    } catch (e) { }
     const url = `/appointments/patient-details/search?by=${request.by}&q=${encodeURIComponent(request.q)}&scope=${request.scope || 'local'}${hospitalId ? `&hospitalId=${hospitalId}` : ''}`;
     return apiClient.get(url);
   },

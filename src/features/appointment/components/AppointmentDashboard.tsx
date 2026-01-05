@@ -1262,7 +1262,7 @@ export const AppointmentDashboard = () => {
                               {/* Case */}
                               <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                                 <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-xs px-2 py-0.5 font-medium hover:bg-blue-100">
-                                  New / Fee
+                                  {appointment.appointmentType || 'New / Fee'}
                                 </Badge>
                               </TableCell>
 

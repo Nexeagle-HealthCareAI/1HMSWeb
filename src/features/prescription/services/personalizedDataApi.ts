@@ -78,4 +78,16 @@ export const personalizedDataApi = {
     );
     return normalizeList(response, lookupType);
   },
+
+  async updatePersonalizedConfiguration(
+    doctorId: string,
+    hospitalId: string,
+    lookupType: PersonalizedLookupType,
+    data: any[]
+  ) {
+    return apiClient.post(
+      API_ENDPOINTS.E_PRESCRIPTION.PERSONALIZED_DATA(doctorId, hospitalId, lookupType),
+      data
+    );
+  },
 };

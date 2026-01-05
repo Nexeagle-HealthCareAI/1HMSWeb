@@ -128,6 +128,7 @@ interface PatientAppointment {
   | 'COMPLETED'
   | 'SCHEDULED'
   | 'CANCELLED';
+  appointmentType: string | null;
   phone?: string;
 }
 
@@ -336,6 +337,7 @@ export const ClinicalDashboard: React.FC = () => {
       startAt: item.startAt,
       endAt: item.endAt,
       finalStatusCode: item.finalStatusCode as PatientAppointment['finalStatusCode'],
+      appointmentType: item.appointmentType,
       phone: item.patientMobile
     })) || [];
 
@@ -1576,7 +1578,7 @@ export const ClinicalDashboard: React.FC = () => {
 
                                       <TableCell className="hidden lg:table-cell py-4 align-middle">
                                         <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-wider bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800">
-                                          New / Fee
+                                          {appointment.appointmentType || 'New / Fee'}
                                         </Badge>
                                       </TableCell>
                                       <TableCell className="py-4 align-middle text-center">
@@ -1772,7 +1774,7 @@ export const ClinicalDashboard: React.FC = () => {
                                     <TableCell className="py-4">{getStatusBadge(appointment.finalStatusCode)}</TableCell>
                                     <TableCell className="py-4">
                                       <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 font-medium">
-                                        {t('docBoard.table.newCase')}
+                                        {appointment.appointmentType || t('docBoard.table.newCase')}
                                       </Badge>
                                     </TableCell>
                                     <TableCell className="py-4">
@@ -1964,7 +1966,7 @@ export const ClinicalDashboard: React.FC = () => {
                                     <TableCell className="py-4">{getStatusBadge(appointment.finalStatusCode)}</TableCell>
                                     <TableCell className="py-4">
                                       <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200 font-medium">
-                                        {t('docBoard.table.newCase')}
+                                        {appointment.appointmentType || t('docBoard.table.newCase')}
                                       </Badge>
                                     </TableCell>
                                     <TableCell className="py-4">

@@ -38,6 +38,7 @@ import { patientProfileApi, PatientProfileData } from '../services/patientProfil
 
 import { LookupItem } from './LookupMultiSelect';
 
+import { personalizedDataApi, PersonalizedLookupType } from '@/features/prescription/services/personalizedDataApi';
 import { eprescriptionApi, LookupData, EPrescriptionDraftReq, MedicineSearchItem } from '../services/eprescriptionApi';
 import AttachmentsSection from './AttachmentsSection';
 import { SelectValue } from '@radix-ui/react-select';
@@ -1081,6 +1082,105 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
   const [comorbidityActiveIndex, setComorbidityActiveIndex] = useState(0);
   const comorbidityInputRef = useRef<HTMLInputElement | null>(null);
   const comorbidityRootRef = useRef<HTMLDivElement | null>(null);
+
+
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  // Personalized Data Handler
+  const handlePersonalizedDataUpdate = useCallback(async (
+    lookupType: PersonalizedLookupType,
+    items: any[]
+  ) => {
+    const hid = getHospitalId() || '4de8ea65-71aa-4800-8167-60147d78ea58';
+    const did = getDoctorId() || '9de6031b-7195-43f7-85b4-bba824585529';
+
+    if (!hid || !did) return;
+
+    try {
+      const payload = items.map((item, index) => ({
+        personalId: item.personalId || null,
+        name: item.name || item.text || item,
+        code: item.code || item.id || `CODE-${index}`,
+        shortDesc: item.shortDesc || '',
+        synonyms: item.synonyms || '',
+      }));
+
+      await personalizedDataApi.updatePersonalizedConfiguration(
+        did,
+        hid,
+        lookupType,
+        payload
+      );
+    } catch (error) {
+      console.error(`Failed to update personalized configuration for ${lookupType}`, error);
+    }
+  }, [getHospitalId, getDoctorId]);
+
+
+
+
+
+  const handleChiefComplaintChange = (items: any[]) => {
+    setPrescriptionData((prev) => ({
+      ...prev,
+      chiefComplaint: items.map((i) => i.name).join(', '),
+    }));
+    handlePersonalizedDataUpdate('CHIEF_COMPLAINT', items);
+  };
+
+  const handleHistoryChange = (items: any[]) => {
+    setPrescriptionData((prev) => ({
+      ...prev,
+      history: items.map((i) => i.name).join(', '),
+    }));
+    handlePersonalizedDataUpdate('HISTORY', items);
+  };
+
+  const handleComorbidityChange = (items: any[]) => {
+    setPrescriptionData((prev) => ({
+      ...prev,
+      comorbidity: items.map((i) => i.name).join(', '),
+    }));
+    handlePersonalizedDataUpdate('COMORBIDITY', items);
+  };
+
+  const handleExaminationChange = (items: any[]) => {
+    setPrescriptionData((prev) => ({
+      ...prev,
+      examination: items.map((i) => i.name).join(', '),
+    }));
+    handlePersonalizedDataUpdate('EXAMINATION', items);
+  };
+
+  const handleDiagnosisChange = (items: any[]) => {
+    setPrescriptionData((prev) => ({
+      ...prev,
+      diagnosis: items.map((i) => i.name).join(', '),
+    }));
+    handlePersonalizedDataUpdate('DIAGNOSIS', items);
+  };
+
+  const handleInvestigationsChange = (items: any[]) => {
+    setPrescriptionData((prev) => ({
+      ...prev,
+      orders: {
+        ...prev.orders,
+        investigations: items.map((i) => i.name),
+      },
+    }));
+    handlePersonalizedDataUpdate('INVESTIGATION', items);
+  };
+
+  const handleProceduresChange = (items: any[]) => {
+    setPrescriptionData((prev) => ({
+      ...prev,
+      orders: {
+        ...prev.orders,
+        procedures: items.map((i) => i.name),
+      },
+    }));
+    handlePersonalizedDataUpdate('PROCEDURE', items);
+  };
   const [examinationOptions, setExaminationOptions] = useState<LookupItem[]>([]);
   const [selectedExaminations, setSelectedExaminations] = useState<string[]>([]);
   const [examinationOpen, setExaminationOpen] = useState(false);
@@ -1368,6 +1468,59 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
     fetchQuickPicks();
   }, []);
 
+  // Custom Personalized Item Saver
+  const saveCustomPersonalizedItem = useCallback(async (lookupType: PersonalizedLookupType, text: string) => {
+    const hid = getHospitalId() || '4de8ea65-71aa-4800-8167-60147d78ea58';
+    const did = getDoctorId() || '9de6031b-7195-43f7-85b4-bba824585529';
+
+    if (!hid || !did || !text) return;
+
+    // Split by comma or colon
+    const parts = text.split(/[,:]+/).map(p => p.trim()).filter(Boolean);
+
+    // Map lookupType to quickPicks key for duplicate check
+    let quickPickKey = '';
+    switch (lookupType) {
+      case 'CHIEF_COMPLAINT': quickPickKey = 'chiefComplaint'; break;
+      case 'HISTORY': quickPickKey = 'history'; break;
+      case 'COMORBIDITY': quickPickKey = 'comorbidity'; break;
+      case 'EXAMINATION': quickPickKey = 'examination'; break;
+      case 'DIAGNOSIS': quickPickKey = 'diagnosis'; break;
+      case 'INVESTIGATION': quickPickKey = 'investigations'; break;
+      case 'PROCEDURE': quickPickKey = 'procedures'; break;
+    }
+
+    const existingItems = quickPickKey ? quickPicks[quickPickKey] || [] : [];
+
+    for (const part of parts) {
+      // Clean the part to remove duration (e.g. "Fever since 2 days" -> "Fever")
+      // Split by " since " (case insensitive) and take the first part
+      const cleanName = part.split(/\s+since\s+/i)[0].trim();
+
+      if (!cleanName) continue;
+
+      // Always upsert to personalized data, even if it exists (to update usage / ensure tracking)
+      // const exists = existingItems.some(i => i.name.toLowerCase() === cleanName.toLowerCase());
+      // if (!exists) {
+      try {
+        await personalizedDataApi.upsert(did, hid, lookupType, {
+          personalId: null,
+          name: cleanName,
+          code: "", // Keep as requested
+          shortDesc: "",
+          synonyms: ""
+        });
+        console.log(`Saved new personalised item [${lookupType}]: ${cleanName}`);
+
+        // Optimistically update quickPicks to prevent immediate re-save if user types it again?
+        // For now, relying on swr/react-query would be better, but we just want to ensure the PUT fires.
+      } catch (error) {
+        console.error(`Failed to save custom personalised item [${lookupType}]: ${cleanName}`, error);
+      }
+
+    }
+  }, [getHospitalId, getDoctorId, quickPicks]);
+
   const toggleSection = (sectionId: string) => {
     setCollapsedSections(prev => ({
       ...prev,
@@ -1394,6 +1547,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
     setExaminationActiveIndex(0);
     setExaminationOpen(false);
     examinationInputRef.current?.focus();
+    saveCustomPersonalizedItem('EXAMINATION', label);
   };
 
   const removeExaminationItem = (label: string) => {
@@ -1423,12 +1577,19 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
     setDiagnosisActiveIndex(0);
     setDiagnosisOpen(false);
     diagnosisInputRef.current?.focus();
+
+    // API Update
+    const next = [...selectedDiagnoses];
+    if (!next.includes(label)) next.push(label);
+    // handlePersonalizedDataUpdate('DIAGNOSIS', next.map(name => ({ name, code: name })));
+    saveCustomPersonalizedItem('DIAGNOSIS', label);
   };
 
   const removeDiagnosisItem = (label: string) => {
     setSelectedDiagnoses(prev => {
       const next = prev.filter(item => item !== label);
       setPrescriptionData(p => ({ ...p, diagnosis: next.join('; ') }));
+      handlePersonalizedDataUpdate('DIAGNOSIS', next.map(name => ({ name, code: name })));
       return next;
     });
   };
@@ -1452,12 +1613,19 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
     setComorbidityActiveIndex(0);
     setComorbidityOpen(false);
     comorbidityInputRef.current?.focus();
+
+    // API Update
+    const next = [...selectedComorbidities];
+    if (!next.includes(label)) next.push(label);
+    // handlePersonalizedDataUpdate('COMORBIDITY', next.map(name => ({ name, code: name })));
+    saveCustomPersonalizedItem('COMORBIDITY', label);
   };
 
   const removeComorbidityItem = (label: string) => {
     setSelectedComorbidities(prev => {
       const next = prev.filter(item => item !== label);
       setPrescriptionData(p => ({ ...p, comorbidity: next.join('; ') }));
+      handlePersonalizedDataUpdate('COMORBIDITY', next.map(name => ({ name, code: name })));
       return next;
     });
   };
@@ -1481,6 +1649,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
     setHistoryActiveIndex(0);
     setHistoryOpen(false);
     historyInputRef.current?.focus();
+    saveCustomPersonalizedItem('HISTORY', label);
   };
 
   const removeHistoryItem = (label: string) => {
@@ -1543,6 +1712,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
     setChiefComplaintActiveIndex(0);
     setChiefComplaintOpen(false);
     setPendingChiefComplaintLabel(label.trim());
+    saveCustomPersonalizedItem('CHIEF_COMPLAINT', label);
   };
 
   const removeChiefComplaint = (label: string) => {
@@ -1681,7 +1851,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
   const makeMedicationId = () => `${Date.now()}-${Math.random().toString(16).slice(2, 6)}`;
 
   const isMedicationValid = (med: { name: string; dosage: string }) => {
-    return Boolean(med.name.trim() && med.dosage.trim());
+    return Boolean(med.name.trim());
   };
 
   const addMedication = (initial?: Partial<EPrescriptionData['medications'][number]>) => {
@@ -1777,6 +1947,12 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
     setInvestigationActiveIndex(0);
     setInvestigationOpen(false);
     investigationInputRef.current?.focus();
+
+    // API Update
+    const next = [...selectedInvestigations];
+    if (!next.includes(label)) next.push(label);
+    // handlePersonalizedDataUpdate('INVESTIGATION', next.map(name => ({ name, code: name })));
+    saveCustomPersonalizedItem('INVESTIGATION', label);
   };
 
   const removeInvestigationItem = (label: string) => {
@@ -1789,6 +1965,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
           investigations: next
         }
       }));
+      handlePersonalizedDataUpdate('INVESTIGATION', next.map(name => ({ name, code: name })));
       return next;
     });
   };
@@ -1816,8 +1993,14 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
     setProcedureQuery('');
     setProcedureOptions(quickPicks.procedures);
     setProcedureActiveIndex(0);
-    setProcedureOpen(false);
+    setProcedureOpen(false); // Fix: use setProcedureOpen
     procedureInputRef.current?.focus();
+
+    // API Update
+    const next = [...selectedProcedures];
+    if (!next.includes(label)) next.push(label);
+    // handlePersonalizedDataUpdate('PROCEDURE', next.map(name => ({ name, code: name })));
+    saveCustomPersonalizedItem('PROCEDURE', label);
   };
 
   const removeProcedureItem = (label: string) => {
@@ -1830,6 +2013,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
           procedures: next
         }
       }));
+      handlePersonalizedDataUpdate('PROCEDURE', next.map(name => ({ name, code: name })));
       return next;
     });
   };
@@ -3628,9 +3812,8 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                 <div className="space-y-3">
                   {prescriptionData.medications.map((medication, index) => {
                     const nameMissing = !medication.name.trim();
-                    const doseMissing = !medication.dosage.trim();
                     const isActive = activeMedicationId === medication.id || (!activeMedicationId && index === prescriptionData.medications.length - 1);
-                    const missingRequired = nameMissing || doseMissing;
+                    const missingRequired = nameMissing;
                     const summaryParts = [medication.name, medication.dosage, medication.route, medication.frequency]
                       .filter(Boolean)
                       .join(' · ');
@@ -3654,7 +3837,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                               {isActive && <span className="text-blue-600 dark:text-blue-300 font-medium">Active</span>}
                               {missingRequired && (
                                 <span className="px-2 py-1 rounded-full bg-red-50 dark:bg-red-900/40 text-red-700 dark:text-red-200 text-[11px] font-semibold">
-                                  Name + dose required
+                                  Name is required
                                 </span>
                               )}
                             </div>
@@ -3848,7 +4031,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           </div>
 
                           <div className="space-y-1">
-                            <Label className="text-xs text-gray-600">Dosage *</Label>
+                            <Label className="text-xs text-gray-600">Dosage</Label>
                             <Input
                               placeholder="e.g., 500 mg"
                               value={medication.dosage}
@@ -3856,7 +4039,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                               onFocus={() => setActiveMedicationId(medication.id)}
                               className="h-9 text-sm"
                             />
-                            {doseMissing && <div className="text-[11px] text-red-600">Dosage is required</div>}
+                            {/* Dosage is optional */}
                           </div>
 
                           <div className="space-y-1">

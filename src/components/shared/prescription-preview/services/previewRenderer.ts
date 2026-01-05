@@ -422,7 +422,7 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
 
 
   // Clinical Summary
-  const renderTabularItem = async (title: string, content: string | undefined, x: number, w: number, isBoldValues = false): Promise<number> => {
+  const renderTabularItem = async (title: string, content: string | undefined, x: number, w: number, isBoldValues = false, simulate = false): Promise<number> => {
     if (!content || !content.trim()) return 0;
 
     const labelFull = toUpper(`${title}: `);
@@ -481,6 +481,8 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
 
     const totalLines = lineIndex + 1;
     const totalH = (totalLines * (contentSize * 1.3)) + 4;
+
+    if (simulate) return totalH;
 
     if (cursorY - totalH < activeFooterPad) {
       page = await acquirePage();
@@ -691,6 +693,127 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
         cursorY -= lineHeight;
       }
     }
+  }
+
+  // Follow Up & Instructions
+  const followUp = payload.followUp;
+  if (followUp && (followUp.followUpOn || followUp.patientInstructions || followUp.reason || (followUp.referral && followUp.referral.referredTo?.doctorName))) {
+
+
+    // Extract reason and instructions handling both flat and nested structures
+    let rawReason = followUp.reason;
+    let rawInstructions = followUp.patientInstructions;
+
+    // Check if 'reason' is actually an object (backend discrepancy)
+    if (rawReason && typeof rawReason === 'object') {
+      // @ts-ignore
+      rawInstructions = rawReason.patientInstructions || rawInstructions;
+      // @ts-ignore
+      rawReason = rawReason.reason;
+    }
+
+    // --- MEASURE HEIGHT FOR BOX ---
+    let totalBoxH = lineHeight * 2; // Header
+
+    const hasDate = !!followUp.followUpOn;
+    const hasReason = !!(rawReason && typeof rawReason === 'string' && rawReason.trim());
+
+    // 1. Follow Up Date
+    if (hasDate) {
+      totalBoxH += (lineHeight * 1.5);
+    }
+
+    // 2. Reason (Measure)
+    if (hasReason) {
+      const hReason = await renderTabularItem('Reason', rawReason, leftPad, contentWidth, false, true);
+      if (hReason) totalBoxH += (hReason + 6);
+    }
+
+    // 3. Instructions (Measure)
+    if (rawInstructions && typeof rawInstructions === 'string' && rawInstructions.trim()) {
+      const hInst = await renderTabularItem('Instructions', rawInstructions, leftPad, contentWidth, false, true);
+      if (hInst) totalBoxH += (hInst + 6);
+    }
+
+    // 4. Referral (Measure)
+    if (followUp.referral && followUp.referral.referredTo?.doctorName) {
+      totalBoxH += (lineHeight * 1.5); // "Referred To" line
+      if (followUp.referral.clinicalSummary) {
+        const hSum = await renderTabularItem('Clinical Summary', followUp.referral.clinicalSummary, leftPad, contentWidth, false, true);
+        if (hSum) totalBoxH += (hSum + 6);
+      }
+    }
+
+    totalBoxH += 10; // Padding
+
+    // --- DRAW BOX ---
+    await ensureRoom(totalBoxH);
+
+    const boxY = cursorY - totalBoxH + 4; // approximate bottom Y
+    page.drawRectangle({
+      x: leftPad,
+      y: boxY,
+      width: contentWidth,
+      height: totalBoxH,
+      color: COLORS.BgAccent, // Teal 50 background
+      borderRadius: 4,
+      borderColor: COLORS.Border,
+      borderWidth: 1,
+    });
+
+    // Reset Cursor to Top of Box (with padding)
+    cursorY -= 8; // Top padding inside box
+
+    // Draw Header Text
+    page.drawText('FOLLOW UP & INSTRUCTIONS', {
+      x: leftPad + 8,
+      y: cursorY,
+      size: sizeLg,
+      font: boldFont,
+      color: COLORS.Primary
+    });
+    cursorY -= (lineHeight * 1.5);
+
+
+    // --- RENDER CONTENT (Stacked Rows) ---
+    const innerPadX = leftPad + 8;
+    const innerWidth = contentWidth - 16;
+
+    if (hasDate) {
+      const dateStr = getFormattedDate(followUp.followUpOn);
+      page.drawText('FOLLOW UP DATE:', { x: innerPadX, y: cursorY, size: sizeBase, font: boldFont, color: COLORS.TextLight });
+      const labelW = boldFont.widthOfTextAtSize('FOLLOW UP DATE:', sizeBase);
+      page.drawText(toUpper(dateStr), { x: innerPadX + labelW + 10, y: cursorY, size: sizeBase, font: regularFont, color: COLORS.TextMain });
+      cursorY -= lineHeight * 1.2; // Reduced spacing
+    }
+
+    if (hasReason) { // Stacked Reason
+      const hReason = await renderTabularItem('Reason', rawReason, innerPadX, innerWidth);
+      if (hReason) cursorY -= (hReason + 6);
+    }
+
+    if (rawInstructions && typeof rawInstructions === 'string' && rawInstructions.trim()) {
+      const hInst = await renderTabularItem('Instructions', rawInstructions, innerPadX, innerWidth);
+      if (hInst) cursorY -= (hInst + 6);
+    }
+
+    if (followUp.referral && followUp.referral.referredTo?.doctorName) {
+      const ref = followUp.referral;
+      const refText = `${ref.referredTo.doctorName} ${ref.referredTo.specialty ? `(${ref.referredTo.specialty})` : ''}`;
+
+      page.drawText('REFERRED TO:', { x: innerPadX, y: cursorY, size: sizeBase, font: boldFont, color: COLORS.TextLight });
+      const labelW = boldFont.widthOfTextAtSize('REFERRED TO:', sizeBase);
+      page.drawText(toUpper(refText), { x: innerPadX + labelW + 10, y: cursorY, size: sizeBase, font: regularFont, color: COLORS.TextMain });
+      cursorY -= lineHeight * 1.5;
+
+      if (ref.clinicalSummary) {
+        const hSum = await renderTabularItem('Clinical Summary', ref.clinicalSummary, innerPadX, innerWidth);
+        if (hSum) cursorY -= (hSum + 6);
+      }
+    }
+
+    // Ensure cursor ends below box
+    cursorY = boxY - 10; // Space after box
   }
 
 
