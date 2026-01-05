@@ -547,7 +547,7 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   const adviceItems = (payload.nonPharmacologicalAdvice || []).filter(item => item.advice && item.advice.trim());
   if (adviceItems.length > 0) {
     await ensureRoom(lineHeight * 6);
-    page.drawText('ADVICE / INSTRUCTIONS', { x: leftPad, y: cursorY, size: sizeSm, font: boldFont, color: COLORS.Primary });
+    page.drawText('ADVICE / INSTRUCTIONS', { x: leftPad, y: cursorY, size: sizeBase, font: boldFont, color: COLORS.Primary });
     cursorY -= lineHeight;
 
     for (const item of adviceItems) {
