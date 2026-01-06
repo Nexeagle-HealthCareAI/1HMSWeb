@@ -55,7 +55,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
 }) => {
   const { t } = useTranslation();
   const { toast } = useToast();
-  
+
   const SHIFT_TEMPLATES: ShiftTemplate[] = [
     {
       name: 'Morning',
@@ -85,7 +85,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
       description: t('doctorCalendar.shifts.eveningOPDHours')
     }
   ];
-  
+
   const [selectedShifts, setSelectedShifts] = useState<Set<ShiftName>>(new Set());
   const [shiftConfigs, setShiftConfigs] = useState<Record<ShiftName, {
     startTime: string;
@@ -110,7 +110,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
   }, [open, initialStartDateTime, initialEndDateTime]);
   const [startDate, setStartDate] = useState(initialDate || '');
   const [endDate, setEndDate] = useState(initialDate || '');
-  
+
   // Date range selection state
   const [showDateRangePopup, setShowDateRangePopup] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | null>(null);
@@ -131,32 +131,32 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
   useEffect(() => {
     // Only initialize when modal is open
     if (!open) return;
-    
+
     // Initialize start and end dates if not set
     if (!startDate) {
       const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd');
       setStartDate(initialDate || tomorrow);
     }
-    
+
     if (!endDate) {
       const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd');
       setEndDate(initialDate || tomorrow);
     }
-    
+
     if (!recurringEndDate) {
       const fourWeeksLater = format(addWeeks(new Date(), 4), 'yyyy-MM-dd');
       setRecurringEndDate(fourWeeksLater);
     }
-    
+
     // Initialize block form data
     const now = new Date();
     const today = format(now, 'yyyy-MM-dd');
-    
+
     if (initialStartDateTime && initialEndDateTime) {
       try {
         const startDateTime = format(new Date(initialStartDateTime), "yyyy-MM-dd'T'HH:mm");
         const endDateTime = format(new Date(initialEndDateTime), "yyyy-MM-dd'T'HH:mm");
-        
+
         setBlockFormData(prev => ({
           ...prev,
           startDateTime,
@@ -174,7 +174,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
       // Use more user-friendly defaults (10:30 AM - 11:00 AM as shown in the image)
       const startDateTime = `${today}T10:30`;
       const endDateTime = `${today}T11:00`;
-      
+
       setBlockFormData(prev => ({
         ...prev,
         startDateTime,
@@ -224,15 +224,21 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
 
   const generatePayloads = (): CreateOverridePayload[] => {
     const payloads: CreateOverridePayload[] = [];
-    
+    const currentHospitalId = useAuthStore.getState().getHospitalId(); // Get ID directly
+
+    // Map 1-based index (1=Mon...7=Sun) to string abbreviations
+    const daysMap: Record<number, string> = {
+      1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun'
+    };
+
     if (scheduleMode === 'single') {
       // Single day schedule
       const payload: CreateOverridePayload = {
         doctorId,
-        hospitalId: useAuthStore.getState().getHospitalId(),
+        hospitalId: currentHospitalId,
         overrideDate: startDate,
         startDate,
-        endDate,
+        endDate: startDate, // Single day
         shiftDetails: Array.from(selectedShifts).map(shiftName => {
           const config = shiftConfigs[shiftName];
           const slotDuration = Math.max(1, Number(config.slotDuration) || 15);
@@ -241,48 +247,39 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
             startTime: config.startTime,
             endTime: config.endTime,
             slotDurationInMinutes: slotDuration,
-            recurringDays: []
+            recurringDays: [] // No recurring days for single override
           };
         })
       };
       payloads.push(payload);
     } else {
-      // Recurring schedule
-      const start = parseISO(startDate);
-      const end = parseISO(recurringEndDate);
-      const days = Array.from(recurringDays);
-      
-      let currentDate = start;
-      while (currentDate <= end) {
-        const dayOfWeek = currentDate.getDay();
-        const adjustedDayOfWeek = dayOfWeek === 0 ? 7 : dayOfWeek; // Convert Sunday from 0 to 7
-        
-        if (days.includes(adjustedDayOfWeek)) {
-          const dateStr = format(currentDate, 'yyyy-MM-dd');
-          const payload: CreateOverridePayload = {
-            doctorId,
-            hospitalId: useAuthStore.getState().getHospitalId(),
-            overrideDate: dateStr,
-            startDate: dateStr,
-            endDate: dateStr,
-            shiftDetails: Array.from(selectedShifts).map(shiftName => {
-              const config = shiftConfigs[shiftName];
-              const slotDuration = Math.max(1, Number(config.slotDuration) || 15);
-              return {
-                shiftName,
-                startTime: config.startTime,
-                endTime: config.endTime,
-                slotDurationInMinutes: slotDuration,
-                recurringDays: days.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d - 1])
-              };
-            })
+      // Recurring schedule - Send Single Payload
+      // Fix: Send one payload with startDate, endDate and recurringDays
+      // instead of generating individual payloads for each day.
+
+      const selectedDayStrings = Array.from(recurringDays).map(d => daysMap[d]).filter(Boolean);
+
+      const payload: CreateOverridePayload = {
+        doctorId,
+        hospitalId: currentHospitalId,
+        overrideDate: startDate, // Use start date as reference
+        startDate: startDate,
+        endDate: recurringEndDate,
+        shiftDetails: Array.from(selectedShifts).map(shiftName => {
+          const config = shiftConfigs[shiftName];
+          const slotDuration = Math.max(1, Number(config.slotDuration) || 15);
+          return {
+            shiftName,
+            startTime: config.startTime,
+            endTime: config.endTime,
+            slotDurationInMinutes: slotDuration,
+            recurringDays: selectedDayStrings
           };
-          payloads.push(payload);
-        }
-        currentDate = addDays(currentDate, 1);
-      }
+        })
+      };
+      payloads.push(payload);
     }
-    
+
     return payloads;
   };
 
@@ -308,7 +305,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
     setShowDateRangePopup(false);
   };
 
-    const handleDateRangeCancel = () => {
+  const handleDateRangeCancel = () => {
     setShowDateRangePopup(false);
   };
 
@@ -318,20 +315,20 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
 
 
 
-     const handleSubmit = (e: React.FormEvent) => {
-     e.preventDefault();
-     
-     // Enhanced validation
-     if (selectedShifts.size === 0) {
-       toast({
-         title: t('doctorCalendar.personalizedScheduleModal.validation.selectShift.title'),
-         description: t('doctorCalendar.personalizedScheduleModal.validation.selectShift.description'),
-         variant: 'destructive'
-       });
-       return; // No shifts selected
-     }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
 
-     // Validate recurring schedule settings
+    // Enhanced validation
+    if (selectedShifts.size === 0) {
+      toast({
+        title: t('doctorCalendar.personalizedScheduleModal.validation.selectShift.title'),
+        description: t('doctorCalendar.personalizedScheduleModal.validation.selectShift.description'),
+        variant: 'destructive'
+      });
+      return; // No shifts selected
+    }
+
+    // Validate recurring schedule settings
     if (scheduleMode === 'recurring') {
       if (recurringDays.size === 0) {
         toast({
@@ -341,7 +338,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
         });
         return; // No days selected for recurring schedule
       }
-      
+
       const start = parseISO(startDate);
       const end = parseISO(recurringEndDate);
       if (!(start instanceof Date) || isNaN(start.getTime()) || !(end instanceof Date) || isNaN(end.getTime()) || start >= end) {
@@ -352,36 +349,36 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
         });
         return; // End date must be after start date
       }
-     }
+    }
 
-     // Validate shift configurations
-     const hasValidConfigs = Array.from(selectedShifts).every(shiftName => {
-       const config = shiftConfigs[shiftName];
-       if (!config.enabled) return false;
-       
-       const startTime = config.startTime;
-       const endTime = config.endTime;
-       
-       // Basic time validation
-       if (!startTime || !endTime) return false;
-       
-       // Convert to minutes for comparison
-       const startMinutes = parseInt(startTime.split(':')[0]) * 60 + parseInt(startTime.split(':')[1]);
-       const endMinutes = parseInt(endTime.split(':')[0]) * 60 + parseInt(endTime.split(':')[1]);
-       
-       return startMinutes < endMinutes;
-     });
+    // Validate shift configurations
+    const hasValidConfigs = Array.from(selectedShifts).every(shiftName => {
+      const config = shiftConfigs[shiftName];
+      if (!config.enabled) return false;
 
-     if (!hasValidConfigs) {
+      const startTime = config.startTime;
+      const endTime = config.endTime;
+
+      // Basic time validation
+      if (!startTime || !endTime) return false;
+
+      // Convert to minutes for comparison
+      const startMinutes = parseInt(startTime.split(':')[0]) * 60 + parseInt(startTime.split(':')[1]);
+      const endMinutes = parseInt(endTime.split(':')[0]) * 60 + parseInt(endTime.split(':')[1]);
+
+      return startMinutes < endMinutes;
+    });
+
+    if (!hasValidConfigs) {
       toast({
-          title: t('doctorCalendar.personalizedScheduleModal.validation.shiftTimes.title'),
-          description: t('doctorCalendar.personalizedScheduleModal.validation.shiftTimes.description'),
+        title: t('doctorCalendar.personalizedScheduleModal.validation.shiftTimes.title'),
+        description: t('doctorCalendar.personalizedScheduleModal.validation.shiftTimes.description'),
         variant: 'destructive'
       });
-       return; // Invalid shift configurations
-     }
+      return; // Invalid shift configurations
+    }
 
-         const payloads = generatePayloads();
+    const payloads = generatePayloads();
     if (payloads.length > 0) {
       onSave(payloads);
       onOpenChange(false);
@@ -392,7 +389,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
         variant: 'destructive'
       });
     }
-   };
+  };
 
   const clampDateToToday = React.useCallback((dateStr: string) => {
     if (!dateStr) return format(new Date(), 'yyyy-MM-dd');
@@ -407,22 +404,22 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
 
   const handleBlockSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!onSaveBlock) return;
-    
+
     try {
       // Generate a title based on block type and date
       const startDate = new Date(blockFormData.startDateTime);
       const endDate = new Date(blockFormData.endDateTime);
-      
+
       // Check if dates are valid
       if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
         console.error('Invalid dates provided:', blockFormData);
         return;
       }
-      
-  const generatedTitle = blockFormData.blockType;
-      
+
+      const generatedTitle = blockFormData.blockType;
+
       const payload: CreateBlockPayload = {
         doctorId,
         title: generatedTitle,
@@ -430,7 +427,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
         startDateTime: startDate.toISOString(),
         endDateTime: endDate.toISOString()
       };
-      
+
       if (onSaveBlock) {
         onSaveBlock(payload);
         onOpenChange(false);
@@ -440,112 +437,112 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
     }
   };
 
-         const isBlockFormValid = () => {
+  const isBlockFormValid = () => {
     // Check if required fields are filled
     if (!blockFormData.startDateTime || !blockFormData.endDateTime) {
       return false;
     }
-    
+
     const start = new Date(blockFormData.startDateTime);
     const end = new Date(blockFormData.endDateTime);
     const now = new Date();
-    
+
     // Ensure valid dates
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
       return false;
     }
-    
+
     // Allow same-day bookings (start <= end)
     if (start > end) {
       return false;
     }
-    
+
     // Prevent booking in the past (start time should be at least current time)
     // Allow a 10-minute buffer to account for form interaction time and timezone issues
     const bufferTime = new Date(now.getTime() - 10 * 60 * 1000);
     if (start < bufferTime) {
       return false;
     }
-    
+
     return true;
   };
 
   const isScheduleFormValid = () => {
-     if (selectedShifts.size === 0) return false;
+    if (selectedShifts.size === 0) return false;
 
-     // Validate recurring schedule settings
-     if (scheduleMode === 'recurring') {
-       if (recurringDays.size === 0) return false;
-       
-       const start = parseISO(startDate);
-       const end = parseISO(recurringEndDate);
-       if (start >= end) return false;
-     }
+    // Validate recurring schedule settings
+    if (scheduleMode === 'recurring') {
+      if (recurringDays.size === 0) return false;
 
-     // Validate shift configurations
-     return Array.from(selectedShifts).every(shiftName => {
-       const config = shiftConfigs[shiftName];
-       if (!config.enabled) return false;
-       
-       const startTime = config.startTime;
-       const endTime = config.endTime;
-       
-       if (!startTime || !endTime) return false;
-       
-       const startMinutes = parseInt(startTime.split(':')[0]) * 60 + parseInt(startTime.split(':')[1]);
-       const endMinutes = parseInt(endTime.split(':')[0]) * 60 + parseInt(endTime.split(':')[1]);
-       
-       return startMinutes < endMinutes;
-     });
-   };
+      const start = parseISO(startDate);
+      const end = parseISO(recurringEndDate);
+      if (start >= end) return false;
+    }
 
-    const getBlockTypeLabel = (blockType: BlockType) => {
-      const keyMap: Record<BlockType, string> = {
-        'Annual Leave': 'annualLeave',
-        'Sick Leave': 'sickLeave',
-        Personal: 'personal',
-        Conference: 'conference',
-        Training: 'training',
-        Meeting: 'meeting',
-        Emergency: 'emergency',
-        Other: 'other'
-      };
+    // Validate shift configurations
+    return Array.from(selectedShifts).every(shiftName => {
+      const config = shiftConfigs[shiftName];
+      if (!config.enabled) return false;
 
-      const translationKey = keyMap[blockType] ?? 'other';
-      return t(`doctorCalendar.personalizedScheduleModal.blockTypes.${translationKey}`, {
-        defaultValue: blockType
-      });
+      const startTime = config.startTime;
+      const endTime = config.endTime;
+
+      if (!startTime || !endTime) return false;
+
+      const startMinutes = parseInt(startTime.split(':')[0]) * 60 + parseInt(startTime.split(':')[1]);
+      const endMinutes = parseInt(endTime.split(':')[0]) * 60 + parseInt(endTime.split(':')[1]);
+
+      return startMinutes < endMinutes;
+    });
+  };
+
+  const getBlockTypeLabel = (blockType: BlockType) => {
+    const keyMap: Record<BlockType, string> = {
+      'Annual Leave': 'annualLeave',
+      'Sick Leave': 'sickLeave',
+      Personal: 'personal',
+      Conference: 'conference',
+      Training: 'training',
+      Meeting: 'meeting',
+      Emergency: 'emergency',
+      Other: 'other'
     };
 
-    const getBlockTypeColor = (blockType: BlockType) => {
-     switch (blockType) {
-       case 'Annual Leave': return 'text-red-600';
-       case 'Sick Leave': return 'text-orange-600';
-       case 'Personal': return 'text-purple-600';
-       case 'Conference': return 'text-blue-600';
-       case 'Training': return 'text-green-600';
-       case 'Meeting': return 'text-indigo-600';
-       case 'Emergency': return 'text-pink-600';
-       case 'Other': return 'text-gray-600';
-       default: return 'text-gray-600';
-     }
-   };
+    const translationKey = keyMap[blockType] ?? 'other';
+    return t(`doctorCalendar.personalizedScheduleModal.blockTypes.${translationKey}`, {
+      defaultValue: blockType
+    });
+  };
 
-     const formatDate = (dateStr: string) => {
-     try {
-       const date = parseISO(dateStr);
-       return format(date, 'EEEE, MMMM d, yyyy');
-     } catch (error) {
-       return dateStr;
-     }
-   };
+  const getBlockTypeColor = (blockType: BlockType) => {
+    switch (blockType) {
+      case 'Annual Leave': return 'text-red-600';
+      case 'Sick Leave': return 'text-orange-600';
+      case 'Personal': return 'text-purple-600';
+      case 'Conference': return 'text-blue-600';
+      case 'Training': return 'text-green-600';
+      case 'Meeting': return 'text-indigo-600';
+      case 'Emergency': return 'text-pink-600';
+      case 'Other': return 'text-gray-600';
+      default: return 'text-gray-600';
+    }
+  };
 
-     // Get minimum allowed date (today)
+  const formatDate = (dateStr: string) => {
+    try {
+      const date = parseISO(dateStr);
+      return format(date, 'EEEE, MMMM d, yyyy');
+    } catch (error) {
+      return dateStr;
+    }
+  };
+
+  // Get minimum allowed date (today)
   const getMinDate = () => {
     return format(new Date(), 'yyyy-MM-dd');
   };
 
-   
+
 
   const DAYS = [
     { index: 1, key: 'monday', shortKey: 'mon' },
@@ -567,18 +564,17 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
               {t('doctorCalendar.personalizedScheduleModal.title')}
             </DialogTitle>
           </DialogHeader>
-          
+
           <form onSubmit={scheduleType === 'block' ? handleBlockSubmit : handleSubmit} className="h-full flex flex-col">
             {/* Schedule Type Selection */}
             <div className="mb-4">
               <div className="grid w-full grid-cols-2 rounded-md bg-muted p-1">
                 <button
                   type="button"
-                  className={`flex items-center justify-center gap-2 rounded-sm px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
-                    scheduleType === 'schedule'
+                  className={`flex items-center justify-center gap-2 rounded-sm px-3 py-1.5 text-sm font-medium transition-all duration-200 ${scheduleType === 'schedule'
                       ? 'bg-background text-foreground shadow-sm'
                       : 'text-muted-foreground'
-                  }`}
+                    }`}
                   onClick={() => setScheduleType('schedule')}
                 >
                   <Clock className="h-4 w-4" />
@@ -586,11 +582,10 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                 </button>
                 <button
                   type="button"
-                  className={`flex items-center justify-center gap-2 rounded-sm px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
-                    scheduleType === 'block'
+                  className={`flex items-center justify-center gap-2 rounded-sm px-3 py-1.5 text-sm font-medium transition-all duration-200 ${scheduleType === 'block'
                       ? 'bg-background text-foreground shadow-sm'
                       : 'text-muted-foreground'
-                  }`}
+                    }`}
                   onClick={() => setScheduleType('block')}
                 >
                   <AlertCircle className="h-4 w-4" />
@@ -688,7 +683,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                             />
                           </div>
                         </div>
-                        
+
                         <div>
                           <Label className="text-sm font-medium">{t('doctorCalendar.personalizedScheduleModal.dates.recurringDays')}</Label>
                           <div className="flex flex-wrap gap-1 mt-2">
@@ -701,7 +696,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                                 onClick={() => handleDayToggle(day.index)}
                                 className="h-7 px-2 text-xs"
                               >
-                                  {t(`doctorCalendar.personalizedScheduleModal.days.short.${day.shortKey}`)}
+                                {t(`doctorCalendar.personalizedScheduleModal.days.short.${day.shortKey}`)}
                               </Button>
                             ))}
                           </div>
@@ -722,11 +717,10 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                           return (
                             <Card
                               key={template.name}
-                              className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
-                                isSelected
+                              className={`cursor-pointer transition-all duration-200 hover:shadow-md ${isSelected
                                   ? 'ring-2 ring-blue-500 bg-blue-50'
                                   : 'hover:bg-gray-50'
-                              }`}
+                                }`}
                               onClick={() => handleShiftToggle(template.name)}
                             >
                               <CardContent className="p-3 space-y-3">
@@ -741,20 +735,18 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                                   <button
                                     type="button"
                                     aria-pressed={isSelected}
-                                    className={`ml-auto h-6 w-11 rounded-full border border-transparent transition-colors ${
-                                      isSelected
+                                    className={`ml-auto h-6 w-11 rounded-full border border-transparent transition-colors ${isSelected
                                         ? 'bg-blue-500'
                                         : 'bg-gray-200'
-                                    }`}
+                                      }`}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleShiftToggle(template.name);
                                     }}
                                   >
                                     <span
-                                      className={`block h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                                        isSelected ? 'translate-x-5' : 'translate-x-0'
-                                      }`}
+                                      className={`block h-5 w-5 rounded-full bg-white shadow transition-transform ${isSelected ? 'translate-x-5' : 'translate-x-0'
+                                        }`}
                                       aria-hidden="true"
                                     />
                                   </button>
@@ -862,7 +854,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                           </SelectContent>
                         </Select>
                       </div>
-                      
+
                       {/* Date & Time Selection */}
                       <div className="grid grid-cols-2 gap-4">
                         {/* Start Date & Time */}
@@ -899,9 +891,9 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                               value={blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[1] : '09:00'}
                               onChange={(e) => {
                                 const date = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
-                                setBlockFormData(prev => ({ 
-                                  ...prev, 
-                                  startDateTime: `${date}T${e.target.value}` 
+                                setBlockFormData(prev => ({
+                                  ...prev,
+                                  startDateTime: `${date}T${e.target.value}`
                                 }));
                               }}
                               required
@@ -945,9 +937,9 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                               value={blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[1] : '17:00'}
                               onChange={(e) => {
                                 const date = blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
-                                setBlockFormData(prev => ({ 
-                                  ...prev, 
-                                  endDateTime: `${date}T${e.target.value}` 
+                                setBlockFormData(prev => ({
+                                  ...prev,
+                                  endDateTime: `${date}T${e.target.value}`
                                 }));
                               }}
                               required
@@ -1015,7 +1007,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
         </DialogContent>
       </Dialog>
 
-      
+
 
 
     </>
