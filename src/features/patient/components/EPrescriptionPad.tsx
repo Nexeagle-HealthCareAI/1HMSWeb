@@ -1073,7 +1073,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
   const [chiefComplaintQuery, setChiefComplaintQuery] = useState('');
   const [chiefComplaintActiveIndex, setChiefComplaintActiveIndex] = useState(0);
   const [chiefComplaintDurationValue, setChiefComplaintDurationValue] = useState('');
-  const [chiefComplaintDurationUnit, setChiefComplaintDurationUnit] = useState<'day' | 'week' | 'month'>('day');
+  const [chiefComplaintDurationUnit, setChiefComplaintDurationUnit] = useState<'day' | 'week' | 'month' | 'year'>('day');
   const [pendingChiefComplaintLabel, setPendingChiefComplaintLabel] = useState<string | null>(null);
   const chiefComplaintInputRef = useRef<HTMLInputElement | null>(null);
   const chiefComplaintRootRef = useRef<HTMLDivElement | null>(null);
@@ -2317,12 +2317,13 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                       />
                       <select
                         value={chiefComplaintDurationUnit}
-                        onChange={(e) => setChiefComplaintDurationUnit(e.target.value as 'day' | 'week' | 'month')}
+                        onChange={(e) => setChiefComplaintDurationUnit(e.target.value as 'day' | 'week' | 'month' | 'year')}
                         className="h-8 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 text-xs text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800"
                       >
                         <option value="day">day</option>
                         <option value="week">week</option>
                         <option value="month">month</option>
+                        <option value="year">year</option>
                       </select>
                       <Button
                         size="sm"
