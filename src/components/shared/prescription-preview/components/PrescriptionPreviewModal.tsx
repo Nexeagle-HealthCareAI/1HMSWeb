@@ -4,7 +4,6 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from 'react-i18next';
 import { usePrescriptionPreview } from '../hooks/usePrescriptionPreview';
-import { useNavigate } from 'react-router-dom';
 import { type GeneratePrescriptionDetailsRequest } from '../services/generatePrescriptionDetailsService';
 
 export interface PrescriptionPreviewModalProps {
@@ -13,7 +12,7 @@ export interface PrescriptionPreviewModalProps {
   request: GeneratePrescriptionDetailsRequest | null;
   title?: string;
   description?: string;
-  enableLayoutSettingsNavigation?: boolean;
+  onNavigateToSettings?: () => void;
 }
 
 const PreviewModalBody = ({
@@ -21,10 +20,9 @@ const PreviewModalBody = ({
   title,
   description,
   onOpenChange,
-  enableLayoutSettingsNavigation = false,
+  onNavigateToSettings,
 }: Omit<PrescriptionPreviewModalProps, 'open'> & { onOpenChange: (open: boolean) => void }) => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { previewUrl, templateUrl, isLoading, error, regeneratePreview } = usePrescriptionPreview({
     request,
   });
@@ -62,13 +60,12 @@ const PreviewModalBody = ({
               <div className="p-6 h-full flex flex-col items-center justify-center text-center space-y-4">
                 <div className="text-sm text-destructive font-medium">{error}</div>
                 {error.includes('Template url is missing') && (
-                  enableLayoutSettingsNavigation ? (
+                  onNavigateToSettings ? (
                     <Button
                       variant="outline"
                       onClick={() => {
                         onOpenChange(false);
-                        // Navigate to Doctor Dashboard Settings -> Layout
-                        navigate('/dashboard?tab=settings&subtab=layout');
+                        onNavigateToSettings();
                       }}
                     >
                       Go to Layout Settings
@@ -187,7 +184,7 @@ export const PrescriptionPreviewModal = ({
   request,
   title,
   description,
-  enableLayoutSettingsNavigation,
+  onNavigateToSettings,
 }: PrescriptionPreviewModalProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -197,7 +194,7 @@ export const PrescriptionPreviewModal = ({
           title={title}
           description={description}
           onOpenChange={onOpenChange}
-          enableLayoutSettingsNavigation={enableLayoutSettingsNavigation}
+          onNavigateToSettings={onNavigateToSettings}
         />
       ) : null}
     </Dialog>

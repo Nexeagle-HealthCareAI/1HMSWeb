@@ -2239,7 +2239,13 @@ export const ClinicalDashboard: React.FC = () => {
         open={previewModalOpen}
         onOpenChange={handlePreviewModalChange}
         request={previewRequest}
-        enableLayoutSettingsNavigation={true}
+        onNavigateToSettings={() => {
+          setPreviewModalOpen(false);
+          setActiveNavButton('settings');
+          setSettingsTab('layout');
+          // Update URL for consistency and bookmarking, using replace to avoid history stack buildup if desired
+          navigate('/dashboard?tab=settings&subtab=layout');
+        }}
         title={t('docBoard.preview.title')}
         description={t('docBoard.preview.description')}
       />

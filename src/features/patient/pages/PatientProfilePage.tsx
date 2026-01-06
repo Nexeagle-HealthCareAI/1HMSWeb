@@ -675,6 +675,11 @@ export const PatientProfilePage: React.FC = () => {
           open={previewModalOpen}
           onOpenChange={handlePreviewModalChange}
           request={previewRequest}
+          onNavigateToSettings={() => {
+            setPreviewModalOpen(false);
+            // Navigate to Doctor Dashboard Settings -> Layout
+            navigate('/dashboard?tab=settings&subtab=layout');
+          }}
         />
 
         <PatientProfileModal
