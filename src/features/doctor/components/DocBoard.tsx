@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useLayoutEffect, useRef, lazy, Suspense } from 'react';
 import type { AxiosError } from 'axios';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -137,6 +137,7 @@ export const ClinicalDashboard: React.FC = () => {
   const { hospitalId, userId: authUserId, employeeId, userRole } = useAuthStore();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'current' | 'past' | 'future'>('current');
@@ -148,8 +149,36 @@ export const ClinicalDashboard: React.FC = () => {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [appointmentToCancel, setAppointmentToCancel] = useState<PatientAppointment | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
-  const [activeNavButton, setActiveNavButton] = useState<'appointments' | 'settings' | 'calendar' | 'analytics'>('appointments');
-  const [settingsTab, setSettingsTab] = useState<'fields' | 'personalized' | 'layout'>('fields');
+  const location = useLocation();
+
+  const [activeNavButton, setActiveNavButton] = useState<'appointments' | 'settings' | 'calendar' | 'analytics'>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab === 'settings' || tab === 'calendar' || tab === 'analytics') return tab;
+    return 'appointments';
+  });
+
+  const [settingsTab, setSettingsTab] = useState<'fields' | 'personalized' | 'layout'>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sub = params.get('subtab');
+    if (sub === 'fields' || sub === 'personalized' || sub === 'layout') return sub;
+    return 'fields';
+  });
+
+  // Sync state with URL params changes
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab && (tab === 'appointments' || tab === 'settings' || tab === 'calendar' || tab === 'analytics')) {
+      setActiveNavButton(tab as 'appointments' | 'settings' | 'calendar' | 'analytics');
+    }
+
+    const sub = params.get('subtab');
+    if (sub && (sub === 'fields' || sub === 'personalized' || sub === 'layout')) {
+      setSettingsTab(sub as 'fields' | 'personalized' | 'layout');
+    }
+  }, [location.search]);
+
   const [layoutRefreshToken, setLayoutRefreshToken] = useState(0);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewRequest, setPreviewRequest] = useState<GeneratePrescriptionDetailsRequest | null>(null);
@@ -2210,6 +2239,7 @@ export const ClinicalDashboard: React.FC = () => {
         open={previewModalOpen}
         onOpenChange={handlePreviewModalChange}
         request={previewRequest}
+        enableLayoutSettingsNavigation={true}
         title={t('docBoard.preview.title')}
         description={t('docBoard.preview.description')}
       />

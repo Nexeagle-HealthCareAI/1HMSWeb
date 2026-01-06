@@ -4,6 +4,7 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from 'react-i18next';
 import { usePrescriptionPreview } from '../hooks/usePrescriptionPreview';
+import { useNavigate } from 'react-router-dom';
 import { type GeneratePrescriptionDetailsRequest } from '../services/generatePrescriptionDetailsService';
 
 export interface PrescriptionPreviewModalProps {
@@ -12,14 +13,18 @@ export interface PrescriptionPreviewModalProps {
   request: GeneratePrescriptionDetailsRequest | null;
   title?: string;
   description?: string;
+  enableLayoutSettingsNavigation?: boolean;
 }
 
 const PreviewModalBody = ({
   request,
   title,
   description,
-}: Omit<PrescriptionPreviewModalProps, 'open' | 'onOpenChange'>) => {
+  onOpenChange,
+  enableLayoutSettingsNavigation = false,
+}: Omit<PrescriptionPreviewModalProps, 'open'> & { onOpenChange: (open: boolean) => void }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { previewUrl, templateUrl, isLoading, error, regeneratePreview } = usePrescriptionPreview({
     request,
   });
@@ -54,8 +59,26 @@ const PreviewModalBody = ({
           {/* PDF Preview - Left/Main Section */}
           <div className="lg:col-span-2 rounded-lg border bg-muted/30 overflow-hidden h-full">
             {error && (
-              <div className="p-6 text-sm text-destructive">
-                {error}
+              <div className="p-6 h-full flex flex-col items-center justify-center text-center space-y-4">
+                <div className="text-sm text-destructive font-medium">{error}</div>
+                {error.includes('Template url is missing') && (
+                  enableLayoutSettingsNavigation ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        onOpenChange(false);
+                        // Navigate to Doctor Dashboard Settings -> Layout
+                        navigate('/dashboard?tab=settings&subtab=layout');
+                      }}
+                    >
+                      Go to Layout Settings
+                    </Button>
+                  ) : (
+                    <div className="text-sm text-muted-foreground bg-muted p-2 rounded">
+                      Please ask an Administrator to upload a prescription template to proceed.
+                    </div>
+                  )
+                )}
               </div>
             )}
             {!error && (
@@ -164,11 +187,18 @@ export const PrescriptionPreviewModal = ({
   request,
   title,
   description,
+  enableLayoutSettingsNavigation,
 }: PrescriptionPreviewModalProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {open ? (
-        <PreviewModalBody request={request} title={title} description={description} />
+        <PreviewModalBody
+          request={request}
+          title={title}
+          description={description}
+          onOpenChange={onOpenChange}
+          enableLayoutSettingsNavigation={enableLayoutSettingsNavigation}
+        />
       ) : null}
     </Dialog>
   );

@@ -1465,6 +1465,7 @@ export const AppointmentDashboard = () => {
         open={previewModalOpen}
         onOpenChange={handlePreviewModalChange}
         request={previewRequest}
+        enableLayoutSettingsNavigation={false}
       />
 
       <AttachmentsSection
