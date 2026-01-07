@@ -1,4 +1,5 @@
 import { PDFDocument, PDFFont, StandardFonts, rgb, RGB } from 'pdf-lib';
+import QRCode from 'qrcode';
 import { MarginConfig, TypographySettings } from '@/features/prescription/hooks/usePrescriptionDesigner';
 import { GeneratePrescriptionDetailsPayload, PrescriptionPatientDetail, PrescriptionVitals } from './generatePrescriptionDetailsService';
 
@@ -287,7 +288,12 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   const patient = payload.patientData?.patientDetails?.[0] || {} as PrescriptionPatientDetail;
   const vitals = payload.patientData?.vitals || {} as PrescriptionVitals;
 
+
+
   await ensureRoom(100);
+
+
+
 
   // A. Date (Top Right)
   const dateLabel = toUpper(`Date: ${currentDateLabel}`);
@@ -319,10 +325,32 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
     cursorY -= lineHeight * 1.5;
   }
 
+  // QR Code (Inline with Name)
+  const qrSize = 50;
+  const qrPadding = 12;
+  const nameX = payload.qrCodeData ? leftPad + qrSize + qrPadding : leftPad;
+
+  if (payload.qrCodeData) {
+    try {
+      const qrDataUrl = await QRCode.toDataURL(payload.qrCodeData, { margin: 0 });
+      const qrImageBytes = await fetch(qrDataUrl).then(res => res.arrayBuffer());
+      const qrImage = await outputDoc.embedPng(qrImageBytes);
+
+      page.drawImage(qrImage, {
+        x: leftPad,
+        y: cursorY - qrSize + 4, // Align top with Name roughly (Name is drawn baseline, this is top-left)
+        width: qrSize,
+        height: qrSize,
+      });
+    } catch (e) {
+      console.error('QR Generation Failed', e);
+    }
+  }
+
   // Name (Large)
   const pName = toUpper(patient.name || 'Unknown Patient');
   page.drawText(pName, {
-    x: leftPad,
+    x: nameX,
     y: cursorY,
     size: sizeXl,
     font: boldFont,
@@ -334,22 +362,28 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   const pAgeSex = toUpper([patient.age ? `${patient.age} Y` : '', patient.sex].filter(Boolean).join(' / '));
   const pUhid = toUpper(patient.patientId ? `ID: ${patient.patientId}` : '');
 
-  drawLabelValue('AGE / GENDER', pAgeSex, leftPad, cursorY, contentWidth * 0.4);
-  drawLabelValue('UHID / MRN', pUhid, leftPad + (contentWidth * 0.4), cursorY, contentWidth * 0.4);
+  // Dynamic width calculation
+  const availableWidth = pageWidth - rightPad - nameX; // Width from name start to right margin
+  const col1Width = availableWidth * 0.30; // Age/Gender (Reduced from 0.45 to bring UHID closer)
+  const col2Width = availableWidth - col1Width; // UHID takes remaining space
+
+  drawLabelValue('AGE / GENDER', pAgeSex, nameX, cursorY, col1Width);
+  drawLabelValue('UHID / MRN', pUhid, nameX + col1Width, cursorY, col2Width);
   cursorY -= lineHeight * 2;
 
   // Address
   if (patient.address) {
     const address = toUpper([patient.address, patient.city].filter(Boolean).join(', '));
-    page.drawText('ADDRESS', { x: leftPad, y: cursorY, size: sizeSm, font: boldFont, color: COLORS.TextLight });
+    page.drawText('ADDRESS', { x: nameX, y: cursorY, size: sizeSm, font: boldFont, color: COLORS.TextLight });
 
-    const addressLines = wrapText(address, regularFont, sizeBase, contentWidth * 0.6);
+    const addressLines = wrapText(address, regularFont, sizeBase, availableWidth);
     let addressY = cursorY - sizeBase - 2;
 
     addressLines.forEach((line) => {
-      page.drawText(line, { x: leftPad, y: addressY, size: sizeBase, font: regularFont, color: COLORS.TextMain });
+      page.drawText(line, { x: nameX, y: addressY, size: sizeBase, font: regularFont, color: COLORS.TextMain });
       addressY -= lineHeight;
     });
+
     cursorY = addressY - lineHeight;
   }
 

@@ -137,6 +137,7 @@ export interface GeneratePrescriptionDetailsPayload {
   followUp: PrescriptionFollowUp;
   immunizations: PrescriptionImmunization[];
   validUpto?: number; // Number of days the prescription is valid
+  qrCodeData?: string;
 }
 
 export interface GeneratePrescriptionDetailsResponse {

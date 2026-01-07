@@ -38,7 +38,10 @@ export const prescriptionPreviewService = {
     const blob = await this.buildPreviewBlob({
       layout: templateConfig.layout,
       typography: templateConfig.typography,
-      payload,
+      payload: {
+        ...payload,
+        qrCodeData: `https://easyhms.com/verify/${response.appointmentId}`
+      },
       templateUrl: templateConfig.templateUrl,
     });
 
