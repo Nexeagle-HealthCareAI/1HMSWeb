@@ -23,6 +23,7 @@ export interface DoctorProfessionalData {
   department: string;
   specializations: string[];
   hospitalId: string;
+  hospitalDepartmentMappingId?: string;
 }
 
 export interface DoctorProfileResponse {
@@ -93,57 +94,57 @@ export const doctorApi = {
     params.append('endDate', request.endDate);
     params.append('hospitalId', request.hospitalId);
     params.append('doctorId', request.doctorId);
-    
+
     const url = `/doctor-dashboard/appointment-details?${params.toString()}`;
     return apiClient.get<{ items: DoctorAppointmentDetail[] }>(url);
   },
 
   updateDoctorProfessional: async (payload: {
-      userId: string;
-      hospitalDepartmentMappingId: string;
-      licenseNumber: string;
-      qualification: string[];
-      experienceYears: number;
-      medicalCouncil: string;
-      registrationYear: number;
-      bio: string;
-      primaryDepartment: string;
-      department: string;
-      specializations: string[];
-    }) => {
-      try {
-        const response = await apiClient.put(`${API_ENDPOINTS.DOCTORS.UPDATE_PROFILE}`,
-          payload,
-          {
-            headers: {
-              'accept': 'text/plain',
-              'Content-Type': 'application/json',
-            },
-          }
-        );
-       
-        return response;
-      } catch (error) {       
-        throw error;
-      }
-    },
-    // Get doctor profile
-    getDoctorProfile: async (doctorId: string): Promise<DoctorProfileResponse> => {
-      try {
-        const response = await apiClient.get(`${API_ENDPOINTS.DOCTORS.PROFILE}/${doctorId}`);        
-        return response as DoctorProfileResponse;
-      } catch (error) {        
-        throw error;
-      }
-    },
-  
-    // Create doctor profile
-    createDoctorProfile: async (doctorData: DoctorProfessionalData): Promise<DoctorProfileResponse> => {
-      try {
-        const response = await apiClient.post(API_ENDPOINTS.DOCTORS.PROFILE, doctorData);        
-        return response as DoctorProfileResponse;
-      } catch (error) {        
-        throw error;
-      }
-    },
+    userId: string;
+    hospitalDepartmentMappingId: string;
+    licenseNumber: string;
+    qualification: string[];
+    experienceYears: number;
+    medicalCouncil: string;
+    registrationYear: number;
+    bio: string;
+    primaryDepartment: string;
+    department: string;
+    specializations: string[];
+  }) => {
+    try {
+      const response = await apiClient.put(`${API_ENDPOINTS.DOCTORS.UPDATE_PROFILE}`,
+        payload,
+        {
+          headers: {
+            'accept': 'text/plain',
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  },
+  // Get doctor profile
+  getDoctorProfile: async (doctorId: string): Promise<DoctorProfileResponse> => {
+    try {
+      const response = await apiClient.get(`${API_ENDPOINTS.DOCTORS.PROFILE}/${doctorId}`);
+      return response as DoctorProfileResponse;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Create doctor profile
+  createDoctorProfile: async (doctorData: DoctorProfessionalData): Promise<DoctorProfileResponse> => {
+    try {
+      const response = await apiClient.post(API_ENDPOINTS.DOCTORS.PROFILE, doctorData);
+      return response as DoctorProfileResponse;
+    } catch (error) {
+      throw error;
+    }
+  },
 };

@@ -1646,7 +1646,7 @@ export const ClinicalDashboard: React.FC = () => {
 
                                       <TableCell className="hidden lg:table-cell py-4 align-middle">
                                         <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-wider bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800">
-                                          {appointment.appointmentType || 'New / Fee'}
+                                          {(!appointment.appointmentType || appointment.appointmentType === 'New' || appointment.appointmentType === 'New/Fee' || appointment.appointmentType === 'New / Fee') ? t('docBoard.table.newCase', { defaultValue: 'New' }) : appointment.appointmentType}
                                         </Badge>
                                       </TableCell>
                                       <TableCell className="py-4 align-middle text-center">

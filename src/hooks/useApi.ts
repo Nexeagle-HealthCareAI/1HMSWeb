@@ -35,26 +35,26 @@ export const createMutationHook = <TData, TVariables, TError = Error>(
 export const useAuthApi = {
   // Login
   login: () => createMutationHook(authApi.login),
-  
+
   // Register
   register: () => createMutationHook(authApi.register),
-  
+
   // Onboarding Register
   onboardingRegister: () => createMutationHook(authApi.onboardingRegister),
-  
+
   // Send OTP
   sendOTP: () => createMutationHook(authApi.sendOTP),
-  
+
   // Verify OTP
   verifyOTP: () => createMutationHook(authApi.verifyOTP),
-  
+
   // Set password (for registration)
   setPassword: () => createMutationHook(authApi.setPassword),
-  
+
   // Reset password with userId (for forgot password)
   resetPasswordWithUserId: () => createMutationHook(authApi.resetPasswordWithUserId),
   getUserPermissions: () => createMutationHook(authApi.getUserPermissions),
-  
+
   // Validate onboarding token
   validateToken: () => createMutationHook(authApi.validateToken),
 };
@@ -102,7 +102,7 @@ export const useSpecializationApi = {
   getSpecializationsByDepartment: (departmentId: string, hospitalId: string, includeGlobal: boolean = true) => createApiHook(
     ['specializations', 'department', departmentId, hospitalId, includeGlobal.toString()],
     () => specializationApi.getSpecializationsByDepartment(departmentId, hospitalId, includeGlobal),
-    { 
+    {
       enabled: !!departmentId && !!hospitalId,
       staleTime: 5 * 60 * 1000 // 5 minutes
     }
@@ -127,20 +127,20 @@ export const useDoctorApi = {
       },
     }
   ),
-  
+
 };
 
 // Media Upload API hooks
 export const useMediaUploadApi = {
   // Upload profile picture
   uploadProfilePicture: () => useMutation({
-    mutationFn: ({ userId, file }: { userId: string; file: File }) => 
+    mutationFn: ({ userId, file }: { userId: string; file: File }) =>
       mediaUploadApi.uploadProfilePicture(userId, file),
   }),
 
   // Remove profile picture
   removeProfilePicture: () => useMutation({
-    mutationFn: (userId: string) => 
+    mutationFn: (userId: string) =>
       mediaUploadApi.removeProfilePicture(userId),
   }),
 
@@ -163,17 +163,17 @@ export const useMediaUploadApi = {
 
   // Upload prescription asset
   uploadPrescriptionAsset: () => useMutation({
-    mutationFn: ({ 
-      doctorId, 
-      file, 
-      assetType, 
-      prescriptionSettingId 
-    }: { 
-      doctorId: string; 
-      file: File; 
+    mutationFn: ({
+      doctorId,
+      file,
+      assetType,
+      prescriptionSettingId
+    }: {
+      doctorId: string;
+      file: File;
       assetType: 'header_image' | 'footer_image' | 'signature_image';
       prescriptionSettingId: string;
-    }) => 
+    }) =>
       mediaUploadApi.uploadPrescriptionAsset(doctorId, file, assetType, prescriptionSettingId),
   }),
 
@@ -196,7 +196,7 @@ export const useMediaUploadApi = {
 
   // Delete prescription asset
   deletePrescriptionAsset: () => useMutation({
-    mutationFn: (deleteRequest: { prescriptionAssestId: string; blobAssetId: string }) => 
+    mutationFn: (deleteRequest: { prescriptionAssestId: string; blobAssetId: string }) =>
       mediaUploadApi.deletePrescriptionAsset(deleteRequest),
   }),
 };
@@ -205,7 +205,7 @@ export const useMediaUploadApi = {
 // Utility hook for invalidating queries
 export const useInvalidateQueries = () => {
   const queryClient = useQueryClient();
-  
+
   return {
     invalidateAuth: () => queryClient.invalidateQueries({ queryKey: ['auth'] }),
     invalidateUser: () => queryClient.invalidateQueries({ queryKey: ['auth', 'user'] }),

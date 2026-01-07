@@ -3,14 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useTranslation } from 'react-i18next';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
   ResponsiveContainer,
   LineChart,
   Line,
@@ -20,7 +20,7 @@ import {
   Area,
   AreaChart
 } from 'recharts';
-import { 
+import {
   Calendar,
   Users,
   DollarSign,
@@ -61,9 +61,9 @@ interface DashboardOverviewProps {
   getStatusBadge: (status: string) => React.ReactNode;
 }
 
-export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ 
-  renderKPICard, 
-  getStatusBadge 
+export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
+  renderKPICard,
+  getStatusBadge
 }) => {
   const { t } = useTranslation();
 
@@ -108,10 +108,10 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 <XAxis dataKey="date" fontSize={12} />
                 <YAxis fontSize={12} />
                 <Tooltip />
-                <Line 
-                  type="monotone" 
-                  dataKey="appointments" 
-                  stroke="#8884d8" 
+                <Line
+                  type="monotone"
+                  dataKey="appointments"
+                  stroke="#8884d8"
                   strokeWidth={2}
                   dot={{ fill: '#8884d8' }}
                 />
@@ -165,11 +165,11 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={revenueByDoctor}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="doctor" 
-                  angle={-45} 
-                  textAnchor="end" 
-                  height={80} 
+                <XAxis
+                  dataKey="doctor"
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
                   fontSize={10}
                 />
                 <YAxis fontSize={12} />
@@ -192,11 +192,11 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 <XAxis dataKey="hour" fontSize={12} />
                 <YAxis fontSize={12} />
                 <Tooltip />
-                <Area 
-                  type="monotone" 
-                  dataKey="appointments" 
-                  stroke="#ffc658" 
-                  fill="#ffc658" 
+                <Area
+                  type="monotone"
+                  dataKey="appointments"
+                  stroke="#ffc658"
+                  fill="#ffc658"
                   fillOpacity={0.6}
                 />
               </AreaChart>
