@@ -345,5 +345,16 @@ export const appointmentApi = {
   }): Promise<ApiResponse<any>> => {
     const url = `/appointments/patient-cancel`;
     return apiClient.patch(url, request);
-  }
+  },
+
+  // Complete appointment
+  completeAppointment: (request: {
+    hospitalId: string;
+    doctordId: string;
+    appointmentId: string;
+    patientId: string;
+  }): Promise<ApiResponse<any>> => {
+    const url = `/appointments/complete-appointment`;
+    return apiClient.post(url, request);
+  },
 };

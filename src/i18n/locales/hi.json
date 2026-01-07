@@ -1959,180 +1959,6 @@
       "followUpScheduledDescription": "फॉलो-अप {{date}} के लिए निर्धारित"
     }
   },
-  "docBoard": {
-    "header": {
-      "title": "डैशबोर्ड",
-      "viewProfessionalProfile": "प्रोफ़ेशनल प्रोफ़ाइल देखें",
-      "professionalProfile": "प्रोफ़ेशनल प्रोफ़ाइल",
-      "verified": "सत्यापित",
-      "defaultDoctorName": "डॉ. वर्तमान उपयोगकर्ता"
-    },
-    "nav": {
-      "appointments": {
-        "label": "अपॉइंटमेंट",
-        "short": "अपॉइंट",
-        "description": "आज की कतार देखें"
-      },
-      "calendar": {
-        "label": "मेरा कैलेंडर",
-        "short": "कैल",
-        "description": "अपना सप्ताह प्लान करें"
-      },
-      "assistant": {
-        "label": "एआई सहायक",
-        "short": "एआई",
-        "description": "सारांश और इनसाइट्स"
-      },
-      "settings": {
-        "label": "प्रिस्क्रिप्शन सेटिंग्स",
-        "short": "सेटिंग्स",
-        "description": "लेआउट पर्सनलाइज़ करें"
-      },
-      "lockedMessage": "इस सेक्शन को अनलॉक करने के लिए प्रोफ़ाइल पूरा करें"
-    },
-    "alerts": {
-      "previewMissingContext": "प्रिस्क्रिप्शन प्रीव्यू के लिए डॉक्टर और अस्पताल संदर्भ आवश्यक है।"
-    },
-    "loading": {
-      "doctorProfile": "डॉक्टर प्रोफ़ाइल लोड हो रहा है...",
-      "appointments": "अपॉइंटमेंट डेटा लोड हो रहा है...",
-      "helper": "कृपया प्रतीक्षा करें, हम आपका डेटा ला रहे हैं"
-    },
-    "error": {
-      "doctorProfile": "डॉक्टर प्रोफ़ाइल लोड करने में विफल",
-      "appointments": "अपॉइंटमेंट डेटा लोड करने में विफल",
-      "missingData": "आवश्यक डेटा अनुपलब्ध: {{fields}}",
-      "missingHospitalId": "हॉस्पिटल आईडी",
-      "missingDoctorId": "डॉक्टर आईडी",
-      "generic": "कृपया कंसोल देखें और पेज रिफ्रेश करने का प्रयास करें",
-      "refreshPage": "पेज रिफ्रेश करें"
-    },
-    "restriction": {
-      "title": "अपनी डॉक्टर प्रोफ़ाइल पूरी करें",
-      "subtitle": "कैलेंडर, अपॉइंटमेंट और प्रिस्क्रिप्शन फीचर अनलॉक करें",
-      "requiredInfoTitle": "आवश्यक जानकारी:",
-      "requiredItems": {
-        "license": "मेडिकल लाइसेंस नंबर",
-        "department": "विभाग और विशेषज्ञता",
-        "qualifications": "पेशेवर योग्यताएं",
-        "experience": "अनुभव और रजिस्ट्रेशन विवरण"
-      },
-      "benefits": {
-        "calendar": "कैलेंडर एक्सेस",
-        "prescriptions": "प्रिस्क्रिप्शन",
-        "appointments": "अपॉइंटमेंट"
-      },
-      "completeProfileCta": "प्रोफ़ाइल अभी पूरी करें",
-      "ctaHelper": "बस 2-3 मिनट लगेंगे"
-    },
-    "tabs": {
-      "swipeHint": "एक्सप्लोर करने के लिए स्वाइप करें",
-      "expandSidebar": "अपॉइंटमेंट साइडबार विस्तृत करें",
-      "collapseSidebar": "अपॉइंटमेंट साइडबार संकुचित करें",
-      "current": {
-        "label": "वर्तमान अपॉइंटमेंट",
-        "subLabel": "लाइव कतार व वाइटल्स"
-      },
-      "past": {
-        "label": "पिछली विज़िट",
-        "subLabel": "इतिहास और फॉलो-अप"
-      },
-      "future": {
-        "label": "आगामी शेड्यूल",
-        "subLabel": "अगले 7 दिन"
-      }
-    },
-    "statusBadge": {
-      "vitalsRequired": "वाइटल्स आवश्यक",
-      "ready": "तैयार",
-      "consulting": "परामर्श जारी",
-      "labRequired": "लैब आवश्यक",
-      "reconsult": "पुनः परामर्श",
-      "completed": "पूर्ण",
-      "scheduled": "शेड्यूल",
-      "cancelled": "रद्द",
-      "default": "{{status}}"
-    },
-    "filters": {
-      "all": "सभी ({{count}})",
-      "vitalsRequired": "वाइटल्स ({{count}})",
-      "ready": "तैयार ({{count}})",
-      "consulting": "परामर्श ({{count}})",
-      "labRequired": "लैब ({{count}})",
-      "reconsult": "पुनः परामर्श ({{count}})",
-      "completed": "पूर्ण ({{count}})",
-      "cancelled": "रद्द ({{count}})"
-    },
-    "sync": {
-      "lastSynced": "अंतिम सिंक",
-      "refresh": "रिफ्रेश"
-    },
-    "search": {
-      "currentPlaceholder": "नाम या आईडी से मरीज़ खोजें...",
-      "pastPlaceholder": "नाम या आईडी से मरीज़ खोजें...",
-      "futurePlaceholder": "आगामी मरीज़ खोजें..."
-    },
-    "date": {
-      "from": "से",
-      "to": "तक"
-    },
-    "table": {
-      "patient": "मरीज़",
-      "patientName": "मरीज़ का नाम",
-      "patientId": "मरीज़ आईडी",
-      "token": "टोकन",
-      "tokenLabel": "टोकन",
-      "tokenNumber": "टोकन नंबर",
-      "notAvailable": "उपलब्ध नहीं",
-      "appointmentTime": "अपॉइंटमेंट समय",
-      "time": "समय",
-      "status": "स्थिति",
-      "case": "केस",
-      "actions": "कार्य",
-      "printRx": "आरएक्स प्रिंट करें",
-      "printToken": "टोकन प्रिंट",
-      "lastVisit": "अंतिम विज़िट",
-      "followUp": "फॉलो-अप",
-      "completed": "पूर्ण",
-      "newCase": "नया / शुल्क",
-      "vitals": "वाइटल्स",
-      "notApplicable": "प्रासंगिक नहीं",
-      "noPhone": "कोई मोबाइल उपलब्ध नहीं"
-    },
-    "empty": {
-      "current": "कोई अपॉइंटमेंट नहीं मिला",
-      "past": "कोई पिछले अपॉइंटमेंट नहीं मिले",
-      "future": "कोई भविष्य के अपॉइंटमेंट नहीं मिले"
-    },
-    "preview": {
-      "title": "प्रिस्क्रिप्शन प्रीव्यू",
-      "description": "प्रिस्क्रिप्शन पीडीएफ डाउनलोड, साझा या प्रिंट करें।"
-    },
-    "calendar": {
-      "loading": "कैलेंडर लोड हो रहा है..."
-    },
-    "assistant": {
-      "loading": "सहायक लोड हो रहा है..."
-    },
-    "cancelDialog": {
-      "title": "अपॉइंटमेंट रद्द करें",
-      "description": "क्या आप वाकई इस अपॉइंटमेंट को रद्द करना चाहते हैं? यह कार्य पूर्ववत नहीं किया जा सकता।",
-      "patient": "मरीज़",
-      "patientId": "मरीज़ आईडी",
-      "doctor": "डॉक्टर",
-      "appointmentId": "अपॉइंटमेंट आईडी",
-      "keepAppointment": "अपॉइंटमेंट रखें",
-      "confirmCancel": "अपॉइंटमेंट रद्द करें",
-      "cancelling": "रद्द किया जा रहा है..."
-    },
-    "settings": {
-      "fields": "फ़ील्ड",
-      "personalData": "व्यक्तिगत डेटा",
-      "personalShort": "व्यक्तिगत",
-      "layoutLab": "लेआउट लैब",
-      "layoutShort": "लेआउट"
-    }
-  },
   "appointmentDashboard": {
     "title": "अपॉइंटमेंट डैशबोर्ड",
     "subtitle": "मरीज़ के अपॉइंटमेंट को कुशलतापूर्वक प्रबंधित करें",
@@ -3611,6 +3437,13 @@
       "keepAppointment": "नहीं, इसे रखें",
       "cancelling": "रद्द किया जा रहा है...",
       "confirmCancel": "हाँ, अपॉइंटमेंट रद्द करें"
+    },
+    "markDoneDialog": {
+      "title": "अपॉइंटमेंट पूरा करें",
+      "description": "क्या आप इस वर्तमान मरीज़ को पूरा करना चाहते हैं? कृपया पुष्टि करें",
+      "confirm": "पुष्टि करें",
+      "cancel": "रद्द करें",
+      "marking": "पूरा किया जा रहा है..."
     },
     "settings": {
       "fields": "प्रिस्क्रिप्शन अनुभाग",

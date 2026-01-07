@@ -89,6 +89,16 @@ import {
 import { format, subDays, addDays } from 'date-fns';
 import { useAuthStore } from '@/store/authStore';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import AttachmentsSection from '@/features/patient/components/AttachmentsSection';
 import { appointmentApi } from '@/features/appointment/services/appointmentApi';
 import { useQueryClient } from '@tanstack/react-query';
@@ -149,6 +159,9 @@ export const ClinicalDashboard: React.FC = () => {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [appointmentToCancel, setAppointmentToCancel] = useState<PatientAppointment | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [markDoneDialogOpen, setMarkDoneDialogOpen] = useState(false);
+  const [appointmentToMarkDone, setAppointmentToMarkDone] = useState<PatientAppointment | null>(null);
+  const [isMarkingDone, setIsMarkingDone] = useState(false);
   const location = useLocation();
 
   const [activeNavButton, setActiveNavButton] = useState<'appointments' | 'settings' | 'calendar' | 'analytics'>(() => {
@@ -773,6 +786,32 @@ export const ClinicalDashboard: React.FC = () => {
       console.error('Error cancelling appointment:', error);
     } finally {
       setIsCancelling(false);
+    }
+  };
+
+  const handleMarkDoneClick = (appointment: PatientAppointment) => {
+    setAppointmentToMarkDone(appointment);
+    setMarkDoneDialogOpen(true);
+  };
+
+  const handleConfirmMarkDone = async () => {
+    if (!appointmentToMarkDone) return;
+    setIsMarkingDone(true);
+    try {
+      await appointmentApi.completeAppointment({
+        hospitalId: hospitalId || '',
+        doctordId: doctorId || '',
+        appointmentId: appointmentToMarkDone.appointmentId,
+        patientId: appointmentToMarkDone.patientId
+      });
+
+      setMarkDoneDialogOpen(false);
+      setAppointmentToMarkDone(null);
+      await refetch?.();
+    } catch (error) {
+      console.error('Error marking appointment as done:', error);
+    } finally {
+      setIsMarkingDone(false);
     }
   };
 
@@ -1611,19 +1650,31 @@ export const ClinicalDashboard: React.FC = () => {
                                         </Badge>
                                       </TableCell>
                                       <TableCell className="py-4 align-middle text-center">
-                                        {!['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(
-                                          appointment.finalStatusCode
-                                        ) && (
+                                        {!['COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode) && (
+                                          <>
                                             <Button
                                               variant="ghost"
                                               size="sm"
-                                              className="h-8 px-2 text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                              onClick={() => handleCancelClick(appointment)}
+                                              className="h-8 px-2 text-green-600 hover:bg-green-50 hover:text-green-700 dark:hover:bg-green-900/20 rounded-lg transition-colors mr-1"
+                                              onClick={() => handleMarkDoneClick(appointment)}
+                                              title={t('docBoard.markDoneDialog.title', { defaultValue: 'Mark Done' })}
                                             >
-                                              <span className="sr-only">{t('common.cancel')}</span>
-                                              <X className="h-4 w-4" />
+                                              <CircleCheck className="h-4 w-4" />
                                             </Button>
-                                          )}
+                                            {!['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT'].includes(appointment.finalStatusCode) && (
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 px-2 text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                                onClick={() => handleCancelClick(appointment)}
+                                              >
+                                                <span className="sr-only">{t('common.cancel')}</span>
+                                                <X className="h-4 w-4" />
+                                              </Button>
+                                            )}
+                                          </>
+                                        )
+                                        }
                                       </TableCell>
                                       <TableCell className="hidden lg:table-cell py-4 align-middle text-center">
                                         <Button
@@ -2297,6 +2348,23 @@ export const ClinicalDashboard: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={markDoneDialogOpen} onOpenChange={setMarkDoneDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('docBoard.markDoneDialog.title')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('docBoard.markDoneDialog.description')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isMarkingDone}>{t('docBoard.markDoneDialog.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); handleConfirmMarkDone(); }} disabled={isMarkingDone} className="bg-green-600 hover:bg-green-700">
+              {isMarkingDone ? t('docBoard.markDoneDialog.marking') : t('docBoard.markDoneDialog.confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Cancel Confirmation Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>

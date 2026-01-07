@@ -2074,180 +2074,6 @@
       "followUpScheduledDescription": "Follow-up scheduled for {{date}}"
     }
   },
-  "__docBoard_old__": {
-    "header": {
-      "title": "Dashboard",
-      "viewProfessionalProfile": "View professional profile",
-      "professionalProfile": "Professional profile",
-      "verified": "Verified",
-      "defaultDoctorName": "Dr. Current User"
-    },
-    "nav": {
-      "appointments": {
-        "label": "Appointments",
-        "short": "Appts",
-        "description": "Monitor today’s queue"
-      },
-      "calendar": {
-        "label": "My Calendar",
-        "short": "Cal",
-        "description": "Plan your week"
-      },
-      "assistant": {
-        "label": "AI Assistant",
-        "short": "AI",
-        "description": "Summaries & insights"
-      },
-      "settings": {
-        "label": "Prescription Settings",
-        "short": "Settings",
-        "description": "Personalize layouts"
-      },
-      "lockedMessage": "Complete your profile to unlock this section"
-    },
-    "alerts": {
-      "previewMissingContext": "Prescription preview requires doctor and hospital context."
-    },
-    "loading": {
-      "doctorProfile": "Loading doctor profile...",
-      "appointments": "Loading appointment data...",
-      "helper": "Please wait while we fetch your data"
-    },
-    "error": {
-      "doctorProfile": "Failed to load doctor profile",
-      "appointments": "Failed to load appointment data",
-      "missingData": "Missing required data: {{fields}}",
-      "missingHospitalId": "Hospital ID",
-      "missingDoctorId": "Doctor ID",
-      "generic": "Please check the console for error details and try refreshing the page",
-      "refreshPage": "Refresh Page"
-    },
-    "restriction": {
-      "title": "Complete Your Doctor Profile",
-      "subtitle": "Unlock full access to calendar, appointments, and prescription features",
-      "requiredInfoTitle": "Required Information:",
-      "requiredItems": {
-        "license": "Medical License Number",
-        "department": "Department & Specializations",
-        "qualifications": "Professional Qualifications",
-        "experience": "Experience & Registration Details"
-      },
-      "benefits": {
-        "calendar": "Calendar Access",
-        "prescriptions": "Prescriptions",
-        "appointments": "Appointments"
-      },
-      "completeProfileCta": "Complete Profile Now",
-      "ctaHelper": "Takes only 2-3 minutes"
-    },
-    "tabs": {
-      "swipeHint": "Swipe to explore",
-      "expandSidebar": "Expand appointment sidebar",
-      "collapseSidebar": "Collapse appointment sidebar",
-      "current": {
-        "label": "Current Appointments",
-        "subLabel": "Live queue & vitals"
-      },
-      "past": {
-        "label": "Past Visits",
-        "subLabel": "History & follow-ups"
-      },
-      "future": {
-        "label": "Upcoming Schedule",
-        "subLabel": "Next 7 days"
-      }
-    },
-    "statusBadge": {
-      "vitalsRequired": "Vitals Required",
-      "ready": "Ready",
-      "consulting": "Consulting",
-      "labRequired": "Lab Required",
-      "reconsult": "Reconsult",
-      "completed": "Completed",
-      "scheduled": "Scheduled",
-      "cancelled": "Cancelled",
-      "default": "{{status}}"
-    },
-    "filters": {
-      "all": "All ({{count}})",
-      "vitalsRequired": "Vitals ({{count}})",
-      "ready": "Ready ({{count}})",
-      "consulting": "Consulting ({{count}})",
-      "labRequired": "Lab ({{count}})",
-      "reconsult": "Reconsult ({{count}})",
-      "completed": "Completed ({{count}})",
-      "cancelled": "Cancelled ({{count}})"
-    },
-    "sync": {
-      "lastSynced": "Last synced",
-      "refresh": "Refresh"
-    },
-    "search": {
-      "currentPlaceholder": "Search patients by name or ID...",
-      "pastPlaceholder": "Search patients by name or ID...",
-      "futurePlaceholder": "Search upcoming patients..."
-    },
-    "date": {
-      "from": "From",
-      "to": "To"
-    },
-    "table": {
-      "patient": "Patient",
-      "patientName": "Patient Name",
-      "patientId": "Patient ID",
-      "token": "Token",
-      "tokenLabel": "Token",
-      "tokenNumber": "Token Number",
-      "notAvailable": "N/A",
-      "appointmentTime": "Appointment Time",
-      "time": "Time",
-      "status": "Status",
-      "case": "Case",
-      "actions": "Actions",
-      "printRx": "Print Rx",
-      "printToken": "Print Token",
-      "lastVisit": "Last Visit",
-      "followUp": "Follow Up",
-      "completed": "Completed",
-      "newCase": "New / Fee",
-      "vitals": "Vitals",
-      "notApplicable": "NA",
-      "noPhone": "No mobile on file"
-    },
-    "empty": {
-      "current": "No appointments found",
-      "past": "No past appointments found",
-      "future": "No future appointments found"
-    },
-    "preview": {
-      "title": "Prescription Preview",
-      "description": "Download, share, or print the prescription PDF."
-    },
-    "calendar": {
-      "loading": "Loading calendar..."
-    },
-    "assistant": {
-      "loading": "Loading assistant..."
-    },
-    "cancelDialog": {
-      "title": "Cancel Appointment",
-      "description": "Are you sure you want to cancel this appointment? This action cannot be undone.",
-      "patient": "Patient",
-      "patientId": "Patient ID",
-      "doctor": "Doctor",
-      "appointmentId": "Appointment ID",
-      "keepAppointment": "Keep Appointment",
-      "confirmCancel": "Cancel Appointment",
-      "cancelling": "Cancelling..."
-    },
-    "settings": {
-      "fields": "Fields",
-      "personalData": "Personal Data",
-      "personalShort": "Personal",
-      "layoutLab": "Layout Lab",
-      "layoutShort": "Layout"
-    }
-  },
   "patientForm": {
     "title": "Book Appointment",
     "description": "Please fill in the patient information to schedule your appointment.",
@@ -3143,6 +2969,13 @@
       "keepAppointment": "No, Keep It",
       "cancelling": "Cancelling...",
       "confirmCancel": "Yes, Cancel Appointment"
+    },
+    "markDoneDialog": {
+      "title": "Mark Appointment as Done",
+      "description": "Do you want to mark this patient's appointment as completed?",
+      "confirm": "Yes, Mark as Done",
+      "cancel": "Cancel",
+      "marking": "Marking as Done..."
     },
     "settings": {
       "fields": "Prescription Sections",
