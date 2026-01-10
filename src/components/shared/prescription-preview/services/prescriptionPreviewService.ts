@@ -40,7 +40,7 @@ export const prescriptionPreviewService = {
       typography: templateConfig.typography,
       payload: {
         ...payload,
-        qrCodeData: `https://easyhms.com/verify/${response.appointmentId}`
+        qrCodeData: `${import.meta.env.VITE_APP_URL || window.location.origin}/verify/${response.appointmentId}`
       },
       templateUrl: templateConfig.templateUrl,
     });

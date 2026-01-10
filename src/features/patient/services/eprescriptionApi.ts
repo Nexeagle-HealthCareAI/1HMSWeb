@@ -172,6 +172,23 @@ export const eprescriptionApi = {
         );
         return apiClient.get<LookupSearchResponse>(endpoint);
     },
+
+    uploadVisitSummary: async (appointmentId: string, file: File) => {
+        const formData = new FormData();
+        formData.append('File', file);
+
+        const response = await apiClient.post(
+            `/e-prescription/visit-summary/upload`,
+            formData,
+            {
+                params: { AppointmentId: appointmentId },
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            }
+        );
+        return response as unknown as { success: boolean; message: string; url: string | null };
+    },
     getLookupDetails: async (
         hospitalId: string,
         doctorId: string

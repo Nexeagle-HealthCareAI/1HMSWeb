@@ -384,7 +384,8 @@ export const ClinicalDashboard: React.FC = () => {
     })) || [];
 
   // Loading + Error state combine
-  const isDataLoading = doctorProfileLoading || appointmentLoading;
+  // If profile is restricted (204), we shouldn't consider appointment loading state as blocking
+  const isDataLoading = doctorProfileLoading || (!doctorProfileRestricted && appointmentLoading);
 
   const normalizedDoctorProfileError = doctorProfileError as AxiosError | undefined;
   const normalizedAppointmentError = appointmentError as AxiosError | undefined;
@@ -1475,7 +1476,9 @@ export const ClinicalDashboard: React.FC = () => {
                                   <span>#{appointment.tokenDetails?.tokenNumber || t('docBoard.table.notAvailable')}</span>
                                 </div>
                                 <Badge variant="outline" className="text-[11px] bg-blue-50 text-blue-700 border-blue-200">
-                                  {t('docBoard.table.newCase')}
+                                  {(!appointment.appointmentType || appointment.appointmentType === 'New')
+                                    ? t('docBoard.table.newCase', { defaultValue: 'New Case' })
+                                    : appointment.appointmentType}
                                 </Badge>
                               </div>
 

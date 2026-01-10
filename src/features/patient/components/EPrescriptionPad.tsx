@@ -55,6 +55,7 @@ interface EPrescriptionData {
     height: string;
     bmi: string;
     oxygenSaturation: string;
+    respiratoryRate: string;
   };
   chiefComplaint: string;
   history: string;
@@ -256,6 +257,7 @@ const normalizeVitals = (raw: any): PatientVitalsResponse => {
     heightCm: base.heightCm ?? base.HeightCm ?? base.height ?? base.heightInCm ?? undefined,
     weightKg: base.weightKg ?? base.WeightKg ?? base.weight ?? base.weightInKg ?? undefined,
     bmi: base.bmi ?? base.Bmi ?? undefined,
+    respiratoryRate: base.respiratoryRate ?? base.RespiratoryRate ?? base.rr ?? undefined,
   };
 };
 
@@ -328,7 +330,9 @@ const AutoSaveHandler: React.FC<{
           spo2: Number(prescriptionData.vitals.oxygenSaturation) || 0,
           heightCm: Number(prescriptionData.vitals.height) || 0,
           weightKg: Number(prescriptionData.vitals.weight) || 0,
+          weightKg: Number(prescriptionData.vitals.weight) || 0,
           bmi: Number(prescriptionData.vitals.bmi) || 0,
+          respiratoryRate: Number(prescriptionData.vitals.respiratoryRate) || 0,
         }),
         chiefComplaint: JSON.stringify(prescriptionData.chiefComplaint),
         history: JSON.stringify(prescriptionData.history),
@@ -407,7 +411,9 @@ const AutoSaveHandler: React.FC<{
             spo2: Number(prescriptionData.vitals.oxygenSaturation) || 0,
             heightCm: Number(prescriptionData.vitals.height) || 0,
             weightKg: Number(prescriptionData.vitals.weight) || 0,
+            weightKg: Number(prescriptionData.vitals.weight) || 0,
             bmi: Number(prescriptionData.vitals.bmi) || 0,
+            respiratoryRate: Number(prescriptionData.vitals.respiratoryRate) || 0,
           },
           chiefComplaint: prescriptionData.chiefComplaint,
           history: prescriptionData.history,
@@ -536,7 +542,9 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
       weight: '',
       height: '',
       bmi: '',
-      oxygenSaturation: ''
+      bmi: '',
+      oxygenSaturation: '',
+      respiratoryRate: ''
     },
     chiefComplaint: '',
     history: '',
@@ -628,7 +636,9 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             spo2: Number(prescriptionData.vitals.oxygenSaturation) || 0,
             heightCm: Number(prescriptionData.vitals.height) || 0,
             weightKg: Number(prescriptionData.vitals.weight) || 0,
+            weightKg: Number(prescriptionData.vitals.weight) || 0,
             bmi: Number(prescriptionData.vitals.bmi) || 0,
+            respiratoryRate: Number(prescriptionData.vitals.respiratoryRate) || 0,
           },
           chiefComplaint: prescriptionData.chiefComplaint,
           history: prescriptionData.history,
@@ -689,6 +699,28 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
 
         const response = await eprescriptionApi.saveSubmit(payload);
         if (response.success) {
+          try {
+            // Generate PDF and Upload
+            const { blob } = await import('@/components/shared/prescription-preview/services/prescriptionPreviewService')
+              .then(m => m.prescriptionPreviewService.buildPreviewFromRequest({
+                appointmentId: resolvedAppointmentId,
+                patientId: resolvedPatientId,
+                hospitalId: hid,
+                doctorId: did
+              }));
+
+            // Create validated file object
+            const file = new File([blob], `Prescription-${resolvedAppointmentId}.pdf`, { type: 'application/pdf' });
+
+            // Upload
+            await eprescriptionApi.uploadVisitSummary(resolvedAppointmentId, file);
+
+          } catch (pdfError) {
+            console.error('Failed to generate/upload prescription PDF', pdfError);
+            // We don't block the success flow, but maybe warn?
+            // toast({ variant: 'warning', title: 'Upload Failed', description: 'Prescription saved but PDF upload failed.' });
+          }
+
           toast({
             title: 'Submitted',
             description: 'Prescription has been successfully submitted.',
@@ -749,7 +781,9 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             spo2: Number(prescriptionData.vitals.oxygenSaturation) || 0,
             heightCm: Number(prescriptionData.vitals.height) || 0,
             weightKg: Number(prescriptionData.vitals.weight) || 0,
+            weightKg: Number(prescriptionData.vitals.weight) || 0,
             bmi: Number(prescriptionData.vitals.bmi) || 0,
+            respiratoryRate: Number(prescriptionData.vitals.respiratoryRate) || 0,
           },
           chiefComplaint: prescriptionData.chiefComplaint,
           history: prescriptionData.history,
@@ -2184,6 +2218,23 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                         vitals: { ...prev.vitals, oxygenSaturation: e.target.value }
                       }))}
                       className="h-8 text-sm border-gray-200 dark:border-gray-700 focus:border-purple-400 dark:focus:border-purple-300 focus:ring-1 focus:ring-purple-100 dark:focus:ring-purple-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
+                    />
+                  </div>
+
+                  {/* Respiratory Rate */}
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <div className="w-1.5 h-1.5 bg-teal-500 rounded-full"></div>
+                      <Label className="text-xs font-medium text-gray-600 dark:text-gray-200">Respiratory Rate (breaths/min)</Label>
+                    </div>
+                    <Input
+                      placeholder="16"
+                      value={prescriptionData.vitals.respiratoryRate}
+                      onChange={(e) => setPrescriptionData(prev => ({
+                        ...prev,
+                        vitals: { ...prev.vitals, respiratoryRate: e.target.value }
+                      }))}
+                      className="h-8 text-sm border-gray-200 dark:border-gray-700 focus:border-teal-400 dark:focus:border-teal-300 focus:ring-1 focus:ring-teal-100 dark:focus:ring-teal-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
                     />
                   </div>
 

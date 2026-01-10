@@ -170,6 +170,7 @@ export interface PatientVitalsRequest {
     heightCm: number;
     weightKg: number;
     bmi: number;
+    respiratoryRate: number;
   };
   recordedBy: string;
 }
@@ -325,6 +326,12 @@ export const appointmentApi = {
   savePatientVitals: (request: PatientVitalsRequest): Promise<PatientVitalsResponse> => {
     const url = `/appointments/patient-vitals`;
     return apiClient.post(url, request);
+  },
+
+  // Get patient vitals
+  getPatientVitals: (patientId: string, appointmentId: string): Promise<{ vitals: any; success: boolean; message: string }> => {
+    const url = `/e-prescription/patient-details/vitals?patientId=${patientId}&appointmentId=${appointmentId}`;
+    return apiClient.get(url);
   },
 
   // Get appointment details

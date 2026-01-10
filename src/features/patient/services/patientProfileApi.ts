@@ -56,11 +56,27 @@ export const patientProfileApi = {
    * Update patient profile details
    */
   updatePatientProfile: async (
-    hospitalId: string, 
-    patientId: string, 
+    hospitalId: string,
+    patientId: string,
     data: UpdatePatientProfileData
   ): Promise<UpdatePatientProfileResponse> => {
     const endpoint = API_ENDPOINTS.PATIENTS.UPDATE_PROFILE_DETAILS(hospitalId, patientId);
     return apiClient.put<UpdatePatientProfileResponse>(endpoint, data);
+  },
+
+  /**
+   * Get visit summary PDF URL
+   */
+  getVisitSummary: async (appointmentId: string): Promise<{ success: boolean; message: string; pdfUrl: string | null }> => {
+    // Handling the specific path format requested by user: /patient/visit-summary/appointmentId=...
+    // But assuming standard query param first: /patient/visit-summary?appointmentId=...
+    // If we strictly follow the user's curl:
+    // 'https://.../patient/visit-summary/appointmentId=3fa85f64...'
+    // This implies the ID is a path segment OR a query param without '?'.
+    // Let's use the safer query param approach which is standard for 'appointmentId' filters.
+    return apiClient.get<{ success: boolean; message: string; pdfUrl: string | null }>(
+      '/patient/visit-summary',
+      { params: { appointmentId } }
+    );
   },
 };

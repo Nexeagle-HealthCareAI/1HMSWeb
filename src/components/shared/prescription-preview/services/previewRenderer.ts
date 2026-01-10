@@ -363,7 +363,9 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   const pUhid = toUpper(patient.patientId ? `ID: ${patient.patientId}` : '');
 
   // Dynamic width calculation
-  const availableWidth = pageWidth - rightPad - nameX; // Width from name start to right margin
+  // Reserve space for Vitals column on the right (approx 35% + padding)
+  const vitalsReservedWidth = (contentWidth * 0.35) + 10;
+  const availableWidth = pageWidth - rightPad - nameX - vitalsReservedWidth;
   const col1Width = availableWidth * 0.30; // Age/Gender (Reduced from 0.45 to bring UHID closer)
   const col2Width = availableWidth - col1Width; // UHID takes remaining space
 
@@ -373,7 +375,9 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
 
   // Address
   if (patient.address) {
-    const address = toUpper([patient.address, patient.city].filter(Boolean).join(', '));
+    const rawAddress = [patient.address, patient.city].filter(Boolean).join(', ');
+    // Ensure spaces after commas for better wrapping
+    const address = toUpper(rawAddress.replace(/,/g, ', ').replace(/\s+/g, ' '));
     page.drawText('ADDRESS', { x: nameX, y: cursorY, size: sizeSm, font: boldFont, color: COLORS.TextLight });
 
     const addressLines = wrapText(address, regularFont, sizeBase, availableWidth);
@@ -384,7 +388,8 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
       addressY -= lineHeight;
     });
 
-    cursorY = addressY - lineHeight;
+    // Add a bit less padding after address to keep it tight
+    cursorY = addressY - (lineHeight * 0.5);
   }
 
   // Vitals Side Box (Right) -- Simplified placement

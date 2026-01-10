@@ -66,6 +66,7 @@ export interface DoctorAppointmentDetail {
   reason: string;
   insuranceId: string | null;
   paymentMode: string;
+  appointmentType?: string;
   lastStatusAt: string;
   createdAt: string;
   tokenDetails: {

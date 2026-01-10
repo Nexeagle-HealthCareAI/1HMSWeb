@@ -46,6 +46,55 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
     weightUnit: 'kg'
   });
 
+  // Fetch existing vitals on mount
+  React.useEffect(() => {
+    const fetchVitals = async () => {
+      // Import appointmentApi here to avoid circular dependency issues if any, or just use the imported one
+      const { appointmentApi } = await import('@/features/appointment/services/appointmentApi');
+
+      try {
+        console.log('Fetching vitals for:', { patientId, appointmentId });
+        const response = await appointmentApi.getPatientVitals(patientId, appointmentId);
+        console.log('Fetched vitals response:', response);
+
+        // API might return { vitals: ... } without success field based on user snippet
+        // or { success: true, vitals: ... }
+        // We'll check if vitals exists, or if success is true (if present)
+        const hasVitals = response && response.vitals;
+        const isSuccess = response.success !== false; // Assume success unless explicitly false
+
+        if (hasVitals && isSuccess) {
+          const v = response.vitals;
+
+          // Helper to convert to string safely
+          const str = (val: any) => (val !== undefined && val !== null && val !== 0 ? String(val) : '');
+
+          setVitalsData(prev => ({
+            ...prev,
+            systolic: str(v.Bp?.Sys),
+            diastolic: str(v.Bp?.Dia),
+            heartRate: str(v.Pulse),
+            respiratoryRate: str(v.RespiratoryRate), // Assuming PascalCase if present
+            temperature: str(v.TempC),
+            temperatureUnit: 'C',
+            oxygenSaturation: str(v.Spo2),
+            height: v.HeightCm ? String(v.HeightCm) : '',
+            heightUnit: 'cm',
+            weight: v.WeightKg ? String(v.WeightKg) : '',
+            weightUnit: 'kg'
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching vitals:', error);
+        // Silent fail or toast? decided on silent for now as it's just pre-fill
+      }
+    };
+
+    if (patientId && appointmentId) {
+      fetchVitals();
+    }
+  }, [patientId, appointmentId]);
+
   const calculateBMI = () => {
     const height = parseFloat(vitalsData.height);
     const weight = parseFloat(vitalsData.weight);
@@ -100,7 +149,8 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
         weightKg: vitalsData.weightUnit === 'kg'
           ? parseFloat(vitalsData.weight) || 0
           : parseFloat(vitalsData.weight) * 0.453592, // Convert lbs to kg
-        bmi: parseFloat(bmi) || 0
+        bmi: parseFloat(bmi) || 0,
+        respiratoryRate: parseInt(vitalsData.respiratoryRate) || 0
       },
       recordedBy: userId || ''
     };
