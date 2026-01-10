@@ -62,9 +62,6 @@ const PrescriptionVerificationPage: React.FC = () => {
                     <p className="text-gray-500 mb-6">
                         {error || 'The prescription you are looking for is not available or has not been generated yet.'}
                     </p>
-                    <div className="p-4 bg-gray-50 rounded-md border border-gray-200">
-                        <p className="text-xs text-gray-400">Reference: {appointmentId}</p>
-                    </div>
                 </div>
             </div>
         );
