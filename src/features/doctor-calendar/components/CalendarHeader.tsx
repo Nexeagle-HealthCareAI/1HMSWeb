@@ -1,10 +1,13 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, RotateCcw, User } from 'lucide-react';
 import { useAuthStore } from '@/store';
 import { useUserDetails } from '@/hooks/useUserProfileApi';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
+import { cn } from '@/lib/utils';
 
 interface CalendarHeaderProps {
   currentDate: Date;
@@ -100,19 +103,38 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           >
             <ChevronLeft className="h-4 w-4 text-gray-600 dark:text-gray-400" />
           </Button>
-          
+
           <div className="flex flex-col items-center">
-            <Button
-              variant="ghost"
-              size="sm"
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "h-auto p-2 text-sm font-semibold text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200",
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {getViewLabel()}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={currentDate}
+                  onSelect={(date) => date && onDateChange(date)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            <span
+              className="text-xs text-gray-500 dark:text-gray-400 font-medium cursor-pointer hover:text-blue-600"
               onClick={handleToday}
-              className="h-auto p-2 text-sm font-semibold text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
             >
-              {getViewLabel()}
-            </Button>
-            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{t('doctorCalendar.clickForToday')}</span>
+              {t('doctorCalendar.clickForToday')}
+            </span>
           </div>
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -129,11 +151,10 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             variant={view === 'dayGridMonth' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => onViewChange('dayGridMonth')}
-            className={`h-7 px-3 text-xs font-medium rounded-md transition-all duration-200 ${
-              view === 'dayGridMonth' 
-                ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700' 
+            className={`h-7 px-3 text-xs font-medium rounded-md transition-all duration-200 ${view === 'dayGridMonth'
+                ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700'
                 : 'text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-            }`}
+              }`}
           >
             {t('doctorCalendar.views.month')}
           </Button>
@@ -141,11 +162,10 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             variant={view === 'timeGridWeek' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => onViewChange('timeGridWeek')}
-            className={`h-7 px-3 text-xs font-medium rounded-md transition-all duration-200 ${
-              view === 'timeGridWeek' 
-                ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700' 
+            className={`h-7 px-3 text-xs font-medium rounded-md transition-all duration-200 ${view === 'timeGridWeek'
+                ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700'
                 : 'text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-            }`}
+              }`}
           >
             {t('doctorCalendar.views.week')}
           </Button>
@@ -153,11 +173,10 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             variant={view === 'timeGridDay' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => onViewChange('timeGridDay')}
-            className={`h-7 px-3 text-xs font-medium rounded-md transition-all duration-200 ${
-              view === 'timeGridDay' 
-                ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700' 
+            className={`h-7 px-3 text-xs font-medium rounded-md transition-all duration-200 ${view === 'timeGridDay'
+                ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700'
                 : 'text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-            }`}
+              }`}
           >
             {t('doctorCalendar.views.day')}
           </Button>

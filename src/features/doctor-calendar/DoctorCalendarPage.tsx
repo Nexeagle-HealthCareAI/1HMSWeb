@@ -260,6 +260,56 @@ export const DoctorCalendarPage: React.FC = () => {
     }
   }, [currentDate]);
 
+  // Auto-scroll to earliest shift
+  React.useEffect(() => {
+    if (calendarRef.current && events.length > 0 && !isInitialLoading) {
+      const calendarApi = calendarRef.current.getApi();
+
+      // Filter for shift events only
+      const shiftEvents = events.filter(e =>
+        e.extendedProps?.type === 'shift' ||
+        // Also check if it's a shift that might be marked differently
+        (e.extendedProps as any)?.isWorkingShift
+      );
+
+      if (shiftEvents.length > 0) {
+        // Find the earliest start time
+        let earliestTime = '23:59:59';
+        let hasShifts = false;
+
+        shiftEvents.forEach(event => {
+          if (event.start) {
+            const date = new Date(event.start);
+            const timeStr = format(date, 'HH:mm:ss');
+            if (timeStr < earliestTime) {
+              earliestTime = timeStr;
+              hasShifts = true;
+            }
+          }
+        });
+
+        if (hasShifts) {
+          // Add a 30-minute buffer if possible (handled by subtracting from the date object or string manipulation)
+          // Simple string manipulation for HH:mm:ss
+          const [hours, minutes, seconds] = earliestTime.split(':').map(Number);
+          let scrollHours = hours;
+          let scrollMinutes = minutes - 30;
+
+          if (scrollMinutes < 0) {
+            scrollMinutes += 60;
+            scrollHours -= 1;
+          }
+
+          if (scrollHours < 0) scrollHours = 0;
+
+          const scrollTime = `${String(scrollHours).padStart(2, '0')}:${String(scrollMinutes).padStart(2, '0')}:00`;
+
+          calendarApi.scrollToTime(scrollTime);
+        }
+      }
+    }
+  }, [events, isInitialLoading, view, currentDate]);
+
   // Initial loading delay to ensure all API calls complete
   React.useEffect(() => {
     const timer = setTimeout(() => {

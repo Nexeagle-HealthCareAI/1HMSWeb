@@ -269,6 +269,7 @@ export interface AppointmentDetail {
     status: string | null;
     createdAt: string;
   };
+  departments?: string[];
 }
 
 // Appointment API service

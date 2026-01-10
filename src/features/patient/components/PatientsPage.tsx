@@ -44,7 +44,14 @@ import {
 } from "@/components/ui/table";
 
 import { cn } from '@/lib/utils';
-import { mockCurrentAppointments, StatusTransitionStep } from '../utils/mockCurrentAppointments';
+
+export interface StatusTransitionStep {
+  status: 'VITALS_REQUIRED' | 'READY' | 'UNDER_CONSULT' | 'LAB_REQUIRED' | 'COMPLETED' | 'CANCELLED' | 'AWAITING_RECONSULT';
+  label: string;
+  isCompleted: boolean;
+  isCurrent: boolean;
+}
+
 
 import { appointmentApi, AppointmentDetail } from '@/features/appointment/services/appointmentApi';
 import { patientApi, PatientData } from '@/features/patient/services/patientApi';

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { useTranslation } from 'react-i18next';
 
-import { 
+import {
   Users,
   Calendar,
   DollarSign,
@@ -41,8 +41,7 @@ import {
   MessageSquare,
   Copy
 } from 'lucide-react';
-import { 
-  DashboardOverview,
+import {
   UserManagementModule,
   PatientManagementModule,
 } from './index';
@@ -52,28 +51,12 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { SystemConfigModule } from './SystemConfigModule';
 
-type KPIMetric = {
-  value: number;
-  trend: 'up' | 'down';
-  change: number;
-};
+
 
 
 
 export const AdminDashboard = () => {
-    // Badge renderer for status
-    const getStatusBadge = (status: string) => {
-      switch (status) {
-        case 'confirmed':
-          return <Badge className="bg-green-50 text-green-700 border-green-200 text-xs px-1.5 py-0.5 font-medium">{t('admin.confirmed')}</Badge>;
-        case 'pending':
-          return <Badge className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs px-1.5 py-0.5 font-medium">{t('admin.pending')}</Badge>;
-        case 'cancelled':
-          return <Badge className="bg-red-50 text-red-700 border-red-200 text-xs px-1.5 py-0.5 font-medium">{t('admin.cancelled')}</Badge>;
-        default:
-          return <Badge variant="outline">{status}</Badge>;
-      }
-    };
+
   const { toast } = useToast();
   const { t } = useTranslation();
   // Fix: Ensure setCurrentView is defined
@@ -86,9 +69,9 @@ export const AdminDashboard = () => {
 
   // Fetch hospital profile status and compute completion from API
   const hospitalId = useAuthStore(state => state.hospitalId) ?? '';
-  const { 
-    data: hospitalData, 
-    isLoading: hospitalLoading, 
+  const {
+    data: hospitalData,
+    isLoading: hospitalLoading,
     isFetching: hospitalFetching,
     isError: hospitalError
   } = useHospitalApi.getHospitalById(hospitalId);
@@ -116,59 +99,32 @@ export const AdminDashboard = () => {
     }
   }, [shouldShowHospitalPopup]);
 
-useEffect(() => {
-  if (!hasCompletedHospitalProfileFetch) return;
-  if (hospitalScore >= 100) {
-    if (hospitalAccessRestricted) {
-      setHospitalAccessRestriction(false, null);
+  useEffect(() => {
+    if (!hasCompletedHospitalProfileFetch) return;
+    if (hospitalScore >= 100) {
+      if (hospitalAccessRestricted) {
+        setHospitalAccessRestriction(false, null);
+      }
+      if (showHospitalRegistrationDialog) {
+        setShowHospitalRegistrationDialog(false);
+      }
+      if (!bannerDismissed) {
+        setBannerDismissed(true);
+      }
     }
-    if (showHospitalRegistrationDialog) {
-      setShowHospitalRegistrationDialog(false);
-    }
-    if (!bannerDismissed) {
-      setBannerDismissed(true);
-    }
-  }
-}, [hasCompletedHospitalProfileFetch, hospitalScore, hospitalAccessRestricted, setHospitalAccessRestriction, showHospitalRegistrationDialog, bannerDismissed]);
+  }, [hasCompletedHospitalProfileFetch, hospitalScore, hospitalAccessRestricted, setHospitalAccessRestriction, showHospitalRegistrationDialog, bannerDismissed]);
 
-  const renderKPICard = (title: string, icon: React.ReactNode, data: KPIMetric, isCurrency = false) => (
-    <Card className="hover:shadow-lg transition-shadow">
-      <CardContent className="p-4 lg:p-6">
-        <div className="flex items-center justify-between">
-          <div className="min-w-0 flex-1">
-            <p className="text-xs lg:text-sm font-medium text-muted-foreground truncate">{title}</p>
-            <p className="text-lg lg:text-2xl font-bold">
-              {isCurrency ? `$${data.value.toLocaleString()}` : data.value.toLocaleString()}
-            </p>
-          </div>
-          <div className="p-2 lg:p-3 bg-primary/10 rounded-full ml-2">
-            {icon}
-          </div>
-        </div>
-        <div className="flex items-center mt-2 lg:mt-4">
-          {data.trend === 'up' ? (
-            <TrendingUp className="h-3 w-3 lg:h-4 lg:w-4 text-green-500 mr-1" />
-          ) : (
-            <TrendingDown className="h-3 w-3 lg:h-4 lg:w-4 text-red-500 mr-1" />
-          )}
-          <span className={`text-xs lg:text-sm font-medium ${data.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
-            {data.change > 0 ? '+' : ''}{data.change}%
-          </span>
-          <span className="text-xs lg:text-sm text-muted-foreground ml-1 hidden sm:inline">{t('admin.vsLastPeriod')}</span>
-        </div>
-      </CardContent>
-    </Card>
-  );
+
 
   const adminModules = [
     { id: 'dashboard', name: t('admin.dashboard'), icon: Activity, description: t('admin.overviewAnalytics') },
     { id: 'user-management', name: t('admin.userManagement'), icon: Shield, description: t('admin.usersRolesPermissions') },
     { id: 'patient-management', name: t('admin.patientManagement'), icon: Users, description: t('admin.patientRecordsData') },
-//{ id: 'appointment-oversight', name: t('admin.appointmentOversight'), icon: Calendar, description: t('admin.appointmentManagement') },
+    //{ id: 'appointment-oversight', name: t('admin.appointmentOversight'), icon: Calendar, description: t('admin.appointmentManagement') },
     //{ id: 'billing-insurance', name: t('admin.billingInsurance'), icon: CreditCard, description: t('admin.financialManagement') },
-//{ id: 'bulk-messaging', name: t('admin.bulkMessaging'), icon: MessageSquare, description: t('admin.communicationManagement') },
+    //{ id: 'bulk-messaging', name: t('admin.bulkMessaging'), icon: MessageSquare, description: t('admin.communicationManagement') },
     { id: 'system-config', name: t('admin.systemConfiguration'), icon: Cog, description: t('admin.hospitalSettings') },
-   // { id: 'audit-security', name: t('admin.auditSecurity'), icon: ShieldCheck, description: t('admin.logsSecurity') }
+    // { id: 'audit-security', name: t('admin.auditSecurity'), icon: ShieldCheck, description: t('admin.logsSecurity') }
   ];
 
   const profileChecklist = [
@@ -273,41 +229,41 @@ useEffect(() => {
   const focusHospitalBranding = useCallback(() => {
     setCurrentView('system-config-hospital');
   }, [setCurrentView]);
-  
-    const quickActions = [
-      {
-        id: 'branding',
-        label: t('admin.quickActions.brandingLabel'),
-        description: t('admin.quickActions.brandingDescription'),
-        Icon: Building2,
-        action: focusHospitalBranding,
-        disabled: false
-      },
-      {
-        id: 'systemConfig',
-        label: t('admin.quickActions.systemConfigLabel'),
-        description: t('admin.quickActions.systemConfigDescription'),
-        Icon: Cog,
-        action: () => setCurrentView('system-config'),
-        disabled: false
-      },
-      {
-        id: 'userAccess',
-        label: t('admin.quickActions.userAccessLabel'),
-        description: t('admin.quickActions.userAccessDescription'),
-        Icon: Shield,
-        action: () => setCurrentView('user-management'),
-        disabled: !accessUnlocked
-      }
-    ];
+
+  const quickActions = [
+    {
+      id: 'branding',
+      label: t('admin.quickActions.brandingLabel'),
+      description: t('admin.quickActions.brandingDescription'),
+      Icon: Building2,
+      action: focusHospitalBranding,
+      disabled: false
+    },
+    {
+      id: 'systemConfig',
+      label: t('admin.quickActions.systemConfigLabel'),
+      description: t('admin.quickActions.systemConfigDescription'),
+      Icon: Cog,
+      action: () => setCurrentView('system-config'),
+      disabled: false
+    },
+    {
+      id: 'userAccess',
+      label: t('admin.quickActions.userAccessLabel'),
+      description: t('admin.quickActions.userAccessDescription'),
+      Icon: Shield,
+      action: () => setCurrentView('user-management'),
+      disabled: !accessUnlocked
+    }
+  ];
 
 
 
   return (
-  <div ref={dashboardRootRef} className="min-h-screen w-full p-3 sm:p-4 lg:p-6 space-y-5 sm:space-y-6 bg-gray-50 dark:bg-gray-950 relative z-0">
+    <div ref={dashboardRootRef} className="min-h-screen w-full p-3 sm:p-4 lg:p-6 space-y-5 sm:space-y-6 bg-gray-50 dark:bg-gray-950 relative z-0">
       {/* Hospital Registration Progress Dialog/Popup */}
-      <Dialog 
-        open={showHospitalRegistrationDialog} 
+      <Dialog
+        open={showHospitalRegistrationDialog}
         onOpenChange={(open) => {
           // Only allow closing explicitly through button clicks, not outside clicks
           if (!open) {
@@ -316,7 +272,7 @@ useEffect(() => {
           }
         }}
       >
-        <DialogContent 
+        <DialogContent
           className="max-w-[95vw] sm:max-w-md md:max-w-lg lg:max-w-2xl w-full mx-4"
           onPointerDownOutside={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}
@@ -342,7 +298,7 @@ useEffect(() => {
                 <div className="text-xs sm:text-sm text-blue-500 uppercase tracking-wide">{t('admin.complete')}</div>
               </div>
             </div>
-            
+
             {/* Progress Bar Section */}
             <div className="mb-4">
               <div className="flex justify-between items-center mb-2">
@@ -350,7 +306,7 @@ useEffect(() => {
                 <span className="text-xs sm:text-sm text-blue-600">{hospitalScore}/100%</span>
               </div>
               <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-3 sm:h-4 overflow-hidden">
-                <div 
+                <div
                   className="bg-gradient-to-r from-blue-600 to-blue-500 h-3 sm:h-4 rounded-full transition-all duration-500 ease-out relative"
                   style={{ width: `${hospitalScore}%` }}
                 >
@@ -358,7 +314,7 @@ useEffect(() => {
                 </div>
               </div>
             </div>
-            
+
             {/* Footer Section - Stack on mobile */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
               <div className="flex items-center gap-2 text-xs sm:text-sm">
@@ -378,13 +334,13 @@ useEffect(() => {
                   </>
                 )}
               </div>
-              
-              <Button 
+
+              <Button
                 onClick={() => {
                   setShowHospitalRegistrationDialog(false);
                   setBannerDismissed(true);
                   setCurrentView('system-config-hospital');
-                }} 
+                }}
                 className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 sm:px-6 py-2 text-sm sm:text-base"
               >
                 <span className="hidden sm:inline">
@@ -495,11 +451,10 @@ useEffect(() => {
                   aria-pressed={isActive}
                   tabIndex={isLocked ? -1 : 0}
                   title={isLocked ? t('admin.adminFeaturesLocked') : module.description}
-                  className={`group flex-1 lg:flex-none min-w-[96px] flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-2.5 py-1.5 border transition-all duration-300 text-[12px] ${
-                    isActive
+                  className={`group flex-1 lg:flex-none min-w-[96px] flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-2.5 py-1.5 border transition-all duration-300 text-[12px] ${isActive
                       ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white border-transparent shadow-xl shadow-blue-500/30'
                       : 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800/70'
-                  } ${isLocked ? 'opacity-40 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
+                    } ${isLocked ? 'opacity-40 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
                 >
                   <div className="flex items-center gap-1.5 text-[12px] font-semibold">
                     <span className={`p-1 rounded-lg ${isActive ? 'bg-white/20' : 'bg-gray-100 dark:bg-slate-800'}`}>
@@ -519,12 +474,12 @@ useEffect(() => {
         </div>
       </section>
 
-      {/* Dashboard Content */}
       {currentView === 'dashboard' && (
-        <DashboardOverview 
-          renderKPICard={renderKPICard}
-          getStatusBadge={getStatusBadge}
-        />
+        <div className="flex flex-col items-center justify-center h-[50vh] text-center">
+          <Activity className="h-16 w-16 text-gray-300 mb-4" />
+          <h3 className="text-xl font-semibold text-gray-600 dark:text-gray-300">Analysis Coming Soon</h3>
+          <p className="text-gray-500 dark:text-gray-400 mt-2 max-w-sm">We are working on bringing you advanced analytics and insights.</p>
+        </div>
       )}
 
       {/* User Management Module */}
@@ -532,13 +487,13 @@ useEffect(() => {
 
       {/* Patient Management Module */}
       {currentView === 'patient-management' && <PatientManagementModule />}
- 
- {/* System Configuration Module */}
-{(currentView === 'system-config' || currentView === 'system-config-hospital') && (
-  <div data-module={currentView === 'system-config-hospital' ? 'system-config-hospital' : 'system-config'}>
-    <SystemConfigModule focusTab={currentView === 'system-config-hospital' ? 'hospital' : undefined} />
-  </div>
-)}
+
+      {/* System Configuration Module */}
+      {(currentView === 'system-config' || currentView === 'system-config-hospital') && (
+        <div data-module={currentView === 'system-config-hospital' ? 'system-config-hospital' : 'system-config'}>
+          <SystemConfigModule focusTab={currentView === 'system-config-hospital' ? 'hospital' : undefined} />
+        </div>
+      )}
     </div>
   );
 };

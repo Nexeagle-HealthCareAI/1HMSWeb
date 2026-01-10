@@ -69,9 +69,9 @@ export const AppointmentDashboard = () => {
   const [showBooking, setShowBooking] = useState(false);
   const [bookingRefreshToken, setBookingRefreshToken] = useState(0);
   const [showVitalsForm, setShowVitalsForm] = useState(false);
-  const [showTokenPrint, setShowTokenPrint] = useState(false);
+
   const [selectedPatient, setSelectedPatient] = useState<AppointmentDetail | null>(null);
-  const [selectedAppointmentForToken, setSelectedAppointmentForToken] = useState<AppointmentDetail | null>(null);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -103,7 +103,7 @@ export const AppointmentDashboard = () => {
 
   const handlePrintToken = (appointment: AppointmentDetail) => {
     setTokenPrintData({
-      tokenNumber: appointment.token?.tokenNumber || 'N/A',
+      tokenNumber: String(appointment.token?.tokenNumber || 'N/A'),
       patientName: appointment.patientFullName,
       patientId: appointment.patientId,
       doctorName: appointment.doctorName || 'N/A',
@@ -203,17 +203,11 @@ export const AppointmentDashboard = () => {
     setSelectedPatient(null);
   };
 
-  const handleTokenPrintClick = (appointment: AppointmentDetail) => {
-    setSelectedAppointmentForToken(appointment);
-    setShowTokenPrint(true);
-  };
 
 
 
-  const handleTokenPrintClose = () => {
-    setShowTokenPrint(false);
-    setSelectedAppointmentForToken(null);
-  };
+
+
 
   const handleAddBillClick = (appointment: AppointmentDetail) => {
     setAppointmentForBilling(appointment);
@@ -1635,13 +1629,7 @@ export const AppointmentDashboard = () => {
       )}
 
       {/* Token Print Modal */}
-      {showTokenPrint && selectedAppointmentForToken && (
-        <TokenPrintModal
-          appointment={selectedAppointmentForToken}
-          isOpen={showTokenPrint}
-          onClose={handleTokenPrintClose}
-        />
-      )}
+
 
       <PrescriptionPreviewModal
         open={previewModalOpen}
