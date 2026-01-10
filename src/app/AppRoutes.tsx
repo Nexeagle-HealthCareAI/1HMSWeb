@@ -8,7 +8,7 @@ import { RouteGuard } from '@/components/guards/RouteGuard';
 // Role-based redirect component
 const RoleBasedRedirect = () => {
   const userRole = useAuthStore.getState().getUserRole();
-  
+
   if (userRole === 'Admin') {
     return <Navigate to="/admin" replace />;
   } else if (userRole === 'Doctor' || userRole === 'AdminDoctor') {
@@ -36,6 +36,7 @@ const ProfilePage = lazy(() => import('@/features/profile/components/ProfilePage
 
 const UserOnboardingRegistration = lazy(() => import('@/features/auth/components/UserOnboardingRegistration').then(module => ({ default: module.default })));
 const NotFoundPage = lazy(() => import('@/components/shared/NotFoundPage').then(module => ({ default: module.default })));
+const PrescriptionVerificationPage = lazy(() => import('@/features/patient/pages/PrescriptionVerificationPage').then(module => ({ default: module.default })));
 
 // Patient routes
 const PatientsPage = lazy(() => import('@/features/patient/components/PatientsPage').then(module => ({ default: module.PatientsPage })));
@@ -83,37 +84,43 @@ export const AppRoutes: React.FC = () => {
     <Suspense fallback={<RouteLoadingSpinner />}>
       <Routes>
         {/* Public Routes - No Authentication Required */}
-        <Route 
-          path="/user-onboarding" 
-          element={<UserOnboardingRegistration />} 
+        <Route
+          path="/user-onboarding"
+          element={<UserOnboardingRegistration />}
         />
 
-        <Route 
-          path="/login" 
+        <Route
+          path="/login"
           element={
             isActuallyAuthenticated ? (
               <RoleBasedRedirect />
             ) : (
               <LoginPage />
             )
-          } 
+          }
         />
 
-        <Route 
-          path="/404" 
-          element={<NotFoundPage />} 
+        {/* Verification Route - Public */}
+        <Route
+          path="/verify/:appointmentId"
+          element={<PrescriptionVerificationPage />}
+        />
+
+        <Route
+          path="/404"
+          element={<NotFoundPage />}
         />
 
         {/* Root Route */}
-        <Route 
-          path="/" 
+        <Route
+          path="/"
           element={
             isActuallyAuthenticated ? (
               <RoleBasedRedirect />
             ) : (
               <Navigate to="/login" replace />
             )
-          } 
+          }
         />
 
 
@@ -122,102 +129,102 @@ export const AppRoutes: React.FC = () => {
         {isActuallyAuthenticated ? (
           <>
             {/* Admin Route */}
-            <Route 
-              path="/admin" 
+            <Route
+              path="/admin"
               element={
                 <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
                   <MainLayout>
                     <AdminDashboard />
                   </MainLayout>
                 </RouteGuard>
-              } 
+              }
             />
 
             {/* Clinical Dashboard Route - Restricted to Doctor and AdminDoctor roles */}
-            <Route 
-              path="/dashboard" 
+            <Route
+              path="/dashboard"
               element={
                 <RouteGuard requiredRoles={['Doctor', 'AdminDoctor']}>
                   <MainLayout>
                     <ClinicalDashboard />
                   </MainLayout>
                 </RouteGuard>
-              } 
+              }
             />
 
             {/* Doctor Calendar Route - Restricted to Doctor and AdminDoctor roles */}
-            <Route 
-              path="/calendar" 
+            <Route
+              path="/calendar"
               element={
                 <RouteGuard requiredRoles={['Doctor', 'AdminDoctor']}>
                   <MainLayout>
                     <DoctorCalendar />
                   </MainLayout>
                 </RouteGuard>
-              } 
+              }
             />
 
             {/* Redirect /docboard to /dashboard for consistency */}
-            <Route 
-              path="/docboard" 
+            <Route
+              path="/docboard"
               element={<Navigate to="/dashboard" replace />}
             />
 
             {/* Appointment Routes - Accessible to Admin, AdminDoctor, Receptionist, and Nurse roles */}
-            <Route 
-              path="/appointment-dashboard" 
+            <Route
+              path="/appointment-dashboard"
               element={
                 <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Receptionist', 'Nurse']}>
                   <MainLayout>
                     <AppointmentDashboard />
                   </MainLayout>
                 </RouteGuard>
-              } 
+              }
             />
-            <Route 
-              path="/appointment-booking" 
+            <Route
+              path="/appointment-booking"
               element={
                 <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Receptionist', 'Nurse']}>
                   <MainLayout>
                     <AppointmentBooking />
                   </MainLayout>
                 </RouteGuard>
-              } 
+              }
             />
-            <Route 
-              path="/appointment-oversight" 
+            <Route
+              path="/appointment-oversight"
               element={
                 <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Receptionist', 'Nurse']}>
                   <MainLayout>
                     <AppointmentOversight />
                   </MainLayout>
                 </RouteGuard>
-              } 
+              }
             />
 
             {/* AI Routes - Restricted to Doctor and AdminDoctor roles */}
-            <Route 
-              path="/doc-ai" 
+            <Route
+              path="/doc-ai"
               element={
                 <RouteGuard requiredRoles={['Doctor', 'AdminDoctor']}>
                   <MainLayout>
                     <DocAI />
                   </MainLayout>
                 </RouteGuard>
-              } 
+              }
             />
 
             {/* Profile Routes */}
-            <Route 
-              path="/profile" 
+            <Route
+              path="/profile"
               element={
                 <RouteGuard>
                   <MainLayout>
                     <ProfilePage onBack={() => window.history.back()} />
                   </MainLayout>
                 </RouteGuard>
-              } 
-            />        
+              }
+            />
 
 
             {/* Patient Routes - Restricted to Admin and AdminDoctor roles */}
@@ -256,9 +263,9 @@ export const AppRoutes: React.FC = () => {
         ) : null}
 
         {/* Catch-all route - show 404 page */}
-        <Route 
-          path="*" 
-          element={<NotFoundPage />} 
+        <Route
+          path="*"
+          element={<NotFoundPage />}
         />
       </Routes>
     </Suspense>
