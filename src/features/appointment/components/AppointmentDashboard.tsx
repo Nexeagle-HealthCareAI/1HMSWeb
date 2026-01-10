@@ -21,6 +21,11 @@ import {
   Activity,
   Loader2,
   Upload,
+  UserX,
+  Tag,
+  ArrowUp,
+  Minimize2,
+  Maximize2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -38,9 +43,8 @@ import {
   PaginationPrevious
 } from '@/components/ui/pagination';
 import { AppointmentBooking } from './AppointmentBooking';
-import { VitalsForm } from './VitalsForm';
 import { TokenPrintModal } from './TokenPrintModal';
-import { ArrowUp, Minimize2, Maximize2 } from 'lucide-react';
+import { VitalsForm } from './VitalsForm';
 import { format } from 'date-fns';
 import { useAppointmentDetails } from '../hooks/useAppointmentDetails';
 import { useAuthStore } from '@/store/authStore';
@@ -85,6 +89,29 @@ export const AppointmentDashboard = () => {
   const [showPatientProfileModal, setShowPatientProfileModal] = useState(false);
   const [patientProfileId, setPatientProfileId] = useState<string | null>(null);
   const [patientProfileName, setPatientProfileName] = useState<string | undefined>(undefined);
+
+  // Token Print State
+  const [tokenPrintOpen, setTokenPrintOpen] = useState(false);
+  const [tokenPrintData, setTokenPrintData] = useState<{
+    tokenNumber: string;
+    patientName: string;
+    patientId: string;
+    doctorName: string;
+    appointmentDate: string;
+    department?: string;
+  } | null>(null);
+
+  const handlePrintToken = (appointment: AppointmentDetail) => {
+    setTokenPrintData({
+      tokenNumber: appointment.token?.tokenNumber || 'N/A',
+      patientName: appointment.patientFullName,
+      patientId: appointment.patientId,
+      doctorName: appointment.doctorName || 'N/A',
+      appointmentDate: appointment.startAt,
+      department: appointment.departments?.[0] || undefined
+    });
+    setTokenPrintOpen(true);
+  };
 
   const handleOpenLabAttachments = (appointment: AppointmentDetail) => {
     setLabAttachmentModal({
@@ -591,6 +618,48 @@ export const AppointmentDashboard = () => {
     }
   }, [activeTab]);
 
+  // KPI Calculations
+  const kpiStats = useMemo(() => {
+    if (!appointments) return {
+      total: 0,
+      vitalsRequired: 0,
+      completed: 0,
+      doctorStats: [] as { name: string; count: number; noShowCount: number }[]
+    };
+
+    // Use all currently loaded appointments for stats (logic matches active tab/date range)
+    const currentViewAppointments = appointments;
+
+    const doctorMap = new Map<string, { total: number; noShow: number }>();
+
+    currentViewAppointments.forEach(apt => {
+      const docName = apt.doctorName || 'Unknown Doctor';
+      const currentStats = doctorMap.get(docName) || { total: 0, noShow: 0 };
+
+      currentStats.total += 1;
+
+      // Calculate No Show (VITALS_REQUIRED is considered No Show for Past appointments)
+      if (apt.finalStatusCode === 'VITALS_REQUIRED') {
+        currentStats.noShow += 1;
+      }
+
+      doctorMap.set(docName, currentStats);
+    });
+
+    const doctorStats = Array.from(doctorMap.entries()).map(([name, stats]) => ({
+      name,
+      count: stats.total,
+      noShowCount: stats.noShow
+    }));
+
+    return {
+      total: currentViewAppointments.length,
+      vitalsRequired: currentViewAppointments.filter(apt => apt.finalStatusCode === 'VITALS_REQUIRED').length,
+      completed: currentViewAppointments.filter(apt => apt.finalStatusCode === 'COMPLETED').length,
+      doctorStats
+    };
+  }, [appointments]);
+
   // Initial load when component mounts
   useEffect(() => {
     if (refetch && hospitalId) {
@@ -813,74 +882,78 @@ export const AppointmentDashboard = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Header - AdminDashboard Style */}
       <div className="px-3 sm:px-4 lg:px-6 py-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-gradient-to-br from-white via-blue-50/60 to-indigo-50 dark:from-slate-900 dark:via-slate-900/80 dark:to-slate-900 border-b border-white/70 dark:border-slate-800 rounded-2xl shadow-lg shadow-blue-100/30 dark:shadow-black/30 px-3 py-3 sm:px-6 sm:py-4">
+        <div className="space-y-6">
 
-          {/* Left: Title and Actions */}
-          <div className="flex flex-col gap-1 min-w-0">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
-                {t('appointmentDashboard.title')}
-              </h1>
+          {/* Header Section */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-gradient-to-br from-white via-blue-50/60 to-indigo-50 dark:from-slate-900 dark:via-slate-900/80 dark:to-slate-900 border-b border-white/70 dark:border-slate-800 rounded-2xl shadow-lg shadow-blue-100/30 dark:shadow-black/30 px-3 py-3 sm:px-6 sm:py-4">
 
-              <Button
-                onClick={handleBookingClick}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 rounded-full px-5 sm:px-6 h-9 sm:h-10 gap-2 ml-2 transition-all duration-300 hover:-translate-y-0.5"
-              >
-                <div className="bg-white/20 rounded-full p-1">
-                  <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
+            {/* Left: Title and Actions */}
+            <div className="flex flex-col gap-1 min-w-0">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
+                  {t('appointmentDashboard.title')}
+                </h1>
+
+                <Button
+                  onClick={handleBookingClick}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 rounded-full px-5 sm:px-6 h-9 sm:h-10 gap-2 ml-2 transition-all duration-300 hover:-translate-y-0.5"
+                >
+                  <div className="bg-white/20 rounded-full p-1">
+                    <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
+                  </div>
+                  <span className="hidden sm:inline font-semibold tracking-wide">{t('appointmentDashboard.bookAppointment')}</span>
+                  <span className="sm:hidden font-semibold">Book</span>
+                </Button>
+              </div>
+
+              {/* Live Status Indicators */}
+              {activeTab === 'current' && (
+                <div className="flex items-center gap-2 mt-1 px-1">
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/50 dark:bg-slate-800/50 border border-blue-100 dark:border-slate-700 text-[10px] sm:text-xs font-medium text-gray-600 dark:text-gray-300">
+                    {isRefreshing ? <RefreshCw className="h-3 w-3 animate-spin text-blue-500" /> : <Activity className="h-3 w-3 text-emerald-500" />}
+                    <span>{isRefreshing ? 'Updating...' : 'Live System'}</span>
+                    <div className="w-px h-3 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+                    {connectionStatus === 'online' ? <Wifi className="h-3 w-3 text-emerald-500" /> : <WifiOff className="h-3 w-3 text-red-500" />}
+                    <span className={connectionStatus === 'online' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>
+                      {connectionStatus === 'online' ? 'Online' : 'Offline'}
+                    </span>
+                  </div>
                 </div>
-                <span className="hidden sm:inline font-semibold tracking-wide">{t('appointmentDashboard.bookAppointment')}</span>
-                <span className="sm:hidden font-semibold">Book</span>
-              </Button>
+              )}
             </div>
 
-            {/* Live Status Indicators */}
-            {activeTab === 'current' && (
-              <div className="flex items-center gap-2 mt-1 px-1">
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/50 dark:bg-slate-800/50 border border-blue-100 dark:border-slate-700 text-[10px] sm:text-xs font-medium text-gray-600 dark:text-gray-300">
-                  {isRefreshing ? <RefreshCw className="h-3 w-3 animate-spin text-blue-500" /> : <Activity className="h-3 w-3 text-emerald-500" />}
-                  <span>{isRefreshing ? 'Updating...' : 'Live System'}</span>
-                  <div className="w-px h-3 bg-gray-300 dark:bg-gray-600 mx-1"></div>
-                  {connectionStatus === 'online' ? <Wifi className="h-3 w-3 text-emerald-500" /> : <WifiOff className="h-3 w-3 text-red-500" />}
-                  <span className={connectionStatus === 'online' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>
-                    {connectionStatus === 'online' ? 'Online' : 'Offline'}
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Right: Navigation Tabs */}
-          <nav className="flex flex-wrap gap-2 bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-1 shadow-inner shadow-white/60 dark:shadow-black/40 mt-3 sm:mt-0 min-w-[220px] justify-end">
-            {[
-              { key: 'current', label: t('appointmentDashboard.tabs.current'), Icon: Clock, desc: 'Active Queue' },
-              { key: 'past', label: t('appointmentDashboard.tabs.past'), Icon: Calendar, desc: 'History' },
-              { key: 'future', label: t('appointmentDashboard.tabs.future'), Icon: CalendarDays, desc: 'Upcoming' },
-            ].map((tab) => {
-              const isActive = activeTab === tab.key;
-              const Icon = tab.Icon;
-              return (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key as any)}
-                  className={`group flex-1 lg:flex-none min-w-[96px] flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-2.5 py-1.5 border transition-all duration-300 text-[12px] ${isActive
-                    ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white border-transparent shadow-xl shadow-blue-500/30'
-                    : 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800/70'
-                    } hover:-translate-y-0.5`}
-                >
-                  <div className="flex items-center gap-1.5 text-[12px] font-semibold">
-                    <span className={`p-1 rounded-lg ${isActive ? 'bg-white/20' : 'bg-gray-100 dark:bg-slate-800'}`}>
-                      <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-blue-500 dark:text-blue-400'}`} />
+            {/* Right: Navigation Tabs */}
+            <nav className="flex flex-wrap gap-2 bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-1 shadow-inner shadow-white/60 dark:shadow-black/40 mt-3 sm:mt-0 min-w-[220px] justify-end">
+              {[
+                { key: 'current', label: t('appointmentDashboard.tabs.current'), Icon: Clock, desc: 'Active Queue' },
+                { key: 'past', label: t('appointmentDashboard.tabs.past'), Icon: Calendar, desc: 'History' },
+                { key: 'future', label: t('appointmentDashboard.tabs.future'), Icon: CalendarDays, desc: 'Upcoming' },
+              ].map((tab) => {
+                const isActive = activeTab === tab.key;
+                const Icon = tab.Icon;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key as any)}
+                    className={`group flex-1 lg:flex-none min-w-[96px] flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-2.5 py-1.5 border transition-all duration-300 text-[12px] ${isActive
+                      ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white border-transparent shadow-xl shadow-blue-500/30'
+                      : 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800/70'
+                      } hover:-translate-y-0.5`}
+                  >
+                    <div className="flex items-center gap-1.5 text-[12px] font-semibold">
+                      <span className={`p-1 rounded-lg ${isActive ? 'bg-white/20' : 'bg-gray-100 dark:bg-slate-800'}`}>
+                        <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-blue-500 dark:text-blue-400'}`} />
+                      </span>
+                      <span>{tab.label}</span>
+                    </div>
+                    <span className={`hidden sm:block text-[10px] leading-snug ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'}`}>
+                      {tab.desc}
                     </span>
-                    <span>{tab.label}</span>
-                  </div>
-                  <span className={`hidden sm:block text-[10px] leading-snug ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'}`}>
-                    {tab.desc}
-                  </span>
-                </button>
-              );
-            })}
-          </nav>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
         </div>
       </div>
 
@@ -888,6 +961,81 @@ export const AppointmentDashboard = () => {
       <div className="max-w-7xl mx-auto p-2 sm:p-4 md:p-6">
         {/* Main Content Area */}
         <div className="w-full">
+          {/* KPI Section */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
+            {/* Total Appointments */}
+            <div className="relative overflow-hidden bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/40 dark:to-gray-900 p-4 rounded-xl border border-indigo-100 dark:border-indigo-800/50 shadow-sm hover:shadow-md transition-all duration-300 group">
+              <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Calendar className="h-12 w-12 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div className="flex items-center gap-3 mb-2 relative z-10">
+                <div className="p-2 bg-indigo-100/80 dark:bg-indigo-900/50 rounded-lg shadow-sm group-hover:scale-110 transition-transform">
+                  <Calendar className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <span className="text-xs font-semibold uppercase tracking-wider text-indigo-900/70 dark:text-indigo-200/70">Total Appointments</span>
+              </div>
+              <div className="text-3xl font-black text-indigo-900 dark:text-white relative z-10 tracking-tight">{kpiStats.total}</div>
+            </div>
+
+            {activeTab !== 'future' && (
+              <>
+                {/* Vitals Required (No Show for Past) */}
+                <div className={`relative overflow-hidden ${activeTab === 'past' ? 'bg-gradient-to-br from-gray-50 to-white dark:from-gray-950/40 dark:to-gray-900 border-gray-100 dark:border-gray-800/50' : 'bg-gradient-to-br from-rose-50 to-white dark:from-rose-950/40 dark:to-gray-900 border-rose-100 dark:border-rose-800/50'} p-4 rounded-xl border shadow-sm hover:shadow-md transition-all duration-300 group`}>
+                  <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                    {activeTab === 'past' ? <UserX className="h-12 w-12 text-gray-600 dark:text-gray-400" /> : <Heart className="h-12 w-12 text-rose-600 dark:text-rose-400" />}
+                  </div>
+                  <div className="flex items-center gap-3 mb-2 relative z-10">
+                    <div className={`p-2 ${activeTab === 'past' ? 'bg-gray-100/80 dark:bg-gray-900/50' : 'bg-rose-100/80 dark:bg-rose-900/50'} rounded-lg shadow-sm group-hover:scale-110 transition-transform`}>
+                      {activeTab === 'past' ? <UserX className={`h-5 w-5 ${activeTab === 'past' ? 'text-gray-600 dark:text-gray-400' : 'text-rose-600 dark:text-rose-400'}`} /> : <Heart className="h-5 w-5 text-rose-600 dark:text-rose-400" />}
+                    </div>
+                    <span className={`text-xs font-semibold uppercase tracking-wider ${activeTab === 'past' ? 'text-gray-900/70 dark:text-gray-200/70' : 'text-rose-900/70 dark:text-rose-200/70'}`}>
+                      {activeTab === 'past' ? 'No Show' : 'Vitals Required'}
+                    </span>
+                  </div>
+                  <div className={`text-3xl font-black ${activeTab === 'past' ? 'text-gray-900 dark:text-white' : 'text-rose-900 dark:text-white'} relative z-10 tracking-tight`}>{kpiStats.vitalsRequired}</div>
+                </div>
+
+                {/* Completed */}
+                <div className="relative overflow-hidden bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/40 dark:to-gray-900 p-4 rounded-xl border border-emerald-100 dark:border-emerald-800/50 shadow-sm hover:shadow-md transition-all duration-300 group">
+                  <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <UserCheck className="h-12 w-12 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div className="flex items-center gap-3 mb-2 relative z-10">
+                    <div className="p-2 bg-emerald-100/80 dark:bg-emerald-900/50 rounded-lg shadow-sm group-hover:scale-110 transition-transform">
+                      <UserCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <span className="text-xs font-semibold uppercase tracking-wider text-emerald-900/70 dark:text-emerald-200/70">Completed</span>
+                  </div>
+                  <div className="text-3xl font-black text-emerald-900 dark:text-white relative z-10 tracking-tight">{kpiStats.completed}</div>
+                </div>
+              </>
+            )}
+
+            {/* Doctor Stats - Dynamically rendered */}
+            {kpiStats.doctorStats.map((doc, idx) => (
+              <div key={idx} className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/40 dark:to-gray-900 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50 shadow-sm hover:shadow-md transition-all duration-300 group">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="p-1.5 bg-blue-100/80 dark:bg-blue-900/50 rounded-md shadow-sm">
+                    <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 truncate w-full" title={doc.name}>{doc.name}</span>
+                </div>
+                <div className="flex flex-col gap-0.5 mt-1">
+                  <div className="flex items-baseline justify-between w-full">
+                    <span className="text-2xl font-black text-gray-900 dark:text-white">{doc.count}</span>
+                    <span className="text-[10px] text-gray-400 font-medium">Patients</span>
+                  </div>
+                  {activeTab === 'past' && doc.noShowCount > 0 && (
+                    <div className="flex items-center gap-1 text-[10px] text-red-500 font-medium bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded-full w-fit">
+                      <UserX className="h-3 w-3" />
+                      No Show: {doc.noShowCount}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
           {/* Current Appointments Section */}
           <div className="space-y-4">
 
@@ -925,35 +1073,53 @@ export const AppointmentDashboard = () => {
                 </div>
 
                 {/* Date Range Filter - Only show for Past and Future tabs */}
-                {(activeTab === 'past' || activeTab === 'future') && (
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 w-full sm:w-auto">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('appointmentDashboard.dateRange.label')}:</label>
-                    <div className="flex items-center gap-2">
-                      <div className="flex flex-col gap-1 w-full">
-                        <label className="text-xs text-gray-500 dark:text-gray-400">{t('appointmentDashboard.dateRange.start')}</label>
-                        <Input
-                          type="date"
-                          value={startDate}
-                          onChange={(e) => handleStartDateChange(e.target.value)}
-                          className="w-full sm:w-40 h-10 text-xs"
-                          placeholder={t('appointmentDashboard.dateRange.start')}
-                        />
-                      </div>
-                      <span className="text-gray-400 text-sm mt-6">{t('appointmentDashboard.dateRange.to')}</span>
-                      <div className="flex flex-col gap-1 w-full">
-                        <label className="text-xs text-gray-500 dark:text-gray-400">{t('appointmentDashboard.dateRange.end')}</label>
-                        <Input
-                          type="date"
-                          value={endDate}
-                          onChange={(e) => handleEndDateChange(e.target.value)}
-                          className="w-full sm:w-40 h-10 text-xs"
-                          placeholder={t('appointmentDashboard.dateRange.end')}
-                          min={startDate || undefined}
-                        />
+                {/* Date Range Filter - Only show for Past and Future tabs */}
+                {(activeTab === 'past' || activeTab === 'future') && (() => {
+                  const today = new Date();
+
+                  // Calculate Max Date for Past Tab (Yesterday)
+                  const yesterday = new Date(today);
+                  yesterday.setDate(yesterday.getDate() - 1);
+                  const maxPastDate = yesterday.toISOString().split('T')[0];
+
+                  // Calculate Min Date for Future Tab (Tomorrow)
+                  const tomorrow = new Date(today);
+                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  const minFutureDate = tomorrow.toISOString().split('T')[0];
+
+                  return (
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 w-full sm:w-auto">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('appointmentDashboard.dateRange.label')}:</label>
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-col gap-1 w-full">
+                          <label className="text-xs text-gray-500 dark:text-gray-400">{t('appointmentDashboard.dateRange.start')}</label>
+                          <Input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => handleStartDateChange(e.target.value)}
+                            className="w-full sm:w-40 h-10 text-xs"
+                            placeholder={t('appointmentDashboard.dateRange.start')}
+                            max={activeTab === 'past' ? maxPastDate : undefined}
+                            min={activeTab === 'future' ? minFutureDate : undefined}
+                          />
+                        </div>
+                        <span className="text-gray-400 text-sm mt-6">{t('appointmentDashboard.dateRange.to')}</span>
+                        <div className="flex flex-col gap-1 w-full">
+                          <label className="text-xs text-gray-500 dark:text-gray-400">{t('appointmentDashboard.dateRange.end')}</label>
+                          <Input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => handleEndDateChange(e.target.value)}
+                            className="w-full sm:w-40 h-10 text-xs"
+                            placeholder={t('appointmentDashboard.dateRange.end')}
+                            min={startDate || (activeTab === 'future' ? minFutureDate : undefined)}
+                            max={activeTab === 'past' ? maxPastDate : undefined}
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             </div>
 
@@ -1102,6 +1268,9 @@ export const AppointmentDashboard = () => {
                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.patientName')}</TableHead>
                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.doctorName')}</TableHead>
                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.tokenNo')}</TableHead>
+                          {activeTab === 'current' && (
+                            <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">{t('appointmentDashboard.table.printToken', { defaultValue: 'Print Token' })}</TableHead>
+                          )}
                           <TableHead className="font-semibold text-gray-900 dark:text-white text-xs py-1 px-1 md:py-2 md:px-2">
                             {activeTab === 'past'
                               ? t('appointmentDashboard.table.lastAppointmentDate')
@@ -1202,6 +1371,21 @@ export const AppointmentDashboard = () => {
                                   {appointment.token?.tokenNumber || t('appointmentDashboard.actionButtons.notApplicable')}
                                 </span>
                               </TableCell>
+
+                              {/* Print Token Action */}
+                              {activeTab === 'current' && (
+                                <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handlePrintToken(appointment)}
+                                    className="h-6 px-2 text-xs text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                                  >
+                                    <Tag className="h-2.5 w-2.5 mr-1" />
+                                    Print Token
+                                  </Button>
+                                </TableCell>
+                              )}
 
                               {/* Appointment Time / Last Appointment Date / Appointment Date */}
                               <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
@@ -1459,8 +1643,6 @@ export const AppointmentDashboard = () => {
         />
       )}
 
-
-
       <PrescriptionPreviewModal
         open={previewModalOpen}
         onOpenChange={handlePreviewModalChange}
@@ -1581,6 +1763,12 @@ export const AppointmentDashboard = () => {
         hospitalId={hospitalId || ''}
         patientId={patientProfileId || ''}
         patientName={patientProfileName}
+      />
+
+      <TokenPrintModal
+        open={tokenPrintOpen}
+        onOpenChange={setTokenPrintOpen}
+        tokenData={tokenPrintData}
       />
     </div>
   );

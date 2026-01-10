@@ -1,152 +1,112 @@
-import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import React, { useRef } from 'react';
+import { useReactToPrint } from 'react-to-print';
+import Barcode from 'react-barcode';
 import { Button } from '@/components/ui/button';
-import { TokenSlip } from './TokenSlip';
-import { AppointmentDetail } from '../services/appointmentApi';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Printer } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface TokenPrintModalProps {
-  appointment: AppointmentDetail;
-  isOpen: boolean;
-  onClose: () => void;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    tokenData: {
+        tokenNumber: string;
+        patientName: string;
+        patientId: string;
+        doctorName: string;
+        appointmentDate: string;
+        department?: string;
+    } | null;
 }
 
 export const TokenPrintModal: React.FC<TokenPrintModalProps> = ({
-  appointment,
-  isOpen,
-  onClose,
+    open,
+    onOpenChange,
+    tokenData
 }) => {
-  const [config, setConfig] = useState({
-    widthMm: 58 as 58 | 80,
-    showQR: false,
-    showVisitId: false,
-    hospitalName: 'NEXEAGLE HOSPITAL',
-    counterName: 'COUNTER 1',
-    departmentName: 'GENERAL',
-  });
+    const componentRef = useRef<HTMLDivElement>(null);
 
-  if (!isOpen) return null;
+    const handlePrint = useReactToPrint({
+        contentRef: componentRef,
+        onAfterPrint: () => onOpenChange(false),
+    });
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Print Token</h2>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="h-8 w-8 p-0"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+    if (!tokenData) return null;
 
-        {/* Configuration Options */}
-        <div className="p-4 border-b border-gray-200 bg-gray-50">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">Print Configuration</h3>
-          <div className="grid grid-cols-2 gap-4">
-            {/* Paper Width */}
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Paper Width
-              </label>
-              <select
-                value={config.widthMm}
-                onChange={(e) => setConfig(prev => ({ ...prev, widthMm: Number(e.target.value) as 58 | 80 }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-              >
-                <option value={58}>58mm (Standard)</option>
-                <option value={80}>80mm (Wide)</option>
-              </select>
-            </div>
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Print Token</DialogTitle>
+                </DialogHeader>
 
-            {/* Hospital Name */}
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Hospital Name
-              </label>
-              <input
-                type="text"
-                value={config.hospitalName}
-                onChange={(e) => setConfig(prev => ({ ...prev, hospitalName: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                placeholder="Hospital Name"
-              />
-            </div>
+                <div className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-md border border-gray-200">
+                    {/* Print Preview Area */}
+                    <div
+                        ref={componentRef}
+                        className="bg-white p-4 w-[80mm] min-h-[100mm] flex flex-col items-center text-center shadow-sm print:shadow-none"
+                        style={{
+                            fontFamily: 'monospace',
+                            width: '80mm', // Standard thermal paper width
+                            padding: '5mm',
+                        }}
+                    >
 
-            {/* Counter Name */}
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Counter Name
-              </label>
-              <input
-                type="text"
-                value={config.counterName}
-                onChange={(e) => setConfig(prev => ({ ...prev, counterName: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                placeholder="Counter Name"
-              />
-            </div>
+                        <div className="text-lg font-bold mb-1">TOKEN NO</div>
+                        <div className="text-4xl font-black mb-4">{tokenData.tokenNumber}</div>
 
-            {/* Department */}
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Department
-              </label>
-              <input
-                type="text"
-                value={config.departmentName}
-                onChange={(e) => setConfig(prev => ({ ...prev, departmentName: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                placeholder="Department"
-              />
-            </div>
-          </div>
+                        <div className="w-full text-left space-y-2 mb-4">
+                            <div>
+                                <span className="font-semibold block text-xs">PATIENT ID:</span>
+                                <span className="text-sm">{tokenData.patientId}</span>
+                            </div>
+                            <div className="truncate">
+                                <span className="font-semibold block text-xs">PATIENT:</span>
+                                <span className="text-sm font-bold">{tokenData.patientName}</span>
+                            </div>
+                            <div className="truncate">
+                                <span className="font-semibold block text-xs">DOCTOR:</span>
+                                <span className="text-sm">{tokenData.doctorName}</span>
+                            </div>
+                            {tokenData.department && (
+                                <div className="truncate">
+                                    <span className="font-semibold block text-xs">DEPT:</span>
+                                    <span className="text-sm">{tokenData.department}</span>
+                                </div>
+                            )}
+                            <div>
+                                <span className="font-semibold block text-xs">APPOINTMENT DATE:</span>
+                                <span className="text-sm">{format(new Date(tokenData.appointmentDate), 'dd-MM-yyyy')}</span>
+                            </div>
+                        </div>
 
-          {/* Checkboxes */}
-          <div className="flex gap-4 mt-4">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={config.showQR}
-                onChange={(e) => setConfig(prev => ({ ...prev, showQR: e.target.checked }))}
-                className="mr-2"
-              />
-              <span className="text-sm text-gray-700">Include QR Code</span>
-            </label>
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={config.showVisitId}
-                onChange={(e) => setConfig(prev => ({ ...prev, showVisitId: e.target.checked }))}
-                className="mr-2"
-              />
-              <span className="text-sm text-gray-700">Show Visit ID</span>
-            </label>
-          </div>
-        </div>
+                        <div className="mt-auto pt-4 flex flex-col items-center">
+                            <Barcode
+                                value={tokenData.patientId}
+                                width={1.5}
+                                height={40}
+                                fontSize={12}
+                                displayValue={false}
+                            />
+                            <div className="text-xs mt-1">{tokenData.patientId}</div>
+                        </div>
 
-        {/* Token Slip Preview */}
-        <div className="p-4">
-          <TokenSlip
-            appointment={appointment}
-            hospitalName={config.hospitalName}
-            counterName={config.counterName}
-            departmentName={config.departmentName}
-            widthMm={config.widthMm}
-            showQR={config.showQR}
-            showVisitId={config.showVisitId}
-          />
-        </div>
+                        <div className="text-[10px] mt-4">
+                            Please wait for your turn.
+                        </div>
+                    </div>
+                </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-3 p-4 border-t border-gray-200">
-          <Button variant="outline" onClick={onClose}>
-            Close
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>
+                        Cancel
+                    </Button>
+                    <Button onClick={handlePrint} className="gap-2">
+                        <Printer className="h-4 w-4" />
+                        Print Token
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
 };
