@@ -964,71 +964,71 @@ export const AppointmentDashboard = () => {
           {/* KPI Section */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
             {/* Total Appointments */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/40 dark:to-gray-900 p-4 rounded-xl border border-indigo-100 dark:border-indigo-800/50 shadow-sm hover:shadow-md transition-all duration-300 group">
-              <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Calendar className="h-12 w-12 text-indigo-600 dark:text-indigo-400" />
+            <div className="relative overflow-hidden bg-gradient-to-br from-indigo-100/80 via-white to-white dark:from-indigo-950/60 dark:to-gray-900 p-5 rounded-2xl border border-indigo-100/50 dark:border-indigo-800/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group backdrop-blur-sm">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
+                <Calendar className="h-20 w-20 text-indigo-600 dark:text-indigo-400 -rotate-12" />
               </div>
-              <div className="flex items-center gap-3 mb-2 relative z-10">
-                <div className="p-2 bg-indigo-100/80 dark:bg-indigo-900/50 rounded-lg shadow-sm group-hover:scale-110 transition-transform">
-                  <Calendar className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+              <div className="flex items-center gap-4 mb-3 relative z-10">
+                <div className="p-2.5 bg-indigo-100/80 dark:bg-indigo-900/50 rounded-xl shadow-inner ring-4 ring-indigo-50 dark:ring-indigo-900/30 group-hover:scale-110 transition-transform duration-300">
+                  <Calendar className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
                 </div>
-                <span className="text-xs font-semibold uppercase tracking-wider text-indigo-900/70 dark:text-indigo-200/70">Total Appointments</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-indigo-900/60 dark:text-indigo-200/60">Total Appointments</span>
               </div>
-              <div className="text-3xl font-black text-indigo-900 dark:text-white relative z-10 tracking-tight">{kpiStats.total}</div>
+              <div className="text-4xl font-extrabold text-indigo-900 dark:text-white relative z-10 tracking-tight ml-1">{kpiStats.total}</div>
             </div>
 
             {activeTab !== 'future' && (
               <>
                 {/* Vitals Required (No Show for Past) */}
-                <div className={`relative overflow-hidden ${activeTab === 'past' ? 'bg-gradient-to-br from-gray-50 to-white dark:from-gray-950/40 dark:to-gray-900 border-gray-100 dark:border-gray-800/50' : 'bg-gradient-to-br from-rose-50 to-white dark:from-rose-950/40 dark:to-gray-900 border-rose-100 dark:border-rose-800/50'} p-4 rounded-xl border shadow-sm hover:shadow-md transition-all duration-300 group`}>
-                  <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                    {activeTab === 'past' ? <UserX className="h-12 w-12 text-gray-600 dark:text-gray-400" /> : <Heart className="h-12 w-12 text-rose-600 dark:text-rose-400" />}
+                <div className={`relative overflow-hidden ${activeTab === 'past' ? 'bg-gradient-to-br from-gray-100/80 via-white to-white dark:from-gray-950/60 dark:to-gray-900 border-gray-100/50 dark:border-gray-800/50' : 'bg-gradient-to-br from-rose-100/80 via-white to-white dark:from-rose-950/60 dark:to-gray-900 border-rose-100/50 dark:border-rose-800/50'} p-5 rounded-2xl border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group backdrop-blur-sm`}>
+                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
+                    {activeTab === 'past' ? <UserX className="h-20 w-20 text-gray-600 dark:text-gray-400 -rotate-12" /> : <Heart className="h-20 w-20 text-rose-600 dark:text-rose-400 -rotate-12" />}
                   </div>
-                  <div className="flex items-center gap-3 mb-2 relative z-10">
-                    <div className={`p-2 ${activeTab === 'past' ? 'bg-gray-100/80 dark:bg-gray-900/50' : 'bg-rose-100/80 dark:bg-rose-900/50'} rounded-lg shadow-sm group-hover:scale-110 transition-transform`}>
-                      {activeTab === 'past' ? <UserX className={`h-5 w-5 ${activeTab === 'past' ? 'text-gray-600 dark:text-gray-400' : 'text-rose-600 dark:text-rose-400'}`} /> : <Heart className="h-5 w-5 text-rose-600 dark:text-rose-400" />}
+                  <div className="flex items-center gap-4 mb-3 relative z-10">
+                    <div className={`p-2.5 ${activeTab === 'past' ? 'bg-gray-100/80 dark:bg-gray-900/50 ring-gray-50 dark:ring-gray-900/30' : 'bg-rose-100/80 dark:bg-rose-900/50 ring-rose-50 dark:ring-rose-900/30'} rounded-xl shadow-inner ring-4 group-hover:scale-110 transition-transform duration-300`}>
+                      {activeTab === 'past' ? <UserX className={`h-6 w-6 ${activeTab === 'past' ? 'text-gray-600 dark:text-gray-400' : 'text-rose-600 dark:text-rose-400'}`} /> : <Heart className="h-6 w-6 text-rose-600 dark:text-rose-400" />}
                     </div>
-                    <span className={`text-xs font-semibold uppercase tracking-wider ${activeTab === 'past' ? 'text-gray-900/70 dark:text-gray-200/70' : 'text-rose-900/70 dark:text-rose-200/70'}`}>
+                    <span className={`text-xs font-bold uppercase tracking-widest ${activeTab === 'past' ? 'text-gray-900/60 dark:text-gray-200/60' : 'text-rose-900/60 dark:text-rose-200/60'}`}>
                       {activeTab === 'past' ? 'No Show' : 'Vitals Required'}
                     </span>
                   </div>
-                  <div className={`text-3xl font-black ${activeTab === 'past' ? 'text-gray-900 dark:text-white' : 'text-rose-900 dark:text-white'} relative z-10 tracking-tight`}>{kpiStats.vitalsRequired}</div>
+                  <div className={`text-4xl font-extrabold ${activeTab === 'past' ? 'text-gray-900 dark:text-white' : 'text-rose-900 dark:text-white'} relative z-10 tracking-tight ml-1`}>{kpiStats.vitalsRequired}</div>
                 </div>
 
                 {/* Completed */}
-                <div className="relative overflow-hidden bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/40 dark:to-gray-900 p-4 rounded-xl border border-emerald-100 dark:border-emerald-800/50 shadow-sm hover:shadow-md transition-all duration-300 group">
-                  <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <UserCheck className="h-12 w-12 text-emerald-600 dark:text-emerald-400" />
+                <div className="relative overflow-hidden bg-gradient-to-br from-emerald-100/80 via-white to-white dark:from-emerald-950/60 dark:to-gray-900 p-5 rounded-2xl border border-emerald-100/50 dark:border-emerald-800/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group backdrop-blur-sm">
+                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
+                    <UserCheck className="h-20 w-20 text-emerald-600 dark:text-emerald-400 -rotate-12" />
                   </div>
-                  <div className="flex items-center gap-3 mb-2 relative z-10">
-                    <div className="p-2 bg-emerald-100/80 dark:bg-emerald-900/50 rounded-lg shadow-sm group-hover:scale-110 transition-transform">
-                      <UserCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  <div className="flex items-center gap-4 mb-3 relative z-10">
+                    <div className="p-2.5 bg-emerald-100/80 dark:bg-emerald-900/50 rounded-xl shadow-inner ring-4 ring-emerald-50 dark:ring-emerald-900/30 group-hover:scale-110 transition-transform duration-300">
+                      <UserCheck className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                     </div>
-                    <span className="text-xs font-semibold uppercase tracking-wider text-emerald-900/70 dark:text-emerald-200/70">Completed</span>
+                    <span className="text-xs font-bold uppercase tracking-widest text-emerald-900/60 dark:text-emerald-200/60">Completed</span>
                   </div>
-                  <div className="text-3xl font-black text-emerald-900 dark:text-white relative z-10 tracking-tight">{kpiStats.completed}</div>
+                  <div className="text-4xl font-extrabold text-emerald-900 dark:text-white relative z-10 tracking-tight ml-1">{kpiStats.completed}</div>
                 </div>
               </>
             )}
 
             {/* Doctor Stats - Dynamically rendered */}
             {kpiStats.doctorStats.map((doc, idx) => (
-              <div key={idx} className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/40 dark:to-gray-900 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50 shadow-sm hover:shadow-md transition-all duration-300 group">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 bg-blue-100/80 dark:bg-blue-900/50 rounded-md shadow-sm">
-                    <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 truncate w-full" title={doc.name}>{doc.name}</span>
+              <div key={idx} className="relative overflow-hidden bg-gradient-to-br from-blue-100/80 via-white to-white dark:from-blue-950/60 dark:to-gray-900 p-5 rounded-2xl border border-blue-100/50 dark:border-blue-800/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group backdrop-blur-sm">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
+                  <User className="h-20 w-20 text-blue-600 dark:text-blue-400 -rotate-12" />
                 </div>
-                <div className="flex flex-col gap-0.5 mt-1">
-                  <div className="flex items-baseline justify-between w-full">
-                    <span className="text-2xl font-black text-gray-900 dark:text-white">{doc.count}</span>
-                    <span className="text-[10px] text-gray-400 font-medium">Patients</span>
+                <div className="flex items-center gap-4 mb-3 relative z-10">
+                  <div className="p-2.5 bg-blue-100/80 dark:bg-blue-900/50 rounded-xl shadow-inner ring-4 ring-blue-50 dark:ring-blue-900/30 group-hover:scale-110 transition-transform duration-300">
+                    <User className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                   </div>
+                  <span className="text-xs font-bold uppercase tracking-widest text-blue-900/60 dark:text-blue-200/60 truncate max-w-[100px]" title={doc.name}>{doc.name}</span>
+                </div>
+                <div className="relative z-10 ml-1">
+                  <div className="text-4xl font-extrabold text-blue-900 dark:text-white tracking-tight">{doc.count}</div>
                   {activeTab === 'past' && doc.noShowCount > 0 && (
-                    <div className="flex items-center gap-1 text-[10px] text-red-500 font-medium bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded-full w-fit">
+                    <div className="flex items-center gap-1 mt-2 text-xs font-bold text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded-full w-fit">
                       <UserX className="h-3 w-3" />
-                      No Show: {doc.noShowCount}
+                      <span>No Show: {doc.noShowCount}</span>
                     </div>
                   )}
                 </div>

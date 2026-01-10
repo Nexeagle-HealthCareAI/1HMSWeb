@@ -181,12 +181,21 @@ export const PatientsPage: React.FC = () => {
     setSortConfig({ key, direction });
   };
 
-  // Compute Doctor Counts
+  // Compute Doctor Counts with Status Breakdown
   const doctorStats = useMemo(() => {
-    const stats: Record<string, number> = {};
+    const stats: Record<string, { total: number; completed: number; vitalsRequired: number }> = {};
     currentAppointments.forEach(apt => {
       if (apt.doctorName) {
-        stats[apt.doctorName] = (stats[apt.doctorName] || 0) + 1;
+        if (!stats[apt.doctorName]) {
+          stats[apt.doctorName] = { total: 0, completed: 0, vitalsRequired: 0 };
+        }
+        stats[apt.doctorName].total += 1;
+        if (apt.currentStatus === 'COMPLETED') {
+          stats[apt.doctorName].completed += 1;
+        }
+        if (apt.currentStatus === 'VITALS_REQUIRED') {
+          stats[apt.doctorName].vitalsRequired += 1;
+        }
       }
     });
     return stats;
@@ -233,9 +242,20 @@ export const PatientsPage: React.FC = () => {
       LastVisit: p.registrationDate,
       NextAppointment: null,
       Status: 'Active',
-      Avatar: ''
+      Avatar: '',
+      Doctor: 'Dr. Unassigned' // Placeholder as API doesn't provide this yet
     }));
   }, [patient360Response]);
+
+  const doctorStats360 = useMemo(() => {
+    const stats: Record<string, number> = {};
+    patientList.forEach(p => {
+      // @ts-ignore
+      const docName = p.Doctor || 'Unknown';
+      stats[docName] = (stats[docName] || 0) + 1;
+    });
+    return stats;
+  }, [patientList]);
 
   const patientStats = useMemo(() => {
     const patients = patientList;
@@ -589,29 +609,65 @@ export const PatientsPage: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Completed</p>
-                    <h3 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{dashboardStats.completed}</h3>
-                  </div>
-                  <div className="bg-emerald-100 dark:bg-emerald-900/30 p-3 rounded-xl">
+              {/* Completed */}
+              <div className="relative overflow-hidden bg-gradient-to-br from-emerald-100/80 via-white to-white dark:from-emerald-950/60 dark:to-gray-900 p-5 rounded-2xl border border-emerald-100/50 dark:border-emerald-800/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group backdrop-blur-sm">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
+                  <CheckCircle2 className="h-20 w-20 text-emerald-600 dark:text-emerald-400 -rotate-12" />
+                </div>
+                <div className="flex items-center gap-4 mb-3 relative z-10">
+                  <div className="p-2.5 bg-emerald-100/80 dark:bg-emerald-900/50 rounded-xl shadow-inner ring-4 ring-emerald-50 dark:ring-emerald-900/30 group-hover:scale-110 transition-transform duration-300">
                     <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                   </div>
-                </CardContent>
-              </Card>
+                  <span className="text-xs font-bold uppercase tracking-widest text-emerald-900/60 dark:text-emerald-200/60">Completed</span>
+                </div>
+                <div className="text-4xl font-extrabold text-emerald-900 dark:text-white relative z-10 tracking-tight ml-1">{dashboardStats.completed}</div>
+              </div>
 
-              <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Cancelled</p>
-                    <h3 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{dashboardStats.cancelled}</h3>
+              {/* Doctor Stats Cards */}
+              {Object.entries(doctorStats).map(([doctorName, stats]) => (
+                <div key={doctorName} className="relative overflow-hidden bg-gradient-to-br from-indigo-100/80 via-white to-white dark:from-indigo-950/60 dark:to-gray-900 p-5 rounded-2xl border border-indigo-100/50 dark:border-indigo-800/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group backdrop-blur-sm">
+                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
+                    <Stethoscope className="h-20 w-20 text-indigo-600 dark:text-indigo-400 -rotate-12" />
                   </div>
-                  <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-xl">
+                  <div className="flex items-center gap-4 mb-3 relative z-10">
+                    <div className="p-2.5 bg-indigo-100/80 dark:bg-indigo-900/50 rounded-xl shadow-inner ring-4 ring-indigo-50 dark:ring-indigo-900/30 group-hover:scale-110 transition-transform duration-300">
+                      <Stethoscope className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-widest text-indigo-900/60 dark:text-indigo-200/60 truncate max-w-[100px]" title={doctorName}>{doctorName}</span>
+                  </div>
+                  <div className="relative z-10 ml-1">
+                    <div className="text-4xl font-extrabold text-indigo-900 dark:text-white tracking-tight mb-2">{stats.total}</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {stats.completed > 0 && (
+                        <div className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full">
+                          <CheckCircle2 className="h-3 w-3" />
+                          <span>{stats.completed}</span>
+                        </div>
+                      )}
+                      {stats.vitalsRequired > 0 && (
+                        <div className="flex items-center gap-1 text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 px-2 py-0.5 rounded-full">
+                          <Heart className="h-3 w-3" />
+                          <span>{stats.vitalsRequired}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Cancelled */}
+              <div className="relative overflow-hidden bg-gradient-to-br from-red-100/80 via-white to-white dark:from-red-950/60 dark:to-gray-900 p-5 rounded-2xl border border-red-100/50 dark:border-red-800/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group backdrop-blur-sm">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
+                  <Circle className="h-20 w-20 text-red-600 dark:text-red-400 -rotate-12" />
+                </div>
+                <div className="flex items-center gap-4 mb-3 relative z-10">
+                  <div className="p-2.5 bg-red-100/80 dark:bg-red-900/50 rounded-xl shadow-inner ring-4 ring-red-50 dark:ring-red-900/30 group-hover:scale-110 transition-transform duration-300">
                     <Circle className="h-6 w-6 text-red-600 dark:text-red-400" />
                   </div>
-                </CardContent>
-              </Card>
+                  <span className="text-xs font-bold uppercase tracking-widest text-red-900/60 dark:text-red-200/60">Cancelled</span>
+                </div>
+                <div className="text-4xl font-extrabold text-red-900 dark:text-white relative z-10 tracking-tight ml-1">{dashboardStats.cancelled}</div>
+              </div>
 
               <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm">
                 <CardContent className="p-4 flex items-center justify-between">
@@ -621,18 +677,6 @@ export const PatientsPage: React.FC = () => {
                   </div>
                   <div className="bg-purple-100 dark:bg-purple-900/30 p-3 rounded-xl">
                     <Activity className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Pending Vitals</p>
-                    <h3 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{dashboardStats.pendingVitals}</h3>
-                  </div>
-                  <div className="bg-orange-100 dark:bg-orange-900/30 p-3 rounded-xl">
-                    <Heart className="h-6 w-6 text-orange-600 dark:text-orange-400" />
                   </div>
                 </CardContent>
               </Card>
@@ -670,12 +714,12 @@ export const PatientsPage: React.FC = () => {
                           </Badge>
                         </span>
                       </SelectItem>
-                      {Object.entries(doctorStats).map(([docName, count]) => (
+                      {Object.entries(doctorStats).map(([docName, stats]) => (
                         <SelectItem key={docName} value={docName}>
                           <span className="flex items-center justify-between gap-2 w-full min-w-[140px]">
                             <span className="truncate max-w-[120px]" title={docName}>{docName}</span>
                             <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-blue-50 text-blue-600 border border-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800">
-                              {count}
+                              {stats.total}
                             </Badge>
                           </span>
                         </SelectItem>
