@@ -142,8 +142,17 @@ export interface PatientData {
   registrationDate: string;
 }
 
+export interface DoctorData {
+  doctorName: string;
+  totalPatientCount: number;
+  femalePatientCount: number;
+  malePatientCount: number;
+  sharedPatientCount: number;
+}
+
 export interface PatientListResponse {
   hospitalId: string;
+  doctorsData?: DoctorData[];
   patientsData: PatientData[];
   success: boolean;
   message: string;

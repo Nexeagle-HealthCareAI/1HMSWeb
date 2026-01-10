@@ -217,7 +217,7 @@ export const PatientsPage: React.FC = () => {
   const { data: patient360Response, isLoading: isPatient360Loading } = useQuery({
     queryKey: ['patient360', hospitalId],
     queryFn: async () => {
-      if (!hospitalId) return { patientsData: [] };
+      if (!hospitalId) return { hospitalId: '', patientsData: [], doctorsData: [], success: false, message: '' };
       return patientApi.getAllPatients(hospitalId);
     },
     enabled: !!hospitalId,
@@ -936,16 +936,18 @@ export const PatientsPage: React.FC = () => {
             </div>
 
             {/* Top Stats Row */}
-            <div className="grid grid-cols-4 gap-4 shrink-0">
+            <div className="flex gap-3 overflow-x-auto pb-2 shrink-0 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700">
               {/* Total Patients */}
-              <Card className="bg-gradient-to-br from-blue-500 to-blue-600 border-none text-white shadow-md">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-blue-100 text-xs font-medium mb-1 uppercase tracking-wide">Total Patients</p>
-                    <h3 className="text-3xl font-bold">{patientStats.total}</h3>
-                  </div>
-                  <div className="bg-white/20 p-2.5 rounded-lg">
-                    <Users className="h-5 w-5 text-white" />
+              <Card className="bg-gradient-to-br from-blue-500 to-blue-600 border-none text-white shadow-sm flex-shrink-0 min-w-[120px]">
+                <CardContent className="p-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <div className="bg-white/20 p-1 rounded">
+                      <Users className="h-3 w-3 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-blue-100 text-[8px] font-medium uppercase leading-none">Total</p>
+                      <h3 className="text-2xl font-bold leading-tight">{patientStats.total}</h3>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -953,18 +955,20 @@ export const PatientsPage: React.FC = () => {
               {/* Male Patients */}
               <Card
                 className={cn(
-                  "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover:border-blue-300 transition-colors",
+                  "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover:border-blue-300 transition-colors flex-shrink-0 min-w-[120px]",
                   selectedGender === 'male' && "ring-2 ring-blue-500 border-transparent"
                 )}
                 onClick={() => setSelectedGender(selectedGender === 'male' ? 'all' : 'male')}
               >
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-500 dark:text-gray-400 text-xs font-medium mb-1 uppercase tracking-wide">Male</p>
-                    <h3 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{patientStats.males}</h3>
-                  </div>
-                  <div className="bg-blue-100 dark:bg-blue-900/30 p-2.5 rounded-lg">
-                    <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <CardContent className="p-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <div className="bg-blue-100 dark:bg-blue-900/30 p-1 rounded">
+                      <Users className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-gray-500 dark:text-gray-400 text-[8px] font-medium uppercase leading-none">Male</p>
+                      <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 leading-tight">{patientStats.males}</h3>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -972,40 +976,85 @@ export const PatientsPage: React.FC = () => {
               {/* Female Patients */}
               <Card
                 className={cn(
-                  "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover:border-pink-300 transition-colors",
+                  "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover:border-pink-300 transition-colors flex-shrink-0 min-w-[120px]",
                   selectedGender === 'female' && "ring-2 ring-pink-500 border-transparent"
                 )}
                 onClick={() => setSelectedGender(selectedGender === 'female' ? 'all' : 'female')}
               >
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-500 dark:text-gray-400 text-xs font-medium mb-1 uppercase tracking-wide">Female</p>
-                    <h3 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{patientStats.females}</h3>
-                  </div>
-                  <div className="bg-pink-100 dark:bg-pink-900/30 p-2.5 rounded-lg">
-                    <Users className="h-5 w-5 text-pink-600 dark:text-pink-400" />
+                <CardContent className="p-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <div className="bg-pink-100 dark:bg-pink-900/30 p-1 rounded">
+                      <Users className="h-3 w-3 text-pink-600 dark:text-pink-400" />
+                    </div>
+                    <div>
+                      <p className="text-gray-500 dark:text-gray-400 text-[8px] font-medium uppercase leading-none">Female</p>
+                      <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 leading-tight">{patientStats.females}</h3>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               {/* Cities */}
               <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-500 dark:text-gray-400 text-xs font-medium mb-1 uppercase tracking-wide">Cities</p>
-                    <h3 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{patientStats.cities}</h3>
-                  </div>
-                  <div className="bg-orange-100 dark:bg-orange-900/30 p-2.5 rounded-lg">
-                    <MapPin className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                <CardContent className="p-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <div className="bg-orange-100 dark:bg-orange-900/30 p-1 rounded">
+                      <MapPin className="h-3 w-3 text-orange-600 dark:text-orange-400" />
+                    </div>
+                    <div>
+                      <p className="text-gray-500 dark:text-gray-400 text-[8px] font-medium uppercase leading-none">Cities</p>
+                      <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 leading-tight">{patientStats.cities}</h3>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Doctor KPI Cards - Dynamically rendered from API */}
+              {patient360Response?.doctorsData?.map((doctor: any, idx: number) => (
+                <Card key={idx} className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow flex-shrink-0 min-w-[140px]">
+                  <CardContent className="p-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <div className="bg-indigo-100 dark:bg-indigo-900/30 p-1 rounded">
+                        <Stethoscope className="h-3 w-3 text-indigo-600 dark:text-indigo-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-gray-700 dark:text-gray-300 text-[8px] font-semibold truncate leading-none" title={doctor.doctorName}>
+                          {doctor.doctorName}
+                        </p>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 leading-tight">
+                          {doctor.totalPatientCount}
+                        </h3>
+                        <div className="flex flex-wrap gap-1.5">
+                          {doctor.malePatientCount > 0 && (
+                            <div className="flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-full">
+                              <Users className="h-3 w-3" />
+                              <span>M: {doctor.malePatientCount}</span>
+                            </div>
+                          )}
+                          {doctor.femalePatientCount > 0 && (
+                            <div className="flex items-center gap-1 text-xs font-medium text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-900/20 px-2 py-0.5 rounded-full">
+                              <Users className="h-3 w-3" />
+                              <span>F: {doctor.femalePatientCount}</span>
+                            </div>
+                          )}
+                          {doctor.sharedPatientCount > 0 && (
+                            <div className="flex items-center gap-1 text-xs font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 px-2 py-0.5 rounded-full">
+                              <Users className="h-3 w-3" />
+                              <span>Shared: {doctor.sharedPatientCount}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
 
             <div className="grid grid-cols-12 gap-6 flex-1 min-h-0 overflow-hidden">
               {/* Main Content: Table (Left) */}
               <div className="col-span-12 xl:col-span-9 flex flex-col h-full overflow-hidden order-2 xl:order-1">
-                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/60 dark:border-gray-800 shadow-sm overflow-hidden">
+                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/60 dark:border-gray-800 shadow-sm overflow-auto flex-1">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50">

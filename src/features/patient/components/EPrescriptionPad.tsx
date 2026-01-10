@@ -1002,6 +1002,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             height: vitals.heightCm !== undefined && vitals.heightCm !== null ? String(vitals.heightCm) : '',
             weight: vitals.weightKg !== undefined && vitals.weightKg !== null ? String(vitals.weightKg) : '',
             bmi: vitals.bmi !== undefined && vitals.bmi !== null ? String(vitals.bmi) : '',
+            respiratoryRate: vitals.respiratoryRate !== undefined && vitals.respiratoryRate !== null ? String(vitals.respiratoryRate) : '',
           }
         }));
         setHasFetchedVitals(hasAnyValue);
@@ -1065,6 +1066,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
         heightCm: Number(prescriptionData.vitals.height) || 0,
         weightKg: Number(prescriptionData.vitals.weight) || 0,
         bmi: bmiToUse,
+        respiratoryRate: Number(prescriptionData.vitals.respiratoryRate) || 0,
       },
       recordedBy: getDoctorId() || getUserId?.() || '',
     };
@@ -1301,6 +1303,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             height: String(draft.vitalsJson.heightCm || ''),
             weight: String(draft.vitalsJson.weightKg || ''),
             bmi: String(draft.vitalsJson.bmi || ''),
+            respiratoryRate: String(draft.vitalsJson.respiratoryRate || ''),
           } : prev.vitals,
           orders: {
             investigations: draft.orders?.investigations || [],
