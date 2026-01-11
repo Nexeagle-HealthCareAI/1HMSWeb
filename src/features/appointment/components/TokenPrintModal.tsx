@@ -85,7 +85,7 @@ export const TokenPrintModal: React.FC<TokenPrintModalProps> = ({
                             {/* Header Removed */}
 
                             {/* Token Number */}
-                            <div className="my-1">
+                            <div className="mt-8 mb-2">
                                 <div className="text-sm font-bold uppercase">Token Number</div>
                                 <div className="text-6xl font-black my-1 leading-none">{tokenData.tokenNumber}</div>
                             </div>
