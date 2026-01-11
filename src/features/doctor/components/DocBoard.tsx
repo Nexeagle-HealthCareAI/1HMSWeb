@@ -1291,7 +1291,7 @@ export const ClinicalDashboard: React.FC = () => {
                           <div className="p-2 bg-orange-100/80 dark:bg-orange-900/50 rounded-lg text-orange-600 dark:text-orange-400">
                             <Clock className="h-5 w-5" />
                           </div>
-                          <span className="text-xs font-bold uppercase tracking-wider text-orange-900/60 dark:text-orange-200/60">Not Entered</span>
+                          <span className="text-xs font-bold uppercase tracking-wider text-orange-900/60 dark:text-orange-200/60">Vitals Required</span>
                         </div>
                         <div className="text-3xl font-bold text-orange-900 dark:text-white">{currentAppointmentCounts.vitalsRequired}</div>
                       </div>
