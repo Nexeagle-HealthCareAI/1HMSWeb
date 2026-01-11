@@ -81,6 +81,7 @@ import {
   User,
   UserCheck,
   UserPlus,
+  UserX,
   Users,
   Wifi,
   X,
@@ -600,6 +601,8 @@ export const ClinicalDashboard: React.FC = () => {
     return {
       total: pastAppointments.length,
       completed: pastAppointments.filter((apt) => apt.finalStatusCode === 'COMPLETED').length,
+      noShow: pastAppointments.filter((apt) => apt.finalStatusCode === 'VITALS_REQUIRED').length,
+      ready: pastAppointments.filter((apt) => apt.finalStatusCode === 'READY').length,
       awaitingReconsult: pastAppointments.filter((apt) => apt.finalStatusCode === 'AWAITING_RECONSULT').length,
       cancelled: pastAppointments.filter((apt) => apt.finalStatusCode === 'CANCELLED').length,
       lastVisit: sorted[0]?.startAt || null
@@ -1269,6 +1272,53 @@ export const ClinicalDashboard: React.FC = () => {
 
                   {/* Current - Mobile Responsive */}
                   <TabsContent value="current" className="space-y-4 pt-2">
+                    {/* KPI Section for Current Appointments */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {/* Total Appointments */}
+                      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-100/80 via-white to-white dark:from-indigo-950/60 dark:to-gray-900 p-4 rounded-2xl border border-indigo-100/50 dark:border-indigo-800/50 shadow-sm hover:shadow-md transition-all duration-300 group">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="p-2 bg-indigo-100/80 dark:bg-indigo-900/50 rounded-lg text-indigo-600 dark:text-indigo-400">
+                            <Calendar className="h-5 w-5" />
+                          </div>
+                          <span className="text-xs font-bold uppercase tracking-wider text-indigo-900/60 dark:text-indigo-200/60">Total Today</span>
+                        </div>
+                        <div className="text-3xl font-bold text-indigo-900 dark:text-white">{currentAppointmentCounts.all}</div>
+                      </div>
+
+                      {/* Not Entered (Vitals Required) */}
+                      <div className="relative overflow-hidden bg-gradient-to-br from-orange-100/80 via-white to-white dark:from-orange-950/60 dark:to-gray-900 p-4 rounded-2xl border border-orange-100/50 dark:border-orange-800/50 shadow-sm hover:shadow-md transition-all duration-300 group">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="p-2 bg-orange-100/80 dark:bg-orange-900/50 rounded-lg text-orange-600 dark:text-orange-400">
+                            <Clock className="h-5 w-5" />
+                          </div>
+                          <span className="text-xs font-bold uppercase tracking-wider text-orange-900/60 dark:text-orange-200/60">Not Entered</span>
+                        </div>
+                        <div className="text-3xl font-bold text-orange-900 dark:text-white">{currentAppointmentCounts.vitalsRequired}</div>
+                      </div>
+
+                      {/* Completed */}
+                      <div className="relative overflow-hidden bg-gradient-to-br from-emerald-100/80 via-white to-white dark:from-emerald-950/60 dark:to-gray-900 p-4 rounded-2xl border border-emerald-100/50 dark:border-emerald-800/50 shadow-sm hover:shadow-md transition-all duration-300 group">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="p-2 bg-emerald-100/80 dark:bg-emerald-900/50 rounded-lg text-emerald-600 dark:text-emerald-400">
+                            <UserCheck className="h-5 w-5" />
+                          </div>
+                          <span className="text-xs font-bold uppercase tracking-wider text-emerald-900/60 dark:text-emerald-200/60">Completed</span>
+                        </div>
+                        <div className="text-3xl font-bold text-emerald-900 dark:text-white">{currentAppointmentCounts.completed}</div>
+                      </div>
+
+                      {/* Cancelled */}
+                      <div className="relative overflow-hidden bg-gradient-to-br from-red-100/80 via-white to-white dark:from-red-950/60 dark:to-gray-900 p-4 rounded-2xl border border-red-100/50 dark:border-red-800/50 shadow-sm hover:shadow-md transition-all duration-300 group">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="p-2 bg-red-100/80 dark:bg-red-900/50 rounded-lg text-red-600 dark:text-red-400">
+                            <UserX className="h-5 w-5" />
+                          </div>
+                          <span className="text-xs font-bold uppercase tracking-wider text-red-900/60 dark:text-red-200/60">Cancelled</span>
+                        </div>
+                        <div className="text-3xl font-bold text-red-900 dark:text-white">{currentAppointmentCounts.cancelled}</div>
+                      </div>
+                    </div>
+
                     {/* Status Filters & Sync Controls */}
                     <div className="mb-2 sm:mb-3">
                       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -1736,6 +1786,53 @@ export const ClinicalDashboard: React.FC = () => {
 
                   <TabsContent value="past" className="space-y-4 pt-2">
                     <div className="space-y-4">
+                      {/* KPI Section for Past History */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {/* Total Appointments */}
+                        <div className="relative overflow-hidden bg-gradient-to-br from-indigo-100/80 via-white to-white dark:from-indigo-950/60 dark:to-gray-900 p-4 rounded-2xl border border-indigo-100/50 dark:border-indigo-800/50 shadow-sm hover:shadow-md transition-all duration-300 group">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-indigo-100/80 dark:bg-indigo-900/50 rounded-lg text-indigo-600 dark:text-indigo-400">
+                              <Calendar className="h-5 w-5" />
+                            </div>
+                            <span className="text-xs font-bold uppercase tracking-wider text-indigo-900/60 dark:text-indigo-200/60">Total</span>
+                          </div>
+                          <div className="text-3xl font-bold text-indigo-900 dark:text-white">{pastAppointmentsSummary.total}</div>
+                        </div>
+
+                        {/* No Show (Vitals Required) */}
+                        <div className="relative overflow-hidden bg-gradient-to-br from-rose-100/80 via-white to-white dark:from-rose-950/60 dark:to-gray-900 p-4 rounded-2xl border border-rose-100/50 dark:border-rose-800/50 shadow-sm hover:shadow-md transition-all duration-300 group">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-rose-100/80 dark:bg-rose-900/50 rounded-lg text-rose-600 dark:text-rose-400">
+                              <UserX className="h-5 w-5" />
+                            </div>
+                            <span className="text-xs font-bold uppercase tracking-wider text-rose-900/60 dark:text-rose-200/60">No Show</span>
+                          </div>
+                          <div className="text-3xl font-bold text-rose-900 dark:text-white">{pastAppointmentsSummary.noShow}</div>
+                        </div>
+
+                        {/* Completed */}
+                        <div className="relative overflow-hidden bg-gradient-to-br from-emerald-100/80 via-white to-white dark:from-emerald-950/60 dark:to-gray-900 p-4 rounded-2xl border border-emerald-100/50 dark:border-emerald-800/50 shadow-sm hover:shadow-md transition-all duration-300 group">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-emerald-100/80 dark:bg-emerald-900/50 rounded-lg text-emerald-600 dark:text-emerald-400">
+                              <UserCheck className="h-5 w-5" />
+                            </div>
+                            <span className="text-xs font-bold uppercase tracking-wider text-emerald-900/60 dark:text-emerald-200/60">Completed</span>
+                          </div>
+                          <div className="text-3xl font-bold text-emerald-900 dark:text-white">{pastAppointmentsSummary.completed}</div>
+                        </div>
+
+                        {/* Ready (Stats) */}
+                        <div className="relative overflow-hidden bg-gradient-to-br from-blue-100/80 via-white to-white dark:from-blue-950/60 dark:to-gray-900 p-4 rounded-2xl border border-blue-100/50 dark:border-blue-800/50 shadow-sm hover:shadow-md transition-all duration-300 group">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-blue-100/80 dark:bg-blue-900/50 rounded-lg text-blue-600 dark:text-blue-400">
+                              <Activity className="h-5 w-5" />
+                            </div>
+                            <span className="text-xs font-bold uppercase tracking-wider text-blue-900/60 dark:text-blue-200/60">Ready Status</span>
+                          </div>
+                          <div className="text-3xl font-bold text-blue-900 dark:text-white">{pastAppointmentsSummary.ready}</div>
+                        </div>
+                      </div>
+
                       {/* Search & Filter Card */}
                       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-700/50 p-3 md:p-4 shadow-sm">
                         <div className="flex flex-wrap items-end gap-3">
@@ -1930,6 +2027,20 @@ export const ClinicalDashboard: React.FC = () => {
                   {/* Future - Mobile Responsive */}
                   <TabsContent value="future" className="space-y-4 pt-2">
                     <div className="space-y-4">
+                      {/* KPI Section for Future Appointments */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {/* Total Appointments */}
+                        <div className="relative overflow-hidden bg-gradient-to-br from-indigo-100/80 via-white to-white dark:from-indigo-950/60 dark:to-gray-900 p-4 rounded-2xl border border-indigo-100/50 dark:border-indigo-800/50 shadow-sm hover:shadow-md transition-all duration-300 group">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-indigo-100/80 dark:bg-indigo-900/50 rounded-lg text-indigo-600 dark:text-indigo-400">
+                              <Calendar className="h-5 w-5" />
+                            </div>
+                            <span className="text-xs font-bold uppercase tracking-wider text-indigo-900/60 dark:text-indigo-200/60">Total Upcoming</span>
+                          </div>
+                          <div className="text-3xl font-bold text-indigo-900 dark:text-white">{futureAppointmentsSummary.total}</div>
+                        </div>
+                      </div>
+
                       {/* Search & Filter Card */}
                       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-700/50 p-3 md:p-4 shadow-sm">
                         <div className="flex flex-wrap items-end gap-3">
