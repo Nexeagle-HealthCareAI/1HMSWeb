@@ -60,7 +60,7 @@ export const TokenPrintModal: React.FC<TokenPrintModalProps> = ({
                     <div className="flex justify-center w-full">
                         <div
                             ref={componentRef}
-                            className="bg-white p-2 flex flex-col items-center text-center shadow-sm print:shadow-none print:w-full print:m-0 print:p-0"
+                            className="bg-white p-2 flex flex-col items-center text-center shadow-sm print:shadow-none print:w-full print:m-0 print:py-0 print:pl-4"
                             style={{
                                 width: '80mm', // Standard thermal paper width
                                 minHeight: '100px', // Allow content to dictate height
@@ -91,7 +91,7 @@ export const TokenPrintModal: React.FC<TokenPrintModalProps> = ({
                             </div>
 
                             {/* Details */}
-                            <div className="w-full text-left space-y-1.5 mb-4 border-t-2 border-dashed border-black pt-3 mt-2">
+                            <div className="w-full text-left space-y-1.5 mb-4 border-t-2 border-dashed border-black pt-3 mt-2 pl-4">
                                 <div className="flex justify-between items-baseline">
                                     <span className="font-bold text-xs">Date:</span>
                                     <span className="text-sm font-mono">{format(new Date(tokenData.appointmentDate), 'dd/MM/yyyy')}</span>
