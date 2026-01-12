@@ -66,13 +66,13 @@ export const Patient360Analysis: React.FC<Patient360AnalysisProps> = ({ patientI
                         {patientProfile ? (
                             <div className="flex flex-col gap-3 w-full">
                                 <div className="flex items-center gap-3">
-                                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex flex-wrap items-center gap-2">
                                         {patientProfile.fullName}
                                         <Button
                                             size="sm"
                                             variant="ghost"
                                             onClick={() => setIsProfileModalOpen(true)}
-                                            className="h-6 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-gray-800"
+                                            className="h-6 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-gray-800 ml-auto sm:ml-0"
                                         >
                                             <Edit3 className="h-3 w-3 mr-1" />
                                             <span className="text-xs">Edit Details</span>
@@ -80,40 +80,36 @@ export const Patient360Analysis: React.FC<Patient360AnalysisProps> = ({ patientI
                                     </h2>
                                 </div>
 
-                                <div className="flex flex-wrap gap-x-8 gap-y-2 text-sm text-gray-600 dark:text-gray-300">
-                                    {/* Personal Info Group */}
-                                    <div className="flex items-center gap-4 border-r-0 md:border-r border-gray-200 dark:border-gray-700 pr-0 md:pr-6 w-full md:w-auto mb-2 md:mb-0">
-                                        <div className="flex items-center gap-1.5">
-                                            <Activity className="h-3.5 w-3.5 text-gray-400" />
-                                            <span>
-                                                <span className="text-gray-500 text-xs uppercase mr-1">Age/Sex:</span>
-                                                <span className="font-medium">{patientProfile.ageYears} Y / {patientProfile.sex}</span>
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5">
-                                            <Phone className="h-3.5 w-3.5 text-gray-400" />
-                                            <span>
-                                                <span className="text-gray-500 text-xs uppercase mr-1">Mobile:</span>
-                                                <span className="font-medium">{patientProfile.mobile}</span>
-                                            </span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-wrap md:items-center gap-y-3 gap-x-6 text-sm text-gray-600 dark:text-gray-300">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <Activity className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                                        <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5 truncate">
+                                            <span className="text-gray-500 text-xs uppercase">Age/Sex:</span>
+                                            <span className="font-medium truncate">{patientProfile.ageYears} Y / {patientProfile.sex}</span>
                                         </div>
                                     </div>
 
-                                    {/* Address Info Group */}
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex items-center gap-1.5">
-                                            <MapPin className="h-3.5 w-3.5 text-gray-400" />
-                                            <span>
-                                                <span className="text-gray-500 text-xs uppercase mr-1">Address:</span>
-                                                <span className="font-medium">{patientProfile.addressLine1}, {patientProfile.city}</span>
-                                            </span>
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <Phone className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                                        <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5 truncate">
+                                            <span className="text-gray-500 text-xs uppercase">Mobile:</span>
+                                            <span className="font-medium truncate">{patientProfile.mobile}</span>
                                         </div>
-                                        <div className="flex items-center gap-1.5">
-                                            <span>
-                                                <span className="text-gray-500 text-xs uppercase mr-1">Pincode:</span>
-                                                <span className="font-medium">{patientProfile.pincode || '-'}</span>
-                                            </span>
+                                    </div>
+
+                                    <div className="hidden md:block w-px h-4 bg-gray-200 dark:bg-gray-700 mx-2"></div>
+
+                                    <div className="flex items-center gap-2 min-w-0 sm:col-span-2 md:col-span-1">
+                                        <MapPin className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                                        <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5 truncate">
+                                            <span className="text-gray-500 text-xs uppercase">Address:</span>
+                                            <span className="font-medium truncate">{patientProfile.addressLine1}, {patientProfile.city}</span>
                                         </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <span className="text-gray-500 text-xs uppercase ml-1">Pin:</span>
+                                        <span className="font-medium truncate">{patientProfile.pincode || '-'}</span>
                                     </div>
                                 </div>
                             </div>
