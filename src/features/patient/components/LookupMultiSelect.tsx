@@ -83,7 +83,7 @@ export const LookupMultiSelect: React.FC<LookupMultiSelectProps> = ({
   const debouncedQ = useDebouncedValue(q, debounceMs);
 
   const [open, setOpen] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(-1);
 
   const [data, setData] = useState<LookupSearchResponse>({ query: '', personal: [], general: [] });
   const [loading, setLoading] = useState(false);
@@ -135,7 +135,7 @@ export const LookupMultiSelect: React.FC<LookupMultiSelectProps> = ({
       .then((resp) => {
         setData(resp);
         setLoading(false);
-        setActiveIndex(0);
+        setActiveIndex(-1);
       })
       .catch((e) => {
         if (e?.name === 'AbortError') return;
@@ -177,20 +177,42 @@ export const LookupMultiSelect: React.FC<LookupMultiSelectProps> = ({
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setOpen(true);
-      setActiveIndex((i) => clamp(i + 1, 0, Math.max(0, combined.length - 1)));
+      setActiveIndex((i) => {
+        const max = Math.max(0, combined.length - 1);
+        if (i === -1) return 0;
+        return i >= max ? 0 : i + 1; // Cycle to top
+      });
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setActiveIndex((i) => clamp(i - 1, 0, Math.max(0, combined.length - 1)));
+      setActiveIndex((i) => {
+        const max = Math.max(0, combined.length - 1);
+        if (i <= 0) return max; // Cycle to bottom (or -1 if we wanted to Deselect)
+        return i - 1;
+      });
+    } else if (e.key === 'ArrowRight') {
+      // Jump to start of General section ONLY if already navigating
+      if (activeIndex !== -1 && personal.length > 0 && general.length > 0) {
+        e.preventDefault();
+        setActiveIndex(personal.length);
+      }
+    } else if (e.key === 'ArrowLeft') {
+      // Jump to start of Personal section ONLY if already navigating
+      if (activeIndex !== -1 && personal.length > 0) {
+        e.preventDefault();
+        setActiveIndex(0);
+      }
     } else if (e.key === 'Enter') {
-      if (open && combined[activeIndex]) {
+      if (open && activeIndex >= 0 && combined[activeIndex]) {
         e.preventDefault();
         addItem(combined[activeIndex]);
       } else if (allowFreeText) {
+        // If nothing explicitly selected, treat as free text submission
         e.preventDefault();
         addFreeText();
       }
     } else if (e.key === 'Escape') {
       setOpen(false);
+      setActiveIndex(-1);
     }
   };
 
@@ -249,6 +271,7 @@ export const LookupMultiSelect: React.FC<LookupMultiSelectProps> = ({
           onChange={(e) => {
             setQ(e.target.value);
             setOpen(true);
+            setActiveIndex(-1); // Reset selection on typing
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}

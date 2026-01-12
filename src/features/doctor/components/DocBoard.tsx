@@ -266,6 +266,7 @@ export const ClinicalDashboard: React.FC = () => {
   ];
 
   const handleSettingsTabChange = (value: 'fields' | 'personalized' | 'layout') => {
+    console.log('Settings tab changing to:', value);
     setSettingsTab(value);
     if (value === 'layout') {
       setLayoutRefreshToken((token) => token + 1);
@@ -1487,299 +1488,299 @@ export const ClinicalDashboard: React.FC = () => {
                       </div>
                     </div>
 
-                    {isMobile ? (
-                      <div className="space-y-3">
-                        {currentAppointments.length > 0 ? (
-                          currentAppointments.map((appointment) => (
-                            <div
-                              key={appointment.appointmentId}
-                              className="rounded-2xl border border-gray-200/80 dark:border-gray-800/70 bg-white dark:bg-gray-950 p-3 shadow-sm"
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="space-y-1 min-w-0">
-                                  <button
-                                    onClick={() => handlePatientIdClick(appointment)}
-                                    className="text-sm font-semibold text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-200 inline-flex items-center gap-1 transition-colors"
-                                  >
-                                    {appointment.patientId}
-                                    <ExternalLink className="h-3 w-3" />
-                                  </button>
-                                  <p className="text-sm text-gray-900 dark:text-white truncate">{appointment.patientFullName}</p>
-                                  {appointment.phone && (
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{appointment.phone}</p>
-                                  )}
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-3">
+                      {currentAppointments.length > 0 ? (
+                        currentAppointments.map((appointment) => (
+                          <div
+                            key={appointment.appointmentId}
+                            className="rounded-2xl border border-gray-200/80 dark:border-gray-800/70 bg-white dark:bg-gray-950 p-3 shadow-sm"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="space-y-1 min-w-0">
+                                <button
+                                  onClick={() => handlePatientIdClick(appointment)}
+                                  className="text-sm font-semibold text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-200 inline-flex items-center gap-1 transition-colors"
+                                >
+                                  {appointment.patientId}
+                                  <ExternalLink className="h-3 w-3" />
+                                </button>
+                                <p className="text-sm text-gray-900 dark:text-white truncate">{appointment.patientFullName}</p>
+                                {appointment.phone && (
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{appointment.phone}</p>
+                                )}
+                              </div>
+                              <div className="flex flex-col items-end gap-1 text-right">
+                                {getStatusBadge(appointment.finalStatusCode)}
+                                <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                                  {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
                                 </div>
-                                <div className="flex flex-col items-end gap-1 text-right">
-                                  {getStatusBadge(appointment.finalStatusCode)}
-                                  <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                                    {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
-                                  </div>
-                                  <div className="text-[11px] text-gray-400 dark:text-gray-500">
-                                    {format(new Date(appointment.startAt), 'EEE, MMM dd')}
-                                  </div>
+                                <div className="text-[11px] text-gray-400 dark:text-gray-500">
+                                  {format(new Date(appointment.startAt), 'EEE, MMM dd')}
                                 </div>
                               </div>
+                            </div>
 
-                              <div className="mt-3 flex flex-wrap items-center gap-2">
-                                <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-100 px-3 py-1 text-xs font-semibold">
-                                  <span className="text-[11px] uppercase tracking-wide">{t('docBoard.table.tokenLabel')}</span>
-                                  <span>#{appointment.tokenDetails?.tokenNumber || t('docBoard.table.notAvailable')}</span>
-                                </div>
-                                <Badge variant="outline" className="text-[11px] bg-blue-50 text-blue-700 border-blue-200">
-                                  {(!appointment.appointmentType || appointment.appointmentType === 'New')
-                                    ? t('docBoard.table.newCase', { defaultValue: 'New Case' })
-                                    : appointment.appointmentType}
-                                </Badge>
+                            <div className="mt-3 flex flex-wrap items-center gap-2">
+                              <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-100 px-3 py-1 text-xs font-semibold">
+                                <span className="text-[11px] uppercase tracking-wide">{t('docBoard.table.tokenLabel')}</span>
+                                <span>#{appointment.tokenDetails?.tokenNumber || t('docBoard.table.notAvailable')}</span>
                               </div>
+                              <Badge variant="outline" className="text-[11px] bg-blue-50 text-blue-700 border-blue-200">
+                                {(!appointment.appointmentType || appointment.appointmentType === 'New')
+                                  ? t('docBoard.table.newCase', { defaultValue: 'New Case' })
+                                  : appointment.appointmentType}
+                              </Badge>
+                            </div>
 
-                              <div className="mt-3 flex flex-wrap gap-2">
-                                {['LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(String(appointment.finalStatusCode || '').toUpperCase()) && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {['LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(String(appointment.finalStatusCode || '').toUpperCase()) && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleOpenLabAttachments(appointment)}
+                                  className="h-8 px-3 text-xs font-semibold text-blue-600 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                                >
+                                  <Upload className="h-3 w-3 mr-1" />
+                                  {t('docBoard.table.addLabReport', { defaultValue: 'Lab report' })}
+                                </Button>
+                              )}
+
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleAddBillClick(appointment)}
+                                className="h-8 px-3 text-xs font-semibold text-indigo-600 border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
+                              >
+                                <FileText className="h-3 w-3 mr-1" />
+                                {t('docBoard.table.addBill', { defaultValue: 'Add Bill' })}
+                              </Button>
+
+                              {!['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(
+                                appointment.finalStatusCode
+                              ) && (
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => handleOpenLabAttachments(appointment)}
-                                    className="h-8 px-3 text-xs font-semibold text-blue-600 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                                    className="h-8 px-3 text-xs font-semibold text-red-600 border-red-200 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
+                                    onClick={() => handleCancelClick(appointment)}
                                   >
-                                    <Upload className="h-3 w-3 mr-1" />
-                                    {t('docBoard.table.addLabReport', { defaultValue: 'Lab report' })}
+                                    <X className="h-3 w-3 mr-1" />
+                                    {t('common.cancel')}
                                   </Button>
                                 )}
 
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleAddBillClick(appointment)}
-                                  className="h-8 px-3 text-xs font-semibold text-indigo-600 border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
-                                >
-                                  <FileText className="h-3 w-3 mr-1" />
-                                  {t('docBoard.table.addBill', { defaultValue: 'Add Bill' })}
-                                </Button>
-
-                                {!['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(
-                                  appointment.finalStatusCode
-                                ) && (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-8 px-3 text-xs font-semibold text-red-600 border-red-200 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
-                                      onClick={() => handleCancelClick(appointment)}
-                                    >
-                                      <X className="h-3 w-3 mr-1" />
-                                      {t('common.cancel')}
-                                    </Button>
-                                  )}
-
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 px-3 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
-                                  disabled={!hospitalId || !doctorId}
-                                  onClick={() => openPrescriptionPreview(appointment)}
-                                >
-                                  <FileText className="h-3 w-3 mr-1" />
-                                  {t('common.print')}
-                                </Button>
-                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 px-3 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                                disabled={!hospitalId || !doctorId}
+                                onClick={() => openPrescriptionPreview(appointment)}
+                              >
+                                <FileText className="h-3 w-3 mr-1" />
+                                {t('common.print')}
+                              </Button>
                             </div>
-                          ))
-                        ) : (
-                          <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/40 p-6 text-center text-gray-500 dark:text-gray-400">
-                            {t('docBoard.empty.current')}
                           </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200/60 dark:border-gray-800/60 shadow-xl shadow-gray-100/50 dark:shadow-black/20 overflow-hidden backdrop-blur-sm">
-                          {/* Table Header/Toolbar - Optional */}
+                        ))
+                      ) : (
+                        <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/40 p-6 text-center text-gray-500 dark:text-gray-400">
+                          {t('docBoard.empty.current')}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block space-y-3">
+                      <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200/60 dark:border-gray-800/60 shadow-xl shadow-gray-100/50 dark:shadow-black/20 overflow-hidden backdrop-blur-sm">
+                        {/* Table Header/Toolbar - Optional */}
 
 
-                          <div className="overflow-x-auto w-full">
-                            <Table className="w-full text-sm">
-                              <TableHeader>
-                                <TableRow className="bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-900/50">
-                                  <TableHead className="w-[180px] font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5 pl-8">
-                                    {t('docBoard.table.patient')}
-                                  </TableHead>
-                                  <TableHead className="hidden xl:table-cell font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5">
-                                    {t('docBoard.table.patientName')}
-                                  </TableHead>
-                                  <TableHead className="font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5">
-                                    {t('docBoard.table.token')}
-                                  </TableHead>
-                                  <TableHead className="hidden md:table-cell font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5">
-                                    {t('docBoard.table.appointmentTime')}
-                                  </TableHead>
-                                  <TableHead className="font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5">
-                                    {t('docBoard.table.status')}
-                                  </TableHead>
-                                  <TableHead className="font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5 text-center">
-                                    {t('docBoard.table.labReports', { defaultValue: 'Lab reports' })}
-                                  </TableHead>
+                        <div className="overflow-x-auto w-full">
+                          <Table className="w-full text-sm">
+                            <TableHeader>
+                              <TableRow className="bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-900/50">
+                                <TableHead className="w-[180px] font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5 pl-8">
+                                  {t('docBoard.table.patient')}
+                                </TableHead>
+                                <TableHead className="hidden xl:table-cell font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5">
+                                  {t('docBoard.table.patientName')}
+                                </TableHead>
+                                <TableHead className="font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5">
+                                  {t('docBoard.table.token')}
+                                </TableHead>
+                                <TableHead className="hidden md:table-cell font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5">
+                                  {t('docBoard.table.appointmentTime')}
+                                </TableHead>
+                                <TableHead className="font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5">
+                                  {t('docBoard.table.status')}
+                                </TableHead>
+                                <TableHead className="font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5 text-center">
+                                  {t('docBoard.table.labReports', { defaultValue: 'Lab reports' })}
+                                </TableHead>
 
-                                  <TableHead className="hidden lg:table-cell font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5">
-                                    {t('docBoard.table.case')}
-                                  </TableHead>
-                                  <TableHead className="font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5 text-center">
-                                    {t('docBoard.table.actions')}
-                                  </TableHead>
-                                  <TableHead className="hidden lg:table-cell font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5 text-center">
-                                    {t('docBoard.table.printRx')}
-                                  </TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {currentAppointments.length > 0 ? (
-                                  currentAppointments.map((appointment) => (
-                                    <TableRow
-                                      key={appointment.appointmentId}
-                                      className="group border-b border-gray-100 dark:border-gray-800 hover:bg-blue-50/40 dark:hover:bg-blue-900/10 transition-all duration-200"
-                                    >
-                                      <TableCell className="py-4 pl-6 align-middle font-medium">
-                                        <button
-                                          onClick={() => handlePatientIdClick(appointment)}
-                                          className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 inline-flex items-center gap-1.5 transition-colors group-hover:underline decoration-blue-300 underline-offset-4"
-                                        >
-                                          {appointment.patientId}
-                                          <ExternalLink className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />
-                                        </button>
-                                      </TableCell>
-                                      <TableCell className="hidden xl:table-cell py-4 align-middle text-sm text-gray-700 dark:text-gray-300">
-                                        <div className="flex flex-col">
-                                          <span className="font-medium text-gray-900 dark:text-white">{appointment.patientFullName}</span>
-                                          {appointment.phone && (
-                                            <span className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">{appointment.phone}</span>
-                                          )}
-                                        </div>
-                                      </TableCell>
-                                      <TableCell className="py-4 align-middle">
-                                        <div className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1 text-xs font-bold border border-gray-200 dark:border-gray-700">
-                                          <span className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider">#</span>
-                                          <span>{appointment.tokenDetails?.tokenNumber || '-'}</span>
-                                        </div>
-                                      </TableCell>
-                                      <TableCell className="hidden md:table-cell py-4 align-middle">
-                                        <div className="flex flex-col">
-                                          <div className="text-sm font-semibold text-gray-900 dark:text-white tabular-nums tracking-tight">
-                                            {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
-                                          </div>
-                                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                            {format(new Date(appointment.startAt), 'EEE, MMM dd')}
-                                          </div>
-                                        </div>
-                                      </TableCell>
-                                      <TableCell className="py-4 align-middle">
-                                        <div className="transform transition-transform duration-200 hover:scale-105 origin-left">
-                                          {getStatusBadge(appointment.finalStatusCode)}
-                                        </div>
-                                      </TableCell>
-                                      <TableCell className="py-4 align-middle text-center">
-                                        {['LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(
-                                          String(appointment.finalStatusCode || '').toUpperCase()
-                                        ) ? (
-                                          <TooltipProvider>
-                                            <Tooltip delayDuration={300}>
-                                              <TooltipTrigger asChild>
-                                                <Button
-                                                  variant="ghost"
-                                                  size="icon"
-                                                  onClick={() => handleOpenLabAttachments(appointment)}
-                                                  className="h-8 w-8 rounded-full text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                                                >
-                                                  <FlaskConical className="h-4 w-4" />
-                                                </Button>
-                                              </TooltipTrigger>
-                                              <TooltipContent>Add Lab Report</TooltipContent>
-                                            </Tooltip>
-                                          </TooltipProvider>
-                                        ) : (
-                                          <span className="text-gray-300 dark:text-gray-700 text-xl font-light">·</span>
+                                <TableHead className="hidden lg:table-cell font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5">
+                                  {t('docBoard.table.case')}
+                                </TableHead>
+                                <TableHead className="font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5 text-center">
+                                  {t('docBoard.table.actions')}
+                                </TableHead>
+                                <TableHead className="hidden lg:table-cell font-semibold text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider py-5 text-center">
+                                  {t('docBoard.table.printRx')}
+                                </TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {currentAppointments.length > 0 ? (
+                                currentAppointments.map((appointment) => (
+                                  <TableRow
+                                    key={appointment.appointmentId}
+                                    className="group border-b border-gray-100 dark:border-gray-800 hover:bg-blue-50/40 dark:hover:bg-blue-900/10 transition-all duration-200"
+                                  >
+                                    <TableCell className="py-4 pl-6 align-middle font-medium">
+                                      <button
+                                        onClick={() => handlePatientIdClick(appointment)}
+                                        className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 inline-flex items-center gap-1.5 transition-colors group-hover:underline decoration-blue-300 underline-offset-4"
+                                      >
+                                        {appointment.patientId}
+                                        <ExternalLink className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />
+                                      </button>
+                                    </TableCell>
+                                    <TableCell className="hidden xl:table-cell py-4 align-middle text-sm text-gray-700 dark:text-gray-300">
+                                      <div className="flex flex-col">
+                                        <span className="font-medium text-gray-900 dark:text-white">{appointment.patientFullName}</span>
+                                        {appointment.phone && (
+                                          <span className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">{appointment.phone}</span>
                                         )}
-                                      </TableCell>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-4 align-middle">
+                                      <div className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1 text-xs font-bold border border-gray-200 dark:border-gray-700">
+                                        <span className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider">#</span>
+                                        <span>{appointment.tokenDetails?.tokenNumber || '-'}</span>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="hidden md:table-cell py-4 align-middle">
+                                      <div className="flex flex-col">
+                                        <div className="text-sm font-semibold text-gray-900 dark:text-white tabular-nums tracking-tight">
+                                          {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
+                                        </div>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                          {format(new Date(appointment.startAt), 'EEE, MMM dd')}
+                                        </div>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-4 align-middle">
+                                      <div className="transform transition-transform duration-200 hover:scale-105 origin-left">
+                                        {getStatusBadge(appointment.finalStatusCode)}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-4 align-middle text-center">
+                                      {['LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(
+                                        String(appointment.finalStatusCode || '').toUpperCase()
+                                      ) ? (
+                                        <TooltipProvider>
+                                          <Tooltip delayDuration={300}>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => handleOpenLabAttachments(appointment)}
+                                                className="h-8 w-8 rounded-full text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                              >
+                                                <FlaskConical className="h-4 w-4" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Add Lab Report</TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      ) : (
+                                        <span className="text-gray-300 dark:text-gray-700 text-xl font-light">·</span>
+                                      )}
+                                    </TableCell>
 
-                                      <TableCell className="hidden lg:table-cell py-4 align-middle">
-                                        <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-wider bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800">
-                                          {(!appointment.appointmentType || appointment.appointmentType === 'New' || appointment.appointmentType === 'New/Fee' || appointment.appointmentType === 'New / Fee') ? t('docBoard.table.newCase', { defaultValue: 'New' }) : appointment.appointmentType}
-                                        </Badge>
-                                      </TableCell>
-                                      <TableCell className="py-4 align-middle text-center">
-                                        {!['COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode) && (
-                                          <>
+                                    <TableCell className="hidden lg:table-cell py-4 align-middle">
+                                      <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-wider bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800">
+                                        {(!appointment.appointmentType || appointment.appointmentType === 'New' || appointment.appointmentType === 'New/Fee' || appointment.appointmentType === 'New / Fee') ? t('docBoard.table.newCase', { defaultValue: 'New' }) : appointment.appointmentType}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="py-4 align-middle text-center">
+                                      {!['COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode) && (
+                                        <>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 px-2 text-green-600 hover:bg-green-50 hover:text-green-700 dark:hover:bg-green-900/20 rounded-lg transition-colors mr-1"
+                                            onClick={() => handleMarkDoneClick(appointment)}
+                                            title={t('docBoard.markDoneDialog.title', { defaultValue: 'Mark Done' })}
+                                          >
+                                            <CircleCheck className="h-4 w-4" />
+                                          </Button>
+                                          {!['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT'].includes(appointment.finalStatusCode) && (
                                             <Button
                                               variant="ghost"
                                               size="sm"
-                                              className="h-8 px-2 text-green-600 hover:bg-green-50 hover:text-green-700 dark:hover:bg-green-900/20 rounded-lg transition-colors mr-1"
-                                              onClick={() => handleMarkDoneClick(appointment)}
-                                              title={t('docBoard.markDoneDialog.title', { defaultValue: 'Mark Done' })}
+                                              className="h-8 px-2 text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                              onClick={() => handleCancelClick(appointment)}
                                             >
-                                              <CircleCheck className="h-4 w-4" />
+                                              <span className="sr-only">{t('common.cancel')}</span>
+                                              <X className="h-4 w-4" />
                                             </Button>
-                                            {!['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT'].includes(appointment.finalStatusCode) && (
-                                              <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-8 px-2 text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                                onClick={() => handleCancelClick(appointment)}
-                                              >
-                                                <span className="sr-only">{t('common.cancel')}</span>
-                                                <X className="h-4 w-4" />
-                                              </Button>
-                                            )}
-                                          </>
-                                        )
-                                        }
-                                      </TableCell>
-                                      <TableCell className="hidden lg:table-cell py-4 align-middle text-center">
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8 rounded-full text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:text-gray-400 dark:hover:text-blue-400 dark:hover:bg-blue-900/20"
-                                          disabled={!hospitalId || !doctorId}
-                                          onClick={() => openPrescriptionPreview(appointment)}
-                                        >
-                                          <PrinterIcon className="h-4 w-4" />
-                                        </Button>
-                                      </TableCell>
-                                    </TableRow>
-                                  ))
-                                ) : (
-                                  <TableRow>
-                                    <TableCell colSpan={10} className="h-96 text-center">
-                                      <div className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
-                                        <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-full mb-4">
-                                          <Calendar className="h-12 w-12 opacity-50" />
-                                        </div>
-                                        <p className="text-lg font-medium text-gray-900 dark:text-gray-200">{t('docBoard.empty.current')}</p>
-                                        <p className="text-sm max-w-xs mx-auto mt-1">No appointments found matching your filters.</p>
-                                      </div>
+                                          )}
+                                        </>
+                                      )
+                                      }
+                                    </TableCell>
+                                    <TableCell className="hidden lg:table-cell py-4 align-middle text-center">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 rounded-full text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:text-gray-400 dark:hover:text-blue-400 dark:hover:bg-blue-900/20"
+                                        disabled={!hospitalId || !doctorId}
+                                        onClick={() => openPrescriptionPreview(appointment)}
+                                      >
+                                        <PrinterIcon className="h-4 w-4" />
+                                      </Button>
                                     </TableCell>
                                   </TableRow>
-                                )}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        </div>
-                        <div className="flex justify-center mt-4 pb-2">
-                          <Pagination>
-                            <PaginationContent>
-                              <PaginationItem>
-                                <PaginationPrevious
-                                  onClick={() => handlePageChange(currentPage - 1)}
-                                  className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                                />
-                              </PaginationItem>
-                              {renderPaginationItems()}
-                              <PaginationItem>
-                                <PaginationNext
-                                  onClick={() => handlePageChange(currentPage + 1)}
-                                  className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                                />
-                              </PaginationItem>
-                            </PaginationContent>
-                          </Pagination>
+                                ))
+                              ) : (
+                                <TableRow>
+                                  <TableCell colSpan={10} className="h-96 text-center">
+                                    <div className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
+                                      <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-full mb-4">
+                                        <Calendar className="h-12 w-12 opacity-50" />
+                                      </div>
+                                      <p className="text-lg font-medium text-gray-900 dark:text-gray-200">{t('docBoard.empty.current')}</p>
+                                      <p className="text-sm max-w-xs mx-auto mt-1">No appointments found matching your filters.</p>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </TableBody>
+                          </Table>
                         </div>
                       </div>
-                    )}
+                    </div>
+                    <div className="flex justify-center mt-4 pb-2">
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious
+                              onClick={() => handlePageChange(currentPage - 1)}
+                              className={currentPage === 1 || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                            />
+                          </PaginationItem>
+                          {renderPaginationItems()}
+                          <PaginationItem>
+                            <PaginationNext
+                              onClick={() => handlePageChange(currentPage + 1)}
+                              className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    </div>
 
                     {/* Past - Mobile Responsive */}
                   </TabsContent>
@@ -1877,8 +1878,78 @@ export const ClinicalDashboard: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Past Appointments Table Card */}
-                      <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200/60 dark:border-gray-800/60 shadow-xl shadow-gray-100/50 dark:shadow-black/20 overflow-hidden backdrop-blur-sm">
+                      {/* Mobile Card View - Past */}
+                      <div className="md:hidden space-y-3">
+                        {currentAppointments.length > 0 ? (
+                          currentAppointments.map((appointment) => (
+                            <div
+                              key={appointment.appointmentId}
+                              className="rounded-2xl border border-gray-200/80 dark:border-gray-800/70 bg-white dark:bg-gray-950 p-3 shadow-sm"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="space-y-1 min-w-0">
+                                  <button
+                                    onClick={() => handlePatientIdClick(appointment)}
+                                    className="text-sm font-semibold text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-200 inline-flex items-center gap-1 transition-colors"
+                                  >
+                                    {appointment.patientId}
+                                    <ExternalLink className="h-3 w-3" />
+                                  </button>
+                                  <p className="text-sm text-gray-900 dark:text-white truncate">{appointment.patientFullName}</p>
+                                  {appointment.phone && (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{appointment.phone}</p>
+                                  )}
+                                </div>
+                                <div className="flex flex-col items-end gap-1 text-right">
+                                  {getStatusBadge(appointment.finalStatusCode)}
+                                  <div className="font-medium text-gray-900 dark:text-white text-sm">
+                                    {format(new Date(appointment.startAt), 'MMM dd, yyyy')}
+                                  </div>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="mt-3 flex flex-wrap items-center gap-2">
+                                <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">
+                                  #{appointment.tokenDetails?.tokenNumber || 'N/A'}
+                                </Badge>
+                                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 font-medium">
+                                  {appointment.appointmentType || t('docBoard.table.newCase')}
+                                </Badge>
+                              </div>
+
+                              <div className="mt-3 flex flex-wrap gap-2 items-center">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 px-3 text-xs font-semibold text-gray-600 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                  disabled={!hospitalId || !doctorId}
+                                  onClick={() => openPrescriptionPreview(appointment)}
+                                >
+                                  <PrinterIcon className="h-3.5 w-3.5 mr-1.5" />
+                                  {t('common.print')}
+                                </Button>
+
+                                {appointment.finalStatusCode === 'COMPLETED' && (
+                                  <div className="flex items-center gap-1 text-xs text-emerald-600 font-medium ml-auto">
+                                    <Check className="h-4 w-4" />
+                                    <span>Completed</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/40 p-6 text-center text-gray-500 dark:text-gray-400">
+                            {t('docBoard.empty.past')}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Desktop Table View */}
+                      <div className="hidden md:block bg-white dark:bg-gray-900 rounded-3xl border border-gray-200/60 dark:border-gray-800/60 shadow-xl shadow-gray-100/50 dark:shadow-black/20 overflow-hidden backdrop-blur-sm">
                         {/* Header Toolbar */}
                         <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-gray-50/50 dark:bg-gray-900/50">
                           <div className="flex items-center gap-2">
@@ -2084,8 +2155,84 @@ export const ClinicalDashboard: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Future Appointments Table Card */}
-                      <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200/60 dark:border-gray-800/60 shadow-xl shadow-gray-100/50 dark:shadow-black/20 overflow-hidden backdrop-blur-sm">
+                      {/* Mobile Card View - Future */}
+                      <div className="md:hidden space-y-3">
+                        {currentAppointments.length > 0 ? (
+                          currentAppointments.map((appointment) => (
+                            <div
+                              key={appointment.appointmentId}
+                              className="rounded-2xl border border-gray-200/80 dark:border-gray-800/70 bg-white dark:bg-gray-950 p-3 shadow-sm"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="space-y-1 min-w-0">
+                                  <button
+                                    onClick={() => handlePatientIdClick(appointment)}
+                                    className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 inline-flex items-center gap-1 transition-colors"
+                                  >
+                                    {appointment.patientId}
+                                    <ExternalLink className="h-3 w-3" />
+                                  </button>
+                                  <p className="text-sm text-gray-900 dark:text-white truncate">{appointment.patientFullName}</p>
+                                  {appointment.phone && (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{appointment.phone}</p>
+                                  )}
+                                </div>
+                                <div className="flex flex-col items-end gap-1 text-right">
+                                  {getStatusBadge(appointment.finalStatusCode)}
+                                  <div className="font-medium text-gray-900 dark:text-white text-sm">
+                                    {format(new Date(appointment.startAt), 'HH:mm')} - {format(new Date(appointment.endAt), 'HH:mm')}
+                                  </div>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    {format(new Date(appointment.startAt), 'MMM dd')}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="mt-3 flex flex-wrap items-center gap-2">
+                                <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">
+                                  #{appointment.tokenDetails?.tokenNumber || 'N/A'}
+                                </Badge>
+                                <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200 font-medium">
+                                  {appointment.appointmentType || t('docBoard.table.newCase')}
+                                </Badge>
+                              </div>
+
+                              <div className="mt-3 flex flex-wrap gap-2 items-center">
+                                {!['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(
+                                  appointment.finalStatusCode
+                                ) && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8 px-3 text-xs font-semibold text-red-600 border-red-200 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                      onClick={() => handleCancelClick(appointment)}
+                                    >
+                                      <X className="h-3.5 w-3.5 mr-1" />
+                                      {t('common.cancel')}
+                                    </Button>
+                                  )}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 px-3 text-xs font-semibold text-gray-600 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                  disabled={!hospitalId || !doctorId}
+                                  onClick={() => openPrescriptionPreview(appointment)}
+                                >
+                                  <PrinterIcon className="h-3.5 w-3.5 mr-1.5" />
+                                  <span className="sr-only">{t('common.print')}</span>
+                                </Button>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/40 p-6 text-center text-gray-500 dark:text-gray-400">
+                            {t('docBoard.empty.future')}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Desktop Table View */}
+                      <div className="hidden md:block bg-white dark:bg-gray-900 rounded-3xl border border-gray-200/60 dark:border-gray-800/60 shadow-xl shadow-gray-100/50 dark:shadow-black/20 overflow-hidden backdrop-blur-sm">
                         {/* Header Toolbar */}
                         <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-gray-50/50 dark:bg-gray-900/50">
                           <div className="flex items-center gap-2">
@@ -2284,7 +2431,7 @@ export const ClinicalDashboard: React.FC = () => {
 
                     <TooltipProvider delayDuration={150}>
                       <TabsList
-                        className={`flex md:flex-col w-full bg-gray-100 dark:bg-gray-800/80 rounded-xl ${isSettingsNavCollapsed ? 'md:items-center md:gap-1.5 p-1.5' : 'md:items-stretch md:gap-3 p-2'
+                        className={`flex md:flex-col w-full bg-gray-100 dark:bg-gray-800/80 rounded-xl overflow-x-auto md:overflow-visible no-scrollbar ${isSettingsNavCollapsed ? 'items-center gap-1.5 p-1.5' : 'md:items-stretch gap-2 md:gap-3 p-2'
                           }`}
                       >
                         {(isSettingsNavCollapsed ? (
@@ -2292,7 +2439,7 @@ export const ClinicalDashboard: React.FC = () => {
                             <TooltipTrigger asChild>
                               <TabsTrigger
                                 value="fields"
-                                className={`w-full justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-green-50 dark:hover:bg-green-900/20 ${isSettingsNavCollapsed ? 'md:justify-center md:px-2' : ''
+                                className={`flex-shrink-0 w-auto md:w-full justify-center md:justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-green-50 dark:hover:bg-green-900/20 ${isSettingsNavCollapsed ? 'md:justify-center md:px-2' : ''
                                   }`}
                               >
                                 <Settings className="h-4 w-4" />
@@ -2304,10 +2451,10 @@ export const ClinicalDashboard: React.FC = () => {
                         ) : (
                           <TabsTrigger
                             value="fields"
-                            className="w-full justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-green-50 dark:hover:bg-green-900/20"
+                            className="flex-shrink-0 w-auto md:w-full justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-green-50 dark:hover:bg-green-900/20"
                           >
                             <Settings className="h-4 w-4" />
-                            <span className="font-medium">{t('docBoard.settings.fields')}</span>
+                            <span className="font-medium whitespace-nowrap">{isMobile ? 'Fields' : t('docBoard.settings.fields')}</span>
                           </TabsTrigger>
                         ))}
 
@@ -2316,7 +2463,7 @@ export const ClinicalDashboard: React.FC = () => {
                             <TooltipTrigger asChild>
                               <TabsTrigger
                                 value="personalized"
-                                className={`w-full justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-purple-50 dark:hover:bg-purple-900/20 ${isSettingsNavCollapsed ? 'md:justify-center md:px-2' : ''
+                                className={`flex-shrink-0 w-auto md:w-full justify-center md:justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-purple-50 dark:hover:bg-purple-900/20 ${isSettingsNavCollapsed ? 'md:justify-center md:px-2' : ''
                                   }`}
                               >
                                 <Database className="h-4 w-4" />
@@ -2328,10 +2475,10 @@ export const ClinicalDashboard: React.FC = () => {
                         ) : (
                           <TabsTrigger
                             value="personalized"
-                            className="w-full justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                            className="flex-shrink-0 w-auto md:w-full justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                           >
                             <Database className="h-4 w-4" />
-                            <span className="font-medium">{t('docBoard.settings.personalData')}</span>
+                            <span className="font-medium whitespace-nowrap">{isMobile ? 'Library' : t('docBoard.settings.personalData')}</span>
                           </TabsTrigger>
                         ))}
 
@@ -2341,7 +2488,7 @@ export const ClinicalDashboard: React.FC = () => {
                               <TabsTrigger
                                 value="layout"
                                 onClick={handleLayoutTabClick}
-                                className={`w-full justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 ${isSettingsNavCollapsed ? 'md:justify-center md:px-2' : ''
+                                className={`flex-shrink-0 w-auto md:w-full justify-center md:justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 ${isSettingsNavCollapsed ? 'md:justify-center md:px-2' : ''
                                   }`}
                               >
                                 <LayoutDashboard className="h-4 w-4" />
@@ -2354,10 +2501,10 @@ export const ClinicalDashboard: React.FC = () => {
                           <TabsTrigger
                             value="layout"
                             onClick={handleLayoutTabClick}
-                            className="w-full justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                            className="flex-shrink-0 w-auto md:w-full justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                           >
                             <LayoutDashboard className="h-4 w-4" />
-                            <span className="font-medium">{t('docBoard.settings.layoutLab')}</span>
+                            <span className="font-medium whitespace-nowrap">{isMobile ? 'Layout' : t('docBoard.settings.layoutLab')}</span>
                           </TabsTrigger>
                         ))}
                       </TabsList>
@@ -2368,12 +2515,12 @@ export const ClinicalDashboard: React.FC = () => {
                 <div className="flex-1 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
                   <TabsContent value="fields" className="m-0">
                     <div className="p-2 sm:p-4">
-                      <PrescriptionCustomizePanel showCloseButton={false} defaultTab="fields" />
+                      <PrescriptionCustomizePanel key="fields-panel" showCloseButton={false} defaultTab="fields" />
                     </div>
                   </TabsContent>
                   <TabsContent value="personalized" className="m-0">
                     <div className="p-2 sm:p-4">
-                      <PrescriptionCustomizePanel showCloseButton={false} defaultTab="personalized" />
+                      <PrescriptionCustomizePanel key="personalized-panel" showCloseButton={false} defaultTab="personalized" />
                     </div>
                   </TabsContent>
                   <TabsContent value="layout" className="m-0">

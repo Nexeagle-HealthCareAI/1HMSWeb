@@ -127,66 +127,7 @@ export const AdminDashboard = () => {
     // { id: 'audit-security', name: t('admin.auditSecurity'), icon: ShieldCheck, description: t('admin.logsSecurity') }
   ];
 
-  const profileChecklist = [
-    {
-      id: 'basic-info',
-      label: t('admin.checklist.basicInfoLabel'),
-      helper: t('admin.checklist.basicInfoHelper'),
-      complete: isBasicInfoComplete
-    },
-    {
-      id: 'location',
-      label: t('admin.checklist.locationLabel'),
-      helper: t('admin.checklist.locationHelper'),
-      complete: isLocationInfoComplete
-    },
-    {
-      id: 'contact',
-      label: t('admin.checklist.contactLabel'),
-      helper: t('admin.checklist.contactHelper'),
-      complete: isContactInfoComplete
-    }
-  ];
-
-  const completedChecklist = profileChecklist.filter((item) => item.complete).length;
-  const pendingChecklist = profileChecklist.length - completedChecklist;
-
-  const executiveInsights = [
-    {
-      id: 'score',
-      label: t('admin.exec.profileScoreLabel'),
-      value: `${hospitalScore}%`,
-      helper: accessUnlocked
-        ? t('admin.exec.profileScoreHelperUnlocked')
-        : t('admin.exec.profileScoreHelperLocked'),
-      accent: 'from-blue-500 via-indigo-500 to-purple-500',
-      Icon: Star
-    },
-    {
-      id: 'checklist',
-      label: t('admin.exec.checklistLabel'),
-      value: `${completedChecklist}/${profileChecklist.length}`,
-      helper: pendingChecklist === 0
-        ? t('admin.exec.checklistHelperDone')
-        : t('admin.exec.checklistHelperPending', { count: pendingChecklist }),
-      accent: 'from-emerald-500 via-teal-500 to-cyan-500',
-      Icon: CheckCircle2
-    },
-    {
-      id: 'access',
-      label: accessUnlocked
-        ? t('admin.exec.accessLabelUnlocked')
-        : t('admin.exec.accessLabelRestricted'),
-      value: accessUnlocked
-        ? t('admin.exec.accessValueUnlocked')
-        : t('admin.exec.accessValueRestricted'),
-      helper: accessUnlocked
-        ? t('admin.exec.accessHelperUnlocked')
-        : t('admin.exec.accessHelperRestricted'),
-      accent: accessUnlocked ? 'from-purple-500 via-indigo-500 to-blue-500' : 'from-amber-500 via-orange-500 to-red-500',
-      Icon: ShieldCheck
-    }
-  ];
+  // Unused profile checklist and executive insights removed for clarity
 
   const handleCopyHospitalId = useCallback(async () => {
     if (!hospitalId) {
@@ -225,42 +166,13 @@ export const AdminDashboard = () => {
     }
   }, [hospitalId, toast, t]);
 
-  // Add this function before quickActions
   const focusHospitalBranding = useCallback(() => {
     setCurrentView('system-config-hospital');
   }, [setCurrentView]);
 
-  const quickActions = [
-    {
-      id: 'branding',
-      label: t('admin.quickActions.brandingLabel'),
-      description: t('admin.quickActions.brandingDescription'),
-      Icon: Building2,
-      action: focusHospitalBranding,
-      disabled: false
-    },
-    {
-      id: 'systemConfig',
-      label: t('admin.quickActions.systemConfigLabel'),
-      description: t('admin.quickActions.systemConfigDescription'),
-      Icon: Cog,
-      action: () => setCurrentView('system-config'),
-      disabled: false
-    },
-    {
-      id: 'userAccess',
-      label: t('admin.quickActions.userAccessLabel'),
-      description: t('admin.quickActions.userAccessDescription'),
-      Icon: Shield,
-      action: () => setCurrentView('user-management'),
-      disabled: !accessUnlocked
-    }
-  ];
-
-
 
   return (
-    <div ref={dashboardRootRef} className="min-h-screen w-full p-3 sm:p-4 lg:p-6 space-y-5 sm:space-y-6 bg-gray-50 dark:bg-gray-950 relative z-0">
+    <div ref={dashboardRootRef} className="min-h-screen w-full p-2 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 bg-gray-50 dark:bg-gray-950 relative z-0">
       {/* Hospital Registration Progress Dialog/Popup */}
       <Dialog
         open={showHospitalRegistrationDialog}
@@ -374,9 +286,9 @@ export const AdminDashboard = () => {
 
 
 
-      {/* Enhanced Top Navigation with Hospital ID and Modernized Nav Tabs */}
+      {/* Enhanced Top Navigation with Hospital ID and Modernized Nav Tabs - Mobile Optimized */}
       <section className="mb-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-gradient-to-br from-white via-blue-50/60 to-indigo-50 dark:from-slate-900 dark:via-slate-900/80 dark:to-slate-900 border-b border-white/70 dark:border-slate-800 rounded-2xl shadow-lg shadow-blue-100/30 dark:shadow-black/30 px-3 py-3 sm:px-6 sm:py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2 bg-gradient-to-br from-white via-blue-50/60 to-indigo-50 dark:from-slate-900 dark:via-slate-900/80 dark:to-slate-900 border-b border-white/70 dark:border-slate-800 rounded-2xl shadow-lg shadow-blue-100/30 dark:shadow-black/30 px-3 py-3 sm:px-6 sm:py-4">
           {/* Left: Title, badges, hospital ID */}
           <div className="flex flex-col gap-1 min-w-0">
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
@@ -430,8 +342,8 @@ export const AdminDashboard = () => {
             )}
           </div>
 
-          {/* Right: Navigation Tabs */}
-          <nav className="flex flex-wrap gap-2 bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-1 shadow-inner shadow-white/60 dark:shadow-black/40 mt-3 sm:mt-0 min-w-[220px] justify-end">
+          {/* Right: Navigation Tabs - Mobile Optimized Alignment */}
+          <nav className="flex flex-wrap gap-2 bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-1 shadow-inner shadow-white/60 dark:shadow-black/40 mt-3 sm:mt-0 w-full sm:w-auto min-w-[220px] justify-start sm:justify-end">
             {adminModules.map((module) => {
               const isActive = currentView === module.id;
               const isLocked = !accessUnlocked && module.id !== 'dashboard' && module.id !== 'system-config';
@@ -452,8 +364,8 @@ export const AdminDashboard = () => {
                   tabIndex={isLocked ? -1 : 0}
                   title={isLocked ? t('admin.adminFeaturesLocked') : module.description}
                   className={`group flex-1 lg:flex-none min-w-[96px] flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-2.5 py-1.5 border transition-all duration-300 text-[12px] ${isActive
-                      ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white border-transparent shadow-xl shadow-blue-500/30'
-                      : 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800/70'
+                    ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white border-transparent shadow-xl shadow-blue-500/30'
+                    : 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800/70'
                     } ${isLocked ? 'opacity-40 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
                 >
                   <div className="flex items-center gap-1.5 text-[12px] font-semibold">

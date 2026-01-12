@@ -1248,7 +1248,8 @@ export const AppointmentDashboard = () => {
                     </div>
                   </div>
 
-                  <div className="overflow-x-auto w-full">
+                  {/* Desktop Table View */}
+                  <div className="hidden md:block overflow-x-auto w-full">
                     <Table className="border-collapse min-w-[700px] md:min-w-full text-xs md:text-sm">
                       <TableHeader>
                         <TableRow className="bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700">
@@ -1527,6 +1528,93 @@ export const AppointmentDashboard = () => {
                         )}
                       </TableBody>
                     </Table>
+                  </div>
+
+                  {/* Mobile Card View */}
+                  <div className="md:hidden space-y-3">
+                    {filteredAppointments.length === 0 ? (
+                      <div className="text-center py-6 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                        <CalendarDays className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-gray-600 dark:text-gray-400 text-sm">No appointments found</p>
+                      </div>
+                    ) : (
+                      currentAppointments.map((appointment) => (
+                        <div key={appointment.appointmentId} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 space-y-3">
+                          {/* Header: Token & Status */}
+                          <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded text-xs font-bold">
+                                #{appointment.token?.tokenNumber || 'NA'}
+                              </span>
+                              <Badge variant="outline" className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 border-gray-200">
+                                {format(new Date(appointment.startAt), 'HH:mm')}
+                              </Badge>
+                            </div>
+                            <div>
+                              {getStatusBadge(appointment.finalStatusCode, appointment)}
+                            </div>
+                          </div>
+
+                          {/* Patient Info */}
+                          <div className="flex items-start gap-3" onClick={() => handlePatientClick(appointment)}>
+                            <div className="bg-gray-100 dark:bg-gray-700 p-2 rounded-full mt-1">
+                              <User className="h-4 w-4 text-gray-500" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-gray-900 dark:text-white text-sm">
+                                {appointment.patientFullName}
+                              </div>
+                              <div className="text-xs text-gray-500 flex items-center gap-2 mt-0.5">
+                                <span className="font-mono text-xs bg-gray-50 px-1 rounded border">{appointment.patientId}</span>
+                                <div className="flex items-center gap-1">
+                                  <Phone className="h-3 w-3" />
+                                  {appointment.patientMobile}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Doctor Info */}
+                          <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/30 p-2 rounded">
+                            <UserCheck className="h-3 w-3 text-green-600" />
+                            <span className="font-medium">Dr. {appointment.doctorName || 'Not Assigned'}</span>
+                          </div>
+
+                          <div className="h-px bg-gray-100 dark:bg-gray-700 my-2" />
+
+                          {/* Actions Grid */}
+                          <div className="grid grid-cols-2 gap-2">
+                            {activeTab !== 'past' && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
+                                onClick={() => handleCancelClick(appointment)}
+                                className={`h-8 text-xs border-red-200 text-red-700 bg-red-50/50 ${['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              >
+                                <X className="h-3 w-3 mr-1.5" /> Cancel
+                              </Button>
+                            )}
+
+                            {activeTab === 'current' && (
+                              <Button variant="outline" size="sm" onClick={() => handlePrintToken(appointment)} className="h-8 text-xs border-orange-200 text-orange-700 bg-orange-50/50">
+                                <Tag className="h-3 w-3 mr-1.5" /> Token
+                              </Button>
+                            )}
+
+                            {(appointment.finalStatusCode === 'VITALS_REQUIRED' || appointment.finalStatusCode === 'READY') && (
+                              <Button variant="outline" size="sm" onClick={() => handleVitalsClick(appointment)} className="h-8 text-xs border-purple-200 text-purple-700 bg-purple-50/50">
+                                <Heart className="h-3 w-3 mr-1.5" /> Vitals
+                              </Button>
+                            )}
+
+                            <Button variant="outline" size="sm" onClick={() => handlePrintPrescription(appointment)} className="h-8 text-xs border-green-200 text-green-700 bg-green-50/50">
+                              <FileText className="h-3 w-3 mr-1.5" /> Rx Print
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
 
                   {/* User Guide */}

@@ -582,7 +582,7 @@ export const PatientsPage: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto relative w-full h-full bg-gray-50/50 dark:bg-black/20 p-4 lg:p-6">
+      <main className="flex-1 overflow-auto relative w-full h-full bg-gray-50/50 dark:bg-black/20 p-2 sm:p-4 lg:p-6">
         {activeTab === 'today' && (
           <div className="max-w-5xl mx-auto space-y-6">
             <div className="flex items-center justify-between mb-2">
@@ -739,7 +739,66 @@ export const PatientsPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/60 dark:border-gray-800 shadow-sm overflow-hidden">
+            {/* Mobile Card View for Today's Appointments */}
+            <div className="block md:hidden space-y-3">
+              {filteredAndSortedAppointments.length > 0 ? (
+                filteredAndSortedAppointments.map((appointment) => (
+                  <div key={appointment.appointmentId} className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col gap-3">
+                    <div className="flex justify-between items-start">
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-gray-900 dark:text-gray-100">{appointment.patientName}</span>
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                          <Users className="h-3 w-3" />
+                          {appointment.patientId}
+                        </div>
+                      </div>
+                      <Badge variant="outline" className={cn(
+                        "capitalize text-[10px] px-1.5 py-0.5 h-auto",
+                        appointment.currentStatus === 'COMPLETED' ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                          appointment.currentStatus === 'CANCELLED' ? "bg-red-50 text-red-700 border-red-200" :
+                            "bg-blue-50 text-blue-700 border-blue-200"
+                      )}>
+                        {appointment.currentStatus.replace(/_/g, ' ').toLowerCase()}
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-400">
+                      <div className="flex items-center gap-1.5">
+                        <Phone className="h-3.5 w-3.5 text-gray-400" />
+                        {appointment.contact}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Stethoscope className="h-3.5 w-3.5 text-gray-400" />
+                        <span className="truncate">{appointment.doctorName}</span>
+                      </div>
+                    </div>
+
+                    {/* Simplified Workflow for Mobile */}
+                    <div className="flex items-center gap-1 mt-1 overflow-x-auto pb-1 no-scrollbar">
+                      {appointment.statusTransition.map((step, idx) => (
+                        <div
+                          key={idx}
+                          className={cn(
+                            "h-1.5 w-8 rounded-full flex-shrink-0 transition-colors",
+                            step.isCompleted ? "bg-emerald-500" :
+                              step.isCurrent ? "bg-blue-600 animate-pulse" :
+                                "bg-gray-200 dark:bg-gray-700"
+                          )}
+                          title={step.label}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-gray-500 bg-white dark:bg-gray-900 rounded-xl border border-dashed border-gray-200 dark:border-gray-800">
+                  <Search className="h-8 w-8 mb-2 opacity-20" />
+                  <p className="text-sm">No appointments found</p>
+                </div>
+              )}
+            </div>
+
+            <div className="hidden md:block bg-white dark:bg-gray-900 rounded-xl border border-gray-200/60 dark:border-gray-800 shadow-sm overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50">
@@ -1061,7 +1120,61 @@ export const PatientsPage: React.FC = () => {
             <div className="grid grid-cols-12 gap-6 flex-1 min-h-0 overflow-hidden">
               {/* Main Content: Table (Left) */}
               <div className="col-span-12 xl:col-span-9 flex flex-col h-full overflow-hidden order-2 xl:order-1">
-                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/60 dark:border-gray-800 shadow-sm overflow-auto flex-1">
+                {/* Mobile Card View for Patient 360 List */}
+                <div className="block md:hidden mb-4 space-y-3 pt-2">
+                  {(() => {
+                    const startIndex = (patient360Page - 1) * patient360ItemsPerPage;
+                    const paginatedPatients = filteredAndSortedPatients.slice(startIndex, startIndex + patient360ItemsPerPage);
+
+                    if (paginatedPatients.length === 0) {
+                      return (
+                        <div className="flex flex-col items-center justify-center py-8 text-gray-500 bg-white dark:bg-gray-900 rounded-xl border border-dashed border-gray-200 dark:border-gray-800">
+                          <p className="text-sm">No patients found matches.</p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-3">
+                        {paginatedPatients.map((patient) => (
+                          <div key={patient.PatientId} className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col gap-2">
+                            <div className="flex justify-between items-start">
+                              <div className="flex flex-col">
+                                <span className="font-semibold text-gray-900 dark:text-gray-100">{patient.Name}</span>
+                                <button
+                                  onClick={() => handlePatientClick(patient.PatientId)}
+                                  className="text-xs text-blue-600 flex items-center gap-1 hover:underline w-fit"
+                                >
+                                  <Users className="h-3 w-3" />
+                                  {patient.PatientId}
+                                </button>
+                              </div>
+                              <Badge variant="secondary" className="text-[10px]">
+                                {patient.Age} / {patient.Sex.charAt(0)}
+                              </Badge>
+                            </div>
+                            <div className="grid grid-cols-1 gap-1 text-xs text-gray-600 dark:text-gray-400">
+                              <div className="flex items-center gap-2">
+                                <Phone className="h-3.5 w-3.5 text-gray-400" />
+                                {patient.Contact}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <MapPin className="h-3.5 w-3.5 text-gray-400" />
+                                <span className="truncate">{patient.AddressLine}, {patient.City}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-gray-400">
+                                <CalendarDays className="h-3.5 w-3.5" />
+                                <span>Reg: {new Date(patient.RegistrationDate).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })()}
+                </div>
+
+                <div className="hidden md:block bg-white dark:bg-gray-900 rounded-xl border border-gray-200/60 dark:border-gray-800 shadow-sm overflow-auto flex-1">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50">

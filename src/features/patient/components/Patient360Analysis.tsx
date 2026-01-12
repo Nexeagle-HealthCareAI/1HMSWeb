@@ -53,7 +53,7 @@ export const Patient360Analysis: React.FC<Patient360AnalysisProps> = ({ patientI
         <div className="flex flex-col h-full bg-gray-50/50 dark:bg-black/20 space-y-6">
 
             {/* Unified Header with Patient Details */}
-            <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-4 shadow-sm">
+            <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-3 md:p-4 shadow-sm">
                 <div className="flex flex-col md:flex-row gap-4 justify-between items-start">
 
                     {/* Left: Back Button & Patient Info */}
@@ -82,7 +82,7 @@ export const Patient360Analysis: React.FC<Patient360AnalysisProps> = ({ patientI
 
                                 <div className="flex flex-wrap gap-x-8 gap-y-2 text-sm text-gray-600 dark:text-gray-300">
                                     {/* Personal Info Group */}
-                                    <div className="flex items-center gap-4 border-r border-gray-200 dark:border-gray-700 pr-6">
+                                    <div className="flex items-center gap-4 border-r-0 md:border-r border-gray-200 dark:border-gray-700 pr-0 md:pr-6 w-full md:w-auto mb-2 md:mb-0">
                                         <div className="flex items-center gap-1.5">
                                             <Activity className="h-3.5 w-3.5 text-gray-400" />
                                             <span>
@@ -123,12 +123,12 @@ export const Patient360Analysis: React.FC<Patient360AnalysisProps> = ({ patientI
                     </div>
 
                     {/* Right: 360 Analysis Title */}
-                    <div className="text-right flex-shrink-0 border-l border-gray-200 dark:border-gray-700 pl-6 hidden md:block">
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2 justify-end">
-                            <BarChart2 className="h-6 w-6 text-blue-600" />
+                    <div className="flex-shrink-0 border-l border-gray-200 dark:border-gray-700 pl-4 md:pl-6 pt-2 md:pt-0 border-t md:border-t-0 md:border-l w-full md:w-auto mt-2 md:mt-0 flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center">
+                        <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                            <BarChart2 className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
                             360 Analysis
                         </h1>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-0 md:mt-1">
                             Patient <span className="font-medium text-gray-700 dark:text-gray-300">#{patientId}</span>
                         </p>
                     </div>
@@ -140,12 +140,12 @@ export const Patient360Analysis: React.FC<Patient360AnalysisProps> = ({ patientI
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
             ) : analysis ? (
-                <div className="space-y-6 px-4 pb-6 animate-in fade-in duration-500">
+                <div className="space-y-4 md:space-y-6 px-3 md:px-4 pb-6 animate-in fade-in duration-500">
 
                     {/* Patient Tags - Moved to Top with Highlight */}
                     {analysis.patientTags && (
                         <Card className="bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900 shadow-sm">
-                            <CardContent className="p-4 flex flex-wrap items-center gap-3">
+                            <CardContent className="p-3 md:p-4 flex flex-wrap items-center gap-2 md:gap-3">
                                 <span className="text-sm font-bold text-amber-700 dark:text-amber-500 uppercase tracking-wider flex items-center gap-2">
                                     <Tag className="w-4 h-4" />
                                     Tags:
@@ -160,7 +160,7 @@ export const Patient360Analysis: React.FC<Patient360AnalysisProps> = ({ patientI
                     )}
 
                     {/* Key Metrics Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                         <StatCard
                             title="Total Visits"
                             value={analysis.totalVisit}
@@ -191,7 +191,7 @@ export const Patient360Analysis: React.FC<Patient360AnalysisProps> = ({ patientI
                     </div>
 
                     {/* Secondary Metrics & Details */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
 
                         {/* Attendance / No Show Status */}
                         <Card className="bg-white dark:bg-gray-900 border-none shadow-md overflow-hidden">
@@ -230,7 +230,7 @@ export const Patient360Analysis: React.FC<Patient360AnalysisProps> = ({ patientI
                                             Doctor Consultations
                                         </h3>
                                     </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                                         {Object.entries(analysis.doctorConsulted).map(([doctorName, count]) => (
                                             <div key={doctorName} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors border border-gray-100 dark:border-gray-800">
                                                 <div className="flex items-center gap-3">
