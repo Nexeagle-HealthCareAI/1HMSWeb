@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 import { useTranslation } from 'react-i18next';
+import { Check, Shield } from 'lucide-react';
 
 interface LoginLayoutProps {
   children: React.ReactNode;
@@ -51,7 +52,7 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
     return titleText;
   };
 
-    const defaultPromotionalContent = (
+  const defaultPromotionalContent = (
     <div className="text-white max-w-2xl">
       <div className="flex items-center gap-3 mb-6">
         <img
@@ -62,32 +63,51 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
         />
         <h1 className="text-3xl font-bold text-white">{t('loginLayout.companyName')}</h1>
       </div>
-      
+
       <h2 className="text-xl font-semibold mb-4">
         {t('loginLayout.tagline')}
       </h2>
-      
+
       <p className="text-lg opacity-90 mb-6 leading-relaxed">
         {t('loginLayout.description')}
       </p>
-      
+
       <div className="grid grid-cols-2 gap-6 mt-8">
         <div className="text-center">
           <div className="text-2xl font-bold">99.9%</div>
           <div className="text-sm opacity-75">{t('loginLayout.uptime')}</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold">10K+</div>
-          <div className="text-sm opacity-75">{t('loginLayout.doctors')}</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold">50M+</div>
-          <div className="text-sm opacity-75">{t('loginLayout.patients')}</div>
-        </div>
-        <div className="text-center">
           <div className="text-2xl font-bold">24/7</div>
           <div className="text-sm opacity-75">{t('loginLayout.support')}</div>
         </div>
+      </div>
+
+      <div className="mt-12">
+        <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
+          <Shield className="w-5 h-5" />
+          Why you can trust us
+        </h3>
+        <ul className="space-y-4">
+          {[
+            "Designed for real OPD workflows (queue, follow-ups, repeat prescriptions)",
+            "Secure patient records with controlled access",
+            "Backup & recovery so your data is safe",
+            "Clear audit trail for edits and actions",
+            "Training + onboarding for your staff",
+            "Human support when you need it",
+            "Built by a healthcare-tech team working closely with clinics",
+            "No long lock-in (monthly plans / data export anytime)",
+            "Data ownership (your data is yours; export on request)"
+          ].map((item, index) => (
+            <li key={index} className="flex items-start gap-3">
+              <div className="mt-1 bg-white/20 p-1 rounded-full flex-shrink-0">
+                <Check className="w-3 h-3 text-white" />
+              </div>
+              <span className="text-lg opacity-90 leading-snug">{item}</span>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );
@@ -99,9 +119,9 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
       {/* Mobile Header */}
       <div className="lg:hidden bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex-shrink-0">
         <div className="flex items-center justify-center gap-2">
-          <img 
-            src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
-            alt="Company Logo" 
+          <img
+            src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png"
+            alt="Company Logo"
             className="h-6 w-6"
             style={{ width: '24px', height: '24px' }}
           />
@@ -123,13 +143,13 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
             {/* Desktop Logo */}
             <div className="hidden lg:flex flex-col items-center justify-center mb-3">
               <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl mb-2">
-                <img 
-                  src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
-                  alt="Company Logo" 
-                  className="h-12 w-12" 
+                <img
+                  src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png"
+                  alt="Company Logo"
+                  className="h-12 w-12"
                   style={{ width: '60px', height: '50px' }}
                 />
-              </div>             
+              </div>
             </div>
             <CardTitle className="text-xl lg:text-3xl font-bold">
               {renderTitle(title)}
@@ -140,7 +160,7 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
               </p>
             )}
           </CardHeader>
-          
+
           <CardContent className="px-6 pb-6">
             {children}
           </CardContent>
