@@ -56,6 +56,7 @@ export const API_ENDPOINTS = {
       `/e-prescription/lookup/search?lookupType=${encodeURIComponent(lookupType)}&hospitalId=${encodeURIComponent(hospitalId)}&doctorId=${encodeURIComponent(doctorId)}&searchText=${encodeURIComponent(searchText)}`,
     LOOKUP_DETAILS: (hospitalId: string, doctorId: string) =>
       `/e-prescription/lookup/details?hospitalId=${encodeURIComponent(hospitalId)}&doctorId=${encodeURIComponent(doctorId)}`,
+    UPLOAD_VISIT_SUMMARY: 'e-prescription/visit-summary/upload',
   },
   AUTH: {
     LOGIN: 'auth/user/login',

@@ -76,6 +76,12 @@ export interface MedicineSearchResponse {
     message: string;
 }
 
+export interface UploadVisitSummaryResponse {
+    success: boolean;
+    message: string;
+    url: string | null;
+}
+
 export interface EPrescriptionDraftReq {
     prescriptionId: string | null;
     appointmentId: string;
@@ -173,12 +179,12 @@ export const eprescriptionApi = {
         return apiClient.get<LookupSearchResponse>(endpoint);
     },
 
-    uploadVisitSummary: async (appointmentId: string, file: File) => {
+    uploadVisitSummary: async (appointmentId: string, file: File): Promise<UploadVisitSummaryResponse> => {
         const formData = new FormData();
         formData.append('File', file);
 
-        const response = await apiClient.post(
-            `/e-prescription/visit-summary/upload`,
+        const response = await apiClient.post<UploadVisitSummaryResponse>(
+            API_ENDPOINTS.E_PRESCRIPTION.UPLOAD_VISIT_SUMMARY,
             formData,
             {
                 params: { AppointmentId: appointmentId },
@@ -187,7 +193,7 @@ export const eprescriptionApi = {
                 },
             }
         );
-        return response as unknown as { success: boolean; message: string; url: string | null };
+        return response;
     },
     getLookupDetails: async (
         hospitalId: string,

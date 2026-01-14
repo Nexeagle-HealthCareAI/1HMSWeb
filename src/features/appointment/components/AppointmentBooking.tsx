@@ -7,7 +7,7 @@ import { ShiftTabs } from './ShiftTabs';
 import { TimeSlots } from './TimeSlots';
 import { PatientForm } from './PatientForm';
 import { VitalsForm } from './VitalsForm';
-import { BookingSuccess } from './BookingSuccess';
+import { TokenPrintModal } from './TokenPrintModal';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -165,7 +165,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [showPatientForm, setShowPatientForm] = useState(false);
   const [showVitalsForm, setShowVitalsForm] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [showTokenPrint, setShowTokenPrint] = useState(false);
   const [appointmentId, setAppointmentId] = useState('');
   const [tokenNumber, setTokenNumber] = useState('');
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
@@ -494,7 +494,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
     });
 
     setShowVitalsForm(false);
-    setShowSuccess(true);
+    setShowTokenPrint(true);
     setSelectedSlot(null);
     setPatientData(null);
   };
@@ -520,7 +520,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
     });
 
     setShowVitalsForm(false);
-    setShowSuccess(true);
+    setShowTokenPrint(true);
     setSelectedSlot(null);
     setPatientData(null);
   };
@@ -643,29 +643,33 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
     );
   }
 
-  if (showSuccess) {
+  if (showTokenPrint) {
     return (
-      <BookingSuccess
-        appointmentId={appointmentId}
-        tokenNumber={tokenNumber}
-        doctor={selectedDoctor!}
-        date={selectedDate}
-        timeSlot={selectedSlot}
-        onBookAnother={() => {
-          setShowSuccess(false);
-          setSelectedSlot(null);
-        }}
-        onClose={() => {
-          setShowSuccess(false);
-          setSelectedSlot(null);
-          // Refresh booked slots data to show updated status
-          if (selectedDoctor?.id && formattedDate) {
-            queryClient.invalidateQueries({
-              queryKey: ['bookedSlots', selectedDoctor.id, formattedDate]
-            });
+      <TokenPrintModal
+        open={showTokenPrint}
+        onOpenChange={(open) => {
+          setShowTokenPrint(open);
+          if (!open) {
+            setSelectedSlot(null);
+            setPatientData(null);
+            setAppointmentId('');
+            setTokenNumber('');
+            // Refresh booked slots data to show updated status
+            if (selectedDoctor?.id && formattedDate) {
+              queryClient.invalidateQueries({
+                queryKey: ['bookedSlots', selectedDoctor.id, formattedDate]
+              });
+            }
           }
         }}
-        open={showSuccess}
+        tokenData={{
+          tokenNumber: tokenNumber,
+          patientName: patientData?.name || '',
+          patientId: patientData?.patientId || '',
+          doctorName: selectedDoctor?.name || '',
+          appointmentDate: selectedDate.toISOString(),
+          department: selectedDoctor?.department
+        }}
       />
     );
   }

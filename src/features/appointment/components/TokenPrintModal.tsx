@@ -138,6 +138,7 @@ export const TokenPrintModal: React.FC<TokenPrintModalProps> = ({
                     <Button variant="outline" onClick={() => onOpenChange(false)}>
                         Cancel
                     </Button>
+
                     <Button onClick={handlePrint} className="gap-2">
                         <Printer className="h-4 w-4" />
                         Print Token
