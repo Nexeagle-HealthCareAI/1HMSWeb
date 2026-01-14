@@ -2,7 +2,8 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 import { useTranslation } from 'react-i18next';
-import { Check, Shield } from 'lucide-react';
+import { Check, Shield, Activity, Lock, Database, FileText, GraduationCap, Users, Code, Calendar, HardDrive } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface LoginLayoutProps {
   children: React.ReactNode;
@@ -53,61 +54,90 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
   };
 
   const defaultPromotionalContent = (
-    <div className="text-white max-w-2xl">
-      <div className="flex items-center gap-3 mb-6">
-        <img
-          src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png"
-          alt="Company Logo"
-          className="h-12 w-12"
-          style={{ width: '48px', height: '48px' }}
-        />
-        <h1 className="text-3xl font-bold text-white">{t('loginLayout.companyName')}</h1>
+    <div className="text-white">
+      <div className="flex items-center gap-4 mb-4">
+        <div className="flex-shrink-0">
+          <img
+            src="/Logo.png"
+            alt="NexEagle Logo"
+            className="h-12 w-12 object-contain"
+          />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-white tracking-tight">NexEagle</h1>
+          <p className="text-blue-200 text-xs font-medium tracking-wide">HEALTHCARE EXCELLENCE</p>
+        </div>
       </div>
 
-      <h2 className="text-xl font-semibold mb-4">
+      <h2 className="text-3xl font-bold mb-4 leading-tight bg-gradient-to-r from-white via-blue-100 to-blue-200 bg-clip-text text-transparent">
         {t('loginLayout.tagline')}
       </h2>
 
-      <p className="text-lg opacity-90 mb-6 leading-relaxed">
+      <p className="text-sm text-blue-100/90 mb-6 leading-relaxed font-normal max-w-xl">
         {t('loginLayout.description')}
       </p>
 
-      <div className="grid grid-cols-2 gap-6 mt-8">
-        <div className="text-center">
-          <div className="text-2xl font-bold">99.9%</div>
-          <div className="text-sm opacity-75">{t('loginLayout.uptime')}</div>
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-lg p-3 hover:bg-white/15 transition-all duration-300">
+          <div className="text-2xl font-bold text-white mb-0.5">99.9%</div>
+          <div className="text-xs text-blue-200 font-medium uppercase tracking-wider">{t('loginLayout.uptime')}</div>
         </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold">24/7</div>
-          <div className="text-sm opacity-75">{t('loginLayout.support')}</div>
+
+        <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-lg p-3 hover:bg-white/15 transition-all duration-300">
+          <div className="text-2xl font-bold text-white mb-0.5">24/7</div>
+          <div className="text-xs text-blue-200 font-medium uppercase tracking-wider">{t('loginLayout.support')}</div>
         </div>
       </div>
 
-      <div className="mt-12">
-        <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
-          <Shield className="w-5 h-5" />
+      <div className="bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-white/10 shadow-2xl">
+        <h3 className="text-lg font-semibold mb-3 flex items-center gap-2 text-white">
+          <div className="p-1.5 bg-emerald-500/20 rounded-md">
+            <Shield className="w-4 h-4 text-emerald-400" />
+          </div>
           Why you can trust us
         </h3>
-        <ul className="space-y-4">
+
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 gap-2"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.1
+              }
+            }
+          }}
+        >
           {[
-            "Designed for real OPD workflows (queue, follow-ups, repeat prescriptions)",
-            "Secure patient records with controlled access",
-            "Backup & recovery so your data is safe",
-            "Clear audit trail for edits and actions",
-            "Training + onboarding for your staff",
-            "Human support when you need it",
-            "Built by a healthcare-tech team working closely with clinics",
-            "No long lock-in (monthly plans / data export anytime)",
-            "Data ownership (your data is yours; export on request)"
+            { icon: Activity, text: "Designed for real OPD workflows (queue, follow-ups)" },
+            { icon: Lock, text: "Secure patient records with controlled access" },
+            { icon: Database, text: "Backup & recovery so your data is safe" },
+            { icon: FileText, text: "Clear audit trail for edits and actions" },
+            { icon: GraduationCap, text: "Training + onboarding for your staff" },
+            { icon: Users, text: "Human support when you need it" },
+            { icon: Code, text: "Built by healthcare-tech team working closely with clinics" },
+            { icon: Calendar, text: "No long lock-in (monthly plans / data export anytime)" },
+            { icon: HardDrive, text: "Data ownership (your data is yours; export on request)" }
           ].map((item, index) => (
-            <li key={index} className="flex items-start gap-3">
-              <div className="mt-1 bg-white/20 p-1 rounded-full flex-shrink-0">
-                <Check className="w-3 h-3 text-white" />
+            <motion.div
+              key={index}
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: { opacity: 1, y: 0 }
+              }}
+              whileHover={{ scale: 1.02, backgroundColor: "rgba(255, 255, 255, 0.25)" }}
+              className="bg-white/20 p-2.5 rounded-lg border border-white/10 backdrop-blur-md flex items-center gap-3 transition-colors cursor-default shadow-sm"
+            >
+              <div className="mt-0 bg-emerald-500/30 p-1.5 rounded-md flex-shrink-0 shadow-inner">
+                <item.icon className="w-3.5 h-3.5 text-emerald-300" />
               </div>
-              <span className="text-lg opacity-90 leading-snug">{item}</span>
-            </li>
+              <span className="text-xs text-white leading-snug font-medium tracking-wide shadow-black/10 text-shadow-sm">{item.text}</span>
+            </motion.div>
           ))}
-        </ul>
+        </motion.div>
       </div>
     </div>
   );
@@ -131,8 +161,10 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
 
       {/* Desktop Promotional Banner (2/3) */}
       {showPromotionalBanner && (
-        <div className="hidden lg:flex w-2/3 bg-gradient-primary items-center justify-center p-8">
-          {promotionalContent || defaultPromotionalContent}
+        <div className="hidden lg:flex w-2/3 bg-gradient-primary flex-col justify-center p-6 overflow-y-auto">
+          <div className="relative z-10 w-full max-w-2xl mx-auto my-auto py-8">
+            {promotionalContent || defaultPromotionalContent}
+          </div>
         </div>
       )}
 
@@ -168,4 +200,4 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
       </div>
     </div>
   );
-}; 
+};
