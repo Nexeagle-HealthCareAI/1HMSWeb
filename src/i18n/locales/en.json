@@ -1412,6 +1412,8 @@
   "admin": {
     "title": "Admin Panel",
     "dashboard": "Dashboard",
+    "totalVisits": "Total Visits",
+    "visitTrends": "Visit Trends",
     "adminBoard": "Admin Board",
     "hospitalManagementOverview": "Hospital Management Overview",
     "userManagement": "User Management",
@@ -2989,5 +2991,26 @@
     "alerts": {
       "previewMissingContext": "Cannot preview: Missing patient or doctor context"
     }
+  },
+  "admin": {
+    "adminBoard": "Admin Board",
+    "dashboard": "Dashboard",
+    "userManagement": "User Management",
+    "patientManagement": "Patient Management",
+    "systemConfiguration": "System Configuration",
+    "overviewAnalytics": "Overview & Analytics",
+    "usersRolesPermissions": "Users, Roles & Permissions",
+    "patientRecordsData": "Patient Records & Data",
+    "hospitalSettings": "Hospital Settings",
+    "hospitalIdLabel": "Hospital ID",
+    "copyHospitalId": "Click to copy Hospital ID",
+    "hospitalIdCopySr": "Copy Hospital ID",
+    "copied": "Copied",
+    "hospitalIdCopied": "Hospital ID copied to clipboard.",
+    "copyFailed": "Copy Failed",
+    "copyFailedDescription": "Please copy the hospital ID manually.",
+    "totalVisits": "Total Visits",
+    "ageDistribution": "Age Distribution",
+    "hospitalSetup100": "Hospital Profile Complete! 🎉"
   }
 }
