@@ -188,9 +188,6 @@ export const eprescriptionApi = {
             formData,
             {
                 params: { AppointmentId: appointmentId },
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
             }
         );
         return response;
