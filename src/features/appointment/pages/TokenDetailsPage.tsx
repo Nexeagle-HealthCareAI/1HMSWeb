@@ -60,7 +60,6 @@ const TokenDetailsPage: React.FC = () => {
     }
 
     return (
-    return (
         <div className="min-h-screen bg-gray-100 p-4 flex flex-col items-center justify-center">
             <div
                 className="bg-white p-2 flex flex-col items-center text-center shadow-lg max-w-[80mm] w-full"
