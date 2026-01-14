@@ -79,6 +79,7 @@ export const API_ENDPOINTS = {
     REGISTER: 'hospitals/register',
     GET_BY_ID: (id: string) => `hospitals/${id}`,
     GET_BY_USER_ID: (userId: string) => `hospitals/users/${userId}`,
+    GET_ANALYSIS: (hospitalId: string) => `hospitals/analysis/hospitalId=${hospitalId}`,
   },
   DEPARTMENTS: {
     GLOBAL: 'departments/global',

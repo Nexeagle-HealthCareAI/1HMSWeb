@@ -112,6 +112,9 @@ import {
 } from '@/components/shared/prescription-preview';
 import PrescriptionCustomizePanel from '@/features/prescription/components/PrescriptionCustomizePanel';
 import { PrescriptionLayout } from '@/features/prescription/components/layout/PrescriptionLayout';
+import { useToast } from '@/hooks/use-toast';
+import { RescheduleDialog } from '../../appointment/components/RescheduleDialog';
+import { AppointmentDetail } from '../../appointment/services/appointmentApi';
 
 // Lazy-load the calendar page so it only loads when the doctor opens it from the dashboard
 const DoctorCalendar = lazy(() => import('@/features/doctor-calendar/DoctorCalendarPage').then(module => ({ default: module.DoctorCalendarPage })));
@@ -145,6 +148,7 @@ interface PatientAppointment {
 
 export const ClinicalDashboard: React.FC = () => {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const { hospitalId, userId: authUserId, employeeId, userRole } = useAuthStore();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -158,6 +162,8 @@ export const ClinicalDashboard: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
+  const [appointmentToReschedule, setAppointmentToReschedule] = useState<AppointmentDetail | null>(null);
   const [appointmentToCancel, setAppointmentToCancel] = useState<PatientAppointment | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [markDoneDialogOpen, setMarkDoneDialogOpen] = useState(false);
@@ -823,6 +829,48 @@ export const ClinicalDashboard: React.FC = () => {
   const handleCancelDialogClose = () => {
     setCancelDialogOpen(false);
     setAppointmentToCancel(null);
+  };
+
+  const handleRescheduleClick = (appointment: PatientAppointment) => {
+    const appointmentDetail: AppointmentDetail = {
+      appointmentId: appointment.appointmentId,
+      patientId: appointment.patientId,
+      patientFullName: appointment.patientFullName,
+      patientMobile: appointment.phone || '',
+      patientSex: '',
+      patientAgeYears: 0,
+      doctorId: doctorId || '',
+      doctorName: appointment.doctorName,
+      appointmentDate: appointment.startAt,
+      startAt: appointment.startAt,
+      endAt: appointment.endAt,
+      finalStatusCode: appointment.finalStatusCode,
+      reason: '',
+      insuranceId: null,
+      paymentMode: '',
+      lastStatusAt: '',
+      appointmentType: appointment.appointmentType || 'New',
+      createdAt: '',
+      token: {
+        tokenId: '',
+        tokenNumber: appointment.tokenDetails?.tokenNumber || 0,
+        createdAt: ''
+      },
+      departments: []
+    };
+
+    setAppointmentToReschedule(appointmentDetail);
+    setShowRescheduleDialog(true);
+  };
+
+  const handleRescheduleSuccess = () => {
+    setShowRescheduleDialog(false);
+    setAppointmentToReschedule(null);
+    toast({
+      title: "Rescheduled",
+      description: "Appointment has been successfully rescheduled.",
+    });
+    refetch?.();
   };
 
   const handleStatusClick = (status: string) => {
@@ -1559,15 +1607,26 @@ export const ClinicalDashboard: React.FC = () => {
                               {!['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(
                                 appointment.finalStatusCode
                               ) && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 px-3 text-xs font-semibold text-red-600 border-red-200 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
-                                    onClick={() => handleCancelClick(appointment)}
-                                  >
-                                    <X className="h-3 w-3 mr-1" />
-                                    {t('common.cancel')}
-                                  </Button>
+                                  <>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8 px-3 text-xs font-semibold text-orange-600 border-orange-200 hover:bg-orange-50 dark:hover:bg-orange-900/30 mr-2"
+                                      onClick={() => handleRescheduleClick(appointment)}
+                                    >
+                                      <Calendar className="h-3 w-3 mr-1" />
+                                      {t('common.reschedule', { defaultValue: 'Reschedule' })}
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8 px-3 text-xs font-semibold text-red-600 border-red-200 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
+                                      onClick={() => handleCancelClick(appointment)}
+                                    >
+                                      <X className="h-3 w-3 mr-1" />
+                                      {t('common.cancel')}
+                                    </Button>
+                                  </>
                                 )}
 
                               <Button
@@ -1717,15 +1776,26 @@ export const ClinicalDashboard: React.FC = () => {
                                             <CircleCheck className="h-4 w-4" />
                                           </Button>
                                           {!['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT'].includes(appointment.finalStatusCode) && (
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              className="h-8 px-2 text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                              onClick={() => handleCancelClick(appointment)}
-                                            >
-                                              <span className="sr-only">{t('common.cancel')}</span>
-                                              <X className="h-4 w-4" />
-                                            </Button>
+                                            <>
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 px-2 text-orange-500 hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-orange-900/20 rounded-lg transition-colors mr-1"
+                                                onClick={() => handleRescheduleClick(appointment)}
+                                                title={t('common.reschedule', { defaultValue: 'Reschedule' })}
+                                              >
+                                                <Calendar className="h-4 w-4" />
+                                              </Button>
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 px-2 text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                                onClick={() => handleCancelClick(appointment)}
+                                              >
+                                                <span className="sr-only">{t('common.cancel')}</span>
+                                                <X className="h-4 w-4" />
+                                              </Button>
+                                            </>
                                           )}
                                         </>
                                       )
@@ -2201,15 +2271,26 @@ export const ClinicalDashboard: React.FC = () => {
                                 {!['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(
                                   appointment.finalStatusCode
                                 ) && (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-8 px-3 text-xs font-semibold text-red-600 border-red-200 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                      onClick={() => handleCancelClick(appointment)}
-                                    >
-                                      <X className="h-3.5 w-3.5 mr-1" />
-                                      {t('common.cancel')}
-                                    </Button>
+                                    <>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 px-3 text-xs font-semibold text-orange-600 border-orange-200 hover:bg-orange-50 dark:hover:bg-orange-900/20 mr-2"
+                                        onClick={() => handleRescheduleClick(appointment)}
+                                      >
+                                        <Calendar className="h-3.5 w-3.5 mr-1" />
+                                        {t('common.reschedule', { defaultValue: 'Reschedule' })}
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 px-3 text-xs font-semibold text-red-600 border-red-200 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                        onClick={() => handleCancelClick(appointment)}
+                                      >
+                                        <X className="h-3.5 w-3.5 mr-1" />
+                                        {t('common.cancel')}
+                                      </Button>
+                                    </>
                                   )}
                                 <Button
                                   variant="outline"
@@ -2315,15 +2396,26 @@ export const ClinicalDashboard: React.FC = () => {
                                         {!['UNDER_CONSULT', 'LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED', 'CANCELLED'].includes(
                                           appointment.finalStatusCode
                                         ) && (
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              className="h-8 px-3 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                              onClick={() => handleCancelClick(appointment)}
-                                            >
-                                              <X className="h-3.5 w-3.5 mr-1" />
-                                              {t('common.cancel')}
-                                            </Button>
+                                            <>
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 px-3 text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-900/20 mr-1"
+                                                onClick={() => handleRescheduleClick(appointment)}
+                                              >
+                                                <Calendar className="h-3.5 w-3.5 mr-1" />
+                                                {t('common.reschedule', { defaultValue: 'Reschedule' })}
+                                              </Button>
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 px-3 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                                onClick={() => handleCancelClick(appointment)}
+                                              >
+                                                <X className="h-3.5 w-3.5 mr-1" />
+                                                {t('common.cancel')}
+                                              </Button>
+                                            </>
                                           )}
                                       </div>
                                     </TableCell>
@@ -2664,6 +2756,17 @@ export const ClinicalDashboard: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {appointmentToReschedule && (
+        <RescheduleDialog
+          appointment={appointmentToReschedule}
+          open={showRescheduleDialog}
+          onOpenChange={setShowRescheduleDialog}
+          onSuccess={handleRescheduleSuccess}
+          disablePastAndToday={true}
+          hideDoctorName={true}
+        />
+      )}
     </div>
   );
 };

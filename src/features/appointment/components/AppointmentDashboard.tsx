@@ -19,6 +19,8 @@ import {
   Wifi,
   WifiOff,
   Activity,
+  CalendarClock,
+  Ban,
   Loader2,
   Upload,
   UserX,
@@ -45,6 +47,7 @@ import {
 import { AppointmentBooking } from './AppointmentBooking';
 import { TokenPrintModal } from './TokenPrintModal';
 import { VitalsForm } from './VitalsForm';
+import { RescheduleDialog } from './RescheduleDialog';
 import { format } from 'date-fns';
 import { useAppointmentDetails } from '../hooks/useAppointmentDetails';
 import { useAuthStore } from '@/store/authStore';
@@ -89,6 +92,8 @@ export const AppointmentDashboard = () => {
   const [showPatientProfileModal, setShowPatientProfileModal] = useState(false);
   const [patientProfileId, setPatientProfileId] = useState<string | null>(null);
   const [patientProfileName, setPatientProfileName] = useState<string | undefined>(undefined);
+  const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
+  const [appointmentToReschedule, setAppointmentToReschedule] = useState<AppointmentDetail | null>(null);
 
   // Token Print State
   const [tokenPrintOpen, setTokenPrintOpen] = useState(false);
@@ -131,6 +136,16 @@ export const AppointmentDashboard = () => {
   const handleLabAttachmentsChange = (next: string[]) => {
     if (!labAttachmentModal.patientId) return;
     setLabAttachments((prev) => ({ ...prev, [labAttachmentModal.patientId]: next }));
+  };
+
+  const handleRescheduleClick = (appointment: AppointmentDetail) => {
+    setAppointmentToReschedule(appointment);
+    setShowRescheduleDialog(true);
+  };
+
+  const handleRescheduleSuccess = () => {
+    // Refresh list after successful reschedule
+    if (refetch) refetch();
   };
 
   const getStatusBadge = (status: AppointmentDetail['finalStatusCode'], appointment?: AppointmentDetail) => {
@@ -1371,13 +1386,13 @@ export const AppointmentDashboard = () => {
                               {activeTab === 'current' && (
                                 <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                                   <Button
-                                    variant="outline"
+                                    variant="ghost"
                                     size="sm"
                                     onClick={() => handlePrintToken(appointment)}
-                                    className="h-6 px-2 text-xs text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                                    className="h-8 w-8 p-0 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-full"
+                                    title={t('appointmentDashboard.actionButtons.printToken', { defaultValue: 'Print Token' })}
                                   >
-                                    <Tag className="h-2.5 w-2.5 mr-1" />
-                                    Print Token
+                                    <Tag className="h-4 w-4" />
                                   </Button>
                                 </TableCell>
                               )}
@@ -1425,13 +1440,13 @@ export const AppointmentDashboard = () => {
                                   String(appointment.finalStatusCode || '').toUpperCase()
                                 ) ? (
                                   <Button
-                                    variant="outline"
+                                    variant="ghost"
                                     size="sm"
                                     onClick={() => handleOpenLabAttachments(appointment)}
-                                    className="h-6 px-2 text-xs text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                    className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full"
+                                    title={t('appointmentDashboard.actionButtons.addLabReport', { defaultValue: 'Add lab report' })}
                                   >
-                                    <Upload className="h-2.5 w-2.5 mr-1" />
-                                    {t('appointmentDashboard.actionButtons.addLabReport', { defaultValue: 'Add lab report' })}
+                                    <Upload className="h-4 w-4" />
                                   </Button>
                                 ) : (
                                   <span className="text-[11px] text-gray-400 dark:text-gray-500">—</span>
@@ -1461,8 +1476,21 @@ export const AppointmentDashboard = () => {
                                         }`}
                                       onClick={() => handleCancelClick(appointment)}
                                     >
-                                      <X className="h-2.5 w-2.5 mr-1" />
+                                      <Ban className="h-2.5 w-2.5 mr-1" />
                                       {t('common.cancel')}
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      disabled={['COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
+                                      className={`h-6 px-2 text-xs ${['COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)
+                                        ? 'text-gray-400 border-gray-200 cursor-not-allowed opacity-50'
+                                        : 'text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                                        }`}
+                                      onClick={() => handleRescheduleClick(appointment)}
+                                    >
+                                      <CalendarClock className="h-2.5 w-2.5 mr-1" />
+                                      Reschedule
                                     </Button>
                                     {(appointment.finalStatusCode === 'VITALS_REQUIRED' || appointment.finalStatusCode === 'READY') && (
                                       <Button
@@ -1471,7 +1499,7 @@ export const AppointmentDashboard = () => {
                                         onClick={() => handleVitalsClick(appointment)}
                                         className="h-6 px-2 text-xs text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                                       >
-                                        <Heart className="h-2.5 w-2.5 mr-1" />
+                                        <Activity className="h-2.5 w-2.5 mr-1" />
                                         {t('appointmentDashboard.actionButtons.vitals')}
                                       </Button>
                                     )}
@@ -1846,6 +1874,16 @@ export const AppointmentDashboard = () => {
         onOpenChange={setTokenPrintOpen}
         tokenData={tokenPrintData}
       />
+
+      {appointmentToReschedule && (
+        <RescheduleDialog
+          open={showRescheduleDialog}
+          onOpenChange={setShowRescheduleDialog}
+          appointment={appointmentToReschedule}
+          onSuccess={handleRescheduleSuccess}
+          enableDoctorSelection={true}
+        />
+      )}
     </div>
   );
 };

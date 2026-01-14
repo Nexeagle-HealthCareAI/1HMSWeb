@@ -53,7 +53,7 @@ import { useHospitalApi } from '@/hooks/useApi';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { SystemConfigModule } from './SystemConfigModule';
-import { AnalyticsResponse, fetchAnalyticsData } from '../services/mockAnalyticsData';
+import { AnalyticsResponse, fetchAnalyticsData } from '../services/analyticsApi';
 
 
 
@@ -63,6 +63,7 @@ export const AdminDashboard = () => {
 
   const { toast } = useToast();
   const { t } = useTranslation();
+  const hospitalId = useAuthStore(state => state.hospitalId) ?? '';
   // Fix: Ensure setCurrentView is defined
   const [dateFilter, setDateFilter] = useState('today');
   const [searchTerm, setSearchTerm] = useState('');
@@ -77,20 +78,26 @@ export const AdminDashboard = () => {
   const [ageDistributionFilter, setAgeDistributionFilter] = useState<'overall' | 'Male' | 'Female'>('overall');
 
   useEffect(() => {
-    if (currentView === 'dashboard') {
+    if (currentView === 'dashboard' && hospitalId) {
       setLoadingAnalytics(true);
-      fetchAnalyticsData().then(response => {
+      fetchAnalyticsData(hospitalId).then(response => {
         if (response.success) {
           setAnalyticsData(response.data);
         }
+      }).catch(error => {
+        console.error('Failed to fetch analytics:', error);
+        toast({
+          title: t('errors.genericError'),
+          description: t('errors.failedToFetchAnalytics'),
+          variant: 'destructive',
+        });
       }).finally(() => {
         setLoadingAnalytics(false);
       });
     }
-  }, [currentView]);
+  }, [currentView, hospitalId, t, toast]);
 
   // Fetch hospital profile status and compute completion from API
-  const hospitalId = useAuthStore(state => state.hospitalId) ?? '';
   const {
     data: hospitalData,
     isLoading: hospitalLoading,
@@ -460,94 +467,106 @@ export const AdminDashboard = () => {
             </Card>
 
             {/* Unique Patients Card - Detailed Breakdown */}
-            <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm">
-              <CardContent className="p-4 sm:p-5">
+            <Card className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 border-indigo-100 dark:border-indigo-900/50 shadow-sm relative overflow-hidden">
+              {/* Decorative background element */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-200/20 dark:bg-indigo-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+
+              <CardContent className="p-4 sm:p-5 relative z-10">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <p className="text-gray-500 text-sm font-medium mb-1">Unique Patients</p>
-                    <h3 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-gray-100">{analyticsData ? analyticsData.kpis.uniquePatients.overall.toLocaleString() : '...'}</h3>
+                    <p className="text-indigo-900/70 dark:text-indigo-200/70 text-sm font-medium mb-1">Unique Patients</p>
+                    <h3 className="text-3xl sm:text-4xl font-bold text-indigo-900 dark:text-indigo-50">{analyticsData ? analyticsData.kpis.uniquePatients.overall.toLocaleString() : '...'}</h3>
                   </div>
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                    <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                  <div className="p-2.5 bg-white dark:bg-indigo-800/50 rounded-xl shadow-sm border border-indigo-100 dark:border-indigo-700/50">
+                    <Users className="h-6 w-6 text-indigo-600 dark:text-indigo-300" />
                   </div>
                 </div>
 
                 {/* 2x3 Grid for Breakdown */}
-                <div className="grid grid-cols-2 gap-x-4 gap-y-3 pt-2 text-xs sm:text-sm border-t border-gray-100 dark:border-gray-800">
-                  <div className="flex flex-col">
-                    <span className="text-gray-400 dark:text-gray-500 text-[10px] uppercase tracking-wide">Today</span>
-                    <span className="font-semibold text-gray-700 dark:text-gray-200 text-lg">{analyticsData?.kpis.uniquePatients.byBucket.today.toLocaleString() || 0}</span>
+                <div className="grid grid-cols-2 gap-2 pt-2 text-xs sm:text-sm">
+                  <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-indigo-50/50 dark:border-indigo-800/30">
+                    <span className="text-indigo-400 dark:text-indigo-300 text-[10px] uppercase tracking-wide font-bold">Today</span>
+                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis.uniquePatients.byBucket.today.toLocaleString() || 0}</span>
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-gray-400 dark:text-gray-500 text-[10px] uppercase tracking-wide">Yesterday</span>
-                    <span className="font-semibold text-gray-700 dark:text-gray-200 text-lg">{analyticsData?.kpis.uniquePatients.byBucket.yesterday.toLocaleString() || 0}</span>
-                  </div>
-
-                  <div className="flex flex-col">
-                    <span className="text-gray-400 dark:text-gray-500 text-[10px] uppercase tracking-wide">Last 7 Days</span>
-                    <span className="font-semibold text-gray-700 dark:text-gray-200 text-lg">{analyticsData?.kpis.uniquePatients.byBucket.last7Days.toLocaleString() || 0}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-gray-400 dark:text-gray-500 text-[10px] uppercase tracking-wide">This Month</span>
-                    <span className="font-semibold text-gray-700 dark:text-gray-200 text-lg">{analyticsData?.kpis.uniquePatients.byBucket.thisMonth.toLocaleString() || 0}</span>
+                  <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-indigo-50/50 dark:border-indigo-800/30">
+                    <span className="text-indigo-400 dark:text-indigo-300 text-[10px] uppercase tracking-wide font-bold">Yesterday</span>
+                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis.uniquePatients.byBucket.yesterday.toLocaleString() || 0}</span>
                   </div>
 
-                  <div className="flex flex-col">
-                    <span className="text-gray-400 dark:text-gray-500 text-[10px] uppercase tracking-wide">This Year</span>
-                    <span className="font-semibold text-gray-700 dark:text-gray-200 text-lg">{analyticsData?.kpis.uniquePatients.byBucket.thisYear.toLocaleString() || 0}</span>
+                  <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-indigo-50/50 dark:border-indigo-800/30">
+                    <span className="text-indigo-400 dark:text-indigo-300 text-[10px] uppercase tracking-wide font-bold">Last 7 Days</span>
+                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis.uniquePatients.byBucket.last7Days.toLocaleString() || 0}</span>
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-gray-400 dark:text-gray-500 text-[10px] uppercase tracking-wide">Prev Year</span>
-                    <span className="font-semibold text-gray-700 dark:text-gray-200 text-lg">{analyticsData?.kpis.uniquePatients.byBucket.prevYear.toLocaleString() || 0}</span>
+                  <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-indigo-50/50 dark:border-indigo-800/30">
+                    <span className="text-indigo-400 dark:text-indigo-300 text-[10px] uppercase tracking-wide font-bold">This Month</span>
+                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis.uniquePatients.byBucket.thisMonth.toLocaleString() || 0}</span>
+                  </div>
+
+                  <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-indigo-50/50 dark:border-indigo-800/30">
+                    <span className="text-indigo-400 dark:text-indigo-300 text-[10px] uppercase tracking-wide font-bold">This Year</span>
+                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis.uniquePatients.byBucket.thisYear.toLocaleString() || 0}</span>
+                  </div>
+                  <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-indigo-50/50 dark:border-indigo-800/30">
+                    <span className="text-indigo-400 dark:text-indigo-300 text-[10px] uppercase tracking-wide font-bold">Prev Year</span>
+                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis.uniquePatients.byBucket.prevYear.toLocaleString() || 0}</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* New vs Returning Card - Improved Visual */}
-            <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm">
-              <CardContent className="p-5">
+            <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 border-blue-100 dark:border-blue-900/50 shadow-sm relative overflow-hidden">
+              {/* Decorative background element */}
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-200/20 dark:bg-blue-500/10 rounded-full blur-2xl -ml-10 -mb-10 pointer-events-none"></div>
+
+              <CardContent className="p-5 relative z-10">
                 <div className="flex flex-col h-full justify-between">
-                  <p className="text-gray-500 text-sm font-medium mb-4">New vs Returning</p>
+                  <div className="flex justify-between items-center mb-4">
+                    <p className="text-blue-900/70 dark:text-blue-200/70 text-sm font-medium">New vs Returning</p>
+                    <div className="p-1.5 bg-white/80 dark:bg-blue-900/30 rounded-lg">
+                      <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                  </div>
 
                   {/* Stats Row */}
-                  <div className="flex justify-between items-end mb-3">
+                  <div className="flex justify-between items-end mb-4 px-2">
                     {/* New Patients - Left Aligned */}
                     <div className="flex flex-col items-start">
-                      <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                      <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">
                         {analyticsData ? analyticsData.kpis.newVsReturningPatients.new.percent : '..'}%
                       </span>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                          New <span className="opacity-75">({analyticsData?.kpis.newVsReturningPatients.new.count || 0})</span>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm ring-2 ring-white dark:ring-blue-950"></div>
+                        <span className="text-xs font-semibold text-blue-800 dark:text-blue-200">
+                          New <span className="opacity-70 font-normal">({analyticsData?.kpis.newVsReturningPatients.new.count || 0})</span>
                         </span>
                       </div>
                     </div>
 
                     {/* Returning Patients - Right Aligned */}
                     <div className="flex flex-col items-end">
-                      <span className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                      <span className="text-3xl font-bold text-cyan-600 dark:text-cyan-400">
                         {analyticsData ? analyticsData.kpis.newVsReturningPatients.returning.percent : '..'}%
                       </span>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                          Returning <span className="opacity-75">({analyticsData?.kpis.newVsReturningPatients.returning.count || 0})</span>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="text-xs font-semibold text-cyan-800 dark:text-cyan-200">
+                          Returning <span className="opacity-70 font-normal">({analyticsData?.kpis.newVsReturningPatients.returning.count || 0})</span>
                         </span>
-                        <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                        <div className="w-2.5 h-2.5 rounded-full bg-cyan-500 shadow-sm ring-2 ring-white dark:ring-blue-950"></div>
                       </div>
                     </div>
                   </div>
 
                   {/* Segmented Progress Bar */}
-                  <div className="w-full h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden flex shadow-inner">
+                  <div className="w-full h-4 bg-white/50 dark:bg-black/20 rounded-full overflow-hidden flex shadow-inner p-0.5 backdrop-blur-sm border border-blue-100 dark:border-blue-800/30">
                     <div
-                      className="bg-blue-500 h-full transition-all duration-1000 ease-out relative group"
+                      className="bg-gradient-to-r from-blue-500 to-blue-400 h-full rounded-l-full transition-all duration-1000 ease-out relative group"
                       style={{ width: `${analyticsData?.kpis.newVsReturningPatients.new.percent || 0}%` }}
                       title={`New: ${analyticsData?.kpis.newVsReturningPatients.new.percent}%`}
                     ></div>
+                    <div className="w-0.5 h-full bg-transparent"></div>
                     <div
-                      className="bg-indigo-500 h-full transition-all duration-1000 ease-out relative group"
+                      className="bg-gradient-to-r from-cyan-400 to-cyan-500 h-full rounded-r-full transition-all duration-1000 ease-out relative group"
                       style={{ width: `${analyticsData?.kpis.newVsReturningPatients.returning.percent || 0}%` }}
                       title={`Returning: ${analyticsData?.kpis.newVsReturningPatients.returning.percent}%`}
                     ></div>
@@ -772,22 +791,42 @@ export const AdminDashboard = () => {
               <CardContent className="p-4">
                 <div className="space-y-4">
                   {analyticsData ? (
-                    Object.entries(analyticsData.overall.top5City)
-                      .sort(([, a], [, b]) => b - a) // Sort by count descending
-                      .slice(0, 5) // Take top 5
-                      .map(([city, count], index) => (
-                        <div key={city} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border border-transparent hover:border-gray-100">
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 text-xs font-bold">
-                              {index + 1}
-                            </div>
-                            <span className="font-medium text-gray-700 dark:text-gray-200">{city}</span>
+                    (() => {
+                      const cityEntries = Object.entries(analyticsData.overall.top5City)
+                        .sort(([, a], [, b]) => b - a)
+                        .slice(0, 5);
+
+                      // Calculate max for progress bar
+                      const maxCount = Math.max(...cityEntries.map(([, c]) => c)) || 1;
+
+                      return cityEntries.map(([city, count], index) => (
+                        <div key={city} className="relative p-3 rounded-lg bg-white/50 dark:bg-gray-800/40 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-colors border border-gray-100 dark:border-gray-800 group">
+                          {/* Progress bar background */}
+                          <div className="absolute bottom-0 left-0 h-1 bg-indigo-100 dark:bg-gray-700 w-full rounded-b-lg overflow-hidden opacity-50">
+                            <div className="h-full bg-indigo-500 rounded-lg" style={{ width: `${(count / maxCount) * 100}%` }}></div>
                           </div>
-                          <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-100">
-                            {count.toLocaleString()}
-                          </Badge>
+
+                          <div className="flex items-center justify-between relative z-10 mb-1">
+                            <div className="flex items-center gap-3">
+                              <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold shadow-sm ${index === 0 ? 'bg-amber-100 text-amber-700 ring-2 ring-amber-50' :
+                                index === 1 ? 'bg-gray-200 text-gray-600' :
+                                  index === 2 ? 'bg-orange-100 text-orange-700' :
+                                    'bg-indigo-50 text-indigo-600'
+                                }`}>
+                                {index + 1}
+                              </div>
+                              <span className="font-semibold text-gray-700 dark:text-gray-200">{city}</span>
+                            </div>
+                            <div className="flex flex-col items-end">
+                              <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                                {count.toLocaleString()}
+                              </span>
+                              <span className="text-[10px] text-gray-400 uppercase tracking-wide">Patients</span>
+                            </div>
+                          </div>
                         </div>
-                      ))
+                      ));
+                    })()
                   ) : (
                     <div className="text-center py-8 text-gray-400">Loading cities...</div>
                   )}
@@ -808,7 +847,11 @@ export const AdminDashboard = () => {
               </CardHeader>
               <CardContent className="p-0 h-[400px] w-full relative">
                 {analyticsData ? (
-                  <CityMap data={analyticsData.overall.top5City} className="rounded-none border-x-0 border-b-0" />
+                  <CityMap
+                    data={analyticsData.overall.top5City}
+                    cities={analyticsData.overall.uniqueCities}
+                    className="rounded-none border-x-0 border-b-0"
+                  />
                 ) : (
                   <div className="h-full w-full bg-gray-50 flex items-center justify-center text-gray-400">Loading map...</div>
                 )}
@@ -941,16 +984,24 @@ export const AdminDashboard = () => {
                       <div className="flex justify-between items-center mb-1">
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{spec.specialtyName}</span>
                         <div className="flex items-center gap-1">
-                          <span className={`text-[10px] font-bold ${spec.trendVsPreviousPeriod?.direction === 'UP' ? 'text-green-600' :
-                            spec.trendVsPreviousPeriod?.direction === 'DOWN' ? 'text-red-500' : 'text-gray-400'
-                            }`}>
-                            {spec.trendVsPreviousPeriod?.direction === 'UP' ? '↑' :
-                              spec.trendVsPreviousPeriod?.direction === 'DOWN' ? '↓' : '•'}
-                            {Math.abs(spec.trendVsPreviousPeriod?.percent || 0)}%
-                          </span>
+                          {spec.trendVsPreviousPeriod && Math.abs(spec.trendVsPreviousPeriod.percent) > 0 && (
+                            <span className={`text-[10px] font-bold ${spec.trendVsPreviousPeriod.direction === 'UP' ? 'text-green-600' :
+                              spec.trendVsPreviousPeriod.direction === 'DOWN' ? 'text-red-500' : 'text-gray-400'
+                              }`}>
+                              {spec.trendVsPreviousPeriod.direction === 'UP' ? '↑' :
+                                spec.trendVsPreviousPeriod.direction === 'DOWN' ? '↓' : ''}
+                              {Math.abs(spec.trendVsPreviousPeriod.percent)}%
+                            </span>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {spec.uniquePatients.toLocaleString()} Unique Patients</span>
+                        <span className="text-gray-300 dark:text-gray-700">•</span>
+                        <span>{spec.overallVisits.toLocaleString()} Overall Visits</span>
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-2">
                         <div className="flex-1 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                           <div className={`h-full rounded-full ${idx === 0 ? 'bg-purple-500' :
                             idx === 1 ? 'bg-blue-500' :

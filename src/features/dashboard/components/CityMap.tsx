@@ -30,12 +30,16 @@ const CITY_COORDINATES: Record<string, [number, number]> = {
 
 interface CityMapProps {
     data: Record<string, number>;
+    cities?: string[];
     className?: string;
 }
 
-export const CityMap: React.FC<CityMapProps> = ({ data, className }) => {
+export const CityMap: React.FC<CityMapProps> = ({ data, cities, className }) => {
     // Default center roughly focusing on Bihar/West Bengal region
     const centerPosition: [number, number] = [25.5, 87.5];
+
+    // Use provided cities list or fall back to keys from data
+    const citiesToList = cities || Object.keys(data);
 
     return (
         <div className={`h-full w-full rounded-lg overflow-hidden border border-gray-200 dark:border-gray-800 ${className}`}>
@@ -50,9 +54,12 @@ export const CityMap: React.FC<CityMapProps> = ({ data, className }) => {
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                {Object.entries(data).map(([city, count]) => {
+                {citiesToList.map((city) => {
                     const position = CITY_COORDINATES[city];
+                    // Skip if no coordinates found
                     if (!position) return null;
+
+                    const count = data[city] || 0;
 
                     return (
                         <Marker key={city} position={position} icon={customIcon}>

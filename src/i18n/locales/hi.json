@@ -1414,6 +1414,10 @@
     "inactiveUsers": "निष्क्रिय उपयोगकर्ता",
     "totalUsers": "कुल उपयोगकर्ता",
     "hospitalRegistrationProgress": "🏥 हॉस्पिटल पंजीकरण प्रगति",
+    "ageDistribution": "आयु वितरण",
+    "adminBoard": "एडमिन बोर्ड",
+    "dashboard": "डैशबोर्ड",
+    "totalVisits": "कुल विज़िट",
     "completeHospitalDetails": "सभी एडमिन सुविधाओं को अनलॉक करने के लिए हॉस्पिटल विवरण पूर्ण करें",
     "complete": "पूर्ण",
     "progress": "प्रगति",
@@ -3457,5 +3461,9 @@
     "alerts": {
       "previewMissingContext": "पूर्वावलोकन नहीं कर सकते: मरीज़ या डॉक्टर संदर्भ गायब है"
     }
+  },
+  "errors": {
+    "genericError": "कुछ गलत हो गया",
+    "failedToFetchAnalytics": "एनालिटिक्स डेटा लाने में विफल"
   }
 }

@@ -270,6 +270,8 @@ export interface AppointmentDetail {
     createdAt: string;
   };
   departments?: string[];
+  departmentId?: string;
+  departmentName?: string;
 }
 
 // Appointment API service
@@ -364,5 +366,19 @@ export const appointmentApi = {
   }): Promise<ApiResponse<any>> => {
     const url = `/appointments/complete-appointment`;
     return apiClient.post(url, request);
+  },
+
+  // Reschedule appointment
+  rescheduleAppointment: (request: {
+    appointmentId: string;
+    patientId: string;
+    doctorId: string;
+    hospitalId: string;
+    newDate: string; // YYYY-MM-DD
+    newSlot: string; // HH:mm
+    reason?: string;
+  }): Promise<ApiResponse<any>> => {
+    const url = `/appointments/reschedule`;
+    return apiClient.put(url, request);
   },
 };
