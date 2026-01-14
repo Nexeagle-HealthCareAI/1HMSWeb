@@ -60,72 +60,53 @@ const TokenDetailsPage: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 p-4 flex flex-col items-center justify-center">
-            <Card className="w-full max-w-md shadow-xl border-t-4 border-t-indigo-600">
-                <CardHeader className="text-center pb-2">
-                    <CardTitle className="text-gray-800 text-xl font-bold uppercase tracking-wider">Appointment Token</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6 pt-6">
+    return (
+        <div className="min-h-screen bg-gray-100 p-4 flex flex-col items-center justify-center">
+            <div
+                className="bg-white p-2 flex flex-col items-center text-center shadow-lg max-w-[80mm] w-full"
+                style={{
+                    fontFamily: 'Arial, Helvetica, sans-serif',
+                    color: 'black',
+                }}
+            >
+                {/* Token Number */}
+                <div className="mt-8 mb-2">
+                    <div className="text-sm font-bold uppercase">Token Number</div>
+                    <div className="text-6xl font-black my-1 leading-none">{tokenData.tn}</div>
+                </div>
 
-                    <div className="text-center bg-indigo-50 py-6 rounded-xl border border-indigo-100">
-                        <p className="text-indigo-600 text-xs font-bold uppercase tracking-widest mb-1">Your Token Number</p>
-                        <h1 className="text-6xl font-black text-indigo-700 tabular-nums">{tokenData.tn}</h1>
+                {/* Details */}
+                <div className="w-full text-left space-y-1.5 mb-4 border-t-2 border-dashed border-black pt-3 mt-2 pl-4">
+                    <div className="flex justify-between items-baseline">
+                        <span className="font-bold text-xs">Date:</span>
+                        <span className="text-sm font-mono">{format(new Date(tokenData.ad), 'dd/MM/yyyy')}</span>
                     </div>
 
-                    <div className="space-y-4">
-                        <div className="flex items-center p-3 bg-white rounded-lg border border-gray-100 shadow-sm">
-                            <div className="bg-blue-100 p-2 rounded-full mr-3">
-                                <User className="w-5 h-5 text-blue-600" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-xs text-gray-500 uppercase font-semibold">Patient</p>
-                                <p className="font-medium text-gray-900 truncate">{tokenData.pn}</p>
-                                <p className="text-xs text-gray-400 font-mono">{tokenData.pid}</p>
-                            </div>
-                        </div>
+                    <div>
+                        <span className="font-bold block text-[10px] uppercase text-gray-600">Patient Details</span>
+                        <div className="text-sm font-bold truncate">{tokenData.pn}</div>
+                        <div className="text-xs font-mono">{tokenData.pid}</div>
+                    </div>
 
-                        <div className="flex items-center p-3 bg-white rounded-lg border border-gray-100 shadow-sm">
-                            <div className="bg-green-100 p-2 rounded-full mr-3">
-                                <Stethoscope className="w-5 h-5 text-green-600" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-xs text-gray-500 uppercase font-semibold">Doctor</p>
-                                <p className="font-medium text-gray-900 truncate">{tokenData.dn}</p>
-                            </div>
-                        </div>
-
+                    <div>
+                        <span className="font-bold block text-[10px] uppercase text-gray-600">Doctor</span>
+                        <div className="text-sm font-bold truncate">{tokenData.dn}</div>
                         {tokenData.d && (
-                            <div className="flex items-center p-3 bg-white rounded-lg border border-gray-100 shadow-sm">
-                                <div className="bg-purple-100 p-2 rounded-full mr-3">
-                                    <Building2 className="w-5 h-5 text-purple-600" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-xs text-gray-500 uppercase font-semibold">Department</p>
-                                    <p className="font-medium text-gray-900 truncate">{tokenData.d}</p>
-                                </div>
-                            </div>
+                            <div className="text-xs">{tokenData.d}</div>
                         )}
-
-                        <div className="flex items-center p-3 bg-white rounded-lg border border-gray-100 shadow-sm">
-                            <div className="bg-orange-100 p-2 rounded-full mr-3">
-                                <Calendar className="w-5 h-5 text-orange-600" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-xs text-gray-500 uppercase font-semibold">Date</p>
-                                <p className="font-medium text-gray-900">
-                                    {format(new Date(tokenData.ad), 'EEEE, MMMM do, yyyy')}
-                                </p>
-                            </div>
-                        </div>
                     </div>
+                </div>
 
-                    <div className="text-center pt-4 border-t border-dashed border-gray-200">
-                        <p className="text-sm text-gray-500 italic">Please wait for your turn.</p>
-                        <p className="text-xs text-gray-400 mt-2">Thank you for choosing us.</p>
-                    </div>
+                {/* Footer */}
+                <div className="text-[10px] mt-3 font-semibold text-center w-full border-t-2 border-black pt-2">
+                    Please wait for your turn.
+                </div>
+                <div className="text-[8px] mt-1 text-center w-full mb-4">
+                    {format(new Date(), 'dd/MM/yyyy HH:mm')}
+                </div>
+            </div>
 
-                </CardContent>
-            </Card>
+            <p className="mt-6 text-xs text-gray-400">Digital Token View</p>
         </div>
     );
 };

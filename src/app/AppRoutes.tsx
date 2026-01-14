@@ -35,6 +35,7 @@ const DocAI = lazy(() => import('@/features/ai/components/DocAI').then(module =>
 const ProfilePage = lazy(() => import('@/features/profile/components/ProfilePage').then(module => ({ default: module.ProfilePage })));
 
 const UserOnboardingRegistration = lazy(() => import('@/features/auth/components/UserOnboardingRegistration').then(module => ({ default: module.default })));
+const TokenDetailsPage = lazy(() => import('@/features/appointment/pages/TokenDetailsPage').then(module => ({ default: module.default })));
 const NotFoundPage = lazy(() => import('@/components/shared/NotFoundPage').then(module => ({ default: module.default })));
 const PrescriptionVerificationPage = lazy(() => import('@/features/patient/pages/PrescriptionVerificationPage').then(module => ({ default: module.default })));
 
@@ -87,6 +88,12 @@ export const AppRoutes: React.FC = () => {
         <Route
           path="/user-onboarding"
           element={<UserOnboardingRegistration />}
+        />
+
+        {/* Token View - Publicly accessible */}
+        <Route
+          path="/token-view"
+          element={<TokenDetailsPage />}
         />
 
         <Route
