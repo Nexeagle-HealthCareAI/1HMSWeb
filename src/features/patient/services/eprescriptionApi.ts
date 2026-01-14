@@ -188,6 +188,9 @@ export const eprescriptionApi = {
             formData,
             {
                 params: { AppointmentId: appointmentId },
+                headers: {
+                    'Content-Type': undefined,
+                } as any // Cast to allow undefined override
             }
         );
         return response;
