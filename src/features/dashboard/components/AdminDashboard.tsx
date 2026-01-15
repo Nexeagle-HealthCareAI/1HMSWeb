@@ -394,7 +394,7 @@ export const AdminDashboard = () => {
           </div>
 
           {/* Right: Navigation Tabs - Mobile Optimized Alignment */}
-          <nav className="flex flex-wrap gap-2 bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-1 shadow-inner shadow-white/60 dark:shadow-black/40 mt-3 sm:mt-0 w-full sm:w-auto min-w-[220px] justify-start sm:justify-end">
+          <nav className="flex flex-nowrap overflow-x-auto gap-2 bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-1 shadow-inner shadow-white/60 dark:shadow-black/40 mt-3 sm:mt-0 w-full sm:w-auto sm:min-w-[220px] justify-start sm:justify-end [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
             {adminModules.map((module) => {
               const isActive = currentView === module.id;
               const isLocked = !accessUnlocked && module.id !== 'dashboard' && module.id !== 'system-config';
@@ -414,7 +414,7 @@ export const AdminDashboard = () => {
                   aria-pressed={isActive}
                   tabIndex={isLocked ? -1 : 0}
                   title={isLocked ? t('admin.adminFeaturesLocked') : module.description}
-                  className={`group flex-1 lg:flex-none min-w-[96px] flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-2.5 py-1.5 border transition-all duration-300 text-[12px] ${isActive
+                  className={`group flex-none flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-3 py-2 sm:px-2.5 sm:py-1.5 border transition-all duration-300 text-[12px] whitespace-nowrap ${isActive
                     ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white border-transparent shadow-xl shadow-blue-500/30'
                     : 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800/70'
                     } ${isLocked ? 'opacity-40 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
@@ -423,13 +423,9 @@ export const AdminDashboard = () => {
                     <span className={`p-1 rounded-lg ${isActive ? 'bg-white/20' : 'bg-gray-100 dark:bg-slate-800'}`}>
                       <module.icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-blue-500 dark:text-blue-400'}`} />
                     </span>
-                    <span className="hidden sm:inline">{module.name}</span>
-                    <span className="sm:hidden">{module.name.split(' ')[0]}</span>
+                    <span className="inline">{module.name}</span>
                   </div>
                   <span className={`hidden sm:block text-[10px] leading-snug ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'}`}>{module.description}</span>
-                  <span className={`block text-[10px] leading-snug truncate w-full ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'} sm:hidden`}>
-                    {module.description}
-                  </span>
                 </button>
               );
             })}
@@ -652,11 +648,11 @@ export const AdminDashboard = () => {
                   ))}
                 </div>
               </CardHeader>
-              <CardContent className="h-[320px]">
+              <CardContent className="h-[320px] sm:h-[350px]">
                 {/* Custom CSS Bar Chart for Ages */}
-                <div className="h-full w-full pt-8 pb-4 relative">
+                <div className="h-full w-full pt-8 pb-4 relative overflow-x-auto overflow-y-hidden">
                   {/* Background Grid Lines */}
-                  <div className="absolute inset-x-0 bottom-0 top-8 flex flex-col justify-between pointer-events-none">
+                  <div className="absolute inset-x-0 bottom-4 top-8 flex flex-col justify-between pointer-events-none min-w-[300px]">
                     {[100, 75, 50, 25, 0].map((tick) => (
                       <div key={tick} className="w-full border-t border-gray-100 dark:border-gray-800 relative h-0">
                         <span className="absolute -left-0 -top-2 text-[10px] text-gray-300 dark:text-gray-600 hidden sm:block">{tick}%</span>
@@ -664,7 +660,7 @@ export const AdminDashboard = () => {
                     ))}
                   </div>
 
-                  <div className="h-full flex items-end justify-between gap-2 sm:gap-4 relative z-10 pl-2">
+                  <div className="h-full flex items-end justify-between gap-2 sm:gap-4 relative z-10 pl-2 min-w-[300px]">
                     {analyticsData ? (() => {
                       // Determine which data to show based on filter
                       let dataToDisplay = analyticsData.overall.ageDistribution;
@@ -897,19 +893,19 @@ export const AdminDashboard = () => {
                   <table className="w-full text-sm text-left">
                     <thead className="bg-gray-100/70 dark:bg-gray-800/70 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200 dark:border-gray-800">
                       <tr>
-                        <th className="px-6 py-4 min-w-[200px]">Doctor</th>
-                        <th className="px-6 py-4 text-center">Total Visits</th>
-                        <th className="px-6 py-4 text-center">Unique Pts</th>
-                        <th className="px-6 py-4 text-center">New Patients <span className="text-[10px] lowercase font-normal opacity-70 block">(D / W / M / Y)</span></th>
-                        <th className="px-6 py-4 text-center">Returning</th>
-                        <th className="px-6 py-4 text-center">No Show</th>
-                        <th className="px-6 py-4 text-right">Share %</th>
+                        <th className="px-6 py-4 min-w-[200px] whitespace-nowrap">Doctor</th>
+                        <th className="px-6 py-4 text-center whitespace-nowrap">Total Visits</th>
+                        <th className="px-6 py-4 text-center whitespace-nowrap">Unique Pts</th>
+                        <th className="px-6 py-4 text-center whitespace-nowrap">New Patients <span className="text-[10px] lowercase font-normal opacity-70 block">(D / W / M / Y)</span></th>
+                        <th className="px-6 py-4 text-center whitespace-nowrap">Returning</th>
+                        <th className="px-6 py-4 text-center whitespace-nowrap">No Show</th>
+                        <th className="px-6 py-4 text-right whitespace-nowrap">Share %</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800/50">
                       {analyticsData ? analyticsData.breakdowns.byDoctor.map((doc, idx) => (
                         <tr key={idx} className="hover:bg-gray-50/80 dark:hover:bg-gray-800/30 transition-colors">
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center gap-3">
                               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${idx === 0 ? 'bg-amber-100 text-amber-700' :
                                 idx === 1 ? 'bg-gray-200 text-gray-600' :
@@ -923,13 +919,13 @@ export const AdminDashboard = () => {
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 text-center font-medium text-gray-700 dark:text-gray-200">
+                          <td className="px-6 py-4 text-center font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap">
                             {doc.overallVisits.toLocaleString()}
                           </td>
-                          <td className="px-6 py-4 text-center text-gray-600 dark:text-gray-400">
+                          <td className="px-6 py-4 text-center text-gray-600 dark:text-gray-400 whitespace-nowrap">
                             {doc.uniquePatients.toLocaleString()}
                           </td>
-                          <td className="px-6 py-4 max-w-[220px]">
+                          <td className="px-6 py-4 max-w-[220px] whitespace-nowrap">
                             <div className="flex items-center justify-center gap-2 text-xs">
                               <div className="flex flex-col items-center bg-blue-50 dark:bg-blue-900/10 px-1.5 py-0.5 rounded border border-blue-100 dark:border-blue-900/20">
                                 <span className="font-bold text-blue-700 dark:text-blue-300">{doc.newPatients.day}</span>
@@ -952,19 +948,19 @@ export const AdminDashboard = () => {
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 text-center">
+                          <td className="px-6 py-4 text-center whitespace-nowrap">
                             <div className="flex flex-col items-center">
                               <span className="font-medium text-indigo-600 dark:text-indigo-400">{doc.returningPatients.toLocaleString()}</span>
                               <span className="text-[10px] text-gray-400">{(doc.returningPatients / doc.overallVisits * 100).toFixed(0)}% rate</span>
                             </div>
                           </td>
-                          <td className="px-6 py-4 text-center">
+                          <td className="px-6 py-4 text-center whitespace-nowrap">
                             <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${doc.noShow > 100 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                               }`}>
                               {doc.noShow}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-right">
+                          <td className="px-6 py-4 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-2">
                               <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{doc.sharePercent}%</span>
                               <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
