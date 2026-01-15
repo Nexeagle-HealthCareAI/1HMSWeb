@@ -33,7 +33,7 @@ const PreviewModalBody = ({
       const hasFragment = url.includes('#');
       const separator = hasFragment ? '&' : '#';
       const pdfUrl = `${url}${separator}toolbar=0&navpanes=0&scrollbar=0&statusbar=0&view=FitH`;
-      const srcDoc = `<!doctype html><html><head><style>html,body{margin:0;padding:0;height:100%;background:#fff;}embed{width:100%;height:100%;border:0;background:#fff;}</style></head><body><embed src="${pdfUrl}" type="application/pdf" /></body></html>`;
+      const srcDoc = `<!doctype html><html><head><style>html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#fff;}embed{width:100%;height:100%;border:0;background:#fff;}</style></head><body><embed src="${pdfUrl}" type="application/pdf" /></body></html>`;
       return { src: null, srcDoc };
     } catch {
       return { src: url, srcDoc: null };
@@ -42,7 +42,7 @@ const PreviewModalBody = ({
 
 
   return (
-    <DialogContent className="max-w-[90vw] xl:max-w-[1100px] 2xl:max-w-[1200px] w-full h-[95vh] p-0 flex flex-col overflow-hidden">
+    <DialogContent className="max-w-[95vw] xl:max-w-[1200px] 2xl:max-w-[1400px] w-full h-[95vh] p-0 flex flex-col overflow-hidden">
       {/* Header Section - Fixed */}
       <div className="flex-shrink-0">
         <DialogHeader className="px-6 pt-6 pb-4">
