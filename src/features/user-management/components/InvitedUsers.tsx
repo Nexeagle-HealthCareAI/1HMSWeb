@@ -6,14 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -23,13 +23,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { 
-  Mail, 
-  Clock, 
-  CheckCircle, 
+import {
+  Mail,
+  Clock,
+  CheckCircle,
   XCircle,
   Search,
-  Eye,
+
   RefreshCw,
   MoreHorizontal,
   UserPlus,
@@ -53,55 +53,55 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
   const authStore = useAuthStore.getState();
   const hospitalId = authStore.getHospitalId();
   const currentUserId = authStore.getUserId();
-  
+
   // Scope state for filtering
   const [activeScope, setActiveScope] = useState<'Pending' | 'Accepted' | 'Revoked' | 'ALL'>(initialScope);
-  
+
   // Action states
   const [selectedInvitation, setSelectedInvitation] = useState<InvitedUser | null>(null);
   const [actionType, setActionType] = useState<'resend' | 'revoke' | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [processingInvitations, setProcessingInvitations] = useState<Set<string>>(new Set());
-  
+
   const { getInvitedUsers, manageInvitation } = useUserManagementApi();
-  
+
   // Get all data once and filter on frontend for consistent behavior
   const { data: response, isLoading, error } = getInvitedUsers(hospitalId || '', 'ALL');
-  
+
   // Extract all invitations from response
   const allUsers = response?.invitations || [];
-  
+
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
-  
+
   // Helper function to check if invitation is expired
   const isExpired = (expiresAt: string) => {
     return new Date(expiresAt) < new Date();
   };
-  
+
   // Get unique roles for filter
   const uniqueRoles = Array.from(new Set(allUsers.map(user => user.roleName)));
 
   // Filter users based on active scope and other filters
   const filteredUsers = allUsers.filter(user => {
     const matchesSearch = user.recipientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.recipientEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.recipientMobile.includes(searchTerm);
+      user.recipientEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.recipientMobile.includes(searchTerm);
     const matchesRole = roleFilter === 'all' || user.roleName === roleFilter;
-    
+
     // Apply scope filtering
     let matchesScope = true;
     if (activeScope !== 'ALL') {
       if (activeScope === 'Revoked') {
         // Include both explicitly revoked and expired invitations
-        matchesScope = user.status.toLowerCase() === 'revoked' || 
-                      (user.status.toLowerCase() === 'pending' && isExpired(user.expiresAt));
+        matchesScope = user.status.toLowerCase() === 'revoked' ||
+          (user.status.toLowerCase() === 'pending' && isExpired(user.expiresAt));
       } else {
         matchesScope = user.status.toLowerCase() === activeScope.toLowerCase();
       }
     }
-    
+
     return matchesSearch && matchesRole && matchesScope;
   });
 
@@ -110,15 +110,15 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
     if (status === 'ALL') {
       return allUsers.length;
     }
-    
+
     if (status === 'Revoked') {
       // Include both explicitly revoked and expired invitations
-      return allUsers.filter(user => 
-        user.status.toLowerCase() === 'revoked' || 
+      return allUsers.filter(user =>
+        user.status.toLowerCase() === 'revoked' ||
         (user.status.toLowerCase() === 'pending' && isExpired(user.expiresAt))
       ).length;
     }
-    
+
     return allUsers.filter(user => user.status.toLowerCase() === status.toLowerCase()).length;
   };
 
@@ -236,7 +236,7 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
         scope: actionType,
         performedByUserId: currentUserId,
       });
-      
+
       // Reset states
       setSelectedInvitation(null);
       setActionType(null);
@@ -363,11 +363,11 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
               </div>
               <h3 className="text-lg font-semibold mb-2">{t('userManagement.invitedUsers.emptyTitle')}</h3>
               <p className="text-muted-foreground max-w-sm mx-auto">
-                {searchTerm || roleFilter !== 'all' 
+                {searchTerm || roleFilter !== 'all'
                   ? t('userManagement.invitedUsers.emptyFilterHint')
                   : t('userManagement.invitedUsers.emptyScopeHint', {
-                      scope: t(`userManagement.invitedUsers.status.${activeScope.toLowerCase()}`, { defaultValue: activeScope.toLowerCase() })
-                    })
+                    scope: t(`userManagement.invitedUsers.status.${activeScope.toLowerCase()}`, { defaultValue: activeScope.toLowerCase() })
+                  })
                 }
               </p>
             </CardContent>
@@ -392,7 +392,7 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
                         </Badge>
 
                       </div>
-                      
+
                       <div className="space-y-1 mb-3">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <AtSign className="h-3 w-3" />
@@ -403,12 +403,12 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
                           <span>{user.recipientMobile}</span>
                         </div>
                       </div>
-                      
+
                       <div className="flex flex-wrap gap-2">
                         <Badge className={`${getRoleColor(user.roleName)} border`}>
                           {user.roleName}
                         </Badge>
-                        
+
                         {/* Action Availability Indicators */}
                         {user.status.toLowerCase() !== 'accepted' && (
                           <Badge variant="outline" className="text-blue-600 border-blue-200">
@@ -425,7 +425,7 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full lg:w-auto">
                     <div className="text-left sm:text-right space-y-1">
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -449,20 +449,18 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
                         </div>
                       )}
                     </div>
-                    
+
                     {/* Action Section */}
                     <div className="flex flex-col gap-2 w-full sm:w-auto">
                       {/* Action Buttons */}
                       <div className="flex gap-2 justify-end">
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <Eye className="h-4 w-4" />
-                        </Button>
-                        
+
+
                         {/* Visible Action Buttons */}
                         {user.status.toLowerCase() !== 'accepted' && (
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => handleAction(user, 'resend')}
                             disabled={manageInvitation.isPending || isProcessing(user.invitationId)}
                             className="h-8 px-3 text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
@@ -477,11 +475,11 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
                               : t('userManagement.invitedUsers.actions.resend')}
                           </Button>
                         )}
-                        
+
                         {user.status.toLowerCase() !== 'revoked' && (
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => handleAction(user, 'revoke')}
                             disabled={manageInvitation.isPending || isProcessing(user.invitationId)}
                             className="h-8 px-3 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
@@ -496,10 +494,10 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
                               : t('userManagement.invitedUsers.actions.revoke')}
                           </Button>
                         )}
-                        
-                        
+
+
                       </div>
-                      
+
                       {/* Action Status Indicator */}
                       {isProcessing(user.invitationId) && (
                         <div className="flex items-center gap-2 text-xs text-blue-600">
@@ -553,7 +551,7 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleActionConfirm}
               disabled={manageInvitation.isPending || isProcessing(selectedInvitation?.invitationId || '')}
               className={actionType === 'revoke' ? 'bg-red-600 hover:bg-red-700' : ''}

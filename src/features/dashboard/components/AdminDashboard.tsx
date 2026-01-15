@@ -77,25 +77,48 @@ export const AdminDashboard = () => {
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
   const [ageDistributionFilter, setAgeDistributionFilter] = useState<'overall' | 'Male' | 'Female'>('overall');
 
-  useEffect(() => {
-    if (currentView === 'dashboard' && hospitalId) {
+  const fetchDashboardData = useCallback(async (isBackground = false) => {
+    if (!hospitalId) return;
+
+    if (!isBackground) {
       setLoadingAnalytics(true);
-      fetchAnalyticsData(hospitalId).then(response => {
-        if (response.success) {
-          setAnalyticsData(response.data);
-        }
-      }).catch(error => {
-        console.error('Failed to fetch analytics:', error);
+    }
+
+    try {
+      const response = await fetchAnalyticsData(hospitalId);
+      if (response.success) {
+        setAnalyticsData(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error);
+      // Only show error toast on explicit user-triggered loads or initial loads
+      if (!isBackground) {
         toast({
           title: t('errors.genericError'),
           description: t('errors.failedToFetchAnalytics'),
           variant: 'destructive',
         });
-      }).finally(() => {
+      }
+    } finally {
+      if (!isBackground) {
         setLoadingAnalytics(false);
-      });
+      }
     }
-  }, [currentView, hospitalId, t, toast]);
+  }, [hospitalId, t, toast]);
+
+  useEffect(() => {
+    if (currentView === 'dashboard') {
+      // Initial load
+      fetchDashboardData(false);
+
+      // Auto-refresh every 5 minutes (300,000 ms)
+      const intervalId = setInterval(() => {
+        fetchDashboardData(true);
+      }, 5 * 60 * 1000);
+
+      return () => clearInterval(intervalId);
+    }
+  }, [currentView, fetchDashboardData]);
 
   // Fetch hospital profile status and compute completion from API
   const {

@@ -227,7 +227,10 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
       item.name.toLowerCase().includes(query) ||
       item.code.toLowerCase().includes(query) ||
       item.shortDesc.toLowerCase().includes(query) ||
-      item.synonyms.toLowerCase().includes(query)
+      item.synonyms.toLowerCase().includes(query) ||
+      (item.medicineName && item.medicineName.toLowerCase().includes(query)) ||
+      (item.genericName && item.genericName.toLowerCase().includes(query)) ||
+      (item.brandName && item.brandName.toLowerCase().includes(query))
     );
   };
 
@@ -848,14 +851,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
   }, [selectedPersonalizedCategory, doctorId, hospitalId]);
 
   useEffect(() => {
-    const items = personalizedData[selectedPersonalizedCategory as keyof PersonalizedData] || [];
-    const filtered = searchQuery.trim()
-      ? items.filter(item =>
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.shortDesc.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-      : items;
+    const filtered = getFilteredPersonalizedDataItems();
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
     if (currentPage > totalPages) {
       setCurrentPage(totalPages);
@@ -1030,14 +1026,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                 {/* Tabular Data Display - Mobile Responsive */}
                 <div className="flex-1 overflow-visible bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm">
                   {(() => {
-                    const items = personalizedData[selectedPersonalizedCategory as keyof PersonalizedData] || [];
-                    const filteredItems = searchQuery.trim()
-                      ? items.filter(item =>
-                        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        item.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        item.shortDesc.toLowerCase().includes(searchQuery.toLowerCase())
-                      )
-                      : items;
+                    const filteredItems = getFilteredPersonalizedDataItems();
 
                     const sortedItems = [...filteredItems].sort((a, b) => {
                       const aVal = getSortValue(a, sortBy.key);

@@ -11,7 +11,7 @@ import {
   Users,
   Search,
   Eye,
-  MoreHorizontal,
+
   UserX,
   Mail,
   Phone,
@@ -215,8 +215,8 @@ export const OnboardedUsers: React.FC = () => {
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isUserActive(user)
-                            ? 'bg-green-100 text-green-600'
-                            : 'bg-gray-100 text-gray-400'
+                          ? 'bg-green-100 text-green-600'
+                          : 'bg-gray-100 text-gray-400'
                           }`}>
                           <Users className="h-5 w-5" />
                         </div>
@@ -291,8 +291,8 @@ export const OnboardedUsers: React.FC = () => {
                             email: user.email
                           })}
                           className={`h-7 w-7 p-0 ${isUserActive(user) && user.userId !== currentUserId
-                              ? 'hover:bg-red-50 hover:text-red-600'
-                              : 'opacity-50 cursor-not-allowed'
+                            ? 'hover:bg-red-50 hover:text-red-600'
+                            : 'opacity-50 cursor-not-allowed'
                             }`}
                           title={
                             user.isPrimary
@@ -308,14 +308,7 @@ export const OnboardedUsers: React.FC = () => {
                           <UserX className="h-3.5 w-3.5" />
                         </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0 hover:bg-gray-50"
-                        title={t('userManagement.onboardedUsers.actions.moreOptions')}
-                      >
-                        <MoreHorizontal className="h-3.5 w-3.5" />
-                      </Button>
+
                     </div>
                   </div>
                 </CardContent>

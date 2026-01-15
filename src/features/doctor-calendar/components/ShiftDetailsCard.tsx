@@ -16,9 +16,9 @@ interface ShiftDetailsCardProps {
   currentView?: 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay';
 }
 
-export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({ 
-  events = [], 
-  calendarConfig, 
+export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
+  events = [],
+  calendarConfig,
   isLoading = false,
   isTimeOffWarningClosed = false,
   onCloseTimeOffWarning,
@@ -60,7 +60,7 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
     }
     return null;
   }, []);
-  
+
   // Extract unique shifts from visible events
   const uniqueShifts = React.useMemo(() => {
     const shifts = new Map<
@@ -78,7 +78,7 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
         }>;
       }
     >();
-    
+
     visibleEvents.forEach(event => {
       if (event.type === 'shift') {
         const shiftName =
@@ -145,7 +145,7 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
         }
       }
     });
-    
+
     return Array.from(shifts.values()).map(data => ({
       name: data.displayName,
       color: data.color,
@@ -161,8 +161,8 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
 
   // Check for time-off events
   const timeOffEvents = React.useMemo(() => {
-    return events.filter(event => 
-      event.type === 'timeoff' || 
+    return events.filter(event =>
+      event.type === 'timeoff' ||
       event.id?.startsWith('timeoff-') ||
       event.extendedProps?.type === 'timeoff'
     );
@@ -199,31 +199,31 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
   // Check if there are time-off conflicts with shifts
   const hasTimeOffConflicts = React.useMemo(() => {
     if (timeOffEvents.length === 0) return false;
-    
+
     // Check if any time-off events overlap with shift events
     return events.some(event => {
       if (event.type !== 'shift') return false;
-      
+
       const shiftStart = new Date(event.start);
       const shiftEnd = new Date(event.end);
-      
+
       return timeOffEvents.some(timeOffEvent => {
         const timeOffStart = new Date(timeOffEvent.start);
         const timeOffEnd = new Date(timeOffEvent.end);
-        
+
         // Check for overlap - only consider it a conflict if the time-off completely overlaps or significantly overlaps with the shift
         const overlapStart = Math.max(shiftStart.getTime(), timeOffStart.getTime());
         const overlapEnd = Math.min(shiftEnd.getTime(), timeOffEnd.getTime());
         const overlapDuration = overlapEnd - overlapStart;
         const shiftDuration = shiftEnd.getTime() - shiftStart.getTime();
-        
+
         // Only mark as conflict if overlap is more than 50% of the shift duration
         return overlapDuration > 0 && (overlapDuration / shiftDuration) > 0.5;
       });
     });
   }, [events, timeOffEvents]);
 
-  
+
 
   return (
     <Card className="h-fit bg-white dark:bg-gray-800 shadow-md border border-gray-200 dark:border-gray-700 lg:max-w-xs">
@@ -261,7 +261,7 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
 
         {/* Current Shifts */}
         <div className="space-y-2">
-          
+
           {isLoading ? (
             <div className="text-xs text-gray-500 dark:text-gray-400">{t('doctorCalendar.shiftDetails.loadingShifts')}</div>
           ) : uniqueShifts.length > 0 ? (
@@ -275,9 +275,8 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
                 return (
                   <div
                     key={index}
-                    className={`space-y-1.5 rounded-md border p-1.5 ${
-                      shiftHasTimeOffConflict ? 'border-red-300 bg-red-50 dark:bg-red-900/20' : ''
-                    }`}
+                    className={`space-y-1.5 rounded-md border p-1.5 ${shiftHasTimeOffConflict ? 'border-red-300 bg-red-50 dark:bg-red-900/20' : ''
+                      }`}
                     style={cardStyle}
                   >
                     <div className="flex items-center gap-1.5">
@@ -286,10 +285,10 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
                         style={{ backgroundColor: shiftHasTimeOffConflict ? '#ef4444' : shift.color }}
                       ></div>
                       <span
-                        className={`text-xs font-semibold flex-1 ${
-                          shiftHasTimeOffConflict ? 'text-red-700 dark:text-red-300' : ''
-                        }`}
-                        style={{ color: shiftHasTimeOffConflict ? '#b91c1c' : '#0f172a' }}
+                        className={`text-xs font-semibold flex-1 ${shiftHasTimeOffConflict
+                            ? 'text-red-700 dark:text-red-300'
+                            : 'text-gray-900 dark:text-gray-100'
+                          }`}
                       >
                         {shift.name}
                         {shiftHasTimeOffConflict && (
@@ -298,17 +297,17 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
                       </span>
                       <Badge
                         variant="outline"
-                        className={`text-[10px] px-1 py-0 ${
-                          shiftHasTimeOffConflict ? 'border-red-300 text-red-600' : ''
-                        }`}
+                        className={`text-[10px] px-1 py-0 ${shiftHasTimeOffConflict
+                            ? 'border-red-300 text-red-600'
+                            : 'text-gray-700 dark:text-gray-200'
+                          }`}
                         style={
                           shiftHasTimeOffConflict
                             ? undefined
                             : {
-                                backgroundColor: `${shift.color}15`,
-                                borderColor: `${shift.color}35`,
-                                color: '#0f172a'
-                              }
+                              backgroundColor: `${shift.color}15`,
+                              borderColor: `${shift.color}35`,
+                            }
                         }
                       >
                         {shift.instances.length} {t('doctorCalendar.shiftDetails.timeRanges')}
