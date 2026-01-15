@@ -181,10 +181,6 @@ export const AdminDashboard = () => {
       } else {
         copyFallback();
       }
-      toast({
-        title: t('admin.copied'),
-        description: t('admin.hospitalIdCopied') || 'Hospital ID copied to clipboard.'
-      });
     } catch (error) {
       console.error('Unable to copy hospital ID:', error);
       toast({
