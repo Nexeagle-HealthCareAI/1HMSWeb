@@ -780,21 +780,20 @@ export const AdminDashboard = () => {
           {/* Row 3: Patient Locations Section (Split: Top 5 List + Full Map) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-            {/* Left Col: Top 5 Cities List */}
-            <Card className="lg:col-span-1 shadow-sm border-gray-200 dark:border-gray-800">
-              <CardHeader className="pb-2 bg-gray-50/50 dark:bg-gray-800/10">
+            {/* Left Col: City Distribution List */}
+            <Card className="lg:col-span-1 shadow-sm border-gray-200 dark:border-gray-800 flex flex-col">
+              <CardHeader className="pb-2 bg-gray-50/50 dark:bg-gray-800/10 shrink-0">
                 <CardTitle className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
                   <Building2 className="h-5 w-5 text-indigo-600" />
-                  Top Cities
+                  City Distribution
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-4">
-                <div className="space-y-4">
+              <CardContent className="p-4 pb-2">
+                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
                   {analyticsData ? (
                     (() => {
                       const cityEntries = Object.entries(analyticsData.overall.top5City)
-                        .sort(([, a], [, b]) => b - a)
-                        .slice(0, 5);
+                        .sort(([, a], [, b]) => b - a);
 
                       // Calculate max for progress bar
                       const maxCount = Math.max(...cityEntries.map(([, c]) => c)) || 1;
@@ -815,7 +814,7 @@ export const AdminDashboard = () => {
                                 }`}>
                                 {index + 1}
                               </div>
-                              <span className="font-semibold text-gray-700 dark:text-gray-200">{city}</span>
+                              <span className="font-semibold text-gray-700 dark:text-gray-200 capitalize">{city}</span>
                             </div>
                             <div className="flex flex-col items-end">
                               <span className="font-bold text-indigo-600 dark:text-indigo-400">
