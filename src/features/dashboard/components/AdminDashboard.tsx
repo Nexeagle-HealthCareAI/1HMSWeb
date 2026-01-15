@@ -621,7 +621,7 @@ export const AdminDashboard = () => {
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Age Distribution Graph */}
             <Card className="lg:col-span-2 shadow-sm border-gray-200 dark:border-gray-800">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0 pb-2">
                 <div>
                   <CardTitle className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
                     <BarChart3 className="h-5 w-5 text-indigo-500" />
@@ -633,12 +633,12 @@ export const AdminDashboard = () => {
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Patient demographics by age group</p>
                 </div>
                 {/* Filter Tabs */}
-                <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 gap-1">
+                <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 gap-1 self-start sm:self-auto overflow-x-auto max-w-full">
                   {(['overall', 'Male', 'Female'] as const).map((filter) => (
                     <button
                       key={filter}
                       onClick={() => setAgeDistributionFilter(filter)}
-                      className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${ageDistributionFilter === filter
+                      className={`px-3 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap ${ageDistributionFilter === filter
                         ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-300 shadow-sm'
                         : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                         }`}
