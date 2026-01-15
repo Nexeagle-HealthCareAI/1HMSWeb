@@ -28,7 +28,11 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
     activeTab,
     setActiveTab,
     hospitalBranding,
-    handleBrandingChange
+    handleBrandingChange,
+    daysRemaining,
+    isTrialActive,
+    isHospitalLoading,
+    trialStartDate
   } = useSystemConfiguration(focusTab);
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -180,8 +184,30 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
                     </span>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-semibold">{t('systemConfiguration.subscription.cards.remainingDays.value')}</div>
-                    <p className="text-xs text-muted-foreground">{t('systemConfiguration.subscription.cards.remainingDays.helper')}</p>
+                    <div className="text-3xl font-semibold">
+                      {isHospitalLoading ? '...' : daysRemaining}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {isTrialActive
+                        ? 'Free trial days left'
+                        : t('systemConfiguration.subscription.cards.remainingDays.helper')}
+                    </p>
+                    {isTrialActive && trialStartDate && (
+                      <div className="mt-2 pt-2 border-t border-border/50">
+                        <div className="flex flex-col gap-1 text-[10px] text-muted-foreground">
+                          <div className="flex justify-between">
+                            <span>Started:</span>
+                            <span className="font-medium">
+                              {trialStartDate.getDate()} {trialStartDate.toLocaleString('en-US', { month: 'short' })}, {trialStartDate.getFullYear()}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Duration:</span>
+                            <span className="font-medium">3 Months</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -193,8 +219,14 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
                     </span>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-semibold">{t('systemConfiguration.subscription.cards.paymentMode.value')}</div>
-                    <p className="text-xs text-muted-foreground">{t('systemConfiguration.subscription.cards.paymentMode.helper')}</p>
+                    <div className="text-3xl font-semibold">
+                      {isTrialActive ? 'Free Trial' : t('systemConfiguration.subscription.cards.paymentMode.value')}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {isTrialActive
+                        ? 'No payment method required'
+                        : t('systemConfiguration.subscription.cards.paymentMode.helper')}
+                    </p>
                   </CardContent>
                 </Card>
 
@@ -206,8 +238,14 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
                     </span>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-semibold">{t('systemConfiguration.subscription.cards.totalBill.value')}</div>
-                    <p className="text-xs text-muted-foreground">{t('systemConfiguration.subscription.cards.totalBill.helper')}</p>
+                    <div className="text-3xl font-semibold">
+                      {isTrialActive ? 'Free' : t('systemConfiguration.subscription.cards.totalBill.value')}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {isTrialActive
+                        ? 'Enjoy your free trial period'
+                        : t('systemConfiguration.subscription.cards.totalBill.helper')}
+                    </p>
                   </CardContent>
                 </Card>
               </div>
@@ -221,7 +259,7 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
             </TabsContent>
           </Tabs>
         </div>
-      </main>
-    </div>
+      </main >
+    </div >
   );
 };
