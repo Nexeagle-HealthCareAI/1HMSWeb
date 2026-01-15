@@ -902,30 +902,30 @@ export const DoctorCalendarPage: React.FC = () => {
       if (successCount > 0 && errorCount === 0) {
         setSuccessDialog({
           open: true,
-          title: t('doctorCalendar.scheduleSaved'),
-          message: t('doctorCalendar.scheduleSavedMessage'),
+          title: t('doctorCalendar.notifications.scheduleSaved'),
+          message: t('doctorCalendar.notifications.scheduleSavedMessage'),
           details: [
-            `✅ ${successCount} ${t('doctorCalendar.overridesCreated')}${successCount > 1 ? 's' : ''}`,
-            `📅 ${t('doctorCalendar.changesReflected')}`,
-            `👥 ${t('doctorCalendar.patientsCanBook')}`
+            `✅ ${t('doctorCalendar.notifications.overridesCreated', { count: successCount })}`,
+            `📅 ${t('doctorCalendar.notifications.changesReflected')}`,
+            `👥 ${t('doctorCalendar.notifications.patientsCanBook')}`
           ]
         });
       } else if (successCount > 0 && errorCount > 0) {
         setSuccessDialog({
           open: true,
-          title: t('doctorCalendar.partiallySaved'),
-          message: t('doctorCalendar.partiallySavedMessage'),
+          title: t('doctorCalendar.notifications.partiallySaved'),
+          message: t('doctorCalendar.notifications.partiallySavedMessage'),
           details: [
-            `✅ ${successCount} ${t('doctorCalendar.overridesSaved')}`,
-            `❌ ${errorCount} ${t('doctorCalendar.overridesFailed')}`,
-            `🔄 ${t('doctorCalendar.tryAgainFailed')}`
+            `✅ ${t('doctorCalendar.notifications.overridesSaved', { count: successCount })}`,
+            `❌ ${t('doctorCalendar.notifications.overridesFailed', { count: errorCount })}`,
+            `🔄 ${t('doctorCalendar.notifications.tryAgainFailed')}`
           ]
         });
       } else {
         // Keep toast for error cases
         toast({
-          title: t('doctorCalendar.error'),
-          description: t('doctorCalendar.failedToCreateOverrides'),
+          title: t('doctorCalendar.messages.error'),
+          description: t('doctorCalendar.errors.failedToCreateOverrides'),
           variant: "destructive",
         });
       }

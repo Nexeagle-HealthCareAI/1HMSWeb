@@ -884,13 +884,16 @@
     "notifications": {
       "scheduleSaved": "Schedule saved successfully! 🎉",
       "scheduleSavedMessage": "Your personalized schedule has been saved successfully. Your new working hours are now active.",
-      "overridesCreated": "Shift overrides created",
+      "overridesCreated": "{{count}} shift override created",
+      "overridesCreated_plural": "{{count}} shift overrides created",
       "changesReflected": "Changes will be reflected immediately in your calendar",
       "patientsCanBook": "Patients can now book appointments during your updated hours",
       "partiallySaved": "Partially saved ⚠️",
       "partiallySavedMessage": "Some of your shift overrides were saved, but some failed to save.",
-      "overridesSaved": "Overrides saved successfully",
-      "overridesFailed": "Failed to save overrides",
+      "overridesSaved": "{{count}} override saved successfully",
+      "overridesSaved_plural": "{{count}} overrides saved successfully",
+      "overridesFailed": "{{count}} override failed to save",
+      "overridesFailed_plural": "{{count}} overrides failed to save",
       "tryAgainFailed": "You can try to save the failed overrides again",
       "timeOffScheduled": "Time off scheduled successfully! 🏖️",
       "timeOffScheduledMessage": "Your time off has been scheduled and you will be unavailable during the selected period.",
@@ -1149,6 +1152,62 @@
       "profileLoadError": "Cannot load doctor profile. Please try refreshing the page.",
       "userIdRequired": "User ID required",
       "userIdRequiredMessage": "Cannot get user ID. Please try logging in again."
+    }
+  },
+  "analytics": {
+    "title": "Practice Analytics",
+    "description": "Deep dive into your practice performance and clinical outcomes.",
+    "timeRange": "Time Range",
+    "periods": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "last7Days": "Last 7 Days",
+      "thisMonth": "This Month",
+      "thisYear": "This Year",
+      "prevYear": "Previous Year"
+    },
+    "kpis": {
+      "totalVisits": "Total Visits",
+      "uniquePatients": "Unique Patients",
+      "newPatients": "New Patients",
+      "returningPatients": "Returning Patients",
+      "patientComposition": "Patient Composition",
+      "newCases": "{{percentage}}% New Cases",
+      "reachInPeriod": "Reach in {{period}}",
+      "noShows": "No Shows",
+      "cancelled": "Cancelled",
+      "missedAppointments": "Missed Appointments",
+      "userInitiated": "User Initiated",
+      "reliabilityRate": "Reliability Rate",
+      "attrition": "Attrition"
+    },
+    "demographics": {
+      "ageGroups": "Age Groups"
+    },
+    "vitals": {
+      "bmiDistribution": "BMI Distribution",
+      "bloodPressure": "Clinical Profile: Blood Pressure",
+      "weightDistribution": "Clinical Profile: Weight Distribution",
+      "normal": "Normal",
+      "elevated": "Elevated",
+      "htnStage1": "HTN Stage 1",
+      "htnStage2": "HTN Stage 2",
+      "hypotension": "Hypotension",
+      "underweight": "Underweight",
+      "overweight": "Overweight",
+      "obese1": "Obese I",
+      "obese2": "Obese II",
+      "obese3": "Obese III"
+    },
+    "medicalStats": {
+      "topMedicines": "Top Medicines",
+      "commonComplains": "Common Complains",
+      "topDiagnosis": "Top Diagnosis",
+      "topInvestigations": "Top Investigations",
+      "topExaminations": "Top Examinations",
+      "rank": "#",
+      "internalName": "Internal Name",
+      "count": "Count"
     }
   },
   "settings": {
