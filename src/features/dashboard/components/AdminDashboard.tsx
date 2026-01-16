@@ -604,7 +604,7 @@ export const AdminDashboard = () => {
                     <Users className="h-5 w-5" /> Gender Demographics
                   </p>
                   <div className="space-y-4">
-                    {analyticsData?.genderWise.map((g, i) => (
+                    {analyticsData?.genderWise?.map((g, i) => (
                       <div key={i} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className={`w-2 h-2 rounded-full ${g.gender === 'Male' ? 'bg-blue-500' : 'bg-pink-500'}`}></div>
@@ -669,8 +669,8 @@ export const AdminDashboard = () => {
                   <div className="h-full flex items-end justify-between gap-2 sm:gap-4 relative z-10 pl-2 min-w-[300px]">
                     {analyticsData ? (() => {
                       // Determine which data to show based on filter
-                      let dataToDisplay = analyticsData.overall.ageDistribution;
-                      if (ageDistributionFilter !== 'overall') {
+                      let dataToDisplay = analyticsData?.overall?.ageDistribution || {};
+                      if (ageDistributionFilter !== 'overall' && analyticsData?.genderWise) {
                         const genderData = analyticsData.genderWise.find(g => g.gender === ageDistributionFilter);
                         if (genderData) {
                           dataToDisplay = genderData.ageDistribution;
@@ -735,7 +735,7 @@ export const AdminDashboard = () => {
               <CardContent className="p-4 flex flex-col justify-center h-full gap-6">
                 {/* Overall No Show */}
                 <div className="text-center">
-                  <span className="text-3xl font-bold text-gray-900 dark:text-white block">{analyticsData?.overall.noShow || 0}</span>
+                  <span className="text-3xl font-bold text-gray-900 dark:text-white block">{analyticsData?.overall?.noShow || 0}</span>
                   <span className="text-xs text-red-500 font-medium bg-red-50 dark:bg-red-900/10 px-2 py-1 rounded-full">Overall Missed</span>
                 </div>
 
@@ -745,14 +745,14 @@ export const AdminDashboard = () => {
                   <div className="text-center">
                     <div className="mb-1 text-gray-400 text-xs uppercase tracking-wider">Male</div>
                     <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-                      {analyticsData?.genderWise.find(g => g.gender === 'Male')?.noShow || 0}
+                      {analyticsData?.genderWise?.find(g => g.gender === 'Male')?.noShow || 0}
                     </span>
                   </div>
                   {/* Female */}
                   <div className="text-center border-l border-gray-100 dark:border-gray-800">
                     <div className="mb-1 text-gray-400 text-xs uppercase tracking-wider">Female</div>
                     <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-                      {analyticsData?.genderWise.find(g => g.gender === 'Female')?.noShow || 0}
+                      {analyticsData?.genderWise?.find(g => g.gender === 'Female')?.noShow || 0}
                     </span>
                   </div>
                 </div>
@@ -771,7 +771,7 @@ export const AdminDashboard = () => {
               <CardContent className="p-4 flex flex-col justify-center h-full gap-6">
                 {/* Overall Cancelled */}
                 <div className="text-center">
-                  <span className="text-3xl font-bold text-gray-900 dark:text-white block">{analyticsData?.overall.cancelled || 0}</span>
+                  <span className="text-3xl font-bold text-gray-900 dark:text-white block">{analyticsData?.overall?.cancelled || 0}</span>
                   <span className="text-xs text-amber-600 font-medium bg-amber-50 dark:bg-amber-900/10 px-2 py-1 rounded-full">Overall Cancelled</span>
                 </div>
 
@@ -781,14 +781,14 @@ export const AdminDashboard = () => {
                   <div className="text-center">
                     <div className="mb-1 text-gray-400 text-xs uppercase tracking-wider">Male</div>
                     <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-                      {analyticsData?.genderWise.find(g => g.gender === 'Male')?.cancelled || 0}
+                      {analyticsData?.genderWise?.find(g => g.gender === 'Male')?.cancelled || 0}
                     </span>
                   </div>
                   {/* Female */}
                   <div className="text-center border-l border-gray-100 dark:border-gray-800">
                     <div className="mb-1 text-gray-400 text-xs uppercase tracking-wider">Female</div>
                     <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-                      {analyticsData?.genderWise.find(g => g.gender === 'Female')?.cancelled || 0}
+                      {analyticsData?.genderWise?.find(g => g.gender === 'Female')?.cancelled || 0}
                     </span>
                   </div>
                 </div>
@@ -813,7 +813,7 @@ export const AdminDashboard = () => {
                 <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
                   {analyticsData ? (
                     (() => {
-                      const cityEntries = Object.entries(analyticsData.overall.top5City)
+                      const cityEntries = Object.entries(analyticsData?.overall?.top5City || {})
                         .sort(([, a], [, b]) => b - a);
 
                       // Calculate max for progress bar
@@ -868,8 +868,8 @@ export const AdminDashboard = () => {
               <CardContent className="p-0 h-[400px] w-full relative">
                 {analyticsData ? (
                   <CityMap
-                    data={analyticsData.overall.top5City}
-                    cities={analyticsData.overall.uniqueCities}
+                    data={analyticsData?.overall?.top5City || {}}
+                    cities={analyticsData?.overall?.uniqueCities || []}
                     className="rounded-none border-x-0 border-b-0"
                   />
                 ) : (
@@ -909,7 +909,7 @@ export const AdminDashboard = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800/50">
-                      {analyticsData ? analyticsData.breakdowns.byDoctor.map((doc, idx) => (
+                      {analyticsData?.breakdowns?.byDoctor?.length ? analyticsData.breakdowns.byDoctor.map((doc, idx) => (
                         <tr key={idx} className="hover:bg-gray-50/80 dark:hover:bg-gray-800/30 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center gap-3">
@@ -998,47 +998,54 @@ export const AdminDashboard = () => {
                 <p className="text-xs text-gray-500">Patient distribution by department</p>
               </CardHeader>
               <CardContent className="space-y-4 flex-1 overflow-y-auto max-h-[500px] pr-1">
-                {analyticsData ? analyticsData.breakdowns.bySpecialty.map((spec, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
-                    <div className="flex-1">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{spec.specialtyName}</span>
-                        <div className="flex items-center gap-1">
-                          {spec.trendVsPreviousPeriod && Math.abs(spec.trendVsPreviousPeriod.percent) > 0 && (
-                            <span className={`text-[10px] font-bold ${spec.trendVsPreviousPeriod.direction === 'UP' ? 'text-green-600' :
-                              spec.trendVsPreviousPeriod.direction === 'DOWN' ? 'text-red-500' : 'text-gray-400'
-                              }`}>
-                              {spec.trendVsPreviousPeriod.direction === 'UP' ? '↑' :
-                                spec.trendVsPreviousPeriod.direction === 'DOWN' ? '↓' : ''}
-                              {Math.abs(spec.trendVsPreviousPeriod.percent)}%
-                            </span>
-                          )}
+                {analyticsData?.breakdowns?.bySpecialty?.length ? (
+                  analyticsData.breakdowns.bySpecialty.map((spec, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+                      <div className="flex-1">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{spec.specialtyName}</span>
+                          <div className="flex items-center gap-1">
+                            {spec.trendVsPreviousPeriod && Math.abs(spec.trendVsPreviousPeriod.percent) > 0 && (
+                              <span className={`text-[10px] font-bold ${spec.trendVsPreviousPeriod.direction === 'UP' ? 'text-green-600' :
+                                spec.trendVsPreviousPeriod.direction === 'DOWN' ? 'text-red-500' : 'text-gray-400'
+                                }`}>
+                                {spec.trendVsPreviousPeriod.direction === 'UP' ? '↑' :
+                                  spec.trendVsPreviousPeriod.direction === 'DOWN' ? '↓' : ''}
+                                {Math.abs(spec.trendVsPreviousPeriod.percent)}%
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {spec.uniquePatients.toLocaleString()} Unique Patients</span>
-                        <span className="text-gray-300 dark:text-gray-700">•</span>
-                        <span>{spec.overallVisits.toLocaleString()} Overall Visits</span>
-                      </div>
+                        <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 dark:text-gray-400">
+                          <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {spec.uniquePatients.toLocaleString()} Unique Patients</span>
+                          <span className="text-gray-300 dark:text-gray-700">•</span>
+                          <span>{spec.overallVisits.toLocaleString()} Overall Visits</span>
+                        </div>
 
-                      <div className="flex items-center gap-2 mt-2">
-                        <div className="flex-1 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${idx === 0 ? 'bg-purple-500' :
-                            idx === 1 ? 'bg-blue-500' :
-                              idx === 2 ? 'bg-indigo-500' :
-                                idx === 3 ? 'bg-pink-500' : 'bg-gray-400'
-                            }`} style={{ width: `${spec.sharePercent}%` }}></div>
+                        <div className="flex items-center gap-2 mt-2">
+                          <div className="flex-1 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${idx === 0 ? 'bg-purple-500' :
+                              idx === 1 ? 'bg-blue-500' :
+                                idx === 2 ? 'bg-indigo-500' :
+                                  idx === 3 ? 'bg-pink-500' : 'bg-gray-400'
+                              }`} style={{ width: `${spec.sharePercent}%` }}></div>
+                          </div>
+                          <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 w-8 text-right">{spec.sharePercent}%</span>
                         </div>
-                        <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 w-8 text-right">{spec.sharePercent}%</span>
                       </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="text-center text-gray-400 py-8">
+                    {analyticsData ? 'No specialty data available' : 'Loading specialties...'}
                   </div>
-                )) : <div className="text-center text-gray-400 py-8">Loading specialties...</div>}
+                )}
               </CardContent>
             </Card>
           </div>
         </div>
-      )}
+      )
+      }
 
       {/* User Management Module */}
       {currentView === 'user-management' && <UserManagementModule />}
@@ -1047,20 +1054,24 @@ export const AdminDashboard = () => {
       {currentView === 'patient-management' && <PatientManagementModule />}
 
       {/* Billing Management Module - Upcoming */}
-      {currentView === 'billing-management' && (
-        <div className="p-4 sm:p-6 lg:p-8">
-          <BillingPage />
-        </div>
-      )}
+      {
+        currentView === 'billing-management' && (
+          <div className="p-4 sm:p-6 lg:p-8">
+            <BillingPage />
+          </div>
+        )
+      }
 
 
 
       {/* System Configuration Module */}
-      {(currentView === 'system-config' || currentView === 'system-config-hospital') && (
-        <div data-module={currentView === 'system-config-hospital' ? 'system-config-hospital' : 'system-config'}>
-          <SystemConfigModule focusTab={currentView === 'system-config-hospital' ? 'hospital' : undefined} />
-        </div>
-      )}
-    </div>
+      {
+        (currentView === 'system-config' || currentView === 'system-config-hospital') && (
+          <div data-module={currentView === 'system-config-hospital' ? 'system-config-hospital' : 'system-config'}>
+            <SystemConfigModule focusTab={currentView === 'system-config-hospital' ? 'hospital' : undefined} />
+          </div>
+        )
+      }
+    </div >
   );
 };
