@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
     XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
     AreaChart, Area, PieChart, Pie, Cell, BarChart, Bar
@@ -6,280 +6,110 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Activity, Calendar, TrendingUp, Users, CheckCircle,
-    Clock, Plus, ArrowRight, UserCheck, UserPlus, Scale, Heart, AlertCircle
+    Clock, Plus, ArrowRight, UserCheck, UserPlus, Scale, Heart, AlertCircle, type LucideIcon
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-// --- Types & Interfaces ---
-
-interface TimeBucket {
-    label: string;
-    count: number;
-    trend?: string;
-    percentageChange?: number;
-}
-
-interface KPIBuckets {
-    today: TimeBucket;
-    yesterday: TimeBucket;
-    last7Days: TimeBucket;
-    thisMonth: TimeBucket;
-    thisYear: TimeBucket;
-    prevYear: TimeBucket;
-}
-
-interface AnalyticsKPI {
-    overall: number;
-    byBucket: KPIBuckets;
-}
-
-interface DistributionItem {
-    name: string;
-    value: number;
-}
-
-interface MedicalStatItem {
-    rank: number;
-    name: string;
-    count: number;
-    percentage: number;
-}
-
-interface BPStatistics {
-    categoryCounts: {
-        NORMAL: number;
-        ELEVATED: number;
-        HTN_STAGE_1: number;
-        HTN_STAGE_2: number;
-        HYPOTENSION: number;
-    };
-}
-
-interface WeightStatistics {
-    buckets: Array<{
-        range: string;
-        count: number;
-    }>;
-}
-
-interface BMIStatistics {
-    categoryCounts: {
-        UNDERWEIGHT: number;
-        NORMAL: number;
-        OVERWEIGHT: number;
-        OBESE_I: number;
-        OBESE_II: number;
-        OBESE_III: number;
-    };
-}
-
-interface AnalyticsData {
-    totalVisits: AnalyticsKPI;
-    uniquePatients: AnalyticsKPI;
-    newVsReturningPatients: {
-        new: AnalyticsKPI;
-        returning: AnalyticsKPI;
-    };
-    ageDistribution: DistributionItem[];
-    noShow: AnalyticsKPI;
-    cancelled: AnalyticsKPI;
-    medicalStats: {
-        Top5MedicineUse: MedicalStatItem[];
-        Top5Complain: MedicalStatItem[];
-        Top5Diagnosis: MedicalStatItem[];
-        Top5Investigation: MedicalStatItem[];
-        Top5Examination: MedicalStatItem[];
-    };
-    vitalsDistribution: {
-        bp: BPStatistics;
-        weight: WeightStatistics;
-        bmi: BMIStatistics;
-    };
-}
-
-// --- Mock Data ---
-
-const MOCK_ANALYTICS: AnalyticsData = {
-    totalVisits: {
-        overall: 489,
-        byBucket: {
-            today: { label: 'Today', count: 12, trend: 'up', percentageChange: 15 },
-            yesterday: { label: 'Yesterday', count: 24, trend: 'down', percentageChange: 5 },
-            last7Days: { label: 'Last 7 Days', count: 156, trend: 'up', percentageChange: 8 },
-            thisMonth: { label: 'This Month', count: 489, trend: 'up', percentageChange: 12 },
-            thisYear: { label: 'This Year', count: 1240, trend: 'up', percentageChange: 22 },
-            prevYear: { label: 'Previous Year', count: 1100 }
-        }
-    },
-    uniquePatients: {
-        overall: 324,
-        byBucket: {
-            today: { label: 'Today', count: 8 },
-            yesterday: { label: 'Yesterday', count: 14 },
-            last7Days: { label: 'Last 7 Days', count: 98 },
-            thisMonth: { label: 'This Month', count: 324 },
-            thisYear: { label: 'This Year', count: 850 },
-            prevYear: { label: 'Previous Year', count: 720 }
-        }
-    },
-    newVsReturningPatients: {
-        new: {
-            overall: 145,
-            byBucket: {
-                today: { label: 'Today', count: 3 },
-                yesterday: { label: 'Yesterday', count: 5 },
-                last7Days: { label: 'Last 7 Days', count: 42 },
-                thisMonth: { label: 'This Month', count: 145 },
-                thisYear: { label: 'This Year', count: 320 },
-                prevYear: { label: 'Previous Year', count: 280 }
-            }
-        },
-        returning: {
-            overall: 179,
-            byBucket: {
-                today: { label: 'Today', count: 5 },
-                yesterday: { label: 'Yesterday', count: 9 },
-                last7Days: { label: 'Last 7 Days', count: 56 },
-                thisMonth: { label: 'This Month', count: 179 },
-                thisYear: { label: 'This Year', count: 530 },
-                prevYear: { label: 'Previous Year', count: 440 }
-            }
-        }
-    },
-    ageDistribution: [
-        { name: '0-12', value: 45 },
-        { name: '13-18', value: 32 },
-        { name: '19-35', value: 128 },
-        { name: '36-60', value: 210 },
-        { name: '60+', value: 74 }
-    ],
-    noShow: {
-        overall: 24,
-        byBucket: {
-            today: { label: 'Today', count: 1 },
-            yesterday: { label: 'Yesterday', count: 2 },
-            last7Days: { label: 'Last 7 Days', count: 8 },
-            thisMonth: { label: 'This Month', count: 24 },
-            thisYear: { label: 'This Year', count: 45 },
-            prevYear: { label: 'Previous Year', count: 38 }
-        }
-    },
-    cancelled: {
-        overall: 18,
-        byBucket: {
-            today: { label: 'Today', count: 0 },
-            yesterday: { label: 'Yesterday', count: 3 },
-            last7Days: { label: 'Last 7 Days', count: 6 },
-            thisMonth: { label: 'This Month', count: 18 },
-            thisYear: { label: 'This Year', count: 32 },
-            prevYear: { label: 'Previous Year', count: 28 }
-        }
-    },
-    medicalStats: {
-        Top5MedicineUse: [
-            { rank: 1, name: 'Paracetamol 500mg', count: 245, percentage: 82 },
-            { rank: 2, name: 'Amoxicillin 250mg', count: 156, percentage: 52 },
-            { rank: 3, name: 'Metformin 500mg', count: 124, percentage: 41 },
-            { rank: 4, name: 'Aspirin 75mg', count: 98, percentage: 33 },
-            { rank: 5, name: 'Ibuprofen 400mg', count: 87, percentage: 29 }
-        ],
-        Top5Complain: [
-            { rank: 1, name: 'Fever', count: 189, percentage: 38 },
-            { rank: 2, name: 'Cough', count: 145, percentage: 29 },
-            { rank: 3, name: 'Headache', count: 120, percentage: 24 },
-            { rank: 4, name: 'Abdominal Pain', count: 95, percentage: 19 },
-            { rank: 5, name: 'Back Pain', count: 78, percentage: 16 }
-        ],
-        Top5Diagnosis: [
-            { rank: 1, name: 'Viral Infection', count: 156, percentage: 32 },
-            { rank: 2, name: 'Hypertension', count: 132, percentage: 27 },
-            { rank: 3, name: 'Type 2 Diabetes', count: 110, percentage: 22 },
-            { rank: 4, name: 'Gastroenteritis', count: 89, percentage: 18 },
-            { rank: 5, name: 'Upper Respiratory Infection', count: 75, percentage: 15 }
-        ],
-        Top5Investigation: [
-            { rank: 1, name: 'CBC', count: 210, percentage: 43 },
-            { rank: 2, name: 'Blood Sugar (F/PP)', count: 185, percentage: 37 },
-            { rank: 3, name: 'Urine Routine', count: 124, percentage: 25 },
-            { rank: 4, name: 'Chest X-Ray', count: 98, percentage: 20 },
-            { rank: 5, name: 'Ultrasound Abdomen', count: 85, percentage: 17 }
-        ],
-        Top5Examination: [
-            { rank: 1, name: 'General Physical Exam', count: 489, percentage: 100 },
-            { rank: 2, name: 'BP Monitoring', count: 450, percentage: 92 },
-            { rank: 3, name: 'Temperature Check', count: 432, percentage: 88 },
-            { rank: 4, name: 'SPO2 Level', count: 410, percentage: 84 },
-            { rank: 5, name: 'Heart Rate Monitoring', count: 395, percentage: 81 }
-        ]
-    },
-    vitalsDistribution: {
-        bp: {
-            categoryCounts: {
-                NORMAL: 145,
-                ELEVATED: 85,
-                HTN_STAGE_1: 56,
-                HTN_STAGE_2: 32,
-                HYPOTENSION: 12
-            }
-        },
-        weight: {
-            buckets: [
-                { range: '< 50kg', count: 45 },
-                { range: '50-65kg', count: 128 },
-                { range: '65-80kg', count: 156 },
-                { range: '80-95kg', count: 74 },
-                { range: '> 95kg', count: 22 }
-            ]
-        },
-        bmi: {
-            categoryCounts: {
-                UNDERWEIGHT: 32,
-                NORMAL: 156,
-                OVERWEIGHT: 110,
-                OBESE_I: 45,
-                OBESE_II: 18,
-                OBESE_III: 8
-            }
-        }
-    }
-};
-
-type TimeBucketKey = keyof KPIBuckets;
+import { useAuthStore } from '@/store/authStore';
+import { doctorAnalyticsApi, type UI_AnalyticsData, type TimeBucketKey } from '../services/doctorAnalyticsApi';
 
 export const DoctorAnalyticsPage: React.FC = () => {
     const { t } = useTranslation();
+    const { doctorId, hospitalId } = useAuthStore();
     const [timeBucket, setTimeBucket] = useState<TimeBucketKey>('thisMonth');
+    const [analyticsData, setAnalyticsData] = useState<UI_AnalyticsData | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6'];
 
-    const activeKPIs = useMemo(() => {
-        return {
-            visits: MOCK_ANALYTICS.totalVisits.byBucket[timeBucket],
-            patients: MOCK_ANALYTICS.uniquePatients.byBucket[timeBucket],
-            newPatients: MOCK_ANALYTICS.newVsReturningPatients.new.byBucket[timeBucket],
-            returningPatients: MOCK_ANALYTICS.newVsReturningPatients.returning.byBucket[timeBucket],
-            noShow: MOCK_ANALYTICS.noShow.byBucket[timeBucket],
-            cancelled: MOCK_ANALYTICS.cancelled.byBucket[timeBucket]
+    useEffect(() => {
+        const fetchAnalytics = async () => {
+            if (!doctorId || !hospitalId) {
+                // If ids are missing, we can't fetch. 
+                // In a real app we might redirect or show error.
+                // For now, stop loading.
+                setIsLoading(false);
+                return;
+            }
+
+            try {
+                setIsLoading(true);
+                const data = await doctorAnalyticsApi.getAnalytics(hospitalId, doctorId);
+                setAnalyticsData(data);
+            } catch (error) {
+                console.error("Failed to fetch analytics:", error);
+                // Handle error state if needed
+            } finally {
+                setIsLoading(false);
+            }
         };
-    }, [timeBucket]);
+
+        fetchAnalytics();
+    }, [doctorId, hospitalId]);
+
+
+    const activeKPIs = useMemo(() => {
+        if (!analyticsData) return null;
+        return {
+            visits: analyticsData.totalVisits.byBucket[timeBucket],
+            patients: analyticsData.uniquePatients.byBucket[timeBucket],
+            newPatients: analyticsData.newVsReturningPatients.new.byBucket[timeBucket],
+            returningPatients: analyticsData.newVsReturningPatients.returning.byBucket[timeBucket],
+            noShow: analyticsData.noShow.byBucket[timeBucket],
+            cancelled: analyticsData.cancelled.byBucket[timeBucket]
+        };
+    }, [analyticsData, timeBucket]);
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+        );
+    }
+
+    if (!analyticsData || !activeKPIs) {
+        return (
+            <div className="space-y-6 p-4 min-h-screen bg-gray-50/50 dark:bg-slate-950/50">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm">
+                    <div>
+                        <h2 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                            <TrendingUp className="h-8 w-8 text-blue-600" />
+                            {t('analytics.title')}
+                        </h2>
+                        <p className="text-gray-500 dark:text-gray-400 mt-1">{t('analytics.description')}</p>
+                    </div>
+                </div>
+
+                <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-900 rounded-3xl border border-gray-100 dark:border-slate-800 border-dashed">
+                    <div className="p-4 bg-gray-50 dark:bg-slate-800 rounded-full mb-4">
+                        <Activity className="h-12 w-12 text-gray-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Analytics Data</h3>
+                    <p className="text-gray-500 dark:text-gray-400 max-w-md text-center">
+                        There is no data available for the selected period. As you treat patients, analytics will appear here.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     const bpData = [
-        { name: 'Normal', value: MOCK_ANALYTICS.vitalsDistribution.bp.categoryCounts.NORMAL, color: '#10b981' },
-        { name: 'Elevated', value: MOCK_ANALYTICS.vitalsDistribution.bp.categoryCounts.ELEVATED, color: '#f59e0b' },
-        { name: 'HTN Stage 1', value: MOCK_ANALYTICS.vitalsDistribution.bp.categoryCounts.HTN_STAGE_1, color: '#f97316' },
-        { name: 'HTN Stage 2', value: MOCK_ANALYTICS.vitalsDistribution.bp.categoryCounts.HTN_STAGE_2, color: '#ef4444' },
-        { name: 'Hypotension', value: MOCK_ANALYTICS.vitalsDistribution.bp.categoryCounts.HYPOTENSION, color: '#3b82f6' }
+        { name: 'Normal', value: analyticsData.vitalsDistribution.bp.categoryCounts.NORMAL, color: '#10b981' },
+        { name: 'Elevated', value: analyticsData.vitalsDistribution.bp.categoryCounts.ELEVATED, color: '#f59e0b' },
+        { name: 'HTN Stage 1', value: analyticsData.vitalsDistribution.bp.categoryCounts.HTN_STAGE_1, color: '#f97316' },
+        { name: 'HTN Stage 2', value: analyticsData.vitalsDistribution.bp.categoryCounts.HTN_STAGE_2, color: '#ef4444' },
+        { name: 'Hypotension', value: analyticsData.vitalsDistribution.bp.categoryCounts.HYPOTENSION, color: '#3b82f6' }
     ];
 
     const bmiData = [
-        { name: 'Underweight', value: MOCK_ANALYTICS.vitalsDistribution.bmi.categoryCounts.UNDERWEIGHT, color: '#3b82f6' },
-        { name: 'Normal', value: MOCK_ANALYTICS.vitalsDistribution.bmi.categoryCounts.NORMAL, color: '#10b981' },
-        { name: 'Overweight', value: MOCK_ANALYTICS.vitalsDistribution.bmi.categoryCounts.OVERWEIGHT, color: '#f59e0b' },
-        { name: 'Obese I', value: MOCK_ANALYTICS.vitalsDistribution.bmi.categoryCounts.OBESE_I, color: '#f97316' },
-        { name: 'Obese II', value: MOCK_ANALYTICS.vitalsDistribution.bmi.categoryCounts.OBESE_II, color: '#ef4444' },
-        { name: 'Obese III', value: MOCK_ANALYTICS.vitalsDistribution.bmi.categoryCounts.OBESE_III, color: '#991b1b' }
+        { name: 'Underweight', value: analyticsData.vitalsDistribution.bmi.categoryCounts.UNDERWEIGHT, color: '#3b82f6' },
+        { name: 'Normal', value: analyticsData.vitalsDistribution.bmi.categoryCounts.NORMAL, color: '#10b981' },
+        { name: 'Overweight', value: analyticsData.vitalsDistribution.bmi.categoryCounts.OVERWEIGHT, color: '#f59e0b' },
+        { name: 'Obese I', value: analyticsData.vitalsDistribution.bmi.categoryCounts.OBESE_I, color: '#f97316' },
+        { name: 'Obese II', value: analyticsData.vitalsDistribution.bmi.categoryCounts.OBESE_II, color: '#ef4444' },
+        { name: 'Obese III', value: analyticsData.vitalsDistribution.bmi.categoryCounts.OBESE_III, color: '#991b1b' }
     ];
 
     return (
@@ -311,57 +141,27 @@ export const DoctorAnalyticsPage: React.FC = () => {
                 </div>
             </div>
 
-            {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Total Visits */}
-                <Card className="relative overflow-hidden group hover:shadow-xl transition-all duration-300 border-0 bg-white dark:bg-slate-900 shadow-lg shadow-blue-500/5">
-                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                        <Calendar className="h-24 w-24 text-blue-600" />
-                    </div>
-                    <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between">
-                            <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-xl">
-                                <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                            </div>
-                            {activeKPIs.visits.percentageChange && (
-                                <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-800">
-                                    +{activeKPIs.visits.percentageChange}%
-                                </Badge>
-                            )}
-                        </div>
-                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-2">{t('analytics.kpis.totalVisits')}</p>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-4xl font-bold text-gray-900 dark:text-white tabular-nums">{activeKPIs.visits.count}</div>
-                        <div className="flex items-center gap-1 mt-2 text-xs text-blue-600 dark:text-blue-400 font-medium">
-                            <span>{t(`analytics.periods.${timeBucket}`)}</span>
-                            <ArrowRight className="h-3 w-3" />
-                        </div>
-                    </CardContent>
-                </Card>
+            {/* Key Performance Indicators */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <KpiCard
+                    title={t('analytics.kpis.totalVisits')}
+                    value={activeKPIs.visits.count}
+                    percentageChange={activeKPIs.visits.percentageChange}
+                    icon={Calendar}
+                    color="blue"
+                    period={t(`analytics.periods.${timeBucket}`)}
+                />
 
-                {/* Unique Patients */}
-                <Card className="relative overflow-hidden group hover:shadow-xl transition-all duration-300 border-0 bg-white dark:bg-slate-900 shadow-lg shadow-indigo-500/5">
-                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                        <UserCheck className="h-24 w-24 text-indigo-600" />
-                    </div>
-                    <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between">
-                            <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl">
-                                <UserCheck className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                            </div>
-                        </div>
-                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-2">{t('analytics.kpis.uniquePatients')}</p>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-4xl font-bold text-gray-900 dark:text-white tabular-nums">{activeKPIs.patients.count}</div>
-                        <div className="flex items-center gap-1 mt-2 text-xs text-indigo-600 dark:text-indigo-400 font-medium">
-                            <span>{t('analytics.kpis.reachInPeriod', { period: t(`analytics.periods.${timeBucket}`) })}</span>
-                        </div>
-                    </CardContent>
-                </Card>
+                <KpiCard
+                    title={t('analytics.kpis.uniquePatients')}
+                    value={activeKPIs.patients.count}
+                    icon={UserCheck}
+                    color="indigo"
+                    period={t(`analytics.periods.${timeBucket}`)}
+                    footerText={t('analytics.kpis.reachInPeriod', { period: t(`analytics.periods.${timeBucket}`) })}
+                />
 
-                {/* New vs Returning */}
+                {/* New vs Returning - Custom KPI Card */}
                 <Card className="relative overflow-hidden group hover:shadow-xl transition-all duration-300 border-0 bg-white dark:bg-slate-900 shadow-lg shadow-purple-500/5 col-span-1 md:col-span-2">
                     <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                         <Users className="h-24 w-24 text-purple-600" />
@@ -406,6 +206,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
                 </Card>
             </div>
 
+            {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Age Distribution */}
                 <Card className="lg:col-span-1 shadow-lg border-0 bg-white dark:bg-slate-900 rounded-3xl overflow-hidden">
@@ -418,25 +219,20 @@ export const DoctorAnalyticsPage: React.FC = () => {
                     <CardContent className="pt-6">
                         <div className="h-[280px]">
                             <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={MOCK_ANALYTICS.ageDistribution}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={80}
-                                        paddingAngle={4}
-                                        dataKey="value"
-                                    >
-                                        {MOCK_ANALYTICS.ageDistribution.map((_, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
+                                <BarChart data={analyticsData.ageDistribution} layout="horizontal" margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={true} horizontal={true} strokeOpacity={0.1} />
+                                    <XAxis type="category" dataKey="name" tickLine={false} axisLine={false} fontSize={12} tick={{ fill: '#6b7280' }} />
+                                    <YAxis type="number" axisLine={false} tickLine={false} fontSize={12} tick={{ fill: '#6b7280' }} allowDecimals={false} />
                                     <Tooltip
+                                        cursor={{ fill: 'transparent' }}
                                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                                     />
-                                    <Legend iconType="circle" />
-                                </PieChart>
+                                    <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={40}>
+                                        {analyticsData.ageDistribution.map((_, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
                             </ResponsiveContainer>
                         </div>
                     </CardContent>
@@ -570,7 +366,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
                                                 className="h-full rounded-full transition-all duration-500"
                                                 style={{
                                                     backgroundColor: item.color,
-                                                    width: `${(item.value / (MOCK_ANALYTICS.totalVisits.overall || 1)) * 100}%`
+                                                    width: `${(item.value / (analyticsData.totalVisits.overall || 1)) * 100}%`
                                                 }}
                                             />
                                         </div>
@@ -592,7 +388,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
                     <CardContent className="pt-8 px-6">
                         <div className="h-[240px]">
                             <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={MOCK_ANALYTICS.vitalsDistribution.weight.buckets}>
+                                <AreaChart data={analyticsData.vitalsDistribution.weight.buckets}>
                                     <defs>
                                         <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
@@ -619,7 +415,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
                 <StatsTable
                     title={t('analytics.medicalStats.topMedicines')}
                     icon={<Plus className="h-5 w-5 text-emerald-500" />}
-                    data={MOCK_ANALYTICS.medicalStats.Top5MedicineUse}
+                    data={analyticsData.medicalStats.Top5MedicineUse}
                     accentColor="emerald"
                     t={t}
                 />
@@ -628,7 +424,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
                 <StatsTable
                     title={t('analytics.medicalStats.commonComplains')}
                     icon={<AlertCircle className="h-5 w-5 text-amber-500" />}
-                    data={MOCK_ANALYTICS.medicalStats.Top5Complain}
+                    data={analyticsData.medicalStats.Top5Complain}
                     accentColor="amber"
                     t={t}
                 />
@@ -637,7 +433,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
                 <StatsTable
                     title={t('analytics.medicalStats.topDiagnosis')}
                     icon={<Activity className="h-5 w-5 text-blue-500" />}
-                    data={MOCK_ANALYTICS.medicalStats.Top5Diagnosis}
+                    data={analyticsData.medicalStats.Top5Diagnosis}
                     accentColor="blue"
                     t={t}
                 />
@@ -646,7 +442,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
                 <StatsTable
                     title={t('analytics.medicalStats.topInvestigations')}
                     icon={<CheckCircle className="h-5 w-5 text-purple-500" />}
-                    data={MOCK_ANALYTICS.medicalStats.Top5Investigation}
+                    data={analyticsData.medicalStats.Top5Investigation}
                     accentColor="purple"
                     t={t}
                 />
@@ -655,7 +451,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
                 <StatsTable
                     title={t('analytics.medicalStats.topExaminations')}
                     icon={<Clock className="h-5 w-5 text-indigo-500" />}
-                    data={MOCK_ANALYTICS.medicalStats.Top5Examination}
+                    data={analyticsData.medicalStats.Top5Examination}
                     accentColor="indigo"
                     className="md:col-span-2 xl:col-span-1"
                     t={t}
@@ -666,6 +462,61 @@ export const DoctorAnalyticsPage: React.FC = () => {
 };
 
 // --- Helper Components ---
+
+interface KpiCardProps {
+    title: string;
+    value: number | string;
+    percentageChange?: number;
+    icon: LucideIcon;
+    color: string;
+    period: string;
+    footerText?: string;
+    trend?: "up" | "down" | "neutral";
+}
+
+const KpiCard: React.FC<KpiCardProps> = ({ title, value, percentageChange, icon: Icon, color, period, footerText }) => {
+    // Quick mapping for background/text based on color name
+    const colorMap: Record<string, { bg: string, text: string, iconBg: string }> = {
+        'blue': { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600', iconBg: 'bg-blue-50 dark:bg-blue-900/30' },
+        'indigo': { bg: 'bg-indigo-50 dark:bg-indigo-900/20', text: 'text-indigo-600', iconBg: 'bg-indigo-50 dark:bg-indigo-900/30' },
+        'emerald': { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-600', iconBg: 'bg-emerald-50 dark:bg-emerald-900/30' },
+        'violet': { bg: 'bg-violet-50 dark:bg-violet-900/20', text: 'text-violet-600', iconBg: 'bg-violet-50 dark:bg-violet-900/30' },
+        'rose': { bg: 'bg-rose-50 dark:bg-rose-900/20', text: 'text-rose-600', iconBg: 'bg-rose-50 dark:bg-rose-900/30' },
+    };
+
+    // Fallback if color not found
+    const theme = colorMap[color] || colorMap['blue'];
+
+    return (
+        <Card className={`relative overflow-hidden group hover:shadow-xl transition-all duration-300 border-0 bg-white dark:bg-slate-900 shadow-lg ${theme.bg}`}>
+            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                <Icon className={`h-24 w-24 ${theme.text}`} />
+            </div>
+            <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                    <div className={`p-2 rounded-xl ${theme.iconBg}`}>
+                        <Icon className={`h-5 w-5 ${theme.text} dark:${theme.text.replace('600', '400')}`} />
+                    </div>
+                    {percentageChange !== undefined && (
+                        <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-800">
+                            +{percentageChange}%
+                        </Badge>
+                    )}
+                </div>
+                <div className="mt-2">
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="text-4xl font-bold text-gray-900 dark:text-white tabular-nums">{value}</div>
+                <div className={`flex items-center gap-1 mt-2 text-xs ${theme.text} dark:${theme.text.replace('600', '400')} font-medium`}>
+                    <span>{footerText || period}</span>
+                    {!footerText && <ArrowRight className="h-3 w-3" />}
+                </div>
+            </CardContent>
+        </Card>
+    );
+};
 
 interface StatsTableProps {
     title: string;
