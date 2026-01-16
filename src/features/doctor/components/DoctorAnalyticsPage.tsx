@@ -17,7 +17,7 @@ import { doctorAnalyticsApi, type UI_AnalyticsData, type TimeBucketKey } from '.
 export const DoctorAnalyticsPage: React.FC = () => {
     const { t } = useTranslation();
     const { doctorId, hospitalId } = useAuthStore();
-    const [timeBucket, setTimeBucket] = useState<TimeBucketKey>('thisMonth');
+    const [timeBucket, setTimeBucket] = useState<TimeBucketKey>('thisYear');
     const [analyticsData, setAnalyticsData] = useState<UI_AnalyticsData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -188,17 +188,17 @@ export const DoctorAnalyticsPage: React.FC = () => {
                             <div className="space-y-1">
                                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('analytics.kpis.patientComposition')}</p>
                                 <div className="text-3xl font-bold text-gray-900 dark:text-white">
-                                    {t('analytics.kpis.newCases', { percentage: Math.round((activeKPIs.newPatients.count / (activeKPIs.patients.count || 1)) * 100) })}
+                                    {t('analytics.kpis.newCases', { percentage: Math.round((activeKPIs.newPatients.count / ((activeKPIs.newPatients.count + activeKPIs.returningPatients.count) || 1)) * 100) })}
                                 </div>
                             </div>
                             <div className="flex-1 max-w-[240px] h-3 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden flex ml-4 mb-2">
                                 <div
                                     className="h-full bg-emerald-500"
-                                    style={{ width: `${(activeKPIs.newPatients.count / (activeKPIs.patients.count || 1)) * 100}%` }}
+                                    style={{ width: `${(activeKPIs.newPatients.count / ((activeKPIs.newPatients.count + activeKPIs.returningPatients.count) || 1)) * 100}%` }}
                                 />
                                 <div
                                     className="h-full bg-blue-500"
-                                    style={{ width: `${(activeKPIs.returningPatients.count / (activeKPIs.patients.count || 1)) * 100}%` }}
+                                    style={{ width: `${(activeKPIs.returningPatients.count / ((activeKPIs.newPatients.count + activeKPIs.returningPatients.count) || 1)) * 100}%` }}
                                 />
                             </div>
                         </div>

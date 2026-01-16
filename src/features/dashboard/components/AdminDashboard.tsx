@@ -42,6 +42,8 @@ import {
   ArrowRight,
   Ban,
   MessageSquare,
+  LayoutDashboard,
+  Receipt,
   Copy
 } from 'lucide-react';
 import {
@@ -53,6 +55,7 @@ import { useHospitalApi } from '@/hooks/useApi';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { SystemConfigModule } from './SystemConfigModule';
+import { BillingDashboard } from '@/features/billing/components/BillingDashboard';
 import { AnalyticsResponse, fetchAnalyticsData } from '../services/analyticsApi';
 
 
@@ -169,13 +172,14 @@ export const AdminDashboard = () => {
 
 
   const adminModules = [
-    { id: 'dashboard', name: t('admin.dashboard'), icon: Activity, description: t('admin.overviewAnalytics') },
-    { id: 'user-management', name: t('admin.userManagement'), icon: Shield, description: t('admin.usersRolesPermissions') },
-    { id: 'patient-management', name: t('admin.patientManagement'), icon: Users, description: t('admin.patientRecordsData') },
-    //{ id: 'appointment-oversight', name: t('admin.appointmentOversight'), icon: Calendar, description: t('admin.appointmentManagement') },
+    { id: 'dashboard', name: t('admin.dashboard'), icon: LayoutDashboard, description: t('admin.overviewAnalytics') },
+    { id: 'user-management', name: t('admin.userManagement'), icon: Users, description: t('admin.usersRolesPermissions') },
+    { id: 'patient-management', name: t('admin.patientManagement'), icon: UserCheck, description: t('admin.patientRecordsData') },
+    //{ id: 'appointment-oversight', name: t('admin.appointmentOversight') || 'Appointments', icon: Calendar, description: t('admin.appointmentManagement') || 'Manage System Appointments' },
+    { id: 'billing-management', name: t('admin.billingManagement') || 'Billing Management', icon: Receipt, description: t('admin.billingDescription') || 'Manage subscription and billing' },
     //{ id: 'billing-insurance', name: t('admin.billingInsurance'), icon: CreditCard, description: t('admin.financialManagement') },
     //{ id: 'bulk-messaging', name: t('admin.bulkMessaging'), icon: MessageSquare, description: t('admin.communicationManagement') },
-    { id: 'system-config', name: t('admin.systemConfiguration'), icon: Cog, description: t('admin.hospitalSettings') },
+    { id: 'system-config', name: t('admin.systemConfiguration'), icon: Settings, description: t('admin.hospitalSettings') },
     // { id: 'audit-security', name: t('admin.auditSecurity'), icon: ShieldCheck, description: t('admin.logsSecurity') }
   ];
 
@@ -223,7 +227,7 @@ export const AdminDashboard = () => {
 
 
   return (
-    <div ref={dashboardRootRef} className="min-h-screen w-full p-2 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 bg-gray-50 dark:bg-gray-950 relative z-0">
+    <div ref={dashboardRootRef} className={`min-h-screen w-full bg-gray-50 dark:bg-gray-950 relative z-0 ${(currentView === 'system-config' || currentView === 'system-config-hospital') ? 'p-0' : 'p-2 sm:p-4 lg:p-6 space-y-4 sm:space-y-6'}`}>
       {/* Hospital Registration Progress Dialog/Popup */}
       <Dialog
         open={showHospitalRegistrationDialog}
@@ -338,10 +342,10 @@ export const AdminDashboard = () => {
 
 
       {/* Enhanced Top Navigation with Hospital ID and Modernized Nav Tabs - Mobile Optimized */}
-      <section className="mb-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2 bg-gradient-to-br from-white via-blue-50/60 to-indigo-50 dark:from-slate-900 dark:via-slate-900/80 dark:to-slate-900 border-b border-white/70 dark:border-slate-800 rounded-2xl shadow-lg shadow-blue-100/30 dark:shadow-black/30 px-3 py-3 sm:px-6 sm:py-4">
+      <section className={`mb-4 ${(currentView === 'system-config' || currentView === 'system-config-hospital') ? 'mx-2 sm:mx-4 lg:mx-6 mt-2 sm:mt-4 lg:mt-6' : ''}`}>
+        <div className="flex flex-col xl:flex-row items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-white/20 dark:border-slate-800 rounded-2xl shadow-lg shadow-blue-100/10 dark:shadow-black/20 px-3 py-3 sm:px-6 sm:py-4 ring-1 ring-black/5 dark:ring-white/5">
           {/* Left: Title, badges, hospital ID */}
-          <div className="flex flex-col gap-1 min-w-0">
+          <div className="flex flex-col gap-1 min-w-0 shrink-0 w-full xl:w-auto">
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
                 {t('admin.adminBoard')}
@@ -350,7 +354,7 @@ export const AdminDashboard = () => {
                 <button
                   type="button"
                   onClick={focusHospitalBranding}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-gradient-to-r from-primary/10 to-blue-100 px-3 py-1 text-xs font-semibold text-primary shadow-sm hover:bg-primary/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-all"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary shadow-sm hover:bg-primary/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-all"
                 >
                   <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/20 text-[10px] font-bold text-primary">
                     {Math.round(hospitalScore)}
@@ -360,8 +364,8 @@ export const AdminDashboard = () => {
                 </button>
               )}
               {hospitalScore === 100 && (
-                <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border-green-200 text-xs font-semibold shadow-sm">
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                <Badge className="bg-green-100 text-green-700 border-green-200 text-xs font-semibold shadow-sm px-2 py-0.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
                   {t('admin.hospitalSetup100')}
                 </Badge>
               )}
@@ -381,20 +385,20 @@ export const AdminDashboard = () => {
                   type="button"
                   size="icon"
                   variant="ghost"
-                  className="h-7 w-7"
+                  className="h-6 w-6 ml-1 text-muted-foreground hover:text-foreground"
                   onClick={handleCopyHospitalId}
                   aria-label={t('admin.copyHospitalId') || t('admin.hospitalIdCopySr')}
                   tabIndex={0}
                 >
-                  <Copy className="h-4 w-4" />
+                  <Copy className="h-3.5 w-3.5" />
                   <span className="sr-only">{t('admin.hospitalIdCopySr')}</span>
                 </Button>
               </div>
             )}
           </div>
 
-          {/* Right: Navigation Tabs - Mobile Optimized Alignment */}
-          <nav className="flex flex-nowrap overflow-x-auto gap-2 bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-1 shadow-inner shadow-white/60 dark:shadow-black/40 mt-3 sm:mt-0 w-full sm:w-auto sm:min-w-[220px] justify-start sm:justify-end [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+          {/* Right: Navigation Tabs - Responsive Scroll Container */}
+          <nav className="w-full xl:w-auto xl:flex-1 min-w-0 xl:ml-4 flex flex-nowrap overflow-x-auto gap-2 bg-gray-50/50 dark:bg-black/20 border border-gray-200/50 dark:border-white/5 rounded-xl p-1.5 shadow-inner justify-start md:justify-end scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent">
             {adminModules.map((module) => {
               const isActive = currentView === module.id;
               const isLocked = !accessUnlocked && module.id !== 'dashboard' && module.id !== 'system-config';
@@ -414,18 +418,19 @@ export const AdminDashboard = () => {
                   aria-pressed={isActive}
                   tabIndex={isLocked ? -1 : 0}
                   title={isLocked ? t('admin.adminFeaturesLocked') : module.description}
-                  className={`group flex-none flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-3 py-2 sm:px-2.5 sm:py-1.5 border transition-all duration-300 text-[12px] whitespace-nowrap ${isActive
-                    ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white border-transparent shadow-xl shadow-blue-500/30'
-                    : 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800/70'
+                  className={`group flex-1 flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-lg px-3 py-2 transition-all duration-200 min-w-[80px] sm:min-w-[120px] ${isActive
+                    ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-slate-800/50 hover:text-gray-900 dark:hover:text-gray-200'
                     } ${isLocked ? 'opacity-40 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
                 >
-                  <div className="flex items-center gap-1.5 text-[12px] font-semibold">
-                    <span className={`p-1 rounded-lg ${isActive ? 'bg-white/20' : 'bg-gray-100 dark:bg-slate-800'}`}>
-                      <module.icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-blue-500 dark:text-blue-400'}`} />
-                    </span>
-                    <span className="inline">{module.name}</span>
+                  <div className="flex items-center justify-center sm:justify-start gap-1.5 font-semibold w-full">
+                    <module.icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300'}`} />
+                    <span className="hidden sm:inline text-[12px] line-clamp-1">{module.name}</span>
                   </div>
-                  <span className={`hidden sm:block text-[10px] leading-snug ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'}`}>{module.description}</span>
+                  <span className="sm:hidden text-[10px] font-medium w-full text-center line-clamp-1 leading-tight">{module.name}</span>
+                  <p className={`hidden sm:block text-[10px] leading-snug w-full line-clamp-2 opacity-90 mt-0.5 ${isActive ? 'text-blue-600/80 dark:text-blue-400/80' : 'text-gray-500 dark:text-gray-500'}`}>
+                    {module.description}
+                  </p>
                 </button>
               );
             })}
@@ -435,14 +440,14 @@ export const AdminDashboard = () => {
 
       {currentView === 'dashboard' && (
         <div className="space-y-6 animate-in fade-in duration-500">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {/* Total Visits Card - Detailed Breakdown */}
             <Card className="bg-gradient-to-br from-indigo-500 to-purple-600 border-none text-white shadow-lg">
               <CardContent className="p-4 sm:p-5">
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <p className="text-indigo-100 text-sm font-medium mb-1">{t('admin.totalVisits') || 'Total Visits'}</p>
-                    <h3 className="text-3xl sm:text-4xl font-bold">{analyticsData ? analyticsData.kpis.totalVisits.overall.toLocaleString() : '...'}</h3>
+                    <h3 className="text-3xl sm:text-4xl font-bold">{analyticsData?.kpis?.totalVisits?.overall?.toLocaleString() || '...'}</h3>
                   </div>
                   <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
                     <Activity className="h-6 w-6 text-white" />
@@ -453,29 +458,29 @@ export const AdminDashboard = () => {
                 <div className="grid grid-cols-2 gap-x-4 gap-y-3 pt-2 text-xs sm:text-sm border-t border-indigo-400/30">
                   <div className="flex flex-col">
                     <span className="text-indigo-200 text-[10px] uppercase tracking-wide">Today</span>
-                    <span className="font-semibold text-lg">{analyticsData?.kpis.totalVisits.byBucket.today.toLocaleString() || 0}</span>
+                    <span className="font-semibold text-lg">{analyticsData?.kpis?.totalVisits?.byBucket?.today?.toLocaleString() || 0}</span>
                   </div>
                   <div className="flex flex-col">
                     <span className="text-indigo-200 text-[10px] uppercase tracking-wide">Yesterday</span>
-                    <span className="font-semibold text-lg">{analyticsData?.kpis.totalVisits.byBucket.yesterday.toLocaleString() || 0}</span>
+                    <span className="font-semibold text-lg">{analyticsData?.kpis?.totalVisits?.byBucket?.yesterday?.toLocaleString() || 0}</span>
                   </div>
 
                   <div className="flex flex-col">
                     <span className="text-indigo-200 text-[10px] uppercase tracking-wide">Last 7 Days</span>
-                    <span className="font-semibold text-lg">{analyticsData?.kpis.totalVisits.byBucket.last7Days.toLocaleString() || 0}</span>
+                    <span className="font-semibold text-lg">{analyticsData?.kpis?.totalVisits?.byBucket?.last7Days?.toLocaleString() || 0}</span>
                   </div>
                   <div className="flex flex-col">
                     <span className="text-indigo-200 text-[10px] uppercase tracking-wide">This Month</span>
-                    <span className="font-semibold text-lg">{analyticsData?.kpis.totalVisits.byBucket.thisMonth.toLocaleString() || 0}</span>
+                    <span className="font-semibold text-lg">{analyticsData?.kpis?.totalVisits?.byBucket?.thisMonth?.toLocaleString() || 0}</span>
                   </div>
 
                   <div className="flex flex-col">
                     <span className="text-indigo-200 text-[10px] uppercase tracking-wide">This Year</span>
-                    <span className="font-semibold text-lg">{analyticsData?.kpis.totalVisits.byBucket.thisYear.toLocaleString() || 0}</span>
+                    <span className="font-semibold text-lg">{analyticsData?.kpis?.totalVisits?.byBucket?.thisYear?.toLocaleString() || 0}</span>
                   </div>
                   <div className="flex flex-col">
                     <span className="text-indigo-200 text-[10px] uppercase tracking-wide">Prev Year</span>
-                    <span className="font-semibold text-lg">{analyticsData?.kpis.totalVisits.byBucket.prevYear.toLocaleString() || 0}</span>
+                    <span className="font-semibold text-lg">{analyticsData?.kpis?.totalVisits?.byBucket?.prevYear?.toLocaleString() || 0}</span>
                   </div>
                 </div>
               </CardContent>
@@ -490,7 +495,7 @@ export const AdminDashboard = () => {
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <p className="text-indigo-900/70 dark:text-indigo-200/70 text-sm font-medium mb-1">Unique Patients</p>
-                    <h3 className="text-3xl sm:text-4xl font-bold text-indigo-900 dark:text-indigo-50">{analyticsData ? analyticsData.kpis.uniquePatients.overall.toLocaleString() : '...'}</h3>
+                    <h3 className="text-3xl sm:text-4xl font-bold text-indigo-900 dark:text-indigo-50">{analyticsData?.kpis?.uniquePatients?.overall?.toLocaleString() || '...'}</h3>
                   </div>
                   <div className="p-2.5 bg-white dark:bg-indigo-800/50 rounded-xl shadow-sm border border-indigo-100 dark:border-indigo-700/50">
                     <Users className="h-6 w-6 text-indigo-600 dark:text-indigo-300" />
@@ -501,29 +506,29 @@ export const AdminDashboard = () => {
                 <div className="grid grid-cols-2 gap-2 pt-2 text-xs sm:text-sm">
                   <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-indigo-50/50 dark:border-indigo-800/30">
                     <span className="text-indigo-400 dark:text-indigo-300 text-[10px] uppercase tracking-wide font-bold">Today</span>
-                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis.uniquePatients.byBucket.today.toLocaleString() || 0}</span>
+                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis?.uniquePatients?.byBucket?.today?.toLocaleString() || 0}</span>
                   </div>
                   <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-indigo-50/50 dark:border-indigo-800/30">
                     <span className="text-indigo-400 dark:text-indigo-300 text-[10px] uppercase tracking-wide font-bold">Yesterday</span>
-                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis.uniquePatients.byBucket.yesterday.toLocaleString() || 0}</span>
+                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis?.uniquePatients?.byBucket?.yesterday?.toLocaleString() || 0}</span>
                   </div>
 
                   <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-indigo-50/50 dark:border-indigo-800/30">
                     <span className="text-indigo-400 dark:text-indigo-300 text-[10px] uppercase tracking-wide font-bold">Last 7 Days</span>
-                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis.uniquePatients.byBucket.last7Days.toLocaleString() || 0}</span>
+                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis?.uniquePatients?.byBucket?.last7Days?.toLocaleString() || 0}</span>
                   </div>
                   <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-indigo-50/50 dark:border-indigo-800/30">
                     <span className="text-indigo-400 dark:text-indigo-300 text-[10px] uppercase tracking-wide font-bold">This Month</span>
-                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis.uniquePatients.byBucket.thisMonth.toLocaleString() || 0}</span>
+                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis?.uniquePatients?.byBucket?.thisMonth?.toLocaleString() || 0}</span>
                   </div>
 
                   <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-indigo-50/50 dark:border-indigo-800/30">
                     <span className="text-indigo-400 dark:text-indigo-300 text-[10px] uppercase tracking-wide font-bold">This Year</span>
-                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis.uniquePatients.byBucket.thisYear.toLocaleString() || 0}</span>
+                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis?.uniquePatients?.byBucket?.thisYear?.toLocaleString() || 0}</span>
                   </div>
                   <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-indigo-50/50 dark:border-indigo-800/30">
                     <span className="text-indigo-400 dark:text-indigo-300 text-[10px] uppercase tracking-wide font-bold">Prev Year</span>
-                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis.uniquePatients.byBucket.prevYear.toLocaleString() || 0}</span>
+                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis?.uniquePatients?.byBucket?.prevYear?.toLocaleString() || 0}</span>
                   </div>
                 </div>
               </CardContent>
@@ -548,12 +553,12 @@ export const AdminDashboard = () => {
                     {/* New Patients - Left Aligned */}
                     <div className="flex flex-col items-start">
                       <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                        {analyticsData ? analyticsData.kpis.newVsReturningPatients.new.percent : '..'}%
+                        {analyticsData?.kpis?.newVsReturningPatients?.new?.percent ?? '..'}%
                       </span>
                       <div className="flex items-center gap-1.5 mt-1">
                         <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm ring-2 ring-white dark:ring-blue-950"></div>
                         <span className="text-xs font-semibold text-blue-800 dark:text-blue-200">
-                          New <span className="opacity-70 font-normal">({analyticsData?.kpis.newVsReturningPatients.new.count || 0})</span>
+                          New <span className="opacity-70 font-normal">({analyticsData?.kpis?.newVsReturningPatients?.new?.count || 0})</span>
                         </span>
                       </div>
                     </div>
@@ -561,11 +566,11 @@ export const AdminDashboard = () => {
                     {/* Returning Patients - Right Aligned */}
                     <div className="flex flex-col items-end">
                       <span className="text-3xl font-bold text-cyan-600 dark:text-cyan-400">
-                        {analyticsData ? analyticsData.kpis.newVsReturningPatients.returning.percent : '..'}%
+                        {analyticsData?.kpis?.newVsReturningPatients?.returning?.percent ?? '..'}%
                       </span>
                       <div className="flex items-center gap-1.5 mt-1">
                         <span className="text-xs font-semibold text-cyan-800 dark:text-cyan-200">
-                          Returning <span className="opacity-70 font-normal">({analyticsData?.kpis.newVsReturningPatients.returning.count || 0})</span>
+                          Returning <span className="opacity-70 font-normal">({analyticsData?.kpis?.newVsReturningPatients?.returning?.count || 0})</span>
                         </span>
                         <div className="w-2.5 h-2.5 rounded-full bg-cyan-500 shadow-sm ring-2 ring-white dark:ring-blue-950"></div>
                       </div>
@@ -576,14 +581,14 @@ export const AdminDashboard = () => {
                   <div className="w-full h-4 bg-white/50 dark:bg-black/20 rounded-full overflow-hidden flex shadow-inner p-0.5 backdrop-blur-sm border border-blue-100 dark:border-blue-800/30">
                     <div
                       className="bg-gradient-to-r from-blue-500 to-blue-400 h-full rounded-l-full transition-all duration-1000 ease-out relative group"
-                      style={{ width: `${analyticsData?.kpis.newVsReturningPatients.new.percent || 0}%` }}
-                      title={`New: ${analyticsData?.kpis.newVsReturningPatients.new.percent}%`}
+                      style={{ width: `${analyticsData?.kpis?.newVsReturningPatients?.new?.percent || 0}%` }}
+                      title={`New: ${analyticsData?.kpis?.newVsReturningPatients?.new?.percent || 0}%`}
                     ></div>
                     <div className="w-0.5 h-full bg-transparent"></div>
                     <div
                       className="bg-gradient-to-r from-cyan-400 to-cyan-500 h-full rounded-r-full transition-all duration-1000 ease-out relative group"
-                      style={{ width: `${analyticsData?.kpis.newVsReturningPatients.returning.percent || 0}%` }}
-                      title={`Returning: ${analyticsData?.kpis.newVsReturningPatients.returning.percent}%`}
+                      style={{ width: `${analyticsData?.kpis?.newVsReturningPatients?.returning?.percent || 0}%` }}
+                      title={`Returning: ${analyticsData?.kpis?.newVsReturningPatients?.returning?.percent || 0}%`}
                     ></div>
                   </div>
                 </div>
@@ -618,9 +623,9 @@ export const AdminDashboard = () => {
 
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
             {/* Age Distribution Graph */}
-            <Card className="lg:col-span-2 shadow-sm border-gray-200 dark:border-gray-800">
+            <Card className="xl:col-span-2 shadow-sm border-gray-200 dark:border-gray-800">
               <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0 pb-2">
                 <div>
                   <CardTitle className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
@@ -793,10 +798,10 @@ export const AdminDashboard = () => {
 
           {/* Row 3: Patient Locations Map (Full Width Large Section) */}
           {/* Row 3: Patient Locations Section (Split: Top 5 List + Full Map) */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
             {/* Left Col: City Distribution List */}
-            <Card className="lg:col-span-1 shadow-sm border-gray-200 dark:border-gray-800 flex flex-col">
+            <Card className="xl:col-span-1 shadow-sm border-gray-200 dark:border-gray-800 flex flex-col">
               <CardHeader className="pb-2 bg-gray-50/50 dark:bg-gray-800/10 shrink-0">
                 <CardTitle className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
                   <Building2 className="h-5 w-5 text-indigo-600" />
@@ -849,7 +854,7 @@ export const AdminDashboard = () => {
             </Card>
 
             {/* Right Col: Full Map */}
-            <Card className="lg:col-span-2 shadow-sm border-gray-200 dark:border-gray-800">
+            <Card className="xl:col-span-2 shadow-sm border-gray-200 dark:border-gray-800">
               <CardHeader className="flex flex-row items-center justify-between pb-2 bg-gray-50/50 dark:bg-gray-800/10">
                 <div>
                   <CardTitle className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
@@ -873,9 +878,9 @@ export const AdminDashboard = () => {
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
             {/* Doctor Performance Analytics Table (Span 3) */}
-            <Card className="lg:col-span-3 shadow-sm border-gray-200 dark:border-gray-800 overflow-hidden">
+            <Card className="xl:col-span-3 shadow-sm border-gray-200 dark:border-gray-800 overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between pb-4 bg-gray-50/50 dark:bg-gray-800/10">
                 <div>
                   <CardTitle className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
@@ -983,7 +988,7 @@ export const AdminDashboard = () => {
             </Card>
 
             {/* Specialty Performance Card (Span 1) - Moved here */}
-            <Card className="lg:col-span-1 shadow-sm border-gray-200 dark:border-gray-800 flex flex-col h-full">
+            <Card className="xl:col-span-1 shadow-sm border-gray-200 dark:border-gray-800 flex flex-col h-full">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
                   <PieChart className="h-5 w-5 text-purple-600" />
@@ -1039,6 +1044,13 @@ export const AdminDashboard = () => {
 
       {/* Patient Management Module */}
       {currentView === 'patient-management' && <PatientManagementModule />}
+
+      {/* Billing Management Module */}
+      {currentView === 'billing-management' && (
+        <div className="p-4 sm:p-6 lg:p-8">
+          <BillingDashboard />
+        </div>
+      )}
 
       {/* System Configuration Module */}
       {(currentView === 'system-config' || currentView === 'system-config-hospital') && (

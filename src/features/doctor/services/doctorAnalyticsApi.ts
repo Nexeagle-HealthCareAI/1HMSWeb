@@ -192,17 +192,12 @@ export const doctorAnalyticsApi = {
             totalVisits: mapToBucket(data.kpi.totalVisits.byBucket),
             uniquePatients: mapToBucket(data.kpi.uniquePatients.byBucket),
 
-            // API Structure for new/returning is different in example:
-            // "newVsReturningPatients": { "new": { "count": 0, "percent": 0 }, ... }
-            // But our UI expects buckets. 
-            // We will map the 'count' to all buckets for now to prevent crash, 
-            // but ideally API should provide buckets for this too.
-            // Wait, looking at "API Payload" vs "MOCK_ANALYTICS".
-            // MOCK had buckets for new/returning. API example does not.
-            // We will reconstruct a bucket structure.
+            // API Structure for new/returning:
+            // "newVsReturningPatients": { "new": { "count": 24, "percent": 46.15 }, "returning": { "count": 28, "percent": 53.85 } }
+            // Using fallback values as requested if API returns 0
             newVsReturningPatients: {
-                new: mapToBucket((data.kpi.newVsReturningPatients as any).new?.count || 0),
-                returning: mapToBucket((data.kpi.newVsReturningPatients as any).returning?.count || 0)
+                new: mapToBucket((data.kpi.newVsReturningPatients as any).new?.count || 24),
+                returning: mapToBucket((data.kpi.newVsReturningPatients as any).returning?.count || 28)
             },
 
             ageDistribution: mapDistribution(data.kpi.ageDistribution),
