@@ -103,6 +103,8 @@ export const API_ENDPOINTS = {
     UPDATE_PRESCRIPTION_SETTINGS: () => `prescription/prescription-settings`,
     GET_PRESCRIPTION_SETTINGS: (id: string) => `prescription/prescription-settings?doctorId=${id}`,
     RESET_PRESCRIPTION_SETTINGS: (id: string) => `prescription/prescription-settings/reset?doctorId=${id}`,
+    GET_ANALYSIS: (hospitalId: string, doctorId: string) =>
+      `doctor-dashboard/analysis/hospitalId=${encodeURIComponent(hospitalId)}&doctorId=${encodeURIComponent(doctorId)}`,
   },
   USER_MANAGEMENT: {
     INVITE_USER: 'admin/user-onboarding/invitations?scope=new',

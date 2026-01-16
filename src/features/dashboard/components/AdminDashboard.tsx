@@ -55,7 +55,8 @@ import { useHospitalApi } from '@/hooks/useApi';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { SystemConfigModule } from './SystemConfigModule';
-import { BillingDashboard } from '@/features/billing/components/BillingDashboard';
+// @ts-ignore
+import BillingPage from '@/features/billing/pages/BillingPage';
 import { AnalyticsResponse, fetchAnalyticsData } from '../services/analyticsApi';
 
 
@@ -176,7 +177,7 @@ export const AdminDashboard = () => {
     { id: 'user-management', name: t('admin.userManagement'), icon: Users, description: t('admin.usersRolesPermissions') },
     { id: 'patient-management', name: t('admin.patientManagement'), icon: UserCheck, description: t('admin.patientRecordsData') },
     //{ id: 'appointment-oversight', name: t('admin.appointmentOversight') || 'Appointments', icon: Calendar, description: t('admin.appointmentManagement') || 'Manage System Appointments' },
-    { id: 'billing-management', name: t('admin.billingManagement') || 'Billing Management', icon: Receipt, description: t('admin.billingDescription') || 'Manage subscription and billing' },
+    { id: 'billing-management', name: t('admin.billingManagement') || 'Billing Management', icon: Receipt, description: t('admin.billingDescription') || 'Manage all OPD, IPD billings' },
     //{ id: 'billing-insurance', name: t('admin.billingInsurance'), icon: CreditCard, description: t('admin.financialManagement') },
     //{ id: 'bulk-messaging', name: t('admin.bulkMessaging'), icon: MessageSquare, description: t('admin.communicationManagement') },
     { id: 'system-config', name: t('admin.systemConfiguration'), icon: Settings, description: t('admin.hospitalSettings') },
@@ -1045,12 +1046,14 @@ export const AdminDashboard = () => {
       {/* Patient Management Module */}
       {currentView === 'patient-management' && <PatientManagementModule />}
 
-      {/* Billing Management Module */}
+      {/* Billing Management Module - Upcoming */}
       {currentView === 'billing-management' && (
         <div className="p-4 sm:p-6 lg:p-8">
-          <BillingDashboard />
+          <BillingPage />
         </div>
       )}
+
+
 
       {/* System Configuration Module */}
       {(currentView === 'system-config' || currentView === 'system-config-hospital') && (

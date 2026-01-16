@@ -42,6 +42,7 @@ const PrescriptionVerificationPage = lazy(() => import('@/features/patient/pages
 // Patient routes
 const PatientsPage = lazy(() => import('@/features/patient/components/PatientsPage').then(module => ({ default: module.PatientsPage })));
 const PatientProfilePage = lazy(() => import('@/features/patient/pages/PatientProfilePage').then(module => ({ default: module.PatientProfilePage })));
+const BillingPage = lazy(() => import('@/features/billing/pages/BillingPage').then(module => ({ default: module.BillingPage })));
 
 
 // Loading component for lazy routes
@@ -221,6 +222,8 @@ export const AppRoutes: React.FC = () => {
               }
             />
 
+
+
             {/* Profile Routes */}
             <Route
               path="/profile"
@@ -266,6 +269,18 @@ export const AppRoutes: React.FC = () => {
               }
             />
 
+            {/* Billing Route - Restricted to Admin and AdminDoctor roles */}
+            <Route
+              path="/billing"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                  <MainLayout>
+                    <BillingPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+
           </>
         ) : null}
 
@@ -275,6 +290,6 @@ export const AppRoutes: React.FC = () => {
           element={<NotFoundPage />}
         />
       </Routes>
-    </Suspense>
+    </Suspense >
   );
 };
