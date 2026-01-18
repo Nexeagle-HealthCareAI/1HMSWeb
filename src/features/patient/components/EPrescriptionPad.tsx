@@ -40,6 +40,7 @@ import { LookupItem } from './LookupMultiSelect';
 
 import { personalizedDataApi, PersonalizedLookupType } from '@/features/prescription/services/personalizedDataApi';
 import { eprescriptionApi, LookupData, EPrescriptionDraftReq, MedicineSearchItem } from '../services/eprescriptionApi';
+import { prescriptionPreviewService } from '@/components/shared/prescription-preview/services/prescriptionPreviewService';
 import AttachmentsSection from './AttachmentsSection';
 import { SelectValue } from '@radix-ui/react-select';
 // @ts-ignore
@@ -736,14 +737,13 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
         const response = await eprescriptionApi.saveSubmit(payload);
         if (response.success) {
           try {
-            // Generate PDF and Upload
-            const { blob } = await import('@/components/shared/prescription-preview/services/prescriptionPreviewService')
-              .then(m => m.prescriptionPreviewService.buildPreviewFromRequest({
-                appointmentId: resolvedAppointmentId,
-                patientId: resolvedPatientId,
-                hospitalId: hid,
-                doctorId: did
-              }));
+            // Generate PDF using static import
+            const { blob } = await prescriptionPreviewService.buildPreviewFromRequest({
+              appointmentId: resolvedAppointmentId,
+              patientId: resolvedPatientId,
+              hospitalId: hid,
+              doctorId: did
+            });
 
             // Create validated file object
             const file = new File([blob], `Prescription-${resolvedAppointmentId}.pdf`, { type: 'application/pdf' });
