@@ -613,6 +613,32 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
     fetchProfile();
   }, [patientId, searchParams, getHospitalId]);
 
+  const saveMedicineToDrPreference = async (medicineName: string, brandName?: string, dose?: string) => {
+    try {
+      const hid = getHospitalId?.() || '4de8ea65-71aa-4800-8167-60147d78ea58';
+      const did = getDoctorId() || '';
+      if (!did) return;
+
+      await eprescriptionApi.saveDoctorPreference({
+        preferrredId: null,
+        doctorId: did,
+        hospitalId: hid,
+        source: 'Medicine',
+        medicine: {
+          medicineName: medicineName,
+          manufacturer: '',
+          genericName: '',
+          brandName: brandName || '',
+          dosageForm: '',
+          strength: dose || ''
+        }
+      });
+    } catch (error) {
+      console.error('Failed to save medicine preference', error);
+      // Suppress UI error for background preference save
+    }
+  };
+
 
   /* Submit Logic exposed via ref */
   useImperativeHandle(ref, () => ({
@@ -725,12 +751,12 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             // Upload
             await eprescriptionApi.uploadVisitSummary(resolvedAppointmentId, file);
 
-          } catch (pdfError) {
+          } catch (pdfError: any) {
             console.error('Failed to generate/upload prescription PDF', pdfError);
             toast({
               variant: 'destructive',
-              title: 'Upload Failed',
-              description: 'Prescription saved, but PDF generation/upload failed. Please try again or contact support.'
+              title: 'PDF Generation Failed',
+              description: `Prescription saved, but PDF failed: ${pdfError.message || 'Unknown error'}. Check console for CORS details.`
             });
           }
 
@@ -1968,32 +1994,6 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
     // saveMedicineToDrPreference(trimmed, itemData);
 
     setMedicationOpenForId(null);
-  };
-
-  const saveMedicineToDrPreference = (name: string, itemData?: MedicineSearchItem, dosage?: string) => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-
-    // Check if we should save? (Maybe avoid duplicates if recently saved? API handles it hopefully)
-
-    const did = getDoctorId() || '';
-    const hid = getHospitalId?.() || '';
-    if (did) {
-      eprescriptionApi.saveDoctorPreference({
-        preferrredId: null,
-        doctorId: did,
-        hospitalId: hid,
-        source: 'prescription',
-        medicine: {
-          medicineName: trimmed,
-          manufacturer: itemData?.manufacturer || '',
-          genericName: itemData?.genericName || '',
-          brandName: itemData?.brandName || '',
-          dosageForm: itemData?.dosageForm || '',
-          strength: dosage || itemData?.strength || ''
-        }
-      }).catch(err => console.error('Failed to save medicine preference', err));
-    }
   };
 
   const addInvestigationItem = (label: string) => {
