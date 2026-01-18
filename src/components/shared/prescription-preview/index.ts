@@ -1,6 +1,6 @@
 export { PrescriptionPreviewModal, type PrescriptionPreviewModalProps } from './components/PrescriptionPreviewModal';
 export { usePrescriptionPreview, type UsePrescriptionPreviewOptions } from './hooks/usePrescriptionPreview';
-export { prescriptionPreviewService, type PrescriptionPreviewPayload } from './services/prescriptionPreviewService';
+export { prescriptionPreviewService, buildPreviewFromRequest, buildPreviewBlob, type PrescriptionPreviewPayload } from './services/prescriptionPreviewService';
 export {
 	generatePrescriptionDetailsService,
 	type GeneratePrescriptionDetailsRequest,
@@ -13,5 +13,5 @@ export {
 } from './services/generatePrescriptionDetailsService';
 export {
 	buildTemplateBoundPreview,
-	type DynamicPreviewLayoutConfig,
+	type TemplateBoundLayoutConfig,
 } from './services/previewRenderer';

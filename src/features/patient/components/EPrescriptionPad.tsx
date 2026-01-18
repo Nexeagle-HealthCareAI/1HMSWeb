@@ -40,7 +40,7 @@ import { LookupItem } from './LookupMultiSelect';
 
 import { personalizedDataApi, PersonalizedLookupType } from '@/features/prescription/services/personalizedDataApi';
 import { eprescriptionApi, LookupData, EPrescriptionDraftReq, MedicineSearchItem } from '../services/eprescriptionApi';
-import { prescriptionPreviewService } from '@/components/shared/prescription-preview/services/prescriptionPreviewService';
+import { buildPreviewFromRequest } from '@/components/shared/prescription-preview/services/prescriptionPreviewService';
 import AttachmentsSection from './AttachmentsSection';
 import { SelectValue } from '@radix-ui/react-select';
 // @ts-ignore
@@ -737,8 +737,8 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
         const response = await eprescriptionApi.saveSubmit(payload);
         if (response.success) {
           try {
-            // Generate PDF using static import
-            const { blob } = await prescriptionPreviewService.buildPreviewFromRequest({
+            // Generate PDF using static import and named export function
+            const { blob } = await buildPreviewFromRequest({
               appointmentId: resolvedAppointmentId,
               patientId: resolvedPatientId,
               hospitalId: hid,

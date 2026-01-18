@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { prescriptionPreviewService } from '../services/prescriptionPreviewService';
+import { buildPreviewFromRequest } from '../services/prescriptionPreviewService';
 import { type GeneratePrescriptionDetailsRequest } from '../services/generatePrescriptionDetailsService';
 
 export interface UsePrescriptionPreviewOptions {
@@ -36,7 +36,7 @@ export const usePrescriptionPreview = ({
     setError(null);
     try {
       setTemplateUrl(null);
-      const { blob, templateUrl: sourceTemplateUrl } = await prescriptionPreviewService.buildPreviewFromRequest(request);
+      const { blob, templateUrl: sourceTemplateUrl } = await buildPreviewFromRequest(request);
       const nextUrl = URL.createObjectURL(blob);
       revokeUrl(lastObjectUrlRef.current);
       lastObjectUrlRef.current = nextUrl;
