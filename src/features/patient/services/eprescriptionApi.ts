@@ -96,6 +96,7 @@ export interface EPrescriptionDraftReq {
         heightCm: number;
         weightKg: number;
         bmi: number;
+        respiratoryRate: number;
     };
     chiefComplaint?: string;
     history?: string;

@@ -330,7 +330,6 @@ const AutoSaveHandler: React.FC<{
           spo2: Number(prescriptionData.vitals.oxygenSaturation) || 0,
           heightCm: Number(prescriptionData.vitals.height) || 0,
           weightKg: Number(prescriptionData.vitals.weight) || 0,
-          weightKg: Number(prescriptionData.vitals.weight) || 0,
           bmi: Number(prescriptionData.vitals.bmi) || 0,
           respiratoryRate: Number(prescriptionData.vitals.respiratoryRate) || 0,
         }),
@@ -410,7 +409,6 @@ const AutoSaveHandler: React.FC<{
             tempC: Number(prescriptionData.vitals.temperature) || 0,
             spo2: Number(prescriptionData.vitals.oxygenSaturation) || 0,
             heightCm: Number(prescriptionData.vitals.height) || 0,
-            weightKg: Number(prescriptionData.vitals.weight) || 0,
             weightKg: Number(prescriptionData.vitals.weight) || 0,
             bmi: Number(prescriptionData.vitals.bmi) || 0,
             respiratoryRate: Number(prescriptionData.vitals.respiratoryRate) || 0,
@@ -542,7 +540,6 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
       weight: '',
       height: '',
       bmi: '',
-      bmi: '',
       oxygenSaturation: '',
       respiratoryRate: ''
     },
@@ -636,7 +633,6 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             spo2: Number(prescriptionData.vitals.oxygenSaturation) || 0,
             heightCm: Number(prescriptionData.vitals.height) || 0,
             weightKg: Number(prescriptionData.vitals.weight) || 0,
-            weightKg: Number(prescriptionData.vitals.weight) || 0,
             bmi: Number(prescriptionData.vitals.bmi) || 0,
             respiratoryRate: Number(prescriptionData.vitals.respiratoryRate) || 0,
           },
@@ -717,8 +713,11 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
 
           } catch (pdfError) {
             console.error('Failed to generate/upload prescription PDF', pdfError);
-            // We don't block the success flow, but maybe warn?
-            // toast({ variant: 'warning', title: 'Upload Failed', description: 'Prescription saved but PDF upload failed.' });
+            toast({
+              variant: 'destructive',
+              title: 'Upload Failed',
+              description: 'Prescription saved, but PDF generation/upload failed. Please try again or contact support.'
+            });
           }
 
           toast({
@@ -780,7 +779,6 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             tempC: Number(prescriptionData.vitals.temperature) || 0,
             spo2: Number(prescriptionData.vitals.oxygenSaturation) || 0,
             heightCm: Number(prescriptionData.vitals.height) || 0,
-            weightKg: Number(prescriptionData.vitals.weight) || 0,
             weightKg: Number(prescriptionData.vitals.weight) || 0,
             bmi: Number(prescriptionData.vitals.bmi) || 0,
             respiratoryRate: Number(prescriptionData.vitals.respiratoryRate) || 0,

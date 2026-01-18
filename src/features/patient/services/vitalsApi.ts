@@ -9,6 +9,7 @@ export interface PatientVitalsResponse {
   heightCm?: number;
   weightKg?: number;
   bmi?: number;
+  respiratoryRate?: number;
 }
 
 export interface SaveVitalsRequest {
@@ -22,6 +23,7 @@ export interface SaveVitalsRequest {
     heightCm: number;
     weightKg: number;
     bmi: number;
+    respiratoryRate: number;
   };
   recordedBy: string;
 }
