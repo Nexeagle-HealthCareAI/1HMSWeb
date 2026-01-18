@@ -523,6 +523,20 @@ interface EPrescriptionPadProps {
 const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(({ prescriptionFieldPreferences, appointmentId: propAppointmentId }, ref) => {
   const { patientId } = useParams<{ patientId: string }>();
   const [searchParams] = useSearchParams();
+
+  const safeDecode = (value: string | null) => {
+    if (!value) return '';
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return value;
+    }
+  };
+
+  const resolvedPatientId = safeDecode(searchParams.get('patientId')) || patientId || '';
+  const resolvedAppointmentId = propAppointmentId || safeDecode(searchParams.get('appointmentId'));
+  const resolvedPatientName = safeDecode(searchParams.get('patientName')) || '';
+
   const { getDoctorId, getHospitalId, getUserId } = useAuthStore();
   const { toast } = useToast();
   const [apiPreferences, setApiPreferences] = useState<any>(null);
@@ -916,18 +930,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
     return text;
   };
 
-  const safeDecode = (value: string | null) => {
-    if (!value) return '';
-    try {
-      return decodeURIComponent(value);
-    } catch {
-      return value;
-    }
-  };
 
-  const resolvedPatientId = safeDecode(searchParams.get('patientId')) || patientId || '';
-  const resolvedAppointmentId = propAppointmentId || safeDecode(searchParams.get('appointmentId'));
-  const resolvedPatientName = safeDecode(searchParams.get('patientName')) || '';
 
   console.log('[EPrescriptionPad Debug]', {
     resolvedPatientId,
