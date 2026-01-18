@@ -68,9 +68,8 @@ export default defineConfig(({ mode }) => {
       minify: mode === 'production' ? 'terser' : false,
       terserOptions: mode === 'production' ? {
         compress: {
-          drop_console: true,
-          drop_debugger: true,
-          pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn']
+          drop_console: false,
+          drop_debugger: false,
         },
         mangle: {
           safari10: true
@@ -80,7 +79,7 @@ export default defineConfig(({ mode }) => {
         output: {
           assetFileNames: (assetInfo) => {
             if (!assetInfo.name) return `assets/[name]-[hash][extname]`;
-            
+
             if (/\.(css)$/.test(assetInfo.name)) {
               return `assets/[name]-[hash][extname]`;
             }
