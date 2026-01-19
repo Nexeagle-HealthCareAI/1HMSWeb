@@ -17,7 +17,7 @@ import {
   Printer,
   RefreshCw,
   Wifi,
-  WifiOff,
+  ArrowLeft,
   Activity,
   CalendarClock,
   Ban,
@@ -869,17 +869,19 @@ export const AppointmentDashboard = () => {
   if (showBooking) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3 shadow-sm">
-          <div className="max-w-7xl mx-auto flex items-center gap-3">
+        <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+          <div className="flex items-center gap-3 px-4 py-3">
             <Button
-              variant="outline"
+              variant="ghost"
+              size="sm"
               onClick={() => setShowBooking(false)}
-              className="group flex items-center gap-2 border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
+              className="group flex items-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all"
             >
-              <span className="text-gray-700 dark:text-gray-200 font-medium">{t('common.back')}</span>
+              <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+              <span className="font-medium">{t('common.back')}</span>
             </Button>
-            <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />
-            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">{t('appointmentDashboard.bookNewAppointment')}</h1>
+            <div className="h-5 w-px bg-gray-200 dark:bg-gray-700" />
+            <h1 className="text-base font-semibold text-gray-900 dark:text-white">{t('appointmentDashboard.bookNewAppointment')}</h1>
           </div>
         </div>
         <AppointmentBooking refreshToken={bookingRefreshToken} />
@@ -967,7 +969,7 @@ export const AppointmentDashboard = () => {
       </div>
 
       {/* Main Dashboard Content */}
-      <div className="max-w-7xl mx-auto p-2 sm:p-4 md:p-6">
+      <div className="w-full px-3 sm:px-4 lg:px-6 py-6">
         {/* Main Content Area */}
         <div className="w-full">
           {/* KPI Section */}

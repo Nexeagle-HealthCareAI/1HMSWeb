@@ -400,7 +400,7 @@ export const AdminDashboard = () => {
           </div>
 
           {/* Right: Navigation Tabs - Responsive Scroll Container */}
-          <nav className="w-full xl:w-auto xl:flex-1 min-w-0 xl:ml-4 flex flex-nowrap overflow-x-auto gap-2 bg-gray-50/50 dark:bg-black/20 border border-gray-200/50 dark:border-white/5 rounded-xl p-1.5 shadow-inner justify-start md:justify-end scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent">
+          <nav className="w-full xl:w-auto xl:flex-1 min-w-0 xl:ml-4 flex flex-nowrap overflow-x-auto gap-2 bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-1 shadow-inner shadow-white/60 dark:shadow-black/40 justify-start md:justify-end scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent">
             {adminModules.map((module) => {
               const isActive = currentView === module.id;
               const isLocked = !accessUnlocked && module.id !== 'dashboard' && module.id !== 'system-config';
@@ -420,17 +420,19 @@ export const AdminDashboard = () => {
                   aria-pressed={isActive}
                   tabIndex={isLocked ? -1 : 0}
                   title={isLocked ? t('admin.adminFeaturesLocked') : module.description}
-                  className={`group flex-1 flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-lg px-3 py-2 transition-all duration-200 min-w-[80px] sm:min-w-[120px] ${isActive
-                    ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm ring-1 ring-black/5 dark:ring-white/10'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-white/50 dark:hover:bg-slate-800/50 hover:text-gray-900 dark:hover:text-gray-200'
+                  className={`group flex-1 flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-2.5 py-1.5 border transition-all duration-300 min-w-[80px] sm:min-w-[120px] ${isActive
+                    ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white border-transparent shadow-xl shadow-blue-500/30'
+                    : 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800/70 hover:text-gray-900 dark:hover:text-gray-200'
                     } ${isLocked ? 'opacity-40 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
                 >
                   <div className="flex items-center justify-center sm:justify-start gap-1.5 font-semibold w-full">
-                    <module.icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300'}`} />
+                    <span className={`p-1 rounded-lg ${isActive ? 'bg-white/20' : 'bg-gray-100 dark:bg-slate-800'}`}>
+                      <module.icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-white' : 'text-blue-500 dark:text-blue-400'}`} />
+                    </span>
                     <span className="hidden sm:inline text-[12px] line-clamp-1">{module.name}</span>
                   </div>
                   <span className="sm:hidden text-[10px] font-medium w-full text-center line-clamp-1 leading-tight">{module.name}</span>
-                  <p className={`hidden sm:block text-[10px] leading-snug w-full line-clamp-2 opacity-90 mt-0.5 ${isActive ? 'text-blue-600/80 dark:text-blue-400/80' : 'text-gray-500 dark:text-gray-500'}`}>
+                  <p className={`hidden sm:block text-[10px] leading-snug w-full line-clamp-2 opacity-90 mt-0.5 ${isActive ? 'text-white/90' : 'text-gray-500 dark:text-gray-500'}`}>
                     {module.description}
                   </p>
                 </button>

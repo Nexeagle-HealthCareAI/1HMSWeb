@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Shield, Search } from 'lucide-react';
+import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Shield, Search, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RegisterAppointmentRequest, generatePatientId } from '../services/appointmentApi';
 import { useAppointmentBooking } from '../hooks/useAppointmentBooking';
@@ -731,8 +731,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 <Button
                   type="submit"
                   disabled={isSubmitting || isBookingLoading || !isFormReady}
-                  className="flex-1 bg-healthcare-primary hover:bg-healthcare-primary/90 h-10"
+                  className="flex-1 bg-healthcare-primary hover:bg-healthcare-primary/90 h-10 gap-2"
                 >
+                  {(isSubmitting || isBookingLoading) && <Loader2 className="h-4 w-4 animate-spin" />}
                   {isSubmitting || isBookingLoading ? t('patientForm.actions.submitting') : t('patientForm.actions.submit')}
                 </Button>
               </div>

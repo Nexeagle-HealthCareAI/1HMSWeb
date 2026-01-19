@@ -92,7 +92,7 @@ const getShiftGradient = (shiftName: string): string => {
     'Morning': 'from-teal-400 to-cyan-500',
     'Afternoon': 'from-amber-400 to-orange-400',
     'Evening': 'from-blue-400 to-indigo-500',
-    'Night': 'from-slate-500 to-gray-600',
+    'Night': 'from-gray-500 to-gray-600',
     'default': 'from-gray-400 to-gray-500'
   };
   return gradients[shiftName] || gradients.default;
@@ -375,7 +375,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
   // Show authentication required message if user is not authenticated
   if (!isAuthenticated || !userId) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-500 text-4xl mb-4">🔒</div>
           <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('appointmentBooking.authenticationRequired')}</h2>
@@ -390,7 +390,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
   // Show error if hospital user data is not available
   if (hospitalUserError && !storedHospitalId) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-500 text-4xl mb-4">⚠️</div>
           <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('appointmentBooking.failedToLoadHospital')}</h2>
@@ -411,7 +411,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
   // Show loading if hospital user data is loading
   if (shouldShowHospitalLoader || !hospitalId) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">{t('appointmentBooking.loadingHospitalInfo')}</h2>
@@ -565,7 +565,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
   // Loading state
   if (hospitalUserLoading || departmentsLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
@@ -589,7 +589,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
 
   if (hospitalUserError) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-500 text-4xl mb-4">⚠️</div>
           <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('appointmentBooking.failedToLoadHospital')}</h2>
@@ -609,7 +609,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
 
   if (departmentsError) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-500 text-4xl mb-4">⚠️</div>
           <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('appointmentBooking.failedToLoadDepartments')}</h2>
@@ -629,7 +629,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
 
   if (!departmentsLoading && departments.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center px-4">
         <div className="text-center max-w-md">
           <div className="text-5xl mb-4">🏥</div>
           <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-2">
@@ -675,7 +675,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 transition-all duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-all duration-300">
       {/* Mobile-First Layout */}
       <div className="min-h-screen">
         {/* Mobile Header - Fixed Position */}
@@ -787,9 +787,9 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                   <button
                     key={dept.id}
                     onClick={() => handleDepartmentSelect(dept.id)}
-                    className={`flex flex-col items-center gap-2 p-3 rounded-lg border text-center transition-all text-xs ${selectedDepartment === dept.id
-                      ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500 shadow-md'
-                      : 'bg-gray-50 border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
+                    className={`flex flex-col items-center gap-2 p-3 rounded-xl border text-center transition-all text-xs ${selectedDepartment === dept.id
+                      ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white border-transparent shadow-lg shadow-blue-500/20'
+                      : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-gray-50 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
                       }`}
                   >
                     <dept.icon className="h-5 w-5" />
@@ -846,9 +846,9 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                           };
                           handleDoctorSelect(newDoctor);
                         }}
-                        className={`w-full p-3 rounded-lg border text-left transition-all text-xs relative ${selectedDoctor?.id === doctor.doctorId
-                          ? 'border-blue-300 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 shadow-sm'
-                          : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        className={`w-full p-3 rounded-xl border text-left transition-all text-xs relative ${selectedDoctor?.id === doctor.doctorId
+                          ? 'border-indigo-200 bg-indigo-50 dark:from-indigo-900/20 dark:to-indigo-800/20 shadow-sm'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750'
                           }`}
                       >
                         <div className="flex flex-col gap-0.5">
