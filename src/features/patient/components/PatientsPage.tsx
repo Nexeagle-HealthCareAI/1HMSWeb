@@ -23,7 +23,8 @@ import {
   ArrowUpDown,
   ArrowRight,
   MapPin,
-  Calendar
+  Calendar,
+  History
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -48,7 +49,7 @@ import {
 import { cn } from '@/lib/utils';
 
 export interface StatusTransitionStep {
-  status: 'VITALS_REQUIRED' | 'READY' | 'UNDER_CONSULT' | 'LAB_REQUIRED' | 'COMPLETED' | 'CANCELLED' | 'AWAITING_RECONSULT';
+  status: 'VITALS_REQUIRED' | 'READY' | 'UNDER_CONSULT' | 'LAB_REQUIRED' | 'COMPLETED' | 'CANCELLED' | 'AWAITING_RECONSULT' | 'NO_SHOW';
   label: string;
   isCompleted: boolean;
   isCurrent: boolean;
@@ -63,7 +64,7 @@ import { format } from 'date-fns';
 
 import { Patient360Analysis } from './Patient360Analysis';
 
-type Tab = 'today' | 'upcoming' | 'patient360';
+type Tab = 'today' | 'upcoming' | 'past' | 'patient360';
 type ViewMode = 'list' | 'analysis';
 
 export const PatientsPage: React.FC = () => {
@@ -97,6 +98,21 @@ export const PatientsPage: React.FC = () => {
     d.setDate(d.getDate() + 7);
     return format(d, 'yyyy-MM-dd');
   });
+
+  // Date range state for Past Appointments (Default: Last 30 days to Yesterday)
+  const [pastStartDate, setPastStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return format(d, 'yyyy-MM-dd');
+  });
+  const [pastEndDate, setPastEndDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return format(d, 'yyyy-MM-dd');
+  });
+  const [pastPage, setPastPage] = useState(1);
+  const PAST_ITEMS_PER_PAGE = 5;
+  const [pastSearchQuery, setPastSearchQuery] = useState('');
 
   const { hospitalId } = useAuthStore();
 
@@ -140,6 +156,23 @@ export const PatientsPage: React.FC = () => {
     refetchInterval: 30000
   });
 
+  // Fetch Past Appointments
+  const { data: pastAppointmentsResponse, isLoading: isPastLoading } = useQuery({
+    queryKey: ['pastAppointmentDetails', hospitalId, pastStartDate, pastEndDate],
+    queryFn: async () => {
+      if (!hospitalId) return { items: [] };
+
+      return await appointmentApi.getAppointmentDetails({
+        status: 'All',
+        startDate: pastStartDate,
+        endDate: pastEndDate,
+        hospitalId: hospitalId
+      });
+    },
+    enabled: !!hospitalId && !!pastStartDate && !!pastEndDate,
+    refetchInterval: 60000
+  });
+
   // Transform API data to UI format
   const currentAppointments = useMemo(() => {
     if (!appointmentsResponse?.items) return [];
@@ -166,6 +199,7 @@ export const PatientsPage: React.FC = () => {
         case 'AWAITING_RECONSULT': currentStepIndex = 2; break; // Map back to consult area or add step
         case 'COMPLETED': currentStepIndex = 4; break;
         case 'CANCELLED': currentStepIndex = -1; break;
+        case 'NO_SHOW': currentStepIndex = -1; break;
         default: currentStepIndex = 0;
       }
 
@@ -202,6 +236,36 @@ export const PatientsPage: React.FC = () => {
     }));
   }, [upcomingAppointmentsResponse]);
 
+  // Transform Past Appointments
+  const pastAppointments = useMemo(() => {
+    if (!pastAppointmentsResponse?.items) return [];
+
+    const items = pastAppointmentsResponse.items.map((apiAppt: AppointmentDetail) => ({
+      appointmentId: apiAppt.appointmentId,
+      patientId: apiAppt.patientId,
+      patientName: apiAppt.patientFullName,
+      contact: apiAppt.patientMobile,
+      doctorName: apiAppt.doctorName || 'Unknown Doctor',
+      currentStatus: apiAppt.finalStatusCode,
+      appointmentDate: apiAppt.appointmentDate
+    }));
+
+    // Sort by date DESC
+    const sorted = items.sort((a, b) => new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime());
+
+    // Filter by Search Query
+    if (pastSearchQuery) {
+      const query = pastSearchQuery.toLowerCase();
+      return sorted.filter(apt =>
+        apt.patientName.toLowerCase().includes(query) ||
+        apt.patientId.toLowerCase().includes(query) ||
+        apt.doctorName.toLowerCase().includes(query)
+      );
+    }
+
+    return sorted;
+  }, [pastAppointmentsResponse, pastSearchQuery]);
+
   // New state for 360 view navigation
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
@@ -236,11 +300,11 @@ export const PatientsPage: React.FC = () => {
 
   // Compute Doctor Counts with Status Breakdown
   const doctorStats = useMemo(() => {
-    const stats: Record<string, { total: number; completed: number; vitalsRequired: number }> = {};
+    const stats: Record<string, { total: number; completed: number; vitalsRequired: number; cancelled: number; noShow: number }> = {};
     currentAppointments.forEach(apt => {
       if (apt.doctorName) {
         if (!stats[apt.doctorName]) {
-          stats[apt.doctorName] = { total: 0, completed: 0, vitalsRequired: 0 };
+          stats[apt.doctorName] = { total: 0, completed: 0, vitalsRequired: 0, cancelled: 0, noShow: 0 };
         }
         stats[apt.doctorName].total += 1;
         if (apt.currentStatus === 'COMPLETED') {
@@ -249,10 +313,42 @@ export const PatientsPage: React.FC = () => {
         if (apt.currentStatus === 'VITALS_REQUIRED') {
           stats[apt.doctorName].vitalsRequired += 1;
         }
+        if (apt.currentStatus === 'CANCELLED') {
+          stats[apt.doctorName].cancelled += 1;
+        }
+        if (apt.currentStatus === 'NO_SHOW') {
+          stats[apt.doctorName].noShow += 1;
+        }
       }
     });
     return stats;
   }, [currentAppointments]);
+
+  // Compute Past Doctor Counts with Status Breakdown
+  const pastDoctorStats = useMemo(() => {
+    const stats: Record<string, { total: number; completed: number; vitalsRequired: number; cancelled: number; noShow: number }> = {};
+    pastAppointments.forEach(apt => {
+      if (apt.doctorName) {
+        if (!stats[apt.doctorName]) {
+          stats[apt.doctorName] = { total: 0, completed: 0, vitalsRequired: 0, cancelled: 0, noShow: 0 };
+        }
+        stats[apt.doctorName].total += 1;
+        if (apt.currentStatus === 'COMPLETED') {
+          stats[apt.doctorName].completed += 1;
+        }
+        if (apt.currentStatus === 'VITALS_REQUIRED') {
+          stats[apt.doctorName].vitalsRequired += 1;
+        }
+        if (apt.currentStatus === 'CANCELLED') {
+          stats[apt.doctorName].cancelled += 1;
+        }
+        if (apt.currentStatus === 'NO_SHOW') {
+          stats[apt.doctorName].noShow += 1;
+        }
+      }
+    });
+    return stats;
+  }, [pastAppointments]);
 
   // Compute Overall Stats
   const dashboardStats = useMemo(() => {
@@ -262,7 +358,8 @@ export const PatientsPage: React.FC = () => {
       pendingVitals: currentAppointments.filter(a => a.currentStatus === 'VITALS_REQUIRED').length,
       underConsult: currentAppointments.filter(a => a.currentStatus === 'UNDER_CONSULT').length,
       completed: currentAppointments.filter(a => a.currentStatus === 'COMPLETED').length,
-      cancelled: currentAppointments.filter(a => a.currentStatus === 'CANCELLED').length
+      cancelled: currentAppointments.filter(a => a.currentStatus === 'CANCELLED').length,
+      noShow: currentAppointments.filter(a => a.currentStatus === 'NO_SHOW').length
     };
   }, [doctorStats, currentAppointments]);
 
@@ -429,6 +526,11 @@ export const PatientsPage: React.FC = () => {
       id: 'upcoming' as Tab,
       label: 'Upcoming Appointments',
       icon: Calendar,
+    },
+    {
+      id: 'past' as Tab,
+      label: 'Past Appointments',
+      icon: History,
     },
     {
       id: 'patient360' as Tab,
@@ -699,7 +801,13 @@ export const PatientsPage: React.FC = () => {
                       {stats.vitalsRequired > 0 && (
                         <div className="flex items-center gap-0.5 text-[10px] font-medium text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-full">
                           <Heart className="h-2.5 w-2.5" />
-                          <span>{stats.vitalsRequired}</span>
+                          <span>Vitals {stats.vitalsRequired}</span>
+                        </div>
+                      )}
+                      {stats.cancelled > 0 && (
+                        <div className="flex items-center gap-0.5 text-[10px] font-medium text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full">
+                          <Circle className="h-2.5 w-2.5" />
+                          <span>Cancelled {stats.cancelled}</span>
                         </div>
                       )}
                     </div>
@@ -717,6 +825,8 @@ export const PatientsPage: React.FC = () => {
                 </div>
                 <div className="text-xl font-bold text-gray-900 dark:text-gray-100 ml-0.5">{dashboardStats.cancelled}</div>
               </div>
+
+
             </div>
 
             {/* Operations Bar */}
@@ -1046,6 +1156,8 @@ export const PatientsPage: React.FC = () => {
                   </div>
                 </CardContent>
               </Card>
+
+
             </div>
 
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/60 dark:border-gray-800 shadow-sm overflow-hidden">
@@ -1123,6 +1235,236 @@ export const PatientsPage: React.FC = () => {
             </div>
           </div>
         )
+        }
+
+
+
+        {
+          activeTab === 'past' && (
+            <div className="max-w-5xl mx-auto space-y-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
+                <div>
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Past Appointments</h1>
+                  </div>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">History of patient appointments and visits.</p>
+                </div>
+
+                <div className="flex items-center gap-2 bg-white dark:bg-gray-800 p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+                  <div className="flex items-center gap-2 px-2">
+                    <CalendarDays className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Filter:</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Search past appointments..."
+                        className="pl-9 h-8 w-[200px] bg-gray-50 border-gray-200 dark:bg-gray-900 dark:border-gray-700 focus-visible:ring-indigo-500"
+                        value={pastSearchQuery}
+                        onChange={(e) => {
+                          setPastSearchQuery(e.target.value);
+                          setPastPage(1); // Reset to first page on search
+                        }}
+                      />
+                    </div>
+                    <Input
+                      type="date"
+                      value={pastStartDate}
+                      onChange={(e) => {
+                        setPastPage(1);
+                        setPastStartDate(e.target.value);
+                      }}
+                      className="h-8 w-auto min-w-[130px] bg-gray-50 border-gray-200 dark:bg-gray-900 dark:border-gray-700 cursor-pointer"
+                    />
+                    <span className="text-gray-400">-</span>
+                    <Input
+                      type="date"
+                      value={pastEndDate}
+                      onChange={(e) => {
+                        setPastPage(1);
+                        setPastEndDate(e.target.value);
+                      }}
+                      className="h-8 w-auto min-w-[130px] bg-gray-50 border-gray-200 dark:bg-gray-900 dark:border-gray-700 cursor-pointer"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+                <Card className="bg-gradient-to-br from-indigo-500 to-indigo-600 border-none text-white shadow-lg shadow-indigo-500/20">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-indigo-100 text-sm font-medium mb-1">Total Past Visits</p>
+                      <h3 className="text-3xl font-bold">{pastAppointments.length}</h3>
+                    </div>
+                    <div className="bg-white/20 p-3 rounded-xl">
+                      <History className="h-6 w-6 text-white" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Doctor Stats Cards - Compact (Reused for Past) */}
+                {Object.entries(pastDoctorStats).map(([doctorName, stats]) => (
+                  <div key={doctorName} className="relative overflow-hidden bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm transition-all duration-300 group backdrop-blur-sm">
+                    <div className="flex items-center gap-2 mb-1.5 relative z-10">
+                      <div className="p-1.5 bg-indigo-100/50 dark:bg-indigo-900/30 rounded-lg">
+                        <Stethoscope className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                      </div>
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400" title={doctorName}>{doctorName}</span>
+                    </div>
+                    <div className="relative z-10 ml-0.5">
+                      <div className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">{stats.total}</div>
+                      <div className="flex flex-wrap gap-1">
+                        {stats.completed > 0 && (
+                          <div className="flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">
+                            <CheckCircle2 className="h-2.5 w-2.5" />
+                            <span>{stats.completed}</span>
+                          </div>
+                        )}
+                        {stats.vitalsRequired > 0 && (
+                          <div className="flex items-center gap-0.5 text-[10px] font-medium text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-full">
+                            <Users className="h-2.5 w-2.5" />
+                            <span>No Show {stats.vitalsRequired}</span>
+                          </div>
+                        )}
+                        {stats.cancelled > 0 && (
+                          <div className="flex items-center gap-0.5 text-[10px] font-medium text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full">
+                            <Circle className="h-2.5 w-2.5" />
+                            <span>Cancelled {stats.cancelled}</span>
+                          </div>
+                        )}
+                        {stats.noShow > 0 && (
+                          <div className="flex items-center gap-0.5 text-[10px] font-medium text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-full">
+                            <Users className="h-2.5 w-2.5" />
+                            <span>No-Show {stats.noShow}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200/60 dark:border-gray-800 shadow-sm overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <TableHead className="w-[200px]">Date & Time</TableHead>
+                      <TableHead>Patient</TableHead>
+                      <TableHead>Contact</TableHead>
+                      <TableHead>Doctor</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pastAppointments.length > 0 ? (
+                      pastAppointments
+                        .slice((pastPage - 1) * PAST_ITEMS_PER_PAGE, pastPage * PAST_ITEMS_PER_PAGE)
+                        .map((appointment) => (
+                          <TableRow key={appointment.appointmentId} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-medium text-gray-900 dark:text-gray-100">
+                                  {appointment.appointmentDate ? format(new Date(appointment.appointmentDate), 'MMM dd, yyyy') : 'N/A'}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {appointment.appointmentDate ? format(new Date(appointment.appointmentDate), 'h:mm a') : ''}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-medium text-gray-900 dark:text-gray-100">{appointment.patientName}</span>
+                                <div className="text-xs text-gray-500 flex items-center gap-1">
+                                  <Users className="h-3 w-3" />
+                                  {appointment.patientId}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                <Phone className="h-3.5 w-3.5" />
+                                {appointment.contact}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                                  <Stethoscope className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                                </div>
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{appointment.doctorName}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={cn(
+                                "capitalize",
+                                appointment.currentStatus === 'COMPLETED' ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                                  appointment.currentStatus === 'CANCELLED' ? "bg-red-50 text-red-700 border-red-200" :
+                                    "bg-gray-50 text-gray-700 border-gray-200"
+                              )}>
+                                {appointment.currentStatus.replace(/_/g, ' ').toLowerCase()}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} className="h-24 text-center">
+                          <div className="flex flex-col items-center justify-center text-gray-500">
+                            {pastSearchQuery ? (
+                              <>
+                                <Search className="h-8 w-8 mb-2 opacity-20" />
+                                <p>No past appointments found matching "{pastSearchQuery}".</p>
+                                <Button variant="link" onClick={() => setPastSearchQuery('')} className="mt-2 text-indigo-600 h-auto p-0">Clear Search</Button>
+                              </>
+                            ) : (
+                              <>
+                                <History className="h-8 w-8 mb-2 opacity-20" />
+                                <p>No past appointments found in this range.</p>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+
+                {/* Pagination Controls */}
+                {pastAppointments.length > PAST_ITEMS_PER_PAGE && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      Showing <span className="font-medium">{(pastPage - 1) * PAST_ITEMS_PER_PAGE + 1}</span> to <span className="font-medium">{Math.min(pastPage * PAST_ITEMS_PER_PAGE, pastAppointments.length)}</span> of <span className="font-medium">{pastAppointments.length}</span> results
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPastPage(p => Math.max(1, p - 1))}
+                        disabled={pastPage === 1}
+                        className="h-8 w-8 p-0"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Page {pastPage} of {Math.ceil(pastAppointments.length / PAST_ITEMS_PER_PAGE)}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPastPage(p => Math.min(Math.ceil(pastAppointments.length / PAST_ITEMS_PER_PAGE), p + 1))}
+                        disabled={pastPage >= Math.ceil(pastAppointments.length / PAST_ITEMS_PER_PAGE)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )
         }
 
         {
