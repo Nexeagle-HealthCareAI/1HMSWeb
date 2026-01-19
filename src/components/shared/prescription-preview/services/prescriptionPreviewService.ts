@@ -1,3 +1,4 @@
+import { PDFDocument } from 'pdf-lib';
 import { TypographySettings } from '@/features/prescription/hooks/usePrescriptionDesigner';
 import { fetchTemplateAsFile } from '../utils/templateFile';
 import { buildTemplateBoundPreview, TemplateBoundLayoutConfig } from './previewRenderer';
@@ -51,7 +52,25 @@ export const buildPreviewFromRequest = async (request: GeneratePrescriptionDetai
 };
 
 export const buildPreviewBlob = async (request: PrescriptionPreviewPayload): Promise<Blob> => {
-  const templateFile = request.templateFile ?? (await fetchTemplateAsFile(request.templateUrl));
+  let templateFile = request.templateFile;
+
+  if (!templateFile) {
+    if (request.templateUrl) {
+      try {
+        templateFile = await fetchTemplateAsFile(request.templateUrl);
+      } catch (error) {
+        console.warn("Failed to fetch template, falling back to blank.", error);
+      }
+    }
+
+    // Fallback if no URL or fetch failed
+    if (!templateFile) {
+      const doc = await PDFDocument.create();
+      doc.addPage([595.28, 841.89]); // A4 Points
+      const pdfBytes = await doc.save();
+      templateFile = new File([pdfBytes], 'blank.pdf', { type: 'application/pdf' });
+    }
+  }
 
   if (templateFile) {
     return buildTemplateBoundPreview({

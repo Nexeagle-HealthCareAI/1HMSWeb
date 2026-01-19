@@ -44,7 +44,8 @@ import {
   MessageSquare,
   LayoutDashboard,
   Receipt,
-  Copy
+  Copy,
+  IndianRupee
 } from 'lucide-react';
 import {
   UserManagementModule,
@@ -56,7 +57,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { SystemConfigModule } from './SystemConfigModule';
 // @ts-ignore
-import BillingPage from '@/features/billing/pages/BillingPage';
+// import { BillingDashboard } from '@/features/billing/pages/BillingDashboard';
 import { AnalyticsResponse, fetchAnalyticsData } from '../services/analyticsApi';
 
 
@@ -177,7 +178,7 @@ export const AdminDashboard = () => {
     { id: 'user-management', name: t('admin.userManagement'), icon: Users, description: t('admin.usersRolesPermissions') },
     { id: 'patient-management', name: t('admin.patientManagement'), icon: UserCheck, description: t('admin.patientRecordsData') },
     //{ id: 'appointment-oversight', name: t('admin.appointmentOversight') || 'Appointments', icon: Calendar, description: t('admin.appointmentManagement') || 'Manage System Appointments' },
-    { id: 'billing-management', name: t('admin.billingManagement') || 'Billing Management', icon: Receipt, description: t('admin.billingDescription') || 'Manage all OPD, IPD billings' },
+    { id: 'billing-management', name: t('admin.billingManagement') || 'Billing Management', icon: IndianRupee, description: t('admin.billingDescription') || 'Manage all OPD, IPD billings' },
     //{ id: 'billing-insurance', name: t('admin.billingInsurance'), icon: CreditCard, description: t('admin.financialManagement') },
     //{ id: 'bulk-messaging', name: t('admin.bulkMessaging'), icon: MessageSquare, description: t('admin.communicationManagement') },
     { id: 'system-config', name: t('admin.systemConfiguration'), icon: Settings, description: t('admin.hospitalSettings') },
@@ -1056,8 +1057,26 @@ export const AdminDashboard = () => {
       {/* Billing Management Module - Upcoming */}
       {
         currentView === 'billing-management' && (
-          <div className="p-4 sm:p-6 lg:p-8">
-            <BillingPage />
+          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8 animate-in fade-in zoom-in duration-500">
+            <div className="relative mb-6 group">
+              <div className="absolute inset-0 bg-blue-100 dark:bg-blue-900/30 rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500"></div>
+              <div className="relative h-24 w-24 bg-gradient-to-br from-white to-blue-50 dark:from-slate-800 dark:to-slate-900 rounded-full flex items-center justify-center shadow-lg border border-blue-100 dark:border-blue-900/50">
+                <IndianRupee className="h-10 w-10 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-amber-400 to-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md">
+                SOON
+              </div>
+            </div>
+
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-3">Billing System</h2>
+            <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto text-lg leading-relaxed mb-8">
+              We're building a comprehensive billing suite with <span className="font-medium text-slate-700 dark:text-slate-200">insurance integration</span>, <span className="font-medium text-slate-700 dark:text-slate-200">automated invoicing</span>, and <span className="font-medium text-slate-700 dark:text-slate-200">revenue analytics</span>.
+            </p>
+
+            <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-400">
+              <Clock className="h-4 w-4" />
+              <span>Expected launch in upcoming release</span>
+            </div>
           </div>
         )
       }

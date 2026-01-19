@@ -27,14 +27,14 @@ import { useUserDetails, useUpdateUserDetails } from '@/hooks/useUserProfileApi'
 import { ProfilePictureUploader } from '@/components/shared';
 import { UserProfileUpdateRequest, UserDetailsResponse } from '@/features/profile/services/userProfileApi';
 import { useMediaUploadApi } from '@/hooks/useApi';
-import { 
-  User, 
-  Building2, 
-  Stethoscope, 
-  Award, 
-  Mail, 
-  Phone, 
-  MapPin, 
+import {
+  User,
+  Building2,
+  Stethoscope,
+  Award,
+  Mail,
+  Phone,
+  MapPin,
   Calendar,
   ArrowLeft,
   Save,
@@ -136,9 +136,9 @@ interface ProfileData {
   };
 }
 
-export const ProfilePage: React.FC<ProfilePageProps> = ({ 
-  onBack, 
-  userType = 'Doctor' 
+export const ProfilePage: React.FC<ProfilePageProps> = ({
+  onBack,
+  userType = 'Doctor'
 }) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -153,15 +153,15 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   const employeeIdFromStore = useAuthStore((state) => state.employeeId);
   const userId = useAuthStore((state) => state.userId);
   const { uploadProfilePicture, removeProfilePicture } = useMediaUploadApi;
-  
+
   // Initialize mutations at component level
   const uploadMutation = uploadProfilePicture();
   const removeMutation = removeProfilePicture();
-  
+
   // Profile completion hook
   const { completionPercentage, doctorProfileCompletion } = useProfileCompletion();
   const professionalCompletion = Math.max(0, Math.min(100, Math.round(doctorProfileCompletion ?? 0)));
-  
+
   // User profile API hooks
   const { data: userDetailsResponse, isLoading: userDetailsLoading } = useUserDetails(userId || '');
   const updateUserDetailsMutation = useUpdateUserDetails();
@@ -338,10 +338,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       const userProfile = (userDetailsResponse as UserDetailsResponse).userProfile;
       const userDetails = userDetailsResponse as UserDetailsResponse;
       const profilePictureURL = userProfile.profilePictureURL || '';
-      
+
       // Store original profile picture
       setOriginalProfilePicture(profilePictureURL);
-      
+
       // Map API data to profile structure
       setProfileData({
         personal: {
@@ -398,7 +398,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       // TODO: Save to Zustand store instead of localStorage
       console.log('Saving profile data:', data);
     }
-    
+
     setIsEditing(false);
     toast({
       title: t('profilePage.toast.updatedTitle'),
@@ -450,7 +450,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
 
 
-  
+
   // Auto-expand Doctor section if focus=doctor or tab=professional
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -515,7 +515,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     setSaving((s) => ({ ...s, basic: true, address: true }));
     try {
       if (!userId) {
-          toast({ title: t('profilePage.toast.errorTitle'), description: t('profilePage.toast.missingUser'), variant: 'destructive' });
+        toast({ title: t('profilePage.toast.errorTitle'), description: t('profilePage.toast.missingUser'), variant: 'destructive' });
         return;
       }
 
@@ -629,9 +629,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       <div className="mb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={onBack}
               className="flex items-center gap-2 w-full sm:w-auto justify-center"
             >
@@ -687,12 +687,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
               <ProfilePictureUploader
                 currentImageUrl={profileData.personal.profilePicture}
                 onFileSelect={(file) => {
-                  console.log('File selected:', file ? file.name : 'null');
                   // Clean up previous preview URL if it exists
                   if (previewUrlToCleanup) {
                     URL.revokeObjectURL(previewUrlToCleanup);
                   }
-                  
+
                   setSelectedProfilePictureFile(file);
                   // Update preview in local state (just for display)
                   if (file) {
@@ -750,7 +749,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                       };
 
                       await updateUserDetailsMutation.mutateAsync(updateData);
-                      
+
                       // Update local state
                       setProfileData(prev => ({
                         ...prev,
@@ -760,16 +759,16 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                         }
                       }));
                       setOriginalProfilePicture('');
-                      
+
                       // Refresh queries
                       queryClient.invalidateQueries({ queryKey: ['profile', 'completion'] });
                       queryClient.invalidateQueries({ queryKey: ['userDetails', userId] });
-                      
+
                       toast({
                         title: 'Success',
                         description: 'Profile picture removed successfully',
                       });
-                      
+
                       // Exit edit mode after successful removal
                       setIsEditing(false);
                     }
@@ -786,7 +785,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                 disabled={!isEditing}
                 autoUpload={false}
               />
-              
+
               {/* Save Profile Picture Button - only show when a file is selected */}
               {selectedProfilePictureFile && isEditing && (
                 <Button
@@ -805,7 +804,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
                       if (uploadResponse.success && uploadResponse.profilePictureUrl) {
                         const profilePictureURL = uploadResponse.profilePictureUrl;
-                        
+
                         // Update the profile with new picture URL
                         const updateData: UserProfileUpdateRequest = {
                           userId,
@@ -828,7 +827,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                         };
 
                         await updateUserDetailsMutation.mutateAsync(updateData);
-                        
+
                         // Update local state
                         setProfileData(prev => ({
                           ...prev,
@@ -838,23 +837,23 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                           }
                         }));
                         setOriginalProfilePicture(profilePictureURL);
-                        
+
                         // Clean up
                         if (previewUrlToCleanup) {
                           URL.revokeObjectURL(previewUrlToCleanup);
                           setPreviewUrlToCleanup(null);
                         }
                         setSelectedProfilePictureFile(null);
-                        
+
                         // Refresh queries
                         queryClient.invalidateQueries({ queryKey: ['profile', 'completion'] });
                         queryClient.invalidateQueries({ queryKey: ['userDetails', userId] });
-                        
+
                         toast({
                           title: 'Success',
                           description: 'Profile picture updated successfully',
                         });
-                        
+
                         // Exit edit mode after successful save
                         setIsEditing(false);
                       }
@@ -907,7 +906,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                 </p>
               </div>
             </div>
-          
+
           </CardContent>
         </Card>
 
@@ -918,7 +917,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
               {/* Doctor Professional at top */}
               {isDoctorUser && (
                 <div className="mb-4">
-                  <DoctorProfile 
+                  <DoctorProfile
                     isEditing={isEditing}
                     onSave={() => {
                       // Refresh profile completion data
@@ -930,317 +929,317 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                 </div>
               )}
 
-                             {/* Personal Information */}
-               <div className="mb-4">
-                 <Card className="transition-colors dark:border-border">
-                   <CardContent className="p-4 sm:p-6">
-                     <Accordion type="single" collapsible defaultValue="personal">
-                       <AccordionItem value="personal">
-                         <AccordionTrigger className="transition-colors dark:hover:bg-muted/30 hover:no-underline focus:no-underline">
-                           <div className="flex flex-wrap items-center gap-2 text-left">
-                             <User className="h-4 w-4 text-muted-foreground" />
-                                 <span className="text-foreground">{t('profilePage.personal.title')}</span>
-                           <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary dark:bg-primary/20 dark:text-primary-100">
+              {/* Personal Information */}
+              <div className="mb-4">
+                <Card className="transition-colors dark:border-border">
+                  <CardContent className="p-4 sm:p-6">
+                    <Accordion type="single" collapsible defaultValue="personal">
+                      <AccordionItem value="personal">
+                        <AccordionTrigger className="transition-colors dark:hover:bg-muted/30 hover:no-underline focus:no-underline">
+                          <div className="flex flex-wrap items-center gap-2 text-left">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-foreground">{t('profilePage.personal.title')}</span>
+                            <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary dark:bg-primary/20 dark:text-primary-100">
                               {t('profilePage.personal.completion', { percent: completionPercentage })}
                             </span>
-                             <span className={`text-xs ${Object.keys(basicErrors).length || Object.keys(addressErrors).length ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-300'}`}>
-                                   {Object.keys(basicErrors).length || Object.keys(addressErrors).length ? '⚠︎' : '✓'}
-                             </span>
-                           </div>
-                         </AccordionTrigger>
-                         <AccordionContent>
-                           <div className="space-y-8 mt-4">
-                             {/* Basic Info Section */}
-                             <div>
-                               <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                                 <User className="h-4 w-4 text-muted-foreground" />
-                                     {t('profilePage.personal.basic.title')}
-                               </h4>
-                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                 <div>
-                                   <Label htmlFor="fullName">
-                                         {t('profilePage.personal.basic.fullName.label')} <span className="text-red-500" aria-hidden="true">*</span>
-                                   </Label>
-                                   <Input
-                                     id="fullName"
-                                     value={profileData.personal.fullName}
-                                     onChange={(e) => handleInputChange('personal', 'fullName', e.target.value)}
-                                     disabled={!isEditing}
-                                     className="mt-1"
-                                   />
-                                   {basicErrors.fullName && (
-                                     <p className="text-xs text-amber-600 mt-1">{basicErrors.fullName}</p>
-                                   )}
-                                 </div>
-                                 <div>
-                                   <Label htmlFor="email">
-                                         {t('profilePage.personal.basic.email.label')} <span className="text-red-500" aria-hidden="true">*</span>
-                                   </Label>
-                                   <Input
-                                     id="email"
-                                     type="email"
-                                     value={profileData.personal.email}
-                                     onChange={(e) => handleInputChange('personal', 'email', e.target.value)}
-                                       onBlur={() => validateBasicField('email')}
-                                     disabled={!isEditing}
-                                     className="mt-1"
-                                   />
-                                   {basicErrors.email && (
-                                     <p className="text-xs text-amber-600 mt-1">{basicErrors.email}</p>
-                                   )}
-                                 </div>
-                                 <div>
-                                   <Label htmlFor="phone">
-                                         {t('profilePage.personal.basic.phone.label')} <span className="text-red-500" aria-hidden="true">*</span>
-                                   </Label>
-                                   <Input
-                                     id="phone"
-                                     type="tel"
-                                     inputMode="numeric"
-                                     pattern="[0-9]*"
-                                     value={profileData.personal.phone}
-                                     onChange={(e) => handleInputChange('personal', 'phone', e.target.value)}
-                                     onBlur={() => validateBasicField('phone')}
-                                     disabled={!isEditing}
-                                     className="mt-1"
-                                   />
-                                   {basicErrors.phone && (
-                                     <p className="text-xs text-amber-600 mt-1">{basicErrors.phone}</p>
-                                   )}
-                                 </div>
-                                 <div>
-                                       <Label htmlFor="dateOfBirth">{t('profilePage.personal.basic.dob.label')}</Label>
-                                   <Input
-                                     id="dateOfBirth"
-                                     type="date"
-                                     value={profileData.personal.dateOfBirth}
-                                     onChange={(e) => handleInputChange('personal', 'dateOfBirth', e.target.value)}
-                                     disabled={!isEditing}
-                                     className="mt-1"
-                                   />
-                                   {basicErrors.dateOfBirth && (
-                                     <p className="text-xs text-amber-600 mt-1">{basicErrors.dateOfBirth}</p>
-                                   )}
-                                 </div>
-                                 <div>
-                                       <Label htmlFor="gender">{t('profilePage.personal.basic.gender.label')}</Label>
-                                   <Select
-                                     value={profileData.personal.gender || ''}
-                                     onValueChange={(value) => handleInputChange('personal', 'gender', value)}
-                                     disabled={!isEditing}
-                                   >
-                                     <SelectTrigger className="mt-1">
-                                       <SelectValue placeholder="Select a gender" />
-                                     </SelectTrigger>
-                                     <SelectContent>
-                                       {genderOptions.map((option) => (
-                                         <SelectItem key={option.value} value={option.value}>
-                                           {option.label}
-                                         </SelectItem>
-                                       ))}
-                                     </SelectContent>
-                                   </Select>
-                                   {basicErrors.gender && (
-                                     <p className="text-xs text-amber-600 mt-1">{basicErrors.gender}</p>
-                                   )}
-                                 </div>
-                                                                   <div>
-                                                                 <Label htmlFor="bloodGroup">{t('profilePage.personal.basic.bloodGroup.label')}</Label>
-                                    <Select
-                                      value={profileData.personal.bloodGroup || ''}
-                                      onValueChange={(value) => handleInputChange('personal', 'bloodGroup', value)}
-                                      disabled={!isEditing}
-                                    >
-                                      <SelectTrigger className="mt-1">
-                                        <SelectValue placeholder="Select a blood group" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {bloodGroupOptions.map((option) => (
-                                          <SelectItem key={option.value} value={option.value}>
-                                            {option.label}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                    {basicErrors.bloodGroup && (
-                                      <p className="text-xs text-amber-600 mt-1">{basicErrors.bloodGroup}</p>
-                                    )}
-                                  </div>
-                               </div>
-                             </div>
+                            <span className={`text-xs ${Object.keys(basicErrors).length || Object.keys(addressErrors).length ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-300'}`}>
+                              {Object.keys(basicErrors).length || Object.keys(addressErrors).length ? '⚠︎' : '✓'}
+                            </span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-8 mt-4">
+                            {/* Basic Info Section */}
+                            <div>
+                              <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                <User className="h-4 w-4 text-muted-foreground" />
+                                {t('profilePage.personal.basic.title')}
+                              </h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <Label htmlFor="fullName">
+                                    {t('profilePage.personal.basic.fullName.label')} <span className="text-red-500" aria-hidden="true">*</span>
+                                  </Label>
+                                  <Input
+                                    id="fullName"
+                                    value={profileData.personal.fullName}
+                                    onChange={(e) => handleInputChange('personal', 'fullName', e.target.value)}
+                                    disabled={!isEditing}
+                                    className="mt-1"
+                                  />
+                                  {basicErrors.fullName && (
+                                    <p className="text-xs text-amber-600 mt-1">{basicErrors.fullName}</p>
+                                  )}
+                                </div>
+                                <div>
+                                  <Label htmlFor="email">
+                                    {t('profilePage.personal.basic.email.label')} <span className="text-red-500" aria-hidden="true">*</span>
+                                  </Label>
+                                  <Input
+                                    id="email"
+                                    type="email"
+                                    value={profileData.personal.email}
+                                    onChange={(e) => handleInputChange('personal', 'email', e.target.value)}
+                                    onBlur={() => validateBasicField('email')}
+                                    disabled={!isEditing}
+                                    className="mt-1"
+                                  />
+                                  {basicErrors.email && (
+                                    <p className="text-xs text-amber-600 mt-1">{basicErrors.email}</p>
+                                  )}
+                                </div>
+                                <div>
+                                  <Label htmlFor="phone">
+                                    {t('profilePage.personal.basic.phone.label')} <span className="text-red-500" aria-hidden="true">*</span>
+                                  </Label>
+                                  <Input
+                                    id="phone"
+                                    type="tel"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    value={profileData.personal.phone}
+                                    onChange={(e) => handleInputChange('personal', 'phone', e.target.value)}
+                                    onBlur={() => validateBasicField('phone')}
+                                    disabled={!isEditing}
+                                    className="mt-1"
+                                  />
+                                  {basicErrors.phone && (
+                                    <p className="text-xs text-amber-600 mt-1">{basicErrors.phone}</p>
+                                  )}
+                                </div>
+                                <div>
+                                  <Label htmlFor="dateOfBirth">{t('profilePage.personal.basic.dob.label')}</Label>
+                                  <Input
+                                    id="dateOfBirth"
+                                    type="date"
+                                    value={profileData.personal.dateOfBirth}
+                                    onChange={(e) => handleInputChange('personal', 'dateOfBirth', e.target.value)}
+                                    disabled={!isEditing}
+                                    className="mt-1"
+                                  />
+                                  {basicErrors.dateOfBirth && (
+                                    <p className="text-xs text-amber-600 mt-1">{basicErrors.dateOfBirth}</p>
+                                  )}
+                                </div>
+                                <div>
+                                  <Label htmlFor="gender">{t('profilePage.personal.basic.gender.label')}</Label>
+                                  <Select
+                                    value={profileData.personal.gender || ''}
+                                    onValueChange={(value) => handleInputChange('personal', 'gender', value)}
+                                    disabled={!isEditing}
+                                  >
+                                    <SelectTrigger className="mt-1">
+                                      <SelectValue placeholder="Select a gender" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {genderOptions.map((option) => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                          {option.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  {basicErrors.gender && (
+                                    <p className="text-xs text-amber-600 mt-1">{basicErrors.gender}</p>
+                                  )}
+                                </div>
+                                <div>
+                                  <Label htmlFor="bloodGroup">{t('profilePage.personal.basic.bloodGroup.label')}</Label>
+                                  <Select
+                                    value={profileData.personal.bloodGroup || ''}
+                                    onValueChange={(value) => handleInputChange('personal', 'bloodGroup', value)}
+                                    disabled={!isEditing}
+                                  >
+                                    <SelectTrigger className="mt-1">
+                                      <SelectValue placeholder="Select a blood group" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {bloodGroupOptions.map((option) => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                          {option.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  {basicErrors.bloodGroup && (
+                                    <p className="text-xs text-amber-600 mt-1">{basicErrors.bloodGroup}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
 
-                             {/* Address & Contact Section */}
-                             <div>
-                               <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                                 <MapPin className="h-4 w-4" />
-                                     {t('profilePage.personal.address.title')}
-                               </h4>
-                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                 <div>
-                                   <Label htmlFor="address1">
-                                     {t('profilePage.personal.address.address1.label')} <span className="text-red-500" aria-hidden="true">*</span>
-                                   </Label>
-                                   <Input
-                                     id="address1"
-                                     value={profileData.personal.addressLine1 || ''}
-                                     onChange={(e) => handleInputChange('personal', 'addressLine1' as any, e.target.value)}
-                                     disabled={!isEditing}
-                                     className="mt-1"
-                                   />
-                                   {addressErrors.addressLine1 && (
-                                     <p className="text-xs text-amber-600 mt-1">{addressErrors.addressLine1}</p>
-                                   )}
-                                 </div>
-                                 <div>
-                                   <Label htmlFor="address2">Address Line 2</Label>
-                                   <Input
-                                     id="address2"
-                                     value={profileData.personal.addressLine2 || ''}
-                                     onChange={(e) => handleInputChange('personal', 'addressLine2' as any, e.target.value)}
-                                     disabled={!isEditing}
-                                     className="mt-1"
-                                   />
-                                   {addressErrors.addressLine2 && (
-                                     <p className="text-xs text-amber-600 mt-1">{addressErrors.addressLine2}</p>
-                                   )}
-                                 </div>
-                                 <div>
-                                   <Label htmlFor="city">
-                                     {t('profilePage.personal.address.city.label')} <span className="text-red-500" aria-hidden="true">*</span>
-                                   </Label>
-                                   <Input 
-                                     id="city" 
-                                     value={profileData.personal.city || ''} 
-                                     onChange={(e) => handleInputChange('personal', 'city' as any, e.target.value)} 
-                                     disabled={!isEditing} 
-                                     className="mt-1" 
-                                   />
-                                   {addressErrors.city && (
-                                     <p className="text-xs text-amber-600 mt-1">{addressErrors.city}</p>
-                                   )}
-                                 </div>
-                                 <div>
-                                   <Label htmlFor="state">
-                                     {t('profilePage.personal.address.state.label')} <span className="text-red-500" aria-hidden="true">*</span>
-                                   </Label>
-                                   <Input 
-                                     id="state" 
-                                     value={profileData.personal.state || ''} 
-                                     onChange={(e) => handleInputChange('personal', 'state' as any, e.target.value)} 
-                                     disabled={!isEditing} 
-                                     className="mt-1" 
-                                   />
-                                   {addressErrors.state && (
-                                     <p className="text-xs text-amber-600 mt-1">{addressErrors.state}</p>
-                                   )}
-                                 </div>
-                                 <div>
-                                   <Label htmlFor="country">
-                                     {t('profilePage.personal.address.country.label')} <span className="text-red-500" aria-hidden="true">*</span>
-                                   </Label>
-                                   <Input 
-                                     id="country" 
-                                     value={profileData.personal.country || ''} 
-                                     onChange={(e) => handleInputChange('personal', 'country' as any, e.target.value)} 
-                                     disabled={!isEditing} 
-                                     className="mt-1" 
-                                   />
-                                   {addressErrors.country && (
-                                     <p className="text-xs text-amber-600 mt-1">{addressErrors.country}</p>
-                                   )}
-                                 </div>
-                                 <div>
-                                   <Label htmlFor="pincode">
-                                     {t('profilePage.personal.address.pincode.label')} <span className="text-red-500" aria-hidden="true">*</span>
-                                   </Label>
-                                   <Input 
-                                     id="pincode" 
-                                     value={profileData.personal.pincode || ''} 
-                                     onChange={(e) => handleInputChange('personal', 'pincode' as any, e.target.value)} 
-                                     disabled={!isEditing} 
-                                     className="mt-1" 
-                                   />
-                                   {addressErrors.pincode && (
-                                     <p className="text-xs text-amber-600 mt-1">{addressErrors.pincode}</p>
-                                   )}
-                                 </div>
-                               </div>
-                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                 <div>
-                                   <Label htmlFor="emergencyName">
-                                     {t('profilePage.personal.address.emergencyName.label')}
-                                   </Label>
-                                   <Input 
-                                     id="emergencyName" 
-                                     value={profileData.personal.emergencyContactName || ''} 
-                                     onChange={(e) => handleInputChange('personal', 'emergencyContactName' as any, e.target.value)} 
-                                     disabled={!isEditing} 
-                                     className="mt-1" 
-                                   />
-                                   {addressErrors.emergencyContactName && (
-                                     <p className="text-xs text-amber-600 mt-1">{addressErrors.emergencyContactName}</p>
-                                   )}
-                                 </div>
-                                 <div>
-                                   <Label htmlFor="emergencyNumber">
-                                     {t('profilePage.personal.address.emergencyNumber.label')}
-                                   </Label>
-                                   <Input 
-                                     id="emergencyNumber" 
-                                     type="tel"
-                                     inputMode="numeric"
-                                     pattern="[0-9]*"
-                                     value={profileData.personal.emergencyContactNumber || ''} 
-                                     onChange={(e) => handleInputChange('personal', 'emergencyContactNumber' as any, e.target.value)} 
-                                     onBlur={() => validateAddressField('emergencyContactNumber')}
-                                     disabled={!isEditing} 
-                                     className="mt-1" 
-                                   />
-                                   {addressErrors.emergencyContactNumber && (
-                                     <p className="text-xs text-amber-600 mt-1">{addressErrors.emergencyContactNumber}</p>
-                                   )}
-                                 </div>
-                               </div>
-                             </div>
+                            {/* Address & Contact Section */}
+                            <div>
+                              <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                <MapPin className="h-4 w-4" />
+                                {t('profilePage.personal.address.title')}
+                              </h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <Label htmlFor="address1">
+                                    {t('profilePage.personal.address.address1.label')} <span className="text-red-500" aria-hidden="true">*</span>
+                                  </Label>
+                                  <Input
+                                    id="address1"
+                                    value={profileData.personal.addressLine1 || ''}
+                                    onChange={(e) => handleInputChange('personal', 'addressLine1' as any, e.target.value)}
+                                    disabled={!isEditing}
+                                    className="mt-1"
+                                  />
+                                  {addressErrors.addressLine1 && (
+                                    <p className="text-xs text-amber-600 mt-1">{addressErrors.addressLine1}</p>
+                                  )}
+                                </div>
+                                <div>
+                                  <Label htmlFor="address2">Address Line 2</Label>
+                                  <Input
+                                    id="address2"
+                                    value={profileData.personal.addressLine2 || ''}
+                                    onChange={(e) => handleInputChange('personal', 'addressLine2' as any, e.target.value)}
+                                    disabled={!isEditing}
+                                    className="mt-1"
+                                  />
+                                  {addressErrors.addressLine2 && (
+                                    <p className="text-xs text-amber-600 mt-1">{addressErrors.addressLine2}</p>
+                                  )}
+                                </div>
+                                <div>
+                                  <Label htmlFor="city">
+                                    {t('profilePage.personal.address.city.label')} <span className="text-red-500" aria-hidden="true">*</span>
+                                  </Label>
+                                  <Input
+                                    id="city"
+                                    value={profileData.personal.city || ''}
+                                    onChange={(e) => handleInputChange('personal', 'city' as any, e.target.value)}
+                                    disabled={!isEditing}
+                                    className="mt-1"
+                                  />
+                                  {addressErrors.city && (
+                                    <p className="text-xs text-amber-600 mt-1">{addressErrors.city}</p>
+                                  )}
+                                </div>
+                                <div>
+                                  <Label htmlFor="state">
+                                    {t('profilePage.personal.address.state.label')} <span className="text-red-500" aria-hidden="true">*</span>
+                                  </Label>
+                                  <Input
+                                    id="state"
+                                    value={profileData.personal.state || ''}
+                                    onChange={(e) => handleInputChange('personal', 'state' as any, e.target.value)}
+                                    disabled={!isEditing}
+                                    className="mt-1"
+                                  />
+                                  {addressErrors.state && (
+                                    <p className="text-xs text-amber-600 mt-1">{addressErrors.state}</p>
+                                  )}
+                                </div>
+                                <div>
+                                  <Label htmlFor="country">
+                                    {t('profilePage.personal.address.country.label')} <span className="text-red-500" aria-hidden="true">*</span>
+                                  </Label>
+                                  <Input
+                                    id="country"
+                                    value={profileData.personal.country || ''}
+                                    onChange={(e) => handleInputChange('personal', 'country' as any, e.target.value)}
+                                    disabled={!isEditing}
+                                    className="mt-1"
+                                  />
+                                  {addressErrors.country && (
+                                    <p className="text-xs text-amber-600 mt-1">{addressErrors.country}</p>
+                                  )}
+                                </div>
+                                <div>
+                                  <Label htmlFor="pincode">
+                                    {t('profilePage.personal.address.pincode.label')} <span className="text-red-500" aria-hidden="true">*</span>
+                                  </Label>
+                                  <Input
+                                    id="pincode"
+                                    value={profileData.personal.pincode || ''}
+                                    onChange={(e) => handleInputChange('personal', 'pincode' as any, e.target.value)}
+                                    disabled={!isEditing}
+                                    className="mt-1"
+                                  />
+                                  {addressErrors.pincode && (
+                                    <p className="text-xs text-amber-600 mt-1">{addressErrors.pincode}</p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                <div>
+                                  <Label htmlFor="emergencyName">
+                                    {t('profilePage.personal.address.emergencyName.label')}
+                                  </Label>
+                                  <Input
+                                    id="emergencyName"
+                                    value={profileData.personal.emergencyContactName || ''}
+                                    onChange={(e) => handleInputChange('personal', 'emergencyContactName' as any, e.target.value)}
+                                    disabled={!isEditing}
+                                    className="mt-1"
+                                  />
+                                  {addressErrors.emergencyContactName && (
+                                    <p className="text-xs text-amber-600 mt-1">{addressErrors.emergencyContactName}</p>
+                                  )}
+                                </div>
+                                <div>
+                                  <Label htmlFor="emergencyNumber">
+                                    {t('profilePage.personal.address.emergencyNumber.label')}
+                                  </Label>
+                                  <Input
+                                    id="emergencyNumber"
+                                    type="tel"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    value={profileData.personal.emergencyContactNumber || ''}
+                                    onChange={(e) => handleInputChange('personal', 'emergencyContactNumber' as any, e.target.value)}
+                                    onBlur={() => validateAddressField('emergencyContactNumber')}
+                                    disabled={!isEditing}
+                                    className="mt-1"
+                                  />
+                                  {addressErrors.emergencyContactNumber && (
+                                    <p className="text-xs text-amber-600 mt-1">{addressErrors.emergencyContactNumber}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
 
-                             {/* Save Button */}
-                             {isEditing && (
-                               <div className="flex flex-col gap-2 pt-4 border-t sm:flex-row sm:justify-end">
-                                 <Button 
-                                   variant="outline" 
-                                   onClick={() => setIsEditing(false)}
-                                   className="w-full sm:w-auto"
-                                 >
-                                     {t('common.cancel')}
-                                 </Button>
-                                 <Button 
-                                   onClick={savePersonalInformation}
-                                   disabled={!!saving.basic || !!saving.address}
-                                   className="flex items-center justify-center gap-2 w-full sm:w-auto"
-                                 >
-                                   {saving.basic || saving.address ? (
-                                     <>
-                                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                          {t('common.saving', { defaultValue: 'Saving...' })}
-                                     </>
-                                   ) : (
-                                     <>
-                                       <Save className="h-4 w-4" />
-                                          {t('profilePage.personal.save')}
-                                     </>
-                                   )}
-                                 </Button>
-                               </div>
-                             )}
-                           </div>
-                         </AccordionContent>
-                       </AccordionItem>
-                     </Accordion>
-                   </CardContent>
-                 </Card>
-               </div>
+                            {/* Save Button */}
+                            {isEditing && (
+                              <div className="flex flex-col gap-2 pt-4 border-t sm:flex-row sm:justify-end">
+                                <Button
+                                  variant="outline"
+                                  onClick={() => setIsEditing(false)}
+                                  className="w-full sm:w-auto"
+                                >
+                                  {t('common.cancel')}
+                                </Button>
+                                <Button
+                                  onClick={savePersonalInformation}
+                                  disabled={!!saving.basic || !!saving.address}
+                                  className="flex items-center justify-center gap-2 w-full sm:w-auto"
+                                >
+                                  {saving.basic || saving.address ? (
+                                    <>
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                      {t('common.saving', { defaultValue: 'Saving...' })}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Save className="h-4 w-4" />
+                                      {t('profilePage.personal.save')}
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
+                  </CardContent>
+                </Card>
+              </div>
 
-             
+
 
               {/* Doctor Professional (moved to top) removed here to avoid duplicate */}
             </Accordion>
@@ -1248,9 +1247,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
           </CardContent>
         </Card>
-      </div>    
-      
-  
+      </div>
+
+
       <AlertDialog open={showCompletionDialog} onOpenChange={setShowCompletionDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
