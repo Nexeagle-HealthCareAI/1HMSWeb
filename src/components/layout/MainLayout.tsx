@@ -45,7 +45,8 @@ import {
   History as HistoryIcon,
   LayoutDashboard,
   Receipt,
-  Shield
+  Shield,
+  IndianRupee
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -130,7 +131,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       icon: Calendar,
       path: '/appointment-dashboard',
     },
-    { id: 'billing', name: t('header.billing') || 'Billing', icon: Receipt, path: '/billing' },
+    { id: 'billing', name: t('header.billing') || 'Billing', icon: IndianRupee, path: '/billing' },
   ];
 
   // Filter navigation items based on user role
@@ -191,7 +192,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
       {/* Sidebar */}
       <div className={`
-        fixed top-0 left-0 z-50 h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-600 transform shadow-lg
+        fixed top-0 left-0 z-50 h-full bg-[#4f46e5] dark:bg-gray-800 border-r border-gray-200 dark:border-gray-600 transform shadow-lg
         ${sidebarCollapsed ? 'w-20' : 'w-64'} 
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         overflow-hidden transition-transform duration-300 ease-in-out
@@ -239,10 +240,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     w-full relative flex items-center
                     ${sidebarCollapsed ? 'justify-center px-3 h-14 w-14 mx-auto rounded-xl' : 'justify-start gap-4 h-14 px-5 rounded-xl'}
                     ${isActive
-                        ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-300'
+                        ? 'bg-white/20 text-white dark:bg-blue-900 dark:text-blue-300'
+                        : 'text-white/80 dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-700 hover:text-white dark:hover:text-blue-300'
                       }
-                    ${isDisabled ? 'opacity-60 cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-400 dark:hover:text-gray-400' : ''}
+                    ${isDisabled ? 'opacity-60 cursor-not-allowed hover:bg-transparent dark:hover:bg-gray-800 hover:text-white/60 dark:hover:text-gray-400' : ''}
                   `}
                     onClick={() => handleNavigation(item)}
                     disabled={isDisabled}
@@ -257,8 +258,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     <div className={`
                     relative flex items-center justify-center rounded-lg p-3
                     ${isActive
-                        ? 'bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-300'
-                        : 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300 group-hover:bg-blue-100 dark:group-hover:bg-blue-700 group-hover:text-blue-600 dark:group-hover:text-blue-300'
+                        ? 'bg-white/20 dark:bg-blue-800 text-white dark:text-blue-300'
+                        : 'bg-white/10 dark:bg-gray-600 text-white dark:text-gray-300 group-hover:bg-white/20 dark:group-hover:bg-blue-700 group-hover:text-white dark:group-hover:text-blue-300'
                       }
                   `}>
                       <item.icon className={`${sidebarCollapsed ? 'h-5 w-5' : 'h-6 w-6'}`} />
@@ -267,14 +268,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
                     {!sidebarCollapsed && (
                       <div className="flex flex-col items-start flex-1">
-                        <span className={`font-semibold text-sm ${isActive ? 'text-blue-600 dark:text-blue-300' : 'text-gray-700 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-300'
+                        <span className={`font-semibold text-sm ${isActive ? 'text-white dark:text-blue-300' : 'text-white/80 dark:text-gray-200 group-hover:text-white dark:group-hover:text-blue-300'
                           }`}>
                           {item.name}
                         </span>
                         {isActive && (
                           <div className="flex items-center gap-2 mt-1">
-                            <div className="w-1.5 h-1.5 bg-blue-500 dark:bg-blue-400 rounded-full"></div>
-                            <span className="text-xs font-medium text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-800/60 px-2 py-1 rounded-full">{t('common.active')}</span>
+                            <div className="w-1.5 h-1.5 bg-white dark:bg-blue-400 rounded-full"></div>
+                            <span className="text-xs font-medium text-white dark:text-blue-300 bg-white/20 dark:bg-blue-800/60 px-2 py-1 rounded-full">{t('common.active')}</span>
                           </div>
                         )}
                         {!isActive && isDisabled && (
@@ -323,30 +324,30 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           )}
 
           {/* Bottom Section - Logout Only */}
-          <div className={`absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg overflow-hidden`}>
+          <div className={`absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-600 bg-[#4f46e5] dark:bg-gray-800 shadow-lg overflow-hidden`}>
             {/* Logout Button */}
             <Button
               variant="ghost"
               className={`
                w-full group
                ${sidebarCollapsed ? 'justify-center px-3 h-14 w-14 mx-auto rounded-xl' : 'justify-start gap-4 h-14 px-5 rounded-xl'}
-               text-gray-700 dark:text-gray-200 hover:text-red-600 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 border border-gray-200 dark:border-gray-500 hover:border-red-300 dark:hover:border-red-600
+               text-white/80 dark:text-gray-200 hover:text-white dark:hover:text-red-300 hover:bg-white/10 dark:hover:bg-red-900/30 border border-white/20 dark:border-gray-500 hover:border-white/40 dark:hover:border-red-600
              `}
               onClick={handleLogout}
               title={sidebarCollapsed ? t('common.logout') : undefined}
             >
               <div className={`
                relative flex items-center justify-center rounded-lg p-3
-               bg-red-100 dark:bg-red-800/60 text-red-600 dark:text-red-300 
-               group-hover:bg-red-200 dark:group-hover:bg-red-700/80
+               bg-white/10 dark:bg-red-800/60 text-white dark:text-red-300 
+               group-hover:bg-white/20 dark:group-hover:bg-red-700/80
              `}>
                 <LogOut className={`${sidebarCollapsed ? 'h-6 w-6' : 'h-5 w-5'}`} />
               </div>
 
               {!sidebarCollapsed && (
                 <div className="flex flex-col items-start">
-                  <span className="font-semibold text-sm text-gray-900 dark:text-white">{t('common.logout')}</span>
-                  <span className="text-xs text-red-600 dark:text-red-400">{t('header.logoutSubtitle')}</span>
+                  <span className="font-semibold text-sm text-white dark:text-white">{t('common.logout')}</span>
+                  <span className="text-xs text-white/60 dark:text-red-400">{t('header.logoutSubtitle')}</span>
                 </div>
               )}
             </Button>
@@ -372,7 +373,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
               {/* Logo and Branding */}
               <div className="flex items-center gap-3">
-                <img src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" alt="Company Logo" className="h-8 w-8" />
+                <img src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" alt="Company Logo" className="h-8 w-8 bg-white rounded-md p-1" />
                 <div className="hidden md:block">
                   <h1 className="font-black text-gray-900 dark:text-white text-xl tracking-tight">NexEagle</h1>
                   <p className="text-sm font-bold text-blue-700 dark:text-blue-300">easyHMS</p>

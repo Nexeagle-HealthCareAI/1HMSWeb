@@ -68,7 +68,7 @@ export const buildPreviewBlob = async (request: PrescriptionPreviewPayload): Pro
       const doc = await PDFDocument.create();
       doc.addPage([595.28, 841.89]); // A4 Points
       const pdfBytes = await doc.save();
-      templateFile = new File([pdfBytes], 'blank.pdf', { type: 'application/pdf' });
+      templateFile = new File([pdfBytes as any], 'blank.pdf', { type: 'application/pdf' });
     }
   }
 
