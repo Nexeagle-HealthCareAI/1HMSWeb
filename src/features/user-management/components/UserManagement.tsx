@@ -240,8 +240,8 @@ export const UserManagement: React.FC = () => {
       {/* Main Content */}
       <main className="flex-1 overflow-auto relative w-full h-full bg-gray-50/50 dark:bg-black/20 p-4 lg:p-6">
         <div className="max-w-6xl mx-auto space-y-6">
-          <div className="flex justify-end">
-            <Button className="gap-2" onClick={() => setShowAddUser(true)}>
+          <div className="flex flex-col sm:flex-row justify-end gap-3">
+            <Button className="w-full sm:w-auto gap-2" onClick={() => setShowAddUser(true)}>
               <Mail className="h-4 w-4" />
               {t('userManagement.inviteUser')}
             </Button>
@@ -277,7 +277,7 @@ export const UserManagement: React.FC = () => {
 
       {/* Add User Dialog */}
       <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="h-5 w-5" />

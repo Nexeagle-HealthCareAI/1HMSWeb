@@ -404,13 +404,13 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
 
   // RE-INSERT VITALS LOGIC (Correctly Uppercased)
   const vitalItems = [
-    { l: 'BP', v: vitals.bp && (vitals.bp.sys || vitals.bp.dia) ? `${vitals.bp.sys}/${vitals.bp.dia}` : '' },
-    { l: 'Pulse', v: vitals.pulse ? `${vitals.pulse}` : '' },
-    { l: 'Temp', v: vitals.tempC ? `${vitals.tempC}` : '' },
+    { l: 'BP', v: vitals.bp && (vitals.bp.sys || vitals.bp.dia) ? `${vitals.bp.sys}/${vitals.bp.dia} mmHg` : '' },
+    { l: 'Pulse', v: vitals.pulse ? `${vitals.pulse} bpm` : '' },
+    { l: 'Temp', v: vitals.tempC ? `${vitals.tempC}°C` : '' },
     { l: 'SpO2', v: vitals.spo2 ? `${vitals.spo2}%` : '' },
-    { l: 'Wt', v: vitals.weightKg ? `${vitals.weightKg}` : '' },
-    { l: 'BMI', v: vitals.bmi ? `${vitals.bmi}` : '' },
-  ].filter(x => x.v && x.v !== '0' && x.v !== '0/0' && x.v !== '0%');
+    { l: 'Wt', v: vitals.weightKg ? `${vitals.weightKg} kg` : '' },
+    { l: 'BMI', v: vitals.bmi ? `${vitals.bmi} kg/m²` : '' },
+  ].filter(x => x.v && x.v !== '0' && x.v !== '0/0' && x.v !== '0%' && !x.v.startsWith('0 '));
 
   const vitalsW = (contentWidth * 0.35);
   // Move Vitals Box to Top Right below Date
