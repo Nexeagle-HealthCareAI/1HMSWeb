@@ -51,6 +51,12 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
         description: t('systemConfiguration.navigation.branding.description'),
         icon: Palette,
       },
+      {
+        id: 'settings',
+        label: t('systemConfiguration.navigation.settings.label') || 'Settings',
+        description: t('systemConfiguration.navigation.settings.description') || 'General system preferences',
+        icon: Settings,
+      },
     ] as const,
     [t]
   );
@@ -138,7 +144,7 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto relative w-full h-full bg-gray-50/50 dark:bg-black/20 p-4 lg:p-6">
+      <main className="flex-1 overflow-auto relative w-full h-full bg-gray-50/50 dark:bg-black/20 px-4 pb-4 pt-1 lg:px-6 lg:pb-6 lg:pt-1">
         <div className="max-w-6xl mx-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <div className="lg:hidden">
@@ -256,6 +262,17 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
                 branding={hospitalBranding}
                 onBrandingChange={handleBrandingChange}
               />
+            </TabsContent>
+
+            <TabsContent value="settings" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>General Settings</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-500">System-wide settings and preferences will appear here.</p>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </div>

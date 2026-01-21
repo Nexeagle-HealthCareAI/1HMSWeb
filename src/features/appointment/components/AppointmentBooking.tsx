@@ -894,7 +894,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
 
           {/* Main Content */}
           <div className="flex-1 overflow-hidden">
-            <div className="h-full p-3 lg:p-4 overflow-y-auto pb-safe">
+            <div className="h-full px-3 pb-3 pt-1 lg:px-4 lg:pb-4 lg:pt-1 overflow-y-auto pb-safe">
               <div className="max-w-4xl mx-auto">
                 {/* Desktop Header - Compact */}
                 <div className="hidden lg:block mb-3">

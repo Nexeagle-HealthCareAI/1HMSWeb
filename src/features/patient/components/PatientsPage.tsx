@@ -114,6 +114,7 @@ export const PatientsPage: React.FC = () => {
   const [pastPage, setPastPage] = useState(1);
   const PAST_ITEMS_PER_PAGE = 5;
   const [pastSearchQuery, setPastSearchQuery] = useState('');
+  const [selectedPastDoctor, setSelectedPastDoctor] = useState<string>('all');
 
   const { hospitalId } = useAuthStore();
 
@@ -241,7 +242,7 @@ export const PatientsPage: React.FC = () => {
   const pastAppointments = useMemo(() => {
     if (!pastAppointmentsResponse?.items) return [];
 
-    const items = pastAppointmentsResponse.items.map((apiAppt: AppointmentDetail) => ({
+    let items = pastAppointmentsResponse.items.map((apiAppt: AppointmentDetail) => ({
       appointmentId: apiAppt.appointmentId,
       patientId: apiAppt.patientId,
       patientName: apiAppt.patientFullName,
@@ -254,18 +255,29 @@ export const PatientsPage: React.FC = () => {
     // Sort by date DESC
     const sorted = items.sort((a, b) => new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime());
 
+    return sorted;
+  }, [pastAppointmentsResponse]);
+
+  const filteredAndSortedPastAppointments = useMemo(() => {
+    let result = [...pastAppointments];
+
     // Filter by Search Query
     if (pastSearchQuery) {
       const query = pastSearchQuery.toLowerCase();
-      return sorted.filter(apt =>
+      result = result.filter(apt =>
         apt.patientName.toLowerCase().includes(query) ||
         apt.patientId.toLowerCase().includes(query) ||
         apt.doctorName.toLowerCase().includes(query)
       );
     }
 
-    return sorted;
-  }, [pastAppointmentsResponse, pastSearchQuery]);
+    // Filter by Doctor
+    if (selectedPastDoctor && selectedPastDoctor !== 'all') {
+      result = result.filter(apt => apt.doctorName === selectedPastDoctor);
+    }
+
+    return result;
+  }, [pastAppointments, pastSearchQuery, selectedPastDoctor]);
 
   // New state for 360 view navigation
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -802,7 +814,13 @@ export const PatientsPage: React.FC = () => {
 
             {/* Admin Stats Grid - Compact */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
-              <Card className="bg-gradient-to-br from-blue-500 to-blue-600 border-none text-white shadow-md">
+              <Card
+                className="bg-gradient-to-br from-blue-500 to-blue-600 border-none text-white shadow-md cursor-pointer hover:shadow-lg transition-all active:scale-95"
+                onClick={() => {
+                  setSelectedDoctor('all');
+                  setSearchQuery('');
+                }}
+              >
                 <CardContent className="p-3 flex items-center justify-between">
                   <div>
                     <p className="text-blue-100 text-xs font-medium mb-0.5">Total Patients</p>
@@ -827,15 +845,35 @@ export const PatientsPage: React.FC = () => {
 
               {/* Doctor Stats Cards - Compact */}
               {Object.entries(doctorStats).map(([doctorName, stats]) => (
-                <div key={doctorName} className="relative overflow-hidden bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm transition-all duration-300 group backdrop-blur-sm">
+                <div
+                  key={doctorName}
+                  onClick={() => setSelectedDoctor(prev => prev === doctorName ? 'all' : doctorName)}
+                  className={cn(
+                    "relative overflow-hidden p-3 rounded-xl border shadow-sm transition-all duration-300 group backdrop-blur-sm cursor-pointer hover:shadow-md",
+                    selectedDoctor === doctorName
+                      ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 ring-2 ring-blue-100 dark:ring-blue-900"
+                      : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-800"
+                  )}
+                >
                   <div className="flex items-center gap-2 mb-1.5 relative z-10">
-                    <div className="p-1.5 bg-indigo-100/50 dark:bg-indigo-900/30 rounded-lg">
-                      <Stethoscope className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                    <div className={cn(
+                      "p-1.5 rounded-lg transition-colors",
+                      selectedDoctor === doctorName
+                        ? "bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-100"
+                        : "bg-indigo-100/50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
+                    )}>
+                      <Stethoscope className="h-3.5 w-3.5" />
                     </div>
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate max-w-[80px]" title={doctorName}>{doctorName}</span>
+                    <span className={cn(
+                      "text-xs font-medium truncate max-w-[80px]",
+                      selectedDoctor === doctorName ? "text-blue-900 dark:text-blue-100" : "text-gray-500 dark:text-gray-400"
+                    )} title={doctorName}>{doctorName}</span>
                   </div>
                   <div className="relative z-10 ml-0.5">
-                    <div className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">{stats.total}</div>
+                    <div className={cn(
+                      "text-xl font-bold mb-1",
+                      selectedDoctor === doctorName ? "text-blue-700 dark:text-blue-300" : "text-gray-900 dark:text-gray-100"
+                    )}>{stats.total}</div>
                     <div className="flex flex-wrap gap-1">
                       {stats.completed > 0 && (
                         <div className="flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">
@@ -1337,7 +1375,13 @@ export const PatientsPage: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-                <Card className="bg-gradient-to-br from-indigo-500 to-indigo-600 border-none text-white shadow-lg shadow-indigo-500/20">
+                <Card
+                  className="bg-gradient-to-br from-indigo-500 to-indigo-600 border-none text-white shadow-lg shadow-indigo-500/20 cursor-pointer hover:shadow-xl transition-all active:scale-95"
+                  onClick={() => {
+                    setSelectedPastDoctor('all');
+                    setPastSearchQuery('');
+                  }}
+                >
                   <CardContent className="p-4 flex items-center justify-between">
                     <div>
                       <p className="text-indigo-100 text-sm font-medium mb-1">Total Past Visits</p>
@@ -1351,15 +1395,35 @@ export const PatientsPage: React.FC = () => {
 
                 {/* Doctor Stats Cards - Compact (Reused for Past) */}
                 {Object.entries(pastDoctorStats).map(([doctorName, stats]) => (
-                  <div key={doctorName} className="relative overflow-hidden bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm transition-all duration-300 group backdrop-blur-sm">
+                  <div
+                    key={doctorName}
+                    onClick={() => setSelectedPastDoctor(prev => prev === doctorName ? 'all' : doctorName)}
+                    className={cn(
+                      "relative overflow-hidden p-3 rounded-xl border shadow-sm transition-all duration-300 group backdrop-blur-sm cursor-pointer hover:shadow-md",
+                      selectedPastDoctor === doctorName
+                        ? "bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 ring-2 ring-indigo-100 dark:ring-indigo-900"
+                        : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-indigo-200 dark:hover:border-indigo-800"
+                    )}
+                  >
                     <div className="flex items-center gap-2 mb-1.5 relative z-10">
-                      <div className="p-1.5 bg-indigo-100/50 dark:bg-indigo-900/30 rounded-lg">
-                        <Stethoscope className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                      <div className={cn(
+                        "p-1.5 rounded-lg transition-colors",
+                        selectedPastDoctor === doctorName
+                          ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-800 dark:text-indigo-100"
+                          : "bg-indigo-100/50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
+                      )}>
+                        <Stethoscope className="h-3.5 w-3.5" />
                       </div>
-                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400" title={doctorName}>{doctorName}</span>
+                      <span className={cn(
+                        "text-xs font-medium truncate max-w-[80px]",
+                        selectedPastDoctor === doctorName ? "text-indigo-900 dark:text-indigo-100" : "text-gray-500 dark:text-gray-400"
+                      )} title={doctorName}>{doctorName}</span>
                     </div>
                     <div className="relative z-10 ml-0.5">
-                      <div className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">{stats.total}</div>
+                      <div className={cn(
+                        "text-xl font-bold mb-1",
+                        selectedPastDoctor === doctorName ? "text-indigo-700 dark:text-indigo-300" : "text-gray-900 dark:text-gray-100"
+                      )}>{stats.total}</div>
                       <div className="flex flex-wrap gap-1">
                         {stats.completed > 0 && (
                           <div className="flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">
@@ -1403,8 +1467,8 @@ export const PatientsPage: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pastAppointments.length > 0 ? (
-                      pastAppointments
+                    {filteredAndSortedPastAppointments.length > 0 ? (
+                      filteredAndSortedPastAppointments
                         .slice((pastPage - 1) * PAST_ITEMS_PER_PAGE, pastPage * PAST_ITEMS_PER_PAGE)
                         .map((appointment) => (
                           <TableRow key={appointment.appointmentId} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
@@ -1477,10 +1541,10 @@ export const PatientsPage: React.FC = () => {
                 </Table>
 
                 {/* Pagination Controls */}
-                {pastAppointments.length > PAST_ITEMS_PER_PAGE && (
+                {filteredAndSortedPastAppointments.length > PAST_ITEMS_PER_PAGE && (
                   <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
                     <div className="text-sm text-gray-500 dark:text-gray-400">
-                      Showing <span className="font-medium">{(pastPage - 1) * PAST_ITEMS_PER_PAGE + 1}</span> to <span className="font-medium">{Math.min(pastPage * PAST_ITEMS_PER_PAGE, pastAppointments.length)}</span> of <span className="font-medium">{pastAppointments.length}</span> results
+                      Showing <span className="font-medium">{(pastPage - 1) * PAST_ITEMS_PER_PAGE + 1}</span> to <span className="font-medium">{Math.min(pastPage * PAST_ITEMS_PER_PAGE, filteredAndSortedPastAppointments.length)}</span> of <span className="font-medium">{filteredAndSortedPastAppointments.length}</span> results
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
@@ -1493,13 +1557,13 @@ export const PatientsPage: React.FC = () => {
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Page {pastPage} of {Math.ceil(pastAppointments.length / PAST_ITEMS_PER_PAGE)}
+                        Page {pastPage} of {Math.ceil(filteredAndSortedPastAppointments.length / PAST_ITEMS_PER_PAGE)}
                       </span>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setPastPage(p => Math.min(Math.ceil(pastAppointments.length / PAST_ITEMS_PER_PAGE), p + 1))}
-                        disabled={pastPage >= Math.ceil(pastAppointments.length / PAST_ITEMS_PER_PAGE)}
+                        onClick={() => setPastPage(p => Math.min(Math.ceil(filteredAndSortedPastAppointments.length / PAST_ITEMS_PER_PAGE), p + 1))}
+                        disabled={pastPage >= Math.ceil(filteredAndSortedPastAppointments.length / PAST_ITEMS_PER_PAGE)}
                         className="h-8 w-8 p-0"
                       >
                         <ChevronRight className="h-4 w-4" />

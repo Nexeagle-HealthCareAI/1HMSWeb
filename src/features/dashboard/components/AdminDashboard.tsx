@@ -181,7 +181,7 @@ export const AdminDashboard = () => {
     { id: 'billing-management', name: t('admin.billingManagement') || 'Billing Management', icon: IndianRupee, description: t('admin.billingDescription') || 'Manage all OPD, IPD billings' },
     //{ id: 'billing-insurance', name: t('admin.billingInsurance'), icon: CreditCard, description: t('admin.financialManagement') },
     //{ id: 'bulk-messaging', name: t('admin.bulkMessaging'), icon: MessageSquare, description: t('admin.communicationManagement') },
-    { id: 'system-config', name: t('admin.systemConfiguration'), icon: Settings, description: t('admin.hospitalSettings') },
+    { id: 'system-config', name: 'Settings', icon: Settings, description: 'General system preferences' },
     // { id: 'audit-security', name: t('admin.auditSecurity'), icon: ShieldCheck, description: t('admin.logsSecurity') }
   ];
 
@@ -229,7 +229,7 @@ export const AdminDashboard = () => {
 
 
   return (
-    <div ref={dashboardRootRef} className={`min-h-screen w-full bg-gray-50 dark:bg-gray-950 relative z-0 ${(currentView === 'system-config' || currentView === 'system-config-hospital') ? 'p-0' : 'p-2 sm:p-4 lg:p-6 space-y-4 sm:space-y-6'}`}>
+    <div ref={dashboardRootRef} className={`min-h-screen w-full bg-gray-50 dark:bg-gray-950 relative z-0 pt-1 ${(currentView === 'system-config' || currentView === 'system-config-hospital') ? 'px-0 pb-0' : 'px-2 sm:px-4 lg:px-6 pb-2 sm:pb-4 lg:pb-6 space-y-4 sm:space-y-6'}`}>
       {/* Hospital Registration Progress Dialog/Popup */}
       <Dialog
         open={showHospitalRegistrationDialog}
@@ -344,7 +344,7 @@ export const AdminDashboard = () => {
 
 
       {/* Enhanced Top Navigation with Hospital ID and Modernized Nav Tabs - Mobile Optimized */}
-      <section className={`mb-4 ${(currentView === 'system-config' || currentView === 'system-config-hospital') ? 'mx-2 sm:mx-4 lg:mx-6 mt-2 sm:mt-4 lg:mt-6' : ''}`}>
+      <section className={`mb-4 sticky top-0 z-40 ${(currentView === 'system-config' || currentView === 'system-config-hospital') ? 'mx-2 sm:mx-4 lg:mx-6' : ''}`}>
         <div className="flex flex-col xl:flex-row items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-white/20 dark:border-slate-800 rounded-2xl shadow-lg shadow-blue-100/10 dark:shadow-black/20 px-3 py-3 sm:px-6 sm:py-4 ring-1 ring-black/5 dark:ring-white/5">
           {/* Left: Title, badges, hospital ID */}
           <div className="flex flex-col gap-1 min-w-0 shrink-0 w-full xl:w-auto">

@@ -892,7 +892,7 @@ export const AppointmentDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Header - AdminDashboard Style */}
-      <div className="px-3 sm:px-4 lg:px-6 py-4">
+      <div className="px-3 sm:px-4 lg:px-6 pt-1 pb-4">
         <div className="space-y-6">
 
           {/* Header Section */}
