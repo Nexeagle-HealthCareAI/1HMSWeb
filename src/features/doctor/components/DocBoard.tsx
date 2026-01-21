@@ -88,7 +88,7 @@ import {
   ZoomIn
 } from 'lucide-react';
 import { format, subDays, addDays } from 'date-fns';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore, useAppStore } from '@/store';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -211,6 +211,13 @@ export const ClinicalDashboard: React.FC = () => {
   const [windowWidth, setWindowWidth] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1920));
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSettingsNavCollapsed, setIsSettingsNavCollapsed] = useState(false);
+
+  // Auto-collapse sidebar on mount for maximizing screen real estate
+  const setGlobalSidebarCollapsed = useAppStore((state) => state.setSidebarCollapsed);
+
+  useEffect(() => {
+    setGlobalSidebarCollapsed(true);
+  }, [setGlobalSidebarCollapsed]);
 
   // Live update states
   const [isLiveUpdateEnabled, setIsLiveUpdateEnabled] = useState(true);
@@ -854,6 +861,7 @@ export const ClinicalDashboard: React.FC = () => {
       token: {
         tokenId: '',
         tokenNumber: appointment.tokenDetails?.tokenNumber || 0,
+        status: '',
         createdAt: ''
       },
       departments: []

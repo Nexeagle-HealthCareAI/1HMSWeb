@@ -495,8 +495,6 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
 
     setShowVitalsForm(false);
     setShowTokenPrint(true);
-    setSelectedSlot(null);
-    setPatientData(null);
   };
 
   const handleVitalsSkip = () => {
@@ -521,8 +519,6 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
 
     setShowVitalsForm(false);
     setShowTokenPrint(true);
-    setSelectedSlot(null);
-    setPatientData(null);
   };
 
   const handleSlotUpdate = (updatedSlot: TimeSlot) => {

@@ -94,13 +94,13 @@ export const TokenPrintModal: React.FC<TokenPrintModalProps> = ({
                             <div className="w-full text-left space-y-1.5 mb-4 border-t-2 border-dashed border-black pt-3 mt-2 pl-4">
                                 <div className="flex justify-between items-baseline">
                                     <span className="font-bold text-xs">Date:</span>
-                                    <span className="text-sm font-mono">{format(new Date(tokenData.appointmentDate), 'dd/MM/yyyy')}</span>
+                                    <span className="text-sm font-mono">{format(new Date(tokenData.appointmentDate), 'dd MMM, yyyy')}</span>
                                 </div>
 
                                 <div>
                                     <span className="font-bold block text-[10px] uppercase text-gray-600">Patient Details</span>
                                     <div className="text-sm font-bold truncate">{tokenData.patientName}</div>
-                                    <div className="text-xs font-mono">{tokenData.patientId}</div>
+                                    <div className="text-xs font-mono font-bold bg-gray-200 print:bg-gray-200 px-1 inline-block mt-0.5 rounded">{tokenData.patientId}</div>
                                 </div>
 
                                 <div>
