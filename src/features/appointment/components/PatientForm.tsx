@@ -419,10 +419,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                   <span className="text-xs text-muted-foreground">⏱️</span>
                   <span className="text-xs">{t('patientForm.appointmentDetails.duration', { minutes: selectedSlot.slotDurationInMinutes || 10 })}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-3 w-3 text-healthcare-primary" />
-                  <span className="font-medium">{t('patientForm.appointmentDetails.fee')}</span>
-                </div>
+
               </div>
 
               {/* Patient Search - Enhanced */}
