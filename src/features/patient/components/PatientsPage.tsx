@@ -77,7 +77,8 @@ export const PatientsPage: React.FC = () => {
   const [selectedDoctor, setSelectedDoctor] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4;
-  const [selectedGender, setSelectedGender] = useState<'all' | 'male' | 'female'>('all');
+  const [selectedGender, setSelectedGender] = useState<'all' | 'male' | 'female' | 'shared'>('all');
+  const [selectedDoctor360, setSelectedDoctor360] = useState<string | null>(null);
   const [patient360Page, setPatient360Page] = useState(1);
   const patient360ItemsPerPage = 10;
   const [selectedTimePeriod, setSelectedTimePeriod] = useState<'today' | 'week' | 'month' | 'year'>('month');
@@ -367,7 +368,7 @@ export const PatientsPage: React.FC = () => {
   const { data: patient360Response, isLoading: isPatient360Loading } = useQuery({
     queryKey: ['patient360', hospitalId],
     queryFn: async () => {
-      if (!hospitalId) return { hospitalId: '', patientsData: [], doctorsData: [], success: false, message: '' };
+      if (!hospitalId) return { hospitalId: '', patientsData: [], doctorsData: [], statistics: undefined, success: false, message: '' };
       return patientApi.getAllPatients(hospitalId);
     },
     enabled: !!hospitalId,
@@ -393,7 +394,7 @@ export const PatientsPage: React.FC = () => {
       NextAppointment: null,
       Status: 'Active',
       Avatar: '',
-      Doctor: 'Dr. Unassigned' // Placeholder as API doesn't provide this yet
+      Doctor: p.doctorNames || 'Dr. Unassigned'
     }));
   }, [patient360Response]);
 
@@ -408,14 +409,34 @@ export const PatientsPage: React.FC = () => {
   }, [patientList]);
 
   const patientStats = useMemo(() => {
+    if (patient360Response?.statistics) {
+      return {
+        total: patient360Response.statistics.totalPatientCount,
+        males: patient360Response.statistics.malePatientCount,
+        females: patient360Response.statistics.femalePatientCount,
+        shared: patientList.filter(p => {
+          // @ts-ignore
+          if (!p.Doctor) return false;
+          // @ts-ignore
+          return p.Doctor.split(',').length > 1;
+        }).length,
+        cities: new Set(patientList.map(p => p.City)).size
+      };
+    }
     const patients = patientList;
     return {
       total: patients.length,
       males: patients.filter(p => p.Sex.toLowerCase() === 'male').length,
       females: patients.filter(p => p.Sex.toLowerCase() === 'female').length,
+      shared: patients.filter(p => {
+        // @ts-ignore
+        if (!p.Doctor) return false;
+        // @ts-ignore
+        return p.Doctor.split(',').length > 1;
+      }).length,
       cities: new Set(patients.map(p => p.City)).size
     };
-  }, [patientList]);
+  }, [patientList, patient360Response]);
 
   // Advanced Analytics
   const patientAnalytics = useMemo(() => {
@@ -430,27 +451,37 @@ export const PatientsPage: React.FC = () => {
       '60+': 0
     };
 
-    patients.forEach(p => {
-      const age = parseInt(p.Age);
-      if (age <= 18) ageBands['0-18']++;
-      else if (age <= 30) ageBands['19-30']++;
-      else if (age <= 45) ageBands['31-45']++;
-      else if (age <= 60) ageBands['46-60']++;
-      else ageBands['60+']++;
-    });
-
-    // Gender-specific age distribution
+    // Initialize Gender Specific Bands
     const maleAgeBands = { '0-18': 0, '19-30': 0, '31-45': 0, '46-60': 0, '60+': 0 };
     const femaleAgeBands = { '0-18': 0, '19-30': 0, '31-45': 0, '46-60': 0, '60+': 0 };
 
     patients.forEach(p => {
       const age = parseInt(p.Age);
-      const bands = p.Sex.toLowerCase() === 'male' ? maleAgeBands : femaleAgeBands;
-      if (age <= 18) bands['0-18']++;
-      else if (age <= 30) bands['19-30']++;
-      else if (age <= 45) bands['31-45']++;
-      else if (age <= 60) bands['46-60']++;
-      else bands['60+']++;
+      if (isNaN(age)) return;
+
+      // Update Total Bands
+      if (age <= 18) ageBands['0-18']++;
+      else if (age <= 30) ageBands['19-30']++;
+      else if (age <= 45) ageBands['31-45']++;
+      else if (age <= 60) ageBands['46-60']++;
+      else ageBands['60+']++;
+
+      // Update Gender Specific Bands
+      const sex = p.Sex?.toLowerCase() || '';
+
+      if (sex === 'male') {
+        if (age <= 18) maleAgeBands['0-18']++;
+        else if (age <= 30) maleAgeBands['19-30']++;
+        else if (age <= 45) maleAgeBands['31-45']++;
+        else if (age <= 60) maleAgeBands['46-60']++;
+        else maleAgeBands['60+']++;
+      } else if (sex === 'female') {
+        if (age <= 18) femaleAgeBands['0-18']++;
+        else if (age <= 30) femaleAgeBands['19-30']++;
+        else if (age <= 45) femaleAgeBands['31-45']++;
+        else if (age <= 60) femaleAgeBands['46-60']++;
+        else femaleAgeBands['60+']++;
+      }
     });
 
     // Top cities and pincodes
@@ -584,8 +615,22 @@ export const PatientsPage: React.FC = () => {
       );
     }
 
+    if (selectedDoctor360) {
+      // @ts-ignore
+      result = result.filter(p => {
+        if (!p.Doctor) return false;
+        const doctors = p.Doctor.split(',').map((d: string) => d.trim());
+        return doctors.includes(selectedDoctor360);
+      });
+    }
+
     if (selectedGender !== 'all') {
-      result = result.filter(p => p.Sex.toLowerCase() === selectedGender);
+      if (selectedGender === 'shared') {
+        // @ts-ignore
+        result = result.filter(p => p.Doctor && p.Doctor.split(',').length > 1);
+      } else {
+        result = result.filter(p => p.Sex.toLowerCase() === selectedGender);
+      }
     }
 
     if (sortConfig) {
@@ -606,7 +651,7 @@ export const PatientsPage: React.FC = () => {
     }
 
     return result;
-  }, [patientList, patient360SearchQuery, selectedGender, sortConfig]);
+  }, [patientList, patient360SearchQuery, selectedGender, sortConfig, selectedDoctor360]);
 
   const filteredAndSortedAppointments = useMemo(() => {
     let result = [...currentAppointments];
@@ -1499,7 +1544,14 @@ export const PatientsPage: React.FC = () => {
 
               <div className="flex gap-4 overflow-x-auto pb-4 shrink-0 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-700">
                 {/* Total Patients - Premium Gradient */}
-                <Card className="bg-gradient-to-br from-blue-500 to-indigo-600 border-none text-white shadow-lg shadow-blue-500/20 flex-shrink-0 min-w-[140px] relative overflow-hidden group">
+                <Card
+                  className="bg-gradient-to-br from-blue-500 to-indigo-600 border-none text-white shadow-lg shadow-blue-500/20 flex-shrink-0 min-w-[140px] relative overflow-hidden group cursor-pointer hover:shadow-xl transition-all"
+                  onClick={() => {
+                    setPatient360SearchQuery('');
+                    setSelectedGender('all');
+                    setSelectedDoctor360(null);
+                  }}
+                >
                   <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
                     <Users className="h-16 w-16 -rotate-12" />
                   </div>
@@ -1520,7 +1572,14 @@ export const PatientsPage: React.FC = () => {
                     "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all cursor-pointer flex-shrink-0 min-w-[130px] group",
                     selectedGender === 'male' && "ring-2 ring-blue-500 border-transparent bg-blue-50/50 dark:bg-blue-900/10"
                   )}
-                  onClick={() => setSelectedGender(selectedGender === 'male' ? 'all' : 'male')}
+                  onClick={() => {
+                    if (selectedGender === 'male') {
+                      setSelectedGender('all');
+                    } else {
+                      setSelectedGender('male');
+                      setSelectedDoctor360(null);
+                    }
+                  }}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-2">
@@ -1539,7 +1598,14 @@ export const PatientsPage: React.FC = () => {
                     "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all cursor-pointer flex-shrink-0 min-w-[130px] group",
                     selectedGender === 'female' && "ring-2 ring-pink-500 border-transparent bg-pink-50/50 dark:bg-pink-900/10"
                   )}
-                  onClick={() => setSelectedGender(selectedGender === 'female' ? 'all' : 'female')}
+                  onClick={() => {
+                    if (selectedGender === 'female') {
+                      setSelectedGender('all');
+                    } else {
+                      setSelectedGender('female');
+                      setSelectedDoctor360(null);
+                    }
+                  }}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-2">
@@ -1549,6 +1615,32 @@ export const PatientsPage: React.FC = () => {
                       </div>
                     </div>
                     <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 group-hover:scale-105 transition-transform origin-left">{patientStats.females}</h3>
+                  </CardContent>
+                </Card>
+
+                {/* Shared Patients */}
+                <Card
+                  className={cn(
+                    "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all cursor-pointer flex-shrink-0 min-w-[130px] group",
+                    selectedGender === 'shared' && "ring-2 ring-purple-500 border-transparent bg-purple-50/50 dark:bg-purple-900/10"
+                  )}
+                  onClick={() => {
+                    if (selectedGender === 'shared') {
+                      setSelectedGender('all');
+                    } else {
+                      setSelectedGender('shared');
+                      setSelectedDoctor360(null);
+                    }
+                  }}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Shared</span>
+                      <div className={cn("p-1.5 rounded-md transition-colors", selectedGender === 'shared' ? "bg-purple-200 text-purple-700" : "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400")}>
+                        <Users className="h-4 w-4" />
+                      </div>
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 group-hover:scale-105 transition-transform origin-left">{patientStats.shared}</h3>
                   </CardContent>
                 </Card>
 
@@ -1562,7 +1654,21 @@ export const PatientsPage: React.FC = () => {
 
                 {/* Doctor KPI Cards */}
                 {patient360Response?.doctorsData?.map((doctor: any, idx: number) => (
-                  <Card key={idx} className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-800 transition-all flex-shrink-0 min-w-[180px] group">
+                  <Card
+                    key={idx}
+                    className={cn(
+                      "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-800 transition-all flex-shrink-0 min-w-[180px] group cursor-pointer",
+                      selectedDoctor360 === doctor.doctorName && "ring-2 ring-indigo-500 border-transparent bg-indigo-50/50 dark:bg-indigo-900/10"
+                    )}
+                    onClick={() => {
+                      if (selectedDoctor360 === doctor.doctorName) {
+                        setSelectedDoctor360(null);
+                      } else {
+                        setSelectedDoctor360(doctor.doctorName);
+                        setSelectedGender('all');
+                      }
+                    }}
+                  >
                     <CardContent className="p-3">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex gap-2 items-center overflow-hidden">
@@ -1686,7 +1792,7 @@ export const PatientsPage: React.FC = () => {
                             return (
                               <TableRow>
                                 <TableCell colSpan={5} className="h-24 text-center text-gray-500 dark:text-gray-400">
-                                  No patients found matching your search.
+                                  No patients found matching your search{selectedDoctor360 ? ` for doctor ${selectedDoctor360}` : ''}.
                                 </TableCell>
                               </TableRow>
                             );
@@ -1803,10 +1909,14 @@ export const PatientsPage: React.FC = () => {
                     <CardContent className="p-3 pt-1 relative z-10">
                       <div className="flex items-baseline gap-2">
                         <h3 className="text-3xl font-bold tracking-tight">
-                          {selectedTimePeriod === 'today' ? patientAnalytics.registrationStats.today :
-                            selectedTimePeriod === 'week' ? patientAnalytics.registrationStats.thisWeek :
-                              selectedTimePeriod === 'month' ? patientAnalytics.registrationStats.thisMonth :
-                                patientAnalytics.registrationStats.thisYear}
+                          {(() => {
+                            if (!patient360Response?.statistics?.newRegistrations) return 0;
+                            const newReg = patient360Response.statistics.newRegistrations;
+                            return selectedTimePeriod === 'today' ? newReg.today :
+                              selectedTimePeriod === 'week' ? newReg.thisWeek :
+                                selectedTimePeriod === 'month' ? newReg.thisMonth :
+                                  newReg.thisYear;
+                          })()}
                         </h3>
                         <span className="text-emerald-100 text-xs font-medium bg-white/10 px-1.5 py-0.5 rounded-full">
                           {selectedTimePeriod === 'today' ? 'Today' :

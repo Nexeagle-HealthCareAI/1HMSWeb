@@ -140,6 +140,7 @@ export interface PatientData {
   country: string;
   pinCode: string;
   registrationDate: string;
+  doctorNames?: string;
 }
 
 export interface DoctorData {
@@ -150,10 +151,25 @@ export interface DoctorData {
   sharedPatientCount: number;
 }
 
+export interface Statistics {
+  totalPatientCount: number;
+  malePatientCount: number;
+  femalePatientCount: number;
+  newRegistrations: {
+    today: number;
+    yesterday: number;
+    thisWeek: number;
+    thisMonth: number;
+    thisYear: number;
+    previousYear: number;
+  };
+}
+
 export interface PatientListResponse {
-  hospitalId: string;
+  hospitalId?: string;
   doctorsData?: DoctorData[];
   patientsData: PatientData[];
+  statistics?: Statistics;
   success: boolean;
   message: string;
 }
