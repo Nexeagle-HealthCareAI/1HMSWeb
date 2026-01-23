@@ -35,6 +35,7 @@ interface TimeSlot {
 
 type PatientFormState = {
   name: string;
+  referenceName: string;
   phone: string;
   age: string;
   gender: string;
@@ -53,6 +54,7 @@ const PHONE_REGEX = /^\d{10}$/;
 
 const createInitialFormState = (): PatientFormState => ({
   name: '',
+  referenceName: '',
   phone: '',
   age: '',
   gender: '',
@@ -268,6 +270,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const handlePatientSelect = (patient: PatientSearchItem) => {
     setFormData({
       name: patient.fullName,
+      referenceName: '', // Reset reference name on patient select
       phone: formatPhoneNumber(patient.mobile || ''),
       age: patient.age.toString(),
       gender: patient.sex,
@@ -328,7 +331,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       // Prepare the appointment request
       const appointmentRequest: RegisterAppointmentRequest = {
         patient: {
-          fullName: formData.name,
+          fullName: formData.referenceName ? `${formData.name}-${formData.referenceName}` : formData.name,
           mobile: formatPhoneNumber(formData.phone), // Use formatted phone number
           ageYears: parseInt(formData.age),
           sex: formData.gender,
@@ -518,6 +521,19 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                   </div>
 
                   <div>
+                    <Label htmlFor="referenceName" className="text-sm font-medium dark:text-gray-300">
+                      Reference Name
+                    </Label>
+                    <Input
+                      id="referenceName"
+                      value={formData.referenceName}
+                      onChange={(e) => setFormData(prev => ({ ...prev, referenceName: e.target.value }))}
+                      placeholder="Enter Reference Name"
+                      className="h-9"
+                    />
+                  </div>
+
+                  <div>
                     <Label htmlFor="phone" className="text-sm font-medium">
                       {t('patientForm.personal.phone')} <span className="text-red-500">*</span>
                     </Label>
@@ -533,42 +549,44 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     )}
                   </div>
 
-                  <div>
-                    <Label htmlFor="age" className="text-sm font-medium">
-                      {t('patientForm.personal.age')} <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="age"
-                      type="number"
-                      value={formData.age}
-                      onChange={(e) => setFormData(prev => ({ ...prev, age: e.target.value }))}
-                      placeholder={t('patientForm.personal.agePlaceholder')}
-                      min="1"
-                      max="120"
-                      className={`h-9 ${errors.age ? "border-red-500" : ""}`}
-                    />
-                    {errors.age && (
-                      <p className="text-red-500 text-xs mt-1">{t(errors.age)}</p>
-                    )}
-                  </div>
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <Label htmlFor="age" className="text-sm font-medium">
+                        {t('patientForm.personal.age')} <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="age"
+                        type="number"
+                        value={formData.age}
+                        onChange={(e) => setFormData(prev => ({ ...prev, age: e.target.value }))}
+                        placeholder={t('patientForm.personal.agePlaceholder')}
+                        min="1"
+                        max="120"
+                        className={`h-9 ${errors.age ? "border-red-500" : ""}`}
+                      />
+                      {errors.age && (
+                        <p className="text-red-500 text-xs mt-1">{t(errors.age)}</p>
+                      )}
+                    </div>
 
-                  <div>
-                    <Label htmlFor="gender" className="text-sm font-medium">
-                      {t('patientForm.personal.gender')} <span className="text-red-500">*</span>
-                    </Label>
-                    <Select value={formData.gender} onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
-                      <SelectTrigger className={`h-9 ${errors.gender ? "border-red-500" : ""}`}>
-                        <SelectValue placeholder={t('patientForm.personal.genderPlaceholder')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Male">{t('patientForm.personal.genderOptions.male')}</SelectItem>
-                        <SelectItem value="Female">{t('patientForm.personal.genderOptions.female')}</SelectItem>
-                        <SelectItem value="Other">{t('patientForm.personal.genderOptions.other')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {errors.gender && (
-                      <p className="text-red-500 text-xs mt-1">{t(errors.gender)}</p>
-                    )}
+                    <div className="flex-1">
+                      <Label htmlFor="gender" className="text-sm font-medium">
+                        {t('patientForm.personal.gender')} <span className="text-red-500">*</span>
+                      </Label>
+                      <Select value={formData.gender} onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
+                        <SelectTrigger className={`h-9 ${errors.gender ? "border-red-500" : ""}`}>
+                          <SelectValue placeholder={t('patientForm.personal.genderPlaceholder')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Male">{t('patientForm.personal.genderOptions.male')}</SelectItem>
+                          <SelectItem value="Female">{t('patientForm.personal.genderOptions.female')}</SelectItem>
+                          <SelectItem value="Other">{t('patientForm.personal.genderOptions.other')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {errors.gender && (
+                        <p className="text-red-500 text-xs mt-1">{t(errors.gender)}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </Card>

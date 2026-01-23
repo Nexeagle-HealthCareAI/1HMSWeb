@@ -28,6 +28,7 @@ import {
   ArrowUp,
   Minimize2,
   Maximize2,
+  HelpCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -46,6 +47,7 @@ import {
 } from '@/components/ui/pagination';
 import { AppointmentBooking } from './AppointmentBooking';
 import { TokenPrintModal } from './TokenPrintModal';
+import { DashboardQuickGuide } from './DashboardQuickGuide';
 import { VitalsForm } from './VitalsForm';
 import { RescheduleDialog } from './RescheduleDialog';
 import { format } from 'date-fns';
@@ -94,6 +96,7 @@ export const AppointmentDashboard = () => {
   const [patientProfileName, setPatientProfileName] = useState<string | undefined>(undefined);
   const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
   const [appointmentToReschedule, setAppointmentToReschedule] = useState<AppointmentDetail | null>(null);
+  const [showQuickGuide, setShowQuickGuide] = useState(false);
 
   // Token Print State
   const [tokenPrintOpen, setTokenPrintOpen] = useState(false);
@@ -915,6 +918,18 @@ export const AppointmentDashboard = () => {
                   <span className="hidden sm:inline font-semibold tracking-wide">{t('appointmentDashboard.bookAppointment')}</span>
                   <span className="sm:hidden font-semibold">Book</span>
                 </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowQuickGuide(true)}
+                  className="bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-slate-700 rounded-full h-8 sm:h-10 px-3 sm:px-4 ml-2 transition-all duration-300"
+                >
+                  <div className="flex items-center gap-2">
+                    <HelpCircle className="h-4 w-4" />
+                    <span className="hidden sm:inline font-medium">{t('appointmentDashboard.quickGuide', 'Dashboard Help')}</span>
+                  </div>
+                </Button>
               </div>
 
               {/* Live Status Indicators */}
@@ -1361,16 +1376,10 @@ export const AppointmentDashboard = () => {
 
                               {/* Doctor Name */}
                               <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                                {/* Laptop/Desktop: show full info, else only doctor name */}
-                                <div className="hidden lg:flex items-center gap-1.5">
+                                <div className="flex items-center gap-1.5">
                                   <div className="w-5 h-5 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center flex-shrink-0">
                                     <User className="h-2.5 w-2.5 text-green-600 dark:text-green-400" />
                                   </div>
-                                  <span className="text-gray-700 dark:text-gray-300 text-xs truncate">
-                                    {appointment.doctorName || t('appointmentDashboard.actionButtons.notApplicable')}
-                                  </span>
-                                </div>
-                                <div className="lg:hidden">
                                   <span className="text-gray-700 dark:text-gray-300 text-xs truncate">
                                     {appointment.doctorName || t('appointmentDashboard.actionButtons.notApplicable')}
                                   </span>
@@ -1886,6 +1895,10 @@ export const AppointmentDashboard = () => {
           enableDoctorSelection={true}
         />
       )}
+      <DashboardQuickGuide
+        open={showQuickGuide}
+        onOpenChange={setShowQuickGuide}
+      />
     </div>
   );
 };

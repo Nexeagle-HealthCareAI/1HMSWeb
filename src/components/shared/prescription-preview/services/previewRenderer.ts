@@ -348,14 +348,28 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   }
 
   // Name (Large)
-  const pName = toUpper(patient.name || 'Unknown Patient');
-  page.drawText(pName, {
+  const rawPName = toUpper(patient.name || 'Unknown Patient');
+  const [mainName, ...restName] = rawPName.split('-');
+  const subName = restName.join('-').trim();
+
+  page.drawText(mainName.trim(), {
     x: nameX,
     y: cursorY,
-    size: sizeXl,
+    size: sizeLg,
     font: boldFont,
     color: COLORS.TextMain
   });
+
+  if (subName) {
+    cursorY -= (sizeLg + 4);
+    page.drawText(subName, {
+      x: nameX,
+      y: cursorY,
+      size: sizeBase,
+      font: regularFont,
+      color: COLORS.TextMain
+    });
+  }
   cursorY -= lineHeight * 1.2;
 
   // Grid Info
@@ -364,7 +378,7 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
 
   // Dynamic width calculation
   // Reserve space for Vitals column on the right (approx 35% + padding)
-  const vitalsReservedWidth = (contentWidth * 0.35) + 10;
+  const vitalsReservedWidth = (contentWidth * 0.25) + 10;
   const availableWidth = pageWidth - rightPad - nameX - vitalsReservedWidth;
   const col1Width = availableWidth * 0.30; // Age/Gender (Reduced from 0.45 to bring UHID closer)
   const col2Width = availableWidth - col1Width; // UHID takes remaining space
@@ -412,7 +426,7 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
     { l: 'BMI', v: vitals.bmi ? `${vitals.bmi} kg/m²` : '' },
   ].filter(x => x.v && x.v !== '0' && x.v !== '0/0' && x.v !== '0%' && !x.v.startsWith('0 '));
 
-  const vitalsW = (contentWidth * 0.35);
+  const vitalsW = (contentWidth * 0.25);
   // Move Vitals Box to Top Right below Date
   const vitalsTopY = cursorY + 80; // Rough positioning back up?
   // Actually let's just place it relative to Name/Date as before

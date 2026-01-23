@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Calendar, Clock, User, Phone, Users, Stethoscope, ChevronDown, CalendarIcon } from 'lucide-react';
+import { Calendar, Clock, User, Phone, Users, Stethoscope, ChevronDown, CalendarIcon, HelpCircle } from 'lucide-react';
 import { DepartmentSidebar } from './DepartmentSidebar';
 import { DateSelector } from './DateSelector';
 import { ShiftTabs } from './ShiftTabs';
@@ -11,6 +11,7 @@ import { TokenPrintModal } from './TokenPrintModal';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { BookingQuickGuide } from './BookingQuickGuide';
 // import { ContextualGuide } from './guide/ContextualGuide';
 // import { APPOINTMENT_GUIDES } from './guide/GuideData';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -171,6 +172,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [patientData, setPatientData] = useState<any>(null);
   const [showTimeSlotsLoading, setShowTimeSlotsLoading] = useState(false);
+  const [showBookingQuickGuide, setShowBookingQuickGuide] = useState(false);
   const lastRefreshTokenRef = useRef<number | null>(null);
 
   // Fetch doctors for the selected department
@@ -679,8 +681,19 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
           <div className="px-4 py-3">
             <div className="flex items-center justify-between mb-3">
               <h1 className="text-xl font-bold text-primary dark:text-primary">{t('appointmentBooking.title')}</h1>
-              <div className="text-xs text-muted-foreground dark:text-gray-400">
-                {format(selectedDate, 'MMM dd')}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowBookingQuickGuide(true)}
+                  className="h-8 w-8 p-0 md:h-9 md:w-auto md:px-3 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full"
+                >
+                  <HelpCircle className="h-4 w-4 md:mr-2" />
+                  <span className="hidden md:inline font-medium text-xs">{t('bookingGuide.button', 'Booking Help')}</span>
+                </Button>
+                <div className="text-xs text-muted-foreground dark:text-gray-400">
+                  {format(selectedDate, 'MMM dd')}
+                </div>
               </div>
             </div>
 
@@ -898,7 +911,20 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
               <div className="max-w-4xl mx-auto">
                 {/* Desktop Header - Compact */}
                 <div className="hidden lg:block mb-3">
-                  <h1 className="text-xl font-bold text-foreground dark:text-white mb-1">{t('appointmentBooking.title')}</h1>
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <h1 className="text-xl font-bold text-foreground dark:text-white">{t('appointmentBooking.title')}</h1>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowBookingQuickGuide(true)}
+                        className="h-8 px-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full"
+                      >
+                        <HelpCircle className="h-4 w-4 mr-2" />
+                        <span className="font-medium text-xs">{t('bookingGuide.button', 'Booking Help')}</span>
+                      </Button>
+                    </div>
+                  </div>
                   <p className="text-xs text-muted-foreground dark:text-gray-400">
                     {t('appointmentBooking.selectedLabel')}{' '}
                     <span className="font-semibold text-primary">{selectedDoctor?.name || t('appointmentBooking.noDoctorSelected')}</span>
@@ -1181,6 +1207,11 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
       )}
 
 
+
+      <BookingQuickGuide
+        open={showBookingQuickGuide}
+        onOpenChange={setShowBookingQuickGuide}
+      />
     </div>
   );
 };
