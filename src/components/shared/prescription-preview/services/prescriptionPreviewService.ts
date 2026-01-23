@@ -40,7 +40,8 @@ export const buildPreviewFromRequest = async (request: GeneratePrescriptionDetai
     typography: templateConfig.typography,
     payload: {
       ...payload,
-      qrCodeData: `${import.meta.env.VITE_APP_URL || window.location.origin}/verify/${response.appointmentId}`
+      qrCodeData: `${import.meta.env.VITE_APP_URL || window.location.origin}/verify/${response.appointmentId}`,
+      validUptoDate: response.validUptoDate
     },
     templateUrl: templateConfig.templateUrl,
   });

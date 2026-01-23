@@ -307,11 +307,20 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   });
 
   // B. Valid Upto
+  // B. Valid Upto
+  // Prefer server-provided date, else calculate
   const validUptoDays = payload.template?.validUpto ?? 10;
-  if (validUptoDays > 0) {
-    const validUptoDate = new Date();
-    validUptoDate.setDate(validUptoDate.getDate() + validUptoDays);
-    const validUptoLabel = toUpper(`Valid Upto: ${getFormattedDate(validUptoDate)}`);
+  let validUptoDateVal: Date | null = null;
+
+  if (payload.validUptoDate) {
+    validUptoDateVal = new Date(payload.validUptoDate);
+  } else if (validUptoDays > 0) {
+    validUptoDateVal = new Date();
+    validUptoDateVal.setDate(validUptoDateVal.getDate() + validUptoDays);
+  }
+
+  if (validUptoDateVal) {
+    const validUptoLabel = toUpper(`Valid Upto: ${getFormattedDate(validUptoDateVal)}`);
     const validUptoW = regularFont.widthOfTextAtSize(validUptoLabel, sizeSm);
     page.drawText(validUptoLabel, {
       x: pageWidth - rightPad - validUptoW,

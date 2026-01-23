@@ -137,6 +137,7 @@ export interface GeneratePrescriptionDetailsPayload {
   followUp: PrescriptionFollowUp;
   immunizations: PrescriptionImmunization[];
   validUpto?: number; // Number of days the prescription is valid
+  validUptoDate?: string; // Pre-calculated date from server
   qrCodeData?: string;
 }
 
@@ -144,6 +145,7 @@ export interface GeneratePrescriptionDetailsResponse {
   success: boolean;
   message: string;
   appointmentId: string;
+  validUptoDate?: string;
   data: GeneratePrescriptionDetailsPayload;
 }
 
