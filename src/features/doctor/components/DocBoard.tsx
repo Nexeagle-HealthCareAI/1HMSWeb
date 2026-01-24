@@ -1716,6 +1716,11 @@ export const ClinicalDashboard: React.FC = () => {
                                     <TableCell className="hidden xl:table-cell py-4 align-middle text-sm text-gray-700 dark:text-gray-300">
                                       <div className="flex flex-col">
                                         <span className="font-medium text-gray-900 dark:text-white">{appointment.patientFullName?.split('-')[0].trim()}</span>
+                                        {appointment.patientFullName?.includes('-') && (
+                                          <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate block leading-tight">
+                                            {appointment.patientFullName.split('-').slice(1).join('-').trim()}
+                                          </span>
+                                        )}
                                         {appointment.phone && (
                                           <span className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">{appointment.phone}</span>
                                         )}
@@ -1974,6 +1979,11 @@ export const ClinicalDashboard: React.FC = () => {
                                     <ExternalLink className="h-3 w-3" />
                                   </button>
                                   <p className="text-sm text-gray-900 dark:text-white truncate">{appointment.patientFullName?.split('-')[0].trim()}</p>
+                                  {appointment.patientFullName?.includes('-') && (
+                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate leading-tight">
+                                      {appointment.patientFullName.split('-').slice(1).join('-').trim()}
+                                    </p>
+                                  )}
                                   {appointment.phone && (
                                     <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{appointment.phone}</p>
                                   )}
@@ -2080,6 +2090,11 @@ export const ClinicalDashboard: React.FC = () => {
                                     <TableCell className="py-4">
                                       <div className="flex flex-col">
                                         <span className="font-medium text-gray-900 dark:text-white">{appointment.patientFullName?.split('-')[0].trim()}</span>
+                                        {appointment.patientFullName?.includes('-') && (
+                                          <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate block leading-tight">
+                                            {appointment.patientFullName.split('-').slice(1).join('-').trim()}
+                                          </span>
+                                        )}
                                         {appointment.phone && (
                                           <span className="text-xs text-gray-500 dark:text-gray-400">{appointment.phone}</span>
                                         )}
@@ -2251,6 +2266,11 @@ export const ClinicalDashboard: React.FC = () => {
                                     <ExternalLink className="h-3 w-3" />
                                   </button>
                                   <p className="text-sm text-gray-900 dark:text-white truncate">{appointment.patientFullName?.split('-')[0].trim()}</p>
+                                  {appointment.patientFullName?.includes('-') && (
+                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate leading-tight">
+                                      {appointment.patientFullName.split('-').slice(1).join('-').trim()}
+                                    </p>
+                                  )}
                                   {appointment.phone && (
                                     <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{appointment.phone}</p>
                                   )}
@@ -2373,6 +2393,11 @@ export const ClinicalDashboard: React.FC = () => {
                                     <TableCell className="py-4">
                                       <div className="flex flex-col">
                                         <span className="font-medium text-gray-900 dark:text-white">{appointment.patientFullName?.split('-')[0].trim()}</span>
+                                        {appointment.patientFullName?.includes('-') && (
+                                          <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate block leading-tight">
+                                            {appointment.patientFullName.split('-').slice(1).join('-').trim()}
+                                          </span>
+                                        )}
                                         {appointment.phone && (
                                           <span className="text-xs text-gray-500 dark:text-gray-400">{appointment.phone}</span>
                                         )}

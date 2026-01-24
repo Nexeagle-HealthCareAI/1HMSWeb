@@ -1367,6 +1367,11 @@ export const AppointmentDashboard = () => {
                                   <div className="font-medium text-gray-900 dark:text-white text-xs truncate hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                                     {appointment.patientFullName?.split('-')[0].trim()}
                                   </div>
+                                  {appointment.patientFullName?.includes('-') && (
+                                    <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate leading-tight">
+                                      {appointment.patientFullName.split('-').slice(1).join('-').trim()}
+                                    </div>
+                                  )}
                                   <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                     <Phone className="h-2.5 w-2.5" />
                                     <span className="truncate">{appointment.patientMobile}</span>
