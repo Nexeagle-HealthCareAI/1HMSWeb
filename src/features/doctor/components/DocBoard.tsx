@@ -1715,7 +1715,7 @@ export const ClinicalDashboard: React.FC = () => {
                                     </TableCell>
                                     <TableCell className="hidden xl:table-cell py-4 align-middle text-sm text-gray-700 dark:text-gray-300">
                                       <div className="flex flex-col">
-                                        <span className="font-medium text-gray-900 dark:text-white">{appointment.patientFullName}</span>
+                                        <span className="font-medium text-gray-900 dark:text-white">{appointment.patientFullName?.split('-')[0].trim()}</span>
                                         {appointment.phone && (
                                           <span className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">{appointment.phone}</span>
                                         )}
@@ -1973,7 +1973,7 @@ export const ClinicalDashboard: React.FC = () => {
                                     {appointment.patientId}
                                     <ExternalLink className="h-3 w-3" />
                                   </button>
-                                  <p className="text-sm text-gray-900 dark:text-white truncate">{appointment.patientFullName}</p>
+                                  <p className="text-sm text-gray-900 dark:text-white truncate">{appointment.patientFullName?.split('-')[0].trim()}</p>
                                   {appointment.phone && (
                                     <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{appointment.phone}</p>
                                   )}
@@ -2079,7 +2079,7 @@ export const ClinicalDashboard: React.FC = () => {
                                     </TableCell>
                                     <TableCell className="py-4">
                                       <div className="flex flex-col">
-                                        <span className="font-medium text-gray-900 dark:text-white">{appointment.patientFullName}</span>
+                                        <span className="font-medium text-gray-900 dark:text-white">{appointment.patientFullName?.split('-')[0].trim()}</span>
                                         {appointment.phone && (
                                           <span className="text-xs text-gray-500 dark:text-gray-400">{appointment.phone}</span>
                                         )}
@@ -2250,7 +2250,7 @@ export const ClinicalDashboard: React.FC = () => {
                                     {appointment.patientId}
                                     <ExternalLink className="h-3 w-3" />
                                   </button>
-                                  <p className="text-sm text-gray-900 dark:text-white truncate">{appointment.patientFullName}</p>
+                                  <p className="text-sm text-gray-900 dark:text-white truncate">{appointment.patientFullName?.split('-')[0].trim()}</p>
                                   {appointment.phone && (
                                     <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{appointment.phone}</p>
                                   )}
@@ -2372,7 +2372,7 @@ export const ClinicalDashboard: React.FC = () => {
                                     </TableCell>
                                     <TableCell className="py-4">
                                       <div className="flex flex-col">
-                                        <span className="font-medium text-gray-900 dark:text-white">{appointment.patientFullName}</span>
+                                        <span className="font-medium text-gray-900 dark:text-white">{appointment.patientFullName?.split('-')[0].trim()}</span>
                                         {appointment.phone && (
                                           <span className="text-xs text-gray-500 dark:text-gray-400">{appointment.phone}</span>
                                         )}

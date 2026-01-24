@@ -1365,7 +1365,7 @@ export const AppointmentDashboard = () => {
                               <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                                 <div className="min-w-0 cursor-pointer" onClick={() => handlePatientClick(appointment)}>
                                   <div className="font-medium text-gray-900 dark:text-white text-xs truncate hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                                    {appointment.patientFullName}
+                                    {appointment.patientFullName?.split('-')[0].trim()}
                                   </div>
                                   <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                     <Phone className="h-2.5 w-2.5" />

@@ -61,13 +61,16 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
     paymentMode: '',
   });
 
+  const [referenceName, setReferenceName] = useState('');
+
   // Update form data when patient profile is loaded
   useEffect(() => {
     if (patientProfile) {
       setFormData({
         hospitalId: patientProfile.hospitalId,
         patientId: patientProfile.patientId,
-        fullName: patientProfile.fullName,
+        patientId: patientProfile.patientId,
+        fullName: patientProfile.fullName ? patientProfile.fullName.split('-')[0].trim() : '',
         mobile: patientProfile.mobile,
         ageYears: patientProfile.ageYears,
         sex: patientProfile.sex,
@@ -79,6 +82,14 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
         insuranceId: patientProfile.insuranceId || '',
         paymentMode: patientProfile.paymentMode || '',
       });
+      // Set reference name from the part after the first hyphen
+      if (patientProfile.fullName && patientProfile.fullName.includes('-')) {
+        const parts = patientProfile.fullName.split('-');
+        parts.shift(); // remove first part
+        setReferenceName(parts.join('-').trim());
+      } else {
+        setReferenceName('');
+      }
     }
   }, [patientProfile]);
 
@@ -95,7 +106,12 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    handleSave(formData);
+    // Combine Full Name and Reference Name
+    const combinedName = referenceName ? `${formData.fullName} - ${referenceName}` : formData.fullName;
+    handleSave({
+      ...formData,
+      fullName: combinedName
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -175,6 +191,18 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
                         onChange={(e) => handleInputChange('fullName', e.target.value)}
                         disabled={!isEditing}
                         required
+                        className={inputClassName}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label htmlFor="referenceName" className={labelClassName}>Reference Name (e.g. S/O, W/O)</Label>
+                      <Input
+                        id="referenceName"
+                        value={referenceName}
+                        onChange={(e) => setReferenceName(e.target.value)}
+                        disabled={!isEditing}
+                        placeholder="e.g. S/O Father Name"
                         className={inputClassName}
                       />
                     </div>
