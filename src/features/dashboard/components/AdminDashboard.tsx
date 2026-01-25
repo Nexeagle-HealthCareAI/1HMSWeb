@@ -344,7 +344,7 @@ export const AdminDashboard = () => {
 
 
       {/* Enhanced Top Navigation with Hospital ID and Modernized Nav Tabs - Mobile Optimized */}
-      <section className={`mb-4 sticky top-0 z-40 ${(currentView === 'system-config' || currentView === 'system-config-hospital') ? 'mx-2 sm:mx-4 lg:mx-6' : ''}`}>
+      <section className={`mb-4 z-40 ${(currentView === 'system-config' || currentView === 'system-config-hospital') ? 'mx-2 sm:mx-4 lg:mx-6' : ''}`}>
         <div className="flex flex-col xl:flex-row items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-white/20 dark:border-slate-800 rounded-2xl shadow-lg shadow-blue-100/10 dark:shadow-black/20 px-3 py-3 sm:px-6 sm:py-4 ring-1 ring-black/5 dark:ring-white/5">
           {/* Left: Title, badges, hospital ID */}
           <div className="flex flex-col gap-1 min-w-0 shrink-0 w-full xl:w-auto">
