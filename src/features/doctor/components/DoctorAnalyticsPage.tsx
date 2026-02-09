@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import {
     XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-    AreaChart, Area, PieChart, Pie, Cell, BarChart, Bar
+    AreaChart, Area, PieChart, Pie, Cell, BarChart, Bar, LabelList
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -540,6 +540,16 @@ interface StatsTableProps {
 }
 
 const StatsTable: React.FC<StatsTableProps> = ({ title, icon, data, accentColor, className, t }) => {
+    // Mapping accent color to hex for the chart
+    const colorMap: Record<string, string> = {
+        'emerald': '#10b981',
+        'amber': '#f59e0b',
+        'blue': '#3b82f6',
+        'purple': '#8b5cf6',
+        'indigo': '#6366f1'
+    };
+    const barColor = colorMap[accentColor] || colorMap['blue'];
+
     return (
         <Card className={`shadow-lg border-0 bg-white dark:bg-slate-900 rounded-3xl overflow-hidden ${className}`}>
             <CardHeader className="border-b border-gray-50 dark:border-slate-800 bg-gray-50/20 dark:bg-slate-900/10">
@@ -548,40 +558,55 @@ const StatsTable: React.FC<StatsTableProps> = ({ title, icon, data, accentColor,
                     {title}
                 </CardTitle>
             </CardHeader>
-            <CardContent className="p-0">
-                <div className="overflow-hidden">
-                    <table className="w-full text-sm">
-                        <thead className="bg-gray-50/50 dark:bg-slate-800/50 text-gray-500 dark:text-gray-400 font-semibold text-xs uppercase tracking-wider">
-                            <tr>
-                                <th className="px-4 py-3 text-left w-12">{t('analytics.medicalStats.rank')}</th>
-                                <th className="px-4 py-3 text-left">{t('analytics.medicalStats.internalName')}</th>
-                                <th className="px-4 py-3 text-right">{t('analytics.medicalStats.count')}</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
-                            {data.map((item, idx) => (
-                                <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/30 transition-colors group">
-                                    <td className="px-4 py-4 font-bold text-gray-400 group-hover:text-blue-500 transition-colors">
-                                        {item.rank}
-                                    </td>
-                                    <td className="px-4 py-4">
-                                        <div className="flex flex-col gap-1.5">
-                                            <span className="font-semibold text-gray-900 dark:text-white leading-none">{item.name}</span>
-                                            <div className="w-full h-1 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                                <div
-                                                    className={`h-full rounded-full bg-${accentColor}-500 transition-all duration-700`}
-                                                    style={{ width: `${item.percentage}%` }}
-                                                />
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-4 text-right font-mono font-bold text-gray-900 dark:text-white">
-                                        {item.count}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+            <CardContent className="pt-6 pb-4">
+                <div className="h-[280px]">
+                    {data.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={data} layout="vertical" margin={{ left: 10, right: 30, top: 0, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} strokeOpacity={0.1} />
+                                <XAxis type="number" hide />
+                                <YAxis
+                                    dataKey="name"
+                                    type="category"
+                                    axisLine={false}
+                                    tickLine={false}
+                                    fontSize={11}
+                                    width={120}
+                                    tick={{ fill: 'currentColor' }}
+                                    className="text-gray-600 dark:text-gray-400 font-medium"
+                                />
+                                <Tooltip
+                                    cursor={{ fill: 'transparent' }}
+                                    contentStyle={{
+                                        borderRadius: '12px',
+                                        border: 'none',
+                                        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                                        backgroundColor: 'rgb(255 255 255 / 0.95)'
+                                    }}
+                                    itemStyle={{ fontWeight: 'bold' }}
+                                    formatter={(value: number) => [value, t('analytics.medicalStats.count')]}
+                                />
+                                <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={24} fill={barColor}>
+                                    {data.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={barColor} fillOpacity={1 - (index * 0.15)} />
+                                    ))}
+                                    <LabelList
+                                        dataKey="count"
+                                        position="right"
+                                        offset={8}
+                                        className="fill-gray-900 dark:fill-white font-bold text-[11px]"
+                                    />
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div className="h-full flex flex-col items-center justify-center text-center p-8">
+                            <div className="p-3 bg-gray-50 dark:bg-slate-800 rounded-full mb-3">
+                                <Activity className="h-6 w-6 text-gray-300" />
+                            </div>
+                            <p className="text-sm text-gray-400">No data available</p>
+                        </div>
+                    )}
                 </div>
             </CardContent>
         </Card>
