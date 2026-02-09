@@ -1886,39 +1886,36 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
     const saveStatus = sectionSaveStatus[saveStatusKey];
 
     return (
-      <Card key={fieldId} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm transition-all duration-200">
-        <CardHeader
-          className="pb-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/70 transition-colors"
-          onClick={() => toggleSection(fieldId)}
-        >
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-gray-900 dark:text-gray-100">
+      <div key={fieldId} className="bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden transition-all hover:shadow-xl">
+        {/* Section Header */}
+        <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-3">
+            <div className="text-blue-600 dark:text-blue-400">
               {renderFieldIcon(fieldId)}
-              <span>{title}</span>
-              {saveStatus === 'saving' && (
-                <span className="ml-2 flex items-center gap-1 text-[10px] font-normal text-blue-600 animate-pulse">
-                  <div className="h-1.5 w-1.5 bg-blue-600 rounded-full animate-bounce"></div>
-                  Saving...
-                </span>
-              )}
-              {saveStatus === 'saved' && (
-                <span className="ml-2 flex items-center gap-1 text-[10px] font-normal text-green-600 animate-in fade-in duration-500">
-                  <CheckCircle className="h-3 w-3" />
-                  Saved
-                </span>
-              )}
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              {collapsedSections[fieldId] ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </div>
+            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 tracking-wide">
+              {title}
+            </h3>
+            {saveStatus === 'saving' && (
+              <span className="ml-2 flex items-center gap-1 text-[10px] font-normal text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-full">
+                <div className="h-1.5 w-1.5 bg-blue-600 rounded-full animate-bounce"></div>
+                Saving...
+              </span>
+            )}
+            {saveStatus === 'saved' && (
+              <span className="ml-2 flex items-center gap-1 text-[10px] font-normal text-green-600 bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded-full">
+                <CheckCircle className="h-3 w-3" />
+                Saved
+              </span>
+            )}
           </div>
-        </CardHeader>
-        {!collapsedSections[fieldId] && (
-          <CardContent className="bg-white dark:bg-gray-900">
-            {content}
-          </CardContent>
-        )}
-      </Card>
+        </div>
+
+        {/* Section Content */}
+        <div className="p-5">
+          {content}
+        </div>
+      </div>
     );
   };
 
@@ -2108,12 +2105,12 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
+    <div className="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
 
-      <div className="flex min-h-screen max-w-6xl flex-col px-3 py-4 sm:px-6 lg:px-8 gap-4">
+      <div className="flex max-w-6xl flex-col px-3 py-4 sm:px-6 lg:px-8 gap-4">
         {/* Main Content */}
         <div className="flex-1 overflow-visible">
-          <div className="w-full space-y-4 sm:space-y-5">
+          <div className="w-full space-y-4">
 
             {/* Vitals Section */}
             {renderCollapsibleSection(
