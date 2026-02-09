@@ -17,7 +17,9 @@ import {
   Edit,
   CheckCircle,
   AlertCircle,
-  AlertTriangle
+  AlertTriangle,
+  Cloud,
+  ClipboardList
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -278,7 +280,7 @@ export const PatientProfilePage: React.FC = () => {
   const navigationItems = [
     { id: 'overview', label: 'Overview', icon: User },
     { id: 'timeline', label: 'Timeline', icon: History },
-    { id: 'prescriptions', label: 'E-Prescription', icon: FileText },
+    { id: 'prescriptions', label: 'ePrescription Pad', icon: ClipboardList },
     { id: 'lab-tests', label: 'Lab Tests', icon: TestTube },
     { id: 'prescription-fields', label: 'Prescription Fields', icon: Settings },
   ];
@@ -537,6 +539,12 @@ export const PatientProfilePage: React.FC = () => {
                           <>
                             <activeTabMeta.icon className="h-5 w-5 text-primary" />
                             <span>{activeTabMeta.label}</span>
+                            {activeTab === 'prescriptions' && (
+                              <div className="flex items-center gap-1.5 text-xs font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 px-3 py-1.5 rounded-full shadow-md ml-2">
+                                <Cloud className="h-3.5 w-3.5 text-white" />
+                                <span>Auto-save enabled</span>
+                              </div>
+                            )}
                           </>
                         )}
                       </div>

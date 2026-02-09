@@ -2110,18 +2110,10 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
 
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-3 py-4 sm:px-6 lg:px-8 gap-4">
+      <div className="flex min-h-screen max-w-6xl flex-col px-3 py-4 sm:px-6 lg:px-8 gap-4">
         {/* Main Content */}
         <div className="flex-1 overflow-visible">
           <div className="w-full space-y-4 sm:space-y-5">
-
-            {/* Auto-save Indicator */}
-            <div className="flex justify-end items-center px-1">
-              <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 shadow-sm transition-all hover:bg-gray-200 dark:hover:bg-gray-700">
-                <Cloud className="h-3.5 w-3.5 text-blue-500" />
-                <span>Auto-save enabled</span>
-              </div>
-            </div>
 
             {/* Vitals Section */}
             {renderCollapsibleSection(
@@ -2137,7 +2129,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                     <span>Vitals loaded from this visit</span>
                   </div>
                 )}
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Blood Pressure */}
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
@@ -2551,7 +2543,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                             key={item.id}
                             variant={isSelected ? 'default' : 'outline'}
                             size="sm"
-                            className="justify-start h-auto min-h-8 text-xs md:text-sm rounded-full px-3 py-2"
+                            className="justify-start h-auto min-h-5 text-[10px] md:text-[11px] rounded-full px-1.5 py-0.5"
                             onClick={() => commitChiefComplaintSelection(item.name)}
                           >
                             {item.name}
@@ -2743,7 +2735,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           key={item.id}
                           variant={isSelected ? 'default' : 'outline'}
                           size="sm"
-                          className="justify-start h-auto min-h-8 text-xs md:text-sm rounded-full px-3 py-2"
+                          className="justify-start h-auto min-h-5 text-[10px] md:text-[11px] rounded-full px-1.5 py-0.5"
                           onClick={() => addHistoryItem(item.name)}
                         >
                           {item.name}
@@ -2935,7 +2927,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           key={item.id}
                           variant={isSelected ? 'default' : 'outline'}
                           size="sm"
-                          className="justify-start h-auto min-h-8 text-xs md:text-sm rounded-full px-3 py-2"
+                          className="justify-start h-auto min-h-5 text-[10px] md:text-[11px] rounded-full px-1.5 py-0.5"
                           onClick={() => addComorbidityItem(item.name)}
                         >
                           {item.name}
@@ -3127,7 +3119,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           key={item.id}
                           variant={isSelected ? 'default' : 'outline'}
                           size="sm"
-                          className="justify-start h-auto min-h-8 text-xs md:text-sm rounded-full px-3 py-2"
+                          className="justify-start h-auto min-h-5 text-[10px] md:text-[11px] rounded-full px-1.5 py-0.5"
                           onClick={() => addExaminationItem(item.name)}
                         >
                           {item.name}
@@ -3329,7 +3321,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                             key={item.id}
                             variant={isSelected ? 'default' : 'outline'}
                             size="sm"
-                            className="justify-start h-auto min-h-8 text-xs md:text-sm rounded-full px-3 py-2"
+                            className="justify-start h-auto min-h-5 text-[10px] md:text-[11px] rounded-full px-1.5 py-0.5"
                             onClick={() => addInvestigationItem(item.name)}
                           >
                             {item.name}
@@ -3525,7 +3517,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                             key={item.id}
                             variant={isSelected ? 'default' : 'outline'}
                             size="sm"
-                            className="justify-start h-auto min-h-8 text-xs md:text-sm rounded-full px-3 py-2"
+                            className="justify-start h-auto min-h-5 text-[10px] md:text-[11px] rounded-full px-1.5 py-0.5"
                             onClick={() => addProcedureItem(item.name)}
                           >
                             {item.name}
@@ -3718,7 +3710,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           key={item.id}
                           variant={isSelected ? 'default' : 'outline'}
                           size="sm"
-                          className="justify-start h-auto min-h-8 text-xs md:text-sm rounded-full px-3 py-2"
+                          className="justify-start h-auto min-h-5 text-[10px] md:text-[11px] rounded-full px-1.5 py-0.5"
                           onClick={() => addDiagnosisItem(item.name)}
                         >
                           {item.name}
@@ -4200,7 +4192,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                               key={freq}
                               size="sm"
                               variant="outline"
-                              className="h-7 px-2"
+                              className="h-6 px-1.5 text-[11px]"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 const current = medication.frequency || '';
@@ -4218,7 +4210,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                               key={instr}
                               size="sm"
                               variant="outline"
-                              className="h-7 px-2"
+                              className="h-6 px-1.5 text-[11px]"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 const current = medication.instructions || '';
