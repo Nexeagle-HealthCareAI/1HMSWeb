@@ -601,7 +601,7 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   }
 
   if (procedures.length > 0) {
-    const hProc = await renderTabularItem('Procedures', procedures.join(', '), leftPad, contentWidth, false);
+    const hProc = await renderTabularItem('Procedures & Treatment Plan', procedures.join(', '), leftPad, contentWidth, false);
     if (hProc) cursorY -= (hProc + 6);
   }
 

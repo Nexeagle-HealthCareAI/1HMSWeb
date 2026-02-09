@@ -3345,7 +3345,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                 {/* Procedures */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium text-gray-700">Procedures</Label>
+                    <Label className="text-sm font-medium text-gray-700">Procedures & Treatment Plan</Label>
                   </div>
 
                   <div ref={procedureRootRef} className="space-y-2">

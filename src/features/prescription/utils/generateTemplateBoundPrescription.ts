@@ -213,7 +213,7 @@ export const generateTemplateBoundPrescription = async ({ templateFile, layout, 
   await writeList('Chief complaints:', chiefComplaints);
   await writeList('Comorbidities:', comorbidities);
   await writeList('Investigations:', investigations);
-  await writeList('Procedures:', procedures);
+  await writeList('Procedures & Treatment Plan:', procedures);
 
   if (medicines.length) {
     await writeLine('Medicines:', { bold: true });
