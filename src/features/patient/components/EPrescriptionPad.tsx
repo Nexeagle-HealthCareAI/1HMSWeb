@@ -1893,7 +1893,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             <div className="text-blue-600 dark:text-blue-400">
               {renderFieldIcon(fieldId)}
             </div>
-            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 tracking-wide">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 tracking-wide">
               {title}
             </h3>
             {saveStatus === 'saving' && (
@@ -2107,7 +2107,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
   return (
     <div className="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
 
-      <div className="flex max-w-6xl flex-col px-3 py-4 sm:px-6 lg:px-8 gap-4">
+      <div className="flex max-w-7xl flex-col px-3 py-4 sm:px-6 lg:px-8 gap-4">
         {/* Main Content */}
         <div className="flex-1 overflow-visible">
           <div className="w-full space-y-4">
@@ -2116,7 +2116,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             {renderCollapsibleSection(
               'vitals',
               'Vitals',
-              <div className="bg-lime-50/60 dark:bg-lime-900/40 border border-lime-200 dark:border-lime-700 rounded-lg p-4 space-y-3">
+              <div className="bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-lg p-4 space-y-3">
                 {isLoadingVitals && (
                   <div className="text-xs text-muted-foreground text-gray-600 dark:text-gray-300">Loading vitals...</div>
                 )}
@@ -2126,12 +2126,12 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                     <span>Vitals loaded from this visit</span>
                   </div>
                 )}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2">
                   {/* Blood Pressure */}
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                      <Label className="text-xs font-medium text-gray-600 dark:text-gray-200">Blood Pressure (BP)</Label>
+                      <Label className="text-sm font-medium text-gray-600 dark:text-gray-200">Blood Pressure (BP)</Label>
                     </div>
                     <div className="relative">
                       <Input
@@ -2141,7 +2141,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           ...prev,
                           vitals: { ...prev.vitals, bloodPressure: e.target.value }
                         }))}
-                        className="h-8 text-sm border-gray-200 dark:border-gray-700 focus:border-blue-400 dark:focus:border-blue-300 focus:ring-1 focus:ring-blue-100 dark:focus:ring-blue-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
+                        className="h-10 text-base border-gray-200 dark:border-gray-700 focus:border-blue-400 dark:focus:border-blue-300 focus:ring-1 focus:ring-blue-100 dark:focus:ring-blue-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
                       />
                     </div>
                     <div className="h-4 mt-1">
@@ -2167,7 +2167,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
-                      <Label className="text-xs font-medium text-gray-600 dark:text-gray-200">Temperature (°F/°C)</Label>
+                      <Label className="text-sm font-medium text-gray-600 dark:text-gray-200">Temperature (°F/°C)</Label>
                     </div>
                     <Input
                       placeholder="98.6°F"
@@ -2176,7 +2176,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                         ...prev,
                         vitals: { ...prev.vitals, temperature: e.target.value }
                       }))}
-                      className="h-8 text-sm border-gray-200 dark:border-gray-700 focus:border-red-400 dark:focus:border-red-300 focus:ring-1 focus:ring-red-100 dark:focus:ring-red-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
+                      className="h-10 text-base border-gray-200 dark:border-gray-700 focus:border-red-400 dark:focus:border-red-300 focus:ring-1 focus:ring-red-100 dark:focus:ring-red-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
                     />
                   </div>
 
@@ -2184,7 +2184,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                      <Label className="text-xs font-medium text-gray-600 dark:text-gray-200">Heart Rate (bpm)</Label>
+                      <Label className="text-sm font-medium text-gray-600 dark:text-gray-200">Heart Rate (bpm)</Label>
                     </div>
                     <Input
                       placeholder="72 bpm"
@@ -2193,7 +2193,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                         ...prev,
                         vitals: { ...prev.vitals, heartRate: e.target.value }
                       }))}
-                      className="h-8 text-sm border-gray-200 dark:border-gray-700 focus:border-green-400 dark:focus:border-green-300 focus:ring-1 focus:ring-green-100 dark:focus:ring-green-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
+                      className="h-10 text-base border-gray-200 dark:border-gray-700 focus:border-green-400 dark:focus:border-green-300 focus:ring-1 focus:ring-green-100 dark:focus:ring-green-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
                     />
                   </div>
 
@@ -2201,7 +2201,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
-                      <Label className="text-xs font-medium text-gray-600 dark:text-gray-200">Oxygen Saturation (SpO₂)</Label>
+                      <Label className="text-sm font-medium text-gray-600 dark:text-gray-200">Oxygen Saturation (SpO₂)</Label>
                     </div>
                     <Input
                       placeholder="98%"
@@ -2210,7 +2210,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                         ...prev,
                         vitals: { ...prev.vitals, oxygenSaturation: e.target.value }
                       }))}
-                      className="h-8 text-sm border-gray-200 dark:border-gray-700 focus:border-purple-400 dark:focus:border-purple-300 focus:ring-1 focus:ring-purple-100 dark:focus:ring-purple-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
+                      className="h-10 text-base border-gray-200 dark:border-gray-700 focus:border-purple-400 dark:focus:border-purple-300 focus:ring-1 focus:ring-purple-100 dark:focus:ring-purple-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
                     />
                   </div>
 
@@ -2218,7 +2218,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className="w-1.5 h-1.5 bg-teal-500 rounded-full"></div>
-                      <Label className="text-xs font-medium text-gray-600 dark:text-gray-200">Respiratory Rate (breaths/min)</Label>
+                      <Label className="text-sm font-medium text-gray-600 dark:text-gray-200">Respiratory Rate (breaths/min)</Label>
                     </div>
                     <Input
                       placeholder="16"
@@ -2227,7 +2227,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                         ...prev,
                         vitals: { ...prev.vitals, respiratoryRate: e.target.value }
                       }))}
-                      className="h-8 text-sm border-gray-200 dark:border-gray-700 focus:border-teal-400 dark:focus:border-teal-300 focus:ring-1 focus:ring-teal-100 dark:focus:ring-teal-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
+                      className="h-10 text-base border-gray-200 dark:border-gray-700 focus:border-teal-400 dark:focus:border-teal-300 focus:ring-1 focus:ring-teal-100 dark:focus:ring-teal-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
                     />
                   </div>
 
@@ -2235,7 +2235,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className="w-1.5 h-1.5 bg-gray-500 rounded-full"></div>
-                      <Label className="text-xs font-medium text-gray-600 dark:text-gray-200">Weight (kg)</Label>
+                      <Label className="text-sm font-medium text-gray-600 dark:text-gray-200">Weight (kg)</Label>
                     </div>
                     <Input
                       placeholder="70 kg"
@@ -2256,7 +2256,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           };
                         });
                       }}
-                      className="h-8 text-sm border-gray-200 dark:border-gray-700 focus:border-gray-400 dark:focus:border-gray-500 focus:ring-1 focus:ring-gray-100 dark:focus:ring-gray-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
+                      className="h-10 text-base border-gray-200 dark:border-gray-700 focus:border-gray-400 dark:focus:border-gray-500 focus:ring-1 focus:ring-gray-100 dark:focus:ring-gray-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
                     />
                   </div>
 
@@ -2264,7 +2264,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className="w-1.5 h-1.5 bg-gray-500 rounded-full"></div>
-                      <Label className="text-xs font-medium text-gray-600 dark:text-gray-200">Height (cm)</Label>
+                      <Label className="text-sm font-medium text-gray-600 dark:text-gray-200">Height (cm)</Label>
                     </div>
                     <Input
                       placeholder="170 cm"
@@ -2285,7 +2285,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           };
                         });
                       }}
-                      className="h-8 text-sm border-gray-200 dark:border-gray-700 focus:border-gray-400 dark:focus:border-gray-500 focus:ring-1 focus:ring-gray-100 dark:focus:ring-gray-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
+                      className="h-10 text-base border-gray-200 dark:border-gray-700 focus:border-gray-400 dark:focus:border-gray-500 focus:ring-1 focus:ring-gray-100 dark:focus:ring-gray-900/40 placeholder:text-gray-400 placeholder:opacity-70 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
                     />
                   </div>
 
@@ -2293,14 +2293,14 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                      <Label className="text-xs font-medium text-gray-600 dark:text-gray-200">BMI (kg/m²)</Label>
+                      <Label className="text-sm font-medium text-gray-600 dark:text-gray-200">BMI (kg/m²)</Label>
                     </div>
                     <div className="relative">
                       <Input
-                        placeholder="24.2"
+                        placeholder=""
                         value={prescriptionData.vitals.bmi}
                         readOnly
-                        className="h-8 text-sm border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-500 cursor-not-allowed"
+                        className="h-10 text-base border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-500 cursor-not-allowed"
                       />
                     </div>
                     <div className="h-4 mt-1">
@@ -2325,14 +2325,14 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             {renderCollapsibleSection(
               'chiefComplaint',
               'Chief Complaint',
-              <div className="space-y-3 bg-teal-50/60 dark:bg-teal-900/40 border border-teal-200 dark:border-teal-700 rounded-lg p-4">
+              <div className="space-y-3 bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-lg p-4">
                 <div ref={chiefComplaintRootRef} className="space-y-2">
                   {selectedChiefComplaints.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {selectedChiefComplaints.map(item => (
                         <div
                           key={item}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 text-xs font-medium text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-green-200 bg-green-100 text-sm font-medium text-green-900 dark:border-green-800 dark:bg-green-900/40 dark:text-green-100"
                         >
                           <span>{item}</span>
                           <button
@@ -2433,10 +2433,9 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                       }}
                       onFocus={() => {
                         setChiefComplaintOpen(true);
-                        setChiefComplaintOptions([]);
                         setChiefComplaintActiveIndex(0);
                       }}
-                      onBlur={() => setTimeout(() => setChiefComplaintOpen(false), 50)}
+                      onBlur={() => setTimeout(() => setChiefComplaintOpen(false), 200)}
                       onKeyDown={(e) => {
                         const personal = chiefComplaintOptions.filter(item => item.source === 'personal');
                         const general = chiefComplaintOptions.filter(item => item.source === 'general');
@@ -2462,75 +2461,95 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                         }
                       }}
                       placeholder="Search or type the main reason for the visit..."
-                      className="text-sm"
+                      className="h-10 text-base pr-24"
                     />
 
+                    {/* Quick Add Button inside search bar */}
+                    {chiefComplaintQuery.trim() && (
+                      <button
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          commitChiefComplaintSelection(chiefComplaintQuery.trim());
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded-md bg-blue-500 hover:bg-blue-600 text-white shadow-sm transition-colors"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Add</span>
+                      </button>
+                    )}
+
+
                     {chiefComplaintOpen && (
-                      <div className="absolute left-0 right-0 top-full z-10 mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-md shadow-lg max-h-60 overflow-y-auto p-3">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <div className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 uppercase">Personal</div>
-                            <div className="flex flex-col gap-1">
-                              {chiefComplaintOptions.filter(item => item.source === 'personal').map((item, idx) => {
-                                const isActive = chiefComplaintActiveIndex === idx;
-                                return (
-                                  <button
-                                    key={item.id}
-                                    type="button"
-                                    className={`flex items-center justify-between w-full rounded-md px-3 py-2 text-left text-sm border ${isActive ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/40' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-gray-600 dark:hover:bg-gray-800'}`}
-                                    onMouseEnter={() => setChiefComplaintActiveIndex(idx)}
-                                    onMouseDown={(e) => {
-                                      e.preventDefault();
-                                      commitChiefComplaintSelection(item.name);
-                                    }}
-                                  >
-                                    <span>{item.name}</span>
-                                  </button>
-                                );
-                              })}
-                              {chiefComplaintOptions.filter(item => item.source === 'personal').length === 0 && (
-                                <div className="text-xs text-gray-500 dark:text-gray-400 px-3 py-2">No personal results</div>
-                              )}
+                      <div className="absolute left-0 right-0 top-full z-10 mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-md shadow-lg overflow-hidden">
+                        <div className="max-h-60 overflow-y-auto p-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <div className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 uppercase">Personal</div>
+                              <div className="flex flex-col gap-1">
+                                {chiefComplaintOptions.filter(item => item.source === 'personal').map((item, idx) => {
+                                  const isActive = chiefComplaintActiveIndex === idx;
+                                  return (
+                                    <button
+                                      key={item.id}
+                                      type="button"
+                                      className={`flex items-center justify-between w-full rounded-md px-3 py-2 text-left text-sm border ${isActive ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/40' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-gray-600 dark:hover:bg-gray-800'}`}
+                                      onMouseEnter={() => setChiefComplaintActiveIndex(idx)}
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        commitChiefComplaintSelection(item.name);
+                                      }}
+                                    >
+                                      <span>{item.name}</span>
+                                    </button>
+                                  );
+                                })}
+                                {chiefComplaintOptions.filter(item => item.source === 'personal').length === 0 && (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 px-3 py-2">No personal results</div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                          <div className="space-y-2">
-                            <div className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 uppercase">General</div>
-                            <div className="flex flex-col gap-1">
-                              {(() => {
-                                const personalCount = chiefComplaintOptions.filter(item => item.source === 'personal').length;
-                                return chiefComplaintOptions
-                                  .filter(item => item.source === 'general')
-                                  .map((item, idx) => {
-                                    const globalIdx = personalCount + idx;
-                                    const isActive = chiefComplaintActiveIndex === globalIdx;
-                                    return (
-                                      <button
-                                        key={item.id}
-                                        type="button"
-                                        className={`flex items-center justify-between w-full rounded-md px-3 py-2 text-left text-sm border ${isActive ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/40' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-gray-600 dark:hover:bg-gray-800'}`}
-                                        onMouseEnter={() => setChiefComplaintActiveIndex(globalIdx)}
-                                        onMouseDown={(e) => {
-                                          e.preventDefault();
-                                          commitChiefComplaintSelection(item.name);
-                                        }}
-                                      >
-                                        <span>{item.name}</span>
-                                      </button>
-                                    );
-                                  });
-                              })()}
-                              {chiefComplaintOptions.filter(item => item.source === 'general').length === 0 && (
-                                <div className="text-xs text-gray-500 dark:text-gray-400 px-3 py-2">No general results</div>
-                              )}
+                            <div className="space-y-2">
+                              <div className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 uppercase">General</div>
+                              <div className="flex flex-col gap-1">
+                                {(() => {
+                                  const personalCount = chiefComplaintOptions.filter(item => item.source === 'personal').length;
+                                  return chiefComplaintOptions
+                                    .filter(item => item.source === 'general')
+                                    .map((item, idx) => {
+                                      const globalIdx = personalCount + idx;
+                                      const isActive = chiefComplaintActiveIndex === globalIdx;
+                                      return (
+                                        <button
+                                          key={item.id}
+                                          type="button"
+                                          className={`flex items-center justify-between w-full rounded-md px-3 py-2 text-left text-sm border ${isActive ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/40' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-gray-600 dark:hover:bg-gray-800'}`}
+                                          onMouseEnter={() => setChiefComplaintActiveIndex(globalIdx)}
+                                          onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            commitChiefComplaintSelection(item.name);
+                                          }}
+                                        >
+                                          <span>{item.name}</span>
+                                        </button>
+                                      );
+                                    });
+                                })()}
+                                {chiefComplaintOptions.filter(item => item.source === 'general').length === 0 && (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 px-3 py-2">No general results</div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
+
+
                       </div>
                     )}
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <div className="text-xs font-semibold text-gray-600 dark:text-gray-300">Quick picks</div>
+                  <div className="text-sm font-semibold text-gray-600 dark:text-gray-300">Quick picks</div>
                   <div className="space-y-2">
                     <div className="flex flex-wrap gap-2">
                       {quickPicks.chiefComplaint.map(item => {
@@ -2540,7 +2559,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                             key={item.id}
                             variant={isSelected ? 'default' : 'outline'}
                             size="sm"
-                            className="justify-start h-auto min-h-5 text-[10px] md:text-[11px] rounded-full px-1.5 py-0.5"
+                            className="justify-start h-auto min-h-6 text-xs md:text-sm rounded-full px-2.5 py-1"
                             onClick={() => commitChiefComplaintSelection(item.name)}
                           >
                             {item.name}
@@ -2558,14 +2577,14 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             {renderCollapsibleSection(
               'history',
               'History',
-              <div className="space-y-3 bg-orange-50/60 dark:bg-orange-900/40 border border-orange-200 dark:border-orange-700 rounded-lg p-4">
+              <div className="space-y-3 bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-lg p-4">
                 <div ref={historyRootRef} className="space-y-2">
                   {selectedHistoryItems.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {selectedHistoryItems.map(item => (
                         <div
                           key={item}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 text-xs font-medium text-gray-700"
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-green-200 bg-green-100 text-sm font-medium text-green-900 dark:border-green-800 dark:bg-green-900/40 dark:text-green-100"
                         >
                           <span>{item}</span>
                           <button
@@ -2651,8 +2670,24 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                         }
                       }}
                       placeholder="Search or type history items..."
-                      className="text-sm"
+                      className="h-10 text-base pr-24"
                     />
+
+                    {/* Quick Add Button inside search bar */}
+                    {historyQuery.trim() && (
+                      <button
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          commitHistorySelection(historyQuery.trim());
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded-md bg-blue-500 hover:bg-blue-600 text-white shadow-sm transition-colors"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Add</span>
+                      </button>
+                    )}
+
 
                     {historyOpen && (
                       <div className="absolute left-0 right-0 top-full z-10 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto p-3">
@@ -2723,7 +2758,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                 </div>
 
                 <div className="space-y-2">
-                  <div className="text-xs font-semibold text-gray-600">Quick picks</div>
+                  <div className="text-sm font-semibold text-gray-600">Quick picks</div>
                   <div className="flex flex-wrap gap-2">
                     {quickPicks.history.map(item => {
                       const isSelected = selectedHistoryItems.includes(item.name);
@@ -2732,7 +2767,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           key={item.id}
                           variant={isSelected ? 'default' : 'outline'}
                           size="sm"
-                          className="justify-start h-auto min-h-5 text-[10px] md:text-[11px] rounded-full px-1.5 py-0.5"
+                          className="justify-start h-auto min-h-6 text-xs md:text-sm rounded-full px-2.5 py-1"
                           onClick={() => addHistoryItem(item.name)}
                         >
                           {item.name}
@@ -2750,14 +2785,14 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             {renderCollapsibleSection(
               'comorbidity',
               'Comorbidity',
-              <div className="space-y-3 bg-pink-50/60 dark:bg-pink-900/40 border border-pink-200 dark:border-pink-700 rounded-lg p-4">
+              <div className="space-y-3 bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-lg p-4">
                 <div ref={comorbidityRootRef} className="space-y-2">
                   {selectedComorbidities.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {selectedComorbidities.map(item => (
                         <div
                           key={item}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 text-xs font-medium text-gray-700"
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-green-200 bg-green-100 text-sm font-medium text-green-900 dark:border-green-800 dark:bg-green-900/40 dark:text-green-100"
                         >
                           <span>{item}</span>
                           <button
@@ -2843,8 +2878,24 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                         }
                       }}
                       placeholder="Search or type comorbidity items..."
-                      className="text-sm"
+                      className="h-10 text-base pr-24"
                     />
+
+                    {/* Quick Add Button inside search bar */}
+                    {comorbidityQuery.trim() && (
+                      <button
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          commitComorbiditySelection(comorbidityQuery.trim());
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded-md bg-blue-500 hover:bg-blue-600 text-white shadow-sm transition-colors"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Add</span>
+                      </button>
+                    )}
+
 
                     {comorbidityOpen && (
                       <div className="absolute left-0 right-0 top-full z-10 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto p-3">
@@ -2915,7 +2966,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                 </div>
 
                 <div className="space-y-2">
-                  <div className="text-xs font-semibold text-gray-600">Quick picks</div>
+                  <div className="text-sm font-semibold text-gray-600">Quick picks</div>
                   <div className="flex flex-wrap gap-2">
                     {quickPicks.comorbidity.map(item => {
                       const isSelected = selectedComorbidities.includes(item.name);
@@ -2924,7 +2975,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           key={item.id}
                           variant={isSelected ? 'default' : 'outline'}
                           size="sm"
-                          className="justify-start h-auto min-h-5 text-[10px] md:text-[11px] rounded-full px-1.5 py-0.5"
+                          className="justify-start h-auto min-h-6 text-xs md:text-sm rounded-full px-2.5 py-1"
                           onClick={() => addComorbidityItem(item.name)}
                         >
                           {item.name}
@@ -2942,14 +2993,14 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             {renderCollapsibleSection(
               'examination',
               'Examination',
-              <div className="space-y-3 bg-purple-50/60 dark:bg-purple-900/40 border border-purple-200 dark:border-purple-700 rounded-lg p-4">
+              <div className="space-y-3 bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-lg p-4">
                 <div ref={examinationRootRef} className="space-y-2">
                   {selectedExaminations.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {selectedExaminations.map(item => (
                         <div
                           key={item}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 text-xs font-medium text-gray-700"
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-green-200 bg-green-100 text-sm font-medium text-green-900 dark:border-green-800 dark:bg-green-900/40 dark:text-green-100"
                         >
                           <span>{item}</span>
                           <button
@@ -3035,8 +3086,24 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                         }
                       }}
                       placeholder="Search or type examination findings..."
-                      className="text-sm"
+                      className="h-10 text-base pr-24"
                     />
+
+                    {/* Quick Add Button inside search bar */}
+                    {examinationQuery.trim() && (
+                      <button
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          commitExaminationSelection(examinationQuery.trim());
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded-md bg-blue-500 hover:bg-blue-600 text-white shadow-sm transition-colors"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Add</span>
+                      </button>
+                    )}
+
 
                     {examinationOpen && (
                       <div className="absolute left-0 right-0 top-full z-10 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto p-3">
@@ -3107,7 +3174,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                 </div>
 
                 <div className="space-y-2">
-                  <div className="text-xs font-semibold text-gray-600">Quick picks</div>
+                  <div className="text-sm font-semibold text-gray-600">Quick picks</div>
                   <div className="flex flex-wrap gap-2">
                     {quickPicks.examination.map(item => {
                       const isSelected = selectedExaminations.includes(item.name);
@@ -3116,7 +3183,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           key={item.id}
                           variant={isSelected ? 'default' : 'outline'}
                           size="sm"
-                          className="justify-start h-auto min-h-5 text-[10px] md:text-[11px] rounded-full px-1.5 py-0.5"
+                          className="justify-start h-auto min-h-6 text-xs md:text-sm rounded-full px-2.5 py-1"
                           onClick={() => addExaminationItem(item.name)}
                         >
                           {item.name}
@@ -3134,7 +3201,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             {renderCollapsibleSection(
               'orders',
               'Orders: Investigation/Procedures & Treatment Plan',
-              <div className="space-y-6 bg-indigo-50/60 dark:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-700 rounded-lg p-4">
+              <div className="space-y-6 bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-lg p-4">
                 {/* Investigations */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -3147,7 +3214,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                         {selectedInvestigations.map(item => (
                           <div
                             key={item}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 text-xs font-medium text-gray-700"
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-green-200 bg-green-100 text-sm font-medium text-green-900 dark:border-green-800 dark:bg-green-900/40 dark:text-green-100"
                           >
                             <span>{item}</span>
                             <button
@@ -3234,8 +3301,24 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           }
                         }}
                         placeholder="Search or type investigations..."
-                        className="text-sm"
+                        className="h-10 text-base pr-24"
                       />
+
+                      {/* Quick Add Button inside search bar */}
+                      {investigationQuery.trim() && (
+                        <button
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            commitInvestigationSelection(investigationQuery.trim());
+                          }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded-md bg-blue-500 hover:bg-blue-600 text-white shadow-sm transition-colors"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          <span>Add</span>
+                        </button>
+                      )}
+
 
                       {investigationOpen && (
                         <div className="absolute left-0 right-0 top-full z-10 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto p-3">
@@ -3309,7 +3392,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                   </div>
 
                   <div className="space-y-2">
-                    <div className="text-xs font-semibold text-gray-600">Quick picks</div>
+                    <div className="text-sm font-semibold text-gray-600">Quick picks</div>
                     <div className="flex flex-wrap gap-2">
                       {quickPicks.investigations.map(item => {
                         const isSelected = selectedInvestigations.includes(item.name);
@@ -3318,7 +3401,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                             key={item.id}
                             variant={isSelected ? 'default' : 'outline'}
                             size="sm"
-                            className="justify-start h-auto min-h-5 text-[10px] md:text-[11px] rounded-full px-1.5 py-0.5"
+                            className="justify-start h-auto min-h-6 text-xs md:text-sm rounded-full px-2.5 py-1"
                             onClick={() => addInvestigationItem(item.name)}
                           >
                             {item.name}
@@ -3343,7 +3426,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                         {selectedProcedures.map(item => (
                           <div
                             key={item}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 text-xs font-medium text-gray-700"
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-green-200 bg-green-100 text-sm font-medium text-green-900 dark:border-green-800 dark:bg-green-900/40 dark:text-green-100"
                           >
                             <span>{item}</span>
                             <button
@@ -3430,8 +3513,24 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           }
                         }}
                         placeholder="Search or type procedures..."
-                        className="text-sm"
+                        className="h-10 text-base pr-24"
                       />
+
+                      {/* Quick Add Button inside search bar */}
+                      {procedureQuery.trim() && (
+                        <button
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            commitProcedureSelection(procedureQuery.trim());
+                          }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded-md bg-blue-500 hover:bg-blue-600 text-white shadow-sm transition-colors"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          <span>Add</span>
+                        </button>
+                      )}
+
 
                       {procedureOpen && (
                         <div className="absolute left-0 right-0 top-full z-10 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto p-3">
@@ -3505,7 +3604,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                   </div>
 
                   <div className="space-y-2">
-                    <div className="text-xs font-semibold text-gray-600">Quick picks</div>
+                    <div className="text-sm font-semibold text-gray-600">Quick picks</div>
                     <div className="flex flex-wrap gap-2">
                       {quickPicks.procedures.map(item => {
                         const isSelected = selectedProcedures.includes(item.name);
@@ -3514,7 +3613,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                             key={item.id}
                             variant={isSelected ? 'default' : 'outline'}
                             size="sm"
-                            className="justify-start h-auto min-h-5 text-[10px] md:text-[11px] rounded-full px-1.5 py-0.5"
+                            className="justify-start h-auto min-h-6 text-xs md:text-sm rounded-full px-2.5 py-1"
                             onClick={() => addProcedureItem(item.name)}
                           >
                             {item.name}
@@ -3533,14 +3632,14 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             {renderCollapsibleSection(
               'diagnosis',
               'Diagnosis',
-              <div className="space-y-3 bg-cyan-50/60 dark:bg-cyan-900/40 border border-cyan-200 dark:border-cyan-700 rounded-lg p-4">
+              <div className="space-y-3 bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-lg p-4">
                 <div ref={diagnosisRootRef} className="space-y-2">
                   {selectedDiagnoses.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {selectedDiagnoses.map(item => (
                         <div
                           key={item}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 text-xs font-medium text-gray-700"
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-green-200 bg-green-100 text-sm font-medium text-green-900 dark:border-green-800 dark:bg-green-900/40 dark:text-green-100"
                         >
                           <span>{item}</span>
                           <button
@@ -3626,8 +3725,24 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                         }
                       }}
                       placeholder="Search or type diagnosis..."
-                      className="text-sm"
+                      className="h-10 text-base pr-24"
                     />
+
+                    {/* Quick Add Button inside search bar */}
+                    {diagnosisQuery.trim() && (
+                      <button
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          commitDiagnosisSelection(diagnosisQuery.trim());
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded-md bg-blue-500 hover:bg-blue-600 text-white shadow-sm transition-colors"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Add</span>
+                      </button>
+                    )}
+
 
                     {diagnosisOpen && (
                       <div className="absolute left-0 right-0 top-full z-10 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto p-3">
@@ -3698,7 +3813,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                 </div>
 
                 <div className="space-y-2">
-                  <div className="text-xs font-semibold text-gray-600">Quick picks</div>
+                  <div className="text-sm font-semibold text-gray-600">Quick picks</div>
                   <div className="flex flex-wrap gap-2">
                     {quickPicks.diagnosis.map(item => {
                       const isSelected = selectedDiagnoses.includes(item.name);
@@ -3707,7 +3822,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           key={item.id}
                           variant={isSelected ? 'default' : 'outline'}
                           size="sm"
-                          className="justify-start h-auto min-h-5 text-[10px] md:text-[11px] rounded-full px-1.5 py-0.5"
+                          className="justify-start h-auto min-h-6 text-xs md:text-sm rounded-full px-2.5 py-1"
                           onClick={() => addDiagnosisItem(item.name)}
                         >
                           {item.name}
@@ -3728,10 +3843,10 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
               <div className="space-y-4">
                 <div className="space-y-2">
                   {(Array.isArray(prescriptionData.nonPharmacologicalAdvice) ? prescriptionData.nonPharmacologicalAdvice : []).map((entry, idx) => (
-                    <div key={idx} className="flex flex-col md:flex-row md:items-center gap-2 bg-green-50/60 dark:bg-green-900/40 border border-green-200 dark:border-green-700 rounded p-2">
+                    <div key={idx} className="flex flex-col md:flex-row md:items-center gap-2 bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded p-2">
                       <div className="flex-1 min-w-[220px]">
                         <div className="flex items-center justify-between mb-1">
-                          <Label className="text-xs text-gray-600">Advice / Instruction *</Label>
+                          <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Advice / Instruction *</Label>
                           <div className="flex items-center gap-1">
                             <Button
                               variant="ghost"
@@ -3778,7 +3893,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                             next[idx] = { ...entry, advice: e.target.value };
                             setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
                           }}
-                          className="h-8 text-xs bg-white dark:bg-slate-900"
+                          className="h-10 text-base bg-white dark:bg-slate-900"
                           id={`advice-input-${idx}`}
                           style={{
                             fontWeight: entry.isBold ? 'bold' : 'normal'
@@ -3787,7 +3902,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                       </div>
                       <div className="flex flex-col md:flex-row gap-2 items-center">
                         <div>
-                          <Label className="text-xs text-gray-600">Duration</Label>
+                          <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Duration</Label>
                           <div className="flex gap-2">
                             <Input
                               placeholder="Value"
@@ -3797,7 +3912,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                                 next[idx] = { ...entry, durationValue: e.target.value };
                                 setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
                               }}
-                              className="h-8 text-xs w-20"
+                              className="h-10 text-base w-20"
                             />
                             <Select
                               value={entry.durationUnit || ''}
@@ -3807,7 +3922,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                                 setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
                               }}
                             >
-                              <SelectTrigger className="h-8 text-xs bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-700 rounded-md px-2">
+                              <SelectTrigger className="h-10 text-base bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-700 rounded-md px-2">
                                 <SelectValue placeholder="Unit" />
                               </SelectTrigger>
                               <SelectContent>
@@ -3820,7 +3935,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                         </div>
                       </div>
                       <div className="flex-1 min-w-[180px]">
-                        <Label className="text-xs text-gray-600">Notes / Customization</Label>
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Notes / Customization</Label>
                         <Input
                           placeholder="e.g. Avoid spicy food at night, Stop if dizziness"
                           value={entry.notes || ''}
@@ -3829,7 +3944,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                             next[idx] = { ...entry, notes: e.target.value };
                             setPrescriptionData(prev => ({ ...prev, nonPharmacologicalAdvice: next }));
                           }}
-                          className="h-8 text-xs"
+                          className="h-10 text-base"
                         />
                       </div>
                       <div className="flex items-end justify-end">
@@ -3870,18 +3985,18 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             {renderCollapsibleSection(
               'medications',
               'Medications',
-              <div className="space-y-4">
+              <div className="space-y-4 bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-lg p-4">
                 {/* Header removed */}
 
                 {prescriptionData.medications.length === 0 && (
-                  <div className="border border-dashed border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 px-4 py-6 text-center space-y-3">
+                  <div className="border border-dashed border-slate-300 dark:border-slate-700 rounded-lg bg-white/50 dark:bg-slate-900/60 px-4 py-6 text-center space-y-3">
                     <div className="text-sm text-gray-700 dark:text-gray-200 font-medium">No medications yet</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">Add the first medication to start building the plan.</div>
                     <div className="flex justify-center">
                       <Button
                         size="sm"
                         onClick={() => addMedication()}
-                        className="h-9 text-sm"
+                        className="h-10 text-base"
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Add first medication
@@ -3904,7 +4019,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                     return (
                       <div
                         key={medication.id}
-                        className={`rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3 shadow-sm ${isActive ? 'ring-2 ring-blue-200 dark:ring-blue-800/60 shadow-md' : ''
+                        className={`rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4 space-y-3 shadow-sm ${isActive ? 'ring-2 ring-blue-200 dark:ring-blue-800/60 shadow-md' : ''
                           }`}
                         onClick={() => setActiveMedicationId(medication.id)}
                       >
@@ -3914,7 +4029,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                               <span className="inline-flex h-6 min-w-[32px] items-center justify-center rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-200 px-2 font-semibold">
                                 #{index + 1}
                               </span>
-                              <span className="font-semibold">Medication</span>
+                              <span className="text-sm font-semibold">Medication</span>
                               {isActive && <span className="text-blue-600 dark:text-blue-300 font-medium">Active</span>}
                               {missingRequired && (
                                 <span className="px-2 py-1 rounded-full bg-red-50 dark:bg-red-900/40 text-red-700 dark:text-red-200 text-[11px] font-semibold">
@@ -3933,7 +4048,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
 
                         <div className="grid grid-cols-1 md:grid-cols-[1.5fr,0.7fr,0.7fr,0.7fr,1.4fr,1fr] gap-3">
                           <div className="space-y-1 relative">
-                            <Label className="text-xs text-gray-600">Name *</Label>
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Name *</Label>
                             <Input
                               placeholder="e.g., Paracetamol"
                               value={medication.name}
@@ -4039,7 +4154,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                                   setMedicationOpenForId(null);
                                 }
                               }}
-                              className="h-9 text-sm"
+                              className="h-10 text-base"
                             />
                             {nameMissing && <div className="text-[11px] text-red-600">Name is required</div>}
                             {medicationOpenForId === medication.id && (
@@ -4051,7 +4166,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                                   return (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                       <div className="space-y-2">
-                                        <div className="text-[11px] font-semibold text-gray-600 uppercase">Personal</div>
+                                        <div className="text-sm font-semibold text-gray-600 uppercase">Personal</div>
                                         <div className="flex flex-col gap-1">
                                           {personal.map((item, idx) => {
                                             const isActive = medicationActiveIndex === idx;
@@ -4077,7 +4192,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                                         </div>
                                       </div>
                                       <div className="space-y-2">
-                                        <div className="text-[11px] font-semibold text-gray-600 uppercase">General</div>
+                                        <div className="text-sm font-semibold text-gray-600 uppercase">General</div>
                                         <div className="flex flex-col gap-1">
                                           {general.map((item, idx) => {
                                             const globalIdx = personalCount + idx;
@@ -4114,54 +4229,54 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           </div>
 
                           <div className="space-y-1">
-                            <Label className="text-xs text-gray-600">Dosage</Label>
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Dosage</Label>
                             <Input
                               placeholder="e.g., 500 mg"
                               value={medication.dosage}
                               onChange={(e) => updateMedication(medication.id, 'dosage', e.target.value)}
                               onFocus={() => setActiveMedicationId(medication.id)}
-                              className="h-9 text-sm"
+                              className="h-10 text-base"
                             />
                             {/* Dosage is optional */}
                           </div>
 
                           <div className="space-y-1">
-                            <Label className="text-xs text-gray-600">Route</Label>
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Route</Label>
                             <Input
                               placeholder="e.g. Oral, IV, IM"
                               value={medication.route}
                               onChange={(e) => updateMedication(medication.id, 'route', e.target.value)}
                               onFocus={() => setActiveMedicationId(medication.id)}
-                              className="h-9 text-sm"
+                              className="h-10 text-base"
                             />
                           </div>
 
                           <div className="space-y-1">
-                            <Label className="text-xs text-gray-600">Frequency</Label>
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Frequency</Label>
                             <Input
                               placeholder="e.g., BD, TDS"
                               value={medication.frequency}
                               onChange={(e) => updateMedication(medication.id, 'frequency', e.target.value)}
                               onFocus={() => setActiveMedicationId(medication.id)}
-                              className="h-9 text-sm"
+                              className="h-10 text-base"
                             />
                           </div>
 
                           <div className="space-y-1">
-                            <Label className="text-xs text-gray-600">Duration</Label>
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Duration</Label>
                             <div className="flex gap-2">
                               <Input
                                 placeholder="e.g. 5"
                                 value={medication.duration}
                                 onChange={(e) => updateMedication(medication.id, 'duration', e.target.value)}
                                 onFocus={() => setActiveMedicationId(medication.id)}
-                                className="h-9 text-sm flex-1 min-w-0 border-gray-200 dark:border-gray-700 focus:border-blue-400 dark:focus:border-blue-300 dark:bg-gray-900 dark:text-gray-100"
+                                className="h-10 text-base flex-1 min-w-0 border-gray-200 dark:border-gray-700 focus:border-blue-400 dark:focus:border-blue-300 dark:bg-gray-900 dark:text-gray-100"
                               />
                               <select
                                 value={medication.durationUnit || 'days'}
                                 onChange={(e) => updateMedication(medication.id, 'durationUnit', e.target.value)}
                                 onFocus={() => setActiveMedicationId(medication.id)}
-                                className="h-9 text-sm border border-gray-200 dark:border-gray-700 rounded-md px-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40"
+                                className="h-10 text-base border border-gray-200 dark:border-gray-700 rounded-md px-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40"
                               >
                                 <option value="days">Days</option>
                                 <option value="weeks">Weeks</option>
@@ -4171,13 +4286,13 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                           </div>
 
                           <div className="space-y-1">
-                            <Label className="text-xs text-gray-600 dark:text-gray-400">Instructions</Label>
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Instructions</Label>
                             <Input
                               placeholder="e.g., After food"
                               value={medication.instructions}
                               onChange={(e) => updateMedication(medication.id, 'instructions', e.target.value)}
                               onFocus={() => setActiveMedicationId(medication.id)}
-                              className="h-9 text-sm"
+                              className="h-10 text-base"
                             />
                           </div>
                         </div>
@@ -4293,7 +4408,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
               <div className="space-y-4">
                 {/* Quick chips/templates removed */}
                 {(Array.isArray(prescriptionData.privateNotes) ? prescriptionData.privateNotes : []).map((note, idx) => (
-                  <Card key={idx} className="bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 shadow-sm p-2">
+                  <Card key={idx} className="bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-sm p-2">
                     <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
                       {/* Type field removed from private notes */}
                       <div className="flex-1 min-w-[200px]">
@@ -4356,7 +4471,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                   const templateOptions = certificationTemplates.types;
                   const selectedTemplate = templateOptions.find(t => t.typeCode === entry.type);
                   return (
-                    <Card key={idx} className="bg-yellow-50/60 dark:bg-yellow-900/40 border border-yellow-200 dark:border-yellow-700 shadow-sm p-4">
+                    <Card key={idx} className="bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-sm p-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Left Column: Inputs */}
                         <div className="space-y-4">
