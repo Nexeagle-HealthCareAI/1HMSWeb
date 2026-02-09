@@ -344,7 +344,7 @@ const AutoSaveHandler: React.FC<{
           investigations: prescriptionData.orders.investigations,
           procedures: prescriptionData.orders.procedures
         }),
-        medications: JSON.stringify(prescriptionData.medications.map(m => ({
+        medications: JSON.stringify(prescriptionData.medications.map((m, index) => ({
           drugName: m.name,
           dose: m.dosage,
           route: m.route,
@@ -352,6 +352,7 @@ const AutoSaveHandler: React.FC<{
           duration: m.duration ? `${m.duration} ${m.durationUnit || ''}`.trim() : '',
           instructions: m.instructions,
           saltName: m.saltName,
+          displayOrder: index,
         }))),
         nonPharmacologicalAdvice: JSON.stringify(prescriptionData.nonPharmacologicalAdvice.map(a => ({
           advice: a.advice,
@@ -424,7 +425,7 @@ const AutoSaveHandler: React.FC<{
             investigations: prescriptionData.orders.investigations,
             procedures: prescriptionData.orders.procedures,
           },
-          medications: prescriptionData.medications.map(m => ({
+          medications: prescriptionData.medications.map((m, index) => ({
             drugName: m.name,
             dose: m.dosage,
             route: m.route,
@@ -432,6 +433,7 @@ const AutoSaveHandler: React.FC<{
             duration: m.duration ? `${m.duration} ${m.durationUnit || ''}`.trim() : '',
             instructions: m.instructions,
             saltName: m.saltName,
+            displayOrder: index,
           })),
           nonPharmacologicalAdvice: prescriptionData.nonPharmacologicalAdvice.map(a => ({
             advice: a.advice,
@@ -687,7 +689,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             investigations: prescriptionData.orders.investigations,
             procedures: prescriptionData.orders.procedures,
           },
-          medications: prescriptionData.medications.map(m => ({
+          medications: prescriptionData.medications.map((m, index) => ({
             drugName: m.name,
             dose: m.dosage,
             route: m.route,
@@ -695,6 +697,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             duration: m.duration ? `${m.duration} ${m.durationUnit || ''}`.trim() : '',
             instructions: m.instructions,
             saltName: m.saltName,
+            displayOrder: index,
           })),
           nonPharmacologicalAdvice: prescriptionData.nonPharmacologicalAdvice.map(a => ({
             advice: a.advice,
@@ -833,7 +836,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             investigations: prescriptionData.orders.investigations,
             procedures: prescriptionData.orders.procedures,
           },
-          medications: prescriptionData.medications.map(m => ({
+          medications: prescriptionData.medications.map((m, index) => ({
             drugName: m.name,
             dose: m.dosage,
             route: m.route,
@@ -841,6 +844,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             duration: m.duration ? `${m.duration} ${m.durationUnit || ''}`.trim() : '',
             instructions: m.instructions,
             saltName: m.saltName,
+            displayOrder: index,
           })),
           nonPharmacologicalAdvice: prescriptionData.nonPharmacologicalAdvice.map(a => ({
             advice: a.advice,
@@ -1337,7 +1341,10 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             investigations: draft.orders?.investigations || [],
             procedures: draft.orders?.procedures || []
           },
-          medications: (draft.medications || []).map((m, idx) => ({
+          medications: (draft.medications || [])
+            .map((m, idx) => ({ ...m, _originalIdx: idx }))
+            .sort((a, b) => (a.displayOrder ?? a._originalIdx) - (b.displayOrder ?? b._originalIdx))
+            .map((m, idx) => ({
             id: `draft-med-${idx}-${Date.now()}`,
             name: m.drugName,
             dosage: m.dose,

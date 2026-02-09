@@ -115,6 +115,7 @@ export interface EPrescriptionDraftReq {
         duration: string;
         instructions: string;
         saltName: string;
+        displayOrder: number | null;
     }[];
     nonPharmacologicalAdvice?: {
         advice: string;

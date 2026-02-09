@@ -71,6 +71,7 @@ export interface PrescriptionMedication {
   duration: string;
   instructions: string;
   saltName: string;
+  displayOrder: number | null;
 }
 
 export interface PrescriptionNonPharmacologicalAdvice {

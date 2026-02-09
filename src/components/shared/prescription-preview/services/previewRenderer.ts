@@ -668,7 +668,11 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   }
 
   // Medications
-  if (payload.medications && payload.medications.length > 0) {
+  const sortedMedications = (payload.medications || [])
+    .map((m, idx) => ({ ...m, _originalIdx: idx }))
+    .sort((a, b) => (a.displayOrder ?? a._originalIdx) - (b.displayOrder ?? b._originalIdx));
+
+  if (sortedMedications.length > 0) {
     await drawSectionHeader('Medications', 'Rx');
 
     const cols = [
@@ -697,7 +701,7 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
     });
     cursorY -= headerH + 6;
 
-    for (const med of payload.medications) {
+    for (const med of sortedMedications) {
       await ensureRoom(lineHeight * 1.8);
       let rX = leftPad + 6;
       const rY = cursorY;

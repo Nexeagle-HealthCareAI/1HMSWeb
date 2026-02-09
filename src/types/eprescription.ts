@@ -15,6 +15,7 @@ export interface Medication {
   frequency: string;
   duration: string;
   instructions: string;
+  displayOrder: number;
 }
 
 export interface Orders {
