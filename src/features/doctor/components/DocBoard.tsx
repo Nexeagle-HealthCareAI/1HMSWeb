@@ -87,7 +87,7 @@ import {
   X,
   ZoomIn
 } from 'lucide-react';
-import { format, subDays, addDays } from 'date-fns';
+import { format, subDays, addDays, subMonths, addMonths } from 'date-fns';
 import { useAuthStore, useAppStore } from '@/store';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -115,6 +115,9 @@ import { PrescriptionLayout } from '@/features/prescription/components/layout/Pr
 import { useToast } from '@/hooks/use-toast';
 import { RescheduleDialog } from '../../appointment/components/RescheduleDialog';
 import { AppointmentDetail } from '../../appointment/services/appointmentApi';
+
+const pastDateUpperBound = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+const futureDateLowerBound = format(addDays(new Date(), 1), 'yyyy-MM-dd');
 
 // Lazy-load the calendar page so it only loads when the doctor opens it from the dashboard
 const DoctorCalendar = lazy(() => import('@/features/doctor-calendar/DoctorCalendarPage').then(module => ({ default: module.DoctorCalendarPage })));
@@ -209,8 +212,8 @@ export const ClinicalDashboard: React.FC = () => {
   const headerRef = useRef<HTMLDivElement>(null);
   const [headerHeight, setHeaderHeight] = useState(0);
   const [windowWidth, setWindowWidth] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 1920));
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isSettingsNavCollapsed, setIsSettingsNavCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [isSettingsNavCollapsed, setIsSettingsNavCollapsed] = useState(true);
 
   // Auto-collapse sidebar on mount for maximizing screen real estate
   const setGlobalSidebarCollapsed = useAppStore((state) => state.setSidebarCollapsed);
@@ -357,9 +360,11 @@ export const ClinicalDashboard: React.FC = () => {
       case 'current':
         return { startDate: today, endDate: today };
       case 'past':
-        return { startDate: startDate || yesterday, endDate: endDate || today };
+        const monthAgo = format(subMonths(new Date(), 1), 'yyyy-MM-dd');
+        return { startDate: startDate || monthAgo, endDate: endDate || yesterday };
       case 'future':
-        return { startDate: startDate || tomorrow, endDate: endDate || tomorrow };
+        const monthHence = format(addMonths(new Date(), 1), 'yyyy-MM-dd');
+        return { startDate: startDate || tomorrow, endDate: endDate || monthHence };
       default:
         return { startDate: today, endDate: today };
     }
@@ -461,22 +466,24 @@ export const ClinicalDashboard: React.FC = () => {
     };
   }, [refetch, hospitalId, doctorId]);
 
-  const pastDateUpperBound = format(subDays(new Date(), 1), 'yyyy-MM-dd');
-  const futureDateLowerBound = format(addDays(new Date(), 1), 'yyyy-MM-dd');
-
   // Default date ranges for past/future tabs
   useEffect(() => {
+    const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+    const monthAgo = format(subMonths(new Date(), 1), 'yyyy-MM-dd');
+    const tomorrow = format(addDays(new Date(), 1), 'yyyy-MM-dd');
+    const monthHence = format(addMonths(new Date(), 1), 'yyyy-MM-dd');
+
     if (activeTab === 'past') {
-      setStartDate(pastDateUpperBound);
-      setEndDate(pastDateUpperBound);
+      setStartDate(monthAgo);
+      setEndDate(yesterday);
     } else if (activeTab === 'future') {
-      setStartDate(futureDateLowerBound);
-      setEndDate(format(addDays(new Date(), 7), 'yyyy-MM-dd'));
+      setStartDate(tomorrow);
+      setEndDate(monthHence);
     } else {
       setStartDate('');
       setEndDate('');
     }
-  }, [activeTab, pastDateUpperBound, futureDateLowerBound]);
+  }, [activeTab]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {

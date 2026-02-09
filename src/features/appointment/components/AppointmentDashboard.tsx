@@ -29,6 +29,7 @@ import {
   Minimize2,
   Maximize2,
   HelpCircle,
+  WifiOff,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -52,7 +53,7 @@ import { VitalsForm } from './VitalsForm';
 import { RescheduleDialog } from './RescheduleDialog';
 import { format } from 'date-fns';
 import { useAppointmentDetails } from '../hooks/useAppointmentDetails';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore, useAppStore } from '@/store';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { AppointmentDetail, appointmentApi } from '../services/appointmentApi';
@@ -108,6 +109,13 @@ export const AppointmentDashboard = () => {
     appointmentDate: string;
     department?: string;
   } | null>(null);
+
+  // Auto-collapse sidebar on mount for maximizing screen real estate
+  const setGlobalSidebarCollapsed = useAppStore((state) => state.setSidebarCollapsed);
+
+  useEffect(() => {
+    setGlobalSidebarCollapsed(true);
+  }, [setGlobalSidebarCollapsed]);
 
   const handlePrintToken = (appointment: AppointmentDetail) => {
     setTokenPrintData({
@@ -615,15 +623,19 @@ export const AppointmentDashboard = () => {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
+    const oneMonthAgo = new Date(today);
+    oneMonthAgo.setMonth(today.getMonth() - 1);
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
+    const oneMonthFromNow = new Date(today);
+    oneMonthFromNow.setMonth(today.getMonth() + 1);
 
     if (activeTab === 'past') {
-      setStartDate(yesterday.toISOString().split('T')[0]);
+      setStartDate(oneMonthAgo.toISOString().split('T')[0]);
       setEndDate(yesterday.toISOString().split('T')[0]);
     } else if (activeTab === 'future') {
       setStartDate(tomorrow.toISOString().split('T')[0]);
-      setEndDate(tomorrow.toISOString().split('T')[0]);
+      setEndDate(oneMonthFromNow.toISOString().split('T')[0]);
     } else {
       setStartDate('');
       setEndDate('');
