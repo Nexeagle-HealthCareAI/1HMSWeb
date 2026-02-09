@@ -5,14 +5,9 @@
         "exclude": [
             "/api/*",
             "/assets/*",
-            "/*.{css,js,ico,png,jpg,jpeg,gif,svg,woff,woff2,ttf,eot}"
+            "/*.{css,js,ico,png,jpg,jpeg,gif,svg,woff,woff2,ttf,eot}",
+            "/Images/*"
         ]
-    },
-    "responseOverrides": {
-        "404": {
-            "rewrite": "/index.html",
-            "statusCode": 200
-        }
     },
     "routes": [
         {
@@ -23,6 +18,8 @@
         }
     ],
     "mimeTypes": {
+        ".css": "text/css",
+        ".js": "application/javascript",
         ".json": "application/json"
     }
 }
