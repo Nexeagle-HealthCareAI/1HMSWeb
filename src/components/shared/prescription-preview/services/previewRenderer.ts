@@ -441,9 +441,9 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   // Actually let's just place it relative to Name/Date as before
 
   if (vitalItems.length > 0) {
-    const vHeaderH = lineHeight + 4;
-    const vContentH = vitalItems.length * lineHeight;
-    const vH = vHeaderH + vContentH + 4;
+    const vHeaderH = lineHeight + 8;
+    const vContentH = vitalItems.length * (lineHeight + 2);
+    const vH = vHeaderH + vContentH + 6;
 
     // Position closer to Valid Upto (approx 2 lines down instead of 3.5)
     // Date (0) -> Valid Upto (-1.5) -> Gap -> Vitals
@@ -460,16 +460,16 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
     });
 
     page.drawText('VITALS', {
-      x: pageWidth - rightPad - vitalsW + 8,
+      x: pageWidth - rightPad - vitalsW + 12,
       y: page.getHeight() - activeHeaderPad - topOffset,
       size: sizeSm,
       font: boldFont,
       color: COLORS.Primary
     });
 
-    let vY = page.getHeight() - activeHeaderPad - topOffset - lineHeight - 4;
-    const vX_Label = pageWidth - rightPad - vitalsW + 8;
-    const vX_Val = pageWidth - rightPad - 10;
+    let vY = page.getHeight() - activeHeaderPad - topOffset - lineHeight - 6;
+    const vX_Label = pageWidth - rightPad - vitalsW + 12;
+    const vX_Val = pageWidth - rightPad - 16;
 
     vitalItems.forEach((vit) => {
       const vL = toUpper(vit.l);
@@ -478,7 +478,7 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
       page.drawText(vL, { x: vX_Label, y: vY, size: sizeSm, font: regularFont, color: COLORS.TextLight });
       const valW = boldFont.widthOfTextAtSize(vV, sizeBase);
       page.drawText(vV, { x: vX_Val - valW, y: vY, size: sizeBase, font: boldFont, color: COLORS.TextMain });
-      vY -= lineHeight;
+      vY -= (lineHeight + 2);
     });
   }
 
@@ -606,16 +606,23 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   }
 
   // Advice
-  const adviceItems = (payload.nonPharmacologicalAdvice || []).filter(item => item.advice && item.advice.trim());
+  const adviceItems = (payload.nonPharmacologicalAdvice || []).filter(item =>
+    (item.advice && item.advice.trim()) || (item.notes && item.notes.trim())
+  );
   if (adviceItems.length > 0) {
     await ensureRoom(lineHeight * 6);
     page.drawText('ADVICE / INSTRUCTIONS', { x: leftPad, y: cursorY, size: sizeBase, font: boldFont, color: COLORS.Primary });
     cursorY -= lineHeight;
 
     for (const item of adviceItems) {
-      let t = item.advice;
-      if (item.duration) t += ` (${item.duration})`;
-      if (item.notes) t += ` - ${item.notes}`;
+      let t = item.advice || '';
+      if (item.duration) t += t ? ` (${item.duration})` : item.duration;
+      if (item.notes) {
+        const notesClean = item.notes.replace(/^notes:\s*/i, '').trim();
+        if (notesClean) {
+          t += t ? ` - ${notesClean}` : notesClean;
+        }
+      }
 
       // PARSE MARKDOWN WITH UPPERCASE
       const segments = parseMarkdown(t); // parseMarkdown uses toUpper()
@@ -759,7 +766,7 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
 
   // Follow Up & Instructions
   const followUp = payload.followUp;
-  if (followUp && (followUp.followUpOn || followUp.patientInstructions || followUp.reason || (followUp.referral && followUp.referral.referredTo?.doctorName))) {
+  if (followUp && followUp.followUpOn) {
 
 
     // Extract reason and instructions handling both flat and nested structures
