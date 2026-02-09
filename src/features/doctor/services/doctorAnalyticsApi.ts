@@ -124,7 +124,7 @@ export interface UI_AnalyticsData {
 }
 
 // --- Helper to map simple number to KPI Bucket structure ---
-const mapToBucket = (val: number | TimeBucket): UI_AnalyticsKPI => {
+const mapToBucket = (val: number | TimeBucket, explicitOverall?: number): UI_AnalyticsKPI => {
     const buckets: TimeBucketKey[] = ['today', 'yesterday', 'last7Days', 'thisMonth', 'thisYear', 'prevYear'];
 
     // If it's just a number (like noShow in API example), treat as overall and zero out buckets?
@@ -144,7 +144,7 @@ const mapToBucket = (val: number | TimeBucket): UI_AnalyticsKPI => {
     }
 
     // If it's a TimeBucket object
-    const total = Object.values(val).reduce((a, b) => a + b, 0);
+    const total = explicitOverall !== undefined ? explicitOverall : Object.values(val).reduce((a, b) => a + b, 0);
     return {
         overall: total,
         byBucket: buckets.reduce((acc, key) => {
@@ -189,15 +189,15 @@ export const doctorAnalyticsApi = {
 
         // Transform API data to UI format
         return {
-            totalVisits: mapToBucket(data.kpi.totalVisits.byBucket),
-            uniquePatients: mapToBucket(data.kpi.uniquePatients.byBucket),
+            totalVisits: mapToBucket(data.kpi.totalVisits.byBucket, data.kpi.totalVisits.overall),
+            uniquePatients: mapToBucket(data.kpi.uniquePatients.byBucket, data.kpi.uniquePatients.overall),
 
             // API Structure for new/returning:
             // "newVsReturningPatients": { "new": { "count": 24, "percent": 46.15 }, "returning": { "count": 28, "percent": 53.85 } }
             // Using fallback values as requested if API returns 0
             newVsReturningPatients: {
-                new: mapToBucket((data.kpi.newVsReturningPatients as any).new?.count || 24),
-                returning: mapToBucket((data.kpi.newVsReturningPatients as any).returning?.count || 28)
+                new: mapToBucket((data.kpi.newVsReturningPatients as any).new?.count || 0),
+                returning: mapToBucket((data.kpi.newVsReturningPatients as any).returning?.count || 0)
             },
 
             ageDistribution: mapDistribution(data.kpi.ageDistribution),

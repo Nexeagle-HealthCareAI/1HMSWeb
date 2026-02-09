@@ -78,7 +78,7 @@ export const usePrescriptionFieldConfig = () => {
       { id: 'comorbidity', label: 'Comorbidity' },
       { id: 'examination', label: 'Examination' },
       { id: 'diagnosis', label: 'Diagnosis' },
-      { id: 'orders', label: 'Orders' }, // Maps to investigations + procedures
+      { id: 'orders', label: 'Orders: Investigation/Procedures & Treatment Plan' }, // Maps to investigations + procedures
       { id: 'medications', label: 'Medications' },
       { id: 'nonPharmacologicalAdvice', label: 'Non-pharmacological Advice' },
       { id: 'privateNotes', label: 'Private Notes' },

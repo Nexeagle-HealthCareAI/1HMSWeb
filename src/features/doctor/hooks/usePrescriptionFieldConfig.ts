@@ -69,7 +69,7 @@ export const usePrescriptionFieldConfig = () => {
   const hospitalId = storedHospitalId || getHospitalId?.() || '';
 
   // Create fields from API preferences
-  const updateFieldsFromPreferences = useCallback((preferences: PrescriptionFieldPreference) => {   
+  const updateFieldsFromPreferences = useCallback((preferences: PrescriptionFieldPreference) => {
     const fieldDefinitions = [
       { id: 'vitals', label: 'Vitals' },
       { id: 'chiefComplaint', label: 'Chief Complaint' },
@@ -77,7 +77,7 @@ export const usePrescriptionFieldConfig = () => {
       { id: 'comorbidity', label: 'Comorbidity' },
       { id: 'examination', label: 'Examination' },
       { id: 'diagnosis', label: 'Diagnosis' },
-      { id: 'orders', label: 'Orders' }, // Maps to investigations + procedures
+      { id: 'orders', label: 'Orders: Investigation/Procedures & Treatment Plan' }, // Maps to investigations + procedures
       { id: 'medications', label: 'Medications' },
       { id: 'nonPharmacologicalAdvice', label: 'Non-pharmacological Advice' },
       { id: 'privateNotes', label: 'Private Notes' },
@@ -89,7 +89,7 @@ export const usePrescriptionFieldConfig = () => {
 
     const fieldsFromApi = fieldDefinitions.map(field => {
       let apiFieldName = field.id;
-      
+
       // Map component field IDs to API field names
       if (field.id === 'certificates') {
         apiFieldName = 'certificatesAndNotes';
@@ -105,15 +105,15 @@ export const usePrescriptionFieldConfig = () => {
           enabled: investigationsEnabled || proceduresEnabled
         };
       }
-      
+
       const enabled = preferences[apiFieldName as keyof PrescriptionFieldPreference];
-      
+
       return {
         ...field,
         enabled: enabled !== undefined ? Boolean(enabled) : false
       };
-    });    
-    
+    });
+
     setFields(fieldsFromApi);
   }, []);
 
@@ -125,11 +125,11 @@ export const usePrescriptionFieldConfig = () => {
     refetch: refetchPreferences
   } = useQuery({
     queryKey: ['prescriptionFieldPreferences', doctorId, hospitalId],
-    queryFn: async () => {      
+    queryFn: async () => {
       try {
-        const result = await prescriptionFieldConfigApi.getFieldPreferences(doctorId, hospitalId);     
+        const result = await prescriptionFieldConfigApi.getFieldPreferences(doctorId, hospitalId);
         return result;
-      } catch (error) {       
+      } catch (error) {
         return {
           success: false,
           message: 'Failed to fetch preferences',
@@ -151,7 +151,7 @@ export const usePrescriptionFieldConfig = () => {
 
   // Update field configuration
   const updateFieldConfig = (fieldId: string, enabled: boolean) => {
-    setFields(prev => prev.map(field => 
+    setFields(prev => prev.map(field =>
       field.id === fieldId ? { ...field, enabled } : field
     ));
   };
@@ -214,7 +214,7 @@ export const usePrescriptionFieldConfig = () => {
     fields,
     isLoadingPreferences,
     preferencesError,
-    
+
     // Actions
     updateFieldConfig,
     saveFieldConfiguration,

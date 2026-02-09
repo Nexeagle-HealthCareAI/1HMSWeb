@@ -172,7 +172,7 @@ const convertPreferencesToFieldConfigs = (preferences: any) => {
     { id: 'comorbidity', label: 'Comorbidity' },
     { id: 'examination', label: 'Examination' },
     { id: 'diagnosis', label: 'Diagnosis' },
-    { id: 'orders', label: 'Orders' },
+    { id: 'orders', label: 'Orders: Investigation/Procedures & Treatment Plan' },
     { id: 'medications', label: 'Medications' },
     { id: 'nonPharmacologicalAdvice', label: 'Non-pharmacological Advice' },
     { id: 'privateNotes', label: 'Private Notes' },
@@ -3144,7 +3144,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             {/* Orders Section */}
             {renderCollapsibleSection(
               'orders',
-              'Orders: Investigations / Procedures',
+              'Orders: Investigation/Procedures & Treatment Plan',
               <div className="space-y-6 bg-indigo-50/60 dark:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-700 rounded-lg p-4">
                 {/* Investigations */}
                 <div className="space-y-3">

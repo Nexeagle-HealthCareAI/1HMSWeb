@@ -53,7 +53,9 @@ export const DoctorAnalyticsPage: React.FC = () => {
         if (!analyticsData) return null;
         return {
             visits: analyticsData.totalVisits.byBucket[timeBucket],
+            visitsOverall: analyticsData.totalVisits.overall,
             patients: analyticsData.uniquePatients.byBucket[timeBucket],
+            patientsOverall: analyticsData.uniquePatients.overall,
             newPatients: analyticsData.newVsReturningPatients.new.byBucket[timeBucket],
             returningPatients: analyticsData.newVsReturningPatients.returning.byBucket[timeBucket],
             noShow: analyticsData.noShow.byBucket[timeBucket],
@@ -150,6 +152,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
                     icon={Calendar}
                     color="blue"
                     period={t(`analytics.periods.${timeBucket}`)}
+                    overallValue={activeKPIs.visitsOverall}
                 />
 
                 <KpiCard
@@ -158,6 +161,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
                     icon={UserCheck}
                     color="indigo"
                     period={t(`analytics.periods.${timeBucket}`)}
+                    overallValue={activeKPIs.patientsOverall}
                     footerText={t('analytics.kpis.reachInPeriod', { period: t(`analytics.periods.${timeBucket}`) })}
                 />
 
@@ -472,9 +476,10 @@ interface KpiCardProps {
     period: string;
     footerText?: string;
     trend?: "up" | "down" | "neutral";
+    overallValue?: number;
 }
 
-const KpiCard: React.FC<KpiCardProps> = ({ title, value, percentageChange, icon: Icon, color, period, footerText }) => {
+const KpiCard: React.FC<KpiCardProps> = ({ title, value, percentageChange, icon: Icon, color, period, footerText, overallValue }) => {
     // Quick mapping for background/text based on color name
     const colorMap: Record<string, { bg: string, text: string, iconBg: string }> = {
         'blue': { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600', iconBg: 'bg-blue-50 dark:bg-blue-900/30' },
@@ -508,7 +513,14 @@ const KpiCard: React.FC<KpiCardProps> = ({ title, value, percentageChange, icon:
                 </div>
             </CardHeader>
             <CardContent>
-                <div className="text-4xl font-bold text-gray-900 dark:text-white tabular-nums">{value}</div>
+                <div className="flex items-baseline gap-2">
+                    <div className="text-4xl font-bold text-gray-900 dark:text-white tabular-nums">{value}</div>
+                    {overallValue !== undefined && (
+                        <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            / {overallValue} <span className="text-xs font-normal">Total</span>
+                        </div>
+                    )}
+                </div>
                 <div className={`flex items-center gap-1 mt-2 text-xs ${theme.text} dark:${theme.text.replace('600', '400')} font-medium`}>
                     <span>{footerText || period}</span>
                     {!footerText && <ArrowRight className="h-3 w-3" />}
