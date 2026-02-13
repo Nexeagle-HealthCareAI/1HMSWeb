@@ -123,6 +123,8 @@ export const API_ENDPOINTS = {
     // Patient Profile API endpoints
     GET_PROFILE_DETAILS: (hospitalId: string, patientId: string) => `patient-profile?hospitalId=${hospitalId}&patientId=${patientId}`,
     UPDATE_PROFILE_DETAILS: (hospitalId: string, patientId: string) => `patient-profile?hospitalId=${hospitalId}&patientId=${patientId}`,
+    SEARCH: (query: string, by: string, scope: string = 'local', hospitalId: string = '') =>
+      `/appointments/patient-details/search?by=${encodeURIComponent(by)}&q=${encodeURIComponent(query)}&scope=${encodeURIComponent(scope)}${hospitalId ? `&hospitalId=${encodeURIComponent(hospitalId)}` : ''}`,
   },
   CALENDAR: {
     GET_DOCTOR_TIMEOFF: (doctorId: string, hospitalId: string) => `calendar/doctor/timeoff?doctorId=${doctorId}&hospitalId=${hospitalId}`,

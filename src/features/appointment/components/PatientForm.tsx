@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Shield, Search, Loader2 } from 'lucide-react';
+import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Shield, Search, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RegisterAppointmentRequest, generatePatientId } from '../services/appointmentApi';
 import { useAppointmentBooking } from '../hooks/useAppointmentBooking';
@@ -34,8 +34,10 @@ interface TimeSlot {
 }
 
 type PatientFormState = {
+  patientId: string;
   name: string;
   referenceName: string;
+  referenceRelation: string;
   phone: string;
   age: string;
   gender: string;
@@ -51,10 +53,13 @@ type PatientFormState = {
 };
 
 const PHONE_REGEX = /^\d{10}$/;
+const RELATION_OPTIONS = ['C/O', 'S/O', 'D/O', 'W/O', 'H/O', 'G/O', 'F/O', 'M/O'];
 
 const createInitialFormState = (): PatientFormState => ({
+  patientId: '',
   name: '',
   referenceName: '',
+  referenceRelation: 'C/O',
   phone: '',
   age: '',
   gender: '',
@@ -122,7 +127,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 
 interface PatientFormProps {
@@ -145,7 +150,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<PatientSearchItem[]>([]);
-  const [searchField, setSearchField] = useState<'patientId' | 'name' | 'appointmentId' | 'contact'>('patientId'); // Default search field
+  // searchField state removed
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -171,85 +176,35 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     return timeFormatter.format(date);
   };
 
-  // Helper functions for search functionality
-  const getSearchPlaceholder = (field: string) => {
-    switch (field) {
-      case 'patientId':
-        return t('patientForm.search.placeholder.patientId');
-      case 'name':
-        return t('patientForm.search.placeholder.name');
-      case 'appointmentId':
-        return t('patientForm.search.placeholder.appointmentId');
-      case 'contact':
-        return t('patientForm.search.placeholder.contact');
-      default:
-        return t('patientForm.search.placeholder.default');
-    }
-  };
-
-  const getSearchFieldLabel = (field: string) => {
-    switch (field) {
-      case 'patientId':
-        return t('patientForm.search.fields.patientId');
-      case 'name':
-        return t('patientForm.search.fields.name');
-      case 'appointmentId':
-        return t('patientForm.search.fields.appointmentId');
-      case 'contact':
-        return t('patientForm.search.fields.contact');
-      default:
-        return t('patientForm.search.fields.default');
-    }
-  };
-
-  const getSearchHelpText = (field: string) => {
-    switch (field) {
-      case 'patientId':
-        return (
-          <>
-            <p>{t('patientForm.search.help.patientId.line1')}</p>
-            <p>{t('patientForm.search.help.patientId.line2')}</p>
-          </>
-        );
-      case 'name':
-        return (
-          <>
-            <p>{t('patientForm.search.help.name.line1')}</p>
-            <p>{t('patientForm.search.help.name.line2')}</p>
-          </>
-        );
-      case 'appointmentId':
-        return (
-          <>
-            <p>{t('patientForm.search.help.appointmentId.line1')}</p>
-            <p>{t('patientForm.search.help.appointmentId.line2')}</p>
-          </>
-        );
-      case 'contact':
-        return (
-          <>
-            <p>{t('patientForm.search.help.contact.line1')}</p>
-            <p>{t('patientForm.search.help.contact.line2')}</p>
-          </>
-        );
-      default:
-        return <p>{t('patientForm.search.help.default')}</p>;
-    }
-  };
-
-  // Search function
+  // Search function with auto-detection
   const handleSearch = async () => {
-    if (!searchQuery.trim()) {
+    const query = searchQuery.trim();
+    if (!query) {
       return;
     }
 
     setIsSearching(true);
     clearSearchError();
 
+    // Determine search field based on input pattern
+    let searchBy: 'patientId' | 'name' | 'contact' = 'name';
+
+    // Check for Patient ID (starts with PTID or UHID)
+    if (/^(PTID|UHID)/i.test(query)) {
+      searchBy = 'patientId';
+    }
+    // Check for Phone Number (mostly digits, allowing +, -, space)
+    else if (/^\+?[\d\s-]{3,}$/.test(query) && /\d/.test(query)) {
+      // Ensure it has at least some digits to be a phone number
+      searchBy = 'contact';
+    }
+
+    console.log(`Smart Search detected type: ${searchBy} for query: ${query}`);
+
     try {
       const response = await searchPatients({
-        by: searchField,
-        q: searchQuery.trim(),
+        by: searchBy,
+        q: query,
         scope: 'local'
       });
 
@@ -269,8 +224,10 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   // Handle patient selection from search results
   const handlePatientSelect = (patient: PatientSearchItem) => {
     setFormData({
+      patientId: patient.patientId,
       name: patient.fullName,
       referenceName: '', // Reset reference name on patient select
+      referenceRelation: 'C/O',
       phone: formatPhoneNumber(patient.mobile || ''),
       age: patient.age.toString(),
       gender: patient.sex,
@@ -326,12 +283,12 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     setIsSubmitting(true);
     try {
       // Generate patient ID automatically before sending request
-      const generatedPatientId = generatePatientId();
+      const generatedPatientId = formData.patientId || generatePatientId();
 
       // Prepare the appointment request
       const appointmentRequest: RegisterAppointmentRequest = {
         patient: {
-          fullName: formData.referenceName ? `${formData.name}-${formData.referenceName}` : formData.name,
+          fullName: formData.referenceName ? `${formData.name}-${formData.referenceRelation} ${formData.referenceName}` : formData.name,
           mobile: formatPhoneNumber(formData.phone), // Use formatted phone number
           ageYears: parseInt(formData.age),
           sex: formData.gender,
@@ -390,122 +347,122 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
   return (
     <Dialog open={true} onOpenChange={onCancel}>
-      <DialogContent className="max-w-7xl max-h-[95vh] overflow-y-auto dark:bg-gray-900">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-healthcare-primary dark:text-blue-400">
-            {t('patientForm.title')}
-          </DialogTitle>
-          <DialogDescription className="dark:text-gray-300">
-            {t('patientForm.description')}
-          </DialogDescription>
+      <DialogContent className="w-[98vw] h-[98vh] md:w-[92vw] md:max-w-[92vw] md:h-[95vh] md:max-h-[95vh] p-3 md:p-6 overflow-y-auto dark:bg-gray-900 [&>button]:hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="absolute right-5 top-5 z-50">
+          <DialogClose className="rounded-full opacity-100 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground bg-red-100 hover:bg-red-200 text-red-600 border-2 border-red-200 h-8 w-8 md:h-10 md:w-10 flex items-center justify-center">
+            <X className="h-5 w-5 md:h-6 md:w-6" />
+            <span className="sr-only">Close</span>
+          </DialogClose>
+        </div>
+        <DialogHeader className="border-b pb-1 mb-1">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mr-8 md:mr-16">
+            <div>
+              <DialogTitle className="text-2xl md:text-3xl font-extrabold text-blue-900 dark:text-blue-400 tracking-tight">
+                {t('patientForm.title')}
+              </DialogTitle>
+              <DialogDescription className="text-sm md:text-base text-gray-600 dark:text-gray-300 mt-0">
+                {t('patientForm.description')}
+              </DialogDescription>
+            </div>
+            {/* Appointment Details Row in Header */}
+            <div className="w-full md:w-auto overflow-x-auto pb-1 -mx-3 px-3 md:mx-0 md:px-0 md:overflow-visible no-scrollbar">
+              <div className="flex flex-nowrap items-center gap-x-3 text-xs md:text-lg bg-blue-100 dark:bg-blue-900/30 px-3 py-1.5 md:px-4 rounded-xl border-2 border-blue-200 dark:border-blue-700 shadow-sm whitespace-nowrap min-w-max">
+                <div className="flex items-center gap-1.5 md:gap-2">
+                  <User className="h-3.5 w-3.5 md:h-5 md:w-5 text-blue-700 dark:text-blue-400" />
+                  <span className="font-bold text-blue-900 dark:text-blue-100">{doctor.name}</span>
+                </div>
+                <div className="h-4 md:h-6 w-px bg-blue-300 dark:bg-blue-600" />
+                <div className="flex items-center gap-1.5 md:gap-2">
+                  <Calendar className="h-3.5 w-3.5 md:h-5 md:w-5 text-blue-700 dark:text-blue-400" />
+                  <span className="font-bold text-blue-900 dark:text-blue-100">{dateFormatter.format(new Date(selectedSlot.date))}</span>
+                </div>
+                <div className="h-4 md:h-6 w-px bg-blue-300 dark:bg-blue-600" />
+                <div className="flex items-center gap-1.5 md:gap-2">
+                  <Clock className="h-3.5 w-3.5 md:h-5 md:w-5 text-blue-700 dark:text-blue-400" />
+                  <span className="font-bold text-blue-900 dark:text-blue-100">{formatTime(selectedSlot.time)}</span>
+                </div>
+                <div className="h-4 md:h-6 w-px bg-blue-300 dark:bg-blue-600" />
+                <div className="flex items-center gap-1.5 md:gap-2">
+                  <span className="text-sm md:text-lg">⏱️</span>
+                  <span className="font-bold text-blue-900 dark:text-blue-100">{t('patientForm.appointmentDetails.duration', { minutes: selectedSlot.slotDurationInMinutes || 10 })}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
-          {/* Appointment Details - Compact */}
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-2 md:gap-4 pb-8">
+          {/* Patient Search - Enhanced */}
           <div className="xl:col-span-1">
-            <Card className="p-3 bg-gradient-subtle dark:bg-gray-800 border-healthcare-primary/20 dark:border-blue-400/20 h-fit">
-              <h3 className="font-semibold text-foreground dark:text-white mb-2 text-sm">{t('patientForm.appointmentDetails.title')}</h3>
-              <div className="space-y-2 text-xs">
-                <div className="flex items-center gap-2">
-                  <User className="h-3 w-3 text-healthcare-primary" />
-                  <span className="font-medium">{doctor.name}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-3 w-3 text-healthcare-primary" />
-                  <span>{dateFormatter.format(new Date(selectedSlot.date))}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-3 w-3 text-healthcare-primary" />
-                  <span>{formatTime(selectedSlot.time)}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">⏱️</span>
-                  <span className="text-xs">{t('patientForm.appointmentDetails.duration', { minutes: selectedSlot.slotDurationInMinutes || 10 })}</span>
+            <Card className="p-3 md:p-6 bg-gradient-subtle dark:bg-gray-800 border-healthcare-primary/20 dark:border-blue-400/20 h-fit mb-0">
+              <h4 className="font-bold text-base md:text-lg text-foreground dark:text-white mb-2 md:mb-4 flex items-center gap-2">
+                <Search className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
+                {t('patientForm.search.title')}
+              </h4>
+              <div className="space-y-3 md:space-y-4">
+                {/* Search Input - Smart Search */}
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSearch();
+                    }
+                  }}
+                  placeholder="Search by Name, Phone, or Patient ID..."
+                  className="text-sm md:text-base h-9 md:h-10 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm"
+                />
+
+                {/* Search Help Text */}
+                <div className="text-xs md:text-sm text-muted-foreground dark:text-gray-400 space-y-1">
+                  <p>💡 Auto-detects <strong>Phone, Patient ID, or Name</strong></p>
                 </div>
 
-              </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="w-full h-9 md:h-10 text-sm md:text-base"
+                  onClick={handleSearch}
+                  disabled={isSearching || isSearchLoading || !searchQuery.trim()}
+                >
+                  <Search className="h-4 w-4 md:h-5 md:w-5 mr-1" />
+                  {isSearching || isSearchLoading ? t('patientForm.search.searching') : t('patientForm.search.submit')}
+                </Button>
 
-              {/* Patient Search - Enhanced */}
-              <div className="mt-4 pt-3 border-t border-healthcare-primary/20 dark:border-blue-400/20">
-                <h4 className="font-medium text-foreground dark:text-white mb-2 text-sm flex items-center gap-1">
-                  <Search className="h-3 w-3 text-blue-600" />
-                  {t('patientForm.search.title')}
-                </h4>
-                <div className="space-y-2">
-                  {/* Search Field Dropdown */}
-                  <div className="flex gap-2">
-                    <Select value={searchField} onValueChange={(value: string) => setSearchField(value as 'patientId' | 'name' | 'appointmentId' | 'contact')}>
-                      <SelectTrigger className="text-xs h-8 flex-1 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
-                        <SelectValue placeholder={t('patientForm.search.fieldPlaceholder')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="patientId">{t('patientForm.search.fields.patientId')}</SelectItem>
-                        <SelectItem value="name">{t('patientForm.search.fields.name')}</SelectItem>
-                        <SelectItem value="appointmentId">{t('patientForm.search.fields.appointmentId')}</SelectItem>
-                        <SelectItem value="contact">{t('patientForm.search.fields.contact')}</SelectItem>
-                      </SelectContent>
-                    </Select>
+                {/* Search Error Display */}
+                {searchError && (
+                  <div className="text-red-500 text-xs md:text-sm bg-red-50 dark:bg-red-900/20 p-2 rounded border border-red-200 dark:border-red-800">
+                    <p>{t('patientForm.search.error', { error: searchError })}</p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="mt-1 h-7 md:h-8 text-xs md:text-sm"
+                      onClick={clearSearchError}
+                    >
+                      {t('patientForm.search.clearError')}
+                    </Button>
                   </div>
-
-                  {/* Search Input */}
-                  <Input
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder={getSearchPlaceholder(searchField)}
-                    className="text-xs h-8 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm"
-                  />
-
-                  {/* Search Help Text */}
-                  <div className="text-xs text-muted-foreground dark:text-gray-400 space-y-1">
-                    <p>💡 <strong>{t('patientForm.search.helpTitle', { field: getSearchFieldLabel(searchField) })}</strong></p>
-                    {getSearchHelpText(searchField)}
-                  </div>
-
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="w-full h-7 text-xs"
-                    onClick={handleSearch}
-                    disabled={isSearching || isSearchLoading || !searchQuery.trim()}
-                  >
-                    <Search className="h-3 w-3 mr-1" />
-                    {isSearching || isSearchLoading ? t('patientForm.search.searching') : t('patientForm.search.submit')}
-                  </Button>
-
-                  {/* Search Error Display */}
-                  {searchError && (
-                    <div className="text-red-500 text-xs bg-red-50 dark:bg-red-900/20 p-2 rounded border border-red-200 dark:border-red-800">
-                      <p>{t('patientForm.search.error', { error: searchError })}</p>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="mt-1 h-6 text-xs"
-                        onClick={clearSearchError}
-                      >
-                        {t('patientForm.search.clearError')}
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
             </Card>
           </div>
 
           {/* Main Form - 3 columns */}
           <div className="xl:col-span-3">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form id="patient-form" onSubmit={handleSubmit} className="space-y-2 md:space-y-4">
               {/* Personal & Contact Information - Single Row */}
-              <Card className="p-4 dark:bg-gray-800">
-                <div className="mb-3">
-                  <h3 className="font-semibold text-foreground dark:text-white flex items-center gap-2">
-                    <User className="h-4 w-4 text-healthcare-primary" />
+              <Card className="p-4 md:p-6 dark:bg-gray-800 shadow-sm mt-0">
+                <div className="mb-2 md:mb-4">
+                  <h3 className="font-bold text-base md:text-lg text-foreground dark:text-white flex items-center gap-2">
+                    <User className="h-4 w-4 md:h-5 md:w-5 text-healthcare-primary" />
                     {t('patientForm.personal.title')}
                   </h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-                  <div>
-                    <Label htmlFor="name" className="text-sm font-medium dark:text-gray-300">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-3 md:gap-5">
+                  <div className="xl:col-span-3">
+                    <Label htmlFor="name" className="text-sm md:text-base font-medium dark:text-gray-300">
                       {t('patientForm.personal.name')} <span className="text-red-500">*</span>
                     </Label>
                     <Input
@@ -513,28 +470,45 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                       value={formData.name}
                       onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                       placeholder={t('patientForm.personal.namePlaceholder')}
-                      className={`h-9 ${errors.name ? "border-red-500" : ""}`}
+                      className={`h-10 text-sm md:text-base mt-1.5 ${errors.name ? "border-red-500" : ""} ${formData.patientId ? "bg-indigo-50" : ""}`}
                     />
                     {errors.name && (
-                      <p className="text-red-500 text-xs mt-1">{t(errors.name)}</p>
+                      <p className="text-red-500 text-xs md:text-sm mt-1">{t(errors.name)}</p>
                     )}
                   </div>
 
-                  <div>
-                    <Label htmlFor="referenceName" className="text-sm font-medium dark:text-gray-300">
+                  <div className="xl:col-span-4">
+                    <Label htmlFor="referenceName" className="text-sm md:text-base font-medium dark:text-gray-300">
                       Reference Name
                     </Label>
-                    <Input
-                      id="referenceName"
-                      value={formData.referenceName}
-                      onChange={(e) => setFormData(prev => ({ ...prev, referenceName: e.target.value }))}
-                      placeholder="Enter Reference Name"
-                      className="h-9"
-                    />
+                    <div className="flex">
+                      <Select
+                        value={formData.referenceRelation}
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, referenceRelation: value }))}
+                      >
+                        <SelectTrigger className="w-[85px] h-10 text-sm md:text-base mt-1.5 rounded-r-none border-r-0 focus:ring-0 focus:ring-offset-0 focus:z-10 bg-muted/50">
+                          <SelectValue placeholder="Rel" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {RELATION_OPTIONS.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        id="referenceName"
+                        value={formData.referenceName}
+                        onChange={(e) => setFormData(prev => ({ ...prev, referenceName: e.target.value }))}
+                        placeholder="Enter Reference Name"
+                        className="flex-1 h-10 text-sm md:text-base mt-1.5 rounded-l-none focus:z-10"
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <Label htmlFor="phone" className="text-sm font-medium">
+                  <div className="xl:col-span-2">
+                    <Label htmlFor="phone" className="text-sm md:text-base font-medium">
                       {t('patientForm.personal.phone')} <span className="text-red-500">*</span>
                     </Label>
                     <Input
@@ -542,16 +516,16 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                       value={formData.phone}
                       onChange={handlePhoneChange}
                       placeholder={t('patientForm.personal.phonePlaceholder')}
-                      className={`h-9 ${errors.phone ? "border-red-500" : ""}`}
+                      className={`h-10 text-sm md:text-base mt-1.5 ${errors.phone ? "border-red-500" : ""} ${formData.patientId ? "bg-indigo-50" : ""}`}
                     />
                     {errors.phone && (
-                      <p className="text-red-500 text-xs mt-1">{t(errors.phone)}</p>
+                      <p className="text-red-500 text-xs md:text-sm mt-1">{t(errors.phone)}</p>
                     )}
                   </div>
 
-                  <div className="flex gap-3">
+                  <div className="xl:col-span-3 flex gap-3 md:gap-4">
                     <div className="flex-1">
-                      <Label htmlFor="age" className="text-sm font-medium">
+                      <Label htmlFor="age" className="text-sm md:text-base font-medium">
                         {t('patientForm.personal.age')} <span className="text-red-500">*</span>
                       </Label>
                       <Input
@@ -562,19 +536,19 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                         placeholder={t('patientForm.personal.agePlaceholder')}
                         min="1"
                         max="120"
-                        className={`h-9 ${errors.age ? "border-red-500" : ""}`}
+                        className={`h-10 text-sm md:text-base mt-1.5 ${errors.age ? "border-red-500" : ""} ${formData.patientId ? "bg-indigo-50" : ""}`}
                       />
                       {errors.age && (
-                        <p className="text-red-500 text-xs mt-1">{t(errors.age)}</p>
+                        <p className="text-red-500 text-xs md:text-sm mt-1">{t(errors.age)}</p>
                       )}
                     </div>
 
                     <div className="flex-1">
-                      <Label htmlFor="gender" className="text-sm font-medium">
+                      <Label htmlFor="gender" className="text-sm md:text-base font-medium">
                         {t('patientForm.personal.gender')} <span className="text-red-500">*</span>
                       </Label>
                       <Select value={formData.gender} onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
-                        <SelectTrigger className={`h-9 ${errors.gender ? "border-red-500" : ""}`}>
+                        <SelectTrigger className={`h-10 text-sm md:text-base mt-1.5 ${errors.gender ? "border-red-500" : ""} ${formData.patientId ? "bg-indigo-50" : ""}`}>
                           <SelectValue placeholder={t('patientForm.personal.genderPlaceholder')} />
                         </SelectTrigger>
                         <SelectContent>
@@ -584,7 +558,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                         </SelectContent>
                       </Select>
                       {errors.gender && (
-                        <p className="text-red-500 text-xs mt-1">{t(errors.gender)}</p>
+                        <p className="text-red-500 text-xs md:text-sm mt-1">{t(errors.gender)}</p>
                       )}
                     </div>
                   </div>
@@ -592,16 +566,16 @@ export const PatientForm: React.FC<PatientFormProps> = ({
               </Card>
 
               {/* Address, Insurance & Payment - Combined */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-5">
                 {/* Address Information */}
-                <Card className="p-4">
-                  <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-healthcare-primary" />
+                <Card className="p-4 md:p-6 shadow-sm">
+                  <h3 className="font-bold text-base md:text-lg text-foreground mb-3 md:mb-4 flex items-center gap-2">
+                    <MapPin className="h-4 w-4 md:h-5 md:w-5 text-healthcare-primary" />
                     {t('patientForm.address.title')}
                   </h3>
-                  <div className="space-y-3">
+                  <div className="space-y-3 md:space-y-4">
                     <div>
-                      <Label htmlFor="address" className="text-sm font-medium">
+                      <Label htmlFor="address" className="text-sm md:text-base font-medium">
                         {t('patientForm.address.address')} <span className="text-red-500">*</span>
                       </Label>
                       <Input
@@ -609,16 +583,16 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                         value={formData.address}
                         onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
                         placeholder={t('patientForm.address.addressPlaceholder')}
-                        className={`h-9 ${errors.address ? "border-red-500" : ""}`}
+                        className={`h-10 text-sm md:text-base mt-1.5 ${errors.address ? "border-red-500" : ""} ${formData.patientId ? "bg-indigo-50" : ""}`}
                       />
                       {errors.address && (
-                        <p className="text-red-500 text-xs mt-1">{t(errors.address)}</p>
+                        <p className="text-red-500 text-xs md:text-sm mt-1">{t(errors.address)}</p>
                       )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-3 md:gap-4">
                       <div>
-                        <Label htmlFor="city" className="text-sm font-medium">
+                        <Label htmlFor="city" className="text-sm md:text-base font-medium">
                           {t('patientForm.address.city')} <span className="text-red-500">*</span>
                         </Label>
                         <Input
@@ -626,15 +600,15 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                           value={formData.city}
                           onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
                           placeholder={t('patientForm.address.cityPlaceholder')}
-                          className={`h-9 ${errors.city ? "border-red-500" : ""}`}
+                          className={`h-10 text-sm md:text-base mt-1.5 ${errors.city ? "border-red-500" : ""} ${formData.patientId ? "bg-indigo-50" : ""}`}
                         />
                         {errors.city && (
-                          <p className="text-red-500 text-xs mt-1">{t(errors.city)}</p>
+                          <p className="text-red-500 text-xs md:text-sm mt-1">{t(errors.city)}</p>
                         )}
                       </div>
 
                       <div>
-                        <Label htmlFor="pincode" className="text-sm font-medium">
+                        <Label htmlFor="pincode" className="text-sm md:text-base font-medium">
                           {t('patientForm.address.pincode')} <span className="text-red-500">*</span>
                         </Label>
                         <Input
@@ -643,10 +617,10 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                           onChange={(e) => setFormData(prev => ({ ...prev, pincode: e.target.value }))}
                           placeholder={t('patientForm.address.pincodePlaceholder')}
                           maxLength={6}
-                          className={`h-9 ${errors.pincode ? "border-red-500" : ""}`}
+                          className={`h-10 text-sm md:text-base mt-1.5 ${errors.pincode ? "border-red-500" : ""} ${formData.patientId ? "bg-indigo-50" : ""}`}
                         />
                         {errors.pincode && (
-                          <p className="text-red-500 text-xs mt-1">{t(errors.pincode)}</p>
+                          <p className="text-red-500 text-xs md:text-sm mt-1">{t(errors.pincode)}</p>
                         )}
                       </div>
                     </div>
@@ -654,17 +628,16 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 </Card>
 
 
-
                 {/* Insurance & Payment Combined */}
-                <Card className="p-4">
-                  <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-green-600" />
+                <Card className="p-4 md:p-6 shadow-sm">
+                  <h3 className="font-bold text-base md:text-lg text-foreground mb-3 md:mb-4 flex items-center gap-2">
+                    <Shield className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
                     {t('patientForm.insurance.title')}
                   </h3>
-                  <div className="space-y-3">
+                  <div className="space-y-3 md:space-y-5">
                     {/* Insurance Section */}
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-3">
                         <Checkbox
                           id="hasInsurance"
                           checked={formData.hasInsurance}
@@ -674,16 +647,17 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                             insuranceId: !!checked ? prev.insuranceId : '',
                             insuranceType: !!checked ? prev.insuranceType : ''
                           }))}
+                          className="h-4 w-4 md:h-5 md:w-5"
                         />
-                        <Label htmlFor="hasInsurance" className="text-sm font-medium">
+                        <Label htmlFor="hasInsurance" className="text-sm md:text-base font-medium">
                           {t('patientForm.insurance.hasInsurance')}
                         </Label>
                       </div>
 
                       {formData.hasInsurance && (
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-3">
                           <Select value={formData.insuranceType} onValueChange={(value) => setFormData(prev => ({ ...prev, insuranceType: value }))}>
-                            <SelectTrigger className="h-9">
+                            <SelectTrigger className="h-10 text-sm md:text-base">
                               <SelectValue placeholder={t('patientForm.insurance.typePlaceholder')} />
                             </SelectTrigger>
                             <SelectContent>
@@ -695,28 +669,29 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                             value={formData.insuranceId}
                             onChange={(e) => setFormData(prev => ({ ...prev, insuranceId: e.target.value }))}
                             placeholder={formData.insuranceType === 'abha' ? t('patientForm.insurance.types.abha') : t('patientForm.insurance.types.insurance')}
-                            className="h-9"
+                            className="h-10 text-sm md:text-base"
                           />
                         </div>
                       )}
                     </div>
 
                     {/* Payment Section */}
-                    <div className="border-t pt-3 space-y-2">
-                      <div className="flex items-center space-x-2">
+                    <div className="border-t pt-3 md:pt-4 space-y-3">
+                      <div className="flex items-center space-x-3">
                         <Checkbox
                           id="isPaid"
                           checked={formData.isPaid}
                           onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPaid: !!checked, paymentMode: !!checked ? prev.paymentMode : '' }))}
+                          className="h-4 w-4 md:h-5 md:w-5"
                         />
-                        <Label htmlFor="isPaid" className="text-sm font-medium">
+                        <Label htmlFor="isPaid" className="text-sm md:text-base font-medium">
                           {t('patientForm.payment.completed')}
                         </Label>
                       </div>
 
                       {formData.isPaid && (
                         <Select value={formData.paymentMode} onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMode: value }))}>
-                          <SelectTrigger className={`h-9 ${errors.paymentMode ? "border-red-500" : ""}`}>
+                          <SelectTrigger className={`h-10 text-sm md:text-base ${errors.paymentMode ? "border-red-500" : ""}`}>
                             <SelectValue placeholder={t('patientForm.payment.modePlaceholder')} />
                           </SelectTrigger>
                           <SelectContent>
@@ -734,31 +709,33 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 </Card>
               </div>
 
-              <div className="flex gap-3 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onCancel}
-                  className="flex-1 h-10"
-                >
-                  {t('patientForm.actions.cancel')}
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting || isBookingLoading || !isFormReady}
-                  className="flex-1 bg-healthcare-primary hover:bg-healthcare-primary/90 h-10 gap-2"
-                >
-                  {(isSubmitting || isBookingLoading) && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {isSubmitting || isBookingLoading ? t('patientForm.actions.submitting') : t('patientForm.actions.submit')}
-                </Button>
-              </div>
             </form>
+
+            <div className="flex justify-end gap-3 md:gap-4 mt-6 pb-8">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                className="flex-1 md:flex-none md:min-w-[200px] h-10 md:h-11 md:text-base"
+              >
+                {t('patientForm.actions.cancel')}
+              </Button>
+              <Button
+                type="submit"
+                form="patient-form"
+                disabled={isSubmitting || isBookingLoading || !isFormReady}
+                className="flex-1 md:flex-none md:min-w-[320px] h-10 md:h-11 md:text-base bg-healthcare-primary hover:bg-healthcare-primary/90 gap-2 shadow-lg shadow-blue-500/20"
+              >
+                {(isSubmitting || isBookingLoading) && <Loader2 className="h-4 w-4 animate-spin" />}
+                {isSubmitting || isBookingLoading ? t('patientForm.actions.submitting') : t('patientForm.actions.submit')}
+              </Button>
+            </div>
           </div>
         </div>
-      </DialogContent>
+      </DialogContent >
 
       {/* Search Results Popup */}
-      <Dialog open={showSearchResults} onOpenChange={setShowSearchResults}>
+      < Dialog open={showSearchResults} onOpenChange={setShowSearchResults} >
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -888,7 +865,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
             )}
           </div>
         </DialogContent>
-      </Dialog>
-    </Dialog>
+      </Dialog >
+    </Dialog >
   );
 };
