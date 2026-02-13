@@ -1,5 +1,6 @@
 import { apiClient, ApiResponse, PaginatedResponse } from '@/services/axiosClient';
 import { useAuthStore } from '@/store/authStore';
+import { API_ENDPOINTS } from '@/app/api';
 
 // Utility function to generate unique patient ID
 export const generatePatientId = (): string => {
@@ -226,7 +227,7 @@ export interface PatientSearchItem {
   pincode: string;
   lastRegistrationAt: string;
   lastRegistrationId: string;
-  matched: {
+  matched?: {
     by: string;
     value: string;
   };
@@ -321,7 +322,7 @@ export const appointmentApi = {
     try {
       hospitalId = useAuthStore.getState().getHospitalId();
     } catch (e) { }
-    const url = `/appointments/patient-details/search?by=${request.by}&q=${encodeURIComponent(request.q)}&scope=${request.scope || 'local'}${hospitalId ? `&hospitalId=${hospitalId}` : ''}`;
+    const url = API_ENDPOINTS.PATIENTS.SEARCH(request.q, hospitalId);
     return apiClient.get(url);
   },
 
