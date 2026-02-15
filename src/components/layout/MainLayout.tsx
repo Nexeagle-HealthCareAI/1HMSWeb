@@ -83,6 +83,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const { currentLanguage, isRTL } = useLanguage();
   const { t } = useTranslation();
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Profile completion hook
   const { completionPercentage, doctorProfileCompletion } = useProfileCompletion();
@@ -392,6 +398,20 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             </div>
 
             <div className="flex items-center gap-4">
+              {/* Date/Time Display */}
+              <div className="hidden lg:flex items-center gap-3 pl-1 pr-4 py-1 bg-white/50 dark:bg-gray-800/50 backdrop-blur-md border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group cursor-default mr-4">
+                <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg shadow-indigo-500/20 text-white group-hover:scale-105 group-hover:rotate-3 transition-all duration-300">
+                  <Clock className="h-4 w-4" />
+                </div>
+                <div className="flex flex-col items-start">
+                  <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider leading-none mb-0.5">
+                    {currentTime.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
+                  </span>
+                  <span className="text-lg font-black bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent leading-none tabular-nums tracking-tight">
+                    {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              </div>
               {/* Sidebar Toggle Hint */}
               <div className="hidden lg:flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-md border border-gray-200 dark:border-gray-600">
                 <span className="font-medium">Ctrl+B</span>
