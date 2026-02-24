@@ -5,7 +5,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { useTranslation } from 'react-i18next';
 import {
-  CalendarHeader,
+  GamifiedHeader,
   EditShiftModal,
   PersonalizedScheduleModal,
   DeleteTimeOffDialog,
@@ -395,8 +395,8 @@ export const DoctorCalendarPage: React.FC = () => {
       event
     });
     toast({
-      title: t('doctorCalendar.error'),
-      description: t('doctorCalendar.failedToDeleteTimeOff'),
+      title: t('doctorCalendar.messages.error'),
+      description: t('doctorCalendar.errors.failedToDeleteTimeOff'),
       variant: 'destructive'
     });
     return false;
@@ -583,8 +583,8 @@ export const DoctorCalendarPage: React.FC = () => {
     if (hasShiftBlockInRange) {
       console.log('Date selection blocked - shift block in range');
       toast({
-        title: t('doctorCalendar.shiftBlock'),
-        description: t('doctorCalendar.shiftBlockMessage'),
+        title: t('doctorCalendar.conflicts.shiftBlock'),
+        description: t('doctorCalendar.conflicts.shiftBlockMessage'),
         variant: "destructive",
       });
       return; // Don't open any modal if shift blocks are in the selection
@@ -604,8 +604,8 @@ export const DoctorCalendarPage: React.FC = () => {
 
     if (hasTimeOffConflict) {
       toast({
-        title: t('doctorCalendar.timeOffConflict'),
-        description: t('doctorCalendar.timeOffConflictMessage'),
+        title: t('doctorCalendar.conflicts.timeOffConflict'),
+        description: t('doctorCalendar.conflicts.timeOffConflictMessage'),
         variant: "destructive",
       });
       return;
@@ -714,9 +714,15 @@ export const DoctorCalendarPage: React.FC = () => {
       }
 
       // Add data-override attribute for override shifts
-      if (info.event.extendedProps?.isOverride) {
+      if (info.event.extendedProps?.isOverride || info.event.extendedProps?.dataSource === 'Override') {
         info.el.setAttribute('data-override', 'true');
-        console.log('📅 Set data-override attribute for event:', info.event.id);
+        info.el.closest('.fc-timegrid-event-harness')?.classList.add('full-width-harness');
+        console.log('📅 Set data-override and harness class for event:', info.event.id);
+      }
+
+      // Also ensure regular shifts are full width
+      if (eventType === 'shift') {
+        info.el.closest('.fc-timegrid-event-harness')?.classList.add('full-width-harness');
       }
 
       // Add data-event-type attribute for better CSS targeting
@@ -955,8 +961,8 @@ export const DoctorCalendarPage: React.FC = () => {
     const timeOffRequest: CreateTimeOffRequest = {
       doctorId: payload.doctorId,
       hospitalId,
-      fromDate: format(fromDate, 'yyyy-MM-dd'),
-      toDate: format(toDate, 'yyyy-MM-dd'),
+      fromDate: fromDate.toISOString(),
+      toDate: toDate.toISOString(),
       reason: payload.title
     };
 
@@ -964,13 +970,13 @@ export const DoctorCalendarPage: React.FC = () => {
       onSuccess: async (data) => {
         setSuccessDialog({
           open: true,
-          title: t('doctorCalendar.timeOffScheduled'),
-          message: t('doctorCalendar.timeOffScheduledMessage'),
+          title: t('doctorCalendar.notifications.timeOffScheduled'),
+          message: t('doctorCalendar.notifications.timeOffScheduledMessage'),
           details: [
-            `✅ ${t('doctorCalendar.timeOffBlocked')}`,
-            `📅 ${t('doctorCalendar.duration')}: ${format(fromDate, 'MMM dd, yyyy HH:mm')} - ${format(toDate, 'MMM dd, yyyy HH:mm')}`,
-            `🚫 ${t('doctorCalendar.noAppointmentsBooked')}`,
-            `📱 ${t('doctorCalendar.cancelTimeOffAnytime')}`
+            `✅ ${t('doctorCalendar.notifications.timeOffBlocked')}`,
+            `📅 ${t('doctorCalendar.notifications.duration')}: ${format(fromDate, 'MMM dd, yyyy HH:mm')} - ${format(toDate, 'MMM dd, yyyy HH:mm')}`,
+            `🚫 ${t('doctorCalendar.notifications.noAppointmentsBooked')}`,
+            `📱 ${t('doctorCalendar.notifications.cancelTimeOffAnytime')}`
           ]
         });
         setPersonalizedScheduleModal(prev => ({ ...prev, open: false }));
@@ -979,8 +985,8 @@ export const DoctorCalendarPage: React.FC = () => {
       },
       onError: (error) => {
         toast({
-          title: t('doctorCalendar.error'),
-          description: t('doctorCalendar.failedToScheduleTimeOff'),
+          title: t('doctorCalendar.messages.error'),
+          description: t('doctorCalendar.errors.failedToScheduleTimeOff'),
           variant: 'destructive',
         });
       }
@@ -1224,79 +1230,61 @@ export const DoctorCalendarPage: React.FC = () => {
   }
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 -m-6 transition-all duration-300">
-      {/* Sticky Header within Main Layout */}
-      <div className="sticky top-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-200/60 dark:border-gray-700/60 shadow-sm">
-        <CalendarHeader
+    <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-950 transition-all duration-300 overflow-hidden">
+      {/* Premium Gamified Header */}
+      <div className="pt-6 px-6">
+        <GamifiedHeader
           currentDate={currentDate}
           onDateChange={setCurrentDate}
           view={view}
           onViewChange={setView}
           onAddOverride={handleAddOverride}
+          doctorName={doctorName}
         />
-
-
       </div>
 
 
 
-      {/* Main Content Area with Calendar and Shift Details */}
-      <div className="flex-1 px-4 py-4">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-full">
-          {/* Calendar Column with Scroll */}
-          <div className="lg:col-span-3 overflow-y-auto">
+      {/* Main Content Area with Calendar and Gamification Sidebar */}
+      <div className="flex-1 px-6 pb-6 overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+          {/* Calendar Column */}
+          <div className="lg:col-span-9 h-full flex flex-col">
             {eventsLoading || doctorProfileLoading || isInitialLoading || configLoading ? (
-              <div className="flex items-center justify-center min-h-[400px]">
-                <div className="text-center bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+              <div className="flex-1 flex items-center justify-center glass-card rounded-3xl">
+                <div className="text-center p-8">
                   <LoadingSpinner size="lg" />
-                  <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">
+                  <h3 className="mt-6 text-xl font-black text-gray-900 dark:text-white">
                     {isInitialLoading ? t('doctorCalendar.preparingCalendar') :
                       doctorProfileLoading ? t('doctorCalendar.loadingProfile') :
                         configLoading ? t('doctorCalendar.loadingScheduleConfig') : t('doctorCalendar.loading')}
                   </h3>
-                  <p className="mt-2 text-gray-600 dark:text-gray-400">
-                    {isInitialLoading ? t('doctorCalendar.preparingMessage') :
-                      doctorProfileLoading ? t('doctorCalendar.fetchingProfileMessage') :
-                        configLoading ? t('doctorCalendar.loadingScheduleMessage') : t('doctorCalendar.pleaseWait')}
-                  </p>
-                  {doctorProfileError && (
-                    <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                      <p className="text-red-700 dark:text-red-400 font-medium">{t('errors.doctorProfileError')}</p>
-                      <p className="text-red-600 dark:text-red-300 text-sm mt-1">{doctorProfileError.message || t('doctorCalendar.profileLoadError')}</p>
-                    </div>
-                  )}
                 </div>
               </div>
             ) : (
-              <div
-                className="calendar-container"
-              >
-                <div className="relative rounded-[30px] bg-gradient-to-br from-white/70 via-slate-50/80 to-blue-50/80 dark:from-slate-900/50 dark:via-slate-900/60 dark:to-slate-900/70 p-[1px] shadow-2xl border border-white/50 dark:border-slate-800/70">
-                  <div className="rounded-[28px] bg-white/95 dark:bg-slate-950/80 backdrop-blur-xl overflow-hidden">
-                    <FullCalendar
-                      key={`${view}-${currentDate.toISOString()}`}
-                      ref={calendarRef}
-                      {...calendarOptions}
-                    />
-                  </div>
+              <div className="flex-1 glass-card rounded-3xl overflow-hidden shadow-2xl relative p-1 bg-white/50 dark:bg-gray-900/50">
+                <div className="h-full overflow-y-auto custom-scrollbar rounded-2xl bg-white dark:bg-gray-900">
+                  <FullCalendar
+                    key={`${view}-${currentDate.toISOString()}`}
+                    ref={calendarRef}
+                    {...calendarOptions}
+                  />
                 </div>
               </div>
             )}
           </div>
 
-          {/* Shift Details Card Column - Fixed Height */}
-          <div className="lg:col-span-1">
-            <div className="h-fit">
-              <ShiftDetailsCard
-                events={allEvents}
-                calendarConfig={calendarConfig}
-                isLoading={eventsLoading || configLoading}
-                isTimeOffWarningClosed={isTimeOffWarningClosed}
-                onCloseTimeOffWarning={() => setIsTimeOffWarningClosed(true)}
-                currentDate={currentDate}
-                currentView={view as 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'}
-              />
-            </div>
+          <div className="lg:col-span-3 space-y-6 h-full overflow-y-auto pb-6 custom-scrollbar pr-2">
+
+            <ShiftDetailsCard
+              events={allEvents}
+              calendarConfig={calendarConfig}
+              isLoading={eventsLoading || configLoading}
+              isTimeOffWarningClosed={isTimeOffWarningClosed}
+              onCloseTimeOffWarning={() => setIsTimeOffWarningClosed(true)}
+              currentDate={currentDate}
+              currentView={view as 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay'}
+            />
           </div>
         </div>
       </div>
@@ -1431,9 +1419,9 @@ export const DoctorCalendarPage: React.FC = () => {
           }
           
           .shift-event {
-            background-color: transparent !important;
-            border: 2px solid #e5e7eb !important;
-            color: #374151 !important;
+            background-color: rgba(59, 130, 246, 0.2) !important;
+            border: 1px solid #3b82f6 !important;
+            color: #1e40af !important;
             font-weight: 500 !important;
           }
           
@@ -1473,23 +1461,23 @@ export const DoctorCalendarPage: React.FC = () => {
            
                        /* Time Off events styling */
             .timeoff-event {
-              background-color: #f97316 !important; /* Amber/Orange color */
-              border-color: #ea580c !important;
+              background-color: #ea580c !important; /* More vivid orange */
+              border-color: #c2410c !important;
               color: white !important;
-              font-weight: 600 !important;
+              font-weight: 700 !important;
             }
             
             /* API Time Off events styling - full width blocks */
-            .api-timeoff-event {
-              background-color: rgba(220, 38, 38, 0.8) !important; /* More opaque red */
-              border-color: #dc2626 !important;
-              color: white !important;
-              font-weight: 700 !important;
-              border-width: 2px !important;
-              width: 100% !important;
-              margin: 0 !important;
-              border-radius: 4px !important;
-            }
+             .api-timeoff-event {
+               background-color: rgba(220, 38, 38, 0.9) !important; 
+               border-color: #dc2626 !important;
+               color: white !important;
+               font-weight: 800 !important;
+               border-width: 2px !important;
+               width: 100% !important;
+               margin: 0 !important;
+               z-index: 50 !important; /* Ensure it stays on top */
+             }
 
             /* Shift background events styling - light blue */
             .fc-bg-event.shift-background {
@@ -1522,25 +1510,22 @@ export const DoctorCalendarPage: React.FC = () => {
               border-left: 4px solid #3b82f6 !important;
             }
 
-            /* Working shift events */
-            .shift-event {
-              background-color: rgba(59, 130, 246, 0.3) !important; /* Light blue */
-              border-color: #2563eb !important;
+            /* Working shift events (Consolidated) */
+            .shift-event-default {
+              background-color: #dbeafe !important;
+              border-color: #3b82f6 !important;
               color: #1e40af !important;
-              font-weight: 600 !important;
-              border-width: 1px !important;
+              width: 100% !important;
+              margin: 0 !important;
             }
-
-          .shift-event-default {
-            background-color: #bfdbfe !important;
-            border-color: #1d4ed8 !important;
-            color: #0f172a !important;
-          }
 
           .shift-event-override {
             background-color: #bbf7d0 !important;
             border-color: #15803d !important;
             color: #064e3b !important;
+            width: 100% !important;
+            margin: 0 !important;
+            z-index: 10 !important;
           }
             
                      /* Enhanced Shift block events */
@@ -1619,11 +1604,13 @@ export const DoctorCalendarPage: React.FC = () => {
           /* Enhanced Event Styling */
           .fc-event {
             cursor: pointer;
-            border-radius: 8px !important;
-            margin: 2px 1px !important;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-            backdrop-filter: blur(8px) !important;
+            border-radius: 4px !important; /* Slightly sharper but still modern */
+            margin: 0 !important; /* Fill the whole width */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            backdrop-filter: blur(4px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.4) !important;
+            width: calc(100% - 1px) !important; /* Micro-gap for vertical lines */
           }
           
           .fc-event:hover {
@@ -1660,16 +1647,23 @@ export const DoctorCalendarPage: React.FC = () => {
           .fc-event[data-override="true"] {
             position: relative !important;
             cursor: pointer !important;
-            border: 2px solid #dc2626 !important;
+            border: 3px solid #16a34a !important; /* Greener/Stronger for overrides */
             z-index: 10 !important;
-            pointer-events: auto !important; /* Enable clicks on the event */
+            pointer-events: auto !important; 
           }
           
-          .fc-event[data-override="true"]:hover {
-            cursor: pointer !important;
-            transform: translateY(-1px) !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-            opacity: 0.9 !important;
+          /* Harness level overrides to force full width */
+          .full-width-harness {
+            left: 0 !important;
+            right: 0 !important;
+            margin: 0 !important;
+            z-index: 5 !important;
+          }
+          
+          .full-width-harness .fc-event {
+            width: 100% !important;
+            margin: 0 !important;
+            border-radius: 0 !important; /* Sharp edges for "block" look */
           }
           
           /* Ensure block events are visible above override events */

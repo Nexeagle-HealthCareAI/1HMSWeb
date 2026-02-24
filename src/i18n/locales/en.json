@@ -1090,6 +1090,7 @@
     },
     "personalizedScheduleModal": {
       "title": "Schedule & Time Off Management",
+      "blockTitle": "Manage Time Off & Blocks",
       "tabs": {
         "schedule": "Schedule",
         "timeOff": "Time Off"

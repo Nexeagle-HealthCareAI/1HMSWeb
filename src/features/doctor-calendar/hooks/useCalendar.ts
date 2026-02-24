@@ -176,9 +176,14 @@ export function useCalendarEvents(
       // Add time-off blocks
       if (timeOffData?.timeOffs) {
         timeOffData.timeOffs.forEach((timeOff, index) => {
-          // Parse dates
-          const fromDate = new Date(timeOff.fromDate);
-          const toDate = new Date(timeOff.toDate);
+          // Parse dates - prefer the more detailed API response fields if they exist
+          const fromDate = new Date(timeOff.startDate || timeOff.fromDate);
+          let toDate = new Date(timeOff.endDate || timeOff.toDate);
+
+          // If toDate is exactly same as fromDate (0 duration), make it cover the full day
+          if (toDate.getTime() === fromDate.getTime()) {
+            toDate = new Date(fromDate.getTime() + 24 * 60 * 60 * 1000 - 1000); // Add 1 day minus 1s
+          }
 
           // Create time-off event
           const timeOffEvent: CalendarEvent = {
@@ -189,7 +194,7 @@ export function useCalendarEvents(
             end: toDate.toISOString(),
             backgroundColor: '#ef4444', // Red color for time-off
             borderColor: '#dc2626',
-            allDay: true, // Time-off events are typically all-day
+            allDay: false, // Make them timed events so they extend from start time to end time in the grid
             extendedProps: {
               type: 'timeoff', // Add type to extendedProps as backup
               timeOffId: timeOff.timeOffId,

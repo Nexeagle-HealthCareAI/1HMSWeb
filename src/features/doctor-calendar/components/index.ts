@@ -11,3 +11,4 @@ export * from './ShiftDetailsCard';
 export * from './DateRangeSelectionPopup';
 export * from './AppointmentCancelDialog';
 export * from './CalendarEventContent';
+export * from './GamifiedHeader';

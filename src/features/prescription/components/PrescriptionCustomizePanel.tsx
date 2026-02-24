@@ -79,6 +79,12 @@ interface PersonalizedDataItem {
   manufacturer?: string;
   medicineName?: string;
   strength?: string;
+  strengthValue?: string;
+  strengthUnit?: string;
+  route?: string;
+  medicineId?: string;
+  dosageForm?: string;
+  indication?: string;
 }
 
 interface PersonalizedData {

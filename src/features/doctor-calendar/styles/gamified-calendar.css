@@ -1,0 +1,181 @@
+/* High-energy gradients, glassmorphism, and animations for the Premium Gamified Calendar */
+
+:root {
+  --poly-primary: #6366f1;
+  --poly-secondary: #a855f7;
+  --poly-accent: #ec4899;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --glass-highlight: rgba(255, 255, 255, 0.8);
+  --xp-bar-bg: #e2e8f0;
+  --xp-bar-fill: linear-gradient(90deg, #6366f1, #a855f7);
+  --level-badge-glow: rgba(168, 85, 247, 0.5);
+}
+
+.dark {
+  --glass-bg: rgba(15, 23, 42, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-highlight: rgba(255, 255, 255, 0.05);
+}
+
+/* Glassmorphism Classes */
+.glass-effect {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid var(--glass-border);
+}
+
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+}
+
+/* Premium Gradients */
+.bg-premium-gradient {
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+}
+
+.text-gradient-premium {
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* XP & Progression UI */
+.xp-progress-container {
+  height: 8px;
+  background: var(--xp-bar-bg);
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.xp-progress-fill {
+  height: 100%;
+  background: var(--xp-bar-fill);
+  box-shadow: 0 0 10px var(--level-badge-glow);
+  transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Achievement Badge Styling */
+.badge-unlocked {
+  filter: drop-shadow(0 0 8px var(--level-badge-glow));
+  animation: badge-pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.badge-locked {
+  filter: grayscale(1) opacity(0.5);
+}
+
+/* Interactive Elements */
+.interactive-hover {
+  transition: all 0.3s ease;
+}
+
+.interactive-hover:hover {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 12px 20px -10px rgba(0, 0, 0, 0.15);
+}
+
+/* Animations */
+@keyframes badge-pop {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up-fade {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up-fade 0.4s ease-out forwards;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer-effect {
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.2) 50%,
+      transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Calendar Event Enhancements */
+.fc-event-premium {
+  border: none !important;
+  border-radius: 6px !important;
+  padding: 2px 4px !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  transition: transform 0.2s ease !important;
+}
+
+.fc-event-premium:hover {
+  transform: scale(1.02) !important;
+  z-index: 10 !important;
+}
+
+/* Legacy Gamified Modal Styles (Restored for PersonalizedScheduleModal) */
+.gamified-modal {
+  --schedule-primary: #6366f1;
+  --schedule-secondary: #a855f7;
+  --timeoff-primary: #10b981;
+  --timeoff-secondary: #06b6d4;
+  --accent-glow: rgba(99, 102, 241, 0.5);
+}
+
+.bg-gradient-schedule {
+  background: linear-gradient(135deg, var(--schedule-primary), var(--schedule-secondary)) !important;
+}
+
+.bg-gradient-timeoff {
+  background: linear-gradient(135deg, var(--timeoff-primary), var(--timeoff-secondary)) !important;
+}
+
+.glow-schedule {
+  box-shadow: 0 10px 30px -5px rgba(99, 102, 241, 0.5) !important;
+}
+
+.glow-timeoff {
+  box-shadow: 0 10px 30px -5px rgba(16, 185, 129, 0.5) !important;
+}
+
+.mission-progress-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+
+.mission-progress-fill {
+  height: 100%;
+  transition: width 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}

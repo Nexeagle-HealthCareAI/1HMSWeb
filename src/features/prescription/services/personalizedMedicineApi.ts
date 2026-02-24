@@ -38,6 +38,12 @@ export interface PersonalizedMedicineResponse {
 
   // Frontend compat fields (computed during normalization)
   form?: string;
+  strengthValue?: string;
+  strengthUnit?: string;
+  route?: string;
+  dose?: string;
+  indication?: string;
+  medicineId?: string;
 }
 
 const normalizeList = (data: any): PersonalizedMedicineResponse[] => {

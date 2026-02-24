@@ -10,11 +10,13 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { ShiftName, CreateOverridePayload, BlockType, CreateBlockPayload } from '../api/types';
 import { format, parseISO, addDays, addWeeks, addMonths } from 'date-fns';
-import { Clock, Calendar, Repeat, Sun, Moon, Sunrise, Sunset, Info, AlertCircle, CheckCircle } from 'lucide-react';
+import { Clock, Calendar, Repeat, Sun, Moon, Sunrise, Sunset, Info, AlertCircle, CheckCircle, Activity, CalendarDays } from 'lucide-react';
 import { CalendarService, CalendarViewType, DateRange } from '../services/calendarService';
 import { DateRangeSelectionPopup } from './DateRangeSelectionPopup';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/store/authStore';
+import { motion, AnimatePresence } from 'framer-motion';
+import '../styles/gamified-calendar.css';
 
 interface PersonalizedScheduleModalProps {
   open: boolean;
@@ -114,9 +116,10 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
   // Date range selection state
   const [showDateRangePopup, setShowDateRangePopup] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | null>(null);
-  const [scheduleMode, setScheduleMode] = useState<'single' | 'recurring'>('single');
+  const [scheduleMode] = useState<'single' | 'recurring'>('recurring');
   const [recurringDays, setRecurringDays] = useState<Set<number>>(new Set([1, 2, 3, 4, 5])); // Mon-Fri
   const [recurringEndDate, setRecurringEndDate] = useState('');
+  const [isCelebrated, setIsCelebrated] = useState(false);
 
   // Block form state
   const [blockFormData, setBlockFormData] = useState({
@@ -124,6 +127,27 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
     startDateTime: '',
     endDateTime: ''
   });
+
+  // Calculate Gamification Progress
+  const calculateProgress = () => {
+    let tasks = 0;
+    let completed = 0;
+
+    if (scheduleType === 'schedule') {
+      tasks = 3; // Shift selection, date range, recurring days
+      if (selectedShifts.size > 0) completed++;
+      if (startDate && recurringEndDate) completed++;
+      if (recurringDays.size > 0) completed++;
+    } else {
+      tasks = 2; // Block type, date range
+      if (blockFormData.blockType) completed++;
+      if (blockFormData.startDateTime && blockFormData.endDateTime) completed++;
+    }
+
+    return tasks > 0 ? (completed / tasks) * 100 : 0;
+  };
+
+  const progress = calculateProgress();
 
 
 
@@ -231,54 +255,28 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
       1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun'
     };
 
-    if (scheduleMode === 'single') {
-      // Single day schedule
-      const payload: CreateOverridePayload = {
-        doctorId,
-        hospitalId: currentHospitalId,
-        overrideDate: startDate,
-        startDate,
-        endDate: startDate, // Single day
-        shiftDetails: Array.from(selectedShifts).map(shiftName => {
-          const config = shiftConfigs[shiftName];
-          const slotDuration = Math.max(1, Number(config.slotDuration) || 15);
-          return {
-            shiftName,
-            startTime: config.startTime,
-            endTime: config.endTime,
-            slotDurationInMinutes: slotDuration,
-            recurringDays: [] // No recurring days for single override
-          };
-        })
-      };
-      payloads.push(payload);
-    } else {
-      // Recurring schedule - Send Single Payload
-      // Fix: Send one payload with startDate, endDate and recurringDays
-      // instead of generating individual payloads for each day.
+    // Recurring schedule - Send Single Payload
+    const selectedDayStrings = Array.from(recurringDays).map(d => daysMap[d]).filter(Boolean);
 
-      const selectedDayStrings = Array.from(recurringDays).map(d => daysMap[d]).filter(Boolean);
-
-      const payload: CreateOverridePayload = {
-        doctorId,
-        hospitalId: currentHospitalId,
-        overrideDate: startDate, // Use start date as reference
-        startDate: startDate,
-        endDate: recurringEndDate,
-        shiftDetails: Array.from(selectedShifts).map(shiftName => {
-          const config = shiftConfigs[shiftName];
-          const slotDuration = Math.max(1, Number(config.slotDuration) || 15);
-          return {
-            shiftName,
-            startTime: config.startTime,
-            endTime: config.endTime,
-            slotDurationInMinutes: slotDuration,
-            recurringDays: selectedDayStrings
-          };
-        })
-      };
-      payloads.push(payload);
-    }
+    const payload: CreateOverridePayload = {
+      doctorId,
+      hospitalId: currentHospitalId,
+      overrideDate: startDate, // Use start date as reference
+      startDate: startDate,
+      endDate: recurringEndDate,
+      shiftDetails: Array.from(selectedShifts).map(shiftName => {
+        const config = shiftConfigs[shiftName];
+        const slotDuration = Math.max(1, Number(config.slotDuration) || 15);
+        return {
+          shiftName,
+          startTime: config.startTime,
+          endTime: config.endTime,
+          slotDurationInMinutes: slotDuration,
+          recurringDays: selectedDayStrings
+        };
+      })
+    };
+    payloads.push(payload);
 
     return payloads;
   };
@@ -329,26 +327,24 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
     }
 
     // Validate recurring schedule settings
-    if (scheduleMode === 'recurring') {
-      if (recurringDays.size === 0) {
-        toast({
-          title: t('doctorCalendar.personalizedScheduleModal.validation.recurringDays.title'),
-          description: t('doctorCalendar.personalizedScheduleModal.validation.recurringDays.description'),
-          variant: 'destructive'
-        });
-        return; // No days selected for recurring schedule
-      }
+    if (recurringDays.size === 0) {
+      toast({
+        title: t('doctorCalendar.personalizedScheduleModal.validation.recurringDays.title'),
+        description: t('doctorCalendar.personalizedScheduleModal.validation.recurringDays.description'),
+        variant: 'destructive'
+      });
+      return; // No days selected for recurring schedule
+    }
 
-      const start = parseISO(startDate);
-      const end = parseISO(recurringEndDate);
-      if (!(start instanceof Date) || isNaN(start.getTime()) || !(end instanceof Date) || isNaN(end.getTime()) || start >= end) {
-        toast({
-          title: t('doctorCalendar.personalizedScheduleModal.validation.dateRange.title'),
-          description: t('doctorCalendar.personalizedScheduleModal.validation.dateRange.description'),
-          variant: 'destructive'
-        });
-        return; // End date must be after start date
-      }
+    const start = parseISO(startDate);
+    const end = parseISO(recurringEndDate);
+    if (!(start instanceof Date) || isNaN(start.getTime()) || !(end instanceof Date) || isNaN(end.getTime()) || start >= end) {
+      toast({
+        title: t('doctorCalendar.personalizedScheduleModal.validation.dateRange.title'),
+        description: t('doctorCalendar.personalizedScheduleModal.validation.dateRange.description'),
+        variant: 'destructive'
+      });
+      return; // End date must be after start date
     }
 
     // Validate shift configurations
@@ -380,8 +376,12 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
 
     const payloads = generatePayloads();
     if (payloads.length > 0) {
+      setIsCelebrated(true);
       onSave(payloads);
-      onOpenChange(false);
+      setTimeout(() => {
+        setIsCelebrated(false);
+        onOpenChange(false);
+      }, 2000);
     } else {
       toast({
         title: t('doctorCalendar.personalizedScheduleModal.validation.noPayload.title'),
@@ -429,8 +429,12 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
       };
 
       if (onSaveBlock) {
+        setIsCelebrated(true);
         onSaveBlock(payload);
-        onOpenChange(false);
+        setTimeout(() => {
+          setIsCelebrated(false);
+          onOpenChange(false);
+        }, 2000);
       }
     } catch (error) {
       console.error('Error creating time-off payload:', error);
@@ -471,13 +475,11 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
     if (selectedShifts.size === 0) return false;
 
     // Validate recurring schedule settings
-    if (scheduleMode === 'recurring') {
-      if (recurringDays.size === 0) return false;
+    if (recurringDays.size === 0) return false;
 
-      const start = parseISO(startDate);
-      const end = parseISO(recurringEndDate);
-      if (start >= end) return false;
-    }
+    const start = parseISO(startDate);
+    const end = parseISO(recurringEndDate);
+    if (start >= end) return false;
 
     // Validate shift configurations
     return Array.from(selectedShifts).every(shiftName => {
@@ -557,459 +559,258 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[900px] max-h-[85vh] overflow-auto">
-          <DialogHeader className="pb-4">
-            <DialogTitle className="flex items-center gap-2 text-lg">
-              <Calendar className="h-5 w-5" />
-              {t('doctorCalendar.personalizedScheduleModal.title')}
-            </DialogTitle>
-          </DialogHeader>
-
-          <form onSubmit={scheduleType === 'block' ? handleBlockSubmit : handleSubmit} className="h-full flex flex-col">
-            {/* Schedule Type Selection */}
-            <div className="mb-4">
-              <div className="grid w-full grid-cols-2 rounded-md bg-muted p-1">
-                <button
-                  type="button"
-                  className={`flex items-center justify-center gap-2 rounded-sm px-3 py-1.5 text-sm font-medium transition-all duration-200 ${scheduleType === 'schedule'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground'
-                    }`}
-                  onClick={() => setScheduleType('schedule')}
-                >
-                  <Clock className="h-4 w-4" />
-                  {t('doctorCalendar.personalizedScheduleModal.tabs.schedule')}
-                </button>
-                <button
-                  type="button"
-                  className={`flex items-center justify-center gap-2 rounded-sm px-3 py-1.5 text-sm font-medium transition-all duration-200 ${scheduleType === 'block'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground'
-                    }`}
-                  onClick={() => setScheduleType('block')}
-                >
-                  <AlertCircle className="h-4 w-4" />
-                  {t('doctorCalendar.personalizedScheduleModal.tabs.timeOff')}
-                </button>
+        <DialogContent className="max-w-3xl p-0 overflow-hidden border-none rounded-2xl shadow-2xl gamified-modal">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+          >
+            <DialogHeader className={`p-6 text-white transition-colors duration-500 rounded-t-2xl ${scheduleType === 'schedule' ? 'bg-gradient-schedule glow-schedule' : 'bg-gradient-timeoff glow-timeoff'}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <DialogTitle className="text-2xl font-bold flex items-center gap-2 text-white">
+                    {scheduleType === 'schedule' ? <Sun className="animate-pulse" /> : <Moon className="animate-float" />}
+                    {scheduleType === 'schedule' ? t('doctorCalendar.personalizedScheduleModal.title') : t('doctorCalendar.personalizedScheduleModal.blockTitle')}
+                  </DialogTitle>
+                  <p className="text-white/80 text-sm mt-1">
+                    {scheduleType === 'schedule' ? 'Mission: Optimize Your Calendar' : 'Zen Time: Restore Your Energy'}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs font-semibold uppercase tracking-wider opacity-70">Mission Score</div>
+                  <div className="text-2xl font-black">{Math.round(progress)}%</div>
+                </div>
               </div>
 
-              <div className="mt-4">
-                {scheduleType === 'schedule' && (
-                  <div className="space-y-4 h-full">
-                    {/* Schedule Mode Selection */}
-                    <div className="space-y-3">
-                      <Label className="text-sm font-semibold flex items-center gap-2">
-                        <Info className="h-4 w-4" />
-                        {t('doctorCalendar.personalizedScheduleModal.scheduleType')}
-                      </Label>
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant={scheduleMode === 'single' ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setScheduleMode('single')}
-                          className="flex-1"
-                        >
-                          <Calendar className="h-4 w-4 mr-2" />
-                          {t('doctorCalendar.personalizedScheduleModal.scheduleModes.single')}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={scheduleMode === 'recurring' ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setScheduleMode('recurring')}
-                          className="flex-1"
-                        >
-                          <Repeat className="h-4 w-4 mr-2" />
-                          {t('doctorCalendar.personalizedScheduleModal.scheduleModes.recurring')}
-                        </Button>
-                      </div>
-                    </div>
+              {/* Progress Bar */}
+              <div className="mt-4 mission-progress-bar bg-white/20">
+                <motion.div
+                  className="mission-progress-fill bg-white shadow-[0_0_10px_white]"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.5 }}
+                />
+              </div>
+            </DialogHeader>
 
-                    {/* Date Configuration */}
-                    {scheduleMode === 'single' ? (
-                      <div className="space-y-3">
-                        <div>
-                          <Label htmlFor="startDate">{t('doctorCalendar.personalizedScheduleModal.dates.scheduleDate')}</Label>
-                          <Input
-                            id="startDate"
-                            type="date"
-                            value={startDate}
-                            min={getMinDate()}
-                            onChange={(e) => {
-                              const safeDate = clampDateToToday(e.target.value);
-                              setStartDate(safeDate);
-                            }}
-                            required
-                          />
-                        </div>
-                        <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-md">
-                          <Calendar className="h-4 w-4 text-blue-600" />
-                          <span className="text-sm text-blue-800">{formatDate(startDate)}</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <Label htmlFor="recurringStartDate">{t('doctorCalendar.personalizedScheduleModal.dates.startDate')}</Label>
-                            <Input
-                              id="recurringStartDate"
-                              type="date"
-                              value={startDate}
-                              min={getMinDate()}
-                              onChange={(e) => {
-                                const safeStart = clampDateToToday(e.target.value);
-                                setStartDate(safeStart);
-                                setRecurringEndDate(prev => ensureEndDateNotBeforeStart(safeStart, prev));
-                              }}
-                              required
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="recurringEndDate">{t('doctorCalendar.personalizedScheduleModal.dates.endDate')}</Label>
-                            <Input
-                              id="recurringEndDate"
-                              type="date"
-                              value={recurringEndDate}
-                              min={startDate || getMinDate()}
-                              onChange={(e) => {
-                                const safeStart = clampDateToToday(startDate || getMinDate());
-                                const normalizedEnd = ensureEndDateNotBeforeStart(safeStart, e.target.value);
-                                setStartDate(safeStart);
-                                setRecurringEndDate(normalizedEnd);
-                              }}
-                              required
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <Label className="text-sm font-medium">{t('doctorCalendar.personalizedScheduleModal.dates.recurringDays')}</Label>
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {DAYS.map(day => (
-                              <Button
-                                key={day.index}
-                                type="button"
-                                variant={recurringDays.has(day.index) ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => handleDayToggle(day.index)}
-                                className="h-7 px-2 text-xs"
-                              >
-                                {t(`doctorCalendar.personalizedScheduleModal.days.short.${day.shortKey}`)}
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Shift Selection */}
-                    <div className="space-y-3">
-                      <Label className="text-sm font-semibold">
-                        {t('doctorCalendar.personalizedScheduleModal.shifts.selectLabel')}
-                      </Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {SHIFT_TEMPLATES.map((template) => {
-                          const isSelected = selectedShifts.has(template.name);
-                          const config = shiftConfigs[template.name];
-
-                          return (
-                            <Card
-                              key={template.name}
-                              className={`cursor-pointer transition-all duration-200 hover:shadow-md ${isSelected
-                                  ? 'ring-2 ring-blue-500 bg-blue-50'
-                                  : 'hover:bg-gray-50'
-                                }`}
-                              onClick={() => handleShiftToggle(template.name)}
-                            >
-                              <CardContent className="p-3 space-y-3">
-                                <div className="flex items-center gap-2">
-                                  <div className={`p-1 rounded ${template.color}`}>
-                                    {template.icon}
-                                  </div>
-                                  <div className="flex-1">
-                                    <h4 className="font-medium text-sm">{template.label}</h4>
-                                    <p className="text-xs text-gray-600">{template.description}</p>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    aria-pressed={isSelected}
-                                    className={`ml-auto h-6 w-11 rounded-full border border-transparent transition-colors ${isSelected
-                                        ? 'bg-blue-500'
-                                        : 'bg-gray-200'
-                                      }`}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleShiftToggle(template.name);
-                                    }}
-                                  >
-                                    <span
-                                      className={`block h-5 w-5 rounded-full bg-white shadow transition-transform ${isSelected ? 'translate-x-5' : 'translate-x-0'
-                                        }`}
-                                      aria-hidden="true"
-                                    />
-                                  </button>
-                                </div>
-
-                                {isSelected && (
-                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                    <div>
-                                      <Label className="text-xs">
-                                        {t('doctorCalendar.personalizedScheduleModal.shifts.startTime')}
-                                      </Label>
-                                      <Input
-                                        type="time"
-                                        value={config.startTime}
-                                        onChange={(e) => setShiftConfigs(prev => ({
-                                          ...prev,
-                                          [template.name]: { ...prev[template.name], startTime: e.target.value }
-                                        }))}
-                                        className="h-8 text-xs"
-                                        onClick={(e) => e.stopPropagation()}
-                                      />
-                                    </div>
-                                    <div>
-                                      <Label className="text-xs">
-                                        {t('doctorCalendar.personalizedScheduleModal.shifts.endTime')}
-                                      </Label>
-                                      <Input
-                                        type="time"
-                                        value={config.endTime}
-                                        onChange={(e) => setShiftConfigs(prev => ({
-                                          ...prev,
-                                          [template.name]: { ...prev[template.name], endTime: e.target.value }
-                                        }))}
-                                        className="h-8 text-xs"
-                                        onClick={(e) => e.stopPropagation()}
-                                      />
-                                    </div>
-                                    <div>
-                                      <Label className="text-xs">
-                                        {t('doctorCalendar.personalizedScheduleModal.shifts.duration')}
-                                      </Label>
-                                      <Input
-                                        type="number"
-                                        value={config.slotDuration}
-                                        onChange={(e) => setShiftConfigs(prev => ({
-                                          ...prev,
-                                          [template.name]: { ...prev[template.name], slotDuration: e.target.value }
-                                        }))}
-                                        className="h-8 text-xs"
-                                        min="1"
-                                        onClick={(e) => e.stopPropagation()}
-                                      />
-                                    </div>
-                                  </div>
-                                )}
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
-                      </div>
-                    </div>
+            <form onSubmit={scheduleType === 'block' ? handleBlockSubmit : handleSubmit} className="flex flex-col max-h-[calc(85vh-120px)]">
+              <div className="p-6 overflow-y-auto custom-scrollbar">
+                {/* Schedule Type Selection */}
+                <div className="mb-6">
+                  <div className="grid w-full grid-cols-2 rounded-xl bg-gray-100 dark:bg-gray-800 p-1">
+                    <button
+                      type="button"
+                      className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-300 ${scheduleType === 'schedule'
+                        ? 'bg-white text-blue-600 shadow-md scale-[1.02]'
+                        : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                      onClick={() => setScheduleType('schedule')}
+                    >
+                      <Clock className="h-4 w-4" />
+                      {t('doctorCalendar.personalizedScheduleModal.tabs.schedule')}
+                    </button>
+                    <button
+                      type="button"
+                      className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-300 ${scheduleType === 'block'
+                        ? 'bg-white text-emerald-600 shadow-md scale-[1.02]'
+                        : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                      onClick={() => setScheduleType('block')}
+                    >
+                      <AlertCircle className="h-4 w-4" />
+                      {t('doctorCalendar.personalizedScheduleModal.tabs.timeOff')}
+                    </button>
                   </div>
-                )}
+                </div>
 
-                {scheduleType === 'block' && (
-                  <div className="space-y-4 h-full">
-                    <div className="space-y-4">
-                      {/* Block Type Selection */}
-                      <div>
-                        <Label htmlFor="blockType" className="text-sm font-semibold">
-                          {t('doctorCalendar.personalizedScheduleModal.block.typeLabel')}
-                        </Label>
-                        <Select
-                          value={blockFormData.blockType}
-                          onValueChange={(value: BlockType) => setBlockFormData(prev => ({ ...prev, blockType: value }))}
-                        >
-                          <SelectTrigger className="mt-1">
-                            <SelectValue />
+                <div className="space-y-6">
+                  {scheduleType === 'schedule' ? (
+                    <div className="space-y-6">
+                      {/* Shift Configuration */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {['Morning', 'Afternoon', 'Evening'].map((shift) => (
+                          <motion.div
+                            key={shift}
+                            layout
+                            initial={false}
+                            className={`p-1 rounded-2xl border-2 transition-all cursor-pointer overflow-hidden ${selectedShifts.has(shift as ShiftName) ? 'border-blue-500 bg-blue-50/50 shadow-blue-100/50 shadow-xl' : 'border-gray-100 bg-white hover:border-blue-200'}`}
+                            onClick={() => handleShiftToggle(shift as ShiftName)}
+                          >
+                            <div className="p-4 flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className={`p-2 rounded-xl ${selectedShifts.has(shift as ShiftName) ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                  {shift === 'Morning' ? <Sunrise size={20} /> : shift === 'Afternoon' ? <Sun size={20} /> : <Sunset size={20} />}
+                                </div>
+                                <div>
+                                  <div className="font-bold text-lg">{shift}</div>
+                                  <div className="text-xs text-gray-500 font-medium">
+                                    {shiftConfigs[shift as ShiftName].startTime} — {shiftConfigs[shift as ShiftName].endTime}
+                                  </div>
+                                </div>
+                              </div>
+                              {selectedShifts.has(shift as ShiftName) && (
+                                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                                  <CheckCircle className="text-blue-500" size={24} />
+                                </motion.div>
+                              )}
+                            </div>
+
+                            <AnimatePresence>
+                              {selectedShifts.has(shift as ShiftName) && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                                  className="bg-white/60 backdrop-blur-sm border-t border-blue-100 p-4"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                      <Label className="text-[10px] font-black uppercase text-blue-400 tracking-tighter">Start Time</Label>
+                                      <Input
+                                        type="time"
+                                        value={shiftConfigs[shift as ShiftName].startTime}
+                                        onChange={(e) => handleShiftConfigChange(shift as ShiftName, 'startTime', e.target.value)}
+                                        className="h-9 rounded-lg border-blue-100 focus:ring-blue-500 transition-all font-mono"
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <Label className="text-[10px] font-black uppercase text-blue-400 tracking-tighter">End Time</Label>
+                                      <Input
+                                        type="time"
+                                        value={shiftConfigs[shift as ShiftName].endTime}
+                                        onChange={(e) => handleShiftConfigChange(shift as ShiftName, 'endTime', e.target.value)}
+                                        className="h-9 rounded-lg border-blue-100 focus:ring-blue-500 transition-all font-mono"
+                                      />
+                                    </div>
+                                    <div className="col-span-2 space-y-1">
+                                      <Label className="text-[10px] font-black uppercase text-blue-400 tracking-tighter">Slot Duration (Min)</Label>
+                                      <div className="relative">
+                                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-300" />
+                                        <Input
+                                          type="number"
+                                          min="1"
+                                          value={shiftConfigs[shift as ShiftName].slotDuration}
+                                          onChange={(e) => handleShiftConfigChange(shift as ShiftName, 'slotDuration', e.target.value)}
+                                          className="h-9 pl-9 rounded-lg border-blue-100 focus:ring-blue-500 transition-all font-bold"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </motion.div>
+                        ))}
+                      </div>
+
+                      {/* Recurring Dates */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-xs font-bold uppercase text-gray-400">Start Date</Label>
+                          <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="rounded-xl border-gray-200" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs font-bold uppercase text-gray-400">End Date</Label>
+                          <Input type="date" value={recurringEndDate} onChange={(e) => setRecurringEndDate(e.target.value)} className="rounded-xl border-gray-200" />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Time Off Logic */}
+                      <div className="space-y-2">
+                        <Label className="text-xs font-bold uppercase text-gray-400">Reason</Label>
+                        <Select value={blockFormData.blockType} onValueChange={(v: any) => setBlockFormData({ ...blockFormData, blockType: v })}>
+                          <SelectTrigger className="rounded-xl border-gray-200">
+                            <SelectValue placeholder="Select Reason" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Annual Leave" className={getBlockTypeColor('Annual Leave')}>
-                              {getBlockTypeLabel('Annual Leave')}
-                            </SelectItem>
-                            <SelectItem value="Sick Leave" className={getBlockTypeColor('Sick Leave')}>
-                              {getBlockTypeLabel('Sick Leave')}
-                            </SelectItem>
-                            <SelectItem value="Personal" className={getBlockTypeColor('Personal')}>
-                              {getBlockTypeLabel('Personal')}
-                            </SelectItem>
-                            <SelectItem value="Conference" className={getBlockTypeColor('Conference')}>
-                              {getBlockTypeLabel('Conference')}
-                            </SelectItem>
-                            <SelectItem value="Training" className={getBlockTypeColor('Training')}>
-                              {getBlockTypeLabel('Training')}
-                            </SelectItem>
-                            <SelectItem value="Meeting" className={getBlockTypeColor('Meeting')}>
-                              {getBlockTypeLabel('Meeting')}
-                            </SelectItem>
-                            <SelectItem value="Emergency" className={getBlockTypeColor('Emergency')}>
-                              {getBlockTypeLabel('Emergency')}
-                            </SelectItem>
-                            <SelectItem value="Other" className={getBlockTypeColor('Other')}>
-                              {getBlockTypeLabel('Other')}
-                            </SelectItem>
+                            <SelectItem value="Personal">Personal</SelectItem>
+                            <SelectItem value="Sick Leave">Sick Leave</SelectItem>
+                            <SelectItem value="Annual Leave">Annual Leave</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
 
-                      {/* Date & Time Selection */}
                       <div className="grid grid-cols-2 gap-4">
-                        {/* Start Date & Time */}
                         <div className="space-y-2">
-                          <Label className="text-sm font-semibold">
-                            {t('doctorCalendar.personalizedScheduleModal.block.startDateTime')}
-                          </Label>
-                          <div className="space-y-2">
-                            <Input
-                              type="date"
-                              value={blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[0] : ''}
-                              min={format(new Date(), 'yyyy-MM-dd')}
-                              onChange={(e) => {
-                                const rawDate = e.target.value;
-                                const safeStartDate = clampDateToToday(rawDate);
-                                const currentStartTime = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[1] : '09:00';
-                                const currentEndTime = blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[1] : '17:00';
-                                const existingEndDate = blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[0] : safeStartDate;
-                                const normalizedEndDate = ensureEndDateNotBeforeStart(safeStartDate, existingEndDate);
-                                const normalizedEndTime = normalizedEndDate === safeStartDate && currentEndTime < currentStartTime
-                                  ? currentStartTime
-                                  : currentEndTime;
-
-                                setBlockFormData(prev => ({
-                                  ...prev,
-                                  startDateTime: `${safeStartDate}T${currentStartTime}`,
-                                  endDateTime: `${normalizedEndDate}T${normalizedEndTime}`
-                                }));
-                              }}
-                              required
-                            />
-                            <Input
-                              type="time"
-                              value={blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[1] : '09:00'}
-                              onChange={(e) => {
-                                const date = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
-                                setBlockFormData(prev => ({
-                                  ...prev,
-                                  startDateTime: `${date}T${e.target.value}`
-                                }));
-                              }}
-                              required
-                            />
-                          </div>
+                          <Label className="text-xs font-bold uppercase text-gray-400">Start</Label>
+                          <Input type="datetime-local" value={blockFormData.startDateTime} onChange={(e) => setBlockFormData({ ...blockFormData, startDateTime: e.target.value })} className="rounded-xl border-gray-200" />
                         </div>
-
-                        {/* End Date & Time */}
                         <div className="space-y-2">
-                          <Label className="text-sm font-semibold">
-                            {t('doctorCalendar.personalizedScheduleModal.block.endDateTime')}
-                          </Label>
-                          <div className="space-y-2">
-                            <Input
-                              type="date"
-                              value={blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[0] : ''}
-                              min={blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd')}
-                              onChange={(e) => {
-                                const rawDate = e.target.value;
-                                const startDate = blockFormData.startDateTime
-                                  ? blockFormData.startDateTime.split('T')[0]
-                                  : format(new Date(), 'yyyy-MM-dd');
-                                const safeStartDate = clampDateToToday(startDate);
-                                const normalizedEndDate = ensureEndDateNotBeforeStart(safeStartDate, rawDate);
-                                const currentEndTime = blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[1] : '17:00';
-                                const startTime = blockFormData.startDateTime ? blockFormData.startDateTime.split('T')[1] : '09:00';
-                                const adjustedEndTime = normalizedEndDate === safeStartDate && currentEndTime < startTime
-                                  ? startTime
-                                  : currentEndTime;
-
-                                setBlockFormData(prev => ({
-                                  ...prev,
-                                  startDateTime: prev.startDateTime || `${safeStartDate}T${startTime}`,
-                                  endDateTime: `${normalizedEndDate}T${adjustedEndTime}`
-                                }));
-                              }}
-                              required
-                            />
-                            <Input
-                              type="time"
-                              value={blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[1] : '17:00'}
-                              onChange={(e) => {
-                                const date = blockFormData.endDateTime ? blockFormData.endDateTime.split('T')[0] : format(new Date(), 'yyyy-MM-dd');
-                                setBlockFormData(prev => ({
-                                  ...prev,
-                                  endDateTime: `${date}T${e.target.value}`
-                                }));
-                              }}
-                              required
-                            />
-                          </div>
+                          <Label className="text-xs font-bold uppercase text-gray-400">End</Label>
+                          <Input type="datetime-local" value={blockFormData.endDateTime} onChange={(e) => setBlockFormData({ ...blockFormData, endDateTime: e.target.value })} className="rounded-xl border-gray-200" />
                         </div>
                       </div>
-
-                      {/* Summary */}
-                      <Card className="p-3 bg-gray-50">
-                        <div className="flex items-center gap-2 mb-2">
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                          <span className="text-sm font-medium">
-                            {t('doctorCalendar.personalizedScheduleModal.block.summaryTitle')}
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-600 space-y-1">
-                          <p>
-                            <strong>{t('doctorCalendar.personalizedScheduleModal.block.summary.type')}</strong>{' '}
-                            {getBlockTypeLabel(blockFormData.blockType)}
-                          </p>
-                          <p>
-                            <strong>{t('doctorCalendar.personalizedScheduleModal.block.summary.start')}</strong>{' '}
-                            {blockFormData.startDateTime
-                              ? format(new Date(blockFormData.startDateTime), 'MMM dd, yyyy HH:mm')
-                              : t('doctorCalendar.personalizedScheduleModal.block.summary.notSet')}
-                          </p>
-                          <p>
-                            <strong>{t('doctorCalendar.personalizedScheduleModal.block.summary.end')}</strong>{' '}
-                            {blockFormData.endDateTime
-                              ? format(new Date(blockFormData.endDateTime), 'MMM dd, yyyy HH:mm')
-                              : t('doctorCalendar.personalizedScheduleModal.block.summary.notSet')}
-                          </p>
-                        </div>
-                      </Card>
                     </div>
-                  </div>
-                )}
-              </div>
-            </div>
+                  )}
+                </div>
 
-            {/* Footer */}
-            <DialogFooter className="pt-4 border-t bg-white dark:bg-gray-900 sticky bottom-0 z-10 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                className="w-full sm:w-auto h-11 text-sm font-semibold"
-              >
-                {t('common.cancel')}
-              </Button>
-              <Button
-                type="submit"
-                disabled={isLoading || (scheduleType === 'schedule' ? !isScheduleFormValid() : !isBlockFormValid())}
-                className="w-full sm:w-auto h-11 text-sm font-semibold bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 shadow-lg shadow-blue-200/60 dark:shadow-blue-900/30"
-              >
-                {isLoading
-                  ? t('doctorCalendar.personalizedScheduleModal.actions.saving')
-                  : scheduleType === 'schedule'
-                    ? t('doctorCalendar.personalizedScheduleModal.actions.saveSchedule')
-                    : t('doctorCalendar.personalizedScheduleModal.actions.saveTimeOff')}
-              </Button>
-            </DialogFooter>
-          </form>
+              </div>
+
+              <DialogFooter className="p-6 border-t bg-gray-50/50 backdrop-blur-sm rounded-b-2xl">
+                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="rounded-xl font-bold text-gray-400 hover:text-gray-600">Cancel Mission</Button>
+                <Button
+                  type="submit"
+                  disabled={isLoading || (scheduleType === 'schedule' ? !isScheduleFormValid() : !isBlockFormValid())}
+                  className={`rounded-xl px-10 font-black tracking-wide transition-all shadow-lg active:scale-95 ${scheduleType === 'schedule' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:shadow-blue-200' : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:shadow-emerald-200'} text-white border-0`}
+                >
+                  {isLoading ? (
+                    <div className="flex items-center gap-2">
+                      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
+                        <Activity size={18} />
+                      </motion.div>
+                      Deploying...
+                    </div>
+                  ) : 'Deploy Mission'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </motion.div>
         </DialogContent>
       </Dialog>
 
+      <AnimatePresence>
+        {isCelebrated && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none"
+          >
+            <motion.div
+              className="bg-white dark:bg-gray-900 p-8 rounded-3xl shadow-2xl flex flex-col items-center gap-4 border-4 border-emerald-500"
+              animate={{ y: [0, -20, 0] }}
+              transition={{ repeat: Infinity, duration: 1.5 }}
+            >
+              <div className="bg-emerald-100 p-4 rounded-full">
+                <CheckCircle className="text-emerald-600 h-16 w-16" />
+              </div>
+              <h2 className="text-3xl font-black text-emerald-600 tracking-tighter uppercase italic">Mission Accomplished</h2>
+              <p className="text-gray-500 font-bold">Your schedule has been optimized!</p>
 
-
-
+              <div className="flex gap-2">
+                {[...Array(12)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    className="h-2 w-2 rounded-full bg-emerald-400"
+                    animate={{
+                      y: [0, -100],
+                      x: [0, (i - 6) * 40],
+                      opacity: [1, 0],
+                      scale: [1, 2]
+                    }}
+                    transition={{ duration: 1, delay: i * 0.05, repeat: Infinity }}
+                  />
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };
