@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { isAxiosError } from 'axios';
-import { 
-  User, 
-  Phone, 
-  Mail, 
-  Lock, 
-  Shield, 
+import {
+  User,
+  Phone,
+  Mail,
+  Lock,
+  Shield,
   Send,
   CheckCircle,
   Eye,
@@ -82,7 +82,7 @@ const UserOnboardingRegistration: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get('token');
-  
+
   const [formData, setFormData] = useState<UserOnboardingData>({
     fullName: '',
     userRole: '',
@@ -102,20 +102,20 @@ const UserOnboardingRegistration: React.FC = () => {
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
-  
+
   // Resend OTP timer states
   const [resendTimer, setResendTimer] = useState(0);
   const [canResendOtp, setCanResendOtp] = useState(false);
-  
+
   // Token validation states
   const [isValidatingToken, setIsValidatingToken] = useState(true);
   const [isTokenValid, setIsTokenValid] = useState(false);
   const [tokenValidationMessage, setTokenValidationMessage] = useState('');
-  
+
   // Success popup state
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [userId, setUserId] = useState<string>('');
-  
+
   // User already exists popup state
   const [showUserExistsPopup, setShowUserExistsPopup] = useState(false);
 
@@ -137,7 +137,6 @@ const UserOnboardingRegistration: React.FC = () => {
   // API hooks
   const sendOTPMutation = useAuthApi.sendOTP();
   const verifyOTPMutation = useAuthApi.verifyOTP();
-  const registerMutation = useAuthApi.register(); // Use regular register API first
   const setPasswordMutation = useAuthApi.setPassword(); // Use set-password API
   const { mutateAsync: validateTokenAsync } = useAuthApi.validateToken();
   const updateInvitedUserMutation = useUserManagementApi().updateInvitedUser;
@@ -288,58 +287,30 @@ const UserOnboardingRegistration: React.FC = () => {
     try {
       setOtpLoading(true);
       const cleanMobile = ValidationUtils.cleanMobileNumber(formData.mobileNumber);
-      
-      // First call register API with fullName and role for onboarding scenario
-      const registerResponse = await registerMutation.mutateAsync({
-        mobileNumber: cleanMobile,
-        roles: formData.userRole // Pass the role from invitation
+
+      // Send OTP directly (registration is now handled during invitation)
+      const otpResponse = await sendOTPMutation.mutateAsync({
+        mobileNumber: cleanMobile
       });
 
-      if (registerResponse.success) {
-        // Then send OTP
-        const otpResponse = await sendOTPMutation.mutateAsync({
-          mobileNumber: cleanMobile
+      if (otpResponse.success) {
+        setOtpSent(true);
+        // Start 30-second timer for resend
+        setResendTimer(30);
+        setCanResendOtp(false);
+        toast({
+          title: "OTP Sent",
+          description: "Please check your mobile for the verification code."
         });
-
-        if (otpResponse.success) {
-          setOtpSent(true);
-          // Start 30-second timer for resend
-          setResendTimer(30);
-          setCanResendOtp(false);
-          toast({
-            title: "Registration Initiated",
-            description: "User registered successfully. Please check your mobile for the verification code."
-          });
-        } else {
-          throw new Error(otpResponse.message || 'Failed to send OTP');
-        }
       } else {
-        throw new Error(registerResponse.message || 'Failed to register user');
+        throw new Error(otpResponse.message || 'Failed to send OTP');
       }
     } catch (error: unknown) {
-      const axiosDetails = getAxiosErrorDetails(error);
-      const apiMessage = axiosDetails?.message ?? getErrorMessage(error);
-      const apiSuccess = axiosDetails?.success;
-      const httpStatus = axiosDetails?.status;
-
-      const normalizedMessage = apiMessage?.toLowerCase() ?? '';
-      const isMobileExistsError = normalizedMessage.includes('mobile number already exists') ||
-        normalizedMessage.includes('mobile already exists') ||
-        normalizedMessage.includes('user already exists') ||
-        normalizedMessage.includes('already registered');
-
-      const isConflictStatus = httpStatus === 409 || httpStatus === 400;
-      const isApiError = apiSuccess === false && isMobileExistsError;
-
-      if (isMobileExistsError || isConflictStatus || isApiError) {
-        setShowUserExistsPopup(true);
-      } else {
-        toast({
-          title: "Error",
-          description: apiMessage,
-          variant: "destructive"
-        });
-      }
+      toast({
+        title: "Error",
+        description: getErrorMessage(error),
+        variant: "destructive"
+      });
     } finally {
       setOtpLoading(false);
     }
@@ -349,7 +320,7 @@ const UserOnboardingRegistration: React.FC = () => {
     try {
       setOtpLoading(true);
       const cleanMobile = ValidationUtils.cleanMobileNumber(formData.mobileNumber);
-      
+
       const otpResponse = await sendOTPMutation.mutateAsync({
         mobileNumber: cleanMobile
       });
@@ -445,7 +416,7 @@ const UserOnboardingRegistration: React.FC = () => {
       handleNextStep();
       return;
     }
-    
+
     // Validation
     if (!formData.fullName.trim()) {
       toast({
@@ -599,13 +570,12 @@ const UserOnboardingRegistration: React.FC = () => {
                   return (
                     <div key={step.id} className="flex items-start gap-3">
                       <div
-                        className={`h-10 w-10 rounded-full border-2 flex items-center justify-center text-sm font-semibold transition-colors ${
-                          isComplete
+                        className={`h-10 w-10 rounded-full border-2 flex items-center justify-center text-sm font-semibold transition-colors ${isComplete
                             ? 'border-green-500 bg-green-500 text-white shadow-sm'
                             : isActive
                               ? 'border-blue-600 bg-blue-50 text-blue-600'
                               : 'border-slate-200 text-slate-400'
-                        }`}
+                          }`}
                       >
                         {isComplete ? <CheckCircle className="h-5 w-5" /> : step.id}
                       </div>
@@ -890,87 +860,87 @@ const UserOnboardingRegistration: React.FC = () => {
 
       {/* Success Popup Dialog */}
       <Dialog open={showSuccessPopup} onOpenChange={setShowSuccessPopup}>
-         <DialogContent className="sm:max-w-md">
-           <DialogHeader>
-             <DialogTitle className="flex items-center gap-2">
-               <div className="p-2 bg-green-100 rounded-full">
-                 <CheckCircle2 className="h-6 w-6 text-green-600" />
-               </div>
-               Registration Successful!
-             </DialogTitle>
-             <DialogDescription className="text-left space-y-4">
-               <p className="text-base">
-                 Congratulations! Your account has been created successfully.
-               </p>
-               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                 <h4 className="font-medium text-green-800 mb-2">What's Next?</h4>
-                 <ul className="text-sm text-green-700 space-y-1">
-                   <li>• Your account is now active in the system</li>
-                   <li>• You can log in using your mobile number and password</li>
-                   <li>• Contact your administrator if you need any assistance</li>
-                 </ul>
-               </div>
-             </DialogDescription>
-           </DialogHeader>
-           <DialogFooter className="flex flex-col sm:flex-row gap-2">
-             <Button
-               onClick={() => navigate('/')}
-               className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
-             >
-               <ArrowLeft className="h-4 w-4 mr-2" />
-               Go to Login Page
-             </Button>
-           </DialogFooter>
-         </DialogContent>
-       </Dialog>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="p-2 bg-green-100 rounded-full">
+                <CheckCircle2 className="h-6 w-6 text-green-600" />
+              </div>
+              Registration Successful!
+            </DialogTitle>
+            <DialogDescription className="text-left space-y-4">
+              <p className="text-base">
+                Congratulations! Your account has been created successfully.
+              </p>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h4 className="font-medium text-green-800 mb-2">What's Next?</h4>
+                <ul className="text-sm text-green-700 space-y-1">
+                  <li>• Your account is now active in the system</li>
+                  <li>• You can log in using your mobile number and password</li>
+                  <li>• Contact your administrator if you need any assistance</li>
+                </ul>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button
+              onClick={() => navigate('/')}
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Go to Login Page
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* User Already Exists Popup Dialog */}
       <Dialog open={showUserExistsPopup} onOpenChange={setShowUserExistsPopup}>
-         <DialogContent className="sm:max-w-md">
-           <DialogHeader>
-             <DialogTitle className="flex items-center gap-2">
-               <div className="p-2 bg-orange-100 rounded-full">
-                 <AlertCircle className="h-6 w-6 text-orange-600" />
-               </div>
-               User Already Registered
-             </DialogTitle>
-             <DialogDescription className="text-left space-y-4">
-               <p className="text-base">
-                 An account with this mobile number is already registered in our system. You cannot register again with the same mobile number.
-               </p>
-               <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                 <h4 className="font-medium text-orange-800 mb-2">What should you do?</h4>
-                 <ul className="text-sm text-orange-700 space-y-1">
-                   <li>• Try logging in with your existing mobile number and password</li>
-                   <li>• If you forgot your password, use the "Forgot Password" option on the login page</li>
-                   <li>• Contact your administrator if you need help accessing your account</li>
-                 </ul>
-               </div>
-               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                 <h4 className="font-medium text-blue-800 mb-2">Need Help?</h4>
-                 <p className="text-sm text-blue-700">
-                   If you believe this is an error or need assistance, please contact your system administrator.
-                 </p>
-               </div>
-             </DialogDescription>
-           </DialogHeader>
-           <DialogFooter className="flex flex-col sm:flex-row gap-2">
-             <Button
-               onClick={() => navigate('/')}
-               className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
-             >
-               <ArrowLeft className="h-4 w-4 mr-2" />
-               Go to Login Page
-             </Button>
-             <Button
-               variant="outline"
-               onClick={() => setShowUserExistsPopup(false)}
-               className="w-full sm:w-auto"
-             >
-               Stay on This Page
-             </Button>
-           </DialogFooter>
-         </DialogContent>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="p-2 bg-orange-100 rounded-full">
+                <AlertCircle className="h-6 w-6 text-orange-600" />
+              </div>
+              User Already Registered
+            </DialogTitle>
+            <DialogDescription className="text-left space-y-4">
+              <p className="text-base">
+                An account with this mobile number is already registered in our system. You cannot register again with the same mobile number.
+              </p>
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                <h4 className="font-medium text-orange-800 mb-2">What should you do?</h4>
+                <ul className="text-sm text-orange-700 space-y-1">
+                  <li>• Try logging in with your existing mobile number and password</li>
+                  <li>• If you forgot your password, use the "Forgot Password" option on the login page</li>
+                  <li>• Contact your administrator if you need help accessing your account</li>
+                </ul>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-medium text-blue-800 mb-2">Need Help?</h4>
+                <p className="text-sm text-blue-700">
+                  If you believe this is an error or need assistance, please contact your system administrator.
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button
+              onClick={() => navigate('/')}
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Go to Login Page
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowUserExistsPopup(false)}
+              className="w-full sm:w-auto"
+            >
+              Stay on This Page
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
     </>
   );

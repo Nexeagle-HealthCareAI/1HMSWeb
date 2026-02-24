@@ -1744,8 +1744,11 @@
     "userInvitedSuccessfully": "User invited successfully",
     "userInvitedDescription": "Invitation has been sent to the user. They will receive an email to complete their registration.",
     "validation": {
-      "email": "Please enter a valid email address.",
-      "phone": "Please enter a valid 10-digit phone number."
+      "nameRequired": "Full Name is required",
+      "nameTooShort": "Name must be at least 2 characters",
+      "email": "Please enter a valid email address",
+      "phoneRequired": "Phone number is required",
+      "phone": "Please enter a valid 10-digit phone number"
     },
     "inviteError": {
       "title": "Invitation could not be sent",
