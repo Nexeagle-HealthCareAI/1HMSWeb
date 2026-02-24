@@ -72,7 +72,7 @@ export const GamifiedHeader: React.FC<GamifiedHeaderProps> = ({
                     variant="ghost"
                     size="icon"
                     onClick={handlePrevious}
-                    className="w-8 h-8 rounded-lg hover:bg-white dark:hover:bg-gray-700 shadow-sm transition-all"
+                    className="w-8 h-8 rounded-lg hover:bg-poly-primary/10 hover:text-poly-primary dark:hover:bg-gray-700 shadow-sm transition-all"
                 >
                     <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -81,7 +81,7 @@ export const GamifiedHeader: React.FC<GamifiedHeaderProps> = ({
                     <PopoverTrigger asChild>
                         <Button
                             variant="ghost"
-                            className="text-sm font-bold tracking-tight text-gray-900 dark:text-white px-3 h-8 hover:bg-white dark:hover:bg-gray-700 rounded-lg transition-all flex items-center gap-2 min-w-[180px] justify-center"
+                            className="text-sm font-bold tracking-tight text-gray-900 dark:text-white px-3 h-8 hover:bg-poly-primary/10 dark:hover:bg-gray-700 hover:text-poly-primary dark:hover:text-white rounded-lg transition-all flex items-center gap-2 min-w-[180px] justify-center"
                         >
                             <CalendarIcon className="w-3.5 h-3.5 opacity-60" />
                             {getViewLabel()}
@@ -102,7 +102,7 @@ export const GamifiedHeader: React.FC<GamifiedHeaderProps> = ({
                     variant="ghost"
                     size="icon"
                     onClick={handleNext}
-                    className="w-8 h-8 rounded-lg hover:bg-white dark:hover:bg-gray-700 shadow-sm transition-all"
+                    className="w-8 h-8 rounded-lg hover:bg-poly-primary/10 hover:text-poly-primary dark:hover:bg-gray-700 shadow-sm transition-all"
                 >
                     <ChevronRight className="h-4 w-4" />
                 </Button>
