@@ -310,6 +310,83 @@
       "unsupported": "Sharing is not supported in this browser."
     }
   },
+  "prescriptionDesigner": {
+    "title": "Prescription Designer",
+    "selectingDoctor": {
+      "department": "Department",
+      "doctor": "Doctor",
+      "selectDepartment": "Select Department",
+      "selectDoctor": "Select Doctor",
+      "noDepartments": "No departments found",
+      "noDoctors": "No doctors found",
+      "selectDepartmentFirst": "Select Department First",
+      "noDoctorsInDept": "No doctors in this dept"
+    },
+    "preview": {
+      "title": "Prescription preview",
+      "description": "Browser-safe rendering of the current configuration.",
+      "livePreview": "Live Preview",
+      "openPreview": "Open Preview",
+      "test": "Test",
+      "noPreview": "No preview yet. Generate one to validate spacing.",
+      "isGenerating": "Generating preview...",
+      "watermark": "NO PRESCRIPTION UPLOADED"
+    },
+    "controls": {
+      "uploadTitle": "Upload design PDF",
+      "uploadDescription": "Attach a hospital-branded template or sample prescription layout.",
+      "chooseFile": "Choose file",
+      "idealFor": "Ideal for letterheads, templates, or sample prescriptions",
+      "layoutControls": "Layout controls",
+      "layoutDescription": "Fine-tune margins, overflow behavior, and typography before saving.",
+      "marginSettings": "Margin settings",
+      "marginDescription": "Control the printable safe area in millimeters.",
+      "margins": {
+        "headerHeight": "Header height",
+        "footerHeight": "Footer height",
+        "leftMargin": "Content left margin",
+        "rightMargin": "Content right margin"
+      },
+      "overflow": {
+        "title": "Overflow pages",
+        "description": "Choose what happens after the first sheet fills up.",
+        "reuse": "Reuse uploaded layout",
+        "reuseDescription": "Every extra page reuses the imported background.",
+        "blank": "Use blank page",
+        "blankDescription": "Keep overflow sheets plain for more writing room."
+      },
+      "typography": {
+        "title": "Typography",
+        "description": "Dial in font family, sizing, weight, and ink color.",
+        "family": "Font family",
+        "size": "Font size",
+        "weight": "Weight",
+        "color": "Text color",
+        "selectFont": "Select font",
+        "selectWeight": "Select weight",
+        "pt": "pt"
+      },
+      "validity": {
+        "title": "Prescription Validity",
+        "description": "Set a default expiration period for your prescriptions. Set to 0 if they don't expire.",
+        "label": "Valid Upto (Days)"
+      },
+      "actions": {
+        "save": "Save layout settings",
+        "saving": "Saving...",
+        "preview": "Preview Prescription"
+      }
+    },
+    "messages": {
+      "layoutSaved": "Prescription layout settings updated successfully.",
+      "templateUploaded": "Prescription template uploaded successfully.",
+      "noDoctorSelected": "No Doctor Selected",
+      "pleaseChooseDoctor": "Please choose a department and then a doctor to view and manage their prescription configurations.",
+      "loading": "Loading configuration...",
+      "layoutSavedTitle": "Layout saved",
+      "templateUploadedTitle": "Template uploaded"
+    }
+  },
   "passwordResetSuccess": {
     "title": "Password Reset Successful!",
     "description": "Your password has been updated. You can now log in with the new password or reset another if needed.",
@@ -2841,6 +2918,14 @@
       "branding": {
         "label": "Hospital Info",
         "description": "Identity, contact, compliance"
+      },
+      "prescriptions": {
+        "label": "Prescriptions",
+        "description": "Configure prescription layouts and fields"
+      },
+      "settings": {
+        "label": "Settings",
+        "description": "General system preferences"
       }
     },
     "subscription": {
