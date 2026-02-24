@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
@@ -22,6 +23,7 @@ interface PreviewPanelProps {
 }
 
 export const PreviewPanel = ({ previewUrl, isGenerating, onOpen, isTestEnabled = false, margins, typography, overflowStrategy, templateFile, templateUrl }: PreviewPanelProps) => {
+  const { t } = useTranslation();
   const [isTestModalOpen, setIsTestModalOpen] = useState(false);
   const openTestModal = () => {
     if (!isTestEnabled) return;
@@ -32,22 +34,22 @@ export const PreviewPanel = ({ previewUrl, isGenerating, onOpen, isTestEnabled =
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-4">
         <div>
-          <CardTitle>Prescription preview</CardTitle>
-          <CardDescription>Browser-safe rendering of the current configuration.</CardDescription>
+          <CardTitle>{t('prescriptionDesigner.preview.title')}</CardTitle>
+          <CardDescription>{t('prescriptionDesigner.preview.description')}</CardDescription>
         </div>
         <Button type="button" variant="outline" size="sm" onClick={openTestModal} className="shrink-0" disabled={!isTestEnabled}>
-          Test
+          {t('prescriptionDesigner.preview.test')}
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="rounded-lg border bg-muted/30 p-4">
           <AspectRatio ratio={3 / 4}>
             {previewUrl ? (
-              <iframe src={previewUrl} title="Prescription preview" className="h-full w-full rounded-md border" />
+              <iframe src={previewUrl} title={t('prescriptionDesigner.preview.title')} className="h-full w-full rounded-md border" />
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
                 {isGenerating ? <Skeleton className="h-10 w-3/4" /> : <Eye className="h-6 w-6" />}
-                <p>No preview yet. Generate one to validate spacing.</p>
+                <p>{isGenerating ? t('prescriptionDesigner.preview.isGenerating') : t('prescriptionDesigner.preview.noPreview')}</p>
               </div>
             )}
           </AspectRatio>
@@ -55,7 +57,7 @@ export const PreviewPanel = ({ previewUrl, isGenerating, onOpen, isTestEnabled =
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
 
           <Button type="button" variant="secondary" size="sm" onClick={onOpen} disabled={!previewUrl}>
-            Open preview
+            {t('prescriptionDesigner.preview.openPreview')}
           </Button>
         </div>
       </CardContent>

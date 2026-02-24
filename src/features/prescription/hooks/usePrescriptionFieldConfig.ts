@@ -60,14 +60,14 @@ export interface UpdatePrescriptionFieldPreferenceRequest {
   attachments: boolean;
 }
 
-export const usePrescriptionFieldConfig = () => {
+export const usePrescriptionFieldConfig = (overrideDoctorId?: string, overrideHospitalId?: string) => {
   const { getDoctorId, hospitalId: storedHospitalId, getHospitalId } = useAuthStore();
   const queryClient = useQueryClient();
   const [fields, setFields] = useState<FieldConfig[]>([]);
 
-  // Get doctor ID from auth store
-  const doctorId = getDoctorId() || '';
-  const hospitalId = storedHospitalId || getHospitalId?.() || '';
+  // Get doctor ID from auth store or overrides
+  const doctorId = overrideDoctorId || getDoctorId() || '';
+  const hospitalId = overrideHospitalId || storedHospitalId || getHospitalId?.() || '';
 
   // Create fields from API preferences
   const updateFieldsFromPreferences = useCallback((preferences: PrescriptionFieldPreference) => {
@@ -242,10 +242,10 @@ const normalizeLayoutSettings = (data: PrescriptionLayoutSettings | null): Presc
   };
 };
 
-export const usePrescriptionLayoutSettings = () => {
+export const usePrescriptionLayoutSettings = (overrideDoctorId?: string, overrideHospitalId?: string) => {
   const { getDoctorId, hospitalId: storedHospitalId, getHospitalId } = useAuthStore();
-  const doctorId = getDoctorId() || '';
-  const hospitalId = storedHospitalId || getHospitalId?.() || '';
+  const doctorId = overrideDoctorId || getDoctorId() || '';
+  const hospitalId = overrideHospitalId || storedHospitalId || getHospitalId?.() || '';
 
   const settingsQuery = useQuery({
     queryKey: ['prescriptionLayoutSettings', doctorId, hospitalId],

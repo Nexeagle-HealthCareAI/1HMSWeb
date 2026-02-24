@@ -59,6 +59,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { HeaderLanguageSelector } from '@/components/shared/HeaderLanguageSelector';
+import { cn } from '@/lib/utils';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -476,7 +477,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto p-6 bg-gray-50 dark:bg-gray-950 transition-all duration-300">
+        <main className={cn(
+          "flex-1 overflow-x-hidden overflow-y-auto transition-all duration-300 bg-gray-50 dark:bg-gray-950",
+          (location.pathname.startsWith('/admin') || location.pathname.startsWith('/dashboard')) ? "p-0" : "p-6"
+        )}>
           {children}
         </main>
       </div>

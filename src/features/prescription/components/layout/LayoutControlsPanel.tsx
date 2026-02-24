@@ -1,5 +1,6 @@
 import { ChangeEvent } from 'react';
-import { FileText, Ruler } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { FileText, Ruler, Eye } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -27,6 +28,7 @@ interface LayoutControlsPanelProps {
   onValidUptoChange: (days: number) => void;
   onSaveLayout?: () => void;
   isSavingLayout?: boolean;
+  onPreview?: () => void;
 }
 
 const clampMargin = (value: number) => {
@@ -34,12 +36,7 @@ const clampMargin = (value: number) => {
   return Math.min(Math.max(value, 0), 1000);
 };
 
-const marginLabels: Record<keyof MarginConfig, string> = {
-  top: 'Header height',
-  right: 'Content right margin',
-  bottom: 'Footer height',
-  left: 'Content left margin',
-};
+// Labels moved into component to use t() function
 
 export const LayoutControlsPanel = ({
   margins,
@@ -52,12 +49,20 @@ export const LayoutControlsPanel = ({
   onTemplateUpload,
   typography,
   onTypographyChange,
-
   validUpto,
   onValidUptoChange,
   onSaveLayout,
   isSavingLayout,
+  onPreview,
 }: LayoutControlsPanelProps) => {
+  const { t } = useTranslation();
+
+  const marginLabels: Record<keyof MarginConfig, string> = {
+    top: t('prescriptionDesigner.controls.margins.headerHeight'),
+    right: t('prescriptionDesigner.controls.margins.rightMargin'),
+    bottom: t('prescriptionDesigner.controls.margins.footerHeight'),
+    left: t('prescriptionDesigner.controls.margins.leftMargin'),
+  };
   const handleMarginInput = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     // Allow empty string for user editing, don't update until valid number
@@ -91,15 +96,15 @@ export const LayoutControlsPanel = ({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <FileText className="h-4 w-4" />
-            Upload design PDF
+            {t('prescriptionDesigner.controls.uploadTitle')}
           </CardTitle>
-          <CardDescription>Attach a hospital-branded template or sample prescription layout.</CardDescription>
+          <CardDescription>{t('prescriptionDesigner.controls.uploadDescription')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <label className="flex h-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4 text-center text-sm text-primary hover:bg-primary/10">
-            <span className="font-medium">Upload design PDF</span>
-            <span className="text-xs text-primary/80">Ideal for letterheads, templates, or sample prescriptions</span>
-            <span className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">Choose file</span>
+            <span className="font-medium">{t('prescriptionDesigner.controls.uploadTitle')}</span>
+            <span className="text-xs text-primary/80">{t('prescriptionDesigner.controls.idealFor')}</span>
+            <span className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">{t('prescriptionDesigner.controls.chooseFile')}</span>
             <Input type="file" accept="application/pdf" className="hidden" onChange={handleTemplateChange} disabled={isAnalyzingTemplate} />
           </label>
           {templateError && <p className="text-sm text-destructive">{templateError}</p>}
@@ -125,16 +130,16 @@ export const LayoutControlsPanel = ({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Ruler className="h-4 w-4" />
-            Layout controls
+            {t('prescriptionDesigner.controls.layoutControls')}
           </CardTitle>
-          <CardDescription>Fine-tune margins, overflow behavior, and typography before saving.</CardDescription>
+          <CardDescription>{t('prescriptionDesigner.controls.layoutDescription')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-foreground">Margin settings</p>
-                <p className="text-xs text-muted-foreground">Control the printable safe area in millimeters.</p>
+                <p className="text-sm font-semibold text-foreground">{t('prescriptionDesigner.controls.marginSettings')}</p>
+                <p className="text-xs text-muted-foreground">{t('prescriptionDesigner.controls.marginDescription')}</p>
               </div>
             </div>
             <div className="grid gap-4 text-sm">
@@ -177,22 +182,22 @@ export const LayoutControlsPanel = ({
 
           <div className="space-y-4 text-sm">
             <div>
-              <p className="text-sm font-semibold text-foreground">Overflow pages</p>
-              <p className="text-xs text-muted-foreground">Choose what happens after the first sheet fills up.</p>
+              <p className="text-sm font-semibold text-foreground">{t('prescriptionDesigner.controls.overflow.title')}</p>
+              <p className="text-xs text-muted-foreground">{t('prescriptionDesigner.controls.overflow.description')}</p>
             </div>
             <RadioGroup value={overflowStrategy} onValueChange={(value) => onOverflowChange(value as 'reuse-template' | 'blank')} className="space-y-3">
               <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-left">
                 <RadioGroupItem value="reuse-template" className="mt-1" />
                 <div>
-                  <p className="font-medium text-foreground">Reuse uploaded layout</p>
-                  <p className="text-xs text-muted-foreground">Every extra page reuses the imported background.</p>
+                  <p className="font-medium text-foreground">{t('prescriptionDesigner.controls.overflow.reuse')}</p>
+                  <p className="text-xs text-muted-foreground">{t('prescriptionDesigner.controls.overflow.reuseDescription')}</p>
                 </div>
               </label>
               <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-left">
                 <RadioGroupItem value="blank" className="mt-1" />
                 <div>
-                  <p className="font-medium text-foreground">Use blank page</p>
-                  <p className="text-xs text-muted-foreground">Keep overflow sheets plain for more writing room.</p>
+                  <p className="font-medium text-foreground">{t('prescriptionDesigner.controls.overflow.blank')}</p>
+                  <p className="text-xs text-muted-foreground">{t('prescriptionDesigner.controls.overflow.blankDescription')}</p>
                 </div>
               </label>
             </RadioGroup>
@@ -202,14 +207,14 @@ export const LayoutControlsPanel = ({
 
           <div className="space-y-5">
             <div>
-              <p className="text-sm font-semibold text-foreground">Typography</p>
-              <p className="text-xs text-muted-foreground">Dial in font family, sizing, weight, and ink color.</p>
+              <p className="text-sm font-semibold text-foreground">{t('prescriptionDesigner.controls.typography.title')}</p>
+              <p className="text-xs text-muted-foreground">{t('prescriptionDesigner.controls.typography.description')}</p>
             </div>
             <div className="space-y-1.5">
-              <Label>Font family</Label>
+              <Label>{t('prescriptionDesigner.controls.typography.family')}</Label>
               <Select value={typography.family} onValueChange={(value) => onTypographyChange({ family: value as TypographySettings['family'] })}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select font" />
+                  <SelectValue placeholder={t('prescriptionDesigner.controls.typography.selectFont')} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Times">Times New Roman</SelectItem>
@@ -223,17 +228,17 @@ export const LayoutControlsPanel = ({
 
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <Label>Font size</Label>
-                <span>{typography.size} pt</span>
+                <Label>{t('prescriptionDesigner.controls.typography.size')}</Label>
+                <span>{typography.size} {t('prescriptionDesigner.controls.typography.pt')}</span>
               </div>
               <Slider value={[typography.size]} min={9} max={18} step={1} onValueChange={(value) => onTypographyChange({ size: value[0] })} />
             </div>
 
             <div className="space-y-1.5">
-              <Label>Weight</Label>
+              <Label>{t('prescriptionDesigner.controls.typography.weight')}</Label>
               <Select value={typography.weight} onValueChange={(value) => onTypographyChange({ weight: value as TypographySettings['weight'] })}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select weight" />
+                  <SelectValue placeholder={t('prescriptionDesigner.controls.typography.selectWeight')} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="regular">Regular</SelectItem>
@@ -244,7 +249,7 @@ export const LayoutControlsPanel = ({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="font-color">Text color</Label>
+              <Label htmlFor="font-color">{t('prescriptionDesigner.controls.typography.color')}</Label>
               <div className="flex items-center gap-3">
                 <Input
                   id="font-color"
@@ -269,15 +274,15 @@ export const LayoutControlsPanel = ({
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-800 dark:text-amber-300">
                     <FileText className="h-3 w-3" />
                   </span>
-                  Prescription Validity
+                  {t('prescriptionDesigner.controls.validity.title')}
                 </p>
                 <p className="mt-1 text-xs text-amber-700 dark:text-amber-300/80">
-                  Set a default expiration period for your prescriptions. Set to 0 if they don't expire.
+                  {t('prescriptionDesigner.controls.validity.description')}
                 </p>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="valid-upto" className="text-amber-900 dark:text-amber-100">
-                  Valid Upto (Days)
+                  {t('prescriptionDesigner.controls.validity.label')}
                 </Label>
                 <Input
                   id="valid-upto"
@@ -291,9 +296,18 @@ export const LayoutControlsPanel = ({
             </div>
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onPreview}
+              disabled={!onPreview}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              {t('prescriptionDesigner.controls.actions.preview')}
+            </Button>
             <Button type="button" onClick={onSaveLayout} disabled={!onSaveLayout || isSavingLayout}>
-              {isSavingLayout ? 'Saving...' : 'Save layout settings'}
+              {isSavingLayout ? t('prescriptionDesigner.controls.actions.saving') : t('prescriptionDesigner.controls.actions.save')}
             </Button>
           </div>
         </CardContent>

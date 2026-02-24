@@ -95,6 +95,16 @@ export const useDepartmentApi = {
       staleTime: 10 * 60 * 1000, // 10 minutes
     }
   ),
+
+  // Get departments by hospital ID
+  getDepartmentsByHospitalId: (hospitalId: string) => createApiHook(
+    ['departments', 'hospital', hospitalId],
+    () => departmentApi.getDepartmentsByHospitalId(hospitalId),
+    {
+      enabled: !!hospitalId,
+      staleTime: 10 * 60 * 1000, // 10 minutes
+    }
+  ),
 };
 
 // Specialization API hooks
@@ -128,6 +138,15 @@ export const useDoctorApi = {
     }
   ),
 
+  // Get doctors by department and hospital
+  getDoctorsByDepartment: (departmentId: string, hospitalId: string) => createApiHook(
+    ['doctors', 'department', departmentId, hospitalId],
+    () => doctorApi.getDoctorsByDepartment(departmentId, hospitalId),
+    {
+      enabled: !!departmentId && !!hospitalId,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    }
+  ),
 };
 
 // Media Upload API hooks

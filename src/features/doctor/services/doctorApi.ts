@@ -148,4 +148,54 @@ export const doctorApi = {
       throw error;
     }
   },
+
+  // Get doctors by department and hospital
+  getDoctorsByDepartment: async (departmentId: string, hospitalId: string): Promise<any[]> => {
+    try {
+      const url = API_ENDPOINTS.DOCTORS.GET_BY_DEPARTMENT(departmentId, hospitalId);
+      console.log(`[DoctorAPI] Fetching from: ${url}`);
+      const response = await apiClient.get(url);
+      console.log(`[DoctorAPI] Response for dept ${departmentId}:`, response);
+
+      let doctors: any[] = [];
+
+      if (!response) {
+        console.warn(`[DoctorAPI] Received empty response for department ${departmentId}`);
+        return [];
+      }
+
+      // Handle various structures
+      if (Array.isArray(response)) {
+        doctors = response;
+      } else if (typeof response === 'object') {
+        const anyResponse = response as any;
+        if ('doctors' in anyResponse && Array.isArray(anyResponse.doctors)) {
+          doctors = anyResponse.doctors;
+        } else if ('data' in anyResponse) {
+          if (Array.isArray(anyResponse.data)) {
+            doctors = anyResponse.data;
+          } else if (anyResponse.data && typeof anyResponse.data === 'object' && 'doctors' in anyResponse.data) {
+            doctors = anyResponse.data.doctors;
+          }
+        } else if ('items' in anyResponse && Array.isArray(anyResponse.items)) {
+          doctors = anyResponse.items;
+        }
+      }
+
+      console.log(`[DoctorAPI] Extracted ${doctors.length} doctors before normalization`);
+
+      // Normalize fields to match component expectations (userId, fullName)
+      const normalizedDoctors = doctors.map((doc: any, index: number) => ({
+        userId: String(doc.userId || doc.doctorId || doc.id || doc.DoctorID || `doc-${index}`),
+        fullName: String(doc.fullName || doc.doctorName || doc.name || doc.FullName || 'Unknown Doctor'),
+        ...doc
+      }));
+
+      console.log(`[DoctorAPI] Normalized doctors:`, normalizedDoctors);
+      return normalizedDoctors;
+    } catch (error) {
+      console.error(`[DoctorAPI] Error fetching doctors for department ${departmentId}:`, error);
+      throw error;
+    }
+  },
 };

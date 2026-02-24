@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PDFDocument } from 'pdf-lib';
 import { jsPDF } from 'jspdf';
 import { usePrescriptionStore } from '@/store/prescription';
@@ -193,13 +194,16 @@ type A4CompatibilityResult = {
   originalPageSizeMm?: { width: number; height: number };
 };
 
-export const usePrescriptionDesigner = () => {
+export const usePrescriptionDesigner = (overrideDoctorId?: string, overrideHospitalId?: string) => {
+  const { t } = useTranslation();
   const { settings, update } = usePrescriptionStore();
   const { toast } = useToast();
-  const doctorId = useAuthStore((state) => state.doctorId);
-  const hospitalId = useAuthStore((state) => state.hospitalId);
-  const userId = useAuthStore((state) => state.userId);
-  const { layoutSettings, refetchLayoutSettings } = usePrescriptionLayoutSettings();
+  const { doctorId: storedDoctorId, hospitalId: storedHospitalId, userId } = useAuthStore();
+
+  const doctorId = overrideDoctorId || storedDoctorId || '';
+  const hospitalId = overrideHospitalId || storedHospitalId || '';
+
+  const { layoutSettings, refetchLayoutSettings, isLoadingLayoutSettings } = usePrescriptionLayoutSettings(overrideDoctorId, overrideHospitalId);
 
   const [templateMeta, setTemplateMeta] = useState<TemplateMetadata | null>(null);
   const [templateError, setTemplateError] = useState<string | null>(null);
@@ -301,13 +305,15 @@ export const usePrescriptionDesigner = () => {
     setValidUpto(resolvedValidUpto);
   }, [layoutSettings, layoutSettingsSignature, typography, updateMargins, setOverflowStrategy, updateTypography]);
 
+
+
   const ensureA4Compatibility = useCallback(async (file: File): Promise<A4CompatibilityResult> => {
     const buffer = await file.arrayBuffer();
     const pdfDoc = await PDFDocument.load(buffer);
     const pages = pdfDoc.getPages();
 
     if (pages.length === 0) {
-      throw new Error('Uploaded PDF does not contain any pages.');
+      throw new Error(t('prescriptionDesigner.errors.noPages'));
     }
 
     const firstPage = pages[0];
@@ -323,8 +329,8 @@ export const usePrescriptionDesigner = () => {
 
     if (isAlreadyA4) {
       toast({
-        title: 'A4 compatible',
-        description: 'Uploaded PDF already matches A4 dimensions.',
+        title: t('prescriptionDesigner.messages.a4Compatible'),
+        description: t('prescriptionDesigner.messages.a4CompatibleDesc'),
       });
 
       return {
@@ -368,8 +374,8 @@ export const usePrescriptionDesigner = () => {
     });
 
     toast({
-      title: 'Converted to A4',
-      description: 'We created an A4-safe copy automatically for preview.',
+      title: t('prescriptionDesigner.messages.convertedToA4'),
+      description: t('prescriptionDesigner.messages.convertedToA4Desc'),
     });
 
     const finalOrientation: 'portrait' | 'landscape' = originalOrientation;
@@ -406,8 +412,8 @@ export const usePrescriptionDesigner = () => {
     } catch (error) {
       console.error('Template upload failed', error);
       toast({
-        title: 'Upload failed',
-        description: 'We could not upload this template to the server. Please try again.',
+        title: t('prescriptionDesigner.errors.uploadFailed'),
+        description: t('prescriptionDesigner.errors.uploadFailedDesc'),
         variant: 'destructive',
       });
       return false;
@@ -541,8 +547,8 @@ export const usePrescriptionDesigner = () => {
 
     try {
       toast({
-        title: 'Validating template',
-        description: 'Ensuring the uploaded PDF is A4 ready...',
+        title: t('prescriptionDesigner.messages.validatingTemplate'),
+        description: t('prescriptionDesigner.messages.validatingTemplateDesc'),
       });
 
       const { file: compatibleFile, wasConverted, pageSizeMm, orientation: derivedOrientation, originalPageSizeMm } = await ensureA4Compatibility(file);
@@ -581,20 +587,20 @@ export const usePrescriptionDesigner = () => {
 
       const didUpload = await uploadTemplateToServer(compatibleFile);
       if (didUpload) {
-        setTemplateUploadSuccessMessage('Template uploaded successfully.');
+        setTemplateUploadSuccessMessage(t('prescriptionDesigner.messages.templateUploaded'));
         setTemplateUploadSuccessOpen(true);
         refetchLayoutSettings();
       }
 
       toast({
-        title: wasConverted ? 'Converted template ready' : 'Template ready',
+        title: wasConverted ? t('prescriptionDesigner.messages.convertedTemplateReady') : t('prescriptionDesigner.messages.templateReady'),
         description: wasConverted
-          ? 'We converted your file to an A4-safe version before previewing.'
-          : 'PDF uploaded. Apply recommended margins to align content.',
+          ? t('prescriptionDesigner.messages.convertedTemplateDesc')
+          : t('prescriptionDesigner.messages.templateReadyDesc'),
       });
     } catch (error) {
       console.error('Template analysis failed', error);
-      setTemplateError('Unable to analyze PDF template. Please try another file.');
+      setTemplateError(t('prescriptionDesigner.errors.analysisFailed'));
     } finally {
       setIsAnalyzingTemplate(false);
     }
@@ -612,6 +618,21 @@ export const usePrescriptionDesigner = () => {
       const fontStyle = typography.weight === 'bold' ? 'bold' : typography.weight === 'medium' ? 'bold' : 'normal';
       doc.setFont(jsPdfFontMap[typography.family] ?? 'helvetica', fontStyle);
       doc.setFontSize(typography.size);
+
+      // Add watermark if no template is uploaded
+      if (!templateFile && !serverTemplateUri) {
+        doc.setTextColor(230, 230, 230); // Very light but visible gray
+        doc.setFontSize(50);
+        // Draw watermark in background
+        doc.text(t('prescriptionDesigner.preview.watermarkText'), 105, 140, {
+          align: 'center',
+          angle: 315, // Diagonal from bottom-left to top-right (standard watermark)
+        });
+
+        // Reset for actual content
+        doc.setTextColor(typography.color);
+        doc.setFontSize(typography.size);
+      }
 
       const startX = layoutMargins.left;
       let cursorY = layoutMargins.top;
@@ -668,14 +689,14 @@ export const usePrescriptionDesigner = () => {
       setPreviewUrl(nextUrl);
 
       toast({
-        title: 'Preview generated',
-        description: 'A lightweight prescription preview is ready.',
+        title: t('prescriptionDesigner.messages.previewGenerated'),
+        description: t('prescriptionDesigner.messages.previewGeneratedDesc'),
       });
     } catch (error) {
       console.error('Failed to generate preview', error);
       toast({
-        title: 'Preview failed',
-        description: 'Unable to generate the prescription preview. Check console for details.',
+        title: t('prescriptionDesigner.errors.previewFailed'),
+        description: t('prescriptionDesigner.errors.previewFailedDesc'),
         variant: 'destructive',
       });
     } finally {
@@ -718,25 +739,40 @@ export const usePrescriptionDesigner = () => {
       });
 
       toast({
-        title: 'Layout saved',
-        description: 'Prescription layout settings updated successfully.',
+        title: t('prescriptionDesigner.messages.layoutSavedTitle'),
+        description: t('prescriptionDesigner.messages.layoutSaved'),
       });
 
-      setLayoutSaveSuccessMessage('Prescription layout settings updated successfully.');
+      setLayoutSaveSuccessMessage(t('prescriptionDesigner.messages.layoutSaved'));
       setLayoutSaveSuccessOpen(true);
 
       await refetchLayoutSettings();
     } catch (error) {
       console.error('Failed to save layout settings', error);
       toast({
-        title: 'Save failed',
-        description: 'Unable to save layout settings. Please try again.',
+        title: t('prescriptionDesigner.errors.saveFailed'),
+        description: t('prescriptionDesigner.errors.saveFailedDesc'),
         variant: 'destructive',
       });
     } finally {
       setIsSavingLayout(false);
     }
   }, [doctorId, hospitalId, layoutMargins.bottom, layoutMargins.left, layoutMargins.right, layoutMargins.top, overflowStrategy, refetchLayoutSettings, toast, typography.color, typography.family, typography.size, typography.weight, validUpto, userId]);
+
+  // Auto-generate preview if doctor is selected but has no template
+  useEffect(() => {
+    if (doctorId && !isLoadingLayoutSettings && !layoutSettings?.uri && !previewUrl && !isGeneratingPreview) {
+      generatePreview();
+    }
+  }, [doctorId, isLoadingLayoutSettings, layoutSettings?.uri, previewUrl, isGeneratingPreview, generatePreview]);
+
+  // Reset states when doctorId changes
+  useEffect(() => {
+    setPreviewUrl(null);
+    setTemplateFile(null);
+    setTemplateMeta(null);
+    setTemplateError(null);
+  }, [doctorId]);
 
   const serverTemplateUri = layoutSettings?.uri ?? null;
 
@@ -770,5 +806,6 @@ export const usePrescriptionDesigner = () => {
     isSavingLayout,
     validUpto,
     setValidUpto,
+    isLoadingLayoutSettings,
   };
 };

@@ -83,6 +83,7 @@ export const API_ENDPOINTS = {
   },
   DEPARTMENTS: {
     GLOBAL: 'departments/global',
+    GET_BY_HOSPITAL_ID: (hospitalId: string) => `appointments/departments?hospitalId=${encodeURIComponent(hospitalId)}`,
   },
   SPECIALIZATIONS: {
     BY_DEPARTMENT: 'doctors/specializations',
@@ -105,6 +106,8 @@ export const API_ENDPOINTS = {
     RESET_PRESCRIPTION_SETTINGS: (id: string) => `prescription/prescription-settings/reset?doctorId=${id}`,
     GET_ANALYSIS: (hospitalId: string, doctorId: string) =>
       `doctor-dashboard/analysis/hospitalId=${encodeURIComponent(hospitalId)}&doctorId=${encodeURIComponent(doctorId)}`,
+    GET_BY_DEPARTMENT: (departmentId: string, hospitalId: string) =>
+      `appointments/department-doctor?departmentId=${encodeURIComponent(departmentId)}&hospitalId=${encodeURIComponent(hospitalId)}`,
   },
   USER_MANAGEMENT: {
     INVITE_USER: 'admin/user-onboarding/invitations?scope=new',
@@ -160,6 +163,11 @@ export const API_ENDPOINTS = {
     LIST: (appointmentId: string, hospitalId: string, doctorId: string, patientId: string) =>
       `e-prescription/attachments/list?appointmentId=${encodeURIComponent(appointmentId)}&hospitalId=${encodeURIComponent(hospitalId)}&doctorId=${encodeURIComponent(doctorId)}&patientId=${encodeURIComponent(patientId)}`,
     DELETE: (attachmentId: string) => `e-prescription/attachments/delete?AttachmentId=${encodeURIComponent(attachmentId)}`,
+  },
+  BILLING: {
+    CREATE_CHARGE: 'billing/config/changes',
+    GET_CHARGES: (hospitalId: string) => `billing/config/charges/hospitalId=${encodeURIComponent(hospitalId)}`,
+    DELETE_CHARGE: 'billing/config/charges',
   },
 } as const;
 

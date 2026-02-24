@@ -96,15 +96,21 @@ interface PrescriptionCustomizePanelProps {
   showCloseButton?: boolean;
   defaultTab?: 'fields' | 'personalized';
   hidePersonalizedHeader?: boolean;
+  overrideDoctorId?: string;
+  overrideHospitalId?: string;
 }
 
 export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProps> = ({
   showCloseButton = true,
   defaultTab = 'fields',
-  hidePersonalizedHeader = false
+  hidePersonalizedHeader = false,
+  overrideDoctorId,
+  overrideHospitalId
 }) => {
   const [customizeTab, setCustomizeTab] = useState<'fields' | 'playground'>(defaultTab === 'personalized' ? 'playground' : 'fields');
-  const { hospitalId, doctorId } = useAuthStore();
+  const { hospitalId: storedHospitalId, doctorId: storedDoctorId } = useAuthStore();
+  const hospitalId = overrideHospitalId || storedHospitalId;
+  const doctorId = overrideDoctorId || storedDoctorId;
   const { toast } = useToast();
 
   // Use API hook for field configuration
@@ -115,7 +121,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
     isLoadingPreferences,
     isSaving,
     preferencesError
-  } = usePrescriptionFieldConfig();
+  } = usePrescriptionFieldConfig(overrideDoctorId, overrideHospitalId);
 
   const [personalizedData, setPersonalizedData] = useState<PersonalizedData>({
     chiefComplaint: [],

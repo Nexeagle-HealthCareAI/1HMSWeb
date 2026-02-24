@@ -10,11 +10,13 @@ import {
   Receipt,
   ChevronLeft,
   ChevronRight,
-  LayoutDashboard
+  LayoutDashboard,
+  FileText
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { HospitalBrandingConfig } from './HospitalBrandingConfig';
+import { PrescriptionConfig } from '@/features/prescription/components/PrescriptionConfig';
 import { useSystemConfiguration } from '../hooks';
 import { cn } from '@/lib/utils';
 
@@ -52,6 +54,12 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
         icon: Palette,
       },
       {
+        id: 'prescriptions',
+        label: t('systemConfiguration.navigation.prescriptions.label') || 'Prescriptions',
+        description: t('systemConfiguration.navigation.prescriptions.description') || 'Configure prescription layouts and fields',
+        icon: FileText,
+      },
+      {
         id: 'settings',
         label: t('systemConfiguration.navigation.settings.label') || 'Settings',
         description: t('systemConfiguration.navigation.settings.description') || 'General system preferences',
@@ -62,7 +70,7 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
   );
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-gray-50 dark:bg-gray-900 overflow-hidden">
+    <div className="flex h-full min-h-[calc(100vh-160px)] bg-transparent overflow-visible">
       {/* Sidebar */}
       <aside
         className={cn(
@@ -262,6 +270,10 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
                 branding={hospitalBranding}
                 onBrandingChange={handleBrandingChange}
               />
+            </TabsContent>
+
+            <TabsContent value="prescriptions" className="space-y-6">
+              <PrescriptionConfig />
             </TabsContent>
 
             <TabsContent value="settings" className="space-y-6">
