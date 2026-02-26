@@ -178,7 +178,7 @@ export const AdminDashboard = () => {
     { id: 'user-management', name: t('admin.userManagement'), icon: Users, description: t('admin.usersRolesPermissions') },
     { id: 'patient-management', name: t('admin.patientManagement'), icon: UserCheck, description: t('admin.patientRecordsData') },
     //{ id: 'appointment-oversight', name: t('admin.appointmentOversight') || 'Appointments', icon: Calendar, description: t('admin.appointmentManagement') || 'Manage System Appointments' },
-    { id: 'billing-management', name: t('admin.billingManagement') || 'Billing Management', icon: IndianRupee, description: t('admin.billingDescription') || 'Manage all OPD, IPD billings' },
+    { id: 'billing-management', name: t('admin.billingManagement') || 'Configuration', icon: IndianRupee, description: t('admin.billingDescription') || 'Manage all OPD, IPD billings' },
     //{ id: 'billing-insurance', name: t('admin.billingInsurance'), icon: CreditCard, description: t('admin.financialManagement') },
     //{ id: 'bulk-messaging', name: t('admin.bulkMessaging'), icon: MessageSquare, description: t('admin.communicationManagement') },
     { id: 'system-config', name: 'Settings', icon: Settings, description: 'General system preferences' },

@@ -316,7 +316,7 @@ export const UserManagement: React.FC = () => {
           registrationYear: doctorFormData.registrationYear,
           bio: doctorFormData.bio,
           primaryDepartment: doctorFormData.primaryDepartment,
-          department: doctorFormData.department,
+          department: doctorFormData.primaryDepartment,
           specializations: doctorFormData.specializations,
           hospitalDepartmentMappingId: doctorFormData.hospitalDepartmentMappingId,
         });

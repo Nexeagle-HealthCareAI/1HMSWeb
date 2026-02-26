@@ -47,7 +47,7 @@ export const DoctorInviteForm: React.FC<DoctorInviteFormProps> = ({
     const [profileData, setProfileData] = useState({
         licenseNumber: initialData?.licenseNumber || '',
         qualification: initialData?.qualification || [] as string[],
-        experienceYears: initialData?.experienceYears ?? 0,
+        experienceYears: initialData?.experienceYears !== undefined ? initialData.experienceYears : ('' as unknown as number),
         medicalCouncil: initialData?.medicalCouncil || '',
         registrationYear: initialData?.registrationYear || new Date().getFullYear(),
         bio: initialData?.bio || '',
@@ -141,7 +141,7 @@ export const DoctorInviteForm: React.FC<DoctorInviteFormProps> = ({
             registrationYear: profileData.registrationYear,
             bio: profileData.bio,
             primaryDepartment: departmentName,
-            department: departmentName,
+            department: profileData.department,
             specializations: profileData.specializations,
             hospitalDepartmentMappingId: profileData.hospitalDepartmentMappingId,
         });
@@ -155,34 +155,72 @@ export const DoctorInviteForm: React.FC<DoctorInviteFormProps> = ({
         profileData.medicalCouncil,
     ].filter(Boolean).length;
 
+    const isFormValid = useMemo(() => {
+        const hasLicense = !!profileData.licenseNumber?.trim();
+        const hasMedicalCouncil = !!profileData.medicalCouncil?.trim();
+        const hasDepartment = !!profileData.department && !['loading', 'error', 'no-data'].includes(profileData.department);
+        const hasSpecializations = profileData.specializations && profileData.specializations.length > 0;
+        const hasQualifications = profileData.qualification && profileData.qualification.length > 0;
+
+        // Strictly check that these are numbers and not empty strings or NaN
+        const hasExperience = typeof profileData.experienceYears === 'number' && !isNaN(profileData.experienceYears);
+        const hasRegistrationYear = typeof profileData.registrationYear === 'number' && !isNaN(profileData.registrationYear);
+
+        const result = DoctorSchema.safeParse({
+            licenseNumber: profileData.licenseNumber,
+            qualifications: profileData.qualification,
+            specializations: profileData.specializations,
+            experienceYears: profileData.experienceYears,
+            medicalCouncil: profileData.medicalCouncil,
+            registrationYear: profileData.registrationYear,
+            bio: profileData.bio,
+        });
+        return result.success && hasLicense && hasMedicalCouncil && hasDepartment && hasSpecializations && hasQualifications && hasExperience && hasRegistrationYear;
+    }, [DoctorSchema, profileData]);
+
     return (
         <div className="space-y-2.5">
-            {/* Header with progress dots */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                    <Stethoscope className="h-4 w-4 text-blue-500" />
-                    <h3 className="text-sm font-semibold text-foreground">{t('docProfile.sectionTitle')}</h3>
+            {/* Header with gamified progress dots */}
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800/60 mb-4">
+                <div className="flex items-center gap-2">
+                    <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 shadow-md shadow-blue-500/20">
+                        <div className="absolute inset-0 rounded-lg border border-white/20" />
+                        <Stethoscope className="h-4 w-4 text-white" />
+                    </div>
+                    <h3 className="text-sm font-bold bg-gradient-to-r from-slate-800 to-slate-500 dark:from-white dark:to-slate-400 bg-clip-text text-transparent uppercase tracking-wider">
+                        {t('docProfile.sectionTitle')}
+                    </h3>
                 </div>
-                <div className="flex items-center gap-1.5">
-                    <div className="flex gap-0.5">
+                <div className="flex items-center gap-3">
+                    <div className="flex gap-1">
                         {Array.from({ length: 5 }).map((_, i) => (
-                            <div key={i} className={cn(
-                                "w-1.5 h-1.5 rounded-full transition-all duration-300",
-                                i < filledCount ? 'bg-blue-500 scale-110' : 'bg-gray-200 dark:bg-gray-700'
-                            )} />
+                            <div key={i} className="relative w-8 h-1.5 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800">
+                                <div className={cn(
+                                    "absolute inset-y-0 left-0 transition-all duration-500 rounded-full",
+                                    i < filledCount
+                                        ? "w-full bg-gradient-to-r from-blue-500 to-indigo-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+                                        : "w-0 bg-transparent"
+                                )} />
+                            </div>
                         ))}
                     </div>
-                    <span className="text-[10px] text-muted-foreground">{filledCount}/5</span>
+                    <div className="flex items-baseline gap-0.5 font-mono text-xs">
+                        <span className={cn("font-bold", filledCount === 5 ? "text-green-500" : "text-blue-600 dark:text-blue-400")}>{filledCount}</span>
+                        <span className="text-[10px] text-slate-400">/5</span>
+                    </div>
                 </div>
             </div>
 
             {/* Department & Specializations */}
-            <div className="rounded-lg border border-blue-200/60 dark:border-blue-900/40 bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-950/20 dark:to-gray-900/50 p-3 space-y-2.5 shadow-sm">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300">
-                    <Building2 className="h-3.5 w-3.5" />
+            <div className="group relative rounded-xl border border-blue-100/80 bg-white/70 backdrop-blur-md dark:border-blue-900/40 dark:bg-slate-900/50 p-4 space-y-3 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/20 to-transparent dark:from-blue-900/10 pointer-events-none" />
+                <div className="relative flex items-center gap-2 text-xs font-bold tracking-wide text-blue-700 dark:text-blue-400 uppercase">
+                    <div className="p-1.5 rounded-md bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300">
+                        <Building2 className="h-3.5 w-3.5" />
+                    </div>
                     Department & Expertise
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-1">
+                <div className="relative grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5 mt-2">
                     <div className="space-y-1.5">
                         <Label htmlFor="invite-department" className="text-[11px] font-medium text-blue-900 dark:text-blue-300">
                             {t('docProfile.fields.department.label')} <span className="text-red-500">*</span>
@@ -235,12 +273,15 @@ export const DoctorInviteForm: React.FC<DoctorInviteFormProps> = ({
             </div>
 
             {/* Credentials */}
-            <div className="rounded-lg border border-purple-200/60 dark:border-purple-900/40 bg-gradient-to-br from-purple-50/50 to-white dark:from-purple-950/20 dark:to-gray-900/50 p-3 space-y-2.5 shadow-sm">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-purple-700 dark:text-purple-300">
-                    <BookOpen className="h-3.5 w-3.5" />
+            <div className="group relative rounded-xl border border-purple-100/80 bg-white/70 backdrop-blur-md dark:border-purple-900/40 dark:bg-slate-900/50 p-4 space-y-3 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-50/20 to-transparent dark:from-purple-900/10 pointer-events-none" />
+                <div className="relative flex items-center gap-2 text-xs font-bold tracking-wide text-purple-700 dark:text-purple-400 uppercase">
+                    <div className="p-1.5 rounded-md bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-300">
+                        <BookOpen className="h-3.5 w-3.5" />
+                    </div>
                     Credentials
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-1">
+                <div className="relative grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5 mt-2">
                     <div className="space-y-1.5">
                         <Label htmlFor="invite-licenseNumber" className="text-[11px] font-medium text-purple-900 dark:text-purple-300">
                             {t('docProfile.fields.licenseNumber.label')} <span className="text-red-500">*</span>
@@ -260,8 +301,8 @@ export const DoctorInviteForm: React.FC<DoctorInviteFormProps> = ({
                         <Input
                             id="invite-experienceYears"
                             type="number"
-                            value={profileData.experienceYears || ''}
-                            onChange={(e) => handleInputChange('experienceYears', Number(e.target.value))}
+                            value={profileData.experienceYears === ('' as unknown as number) ? '' : profileData.experienceYears}
+                            onChange={(e) => handleInputChange('experienceYears', e.target.value === '' ? ('' as unknown as number) : Number(e.target.value))}
                             className={cn("h-9 text-sm transition-all focus:ring-purple-500/20", errors.experienceYears && 'border-red-400 ring-2 ring-red-100')}
                             placeholder="0"
                         />
@@ -284,12 +325,15 @@ export const DoctorInviteForm: React.FC<DoctorInviteFormProps> = ({
             </div>
 
             {/* Registration & Bio (combined) */}
-            <div className="rounded-lg border border-amber-200/60 dark:border-amber-900/40 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/20 dark:to-gray-900/50 p-3 space-y-2.5 shadow-sm">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-300">
-                    <Award className="h-3.5 w-3.5" />
+            <div className="group relative rounded-xl border border-amber-100/80 bg-white/70 backdrop-blur-md dark:border-amber-900/40 dark:bg-slate-900/50 p-4 space-y-3 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-50/20 to-transparent dark:from-amber-900/10 pointer-events-none" />
+                <div className="relative flex items-center gap-2 text-xs font-bold tracking-wide text-amber-700 dark:text-amber-400 uppercase">
+                    <div className="p-1.5 rounded-md bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-300">
+                        <Award className="h-3.5 w-3.5" />
+                    </div>
                     Registration & Bio
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-1">
+                <div className="relative grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5 mt-2">
                     <div className="space-y-1.5">
                         <Label htmlFor="invite-medicalCouncil" className="text-[11px] font-medium text-amber-900 dark:text-amber-300">
                             {t('docProfile.fields.medicalCouncil.label')} <span className="text-red-500">*</span>
@@ -328,18 +372,34 @@ export const DoctorInviteForm: React.FC<DoctorInviteFormProps> = ({
             )}
 
             {/* Actions */}
-            <div className="flex justify-between pt-4 border-t border-gray-100 dark:border-gray-800">
-                <Button variant="outline" onClick={onBack} className="h-9 px-6 gap-2 text-sm font-medium">
-                    <ArrowLeft className="h-3.5 w-3.5" />
+            <div className="flex justify-between pt-6 border-t border-slate-100 dark:border-slate-800/60 mt-4">
+                <Button
+                    variant="outline"
+                    onClick={onBack}
+                    className="h-10 px-6 gap-2 text-sm font-bold tracking-wide text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-all duration-300"
+                >
+                    <ArrowLeft className="h-4 w-4" />
                     Back
                 </Button>
-                <Button
-                    onClick={handleNext}
-                    className="h-8 px-5 gap-1.5 text-sm font-semibold bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-300"
-                >
-                    Next
-                    <ArrowRight className="h-3.5 w-3.5" />
-                </Button>
+                <div className="relative group">
+                    {/* Glowing background for enabled state */}
+                    {isFormValid && (
+                        <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 opacity-70 blur group-hover:opacity-100 transition-opacity duration-300" />
+                    )}
+                    <Button
+                        onClick={handleNext}
+                        disabled={!isFormValid}
+                        className={cn(
+                            "relative h-10 px-8 gap-2 text-sm font-bold uppercase tracking-wider transition-all duration-300",
+                            isFormValid
+                                ? "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.3)] shadow-blue-500/25"
+                                : "bg-slate-100 text-slate-400 border border-slate-200 dark:bg-slate-800 dark:text-slate-500 dark:border-slate-700 cursor-not-allowed"
+                        )}
+                    >
+                        Next
+                        <ArrowRight className={cn("h-4 w-4 transition-transform", isFormValid && "group-hover:translate-x-1")} />
+                    </Button>
+                </div>
             </div>
         </div >
     );

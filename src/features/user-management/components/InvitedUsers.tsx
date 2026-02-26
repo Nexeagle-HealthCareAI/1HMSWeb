@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useNavigate } from 'react-router-dom';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,7 +40,8 @@ import {
   AtSign,
   Send,
   Ban,
-  Info
+  Info,
+  FileText
 } from 'lucide-react';
 import { useUserManagementApi } from '../hooks/useUserManagementApi';
 import { InvitedUser } from '../services/userManagementApi';
@@ -54,6 +56,7 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
   const authStore = useAuthStore.getState();
   const hospitalId = authStore.getHospitalId();
   const currentUserId = authStore.getUserId();
+  const navigate = useNavigate();
 
   // Scope state for filtering
   const [activeScope, setActiveScope] = useState<'Pending' | 'Accepted' | 'Revoked' | 'ALL'>(initialScope);
@@ -442,6 +445,18 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
 
 
                         {/* Visible Action Buttons */}
+                        {(user.roleName === 'Doctor' || user.roleName === 'AdminDoctor') && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate('/admin/settings/prescription')}
+                            className="h-8 px-3 text-purple-600 border-purple-200 hover:bg-purple-50 hover:border-purple-300"
+                          >
+                            <FileText className="h-3 w-3 mr-1" />
+                            Upload Prescription
+                          </Button>
+                        )}
+
                         <Button
                           variant="outline"
                           size="sm"
