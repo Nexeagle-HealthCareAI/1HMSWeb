@@ -80,8 +80,6 @@ export const AppointmentDashboard = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'online' | 'offline'>('online');
   const [compactMode, setCompactMode] = useState(true);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [appointmentToCancel, setAppointmentToCancel] = useState<AppointmentDetail | null>(null);
@@ -263,13 +261,10 @@ export const AppointmentDashboard = () => {
   const handleManualRefresh = async () => {
     if (!refetch) return;
 
-    setIsRefreshing(true);
     try {
       await refetch();
     } catch (error) {
       console.error('Manual refresh failed:', error);
-    } finally {
-      setIsRefreshing(false);
     }
   };
 
@@ -692,64 +687,6 @@ export const AppointmentDashboard = () => {
     }
   }, [refetch, hospitalId]);
 
-  // Refetch when page becomes visible again (user navigates back to dashboard)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && refetch && hospitalId) {
-        console.log('Page became visible - refetching appointments');
-        refetch();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [refetch, hospitalId]);
-
-  // Live update functionality for current appointments
-  useEffect(() => {
-    if (activeTab !== 'current' || !refetch || !hospitalId) {
-      return;
-    }
-
-    const interval = setInterval(async () => {
-      setIsRefreshing(true);
-      try {
-        await refetch();
-      } catch (error) {
-        console.error('Live update failed:', error);
-      } finally {
-        setIsRefreshing(false);
-      }
-    }, 30000); // Refresh every 30 seconds
-
-    return () => clearInterval(interval);
-  }, [activeTab, refetch, hospitalId]);
-
-  // Connection status monitoring
-  useEffect(() => {
-    const handleOnline = () => {
-      setConnectionStatus('online');
-      if (refetch && hospitalId) {
-        refetch(); // Refresh data when connection is restored
-      }
-    };
-
-    const handleOffline = () => {
-      setConnectionStatus('offline');
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [refetch, hospitalId]);
-
   // Refetch when returning from appointment booking page
   useEffect(() => {
     if (!showBooking && refetch && hospitalId) {
@@ -757,19 +694,6 @@ export const AppointmentDashboard = () => {
       refetch();
     }
   }, [showBooking, refetch, hospitalId]);
-
-  // Auto-refresh appointments every 10 minutes
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (refetch) {
-        refetch();
-        console.log('Auto-refreshing appointments...');
-      }
-    }, 10 * 60 * 1000); // 10 minutes in milliseconds
-
-    // Cleanup interval on component unmount
-    return () => clearInterval(interval);
-  }, [refetch]);
 
   // Refetch appointments when date range changes
   useEffect(() => {
@@ -944,20 +868,6 @@ export const AppointmentDashboard = () => {
                 </Button>
               </div>
 
-              {/* Live Status Indicators */}
-              {activeTab === 'current' && (
-                <div className="flex items-center gap-2 mt-1 px-1">
-                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/50 dark:bg-slate-800/50 border border-blue-100 dark:border-slate-700 text-[10px] sm:text-xs font-medium text-gray-600 dark:text-gray-300">
-                    {isRefreshing ? <RefreshCw className="h-3 w-3 animate-spin text-blue-500" /> : <Activity className="h-3 w-3 text-emerald-500" />}
-                    <span>{isRefreshing ? 'Updating...' : 'Live System'}</span>
-                    <div className="w-px h-3 bg-gray-300 dark:bg-gray-600 mx-1"></div>
-                    {connectionStatus === 'online' ? <Wifi className="h-3 w-3 text-emerald-500" /> : <WifiOff className="h-3 w-3 text-red-500" />}
-                    <span className={connectionStatus === 'online' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>
-                      {connectionStatus === 'online' ? 'Online' : 'Offline'}
-                    </span>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Right: Navigation Tabs */}
@@ -1231,16 +1141,16 @@ export const AppointmentDashboard = () => {
                       );
                     })}
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleManualRefresh}
-                    disabled={isRefreshing}
-                    className="h-9 px-4 text-xs md:self-start mt-2 sm:mt-0"
-                  >
-                    <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
-                    {t('appointmentDashboard.refreshNow')}
-                  </Button>
+                  <div className="flex items-center gap-3">
+                    <Button
+                      variant="outline"
+                      className="bg-white hover:bg-gray-50 dark:bg-gray-900 border-gray-200"
+                      onClick={handleManualRefresh}
+                    >
+                      <RefreshCw className={`mr-2 h-4 w-4`} />
+                      {t('appointmentDashboard.refresh')}
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}

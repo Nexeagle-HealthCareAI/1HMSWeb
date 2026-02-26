@@ -225,9 +225,6 @@ export const ClinicalDashboard: React.FC = () => {
   // Live update states
   const [isLiveUpdateEnabled, setIsLiveUpdateEnabled] = useState(true);
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const [connectionStatus, setConnectionStatus] = useState<'online' | 'offline'>('online');
 
   // userId for doctor profile
   const userId = authUserId || '';
@@ -429,42 +426,17 @@ export const ClinicalDashboard: React.FC = () => {
     setCurrentPage(1);
   }, [searchTerm, selectedStatus, startDate, endDate]);
 
-  // Live update effect
-  useEffect(() => {
-    if (!isLiveUpdateEnabled || activeTab !== 'current' || !refetch || !hospitalId || !doctorId) return;
-
-    const interval = setInterval(async () => {
-      if (connectionStatus === 'online') {
-        setIsRefreshing(true);
-        try {
-          await refetch();
-          setLastUpdateTime(new Date());
-        } catch (error) {
-          console.error('Live update failed:', error);
-        } finally {
-          setIsRefreshing(false);
-        }
+  // Live update manual refresh fallback
+  const handleManualRefresh = async () => {
+    if (refetch && hospitalId && doctorId) {
+      try {
+        await refetch();
+        setLastUpdateTime(new Date());
+      } catch (error) {
+        console.error('Manual update failed:', error);
       }
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [isLiveUpdateEnabled, activeTab, refetch, hospitalId, doctorId, connectionStatus]);
-
-  // Connection status listeners
-  useEffect(() => {
-    const handleOnline = () => {
-      setConnectionStatus('online');
-      if (refetch && hospitalId && doctorId) refetch();
-    };
-    const handleOffline = () => setConnectionStatus('offline');
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [refetch, hospitalId, doctorId]);
+    }
+  };
 
   // Default date ranges for past/future tabs
   useEffect(() => {
@@ -898,21 +870,6 @@ export const ClinicalDashboard: React.FC = () => {
     const encodedAppointmentId = appointment.appointmentId ? encodeURIComponent(appointment.appointmentId) : '';
     const appointmentParam = encodedAppointmentId ? `&appointmentId=${encodedAppointmentId}` : '';
     navigate(`/patient/new?patientId=${encodedPatientId}${appointmentParam}`);
-  };
-
-  // Manual refresh
-  const handleManualRefresh = async () => {
-    if (refetch && hospitalId && doctorId) {
-      setIsRefreshing(true);
-      try {
-        await refetch();
-        setLastUpdateTime(new Date());
-      } catch (error) {
-        console.error('Manual refresh failed:', error);
-      } finally {
-        setIsRefreshing(false);
-      }
-    }
   };
 
   useLayoutEffect(() => {
@@ -1517,13 +1474,12 @@ export const ClinicalDashboard: React.FC = () => {
                           </div>
                           <Button
                             variant="outline"
-                            size="icon"
+                            size="sm"
                             onClick={handleManualRefresh}
-                            disabled={isRefreshing}
-                            className="h-7 w-7 sm:h-8 sm:w-8 border-gray-200 dark:border-gray-700 text-blue-600 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-gray-800"
+                            className="h-8 gap-1.5 border-gray-200 dark:border-gray-700 font-medium"
                           >
-                            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-                            <span className="sr-only">{t('docBoard.sync.refresh')}</span>
+                            <RefreshCw className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">Refresh</span>
                           </Button>
                         </div>
                       </div>

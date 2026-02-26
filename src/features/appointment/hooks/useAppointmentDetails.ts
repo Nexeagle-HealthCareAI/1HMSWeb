@@ -11,7 +11,7 @@ export const useAppointmentDetails = (
   // For current appointments, if no dates are provided, use today's date
   const effectiveStartDate = startDate || new Date().toISOString().split('T')[0];
   const effectiveEndDate = endDate || new Date().toISOString().split('T')[0];
-  
+
   return useQuery<AppointmentDetailsResponse>({
     queryKey: ['appointmentDetails', status, effectiveStartDate, effectiveEndDate, hospitalId],
     queryFn: () => appointmentApi.getAppointmentDetails({
@@ -25,5 +25,6 @@ export const useAppointmentDetails = (
     gcTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: true, // Refetch when window gains focus
     refetchOnMount: true, // Always refetch when component mounts
+    refetchInterval: 30000, // Refetch every 30 seconds
   });
 };

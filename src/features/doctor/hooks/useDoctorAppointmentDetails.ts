@@ -19,23 +19,23 @@ export const useDoctorAppointmentDetails = ({
   doctorId,
   enabled = true
 }: UseDoctorAppointmentDetailsParams) => {
-  
+
   return useQuery<{ items: DoctorAppointmentDetail[] }>({
     queryKey: ['doctorAppointmentDetails', status, startDate, endDate, hospitalId, doctorId],
     queryFn: () => {
-      
-      if (!hospitalId || !doctorId) {        
+
+      if (!hospitalId || !doctorId) {
         throw new Error('Hospital ID and Doctor ID are required');
       }
-      
+
       const request = {
         status,
         startDate: startDate || '',
         endDate: endDate || '',
         hospitalId,
         doctorId
-      };    
-          
+      };
+
       return doctorApi.getAppointmentDetails(request);
     },
     enabled: enabled && !!hospitalId && !!doctorId,
@@ -43,6 +43,5 @@ export const useDoctorAppointmentDetails = ({
     gcTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: false, // Disable refetch on window focus to prevent loops
     refetchOnMount: false, // Disable refetch on mount to prevent loops
-    refetchInterval: false, // Disable auto-refresh to prevent loops
   });
 };
