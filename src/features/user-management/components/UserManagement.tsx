@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Users, UserPlus, Mail, AlertCircle, ChevronLeft, ChevronRight, LayoutDashboard, CheckCircle, ArrowRight, Send, Sparkles, Trophy, Stethoscope, Shield, Heart, Phone, User, FileText, Briefcase, Contact, ShieldCheck } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useUserManagementApi } from '../hooks/useUserManagementApi';
 import { RolesResponse, InviteUserRequest } from '../services/userManagementApi';
 import { OnboardedUsers } from './OnboardedUsers';
@@ -30,12 +31,13 @@ import { toast } from '@/hooks/use-toast';
 
 export const UserManagement: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('onboarded');
   const [invitedUsersScope, setInvitedUsersScope] = useState<'Pending' | 'Accepted' | 'Revoked' | 'ALL'>('ALL');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // API hooks
-  const { getAllRoles, inviteUser } = useUserManagementApi();
+  const { getAllRoles, inviteUser, updateInvitedUser } = useUserManagementApi();
   const { data: rolesResponse, isLoading: rolesLoading, error: rolesError } = getAllRoles();
   const typedRolesResponse = rolesResponse as RolesResponse | undefined;
 
@@ -341,6 +343,18 @@ export const UserManagement: React.FC = () => {
         emergencyContactNumber: personalData.emergencyContactNumber || '',
       });
 
+      // 5. Update user invitation status
+      if (inviteResponse.invitationId && userId) {
+        try {
+          await updateInvitedUser.mutateAsync({
+            invitationId: inviteResponse.invitationId,
+            userId: userId
+          });
+        } catch (updateError) {
+          console.warn('Failed to update invited user status during onboarding:', updateError);
+        }
+      }
+
       // Show success
       setInvitedUserInfo({
         name: newUser.name,
@@ -385,16 +399,36 @@ export const UserManagement: React.FC = () => {
       }
 
       // 2. Register user
+      let userId: string | null = null;
       try {
-        await authApi.register({
+        const registerResponse = await authApi.register({
           mobileNumber: ValidationUtils.cleanMobileNumber(newUser.phone),
           roles: roleName,
         });
+        userId = registerResponse?.userId || null;
       } catch (regError: any) {
         // If user already exists with userId, that's fine
         const responseData = regError?.response?.data;
-        if (!responseData?.userId) {
+        if (responseData?.userId) {
+          userId = responseData.userId;
+        } else {
           throw new Error(responseData?.message || 'Failed to register user');
+        }
+      }
+
+      if (!userId) {
+        throw new Error('Registration did not return a user ID');
+      }
+
+      // 3. Update user invitation status
+      if (response.invitationId && userId) {
+        try {
+          await updateInvitedUser.mutateAsync({
+            invitationId: response.invitationId,
+            userId: userId
+          });
+        } catch (updateError) {
+          console.warn('Failed to update invited user status during onboarding:', updateError);
         }
       }
 
@@ -562,7 +596,10 @@ export const UserManagement: React.FC = () => {
         if (!open) resetInviteDialog();
         setShowAddUser(open);
       }}>
-        <DialogContent className="overflow-hidden p-0 gap-0 flex flex-col !w-[100vw] !h-[100dvh] !max-w-[100vw] !max-h-[100dvh] rounded-none sm:!w-[98vw] sm:!h-[96vh] sm:!max-w-[98vw] sm:!max-h-[96vh] sm:rounded-lg">
+        <DialogContent
+          onInteractOutside={(e) => e.preventDefault()}
+          className="overflow-hidden p-0 gap-0 flex flex-col !w-[100vw] !h-[100dvh] !max-w-[100vw] !max-h-[100dvh] rounded-none sm:!w-[98vw] sm:!h-[96vh] sm:!max-w-[98vw] sm:!max-h-[96vh] sm:rounded-lg"
+        >
           {/* Gradient Header */}
           <div className={cn(
             "px-4 pt-3 pb-2 bg-gradient-to-r rounded-t-lg",
@@ -907,7 +944,7 @@ export const UserManagement: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="flex gap-2 pt-2 relative z-10">
+                <div className="flex gap-2 pt-2 relative z-10 flex-wrap justify-center">
                   <Button variant="outline" className="h-8 px-4 text-sm" onClick={() => {
                     resetInviteDialog();
                     setShowAddUser(false);
@@ -925,6 +962,19 @@ export const UserManagement: React.FC = () => {
                     <Users className="h-3.5 w-3.5" />
                     View Invited Users
                   </Button>
+                  {isDoctorRole() && (
+                    <Button
+                      className="h-8 px-4 gap-2 text-sm bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 shadow-lg shadow-purple-500/25"
+                      onClick={() => {
+                        resetInviteDialog();
+                        setShowAddUser(false);
+                        navigate('/admin/settings/prescription');
+                      }}
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      Upload Prescription Design
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
@@ -960,6 +1010,11 @@ export const UserManagement: React.FC = () => {
         invitedUserName={invitedUserInfo.name}
         invitedUserEmail={invitedUserInfo.email}
         invitedUserRole={invitedUserInfo.role}
+        isDoctorRole={isDoctorRole()}
+        onUploadPrescription={() => {
+          setShowSuccessModal(false);
+          navigate('/admin/settings/prescription');
+        }}
       />
     </div>
   );

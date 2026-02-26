@@ -68,8 +68,7 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
     if (patientProfile) {
       setFormData({
         hospitalId: patientProfile.hospitalId,
-        patientId: patientProfile.patientId,
-        patientId: patientProfile.patientId,
+        patientId: patientProfile.patientId,       
         fullName: patientProfile.fullName ? patientProfile.fullName.split('-')[0].trim() : '',
         mobile: patientProfile.mobile,
         ageYears: patientProfile.ageYears,

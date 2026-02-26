@@ -38,7 +38,8 @@ import {
   Phone,
   AtSign,
   Send,
-  Ban
+  Ban,
+  Info
 } from 'lucide-react';
 import { useUserManagementApi } from '../hooks/useUserManagementApi';
 import { InvitedUser } from '../services/userManagementApi';
@@ -331,27 +332,19 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={activeScope} onValueChange={(value) => setActiveScope(value as 'Pending' | 'Accepted' | 'Revoked' | 'ALL')}>
-                <SelectTrigger className="h-11 sm:w-[200px]">
-                  <SelectValue placeholder={t('userManagement.invitedUsers.statusPlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {scopeFilters.map(({ value, label, count }) => (
-                    <SelectItem key={value} value={value} className="flex items-center justify-between gap-2">
-                      <div className="flex w-full items-center justify-between">
-                        <span>{label}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {count}
-                        </Badge>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Expiration Note */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-3">
+        <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+        <p className="text-sm text-blue-800">
+          <strong>Note:</strong> Invitation links will automatically expire <strong>24 hours</strong> after they are sent.
+          If a user's link expires, you can use the Resend button to send them a new one.
+        </p>
+      </div>
 
       {/* Enhanced Users List */}
       <div className="grid gap-4">
@@ -410,18 +403,10 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
                         </Badge>
 
                         {/* Action Availability Indicators */}
-                        {user.status.toLowerCase() !== 'accepted' && (
-                          <Badge variant="outline" className="text-blue-600 border-blue-200">
-                            <Send className="h-2 w-2 mr-1" />
-                            {t('userManagement.invitedUsers.badges.canResend')}
-                          </Badge>
-                        )}
-                        {user.status.toLowerCase() !== 'revoked' && (
-                          <Badge variant="outline" className="text-red-600 border-red-200">
-                            <Ban className="h-2 w-2 mr-1" />
-                            {t('userManagement.invitedUsers.badges.canRevoke')}
-                          </Badge>
-                        )}
+                        <Badge variant="outline" className="text-blue-600 border-blue-200">
+                          <Send className="h-2 w-2 mr-1" />
+                          {t('userManagement.invitedUsers.badges.canResend')}
+                        </Badge>
                       </div>
                     </div>
                   </div>
@@ -457,44 +442,22 @@ export const InvitedUsers: React.FC<InvitedUsersProps> = ({ initialScope = 'ALL'
 
 
                         {/* Visible Action Buttons */}
-                        {user.status.toLowerCase() !== 'accepted' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleAction(user, 'resend')}
-                            disabled={manageInvitation.isPending || isProcessing(user.invitationId)}
-                            className="h-8 px-3 text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
-                          >
-                            {isProcessing(user.invitationId) ? (
-                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-1"></div>
-                            ) : (
-                              <Send className="h-3 w-3 mr-1" />
-                            )}
-                            {isProcessing(user.invitationId)
-                              ? t('userManagement.invitedUsers.actions.resending')
-                              : t('userManagement.invitedUsers.actions.resend')}
-                          </Button>
-                        )}
-
-                        {user.status.toLowerCase() !== 'revoked' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleAction(user, 'revoke')}
-                            disabled={manageInvitation.isPending || isProcessing(user.invitationId)}
-                            className="h-8 px-3 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
-                          >
-                            {isProcessing(user.invitationId) ? (
-                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
-                            ) : (
-                              <Ban className="h-3 w-3 mr-1" />
-                            )}
-                            {isProcessing(user.invitationId)
-                              ? t('userManagement.invitedUsers.actions.revoking')
-                              : t('userManagement.invitedUsers.actions.revoke')}
-                          </Button>
-                        )}
-
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleAction(user, 'resend')}
+                          disabled={manageInvitation.isPending || isProcessing(user.invitationId)}
+                          className="h-8 px-3 text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
+                        >
+                          {isProcessing(user.invitationId) ? (
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-1"></div>
+                          ) : (
+                            <Send className="h-3 w-3 mr-1" />
+                          )}
+                          {isProcessing(user.invitationId)
+                            ? t('userManagement.invitedUsers.actions.resending')
+                            : t('userManagement.invitedUsers.actions.resend')}
+                        </Button>
 
                       </div>
 

@@ -139,7 +139,6 @@ const UserOnboardingRegistration: React.FC = () => {
   const verifyOTPMutation = useAuthApi.verifyOTP();
   const setPasswordMutation = useAuthApi.setPassword(); // Use set-password API
   const { mutateAsync: validateTokenAsync } = useAuthApi.validateToken();
-  const updateInvitedUserMutation = useUserManagementApi().updateInvitedUser;
   const setAuthToken = useAuthStore((state) => state.setToken);
   const [lastCheckedToken, setLastCheckedToken] = useState<string | null>(null);
 
@@ -377,18 +376,6 @@ const UserOnboardingRegistration: React.FC = () => {
           setAuthToken(response.accessToken);
         }
 
-        // Call the update invited user API after successful OTP verification
-        if (invitationId && invitationId !== '' && verifiedUserId) {
-          try {
-            await updateInvitedUserMutation.mutateAsync({
-              invitationId: invitationId,
-              userId: verifiedUserId
-            });
-          } catch (updateError: unknown) {
-            console.warn('Failed to update invited user after OTP verification', updateError);
-          }
-        }
-
         setIsMobileVerified(true);
         console.log('OTP verified, userId:', verifiedUserId);
         toast({
@@ -571,10 +558,10 @@ const UserOnboardingRegistration: React.FC = () => {
                     <div key={step.id} className="flex items-start gap-3">
                       <div
                         className={`h-10 w-10 rounded-full border-2 flex items-center justify-center text-sm font-semibold transition-colors ${isComplete
-                            ? 'border-green-500 bg-green-500 text-white shadow-sm'
-                            : isActive
-                              ? 'border-blue-600 bg-blue-50 text-blue-600'
-                              : 'border-slate-200 text-slate-400'
+                          ? 'border-green-500 bg-green-500 text-white shadow-sm'
+                          : isActive
+                            ? 'border-blue-600 bg-blue-50 text-blue-600'
+                            : 'border-slate-200 text-slate-400'
                           }`}
                       >
                         {isComplete ? <CheckCircle className="h-5 w-5" /> : step.id}

@@ -11,6 +11,8 @@ interface InvitationSuccessModalProps {
   invitedUserName: string;
   invitedUserEmail: string;
   invitedUserRole: string;
+  isDoctorRole?: boolean;
+  onUploadPrescription?: () => void;
 }
 
 export const InvitationSuccessModal: React.FC<InvitationSuccessModalProps> = ({
@@ -20,6 +22,8 @@ export const InvitationSuccessModal: React.FC<InvitationSuccessModalProps> = ({
   invitedUserName,
   invitedUserEmail,
   invitedUserRole,
+  isDoctorRole,
+  onUploadPrescription,
 }) => {
   const { t } = useTranslation();
 
@@ -32,13 +36,13 @@ export const InvitationSuccessModal: React.FC<InvitationSuccessModalProps> = ({
             {t('userManagement.invitationSuccess.title')}
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           <div className="text-center">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Mail className="h-8 w-8 text-green-600" />
             </div>
-            
+
             <h3 className="text-lg font-semibold mb-2">{t('userManagement.invitationSuccess.deliveredTitle')}</h3>
             <p className="text-muted-foreground mb-4">
               {t('userManagement.invitationSuccess.deliveredDescription')}
@@ -62,13 +66,24 @@ export const InvitationSuccessModal: React.FC<InvitationSuccessModalProps> = ({
             </p>
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={onClose}>
+          <div className="flex justify-end gap-2 pt-4 flex-wrap">
+            <Button variant="outline" onClick={onClose} className="h-8 px-4 text-sm">
               {t('common.close')}
             </Button>
-            <Button onClick={onViewInvitedUsers}>
+            <Button
+              onClick={onViewInvitedUsers}
+              className="h-8 px-4 text-sm"
+            >
               {t('userManagement.viewInvitedUsers')}
             </Button>
+            {isDoctorRole && onUploadPrescription && (
+              <Button
+                className="h-8 px-4 gap-2 text-sm bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 shadow-lg shadow-purple-500/25"
+                onClick={onUploadPrescription}
+              >
+                Upload Prescription Design
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>
