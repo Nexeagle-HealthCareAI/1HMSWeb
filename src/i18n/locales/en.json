@@ -1560,7 +1560,7 @@
     "userManagement": "User Management",
     "patientManagement": "Patient Management",
     "appointmentOversight": "Appointment Oversight",
-    "billingManagement": "Billing Management",
+    "billingManagement": "Configuration",
     "billingDescription": "Manage subscription and billing",
     "billingInsurance": "Billing & Insurance",
     "bulkMessaging": "Bulk Messaging",
@@ -3147,7 +3147,7 @@
     }
   },
   "billing": {
-    "title": "Billing Management",
+    "title": "Configuration",
     "subtitle": "Manage your hospital subscription and billing details",
     "overview": "Billing Overview",
     "history": "Billing History",

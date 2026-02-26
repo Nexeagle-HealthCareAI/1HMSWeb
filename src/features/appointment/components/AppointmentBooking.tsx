@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Calendar, Clock, User, Phone, Users, Stethoscope, ChevronDown, CalendarIcon, HelpCircle } from 'lucide-react';
+import { Calendar, Clock, User, Phone, Users, Stethoscope, ChevronDown, CalendarIcon, HelpCircle, ArrowLeft } from 'lucide-react';
 import { DepartmentSidebar } from './DepartmentSidebar';
 import { DateSelector } from './DateSelector';
 import { ShiftTabs } from './ShiftTabs';
@@ -62,6 +63,7 @@ export interface Department {
 
 interface AppointmentBookingProps {
   refreshToken?: number;
+  onBack?: () => void;
 }
 
 // Default icons for departments
@@ -131,7 +133,7 @@ const generateTimeSlots = (doctorId: string, date: string): TimeSlot[] => {
   }));
 };
 
-export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshToken }) => {
+export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshToken, onBack }) => {
   const { t, i18n } = useTranslation();
   const locale = i18n.language || 'en';
   const queryClient = useQueryClient();
@@ -673,148 +675,48 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-all duration-300">
-      {/* Mobile-First Layout */}
-      <div className="min-h-screen">
-        {/* Mobile Header - Fixed Position */}
-        <div className="lg:hidden sticky top-0 z-40 bg-white dark:bg-gray-900 shadow-sm border-b dark:border-gray-700">
-          <div className="px-4 py-3">
-            <div className="flex items-center justify-between mb-3">
-              <h1 className="text-xl font-bold text-primary dark:text-primary">{t('appointmentBooking.title')}</h1>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowBookingQuickGuide(true)}
-                  className="h-8 w-8 p-0 md:h-9 md:w-auto md:px-3 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full"
-                >
-                  <HelpCircle className="h-4 w-4 md:mr-2" />
-                  <span className="hidden md:inline font-medium text-xs">{t('bookingGuide.button', 'Booking Help')}</span>
-                </Button>
-                <div className="text-xs text-muted-foreground dark:text-gray-400">
-                  {format(selectedDate, 'MMM dd')}
+    <div className="bg-gray-50 dark:bg-gray-950 transition-all duration-300">
+
+
+
+      <div className="flex flex-col lg:flex-row items-stretch">
+
+        {/* ═══════════════════════════ SIDEBAR ═══════════════════════════ */}
+        <div className="hidden lg:flex flex-col w-80 flex-shrink-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-r border-gray-200/50 dark:border-gray-700/50 shadow-sm h-full">
+
+
+          <div className="flex-1 p-4 space-y-5">
+            {/* Department Section */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-5 h-5 rounded-md bg-blue-500/20 flex items-center justify-center">
+                  <span className="text-[10px]">🏢</span>
                 </div>
+                <span className="text-xs font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">{t('appointmentBooking.departmentSelection')}</span>
               </div>
-            </div>
-
-            {/* Compact Selection Row */}
-            <div className="grid grid-cols-2 gap-2">
-              {/* Department Dropdown */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground dark:text-gray-400 mb-1 block">{t('appointmentBooking.department')}</label>
-                <Select value={selectedDepartment} onValueChange={handleDepartmentSelect}>
-                  <SelectTrigger className="h-8 text-xs bg-background">
-                    <SelectValue placeholder={t('appointmentBooking.department')} />
-                  </SelectTrigger>
-                  <SelectContent className="z-50">
-                    {departments.map((dept) => (
-                      <SelectItem key={dept.id} value={dept.id} className="text-xs">
-                        <div className="flex items-center gap-2">
-                          <dept.icon className="h-3 w-3" />
-                          <span>{dept.name}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Doctor Selection */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground dark:text-gray-400 mb-1 block">{t('appointmentBooking.doctor')}</label>
-                <Select value={selectedDoctor?.id || ''} onValueChange={(value) => {
-                  if (doctorsResponse?.doctors) {
-                    const selectedApiDoctor = doctorsResponse.doctors.find(doc => doc.doctorId === value);
-                    if (selectedApiDoctor && selectedDepartmentData) {
-                      const newDoctor = {
-                        id: selectedApiDoctor.doctorId,
-                        name: selectedApiDoctor.doctorName,
-                        department: selectedDepartmentData.name,
-                        specialization: selectedApiDoctor.specializations?.length > 0 ? selectedApiDoctor.specializations.join(', ') : t('appointmentBooking.generalSpecialization')
-                      };
-                      handleDoctorSelect(newDoctor);
-                    }
-                  }
-                }}>
-                  <SelectTrigger className="h-8 text-xs bg-background">
-                    <SelectValue placeholder={doctorsLoading ? t('appointmentBooking.loadingDoctors') : t('appointmentBooking.selectDoctor')} />
-                  </SelectTrigger>
-                  <SelectContent className="z-50">
-                    {doctorsLoading ? (
-                      <SelectItem value="loading" disabled className="text-xs">
-                        {t('appointmentBooking.loadingDoctors')}
-                      </SelectItem>
-                    ) : doctorsError ? (
-                      <SelectItem value="error" disabled className="text-xs">
-                        {t('appointmentBooking.errorLoadingDoctors')}
-                      </SelectItem>
-                    ) : doctorsResponse?.doctors && doctorsResponse.doctors.length > 0 ? (
-                      doctorsResponse.doctors.map((doctor) => (
-                        <SelectItem key={doctor.doctorId} value={doctor.doctorId} className="text-xs">
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center w-full gap-1 sm:gap-2">
-                            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                              <div className="text-base sm:text-sm break-words whitespace-normal leading-tight">{doctor.doctorName}</div>
-                              <div className="hidden sm:block text-xs text-muted-foreground break-words whitespace-normal leading-tight">
-                                {doctor.qualifications?.length > 0 ? doctor.qualifications.join(', ') : t('appointmentBooking.defaultQualification')}
-                              </div>
-                              <div className="hidden sm:block text-xs text-blue-600 break-words whitespace-normal leading-tight">
-                                {doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : t('appointmentBooking.generalSpecialization')}
-                              </div>
-                              <div className="hidden sm:block text-xs text-gray-500 break-words whitespace-normal leading-tight">
-                                {isDoctorOnTimeOff(doctor.doctorId) ? t('appointmentBooking.timeOff') : t('appointmentBooking.available')}
-                              </div>
-                            </div>
-                            {isDoctorOnTimeOff(doctor.doctorId) && (
-                              <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 ml-2 mt-1 sm:mt-0"></div>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="no-doctors" disabled className="text-xs">
-                        {t('appointmentBooking.noDoctorsAvailable')}
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col lg:flex-row min-h-screen lg:h-screen">
-          {/* Desktop Sidebar */}
-          <div className="hidden lg:block w-80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-r border-gray-200/50 dark:border-gray-700/50 shadow-sm">
-            <div className="p-4">
-              <h3 className="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-200 flex items-center gap-2">
-                {t('appointmentBooking.departmentSelection')}
-              </h3>
-
-              {/* Department Grid - Desktop */}
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                {departments.slice(0, 4).map((dept) => (
-                  <button
+              <div className="grid grid-cols-2 gap-2">
+                {departments.slice(0, 4).map((dept, i) => (
+                  <motion.button
                     key={dept.id}
                     onClick={() => handleDepartmentSelect(dept.id)}
-                    className={`flex flex-col items-center gap-2 p-3 rounded-xl border text-center transition-all text-xs ${selectedDepartment === dept.id
-                      ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white border-transparent shadow-lg shadow-blue-500/20'
-                      : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-gray-50 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
-                      }`}
+                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ scale: 1.02 }}
+                    className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border text-center transition-all text-xs font-semibold ${selectedDepartment === dept.id
+                      ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-transparent shadow-lg shadow-blue-500/30'
+                      : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300'}`}
                   >
                     <dept.icon className="h-5 w-5" />
-                    <span className="font-medium">{dept.name}</span>
-                  </button>
+                    <span className="leading-tight">{dept.name}</span>
+                  </motion.button>
                 ))}
               </div>
-
-              {/* More Departments Dropdown */}
               {departments.length > 4 && (
-                <div className="mb-4">
+                <div className="mt-2">
                   <Select value={selectedDepartment} onValueChange={handleDepartmentSelect}>
-                    <SelectTrigger className="h-9 text-xs">
+                    <SelectTrigger className="h-8 text-xs bg-background">
                       <SelectValue placeholder={t('appointmentBooking.moreDepartments')} />
                     </SelectTrigger>
-                    <SelectContent className="bg-white dark:bg-gray-800 border dark:border-gray-700 shadow-lg z-50">
+                    <SelectContent className="z-50">
                       {departments.slice(4).map((dept) => (
                         <SelectItem key={dept.id} value={dept.id} className="text-xs">
                           <div className="flex items-center gap-2">
@@ -827,237 +729,284 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                   </Select>
                 </div>
               )}
+            </div>
 
-              {/* Doctor Selection - Desktop */}
-              <div className="border-t pt-4">
-                <h3 className="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                  👩‍⚕️ {t('appointmentBooking.availableDoctors')}
-                </h3>
-                <div className="space-y-2">
-                  {doctorsLoading ? (
-                    <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 text-center text-xs text-gray-500">
-                      {t('appointmentBooking.loadingDoctors')}
-                    </div>
-                  ) : doctorsError ? (
-                    <div className="p-3 rounded-lg border border-red-200 bg-red-50 text-center text-xs text-red-500">
-                      {t('appointmentBooking.errorLoadingDoctors')}
-                    </div>
-                  ) : doctorsResponse?.doctors && doctorsResponse.doctors.length > 0 ? (
-                    doctorsResponse.doctors.map((doctor) => (
-                      <button
-                        key={doctor.doctorId}
-                        onClick={() => {
-                          const newDoctor = {
-                            id: doctor.doctorId,
-                            name: doctor.doctorName,
-                            department: selectedDepartmentData?.name || '',
-                            specialization: doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : t('appointmentBooking.generalSpecialization')
-                          };
-                          handleDoctorSelect(newDoctor);
-                        }}
-                        className={`w-full p-3 rounded-xl border text-left transition-all text-xs relative ${selectedDoctor?.id === doctor.doctorId
-                          ? 'border-indigo-200 bg-indigo-50 dark:from-indigo-900/20 dark:to-indigo-800/20 shadow-sm'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750'
-                          }`}
-                      >
-                        <div className="flex flex-col gap-0.5">
-                          <div className="text-blue-600 dark:text-blue-400 text-base sm:text-sm break-words whitespace-normal leading-tight">{doctor.doctorName}</div>
-                          <div className="hidden sm:block text-xs text-gray-600 dark:text-gray-400 break-words whitespace-normal leading-tight">
-                            {doctor.qualifications?.length > 0 ? doctor.qualifications.join(', ') : t('appointmentBooking.defaultQualification')}
-                          </div>
-                          <div className="hidden sm:block text-xs text-blue-600 dark:text-blue-400 break-words whitespace-normal leading-tight">
-                            {doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : t('appointmentBooking.generalSpecialization')}
-                          </div>
-                          <div className="hidden sm:block text-xs text-gray-500 dark:text-gray-400 break-words whitespace-normal leading-tight">
-                            {isDoctorOnTimeOff(doctor.doctorId) ? t('appointmentBooking.timeOff') : t('appointmentBooking.available')}
-                          </div>
-                        </div>
-                        {isDoctorOnTimeOff(doctor.doctorId) && (
-                          <div className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full"></div>
-                        )}
-                      </button>
-                    ))
-                  ) : (
-                    <div className="p-3 rounded-lg border border-gray-200 bg-gray-50 text-center text-xs text-gray-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400">
-                      {t('appointmentBooking.noDoctorsAvailable')}
-                    </div>
-                  )}
+            {/* Doctor Section */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-5 h-5 rounded-md bg-indigo-500/20 flex items-center justify-center">
+                  <span className="text-[10px]">👨‍⚕️</span>
                 </div>
+                <span className="text-xs font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">{t('appointmentBooking.availableDoctors')}</span>
               </div>
+              <div className="space-y-2">
+                {doctorsLoading ? (
+                  <div className="p-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-center text-xs text-gray-500 animate-pulse">
+                    {t('appointmentBooking.loadingDoctors')}
+                  </div>
+                ) : doctorsError ? (
+                  <div className="p-3 rounded-xl border border-red-500/20 bg-red-500/10 text-center text-xs text-red-400">
+                    {t('appointmentBooking.errorLoadingDoctors')}
+                  </div>
+                ) : doctorsResponse?.doctors?.length ? (
+                  doctorsResponse.doctors.map((doctor) => (
+                    <motion.button
+                      key={doctor.doctorId}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => {
+                        handleDoctorSelect({
+                          id: doctor.doctorId,
+                          name: doctor.doctorName,
+                          department: selectedDepartmentData?.name || '',
+                          specialization: doctor.specializations?.length > 0 ? doctor.specializations.join(', ') : t('appointmentBooking.generalSpecialization')
+                        });
+                      }}
+                      className={`w-full p-3 rounded-xl border text-left transition-all text-xs relative overflow-hidden ${selectedDoctor?.id === doctor.doctorId
+                        ? 'border-indigo-200 bg-indigo-50 dark:border-indigo-500/50 dark:bg-gradient-to-r dark:from-indigo-500/20 dark:to-blue-500/10 shadow-sm'
+                        : 'border-gray-200 bg-white dark:border-white/10 dark:bg-white/5 hover:border-indigo-300 dark:hover:border-indigo-400/30 hover:bg-indigo-50/30 dark:hover:bg-white/10'}`}
+                    >
+                      {selectedDoctor?.id === doctor.doctorId && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-blue-500/5 pointer-events-none" />
+                      )}
+                      <div className="flex items-center gap-2 relative z-10">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${selectedDoctor?.id === doctor.doctorId ? 'bg-indigo-100 dark:bg-indigo-500/30' : 'bg-gray-100 dark:bg-white/10'}`}>
+                          👨‍⚕️
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className={`font-bold leading-tight truncate ${selectedDoctor?.id === doctor.doctorId ? 'text-indigo-700 dark:text-white' : 'text-gray-800 dark:text-gray-200'}`}>{doctor.doctorName}</div>
+                          <div className="text-gray-400 text-[10px] truncate">{doctor.specializations?.join(', ') || t('appointmentBooking.generalSpecialization')}</div>
+                          {isDoctorOnTimeOff(doctor.doctorId) && (
+                            <span className="inline-block mt-0.5 text-[9px] font-bold uppercase tracking-wide text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-full border border-red-500/20">
+                              🚫 On Leave
+                            </span>
+                          )}
+                        </div>
+                        {selectedDoctor?.id === doctor.doctorId && (
+                          <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center flex-shrink-0">
+                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                    </motion.button>
+                  ))
+                ) : (
+                  <div className="p-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-center text-xs text-gray-500">
+                    {t('appointmentBooking.noDoctorsAvailable')}
+                  </div>
+                )}
+              </div>
+            </div>
 
-              {/* Legend */}
-              <div className="border-t pt-4 mt-4">
-                <div className="flex flex-col gap-2 text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-gradient-to-r from-teal-400 to-emerald-500 rounded-full"></div>
-                    <span className="text-gray-600 dark:text-gray-400">{t('appointmentBooking.availableLegend')}</span>
+            {/* Legend */}
+            <div className="rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 p-3">
+              <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Legend</div>
+              <div className="space-y-1.5">
+                {[
+                  { color: 'bg-emerald-400', label: t('appointmentBooking.availableLegend') },
+                  { color: 'bg-red-400', label: t('appointmentBooking.bookedLegend') },
+                  { color: 'bg-blue-400', label: t('appointmentBooking.selectedLegend') },
+                ].map(({ color, label }) => (
+                  <div key={label} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                    <div className={`w-2.5 h-2.5 rounded-full ${color} shadow-sm`} />
+                    <span>{label}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-gradient-to-r from-rose-400 to-red-500 rounded-full"></div>
-                    <span className="text-gray-600 dark:text-gray-400">{t('appointmentBooking.bookedLegend')}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span className="text-gray-600 dark:text-gray-400">{t('appointmentBooking.timeOffLegend')}</span>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* Main Content */}
-          <div className="flex-1 overflow-hidden">
-            <div className="h-full px-3 pb-3 pt-1 lg:px-4 lg:pb-4 lg:pt-1 overflow-y-auto pb-safe">
-              <div className="max-w-4xl mx-auto">
-                {/* Desktop Header - Compact */}
-                <div className="hidden lg:block mb-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <h1 className="text-xl font-bold text-foreground dark:text-white">{t('appointmentBooking.title')}</h1>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowBookingQuickGuide(true)}
-                        className="h-8 px-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full"
-                      >
-                        <HelpCircle className="h-4 w-4 mr-2" />
-                        <span className="font-medium text-xs">{t('bookingGuide.button', 'Booking Help')}</span>
-                      </Button>
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground dark:text-gray-400">
+          {/* Sidebar Footer — Help button */}
+          <div className="p-4 border-t border-gray-200 dark:border-white/10">
+            <button
+              onClick={() => setShowBookingQuickGuide(true)}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all text-xs font-medium"
+            >
+              <HelpCircle className="h-4 w-4 text-blue-400" />
+              {t('bookingGuide.button', 'Booking Help')}
+            </button>
+          </div>
+        </div>
+
+        {/* ═══════════════════════════ MAIN CONTENT ═══════════════════════════ */}
+        <div className="flex-1 min-w-0">
+          <div className="px-4 pb-6 pt-4 lg:px-6">
+            <div className="max-w-4xl mx-auto space-y-5">
+
+              {/* Selected Doctor Status */}
+              {selectedDoctor && (
+                <div className="hidden lg:flex items-center justify-between mb-1">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     {t('appointmentBooking.selectedLabel')}{' '}
-                    <span className="font-semibold text-primary">{selectedDoctor?.name || t('appointmentBooking.noDoctorSelected')}</span>
-                    <span className="text-muted-foreground/50"> • </span>
-                    <span>{selectedDoctor?.specialization || t('appointmentBooking.selectDepartmentFirst')}</span>
+                    <span className="font-bold text-blue-600 dark:text-blue-300">{selectedDoctor.name}</span>
+                    {selectedDoctor.specialization && <span className="text-gray-400"> • {selectedDoctor.specialization}</span>}
                   </p>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30"
+                  >
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-300">Doctor Selected</span>
+                  </motion.div>
                 </div>
+              )}
 
-                {/* Date Selection with Calendar - Compact */}
-                <div className="mb-3">
-                  <h2 className="text-xs font-semibold mb-2 flex items-center gap-1 text-foreground dark:text-white">
-                    📅 {t('appointmentBooking.dateSelection')}
-                  </h2>
-                  <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
-                    {Array.from({ length: 7 }, (_, i) => {
-                      const date = new Date();
-                      date.setDate(date.getDate() + i);
-                      const isToday = i === 0;
-                      const isSelected = selectedDate.toDateString() === date.toDateString();
 
-                      return (
-                        <button
-                          key={i}
-                          onClick={() => handleDateSelect(date)}
-                          className={`px-2 py-1.5 rounded-md border text-center min-w-[60px] lg:min-w-[70px] flex-shrink-0 transition-all text-xs ${isSelected
-                            ? 'bg-primary text-primary-foreground border-primary shadow-md scale-105'
-                            : 'bg-card border-border hover:border-primary/50 hover:bg-accent hover:scale-105'
-                            }`}
-                        >
-                          <div className="font-medium">
-                            {isToday ? t('appointmentBooking.today') : new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(date)}
-                          </div>
-                          <div className={`text-xs mt-0.5 ${isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
-                            {new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(date)}
-                          </div>
-                        </button>
-                      );
-                    })}
-
-                    {/* Calendar Picker */}
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <button className="px-2 py-1.5 rounded-md border border-dashed border-border bg-muted hover:bg-accent text-center min-w-[60px] lg:min-w-[70px] text-xs flex-shrink-0 transition-all hover:scale-105">
-                          <CalendarIcon className="h-3 w-3 mx-auto text-muted-foreground" />
-                          <div className="mt-0.5 text-muted-foreground">{t('appointmentBooking.otherDate')}</div>
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 z-50" align="start">
-                        <CalendarComponent
-                          mode="single"
-                          selected={selectedDate}
-                          onSelect={(date) => date && handleDateSelect(date)}
-                          disabled={(date) => date < new Date() || date < new Date("1900-01-01")}
-                          initialFocus
-                          className="p-3 pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
+              {/* ── DATE SELECTION ── */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-2xl bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-white/10 p-4 shadow-sm"
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
                   </div>
+                  <span className="text-xs font-black uppercase tracking-widest text-cyan-600 dark:text-cyan-400">{t('appointmentBooking.dateSelection')}</span>
                 </div>
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                  {Array.from({ length: 7 }, (_, i) => {
+                    const date = new Date();
+                    date.setDate(date.getDate() + i);
+                    const isToday = i === 0;
+                    const isSelected = selectedDate.toDateString() === date.toDateString();
+                    return (
+                      <motion.button
+                        key={i}
+                        whileTap={{ scale: 0.93 }}
+                        onClick={() => handleDateSelect(date)}
+                        className={`flex flex-col items-center px-3 py-2.5 rounded-xl border text-center min-w-[64px] flex-shrink-0 transition-all text-xs font-semibold ${isSelected
+                          ? 'bg-gradient-to-br from-cyan-500 to-blue-600 text-white border-transparent shadow-lg shadow-cyan-500/30 scale-105'
+                          : 'bg-card border-border hover:border-cyan-400/50 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-cyan-50 dark:hover:bg-white/5'}`}
+                      >
+                        <div className="font-black text-[11px] uppercase tracking-wide">
+                          {isToday ? 'Today' : new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(date)}
+                        </div>
+                        <div className={`text-xs mt-0.5 ${isSelected ? 'text-white/80' : 'text-gray-500'}`}>
+                          {new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(date)}
+                        </div>
+                        {isToday && !isSelected && <div className="w-1 h-1 rounded-full bg-cyan-400 mt-1" />}
+                      </motion.button>
+                    );
+                  })}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <motion.button whileTap={{ scale: 0.93 }} className="flex flex-col items-center px-3 py-2.5 rounded-xl border border-dashed border-white/20 bg-white/5 hover:bg-white/10 text-center min-w-[64px] flex-shrink-0 transition-all text-gray-400 hover:text-white">
+                        <CalendarIcon className="h-4 w-4 mx-auto mb-0.5" />
+                        <div className="text-[10px] font-semibold">{t('appointmentBooking.otherDate')}</div>
+                      </motion.button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 z-50 bg-slate-800 border-white/20" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={(date) => date && handleDateSelect(date)}
+                        disabled={(date) => date < new Date() || date < new Date("1900-01-01")}
+                        initialFocus
+                        className="p-3 pointer-events-auto text-white"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </motion.div>
 
-                {/* Medical-Appropriate Shift Selection - Compact */}
-                <div className="mb-3">
-                  <h2 className="text-xs font-semibold mb-2 flex items-center gap-1">
-                    ⏰ {t('appointmentBooking.shiftSelection')}
-                  </h2>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                    {availableShifts.length > 0 ? (
-                      availableShifts.map((shift) => (
-                        <button
-                          key={shift.id}
-                          onClick={() => setSelectedShift(shift.id)}
-                          className={`p-2 rounded-md border text-center transition-all text-xs shadow-sm animate-scale-in ${selectedShift === shift.id
-                            ? `bg-gradient-to-r ${shift.gradient} text-white border-transparent shadow-md scale-105`
-                            : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md hover-scale dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700'
-                            }`}
-                        >
-                          <div className="text-sm mb-0.5">{shift.icon}</div>
-                          <div className="font-medium text-xs">{shift.label}</div>
-                          <div className={`text-xs mt-0.5 ${selectedShift === shift.id ? 'text-white/90' : 'text-gray-600 dark:text-gray-400'
-                            }`}>
-                            {shift.time}
-                          </div>
-                        </button>
-                      ))
-                    ) : (
-                      <div className="col-span-full text-center py-4 text-gray-500">
-                        {t('appointmentBooking.noShiftsAvailable')}
-                      </div>
-                    )}
+              {/* ── SHIFT SELECTION ── */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05 }}
+                className="rounded-2xl bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-white/10 p-4 shadow-sm"
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                   </div>
+                  <span className="text-xs font-black uppercase tracking-widest text-amber-600 dark:text-amber-400">{t('appointmentBooking.shiftSelection')}</span>
                 </div>
+                {availableShifts.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {availableShifts.map((shift) => (
+                      <motion.button
+                        key={shift.id}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setSelectedShift(shift.id)}
+                        className={`p-3 rounded-xl border text-center transition-all text-xs font-semibold overflow-hidden relative ${selectedShift === shift.id
+                          ? `bg-gradient-to-br ${shift.gradient} text-white border-transparent shadow-lg`
+                          : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-md text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'}`}
+                      >
+                        <div className="text-xl mb-1">{shift.icon}</div>
+                        <div className="font-black">{shift.label}</div>
+                        <div className={`text-[10px] mt-0.5 ${selectedShift === shift.id ? 'text-white/80' : 'text-gray-500'}`}>{shift.time}</div>
+                        {selectedShift === shift.id && (
+                          <motion.div
+                            layoutId="shiftActive"
+                            className="absolute inset-0 bg-white/10 rounded-xl pointer-events-none"
+                          />
+                        )}
+                      </motion.button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-gray-500 text-sm">
+                    {t('appointmentBooking.noShiftsAvailable')}
+                  </div>
+                )}
+              </motion.div>
 
-                {/* Time Slots - Ultra-Responsive Grid - Compact */}
-                <div>
-                  <h2 className="text-xs font-semibold mb-2 flex items-center gap-1">
-                    🕐 {t('appointmentBooking.timeSlots')}
-                    <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">
-                      {t('appointmentBooking.availableCount', {
-                        count: timeSlots
-                          .filter(slot => {
-                            const selectedShiftData = availableShifts.find(s => s.id === selectedShift);
-                            if (!selectedShiftData) return true;
-                            const slotHour = parseInt(slot.time.split(':')[0]);
-                            const startHour = parseInt(selectedShiftData.startTime.split(':')[0]);
-                            const endHour = parseInt(selectedShiftData.endTime.split(':')[0]);
-                            return slotHour >= startHour && slotHour < endHour;
-                          })
-                          .filter(slot => !slot.isBooked).length,
-                      })}
-                    </span>
-                  </h2>
-                  {/* Custom loading spinner for time slots */}
-                  {showTimeSlotsLoading ? (
-                    <div className="col-span-full text-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
-                      <p className="text-sm text-blue-600 dark:text-blue-300 mb-2">{t('appointmentBooking.loadingSlots')}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{t('appointmentBooking.loadingSlotsMessage')}</p>
+              {/* ── TIME SLOTS ── */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="rounded-2xl bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-white/10 p-4 shadow-sm"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
                     </div>
-                  ) : (
-                    <>
-                      <div className="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-9 lg:grid-cols-11 xl:grid-cols-13 gap-1.5">
-                        {timeSlots.length === 0 && doctorSlotsResponse?.isTimeOff ? (
-                          <div className="col-span-full text-center py-8">
-                            <div className="text-red-500 text-4xl mb-3">🚫</div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                              {t('appointmentBooking.noSlotsAvailableTimeOff')}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-500">
-                              {t('appointmentBooking.pleaseSelectDifferentDate')}
-                            </p>
-                          </div>
-                        ) : timeSlots
+                    <span className="text-xs font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">{t('appointmentBooking.timeSlots')}</span>
+                  </div>
+                  <div className="px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-[10px] font-black text-emerald-600 dark:text-emerald-300">
+                    {timeSlots.filter(slot => {
+                      const selectedShiftData = availableShifts.find(s => s.id === selectedShift);
+                      if (!selectedShiftData) return true;
+                      const slotHour = parseInt(slot.time.split(':')[0]);
+                      const startHour = parseInt(selectedShiftData.startTime.split(':')[0]);
+                      const endHour = parseInt(selectedShiftData.endTime.split(':')[0]);
+                      return slotHour >= startHour && slotHour < endHour;
+                    }).filter(s => !s.isBooked).length} Available
+                  </div>
+                </div>
+
+                {showTimeSlotsLoading ? (
+                  <div className="text-center py-10">
+                    <div className="relative w-12 h-12 mx-auto mb-3">
+                      <div className="absolute inset-0 rounded-full border-2 border-blue-500/20" />
+                      <div className="absolute inset-0 rounded-full border-2 border-t-blue-500 animate-spin" />
+                    </div>
+                    <p className="text-sm font-semibold text-blue-300">{t('appointmentBooking.loadingSlots')}</p>
+                    <p className="text-xs text-gray-500 mt-1">{t('appointmentBooking.loadingSlotsMessage')}</p>
+                  </div>
+                ) : timeSlots.length === 0 && doctorSlotsResponse?.isTimeOff ? (
+                  <div className="text-center py-10">
+                    <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-2xl">🚫</div>
+                    <p className="text-sm font-bold text-red-300">{t('appointmentBooking.noSlotsAvailableTimeOff')}</p>
+                    <p className="text-xs text-gray-500 mt-1">{t('appointmentBooking.pleaseSelectDifferentDate')}</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-9 lg:grid-cols-11 gap-2">
+                      <AnimatePresence>
+                        {timeSlots
                           .filter(slot => {
                             const selectedShiftData = availableShifts.find(s => s.id === selectedShift);
                             if (!selectedShiftData) return true;
@@ -1066,109 +1015,67 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                             const endHour = parseInt(selectedShiftData.endTime.split(':')[0]);
                             return slotHour >= startHour && slotHour < endHour;
                           })
-                          .map((slot) => (
-                            <button
+                          .map((slot, idx) => (
+                            <motion.button
                               key={slot.id}
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: idx * 0.02 }}
+                              whileTap={!slot.isBooked ? { scale: 0.9 } : {}}
                               onClick={() => !slot.isBooked && handleSlotSelect(slot)}
                               disabled={slot.isBooked}
-                              className={`p-1.5 rounded-md border text-center transition-all text-xs min-h-[45px] flex flex-col justify-center shadow-sm hover:shadow-md animate-fade-in ${slot.isBooked
-                                ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-200 cursor-not-allowed opacity-60'
+                              className={`p-2 rounded-xl border text-center transition-all text-[11px] min-h-[52px] flex flex-col items-center justify-center font-bold shadow-sm ${slot.isBooked
+                                ? 'bg-red-50 border-red-200 cursor-not-allowed opacity-60 text-red-400 dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-400'
                                 : selectedSlot?.id === slot.id
-                                  ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-blue-500 text-white shadow-lg scale-105'
-                                  : 'bg-gradient-to-br from-teal-50 to-emerald-100 border-teal-200 hover:from-teal-100 hover:to-emerald-200 hover:border-teal-300 hover-scale dark:from-teal-900/40 dark:to-emerald-900/40 dark:border-teal-800/50 dark:hover:border-teal-700'
-                                }`}
+                                  ? 'bg-gradient-to-br from-blue-500 to-indigo-600 border-blue-400/50 text-white shadow-xl shadow-blue-500/30 scale-110'
+                                  : 'bg-emerald-50 border-emerald-300 hover:border-emerald-400 hover:bg-emerald-100 text-emerald-700 hover:scale-105 dark:bg-emerald-500/10 dark:border-emerald-500/30 dark:hover:bg-emerald-500/20 dark:text-emerald-300'}`}
                             >
-                              <div className={`font-bold text-xs mb-0.5 ${selectedSlot?.id === slot.id ? 'text-white' : slot.isBooked ? 'text-red-700 dark:text-red-400' : 'text-teal-700 dark:text-teal-300'
-                                }`}>
-                                {slot.time}
+                              <div className="font-black leading-tight">{slot.time}</div>
+                              <div className="text-[9px] mt-0.5 opacity-80">
+                                {slot.isBooked ? '✗' : selectedSlot?.id === slot.id ? '✓' : '○'}
                               </div>
-                              <div className={`text-xs px-1 py-0.5 rounded-full font-medium ${slot.isBooked
-                                ? 'bg-red-200 text-red-800'
-                                : selectedSlot?.id === slot.id
-                                  ? 'bg-white/20 text-white'
-                                  : 'bg-teal-200 text-teal-800 dark:bg-teal-900/60 dark:text-teal-300'
-                                }`}>
-                                {slot.isBooked ? '❌' : selectedSlot?.id === slot.id ? '✅' : '✓'}
-                              </div>
-                              {slot.isBooked && (
-                                <div className="flex justify-center gap-0.5 mt-0.5 opacity-60">
-                                  <span className="text-xs">📋</span>
-                                  <span className="text-xs">✏️</span>
-                                </div>
-                              )}
-                            </button>
+                            </motion.button>
                           ))}
-                      </div>
-                      {/* Time-Off Message */}
-                      {doctorSlotsResponse?.isTimeOff && (
-                        <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                          <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0">
-                              <div className="w-8 h-8 bg-red-100 dark:bg-red-800 rounded-full flex items-center justify-center">
-                                <span className="text-red-600 dark:text-red-400 text-lg">🚫</span>
-                              </div>
-                            </div>
-                            <div className="flex-1">
-                              <h3 className="text-sm font-semibold text-red-800 dark:text-red-200 mb-1">
-                                {t('appointmentBooking.doctorUnavailable')}
-                              </h3>
-                              <p className="text-sm text-red-700 dark:text-red-300 mb-2">
-                                {doctorSlotsResponse.timeOffReason || t('appointmentBooking.doctorUnavailableMessage')}
-                              </p>
-                              <div className="text-xs text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-800/30 p-2 rounded border border-red-200 dark:border-red-700">
-                                <strong>{t('appointmentBooking.whatYouCanDo')}</strong>
-                                <ul className="mt-1 space-y-1">
-                                  <li>• {t('appointmentBooking.selectDifferentDate')}</li>
-                                  <li>• {t('appointmentBooking.chooseAnotherDoctor')}</li>
-                                  <li>• {t('appointmentBooking.contactHospital')}</li>
-                                </ul>
-                              </div>
-                            </div>
+                      </AnimatePresence>
+                    </div>
+
+                    {/* Time-Off Warning */}
+                    {doctorSlotsResponse?.isTimeOff && (
+                      <div className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+                        <div className="flex items-start gap-3">
+                          <span className="text-xl flex-shrink-0">🚫</span>
+                          <div>
+                            <p className="text-sm font-bold text-red-300">{t('appointmentBooking.doctorUnavailable')}</p>
+                            <p className="text-xs text-red-400/80 mt-0.5">{doctorSlotsResponse.timeOffReason || t('appointmentBooking.doctorUnavailableMessage')}</p>
                           </div>
-                        </div>
-                      )}
-                      {/* Booked Slots Loading/Error Messages */}
-                      {bookedSlotsLoading && (
-                        <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                          <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                            <span className="text-sm">{t('appointmentBooking.loadingBookedSlots')}</span>
-                          </div>
-                        </div>
-                      )}
-                      {bookedSlotsError && (
-                        <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                          <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-300">
-                            <span className="text-lg">⚠️</span>
-                            <span className="text-sm">{t('appointmentBooking.bookedSlotsError')}</span>
-                          </div>
-                        </div>
-                      )}
-                      {/* Legend - Compact */}
-                      <div className="mt-2 p-2 bg-white/50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
-                        <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t('appointmentBooking.legend')}</div>
-                        <div className="grid grid-cols-3 gap-1 text-xs">
-                          <div className="flex items-center gap-1">
-                            <div className="w-2 h-2 bg-teal-200 rounded border border-teal-300"></div>
-                            <span className="text-gray-600 dark:text-gray-400">{t('appointmentBooking.availableLegend')}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <div className="w-2 h-2 bg-red-200 rounded border border-red-300"></div>
-                            <span className="text-gray-600 dark:text-gray-400">{t('appointmentBooking.bookedLegend')}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <div className="w-2 h-2 bg-blue-500 rounded border border-blue-600"></div>
-                            <span className="text-gray-600 dark:text-gray-400">{t('appointmentBooking.selectedLegend')}</span>
-                          </div>
-                        </div>
-                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-500">
-                          💡 {t('appointmentBooking.tapAnySlotTip')}
                         </div>
                       </div>
-                    </>
-                  )}
-                </div>
-              </div>
+                    )}
+
+                    {/* Booked Slots Status */}
+                    {bookedSlotsLoading && (
+                      <div className="mt-3 flex items-center gap-2 text-xs text-blue-300 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                        <div className="w-3 h-3 rounded-full border border-t-blue-400 animate-spin" />
+                        {t('appointmentBooking.loadingBookedSlots')}
+                      </div>
+                    )}
+                    {bookedSlotsError && (
+                      <div className="mt-3 flex items-center gap-2 text-xs text-yellow-300 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                        ⚠️ {t('appointmentBooking.bookedSlotsError')}
+                      </div>
+                    )}
+
+                    {/* Legend hint */}
+                    <div className="mt-3 flex items-center justify-center gap-3 text-[10px] text-gray-500">
+                      <span>🟢 Available</span>
+                      <span>🔴 Booked</span>
+                      <span>🔵 Selected</span>
+                      <span className="text-gray-600">• Tap any slot to book</span>
+                    </div>
+                  </>
+                )}
+              </motion.div>
+
             </div>
           </div>
         </div>
@@ -1191,11 +1098,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
       {/* Vitals Form Modal */}
       {showVitalsForm && patientData && (
         <>
-          {console.log('Rendering VitalsForm with:', {
-            patientName: patientData.name,
-            appointmentId: appointmentId,
-            patientId: patientData.patientId
-          })}
+          {console.log('Rendering VitalsForm with:', { patientName: patientData.name, appointmentId, patientId: patientData.patientId })}
           <VitalsForm
             patientName={patientData.name}
             appointmentId={appointmentId}
@@ -1205,8 +1108,6 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
           />
         </>
       )}
-
-
 
       <BookingQuickGuide
         open={showBookingQuickGuide}

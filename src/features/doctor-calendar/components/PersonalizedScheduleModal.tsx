@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { ShiftName, CreateOverridePayload, BlockType, CreateBlockPayload } from '../api/types';
+import { ShiftName, CreateOverridePayload, BlockType, CreateBlockPayload, TimeOff } from '../api/types';
 import { format, parseISO, addDays, addWeeks, addMonths } from 'date-fns';
 import { Clock, Calendar, Repeat, Sun, Moon, Sunrise, Sunset, Info, AlertCircle, CheckCircle, Activity, CalendarDays } from 'lucide-react';
 import { CalendarService, CalendarViewType, DateRange } from '../services/calendarService';
@@ -29,6 +29,7 @@ interface PersonalizedScheduleModalProps {
   selectedDate?: Date;
   onSave: (payloads: CreateOverridePayload[]) => void;
   onSaveBlock?: (payload: CreateBlockPayload) => void;
+  existingTimeOffs?: TimeOff[];
   isLoading?: boolean;
 }
 
@@ -53,6 +54,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
   selectedDate = new Date(),
   onSave,
   onSaveBlock,
+  existingTimeOffs = [],
   isLoading = false
 }) => {
   const { t } = useTranslation();
@@ -559,7 +561,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl p-0 overflow-hidden border-none rounded-2xl shadow-2xl gamified-modal">
+        <DialogContent className="max-w-3xl p-0 overflow-hidden border-none rounded-2xl shadow-2xl gamified-modal [&>button:last-child]:hidden">
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -577,9 +579,21 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                     {scheduleType === 'schedule' ? 'Mission: Optimize Your Calendar' : 'Zen Time: Restore Your Energy'}
                   </p>
                 </div>
-                <div className="text-right">
-                  <div className="text-xs font-semibold uppercase tracking-wider opacity-70">Mission Score</div>
-                  <div className="text-2xl font-black">{Math.round(progress)}%</div>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <div className="text-xs font-semibold uppercase tracking-wider opacity-70">Mission Score</div>
+                    <div className="text-2xl font-black">{Math.round(progress)}%</div>
+                  </div>
+                  <DialogClose asChild>
+                    <button
+                      className="flex items-center justify-center w-8 h-8 rounded-full bg-white/20 hover:bg-white/40 text-white transition-all duration-200 border border-white/30"
+                      aria-label="Close"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </DialogClose>
                 </div>
               </div>
 
@@ -627,7 +641,57 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                 <div className="space-y-6">
                   {scheduleType === 'schedule' ? (
                     <div className="space-y-6">
-                      {/* Shift Configuration */}
+                      {/* Recurring Dates - NOW FIRST */}
+                      <div className="rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200/70 p-4 shadow-sm">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="p-1.5 rounded-lg bg-blue-500 text-white">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          <span className="text-sm font-black uppercase tracking-wider text-blue-700">Schedule Date Range</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 space-y-1">
+                            <Label className="text-[10px] font-bold uppercase tracking-wide text-blue-500">From</Label>
+                            <Input
+                              type="date"
+                              value={startDate}
+                              min={getMinDate()}
+                              onChange={(e) => {
+                                const newStart = e.target.value;
+                                setStartDate(newStart);
+                                if (recurringEndDate && recurringEndDate < newStart) {
+                                  setRecurringEndDate(newStart);
+                                }
+                              }}
+                              className="rounded-xl border-blue-200 bg-white font-semibold text-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400 h-10"
+                            />
+                          </div>
+                          <div className="flex items-end pb-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                            </svg>
+                          </div>
+                          <div className="flex-1 space-y-1">
+                            <Label className="text-[10px] font-bold uppercase tracking-wide text-indigo-500">To</Label>
+                            <Input
+                              type="date"
+                              value={recurringEndDate}
+                              min={startDate || getMinDate()}
+                              onChange={(e) => setRecurringEndDate(e.target.value)}
+                              className="rounded-xl border-indigo-200 bg-white font-semibold text-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 h-10"
+                            />
+                          </div>
+                        </div>
+                        {startDate && recurringEndDate && (
+                          <p className="mt-2 text-xs text-blue-600 font-semibold text-center bg-blue-100/60 rounded-lg py-1">
+                            📅 {startDate} → {recurringEndDate}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Shift Configuration - NOW SECOND */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {['Morning', 'Afternoon', 'Evening'].map((shift) => (
                           <motion.div
@@ -705,45 +769,131 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                           </motion.div>
                         ))}
                       </div>
-
-                      {/* Recurring Dates */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-xs font-bold uppercase text-gray-400">Start Date</Label>
-                          <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="rounded-xl border-gray-200" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-bold uppercase text-gray-400">End Date</Label>
-                          <Input type="date" value={recurringEndDate} onChange={(e) => setRecurringEndDate(e.target.value)} className="rounded-xl border-gray-200" />
-                        </div>
-                      </div>
                     </div>
                   ) : (
-                    <div className="space-y-6">
-                      {/* Time Off Logic */}
-                      <div className="space-y-2">
-                        <Label className="text-xs font-bold uppercase text-gray-400">Reason</Label>
+                    <div className="space-y-4">
+                      {/* Existing Time Offs Notification */}
+                      {existingTimeOffs.length > 0 && (
+                        <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-gray-50 border-2 border-slate-200/70 p-4 shadow-sm">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="p-1.5 rounded-lg bg-slate-600 text-white">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                              </svg>
+                            </div>
+                            <span className="text-sm font-black uppercase tracking-wider text-slate-700">
+                              Your Existing Time Offs
+                            </span>
+                            <span className="ml-auto bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                              {existingTimeOffs.filter(t => t.isUpcoming).length} Upcoming
+                            </span>
+                          </div>
+                          <div className="space-y-2 max-h-36 overflow-y-auto custom-scrollbar pr-1">
+                            {existingTimeOffs.map((timeOff) => {
+                              const from = new Date(timeOff.startDate || timeOff.fromDate);
+                              const to = new Date(timeOff.endDate || timeOff.toDate);
+                              const toLocalStr = (d: Date) => {
+                                const y = d.getFullYear();
+                                const m = String(d.getMonth() + 1).padStart(2, '0');
+                                const day = String(d.getDate()).padStart(2, '0');
+                                return `${day}/${m}/${y}`;
+                              };
+                              return (
+                                <div
+                                  key={timeOff.timeOffId}
+                                  className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm ${timeOff.isUpcoming ? 'bg-red-50 border border-red-200' : 'bg-gray-100 border border-gray-200 opacity-60'}`}
+                                >
+                                  <span className="text-lg">{timeOff.isUpcoming ? '🔴' : '✅'}</span>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-bold text-gray-800 truncate">{timeOff.reason}</div>
+                                    <div className="text-xs text-gray-500">{toLocalStr(from)} → {toLocalStr(to)}</div>
+                                  </div>
+                                  {timeOff.isUpcoming && (
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-red-600 bg-red-100 px-1.5 py-0.5 rounded-md shrink-0">
+                                      Upcoming
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Reason Card */}
+                      <div className="rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-200/70 p-4 shadow-sm">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="p-1.5 rounded-lg bg-amber-500 text-white">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                          <span className="text-sm font-black uppercase tracking-wider text-amber-700">Reason for Time Off</span>
+                        </div>
                         <Select value={blockFormData.blockType} onValueChange={(v: any) => setBlockFormData({ ...blockFormData, blockType: v })}>
-                          <SelectTrigger className="rounded-xl border-gray-200">
+                          <SelectTrigger className="rounded-xl border-amber-200 bg-white font-semibold text-sm focus:ring-2 focus:ring-amber-400 h-10">
                             <SelectValue placeholder="Select Reason" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Personal">Personal</SelectItem>
-                            <SelectItem value="Sick Leave">Sick Leave</SelectItem>
-                            <SelectItem value="Annual Leave">Annual Leave</SelectItem>
+                            <SelectItem value="Personal">🙋 Personal</SelectItem>
+                            <SelectItem value="Sick Leave">🤒 Sick Leave</SelectItem>
+                            <SelectItem value="Annual Leave">🏖️ Annual Leave</SelectItem>
+                            <SelectItem value="Conference">🎤 Conference</SelectItem>
+                            <SelectItem value="Training">📚 Training</SelectItem>
+                            <SelectItem value="Meeting">🤝 Meeting</SelectItem>
+                            <SelectItem value="Emergency">🚨 Emergency</SelectItem>
+                            <SelectItem value="Other">📋 Other</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-xs font-bold uppercase text-gray-400">Start</Label>
-                          <Input type="datetime-local" value={blockFormData.startDateTime} onChange={(e) => setBlockFormData({ ...blockFormData, startDateTime: e.target.value })} className="rounded-xl border-gray-200" />
+                      <div className="rounded-2xl bg-gradient-to-br from-red-50 to-rose-50 border-2 border-red-200/70 p-4 shadow-sm">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="p-1.5 rounded-lg bg-red-500 text-white">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                          <span className="text-sm font-black uppercase tracking-wider text-red-700">Time Off Period</span>
                         </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-bold uppercase text-gray-400">End</Label>
-                          <Input type="datetime-local" value={blockFormData.endDateTime} onChange={(e) => setBlockFormData({ ...blockFormData, endDateTime: e.target.value })} className="rounded-xl border-gray-200" />
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 space-y-1">
+                            <Label className="text-[10px] font-bold uppercase tracking-wide text-red-500">From</Label>
+                            <Input
+                              type="datetime-local"
+                              value={blockFormData.startDateTime}
+                              onChange={(e) => {
+                                const newStart = e.target.value;
+                                setBlockFormData(prev => ({
+                                  ...prev,
+                                  startDateTime: newStart,
+                                  endDateTime: prev.endDateTime < newStart ? newStart : prev.endDateTime,
+                                }));
+                              }}
+                              className="rounded-xl border-red-200 bg-white font-semibold text-sm focus:ring-2 focus:ring-red-400 focus:border-red-400 h-10"
+                            />
+                          </div>
+                          <div className="flex items-end pb-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                            </svg>
+                          </div>
+                          <div className="flex-1 space-y-1">
+                            <Label className="text-[10px] font-bold uppercase tracking-wide text-rose-500">To</Label>
+                            <Input
+                              type="datetime-local"
+                              value={blockFormData.endDateTime}
+                              min={blockFormData.startDateTime}
+                              onChange={(e) => setBlockFormData({ ...blockFormData, endDateTime: e.target.value })}
+                              className="rounded-xl border-rose-200 bg-white font-semibold text-sm focus:ring-2 focus:ring-rose-400 focus:border-rose-400 h-10"
+                            />
+                          </div>
                         </div>
+                        {blockFormData.startDateTime && blockFormData.endDateTime && (
+                          <p className="mt-2 text-xs text-red-600 font-semibold text-center bg-red-100/60 rounded-lg py-1">
+                            🕐 {blockFormData.startDateTime.replace('T', ' ')} → {blockFormData.endDateTime.replace('T', ' ')}
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}

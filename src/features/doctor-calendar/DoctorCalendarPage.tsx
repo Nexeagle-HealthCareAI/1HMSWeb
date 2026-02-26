@@ -15,7 +15,7 @@ import {
   AppointmentCancelDialog,
   CalendarEventContent
 } from './components';
-import { useCalendarEvents, useCreateOverride, useDeleteOverride, useCreateTimeOff, useDeleteTimeOff, useDoctorCalendarConfig, useAppointmentCancel } from './hooks/useCalendar';
+import { useCalendarEvents, useCreateOverride, useDeleteOverride, useCreateTimeOff, useDeleteTimeOff, useDoctorCalendarConfig, useAppointmentCancel, useTimeOff } from './hooks/useCalendar';
 import { CalendarEvent, CreateOverridePayload, CreateBlockPayload, ShiftName, CreateTimeOffRequest } from './api/types';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -173,6 +173,9 @@ export const DoctorCalendarPage: React.FC = () => {
   }, [currentDate, view]);
 
   const { fromISO, toISO } = getDateRange();
+
+  // Fetch existing time-offs to show in the modal
+  const { data: existingTimeOffData } = useTimeOff(doctorId || '', hospitalId || '');
 
   // Calculate number of days based on view
   const getDaysCount = useCallback(() => {
@@ -954,15 +957,22 @@ export const DoctorCalendarPage: React.FC = () => {
     }
 
     // Convert CreateBlockPayload to CreateTimeOffRequest
-    // Format dates to YYYY-MM-DD format for the API
-    const fromDate = new Date(payload.startDateTime);
-    const toDate = new Date(payload.endDateTime);
+    // Use LOCAL date strings (YYYY-MM-DD) to avoid UTC timezone shift in IST/other zones
+    const fromDateObj = new Date(payload.startDateTime);
+    const toDateObj = new Date(payload.endDateTime);
+
+    const toLocalDateStr = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
 
     const timeOffRequest: CreateTimeOffRequest = {
       doctorId: payload.doctorId,
       hospitalId,
-      fromDate: fromDate.toISOString(),
-      toDate: toDate.toISOString(),
+      fromDate: toLocalDateStr(fromDateObj),
+      toDate: toLocalDateStr(toDateObj),
       reason: payload.title
     };
 
@@ -974,7 +984,7 @@ export const DoctorCalendarPage: React.FC = () => {
           message: t('doctorCalendar.notifications.timeOffScheduledMessage'),
           details: [
             `✅ ${t('doctorCalendar.notifications.timeOffBlocked')}`,
-            `📅 ${t('doctorCalendar.notifications.duration')}: ${format(fromDate, 'MMM dd, yyyy HH:mm')} - ${format(toDate, 'MMM dd, yyyy HH:mm')}`,
+            `📅 ${t('doctorCalendar.notifications.duration')}: ${format(fromDateObj, 'MMM dd, yyyy')} - ${format(toDateObj, 'MMM dd, yyyy')}`,
             `🚫 ${t('doctorCalendar.notifications.noAppointmentsBooked')}`,
             `📱 ${t('doctorCalendar.notifications.cancelTimeOffAnytime')}`
           ]
@@ -1822,7 +1832,6 @@ export const DoctorCalendarPage: React.FC = () => {
       <PersonalizedScheduleModal
         open={personalizedScheduleModal.open}
         onOpenChange={(open) => {
-          // Prevent opening if an override event was recently clicked
           const overrideEvent = document.querySelector('.fc-event[data-override="true"]:focus, .fc-event[data-override="true"]:active');
           if (overrideEvent && open) {
             console.log('Preventing PersonalizedScheduleModal from opening - override event active');
@@ -1836,6 +1845,7 @@ export const DoctorCalendarPage: React.FC = () => {
         initialEndDateTime={personalizedScheduleModal.initialEndDateTime}
         onSave={handleSavePersonalizedSchedule}
         onSaveBlock={handleSaveBlockFromPersonalized}
+        existingTimeOffs={existingTimeOffData?.timeOffs}
         isLoading={createOverrideMutation.isPending}
       />
 

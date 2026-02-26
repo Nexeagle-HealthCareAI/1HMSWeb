@@ -38,7 +38,7 @@ export const DeleteTimeOffDialog: React.FC<DeleteTimeOffDialogProps> = ({
     timeOffData,
     isPending
   });
-  
+
   // Add more detailed logging
   React.useEffect(() => {
     console.log('🔍 DeleteTimeOffDialog useEffect - isOpen changed:', isOpen);
@@ -46,9 +46,23 @@ export const DeleteTimeOffDialog: React.FC<DeleteTimeOffDialogProps> = ({
       console.log('🔍 DeleteTimeOffDialog is now OPEN with data:', timeOffData);
     }
   }, [isOpen, timeOffData]);
-  const formatDateTime = (dateStr: string) => {
+  const getDisplayDate = (dateStr: string, isEndDate = false) => {
+    const d = new Date(dateStr);
+    // If it is an end date exactly at midnight, subtract 1 minute to show the inclusive day
+    if (isEndDate && d.getHours() === 0 && d.getMinutes() === 0) {
+      return new Date(d.getTime() - 60000);
+    }
+    return d;
+  };
+
+  const formatDateTime = (dateStr: string, isEndDate = false) => {
     try {
-      return format(new Date(dateStr), 'MMM dd, yyyy HH:mm');
+      const d = getDisplayDate(dateStr, isEndDate);
+      // If we adjusted it back from midnight, or if it exactly starts at midnight, just show the date
+      if ((d.getHours() === 23 && d.getMinutes() === 59) || (d.getHours() === 0 && d.getMinutes() === 0)) {
+        return format(d, 'MMM dd, yyyy');
+      }
+      return format(d, 'MMM dd, yyyy HH:mm');
     } catch (error) {
       return dateStr;
     }
@@ -65,10 +79,11 @@ export const DeleteTimeOffDialog: React.FC<DeleteTimeOffDialogProps> = ({
   const isSameDay = (fromDate: string, toDate: string) => {
     try {
       const from = new Date(fromDate);
-      const to = new Date(toDate);
+      const to = getDisplayDate(toDate, true);
       return from.toDateString() === to.toDateString();
     } catch (error) {
       return false;
+
     }
   };
 
@@ -129,7 +144,7 @@ export const DeleteTimeOffDialog: React.FC<DeleteTimeOffDialogProps> = ({
                       </span>
                     ) : (
                       <span className="text-gray-900">
-                        {formatDateTime(timeOffData.fromDate)} - {formatDateTime(timeOffData.toDate)}
+                        {formatDateTime(timeOffData.fromDate)} - {formatDateTime(timeOffData.toDate, true)}
                       </span>
                     )}
                   </div>

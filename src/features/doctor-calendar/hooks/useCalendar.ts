@@ -175,28 +175,34 @@ export function useCalendarEvents(
 
       // Add time-off blocks
       if (timeOffData?.timeOffs) {
+        // Helper: format a Date as YYYY-MM-DD in LOCAL timezone (avoids UTC shift for IST etc.)
+        const toLocalDateStr = (d: Date) => {
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `${y}-${m}-${day}`;
+        };
+
         timeOffData.timeOffs.forEach((timeOff, index) => {
-          // Parse dates - prefer the more detailed API response fields if they exist
           const fromDate = new Date(timeOff.startDate || timeOff.fromDate);
           let toDate = new Date(timeOff.endDate || timeOff.toDate);
 
-          // If toDate is exactly same as fromDate (0 duration), make it cover the full day
-          if (toDate.getTime() === fromDate.getTime()) {
-            toDate = new Date(fromDate.getTime() + 24 * 60 * 60 * 1000 - 1000); // Add 1 day minus 1s
-          }
+          // FullCalendar's allDay end is EXCLUSIVE.
+          // e.g. fromDate=Mar 6, toDate=Mar 7 means block Mar 6 only.
+          // We add 1 day so it correctly includes every intended day.
+          toDate = new Date(toDate.getTime() + 24 * 60 * 60 * 1000);
 
-          // Create time-off event
           const timeOffEvent: CalendarEvent = {
             id: `timeoff-${timeOff.timeOffId}`,
             type: 'timeoff',
             title: timeOff.reason,
-            start: fromDate.toISOString(),
-            end: toDate.toISOString(),
-            backgroundColor: '#ef4444', // Red color for time-off
+            start: toLocalDateStr(fromDate),
+            end: toLocalDateStr(toDate),
+            backgroundColor: '#ef4444',
             borderColor: '#dc2626',
-            allDay: false, // Make them timed events so they extend from start time to end time in the grid
+            allDay: true,
             extendedProps: {
-              type: 'timeoff', // Add type to extendedProps as backup
+              type: 'timeoff',
               timeOffId: timeOff.timeOffId,
               reason: timeOff.reason,
               isUpcoming: timeOff.isUpcoming,

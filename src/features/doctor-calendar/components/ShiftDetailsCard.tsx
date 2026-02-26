@@ -186,7 +186,12 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
   const timeOffSummaries = React.useMemo(() => {
     return timeOffEvents.map((event, idx) => {
       const start = event.start ? new Date(event.start) : null;
-      const end = event.end ? new Date(event.end) : null;
+      // FullCalendar allDay end is exclusive (+1 day was added in useCalendar.ts),
+      // so subtract 1 day to get the real inclusive end date for display
+      let end = event.end ? new Date(event.end) : null;
+      if (end && event.allDay) {
+        end = new Date(end.getTime() - 24 * 60 * 60 * 1000);
+      }
       const reason = event.extendedProps?.reason || event.title || t('doctorCalendar.shiftDetails.timeOff');
       return {
         id: event.id ?? `timeoff-${idx}`,
@@ -286,8 +291,8 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
                       ></div>
                       <span
                         className={`text-xs font-semibold flex-1 ${shiftHasTimeOffConflict
-                            ? 'text-red-700 dark:text-red-300'
-                            : 'text-gray-900 dark:text-gray-100'
+                          ? 'text-red-700 dark:text-red-300'
+                          : 'text-gray-900 dark:text-gray-100'
                           }`}
                       >
                         {shift.name}
@@ -298,8 +303,8 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
                       <Badge
                         variant="outline"
                         className={`text-[10px] px-1 py-0 ${shiftHasTimeOffConflict
-                            ? 'border-red-300 text-red-600'
-                            : 'text-gray-700 dark:text-gray-200'
+                          ? 'border-red-300 text-red-600'
+                          : 'text-gray-700 dark:text-gray-200'
                           }`}
                         style={
                           shiftHasTimeOffConflict

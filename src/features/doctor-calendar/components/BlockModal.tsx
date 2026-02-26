@@ -31,7 +31,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
     title: '',
-    blockType: 'Leave' as BlockType,
+    blockType: 'Annual Leave' as BlockType,
     startDateTime: '',
     endDateTime: ''
   });
@@ -50,7 +50,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
       startTime.setHours(9, 0, 0, 0);
       const endTime = new Date(today);
       endTime.setHours(17, 0, 0, 0);
-      
+
       setFormData(prev => ({
         ...prev,
         startDateTime: format(startTime, "yyyy-MM-dd'T'HH:mm"),
@@ -61,7 +61,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const payload: CreateBlockPayload = {
       doctorId,
       title: formData.title,
@@ -69,25 +69,29 @@ export const BlockModal: React.FC<BlockModalProps> = ({
       startDateTime: new Date(formData.startDateTime).toISOString(),
       endDateTime: new Date(formData.endDateTime).toISOString()
     };
-    
+
     onSave(payload);
   };
 
   const isFormValid = () => {
     if (!formData.title.trim()) return false;
-    
+
     const start = new Date(formData.startDateTime);
     const end = new Date(formData.endDateTime);
-    
+
     return start < end && !isNaN(start.getTime()) && !isNaN(end.getTime());
   };
 
   const getBlockTypeColor = (blockType: BlockType) => {
     switch (blockType) {
-      case 'Leave': return 'text-red-600';
-      case 'Personal': return 'text-orange-600';
-      case 'Surgery': return 'text-purple-600';
-      case 'Admin': return 'text-blue-600';
+      case 'Annual Leave': return 'text-red-600';
+      case 'Sick Leave': return 'text-orange-600';
+      case 'Personal': return 'text-purple-600';
+      case 'Meeting': return 'text-blue-600';
+      case 'Conference': return 'text-teal-600';
+      case 'Training': return 'text-green-600';
+      case 'Emergency': return 'text-pink-600';
+      case 'Other': return 'text-gray-600';
       default: return 'text-gray-600';
     }
   };
@@ -98,7 +102,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
         <DialogHeader>
           <DialogTitle>{t('blockModal.title')}</DialogTitle>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="title">{t('blockModal.fields.titleLabel')}</Label>
@@ -110,7 +114,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
               required
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="blockType">{t('blockModal.fields.blockTypeLabel')}</Label>
             <Select
@@ -121,22 +125,28 @@ export const BlockModal: React.FC<BlockModalProps> = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Leave" className={getBlockTypeColor('Leave')}>
-                  {t('blockModal.fields.blockType.leave')}
+                <SelectItem value="Annual Leave" className={getBlockTypeColor('Annual Leave')}>
+                  Annual Leave
+                </SelectItem>
+                <SelectItem value="Sick Leave" className={getBlockTypeColor('Sick Leave')}>
+                  Sick Leave
                 </SelectItem>
                 <SelectItem value="Personal" className={getBlockTypeColor('Personal')}>
                   {t('blockModal.fields.blockType.personal')}
                 </SelectItem>
-                <SelectItem value="Surgery" className={getBlockTypeColor('Surgery')}>
-                  {t('blockModal.fields.blockType.surgery')}
+                <SelectItem value="Meeting" className={getBlockTypeColor('Meeting')}>
+                  Meeting
                 </SelectItem>
-                <SelectItem value="Admin" className={getBlockTypeColor('Admin')}>
-                  {t('blockModal.fields.blockType.admin')}
+                <SelectItem value="Emergency" className={getBlockTypeColor('Emergency')}>
+                  Emergency
+                </SelectItem>
+                <SelectItem value="Other" className={getBlockTypeColor('Other')}>
+                  Other
                 </SelectItem>
               </SelectContent>
             </Select>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="startDateTime">{t('blockModal.fields.startLabel')}</Label>
@@ -144,23 +154,32 @@ export const BlockModal: React.FC<BlockModalProps> = ({
                 id="startDateTime"
                 type="datetime-local"
                 value={formData.startDateTime}
-                onChange={(e) => setFormData(prev => ({ ...prev, startDateTime: e.target.value }))}
+                onChange={(e) => {
+                  const newStart = e.target.value;
+                  setFormData(prev => ({
+                    ...prev,
+                    startDateTime: newStart,
+                    // If end is before new start, bump end to match start
+                    endDateTime: prev.endDateTime < newStart ? newStart : prev.endDateTime,
+                  }));
+                }}
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="endDateTime">{t('blockModal.fields.endLabel')}</Label>
               <Input
                 id="endDateTime"
                 type="datetime-local"
                 value={formData.endDateTime}
+                min={formData.startDateTime}
                 onChange={(e) => setFormData(prev => ({ ...prev, endDateTime: e.target.value }))}
                 required
               />
             </div>
           </div>
-          
+
           {formData.startDateTime && formData.endDateTime && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="text-sm text-blue-800">
@@ -171,7 +190,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
               </div>
             </div>
           )}
-          
+
           <DialogFooter>
             <Button
               type="button"
@@ -181,7 +200,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
             >
               {t('blockModal.actions.cancel')}
             </Button>
-            
+
             <Button
               type="submit"
               disabled={!isFormValid() || isLoading}
