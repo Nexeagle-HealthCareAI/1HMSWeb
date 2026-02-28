@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -269,8 +270,8 @@ export const UserManagement: React.FC = () => {
       const inviteData: InviteUserRequest = {
         hospitalId,
         roleId: newUser.selectedRole,
-        name: newUser.name,
-        mobile: ValidationUtils.cleanMobileNumber(newUser.phone),
+        name: personalData.fullName || newUser.name,
+        mobile: ValidationUtils.cleanMobileNumber(personalData.phone || newUser.phone),
         email: newUser.email,
         invitedByUserId: currentUserId,
       };
@@ -357,7 +358,7 @@ export const UserManagement: React.FC = () => {
 
       // Show success
       setInvitedUserInfo({
-        name: newUser.name,
+        name: personalData.fullName || newUser.name,
         email: newUser.email,
         role: roleName,
       });
@@ -591,24 +592,25 @@ export const UserManagement: React.FC = () => {
       </main>
 
 
-      {/* Add User Dialog — Multi-Step Gamified */}
-      <Dialog open={showAddUser} onOpenChange={(open) => {
+      {/* Add User Sheet — Multi-Step Gamified */}
+      <Sheet open={showAddUser} onOpenChange={(open) => {
         if (!open) resetInviteDialog();
         setShowAddUser(open);
       }}>
-        <DialogContent
+        <SheetContent
+          side="right"
           onInteractOutside={(e) => e.preventDefault()}
-          className="overflow-hidden p-0 gap-0 flex flex-col !w-[100vw] !h-[100dvh] !max-w-[100vw] !max-h-[100dvh] rounded-none sm:!w-[98vw] sm:!h-[96vh] sm:!max-w-[98vw] sm:!max-h-[96vh] sm:rounded-lg"
+          className="overflow-hidden p-0 gap-0 flex flex-col w-full sm:w-[65vw] lg:w-[50vw] sm:max-w-[65vw] lg:max-w-[50vw] h-full"
         >
           {/* Gradient Header */}
           <div className={cn(
-            "px-4 pt-3 pb-2 bg-gradient-to-r rounded-t-lg",
+            "px-4 pt-4 pb-3 bg-gradient-to-r border-b border-gray-100 dark:border-gray-800",
             inviteStep === 4
               ? 'from-green-500/10 via-emerald-500/10 to-teal-500/10'
               : 'from-blue-500/10 via-indigo-500/10 to-purple-500/10'
           )}>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2.5 text-base">
+            <SheetHeader>
+              <SheetTitle className="flex items-center gap-2.5 text-base text-left">
                 <div className={cn(
                   "w-8 h-8 rounded-lg flex items-center justify-center text-sm shadow-sm",
                   inviteStep === 4
@@ -625,8 +627,8 @@ export const UserManagement: React.FC = () => {
                     </p>
                   )}
                 </div>
-              </DialogTitle>
-            </DialogHeader>
+              </SheetTitle>
+            </SheetHeader>
 
             {/* Gamified Step Progress */}
             {inviteStep <= 4 && (
@@ -962,25 +964,12 @@ export const UserManagement: React.FC = () => {
                     <Users className="h-3.5 w-3.5" />
                     View Invited Users
                   </Button>
-                  {isDoctorRole() && (
-                    <Button
-                      className="h-8 px-4 gap-2 text-sm bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 shadow-lg shadow-purple-500/25"
-                      onClick={() => {
-                        resetInviteDialog();
-                        setShowAddUser(false);
-                        navigate('/admin/settings/prescription');
-                      }}
-                    >
-                      <FileText className="h-3.5 w-3.5" />
-                      Upload Prescription Design
-                    </Button>
-                  )}
                 </div>
               </div>
             )}
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
       {/* Invite Error Modal */}
       <Dialog open={inviteErrorModal.open} onOpenChange={(open) => setInviteErrorModal((prev) => ({ ...prev, open }))}>
@@ -1011,10 +1000,6 @@ export const UserManagement: React.FC = () => {
         invitedUserEmail={invitedUserInfo.email}
         invitedUserRole={invitedUserInfo.role}
         isDoctorRole={isDoctorRole()}
-        onUploadPrescription={() => {
-          setShowSuccessModal(false);
-          navigate('/admin/settings/prescription');
-        }}
       />
     </div>
   );

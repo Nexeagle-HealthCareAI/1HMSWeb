@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   Users,
   Search,
@@ -22,6 +23,7 @@ import { useUserManagementApi } from '../hooks/useUserManagementApi';
 import { AllUsersResponse } from '../services/userManagementApi';
 import { useAuthStore } from '@/store/authStore';
 import { DeactivateUserDialog } from './DeactivateUserDialog';
+import { cn } from '@/lib/utils';
 
 export const OnboardedUsers: React.FC = () => {
   const { t } = useTranslation();
@@ -60,12 +62,21 @@ export const OnboardedUsers: React.FC = () => {
   const uniqueRoles = Array.from(new Set(users.map((user) => getPrimaryRoleName(user))));
 
   const filteredUsers = users.filter((user) => {
-    const matchesSearch = user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.mobileNumber.includes(searchTerm);
+    const matchesSearch = (user.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.mobileNumber || '').includes(searchTerm);
     const matchesRole = roleFilter === 'all' || getPrimaryRoleName(user) === roleFilter;
     const matchesStatus = statusFilter === 'all' || getUserStatus(user.usersStatusId) === statusFilter;
     return matchesSearch && matchesRole && matchesStatus;
+  }).sort((a, b) => {
+    // Sort Active users first
+    const aActive = isUserActive(a) ? 1 : 0;
+    const bActive = isUserActive(b) ? 1 : 0;
+    // Followed by alphabetical sorting by name as a secondary sort
+    if (aActive === bActive) {
+      return a.fullName.localeCompare(b.fullName);
+    }
+    return bActive - aActive;
   });
 
   const getRoleColor = (roleName?: string) => {
@@ -208,92 +219,146 @@ export const OnboardedUsers: React.FC = () => {
         ) : (
           filteredUsers.map(user => {
             return (
-              <Card key={user.userId} className="hover:shadow-md transition-shadow duration-200">
-                <CardContent className="p-4">
-                  <div className="space-y-3">
-                    {/* Header with Avatar and Status */}
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isUserActive(user)
-                          ? 'bg-green-100 text-green-600'
-                          : 'bg-gray-100 text-gray-400'
-                          }`}>
-                          <Users className="h-5 w-5" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-semibold text-sm truncate">{user.fullName}</h3>
-                          <p className="text-xs truncate text-muted-foreground">{user.email}</p>
-                        </div>
+              <Card
+                key={user.userId}
+                className={cn(
+                  "relative overflow-hidden group transition-all duration-300",
+                  isUserActive(user)
+                    ? "border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_25px_rgba(16,185,129,0.15)] hover:border-emerald-400/50 hover:-translate-y-1 bg-gradient-to-br from-white to-emerald-50/40 dark:from-slate-900 dark:to-emerald-900/10"
+                    : "border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 opacity-85 hover:opacity-100 grayscale-[0.6]"
+                )}
+              >
+                {/* Active Inner Glow Line */}
+                {isUserActive(user) && (
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-400 opacity-80" />
+                )}
+                {/* Inactive Tag */}
+                {!isUserActive(user) && (
+                  <div className="absolute top-0 right-0 px-3 py-1 bg-slate-800 text-slate-100 text-[9px] font-mono font-bold tracking-widest uppercase rounded-bl-lg shadow-sm z-10 transition-colors group-hover:bg-red-900 group-hover:text-red-50">
+                    INACTIVE / OFFLINE
+                  </div>
+                )}
+                <CardContent className="p-5">
+                  <div className="space-y-4">
+                    {/* Header: Avatar, Name & Email */}
+                    <div className="flex items-start gap-4 p-1">
+                      <div className={cn(
+                        "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-inner relative overflow-hidden transition-transform duration-300 group-hover:scale-105",
+                        isUserActive(user)
+                          ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800"
+                          : "bg-slate-200 dark:bg-slate-800 text-slate-500 border border-slate-300 dark:border-slate-700"
+                      )}>
+                        {/* Diagonal Shine effect */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/60 to-transparent dark:from-white/10" />
+                        <Users className="h-6 w-6 relative z-10" />
+                        {/* Online Pulse */}
+                        {isUserActive(user) && (
+                          <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse z-20" />
+                        )}
                       </div>
-                      {/* Status Indicator */}
-                      <div className={`w-3 h-3 rounded-full ${isUserActive(user) ? 'bg-green-500' : 'bg-gray-400'
-                        }`} />
+
+                      <div className="min-w-0 flex-1 pt-0.5">
+                        <h3 className={cn(
+                          "font-bold text-base truncate tracking-tight transition-colors duration-300",
+                          isUserActive(user)
+                            ? "text-slate-900 dark:text-white group-hover:text-emerald-700 dark:group-hover:text-emerald-400"
+                            : "text-slate-500 dark:text-slate-400 line-through decoration-slate-300 dark:decoration-slate-600"
+                        )}>
+                          {user.fullName}
+                        </h3>
+                        <p className="text-[11px] truncate text-muted-foreground font-mono mt-0.5 tracking-tight group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">
+                          {user.email}
+                        </p>
+                      </div>
                     </div>
 
-                    {/* Contact Info */}
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className="font-medium">{t('userManagement.onboardedUsers.labels.phone')}:</span>
-                        <span>{user.mobileNumber}</span>
+                    {/* HUD Details Grid - Monospace / Sci-Fi layout */}
+                    <div className={cn(
+                      "grid grid-cols-2 gap-3 p-3 rounded-lg border transition-colors duration-300",
+                      isUserActive(user)
+                        ? "bg-slate-50/80 dark:bg-slate-800/80 border-slate-200/60 dark:border-slate-700/60 group-hover:border-emerald-200 dark:group-hover:border-emerald-800/50"
+                        : "bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                    )}>
+                      <div className="space-y-1.5">
+                        <span className="text-[9px] font-mono tracking-widest text-slate-400 uppercase flex items-center gap-1">
+                          <Phone className="h-2.5 w-2.5" />
+                          {t('userManagement.onboardedUsers.labels.phone')}
+                        </span>
+                        <div className={cn(
+                          "text-xs font-mono font-medium tracking-tight",
+                          isUserActive(user) ? "text-slate-700 dark:text-slate-300" : "text-slate-500 dark:text-slate-500"
+                        )}>
+                          {user.mobileNumber}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className="font-medium">{t('userManagement.onboardedUsers.labels.role')}:</span>
-                        <span>{getPrimaryRoleName(user)}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className="font-medium">{t('userManagement.onboardedUsers.labels.id')}:</span>
-                        <span>{user.employeeID || t('userManagement.onboardedUsers.na')}</span>
+                      <div className="space-y-1.5 border-l border-slate-200 dark:border-slate-700 pl-3">
+                        <span className="text-[9px] font-mono tracking-widest text-slate-400 uppercase flex items-center gap-1">
+                          <Shield className="h-2.5 w-2.5" />
+                          {t('userManagement.onboardedUsers.labels.id')}
+                        </span>
+                        <div className={cn(
+                          "text-xs font-mono font-medium tracking-tight truncate",
+                          isUserActive(user) ? "text-slate-700 dark:text-slate-300" : "text-slate-500 dark:text-slate-500"
+                        )}>
+                          {user.employeeID || 'N/A'}
+                        </div>
                       </div>
                     </div>
 
-                    {/* Badges */}
-                    <div className="flex flex-wrap gap-1">
-                      <Badge
-                        variant="secondary"
-                        className={`text-xs ${getRoleColor(getPrimaryRoleName(user))}`}
-                      >
-                        {getPrimaryRoleName(user)}
-                      </Badge>
-                      <Badge
-                        variant={isUserActive(user) ? 'default' : 'secondary'}
-                        className={`text-xs ${getStatusColor(isUserActive(user) ? 'active' : 'inactive')}`}
-                      >
-                        {isUserActive(user) ? t('userManagement.onboardedUsers.status.active') : t('userManagement.onboardedUsers.status.inactive')}
-                      </Badge>
-                      {user.isPrimary && (
-                        <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
-                          {t('userManagement.onboardedUsers.badges.primary')}
+                    {/* Badges & Actions Footer */}
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="flex flex-wrap gap-1.5">
+                        <Badge
+                          variant="secondary"
+                          className={cn(
+                            "text-[9px] font-mono font-bold tracking-widest uppercase px-2 py-0.5 border shadow-sm transition-colors",
+                            isUserActive(user)
+                              ? getRoleColor(getPrimaryRoleName(user))
+                              : "bg-slate-200 text-slate-500 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
+                          )}
+                        >
+                          {getPrimaryRoleName(user)}
                         </Badge>
-                      )}
-                    </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex items-center justify-between pt-2 border-t">
-                      <div className="flex gap-1">
+                        {user.isPrimary && (
+                          <Badge variant="outline" className="text-[9px] font-mono font-bold tracking-widest uppercase bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800 px-2 py-0.5 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                            {t('userManagement.onboardedUsers.badges.primary', 'PRIMARY')}
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => {
                             setViewUser(user);
                             setIsViewDialogOpen(true);
                           }}
-                          className="h-7 w-7 p-0 hover:bg-blue-50 hover:text-blue-600"
+                          className={cn(
+                            "h-8 w-8 p-0 rounded-lg transition-all duration-300",
+                            isUserActive(user)
+                              ? "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 dark:hover:bg-emerald-900/20 shadow-sm"
+                              : "bg-transparent border-slate-300 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800"
+                          )}
                           title={t('userManagement.onboardedUsers.actions.viewTooltip')}
                         >
-                          <Eye className="h-3.5 w-3.5" />
+                          <Eye className="h-4 w-4" />
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => handleDeactivateUser({
                             userId: user.userId,
                             fullName: user.fullName,
                             email: user.email
                           })}
-                          className={`h-7 w-7 p-0 ${isUserActive(user) && user.userId !== currentUserId
-                            ? 'hover:bg-red-50 hover:text-red-600'
-                            : 'opacity-50 cursor-not-allowed'
-                            }`}
+                          className={cn(
+                            "h-8 w-8 p-0 rounded-lg transition-all duration-300 shadow-sm",
+                            isUserActive(user) && user.userId !== currentUserId && !user.isPrimary
+                              ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:hover:bg-red-900/20 hover:shadow-[0_0_10px_rgba(239,68,68,0.2)]'
+                              : 'opacity-50 cursor-not-allowed bg-slate-50 dark:bg-slate-900 text-slate-400 border-slate-200 dark:border-slate-800'
+                          )}
                           title={
                             user.isPrimary
                               ? t('userManagement.onboardedUsers.actions.cannotDeactivatePrimary', 'Cannot deactivate primary user')
@@ -305,10 +370,9 @@ export const OnboardedUsers: React.FC = () => {
                           }
                           disabled={!isUserActive(user) || user.userId === currentUserId || user.isPrimary}
                         >
-                          <UserX className="h-3.5 w-3.5" />
+                          <UserX className="h-4 w-4" />
                         </Button>
                       </div>
-
                     </div>
                   </div>
                 </CardContent>
@@ -332,105 +396,116 @@ export const OnboardedUsers: React.FC = () => {
       />
 
       {/* View User Details Dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={(open) => {
+      <Sheet open={isViewDialogOpen} onOpenChange={(open) => {
         setIsViewDialogOpen(open);
         if (!open) {
           setViewUser(null);
         }
       }}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{t('userManagement.onboardedUsers.view.title')}</DialogTitle>
-            <DialogDescription>{t('userManagement.onboardedUsers.view.description')}</DialogDescription>
-          </DialogHeader>
-          {viewUser && (
-            <div className="space-y-6 text-sm">
-              <div className="flex items-center gap-4 rounded-xl border bg-muted/40 p-4">
-                <div className={`h-12 w-12 rounded-full flex items-center justify-center ${isUserActive(viewUser) ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-500'
-                  }`}>
-                  <Users className="h-6 w-6" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{t('userManagement.onboardedUsers.view.fullNameLabel')}</p>
-                  <p className="text-lg font-semibold truncate">{viewUser.fullName || t('userManagement.onboardedUsers.view.notProvided')}</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <Badge className={getRoleColor(getPrimaryRoleName(viewUser))}>{getPrimaryRoleName(viewUser)}</Badge>
-                    <Badge variant="outline" className={isUserActive(viewUser) ? 'border-emerald-200 text-emerald-700' : 'border-gray-200 text-gray-600'}>
-                      {isUserActive(viewUser) ? t('userManagement.onboardedUsers.status.active') : t('userManagement.onboardedUsers.status.inactive')}
-                    </Badge>
-                    {viewUser.isPrimary && (
-                      <Badge variant="outline" className="border-amber-200 text-amber-700 bg-amber-50">{t('userManagement.onboardedUsers.badges.primary')}</Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto flex flex-col p-0 border-l border-gray-100 dark:border-gray-800 bg-white dark:bg-slate-950">
+          <div className="p-6 pb-4 border-b border-gray-100 dark:border-gray-800">
+            <SheetHeader>
+              <SheetTitle className="text-lg flex items-center gap-2 text-left">
+                <Eye className="h-5 w-5 text-indigo-500" />
+                {t('userManagement.onboardedUsers.view.title')}
+              </SheetTitle>
+              <SheetDescription className="text-left">
+                {t('userManagement.onboardedUsers.view.description')}
+              </SheetDescription>
+            </SheetHeader>
+          </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-lg border p-3 space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">{t('userManagement.onboardedUsers.view.contact')}</p>
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span className="truncate">{viewUser.email || '—'}</span>
+          <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50 dark:bg-slate-900/20">
+            {viewUser && (
+              <div className="space-y-6 text-sm">
+                <div className="flex items-center gap-4 rounded-xl border bg-muted/40 p-4">
+                  <div className={`h-12 w-12 rounded-full flex items-center justify-center ${isUserActive(viewUser) ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                    <Users className="h-6 w-6" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{viewUser.mobileNumber || '—'}</span>
-                  </div>
-                </div>
-                <div className="rounded-lg border p-3 space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">{t('userManagement.onboardedUsers.view.identity')}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">{t('userManagement.onboardedUsers.labels.employeeId')}</span>
-                    <span className="font-medium">{viewUser.employeeID || '—'}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">{t('userManagement.onboardedUsers.labels.primaryUser')}</span>
-                    <Badge variant="outline" className={viewUser.isPrimary ? 'border-emerald-200 text-emerald-700 bg-emerald-50' : 'border-gray-200 text-gray-600 bg-gray-50'}>
-                      {viewUser.isPrimary ? t('common.yes') : t('common.no')}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-
-              {viewUser.roles?.length ? (
-                <div className="rounded-lg border p-3">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Shield className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('userManagement.onboardedUsers.view.roles')}</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {viewUser.roles.map((role) => (
-                      <Badge key={role.roleId} variant="secondary" className={`text-xs ${getRoleColor(role.roleName)}`}>
-                        {role.roleName}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{t('userManagement.onboardedUsers.view.fullNameLabel')}</p>
+                    <p className="text-lg font-semibold truncate">{viewUser.fullName || t('userManagement.onboardedUsers.view.notProvided')}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Badge className={getRoleColor(getPrimaryRoleName(viewUser))}>{getPrimaryRoleName(viewUser)}</Badge>
+                      <Badge variant="outline" className={isUserActive(viewUser) ? 'border-emerald-200 text-emerald-700' : 'border-gray-200 text-gray-600'}>
+                        {isUserActive(viewUser) ? t('userManagement.onboardedUsers.status.active') : t('userManagement.onboardedUsers.status.inactive')}
                       </Badge>
-                    ))}
+                      {viewUser.isPrimary && (
+                        <Badge variant="outline" className="border-amber-200 text-amber-700 bg-amber-50">{t('userManagement.onboardedUsers.badges.primary')}</Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
-              ) : null}
 
-              {viewUser.permissionKeys?.length ? (
-                <div className="rounded-lg border p-3">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Key className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('userManagement.onboardedUsers.view.permissions')}</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-lg border p-3 space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">{t('userManagement.onboardedUsers.view.contact')}</p>
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span className="truncate">{viewUser.email || '—'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span>{viewUser.mobileNumber || '—'}</span>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {viewUser.permissionKeys.map((permission) => (
-                      <Badge key={permission} variant="outline" className="text-xs">
-                        {permission}
+                  <div className="rounded-lg border p-3 space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">{t('userManagement.onboardedUsers.view.identity')}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">{t('userManagement.onboardedUsers.labels.employeeId')}</span>
+                      <span className="font-medium">{viewUser.employeeID || '—'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">{t('userManagement.onboardedUsers.labels.primaryUser')}</span>
+                      <Badge variant="outline" className={viewUser.isPrimary ? 'border-emerald-200 text-emerald-700 bg-emerald-50' : 'border-gray-200 text-gray-600 bg-gray-50'}>
+                        {viewUser.isPrimary ? t('common.yes') : t('common.no')}
                       </Badge>
-                    ))}
+                    </div>
                   </div>
                 </div>
-              ) : null}
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>{t('common.close')}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+
+                {viewUser.roles?.length ? (
+                  <div className="rounded-lg border p-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Shield className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('userManagement.onboardedUsers.view.roles')}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {viewUser.roles.map((role) => (
+                        <Badge key={role.roleId} variant="secondary" className={`text-xs ${getRoleColor(role.roleName)}`}>
+                          {role.roleName}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {viewUser.permissionKeys?.length ? (
+                  <div className="rounded-lg border p-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Key className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('userManagement.onboardedUsers.view.permissions')}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {viewUser.permissionKeys.map((permission) => (
+                        <Badge key={permission} variant="outline" className="text-xs">
+                          {permission}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
+
+          <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 mt-auto flex justify-end">
+            <Button variant="outline" className="px-6 shadow-sm" onClick={() => setIsViewDialogOpen(false)}>{t('common.close')}</Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+    </div >
   );
 };
 

@@ -200,7 +200,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       {/* Sidebar */}
       <div className={`
         fixed top-0 left-0 z-50 h-full bg-[#4f46e5] dark:bg-gray-800 border-r border-gray-200 dark:border-gray-600 transform shadow-lg
-        ${sidebarCollapsed ? 'w-20' : 'w-64'} 
+        ${sidebarCollapsed ? 'w-24' : 'w-64'} 
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         overflow-hidden transition-transform duration-300 ease-in-out
       `}>
@@ -245,7 +245,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     variant="ghost"
                     className={`
                     w-full relative flex items-center
-                    ${sidebarCollapsed ? 'justify-center px-3 h-14 w-14 mx-auto rounded-xl' : 'justify-start gap-4 h-14 px-5 rounded-xl'}
+                    ${sidebarCollapsed ? 'flex-col justify-center h-20 w-[84px] mx-auto rounded-xl px-1 py-1.5 gap-1' : 'justify-start gap-4 h-14 px-5 rounded-xl'}
                     ${isActive
                         ? 'bg-white/20 text-white dark:bg-blue-900 dark:text-blue-300'
                         : 'text-white/80 dark:text-gray-200 hover:bg-white/10 dark:hover:bg-gray-700 hover:text-white dark:hover:text-blue-300'
@@ -263,7 +263,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
                     {/* Icon container with enhanced effects */}
                     <div className={`
-                    relative flex items-center justify-center rounded-lg p-3
+                    relative flex items-center justify-center rounded-lg p-2.5
                     ${isActive
                         ? 'bg-white/20 dark:bg-blue-800 text-white dark:text-blue-300'
                         : 'bg-white/10 dark:bg-gray-600 text-white dark:text-gray-300 group-hover:bg-white/20 dark:group-hover:bg-blue-700 group-hover:text-white dark:group-hover:text-blue-300'
@@ -272,6 +272,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                       <item.icon className={`${sidebarCollapsed ? 'h-5 w-5' : 'h-6 w-6'}`} />
 
                     </div>
+
+                    {sidebarCollapsed && (
+                      <span className="text-[9px] leading-tight text-center font-medium truncate w-full px-0.5" title={item.name}>
+                        {item.name}
+                      </span>
+                    )}
 
                     {!sidebarCollapsed && (
                       <div className="flex flex-col items-start flex-1">
@@ -336,20 +342,26 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             <Button
               variant="ghost"
               className={`
-               w-full group
-               ${sidebarCollapsed ? 'justify-center px-3 h-14 w-14 mx-auto rounded-xl' : 'justify-start gap-4 h-14 px-5 rounded-xl'}
+               w-full group relative flex items-center
+               ${sidebarCollapsed ? 'flex-col justify-center h-20 w-[84px] mx-auto rounded-xl px-1 py-1.5 gap-1' : 'justify-start gap-4 h-14 px-5 rounded-xl'}
                text-white/80 dark:text-gray-200 hover:text-white dark:hover:text-red-300 hover:bg-white/10 dark:hover:bg-red-900/30 border border-white/20 dark:border-gray-500 hover:border-white/40 dark:hover:border-red-600
              `}
               onClick={handleLogout}
               title={sidebarCollapsed ? t('common.logout') : undefined}
             >
               <div className={`
-               relative flex items-center justify-center rounded-lg p-3
+               relative flex items-center justify-center rounded-lg p-2.5
                bg-white/10 dark:bg-red-800/60 text-white dark:text-red-300 
                group-hover:bg-white/20 dark:group-hover:bg-red-700/80
              `}>
-                <LogOut className={`${sidebarCollapsed ? 'h-6 w-6' : 'h-5 w-5'}`} />
+                <LogOut className={`${sidebarCollapsed ? 'h-5 w-5' : 'h-5 w-5'}`} />
               </div>
+
+              {sidebarCollapsed && (
+                <span className="text-[9px] leading-tight text-center font-medium truncate w-full relative z-10 px-0.5">
+                  {t('common.logout')}
+                </span>
+              )}
 
               {!sidebarCollapsed && (
                 <div className="flex flex-col items-start">
@@ -363,7 +375,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       </div>
 
       {/* Main Content */}
-      <div className={`${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} flex flex-col h-screen overflow-x-hidden relative z-0`}>
+      <div className={`${sidebarCollapsed ? 'lg:ml-24' : 'lg:ml-64'} flex flex-col h-screen overflow-x-hidden relative z-0`}>
         {/* Top Bar */}
         <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex-shrink-0 shadow-sm">
           <div className="flex items-center justify-between">
