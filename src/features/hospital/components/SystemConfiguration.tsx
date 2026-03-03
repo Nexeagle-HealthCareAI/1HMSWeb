@@ -10,15 +10,14 @@ import {
   Receipt,
   ChevronLeft,
   ChevronRight,
-  LayoutDashboard,
-  FileText
+  LayoutDashboard
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { HospitalBrandingConfig } from './HospitalBrandingConfig';
-import { PrescriptionConfig } from '@/features/prescription/components/PrescriptionConfig';
 import { useSystemConfiguration } from '../hooks';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface SystemConfigurationProps {
   focusTab?: string;
@@ -52,29 +51,17 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
         label: t('systemConfiguration.navigation.branding.label'),
         description: t('systemConfiguration.navigation.branding.description'),
         icon: Palette,
-      },
-      {
-        id: 'prescriptions',
-        label: t('systemConfiguration.navigation.prescriptions.label') || 'Prescriptions',
-        description: t('systemConfiguration.navigation.prescriptions.description') || 'Configure prescription layouts and fields',
-        icon: FileText,
-      },
-      {
-        id: 'settings',
-        label: t('systemConfiguration.navigation.settings.label') || 'Settings',
-        description: t('systemConfiguration.navigation.settings.description') || 'General system preferences',
-        icon: Settings,
-      },
+      }
     ] as const,
     [t]
   );
 
   return (
-    <div className="flex h-full min-h-[calc(100vh-160px)] bg-transparent overflow-visible">
+    <div className="flex bg-white dark:bg-slate-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm h-[calc(100vh-140px)] w-full relative z-10 animate-in fade-in duration-500">
       {/* Sidebar */}
       <aside
         className={cn(
-          "bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-300 ease-in-out flex flex-col z-20 relative hidden lg:flex",
+          "bg-gray-50/50 dark:bg-slate-900/50 border-r border-gray-200 dark:border-gray-800 transition-all duration-300 ease-in-out flex flex-col z-20 relative hidden lg:flex rounded-l-xl",
           isSidebarCollapsed ? "w-16" : "w-64"
         )}
       >
@@ -152,8 +139,8 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto relative w-full h-full bg-gray-50/50 dark:bg-black/20 px-4 pb-4 pt-1 lg:px-6 lg:pb-6 lg:pt-1">
-        <div className="max-w-6xl mx-auto">
+      <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:p-8 bg-transparent">
+        <div className="w-full h-full max-w-[1200px] mx-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <div className="lg:hidden">
               <TabsList className="flex gap-2 rounded-2xl bg-muted/40 p-1">
@@ -172,97 +159,126 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
             </div>
 
             <TabsContent value="subscription" className="space-y-6">
-              <div className="rounded-2xl border border-border/60 bg-white/80 p-5 dark:bg-background/60">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                className="rounded-2xl border border-border/60 bg-white/80 p-5 dark:bg-background/60 shadow-sm relative overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -mx-10 -my-10 pointer-events-none" />
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between relative z-10">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-primary">
                       {t('systemConfiguration.subscription.billingOverview')}
                     </p>
                     <h3 className="text-xl font-semibold">{t('systemConfiguration.subscription.subscriptionManagement')}</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground mt-1">
                       {t('systemConfiguration.subscription.description')}
                     </p>
                   </div>
-                  <div className="rounded-xl border border-green-200/80 bg-green-50 px-4 py-2 text-sm font-medium text-green-700 dark:border-green-900/40 dark:bg-green-950/20 dark:text-green-200">
+                  <motion.div
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                    className="rounded-xl border border-green-200/80 bg-green-50 px-4 py-2 text-sm font-medium text-green-700 dark:border-green-900/40 dark:bg-green-950/20 dark:text-green-200 shadow-sm flex items-center gap-2"
+                  >
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                     {t('systemConfiguration.subscription.statusActive')}
-                  </div>
+                  </motion.div>
                 </div>
-              </div>
+              </motion.div>
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <Card className="border-border/70 bg-muted/40 backdrop-blur">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">{t('systemConfiguration.subscription.cards.remainingDays.title')}</CardTitle>
-                    <span className="rounded-full bg-white/80 p-2 text-primary shadow-sm">
-                      <Calendar className="h-4 w-4" />
-                    </span>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-semibold">
-                      {isHospitalLoading ? '...' : daysRemaining}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {isTrialActive
-                        ? 'Free trial days left'
-                        : t('systemConfiguration.subscription.cards.remainingDays.helper')}
-                    </p>
-                    {isTrialActive && trialStartDate && (
-                      <div className="mt-2 pt-2 border-t border-border/50">
-                        <div className="flex flex-col gap-1 text-[10px] text-muted-foreground">
-                          <div className="flex justify-between">
-                            <span>Started:</span>
-                            <span className="font-medium">
-                              {trialStartDate.getDate()} {trialStartDate.toLocaleString('en-US', { month: 'short' })}, {trialStartDate.getFullYear()}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Duration:</span>
-                            <span className="font-medium">3 Months</span>
+              <motion.div
+                variants={{
+                  hidden: { opacity: 0 },
+                  show: {
+                    opacity: 1,
+                    transition: { staggerChildren: 0.1 }
+                  }
+                }}
+                initial="hidden"
+                animate="show"
+                className="grid grid-cols-1 gap-4 md:grid-cols-3"
+              >
+                <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }} whileHover={{ scale: 1.02 }} transition={{ type: "spring", stiffness: 300 }}>
+                  <Card className="border-border/70 bg-gradient-to-br from-white to-gray-50/50 dark:from-slate-900 dark:to-slate-800/50 backdrop-blur shadow-sm hover:shadow-md transition-shadow h-full">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">{t('systemConfiguration.subscription.cards.remainingDays.title')}</CardTitle>
+                      <motion.span whileHover={{ rotate: 15, scale: 1.1 }} className="rounded-full bg-blue-50 dark:bg-blue-900/20 p-2 text-blue-600 dark:text-blue-400 shadow-sm">
+                        <Calendar className="h-4 w-4" />
+                      </motion.span>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
+                        {isHospitalLoading ? '...' : daysRemaining}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {isTrialActive
+                          ? 'Free trial days left'
+                          : t('systemConfiguration.subscription.cards.remainingDays.helper')}
+                      </p>
+                      {isTrialActive && trialStartDate && (
+                        <div className="mt-3 pt-3 border-t border-dashed border-border/50">
+                          <div className="flex flex-col gap-1.5 text-[10px] text-muted-foreground">
+                            <div className="flex justify-between items-center">
+                              <span>Started:</span>
+                              <span className="font-medium bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                                {trialStartDate.getDate()} {trialStartDate.toLocaleString('en-US', { month: 'short' })}, {trialStartDate.getFullYear()}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span>Duration:</span>
+                              <span className="font-medium bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">3 Months</span>
+                            </div>
                           </div>
                         </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+
+                <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }} whileHover={{ scale: 1.02 }} transition={{ type: "spring", stiffness: 300 }}>
+                  <Card className="border-border/70 bg-gradient-to-br from-white to-gray-50/50 dark:from-slate-900 dark:to-slate-800/50 backdrop-blur shadow-sm hover:shadow-md transition-shadow h-full">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">{t('systemConfiguration.subscription.cards.paymentMode.title')}</CardTitle>
+                      <motion.span whileHover={{ rotate: 15, scale: 1.1 }} className="rounded-full bg-emerald-50 dark:bg-emerald-900/20 p-2 text-emerald-600 dark:text-emerald-400 shadow-sm">
+                        <Wallet className="h-4 w-4" />
+                      </motion.span>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold font-mono tracking-tight text-emerald-600 dark:text-emerald-400">
+                        {isTrialActive ? 'TRIAL' : t('systemConfiguration.subscription.cards.paymentMode.value')}
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {isTrialActive
+                          ? 'No payment method required'
+                          : t('systemConfiguration.subscription.cards.paymentMode.helper')}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
 
-                <Card className="border-border/70 bg-muted/40 backdrop-blur">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">{t('systemConfiguration.subscription.cards.paymentMode.title')}</CardTitle>
-                    <span className="rounded-full bg-white/80 p-2 text-primary shadow-sm">
-                      <Wallet className="h-4 w-4" />
-                    </span>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-semibold">
-                      {isTrialActive ? 'Free Trial' : t('systemConfiguration.subscription.cards.paymentMode.value')}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {isTrialActive
-                        ? 'No payment method required'
-                        : t('systemConfiguration.subscription.cards.paymentMode.helper')}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-border/70 bg-muted/40 backdrop-blur">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">{t('systemConfiguration.subscription.cards.totalBill.title')}</CardTitle>
-                    <span className="rounded-full bg-white/80 p-2 text-primary shadow-sm">
-                      <Receipt className="h-4 w-4" />
-                    </span>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-semibold">
-                      {isTrialActive ? 'Free' : t('systemConfiguration.subscription.cards.totalBill.value')}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {isTrialActive
-                        ? 'Enjoy your free trial period'
-                        : t('systemConfiguration.subscription.cards.totalBill.helper')}
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
+                <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }} whileHover={{ scale: 1.02 }} transition={{ type: "spring", stiffness: 300 }}>
+                  <Card className="border-border/70 bg-gradient-to-br from-white to-gray-50/50 dark:from-slate-900 dark:to-slate-800/50 backdrop-blur shadow-sm hover:shadow-md transition-shadow h-full">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">{t('systemConfiguration.subscription.cards.totalBill.title')}</CardTitle>
+                      <motion.span whileHover={{ rotate: 15, scale: 1.1 }} className="rounded-full bg-orange-50 dark:bg-orange-900/20 p-2 text-orange-600 dark:text-orange-400 shadow-sm">
+                        <Receipt className="h-4 w-4" />
+                      </motion.span>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-600 to-amber-600 dark:from-orange-400 dark:to-amber-400">
+                        {isTrialActive ? 'Free' : t('systemConfiguration.subscription.cards.totalBill.value')}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {isTrialActive
+                          ? 'Enjoy your free trial period'
+                          : t('systemConfiguration.subscription.cards.totalBill.helper')}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </motion.div>
             </TabsContent>
 
             <TabsContent value="branding" data-testid="hospital-info-content">
@@ -270,21 +286,6 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
                 branding={hospitalBranding}
                 onBrandingChange={handleBrandingChange}
               />
-            </TabsContent>
-
-            <TabsContent value="prescriptions" className="space-y-6">
-              <PrescriptionConfig />
-            </TabsContent>
-
-            <TabsContent value="settings" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>General Settings</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-500">System-wide settings and preferences will appear here.</p>
-                </CardContent>
-              </Card>
             </TabsContent>
           </Tabs>
         </div>

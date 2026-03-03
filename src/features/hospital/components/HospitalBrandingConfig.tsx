@@ -1,6 +1,8 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
+import confetti from 'canvas-confetti';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertCircle,
   Building2,
@@ -329,6 +331,12 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
           onBrandingChange(branding);
           setHospitalId(response.hospitalId);
           queryClient.invalidateQueries({ queryKey: ['hospital', response.hospitalId] });
+          confetti({
+            particleCount: 150,
+            spread: 80,
+            origin: { y: 0.6 },
+            colors: ['#3b82f6', '#10b981', '#f59e0b']
+          });
           setShowCompletionModal(true);
         }
       } else {
@@ -354,6 +362,12 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
           if (hospitalId) {
             queryClient.invalidateQueries({ queryKey: ['hospital', hospitalId] });
           }
+          confetti({
+            particleCount: 150,
+            spread: 80,
+            origin: { y: 0.6 },
+            colors: ['#3b82f6', '#10b981', '#f59e0b']
+          });
           setShowCompletionModal(true);
         }
       }
@@ -439,416 +453,431 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
         detail: { view: 'dashboard', scrollToTop: true }
       });
       window.dispatchEvent(event);
-        });
-      };
+    });
+  };
 
-      return (
-        <div className="space-y-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h3 className="text-lg font-semibold">
-                {translate('hospitalBranding.title', 'Hospital Branding')}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {translate('hospitalBranding.subtitle', 'Add your hospital details')}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {isExistingHospital && !isEditMode && (
-                <Button onClick={handleStartEdit} variant="outline" className="sm:w-auto">
-                  {translate('hospitalBranding.buttons.editDetails', 'Edit details')}
-                </Button>
-              )}
-              {isExistingHospital && isEditMode && (
-                <>
-                  <Button variant="outline" onClick={handleCancelEdit} className="sm:w-auto">
-                    {translate('hospitalBranding.buttons.cancel', 'Cancel')}
-                  </Button>
-                  <Button
-                    onClick={handleSaveBranding}
-                    disabled={updateHospitalMutation.isPending || isSaveDisabled}
-                    className="sm:w-auto"
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    {updateHospitalMutation.isPending
-                      ? translate('hospitalBranding.buttons.saving', 'Saving...')
-                      : translate('hospitalBranding.buttons.saveChanges', 'Save changes')}
-                  </Button>
-                </>
-              )}
-              {!isExistingHospital && (
-                <Button
-                  onClick={handleSaveBranding}
-                  disabled={registerHospitalMutation.isPending || isSaveDisabled}
-                  className="sm:w-auto"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {registerHospitalMutation.isPending
-                    ? translate('hospitalBranding.buttons.saving', 'Saving...')
-                    : translate('hospitalBranding.buttons.saveInfo', 'Save information')}
-                </Button>
-              )}
-            </div>
-          </div>
-
-      <div className="grid gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
-              {t('hospitalBranding.sections.core.title')}
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">{t('hospitalBranding.sections.core.subtitle')}</p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="hospitalName" className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  {t('hospitalBranding.labels.name')}
-                  <RequiredIndicator />
-                </Label>
-                <Input
-                  id="hospitalName"
-                  value={branding.name}
-                  onChange={(e) => updateBranding('name', e.target.value)}
-                  placeholder={t('hospitalBranding.placeholders.name')}
-                  required
-                  disabled={isExistingHospital && !isEditMode}
-                  className={validationErrors.name ? 'border-red-500 focus:border-red-500' : ''}
-                />
-                <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.name')}</p>
-                {validationErrors.name && (
-                  <div className="flex items-center gap-1 text-xs text-red-500">
-                    <AlertCircle className="h-3 w-3" />
-                    {validationErrors.name}
-                  </div>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="hospitalType" className="flex items-center gap-2">
-                  <Type className="h-4 w-4" />
-                  {t('hospitalBranding.labels.type')}
-                  <RequiredIndicator />
-                </Label>
-                <Select
-                  value={hospitalTypes.some((type) => type.value === branding.type) ? branding.type : undefined}
-                  onValueChange={(value) => updateBranding('type', value)}
-                  disabled={isExistingHospital && !isEditMode}
-                >
-                  <SelectTrigger className={`w-full ${validationErrors.type ? 'border-red-500 focus:border-red-500' : ''}`}>
-                    <SelectValue placeholder={t('hospitalBranding.placeholders.type')} />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-48 overflow-y-auto">
-                    {hospitalTypes.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {validationErrors.type && (
-                  <div className="flex items-center gap-1 text-xs text-red-500">
-                    <AlertCircle className="h-3 w-3" />
-                    {validationErrors.type}
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Phone className="h-5 w-5" />
-              {t('hospitalBranding.sections.contact.title')}
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">{t('hospitalBranding.sections.contact.subtitle')}</p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="contact" className="flex items-center gap-2">
-                  <Phone className="h-4 w-4" />
-                  {t('hospitalBranding.labels.contact')}
-                  <RequiredIndicator />
-                </Label>
-                <Input
-                  id="contact"
-                  value={branding.contact}
-                  onChange={(e) => updateBranding('contact', e.target.value)}
-                  placeholder={t('hospitalBranding.placeholders.contact')}
-                  required
-                  disabled={isExistingHospital && !isEditMode}
-                  className={validationErrors.contact ? 'border-red-500 focus:border-red-500' : ''}
-                />
-                {validationErrors.contact && (
-                  <div className="flex items-center gap-1 text-xs text-red-500">
-                    <AlertCircle className="h-3 w-3" />
-                    {validationErrors.contact}
-                  </div>
-                )}
-                <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.primaryContact')}</p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="alternateContact" className="flex items-center gap-2">
-                  <Phone className="h-4 w-4" />
-                  {t('hospitalBranding.labels.alternateContact')}
-                </Label>
-                <Input
-                  id="alternateContact"
-                  value={branding.alternateContact}
-                  onChange={(e) => updateBranding('alternateContact', e.target.value)}
-                  placeholder={t('hospitalBranding.placeholders.alternateContact')}
-                  disabled={isExistingHospital && !isEditMode}
-                  className={validationErrors.alternateContact ? 'border-red-500 focus:border-red-500' : ''}
-                />
-                {validationErrors.alternateContact && (
-                  <div className="flex items-center gap-1 text-xs text-red-500">
-                    <AlertCircle className="h-3 w-3" />
-                    {validationErrors.alternateContact}
-                  </div>
-                )}
-                <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.alternateContact')}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  {t('hospitalBranding.labels.email')}
-                  <RequiredIndicator />
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={branding.email}
-                  onChange={(e) => updateBranding('email', e.target.value)}
-                  placeholder={t('hospitalBranding.placeholders.email')}
-                  disabled={isExistingHospital && !isEditMode}
-                  className={validationErrors.email ? 'border-red-500 focus:border-red-500' : ''}
-                />
-                {validationErrors.email && (
-                  <div className="flex items-center gap-1 text-xs text-red-500">
-                    <AlertCircle className="h-3 w-3" />
-                    {validationErrors.email}
-                  </div>
-                )}
-                <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.email')}</p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="website" className="flex items-center gap-2">
-                  <Globe className="h-4 w-4" />
-                  {t('hospitalBranding.labels.website')}
-                </Label>
-                <Input
-                  id="website"
-                  value={branding.website}
-                  onChange={(e) => updateBranding('website', e.target.value)}
-                  placeholder={t('hospitalBranding.placeholders.website')}
-                  disabled={isExistingHospital && !isEditMode}
-                  className={validationErrors.website ? 'border-red-500 focus:border-red-500' : ''}
-                />
-                {validationErrors.website && (
-                  <div className="flex items-center gap-1 text-xs text-red-500">
-                    <AlertCircle className="h-3 w-3" />
-                    {validationErrors.website}
-                  </div>
-                )}
-                <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.website')}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
-              {t('hospitalBranding.sections.location.title')}
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">{t('hospitalBranding.sections.location.subtitle')}</p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="location" className="flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                {t('hospitalBranding.labels.location')}
-                <RequiredIndicator />
-              </Label>
-              <Textarea
-                id="location"
-                value={branding.location}
-                onChange={(e) => updateBranding('location', e.target.value)}
-                placeholder={t('hospitalBranding.placeholders.location')}
-                rows={3}
-                required
-                disabled={isExistingHospital && !isEditMode}
-                className={validationErrors.location ? 'border-red-500 focus:border-red-500' : ''}
-              />
-              <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.location')}</p>
-              {validationErrors.location && (
-                <div className="flex items-center gap-1 text-xs text-red-500">
-                  <AlertCircle className="h-3 w-3" />
-                  {validationErrors.location}
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="city" className="flex items-center gap-2">
-                  {t('hospitalBranding.labels.city')}
-                  <RequiredIndicator />
-                </Label>
-                <Input
-                  id="city"
-                  value={branding.city}
-                  onChange={(e) => updateBranding('city', e.target.value)}
-                  placeholder={t('hospitalBranding.placeholders.city')}
-                  required
-                  disabled={isExistingHospital && !isEditMode}
-                  className={validationErrors.city ? 'border-red-500 focus:border-red-500' : ''}
-                />
-                {validationErrors.city && (
-                  <div className="flex items-center gap-1 text-xs text-red-500">
-                    <AlertCircle className="h-3 w-3" />
-                    {validationErrors.city}
-                  </div>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="state" className="flex items-center gap-2">
-                  {t('hospitalBranding.labels.state')}
-                  <RequiredIndicator />
-                </Label>
-                <Input
-                  id="state"
-                  value={branding.state}
-                  onChange={(e) => updateBranding('state', e.target.value)}
-                  placeholder={t('hospitalBranding.placeholders.state')}
-                  required
-                  disabled={isExistingHospital && !isEditMode}
-                  className={validationErrors.state ? 'border-red-500 focus:border-red-500' : ''}
-                />
-                {validationErrors.state && (
-                  <div className="flex items-center gap-1 text-xs text-red-500">
-                    <AlertCircle className="h-3 w-3" />
-                    {validationErrors.state}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="country" className="flex items-center gap-2">
-                  {t('hospitalBranding.labels.country')}
-                  <RequiredIndicator />
-                </Label>
-                <Input
-                  id="country"
-                  value={branding.country}
-                  onChange={(e) => updateBranding('country', e.target.value)}
-                  placeholder={t('hospitalBranding.placeholders.country')}
-                  required
-                  disabled={isExistingHospital && !isEditMode}
-                  className={validationErrors.country ? 'border-red-500 focus:border-red-500' : ''}
-                />
-                {validationErrors.country && (
-                  <div className="flex items-center gap-1 text-xs text-red-500">
-                    <AlertCircle className="h-3 w-3" />
-                    {validationErrors.country}
-                  </div>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="pincode" className="flex items-center gap-2">
-                  {t('hospitalBranding.labels.pincode')}
-                  <RequiredIndicator />
-                </Label>
-                <Input
-                  id="pincode"
-                  value={branding.pincode}
-                  onChange={(e) => updateBranding('pincode', e.target.value)}
-                  placeholder={t('hospitalBranding.placeholders.pincode')}
-                  required
-                  disabled={isExistingHospital && !isEditMode}
-                  className={validationErrors.pincode ? 'border-red-500 focus:border-red-500' : ''}
-                />
-                {validationErrors.pincode && (
-                  <div className="flex items-center gap-1 text-xs text-red-500">
-                    <AlertCircle className="h-3 w-3" />
-                    {validationErrors.pincode}
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              {t('hospitalBranding.sections.config.title')}
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">{t('hospitalBranding.sections.config.subtitle')}</p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="registrationNumber" className="flex items-center gap-2">
-                  <Hash className="h-4 w-4" />
-                  {t('hospitalBranding.labels.registrationNumber')}
-                  <RequiredIndicator />
-                </Label>
-                <Input
-                  id="registrationNumber"
-                  value={branding.registrationNumber}
-                  onChange={(e) => updateBranding('registrationNumber', e.target.value)}
-                  placeholder={t('hospitalBranding.placeholders.registrationNumber')}
-                  required
-                  disabled={isExistingHospital && !isEditMode}
-                  className={validationErrors.registrationNumber ? 'border-red-500 focus:border-red-500' : ''}
-                />
-                <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.registrationNumber')}</p>
-                {validationErrors.registrationNumber && (
-                  <div className="flex items-center gap-1 text-xs text-red-500">
-                    <AlertCircle className="h-3 w-3" />
-                    {validationErrors.registrationNumber}
-                  </div>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="timeZone" className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  {t('hospitalBranding.labels.timeZone')}
-                </Label>
-                <Select
-                  value={branding.timeZone}
-                  onValueChange={(value) => updateBranding('timeZone', value)}
-                  disabled={isExistingHospital && !isEditMode}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('hospitalBranding.placeholders.timeZone')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timeZones.map((tz) => (
-                      <SelectItem key={tz.value} value={tz.value}>
-                        {tz.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.timeZone')}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">
+            {translate('hospitalBranding.title', 'Hospital Branding')}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {translate('hospitalBranding.subtitle', 'Add your hospital details')}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {isExistingHospital && !isEditMode && (
+            <Button onClick={handleStartEdit} variant="outline" className="sm:w-auto">
+              {translate('hospitalBranding.buttons.editDetails', 'Edit details')}
+            </Button>
+          )}
+          {isExistingHospital && isEditMode && (
+            <>
+              <Button variant="outline" onClick={handleCancelEdit} className="sm:w-auto">
+                {translate('hospitalBranding.buttons.cancel', 'Cancel')}
+              </Button>
+              <Button
+                onClick={handleSaveBranding}
+                disabled={updateHospitalMutation.isPending || isSaveDisabled}
+                className="sm:w-auto"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {updateHospitalMutation.isPending
+                  ? translate('hospitalBranding.buttons.saving', 'Saving...')
+                  : translate('hospitalBranding.buttons.saveChanges', 'Save changes')}
+              </Button>
+            </>
+          )}
+          {!isExistingHospital && (
+            <Button
+              onClick={handleSaveBranding}
+              disabled={registerHospitalMutation.isPending || isSaveDisabled}
+              className="sm:w-auto"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {registerHospitalMutation.isPending
+                ? translate('hospitalBranding.buttons.saving', 'Saving...')
+                : translate('hospitalBranding.buttons.saveInfo', 'Save information')}
+            </Button>
+          )}
+        </div>
       </div>
+
+      <motion.div
+        variants={{
+          hidden: { opacity: 0 },
+          show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+        }}
+        initial="hidden" animate="show"
+        className="grid gap-6"
+      >
+        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
+          <Card className="hover:shadow-lg transition-all duration-300 border-border/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                {t('hospitalBranding.sections.core.title')}
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">{t('hospitalBranding.sections.core.subtitle')}</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="hospitalName" className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    {t('hospitalBranding.labels.name')}
+                    <RequiredIndicator />
+                  </Label>
+                  <Input
+                    id="hospitalName"
+                    value={branding.name}
+                    onChange={(e) => updateBranding('name', e.target.value)}
+                    placeholder={t('hospitalBranding.placeholders.name')}
+                    required
+                    disabled={isExistingHospital && !isEditMode}
+                    className={validationErrors.name ? 'border-red-500 focus:border-red-500' : ''}
+                  />
+                  <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.name')}</p>
+                  {validationErrors.name && (
+                    <div className="flex items-center gap-1 text-xs text-red-500">
+                      <AlertCircle className="h-3 w-3" />
+                      {validationErrors.name}
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="hospitalType" className="flex items-center gap-2">
+                    <Type className="h-4 w-4" />
+                    {t('hospitalBranding.labels.type')}
+                    <RequiredIndicator />
+                  </Label>
+                  <Select
+                    value={hospitalTypes.some((type) => type.value === branding.type) ? branding.type : undefined}
+                    onValueChange={(value) => updateBranding('type', value)}
+                    disabled={isExistingHospital && !isEditMode}
+                  >
+                    <SelectTrigger className={`w-full ${validationErrors.type ? 'border-red-500 focus:border-red-500' : ''}`}>
+                      <SelectValue placeholder={t('hospitalBranding.placeholders.type')} />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-48 overflow-y-auto">
+                      {hospitalTypes.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {validationErrors.type && (
+                    <div className="flex items-center gap-1 text-xs text-red-500">
+                      <AlertCircle className="h-3 w-3" />
+                      {validationErrors.type}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
+          <Card className="hover:shadow-lg transition-all duration-300 border-border/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Phone className="h-5 w-5" />
+                {t('hospitalBranding.sections.contact.title')}
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">{t('hospitalBranding.sections.contact.subtitle')}</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="contact" className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    {t('hospitalBranding.labels.contact')}
+                    <RequiredIndicator />
+                  </Label>
+                  <Input
+                    id="contact"
+                    value={branding.contact}
+                    onChange={(e) => updateBranding('contact', e.target.value)}
+                    placeholder={t('hospitalBranding.placeholders.contact')}
+                    required
+                    disabled={isExistingHospital && !isEditMode}
+                    className={validationErrors.contact ? 'border-red-500 focus:border-red-500' : ''}
+                  />
+                  {validationErrors.contact && (
+                    <div className="flex items-center gap-1 text-xs text-red-500">
+                      <AlertCircle className="h-3 w-3" />
+                      {validationErrors.contact}
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.primaryContact')}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="alternateContact" className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    {t('hospitalBranding.labels.alternateContact')}
+                  </Label>
+                  <Input
+                    id="alternateContact"
+                    value={branding.alternateContact}
+                    onChange={(e) => updateBranding('alternateContact', e.target.value)}
+                    placeholder={t('hospitalBranding.placeholders.alternateContact')}
+                    disabled={isExistingHospital && !isEditMode}
+                    className={validationErrors.alternateContact ? 'border-red-500 focus:border-red-500' : ''}
+                  />
+                  {validationErrors.alternateContact && (
+                    <div className="flex items-center gap-1 text-xs text-red-500">
+                      <AlertCircle className="h-3 w-3" />
+                      {validationErrors.alternateContact}
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.alternateContact')}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    {t('hospitalBranding.labels.email')}
+                    <RequiredIndicator />
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={branding.email}
+                    onChange={(e) => updateBranding('email', e.target.value)}
+                    placeholder={t('hospitalBranding.placeholders.email')}
+                    disabled={isExistingHospital && !isEditMode}
+                    className={validationErrors.email ? 'border-red-500 focus:border-red-500' : ''}
+                  />
+                  {validationErrors.email && (
+                    <div className="flex items-center gap-1 text-xs text-red-500">
+                      <AlertCircle className="h-3 w-3" />
+                      {validationErrors.email}
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.email')}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="website" className="flex items-center gap-2">
+                    <Globe className="h-4 w-4" />
+                    {t('hospitalBranding.labels.website')}
+                  </Label>
+                  <Input
+                    id="website"
+                    value={branding.website}
+                    onChange={(e) => updateBranding('website', e.target.value)}
+                    placeholder={t('hospitalBranding.placeholders.website')}
+                    disabled={isExistingHospital && !isEditMode}
+                    className={validationErrors.website ? 'border-red-500 focus:border-red-500' : ''}
+                  />
+                  {validationErrors.website && (
+                    <div className="flex items-center gap-1 text-xs text-red-500">
+                      <AlertCircle className="h-3 w-3" />
+                      {validationErrors.website}
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.website')}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
+          <Card className="hover:shadow-lg transition-all duration-300 border-border/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                {t('hospitalBranding.sections.location.title')}
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">{t('hospitalBranding.sections.location.subtitle')}</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="location" className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  {t('hospitalBranding.labels.location')}
+                  <RequiredIndicator />
+                </Label>
+                <Textarea
+                  id="location"
+                  value={branding.location}
+                  onChange={(e) => updateBranding('location', e.target.value)}
+                  placeholder={t('hospitalBranding.placeholders.location')}
+                  rows={3}
+                  required
+                  disabled={isExistingHospital && !isEditMode}
+                  className={validationErrors.location ? 'border-red-500 focus:border-red-500' : ''}
+                />
+                <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.location')}</p>
+                {validationErrors.location && (
+                  <div className="flex items-center gap-1 text-xs text-red-500">
+                    <AlertCircle className="h-3 w-3" />
+                    {validationErrors.location}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="city" className="flex items-center gap-2">
+                    {t('hospitalBranding.labels.city')}
+                    <RequiredIndicator />
+                  </Label>
+                  <Input
+                    id="city"
+                    value={branding.city}
+                    onChange={(e) => updateBranding('city', e.target.value)}
+                    placeholder={t('hospitalBranding.placeholders.city')}
+                    required
+                    disabled={isExistingHospital && !isEditMode}
+                    className={validationErrors.city ? 'border-red-500 focus:border-red-500' : ''}
+                  />
+                  {validationErrors.city && (
+                    <div className="flex items-center gap-1 text-xs text-red-500">
+                      <AlertCircle className="h-3 w-3" />
+                      {validationErrors.city}
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="state" className="flex items-center gap-2">
+                    {t('hospitalBranding.labels.state')}
+                    <RequiredIndicator />
+                  </Label>
+                  <Input
+                    id="state"
+                    value={branding.state}
+                    onChange={(e) => updateBranding('state', e.target.value)}
+                    placeholder={t('hospitalBranding.placeholders.state')}
+                    required
+                    disabled={isExistingHospital && !isEditMode}
+                    className={validationErrors.state ? 'border-red-500 focus:border-red-500' : ''}
+                  />
+                  {validationErrors.state && (
+                    <div className="flex items-center gap-1 text-xs text-red-500">
+                      <AlertCircle className="h-3 w-3" />
+                      {validationErrors.state}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="country" className="flex items-center gap-2">
+                    {t('hospitalBranding.labels.country')}
+                    <RequiredIndicator />
+                  </Label>
+                  <Input
+                    id="country"
+                    value={branding.country}
+                    onChange={(e) => updateBranding('country', e.target.value)}
+                    placeholder={t('hospitalBranding.placeholders.country')}
+                    required
+                    disabled={isExistingHospital && !isEditMode}
+                    className={validationErrors.country ? 'border-red-500 focus:border-red-500' : ''}
+                  />
+                  {validationErrors.country && (
+                    <div className="flex items-center gap-1 text-xs text-red-500">
+                      <AlertCircle className="h-3 w-3" />
+                      {validationErrors.country}
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pincode" className="flex items-center gap-2">
+                    {t('hospitalBranding.labels.pincode')}
+                    <RequiredIndicator />
+                  </Label>
+                  <Input
+                    id="pincode"
+                    value={branding.pincode}
+                    onChange={(e) => updateBranding('pincode', e.target.value)}
+                    placeholder={t('hospitalBranding.placeholders.pincode')}
+                    required
+                    disabled={isExistingHospital && !isEditMode}
+                    className={validationErrors.pincode ? 'border-red-500 focus:border-red-500' : ''}
+                  />
+                  {validationErrors.pincode && (
+                    <div className="flex items-center gap-1 text-xs text-red-500">
+                      <AlertCircle className="h-3 w-3" />
+                      {validationErrors.pincode}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
+          <Card className="hover:shadow-lg transition-all duration-300 border-border/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                {t('hospitalBranding.sections.config.title')}
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">{t('hospitalBranding.sections.config.subtitle')}</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="registrationNumber" className="flex items-center gap-2">
+                    <Hash className="h-4 w-4" />
+                    {t('hospitalBranding.labels.registrationNumber')}
+                    <RequiredIndicator />
+                  </Label>
+                  <Input
+                    id="registrationNumber"
+                    value={branding.registrationNumber}
+                    onChange={(e) => updateBranding('registrationNumber', e.target.value)}
+                    placeholder={t('hospitalBranding.placeholders.registrationNumber')}
+                    required
+                    disabled={isExistingHospital && !isEditMode}
+                    className={validationErrors.registrationNumber ? 'border-red-500 focus:border-red-500' : ''}
+                  />
+                  <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.registrationNumber')}</p>
+                  {validationErrors.registrationNumber && (
+                    <div className="flex items-center gap-1 text-xs text-red-500">
+                      <AlertCircle className="h-3 w-3" />
+                      {validationErrors.registrationNumber}
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="timeZone" className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    {t('hospitalBranding.labels.timeZone')}
+                  </Label>
+                  <Select
+                    value={branding.timeZone}
+                    onValueChange={(value) => updateBranding('timeZone', value)}
+                    disabled={isExistingHospital && !isEditMode}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('hospitalBranding.placeholders.timeZone')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {timeZones.map((tz) => (
+                        <SelectItem key={tz.value} value={tz.value}>
+                          {tz.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.timeZone')}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
 
       <Dialog open={showCompletionModal} onOpenChange={setShowCompletionModal}>
         <DialogContent className="max-w-md">
@@ -862,10 +891,18 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col items-center gap-1 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 p-4 text-center">
-            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-100">{t('hospitalBranding.completion.score')}</p>
-            <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-200">{completionPercent}%</p>
-          </div>
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 300, delay: 0.2 }}
+            className="flex flex-col items-center gap-1 rounded-xl bg-gradient-to-br from-emerald-500/10 to-teal-500/5 dark:from-emerald-500/20 dark:to-teal-500/10 border border-emerald-200 dark:border-emerald-800 p-6 text-center shadow-inner relative overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-white/20 dark:bg-black/20 backdrop-blur-[2px]" />
+            <div className="relative z-10 flex flex-col items-center">
+              <p className="text-sm font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">{t('hospitalBranding.completion.score')}</p>
+              <p className="text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 mt-2 filter drop-shadow-sm">{completionPercent}%</p>
+            </div>
+          </motion.div>
 
           <div className="mt-4 space-y-2">
             {completionChecklist.map((item) => (
@@ -890,6 +927,6 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
           </Button>
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   );
 };
