@@ -43,6 +43,8 @@ const PrescriptionVerificationPage = lazy(() => import('@/features/patient/pages
 const PatientsPage = lazy(() => import('@/features/patient/components/PatientsPage').then(module => ({ default: module.PatientsPage })));
 const PatientProfilePage = lazy(() => import('@/features/patient/pages/PatientProfilePage').then(module => ({ default: module.PatientProfilePage })));
 const BillingPage = lazy(() => import('@/features/billing/pages/BillingPage').then(module => ({ default: module.BillingPage })));
+const BillingDashboard = lazy(() => import('@/features/billing/pages/BillingDashboard').then(module => ({ default: module.BillingDashboard })));
+const PrintPreviewPage = lazy(() => import('@/features/billing/pages/PrintPreviewPage').then(module => ({ default: module.PrintPreviewPage })));
 
 
 // Loading component for lazy routes
@@ -67,6 +69,7 @@ export const AppRoutes: React.FC = () => {
   // Check if user is authenticated - on refresh, we trust the persisted state
   // Only validate token during active sessions, not on page refresh
   const isActuallyAuthenticated = isAuthenticated;
+
 
 
   // Show loading spinner while checking authentication
@@ -105,6 +108,16 @@ export const AppRoutes: React.FC = () => {
             ) : (
               <LoginPage />
             )
+          }
+        />
+
+        {/* Print Preview Route - Public or Protected? usually protected but lets keep open for iframe/window access simplicity or protect appropriately */}
+        <Route
+          path="/print-preview"
+          element={
+            <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Receptionist', 'Nurse']}>
+              <PrintPreviewPage />
+            </RouteGuard>
           }
         />
 
@@ -270,8 +283,29 @@ export const AppRoutes: React.FC = () => {
             />
 
             {/* Billing Route - Restricted to Admin and AdminDoctor roles */}
+            {/* Billing Route - Restricted to Admin and AdminDoctor roles */}
             <Route
               path="/billing"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                  <MainLayout>
+                    <BillingDashboard />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/billing/ledger"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                  <MainLayout>
+                    <BillingPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/billing/:appointmentId"
               element={
                 <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
                   <MainLayout>
