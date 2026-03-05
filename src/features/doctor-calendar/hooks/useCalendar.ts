@@ -108,7 +108,7 @@ export function useCalendarEvents(
             });
             const colors = getShiftColors(dataSource);
             const shiftBlockEvent: CalendarEvent = {
-              id: `shift-${shiftIndex}-${detailIndex}`,
+              id: `shift-${shiftInfo.shiftDate}-${shiftIndex}-${detailIndex}`,
               type: 'shift',
               title: `${shiftDetail.shiftName} Shift`,
               start: eventStart.toISOString(),
@@ -148,7 +148,7 @@ export function useCalendarEvents(
               });
               const colors = getShiftColors(dataSource);
               const shiftBlockEvent: CalendarEvent = {
-                id: `legacy-shift-${dayIndex}-${shiftIndex}`,
+                id: `legacy-shift-${day.date}-${shiftIndex}`,
                 type: 'shift',
                 title: `${shift.shiftName} Shift`,
                 start: eventStart.toISOString(),

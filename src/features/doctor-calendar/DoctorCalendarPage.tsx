@@ -861,6 +861,14 @@ export const DoctorCalendarPage: React.FC = () => {
     ]);
   }, [refetchCalendarConfig, refetchCalendarEvents]);
 
+  // Explicitly refetch the API when the user changes views or dates
+  // This ensures the backend is queried for latest overrides or shifts
+  React.useEffect(() => {
+    if (!isInitialLoading) {
+      refreshCalendarData();
+    }
+  }, [currentDate, view, isInitialLoading, refreshCalendarData]);
+
   const handleSaveOverride = (payload: CreateOverridePayload) => {
     // Ensure hospitalId is present in payload
     const finalPayload: CreateOverridePayload = {
@@ -1275,7 +1283,7 @@ export const DoctorCalendarPage: React.FC = () => {
               <div className="flex-1 glass-card rounded-3xl overflow-hidden shadow-2xl relative p-1 bg-white/50 dark:bg-gray-900/50">
                 <div className="h-full overflow-y-auto custom-scrollbar rounded-2xl bg-white dark:bg-gray-900">
                   <FullCalendar
-                    key={`${view}-${currentDate.toISOString()}`}
+                    key="doctor-calendar-instance"
                     ref={calendarRef}
                     {...calendarOptions}
                   />

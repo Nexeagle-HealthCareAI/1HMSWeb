@@ -503,7 +503,7 @@
   },
   "header": {
     "welcomeBack": "वापसी पर स्वागत है",
-    "clinicalDashboard": "डैशबोर्ड",
+    "clinicalDashboard": "डॉक बोर्ड",
     "adminPanel": "एडमिन",
     "doctorCalendar": "मेरा कैलेंडर",
     "appointmentScheduler": "अपॉइंटमेंट",
@@ -1796,7 +1796,7 @@
   },
   "header": {
     "welcomeBack": "वापसी पर स्वागत है",
-    "clinicalDashboard": "डैशबोर्ड",
+    "clinicalDashboard": "डॉक बोर्ड",
     "adminPanel": "एडमिन",
     "doctorCalendar": "मेरा कैलेंडर",
     "appointmentScheduler": "अपॉइंटमेंट",
