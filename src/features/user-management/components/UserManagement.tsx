@@ -266,7 +266,24 @@ export const UserManagement: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      // 1. Register user (Core Auth)
+      // 1. Send invitation FIRST before registering user
+      const inviteData: InviteUserRequest = {
+        hospitalId,
+        roleId: newUser.selectedRole,
+        name: personalData.fullName || newUser.name,
+        mobile: ValidationUtils.cleanMobileNumber(personalData.phone || newUser.phone),
+        email: newUser.email,
+        invitedByUserId: currentUserId,
+      };
+
+      const inviteResponse = await inviteUser.mutateAsync(inviteData);
+      if (!inviteResponse.success) {
+        setInviteErrorModal({ open: true, message: inviteResponse.message || t('userManagement.inviteError.defaultMessage') });
+        return;
+      }
+      const invitationId = inviteResponse.invitationId;
+
+      // 2. Register user (Core Auth)
       let userId: string | null = null;
       let registerMessage: string = '';
       try {
@@ -290,7 +307,7 @@ export const UserManagement: React.FC = () => {
         throw new Error(registerMessage || 'Registration did not return a user ID');
       }
 
-      // 2. Update personal info
+      // 3. Update personal info
       await userProfileApi.updateUserDetails({
         userId,
         mobileNumber: ValidationUtils.cleanMobileNumber(personalData.phone),
@@ -312,7 +329,7 @@ export const UserManagement: React.FC = () => {
         emergencyContactNumber: personalData.emergencyContactNumber || '',
       });
 
-      // 3. Create doctor profile
+      // 4. Create doctor profile
       if (doctorFormData) {
         await doctorApi.createDoctorProfile({
           userId,
@@ -330,28 +347,12 @@ export const UserManagement: React.FC = () => {
         });
       }
 
-      // 4. Send invitation ONLY after user and profiles are fully created
-      const inviteData: InviteUserRequest = {
-        hospitalId,
-        roleId: newUser.selectedRole,
-        name: personalData.fullName || newUser.name,
-        mobile: ValidationUtils.cleanMobileNumber(personalData.phone || newUser.phone),
-        email: newUser.email,
-        invitedByUserId: currentUserId,
-      };
-
-      const inviteResponse = await inviteUser.mutateAsync(inviteData);
-      if (!inviteResponse.success) {
-        setInviteErrorModal({ open: true, message: inviteResponse.message || t('userManagement.inviteError.defaultMessage') });
-        return;
-      }
-
       // 5. Update user invitation status
-      if (inviteResponse.invitationId && userId) {
+      if (invitationId && userId) {
         try {
           await updateInvitedUser.mutateAsync({
             actionType: 'invite',
-            invitationId: inviteResponse.invitationId,
+            invitationId: invitationId,
             userId: userId
           });
         } catch (updateError) {
@@ -387,7 +388,24 @@ export const UserManagement: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      // 1. Register user
+      // 1. Send invitation FIRST
+      const inviteData: InviteUserRequest = {
+        hospitalId,
+        roleId: newUser.selectedRole,
+        name: newUser.name,
+        mobile: ValidationUtils.cleanMobileNumber(newUser.phone),
+        email: newUser.email,
+        invitedByUserId: currentUserId,
+      };
+
+      const inviteResponse = await inviteUser.mutateAsync(inviteData);
+      if (!inviteResponse.success) {
+        setInviteErrorModal({ open: true, message: inviteResponse.message || t('userManagement.inviteError.defaultMessage') });
+        return;
+      }
+      const invitationId = inviteResponse.invitationId;
+
+      // 2. Register user
       let userId: string | null = null;
       try {
         const registerResponse = await authApi.register({
@@ -409,28 +427,12 @@ export const UserManagement: React.FC = () => {
         throw new Error('Registration did not return a user ID');
       }
 
-      // 2. Send invitation ONLY after user is successfully created
-      const inviteData: InviteUserRequest = {
-        hospitalId,
-        roleId: newUser.selectedRole,
-        name: newUser.name,
-        mobile: ValidationUtils.cleanMobileNumber(newUser.phone),
-        email: newUser.email,
-        invitedByUserId: currentUserId,
-      };
-
-      const response = await inviteUser.mutateAsync(inviteData);
-      if (!response.success) {
-        setInviteErrorModal({ open: true, message: response.message || t('userManagement.inviteError.defaultMessage') });
-        return;
-      }
-
       // 3. Update user invitation status
-      if (response.invitationId && userId) {
+      if (invitationId && userId) {
         try {
           await updateInvitedUser.mutateAsync({
             actionType: 'invite',
-            invitationId: response.invitationId,
+            invitationId: invitationId,
             userId: userId
           });
         } catch (updateError) {
