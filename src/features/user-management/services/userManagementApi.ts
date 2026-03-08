@@ -101,6 +101,7 @@ export interface DeactivateUserResponse {
 }
 
 export interface UpdateInvitedUserRequest {
+  actionType?: string;
   invitationId: string;
   userId: string;
 }

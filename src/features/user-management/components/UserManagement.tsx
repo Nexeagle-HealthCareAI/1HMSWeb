@@ -266,22 +266,7 @@ export const UserManagement: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      // 1. Send invitation
-      const inviteData: InviteUserRequest = {
-        hospitalId,
-        roleId: newUser.selectedRole,
-        name: personalData.fullName || newUser.name,
-        mobile: ValidationUtils.cleanMobileNumber(personalData.phone || newUser.phone),
-        email: newUser.email,
-        invitedByUserId: currentUserId,
-      };
-      const inviteResponse = await inviteUser.mutateAsync(inviteData);
-      if (!inviteResponse.success) {
-        setInviteErrorModal({ open: true, message: inviteResponse.message || t('userManagement.inviteError.defaultMessage') });
-        return;
-      }
-
-      // 2. Register user
+      // 1. Register user (Core Auth)
       let userId: string | null = null;
       let registerMessage: string = '';
       try {
@@ -305,6 +290,28 @@ export const UserManagement: React.FC = () => {
         throw new Error(registerMessage || 'Registration did not return a user ID');
       }
 
+      // 2. Update personal info
+      await userProfileApi.updateUserDetails({
+        userId,
+        mobileNumber: ValidationUtils.cleanMobileNumber(personalData.phone),
+        email: newUser.email,
+        isActive: true,
+        fullName: personalData.fullName,
+        gender: personalData.gender || '',
+        profilePictureURL: '',
+        employeeID: personalData.employeeId || '',
+        dateOfBirth: personalData.dateOfBirth ? new Date(personalData.dateOfBirth).toISOString() : '',
+        bloodGroup: personalData.bloodGroup || '',
+        addressLine1: personalData.addressLine1 || '',
+        addressLine2: personalData.addressLine2 || '',
+        city: personalData.city || '',
+        state: personalData.state || '',
+        country: personalData.country || '',
+        pincode: personalData.pincode || '',
+        emergencyContactName: personalData.emergencyContactName || '',
+        emergencyContactNumber: personalData.emergencyContactNumber || '',
+      });
+
       // 3. Create doctor profile
       if (doctorFormData) {
         await doctorApi.createDoctorProfile({
@@ -323,31 +330,27 @@ export const UserManagement: React.FC = () => {
         });
       }
 
-      // 4. Update personal info
-      await userProfileApi.updateUserDetails({
-        userId,
-        mobileNumber: ValidationUtils.cleanMobileNumber(personalData.phone),
-        isActive: true,
-        fullName: personalData.fullName,
-        gender: personalData.gender || '',
-        profilePictureURL: '',
-        employeeID: personalData.employeeId || '',
-        dateOfBirth: personalData.dateOfBirth ? new Date(personalData.dateOfBirth).toISOString() : '',
-        bloodGroup: personalData.bloodGroup || '',
-        addressLine1: personalData.addressLine1 || '',
-        addressLine2: personalData.addressLine2 || '',
-        city: personalData.city || '',
-        state: personalData.state || '',
-        country: personalData.country || '',
-        pincode: personalData.pincode || '',
-        emergencyContactName: personalData.emergencyContactName || '',
-        emergencyContactNumber: personalData.emergencyContactNumber || '',
-      });
+      // 4. Send invitation ONLY after user and profiles are fully created
+      const inviteData: InviteUserRequest = {
+        hospitalId,
+        roleId: newUser.selectedRole,
+        name: personalData.fullName || newUser.name,
+        mobile: ValidationUtils.cleanMobileNumber(personalData.phone || newUser.phone),
+        email: newUser.email,
+        invitedByUserId: currentUserId,
+      };
+
+      const inviteResponse = await inviteUser.mutateAsync(inviteData);
+      if (!inviteResponse.success) {
+        setInviteErrorModal({ open: true, message: inviteResponse.message || t('userManagement.inviteError.defaultMessage') });
+        return;
+      }
 
       // 5. Update user invitation status
       if (inviteResponse.invitationId && userId) {
         try {
           await updateInvitedUser.mutateAsync({
+            actionType: 'invite',
             invitationId: inviteResponse.invitationId,
             userId: userId
           });
@@ -384,22 +387,7 @@ export const UserManagement: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      // 1. Send invitation
-      const inviteData: InviteUserRequest = {
-        hospitalId,
-        roleId: newUser.selectedRole,
-        name: newUser.name,
-        mobile: ValidationUtils.cleanMobileNumber(newUser.phone),
-        email: newUser.email,
-        invitedByUserId: currentUserId,
-      };
-      const response = await inviteUser.mutateAsync(inviteData);
-      if (!response.success) {
-        setInviteErrorModal({ open: true, message: response.message || t('userManagement.inviteError.defaultMessage') });
-        return;
-      }
-
-      // 2. Register user
+      // 1. Register user
       let userId: string | null = null;
       try {
         const registerResponse = await authApi.register({
@@ -421,10 +409,27 @@ export const UserManagement: React.FC = () => {
         throw new Error('Registration did not return a user ID');
       }
 
+      // 2. Send invitation ONLY after user is successfully created
+      const inviteData: InviteUserRequest = {
+        hospitalId,
+        roleId: newUser.selectedRole,
+        name: newUser.name,
+        mobile: ValidationUtils.cleanMobileNumber(newUser.phone),
+        email: newUser.email,
+        invitedByUserId: currentUserId,
+      };
+
+      const response = await inviteUser.mutateAsync(inviteData);
+      if (!response.success) {
+        setInviteErrorModal({ open: true, message: response.message || t('userManagement.inviteError.defaultMessage') });
+        return;
+      }
+
       // 3. Update user invitation status
       if (response.invitationId && userId) {
         try {
           await updateInvitedUser.mutateAsync({
+            actionType: 'invite',
             invitationId: response.invitationId,
             userId: userId
           });
@@ -600,7 +605,7 @@ export const UserManagement: React.FC = () => {
         <SheetContent
           side="right"
           onInteractOutside={(e) => e.preventDefault()}
-          className="overflow-hidden p-0 gap-0 flex flex-col w-full sm:w-[65vw] lg:w-[50vw] sm:max-w-[65vw] lg:max-w-[50vw] h-full"
+          className="overflow-hidden p-0 gap-0 flex flex-col w-full sm:w-[75vw] lg:w-[60vw] xl:w-[55vw] sm:max-w-[75vw] lg:max-w-[60vw] xl:max-w-[55vw] h-full"
         >
           {/* Gradient Header */}
           <div className={cn(
@@ -1000,6 +1005,11 @@ export const UserManagement: React.FC = () => {
         invitedUserEmail={invitedUserInfo.email}
         invitedUserRole={invitedUserInfo.role}
         isDoctorRole={isDoctorRole()}
+        onUploadPrescription={() => {
+          setShowSuccessModal(false);
+          setShowAddUser(false);
+          navigate('/dashboard?tab=configurations#prescription');
+        }}
       />
     </div>
   );

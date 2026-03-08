@@ -11,6 +11,8 @@ interface InvitationSuccessModalProps {
   invitedUserName: string;
   invitedUserEmail: string;
   invitedUserRole: string;
+  isDoctorRole?: boolean;
+  onUploadPrescription?: () => void;
 }
 
 export const InvitationSuccessModal: React.FC<InvitationSuccessModalProps> = ({
@@ -20,6 +22,8 @@ export const InvitationSuccessModal: React.FC<InvitationSuccessModalProps> = ({
   invitedUserName,
   invitedUserEmail,
   invitedUserRole,
+  isDoctorRole,
+  onUploadPrescription,
 }) => {
   const { t } = useTranslation();
 
@@ -68,10 +72,18 @@ export const InvitationSuccessModal: React.FC<InvitationSuccessModalProps> = ({
             </Button>
             <Button
               onClick={onViewInvitedUsers}
-              className="h-8 px-4 text-sm"
+              className="h-8 px-4 text-sm bg-secondary text-secondary-foreground hover:bg-secondary/80"
             >
               {t('userManagement.viewInvitedUsers')}
             </Button>
+            {isDoctorRole && onUploadPrescription && (
+              <Button
+                onClick={onUploadPrescription}
+                className="h-8 px-4 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-500/20"
+              >
+                Upload Prescription Pad
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

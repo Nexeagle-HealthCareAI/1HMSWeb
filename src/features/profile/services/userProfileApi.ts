@@ -5,6 +5,7 @@ import { API_ENDPOINTS } from '@/app/api';
 export interface UserProfileUpdateRequest {
   userId: string;
   mobileNumber: string;
+  email?: string;
   isActive: boolean;
   fullName: string;
   gender: string;

@@ -43,6 +43,7 @@ export const DoctorInviteForm: React.FC<DoctorInviteFormProps> = ({
 }) => {
     const { t } = useTranslation();
     const [errors, setErrors] = useState<FieldErrors>({});
+    const [localStep, setLocalStep] = useState(1);
 
     const [profileData, setProfileData] = useState({
         licenseNumber: initialData?.licenseNumber || '',
@@ -91,17 +92,35 @@ export const DoctorInviteForm: React.FC<DoctorInviteFormProps> = ({
 
     const handleInputChange = (field: string, value: string | number) => {
         setProfileData(prev => ({ ...prev, [field]: value }));
-        if (errors[field]) setErrors(prev => ({ ...prev, [field]: undefined }));
+        if (errors[field]) {
+            setErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors[field];
+                return newErrors;
+            });
+        }
     };
 
     const handleSpecializationsChange = (specializations: string[]) => {
         setProfileData(prev => ({ ...prev, specializations }));
-        if (errors.specializations) setErrors(prev => ({ ...prev, specializations: undefined }));
+        if (errors.specializations) {
+            setErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors.specializations;
+                return newErrors;
+            });
+        }
     };
 
     const handleQualificationsChange = (qualifications: string[]) => {
         setProfileData(prev => ({ ...prev, qualification: qualifications }));
-        if (errors.qualifications) setErrors(prev => ({ ...prev, qualifications: undefined }));
+        if (errors.qualifications) {
+            setErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors.qualifications;
+                return newErrors;
+            });
+        }
     };
 
     const handleDepartmentChange = (departmentId: string) => {
@@ -155,28 +174,34 @@ export const DoctorInviteForm: React.FC<DoctorInviteFormProps> = ({
         profileData.medicalCouncil,
     ].filter(Boolean).length;
 
-    const isFormValid = useMemo(() => {
-        const hasLicense = !!profileData.licenseNumber?.trim();
-        const hasMedicalCouncil = !!profileData.medicalCouncil?.trim();
+    const isStep1Valid = useMemo(() => {
         const hasDepartment = !!profileData.department && !['loading', 'error', 'no-data'].includes(profileData.department);
         const hasSpecializations = profileData.specializations && profileData.specializations.length > 0;
         const hasQualifications = profileData.qualification && profileData.qualification.length > 0;
+        return hasDepartment && hasSpecializations && hasQualifications;
+    }, [profileData]);
 
-        // Strictly check that these are numbers and not empty strings or NaN
+    const isStep2Valid = useMemo(() => {
+        const hasLicense = !!profileData.licenseNumber?.trim();
+        const hasMedicalCouncil = !!profileData.medicalCouncil?.trim();
         const hasExperience = typeof profileData.experienceYears === 'number' && !isNaN(profileData.experienceYears);
         const hasRegistrationYear = typeof profileData.registrationYear === 'number' && !isNaN(profileData.registrationYear);
 
         const result = DoctorSchema.safeParse({
             licenseNumber: profileData.licenseNumber,
-            qualifications: profileData.qualification,
-            specializations: profileData.specializations,
+            qualifications: profileData.qualification, // from step 1
+            specializations: profileData.specializations, // from step 1
             experienceYears: profileData.experienceYears,
             medicalCouncil: profileData.medicalCouncil,
             registrationYear: profileData.registrationYear,
             bio: profileData.bio,
         });
-        return result.success && hasLicense && hasMedicalCouncil && hasDepartment && hasSpecializations && hasQualifications && hasExperience && hasRegistrationYear;
+
+        // if result isn't entirely successful, it's false overall
+        return result.success && hasLicense && hasMedicalCouncil && hasExperience && hasRegistrationYear;
     }, [DoctorSchema, profileData]);
+
+    const isFormValid = isStep1Valid && isStep2Valid;
 
     return (
         <div className="space-y-2.5">
@@ -211,155 +236,167 @@ export const DoctorInviteForm: React.FC<DoctorInviteFormProps> = ({
                 </div>
             </div>
 
-            {/* Department & Specializations */}
-            <div className="group relative rounded-xl border border-blue-100/80 bg-white/70 backdrop-blur-md dark:border-blue-900/40 dark:bg-slate-900/50 p-4 space-y-3 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/20 to-transparent dark:from-blue-900/10 pointer-events-none" />
-                <div className="relative flex items-center gap-2 text-xs font-bold tracking-wide text-blue-700 dark:text-blue-400 uppercase">
-                    <div className="p-1.5 rounded-md bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300">
-                        <Building2 className="h-3.5 w-3.5" />
-                    </div>
-                    Department & Expertise
-                </div>
-                <div className="relative grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5 mt-2">
-                    <div className="space-y-1.5">
-                        <Label htmlFor="invite-department" className="text-[11px] font-medium text-blue-900 dark:text-blue-300">
-                            {t('docProfile.fields.department.label')} <span className="text-red-500">*</span>
-                        </Label>
-                        <Select value={profileData.department || ''} onValueChange={handleDepartmentChange} disabled={departmentsLoading}>
-                            <SelectTrigger id="invite-department" className={cn("h-9 text-sm transition-all focus:ring-blue-500/20", errors.department && 'border-red-400 ring-2 ring-red-100')}>
-                                <SelectValue placeholder={departmentsLoading ? t('docProfile.fields.department.loading') : t('docProfile.fields.department.placeholder')} />
-                            </SelectTrigger>
-                            <SelectContent className="max-h-56 overflow-y-auto">
-                                {departmentsLoading ? (
-                                    <SelectItem value="loading" disabled>{t('docProfile.fields.department.loading')}</SelectItem>
-                                ) : departmentsError ? (
-                                    <SelectItem value="error" disabled>{t('docProfile.fields.department.loadError')}</SelectItem>
-                                ) : departmentOptions.length === 0 ? (
-                                    <SelectItem value="no-data" disabled>{t('docProfile.fields.department.empty')}</SelectItem>
-                                ) : (
-                                    departmentOptions.map(({ id, name }: any) => (
-                                        <SelectItem key={id} value={id}>{name}</SelectItem>
-                                    ))
-                                )}
-                            </SelectContent>
-                        </Select>
-                        {errors.department && <p className="text-[10px] text-red-500 flex items-center gap-1 mt-1 font-medium"><AlertCircle className="h-3 w-3" />{errors.department}</p>}
-                    </div>
-                    <div className="space-y-1.5">
-                        <Label className="text-[11px] font-medium text-blue-900 dark:text-blue-300">
-                            {t('docProfile.fields.specializations.label')} <span className="text-red-500">*</span>
-                        </Label>
-                        <SpecializationSelector
-                            departmentId={profileData.department}
-                            departmentName={selectedDepartment?.name || ''}
-                            selectedSpecializations={profileData.specializations}
-                            onSpecializationsChange={handleSpecializationsChange}
-                            disabled={false}
-                        />
-                        {errors.specializations && <p className="text-[10px] text-red-500 flex items-center gap-1 mt-1 font-medium"><AlertCircle className="h-3 w-3" />{errors.specializations}</p>}
-                    </div>
-                    <div className="space-y-1.5">
-                        <Label className="text-[11px] font-medium text-blue-900 dark:text-blue-300">
-                            {t('docProfile.fields.qualifications.label')} <span className="text-red-500">*</span>
-                        </Label>
-                        <QualificationSelector
-                            selectedQualifications={profileData.qualification}
-                            onQualificationsChange={handleQualificationsChange}
-                            disabled={false}
-                        />
-                        {errors.qualifications && <p className="text-[10px] text-red-500 flex items-center gap-1 mt-1 font-medium"><AlertCircle className="h-3 w-3" />{errors.qualifications}</p>}
-                    </div>
-                </div>
+            {/* Step Indicators inside the page */}
+            <div className="flex gap-2 mb-4">
+                <div className={cn("flex-1 h-1.5 rounded-full transition-all duration-300", localStep >= 1 ? "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]" : "bg-slate-200 dark:bg-slate-700")} />
+                <div className={cn("flex-1 h-1.5 rounded-full transition-all duration-300", localStep >= 2 ? "bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.6)]" : "bg-slate-200 dark:bg-slate-700")} />
             </div>
 
-            {/* Credentials */}
-            <div className="group relative rounded-xl border border-purple-100/80 bg-white/70 backdrop-blur-md dark:border-purple-900/40 dark:bg-slate-900/50 p-4 space-y-3 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-50/20 to-transparent dark:from-purple-900/10 pointer-events-none" />
-                <div className="relative flex items-center gap-2 text-xs font-bold tracking-wide text-purple-700 dark:text-purple-400 uppercase">
-                    <div className="p-1.5 rounded-md bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-300">
-                        <BookOpen className="h-3.5 w-3.5" />
+            {/* Department & Specializations (Step 1) */}
+            {localStep === 1 && (
+                <div className="group relative rounded-xl border border-blue-100/80 bg-white/70 backdrop-blur-md dark:border-blue-900/40 dark:bg-slate-900/50 p-4 space-y-3 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-50/20 to-transparent dark:from-blue-900/10 pointer-events-none" />
+                    <div className="relative flex items-center gap-2 text-xs font-bold tracking-wide text-blue-700 dark:text-blue-400 uppercase">
+                        <div className="p-1.5 rounded-md bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300">
+                            <Building2 className="h-3.5 w-3.5" />
+                        </div>
+                        Department & Expertise
                     </div>
-                    Credentials
+                    <div className="relative grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5 mt-2">
+                        <div className="space-y-1.5">
+                            <Label htmlFor="invite-department" className="text-[11px] font-medium text-blue-900 dark:text-blue-300">
+                                {t('docProfile.fields.department.label')} <span className="text-red-500">*</span>
+                            </Label>
+                            <Select value={profileData.department || ''} onValueChange={handleDepartmentChange} disabled={departmentsLoading}>
+                                <SelectTrigger id="invite-department" className={cn("h-9 text-sm transition-all focus:ring-blue-500/20", errors.department && 'border-red-400 ring-2 ring-red-100')}>
+                                    <SelectValue placeholder={departmentsLoading ? t('docProfile.fields.department.loading') : t('docProfile.fields.department.placeholder')} />
+                                </SelectTrigger>
+                                <SelectContent className="max-h-56 overflow-y-auto">
+                                    {departmentsLoading ? (
+                                        <SelectItem value="loading" disabled>{t('docProfile.fields.department.loading')}</SelectItem>
+                                    ) : departmentsError ? (
+                                        <SelectItem value="error" disabled>{t('docProfile.fields.department.loadError')}</SelectItem>
+                                    ) : departmentOptions.length === 0 ? (
+                                        <SelectItem value="no-data" disabled>{t('docProfile.fields.department.empty')}</SelectItem>
+                                    ) : (
+                                        departmentOptions.map(({ id, name }: any) => (
+                                            <SelectItem key={id} value={id}>{name}</SelectItem>
+                                        ))
+                                    )}
+                                </SelectContent>
+                            </Select>
+                            {errors.department && <p className="text-[10px] text-red-500 flex items-center gap-1 mt-1 font-medium"><AlertCircle className="h-3 w-3" />{errors.department}</p>}
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label className="text-[11px] font-medium text-blue-900 dark:text-blue-300">
+                                {t('docProfile.fields.specializations.label')} <span className="text-red-500">*</span>
+                            </Label>
+                            <SpecializationSelector
+                                departmentId={profileData.department}
+                                departmentName={selectedDepartment?.name || ''}
+                                selectedSpecializations={profileData.specializations}
+                                onSpecializationsChange={handleSpecializationsChange}
+                                disabled={false}
+                            />
+                            {errors.specializations && <p className="text-[10px] text-red-500 flex items-center gap-1 mt-1 font-medium"><AlertCircle className="h-3 w-3" />{errors.specializations}</p>}
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label className="text-[11px] font-medium text-blue-900 dark:text-blue-300">
+                                {t('docProfile.fields.qualifications.label')} <span className="text-red-500">*</span>
+                            </Label>
+                            <QualificationSelector
+                                selectedQualifications={profileData.qualification}
+                                onQualificationsChange={handleQualificationsChange}
+                                disabled={false}
+                            />
+                            {errors.qualifications && <p className="text-[10px] text-red-500 flex items-center gap-1 mt-1 font-medium"><AlertCircle className="h-3 w-3" />{errors.qualifications}</p>}
+                        </div>
+                    </div>
                 </div>
-                <div className="relative grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5 mt-2">
-                    <div className="space-y-1.5">
-                        <Label htmlFor="invite-licenseNumber" className="text-[11px] font-medium text-purple-900 dark:text-purple-300">
-                            {t('docProfile.fields.licenseNumber.label')} <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                            id="invite-licenseNumber"
-                            value={profileData.licenseNumber}
-                            onChange={(e) => handleInputChange('licenseNumber', e.target.value)}
-                            className={cn("h-9 text-sm transition-all focus:ring-purple-500/20", errors.licenseNumber && 'border-red-400 ring-2 ring-red-100')}
-                        />
-                        {errors.licenseNumber && <p className="text-[10px] text-red-500 flex items-center gap-1 mt-1 font-medium"><AlertCircle className="h-3 w-3" />{errors.licenseNumber}</p>}
-                    </div>
-                    <div className="space-y-1.5">
-                        <Label htmlFor="invite-experienceYears" className="text-[11px] font-medium text-purple-900 dark:text-purple-300">
-                            {t('docProfile.fields.experienceYears.label')} <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                            id="invite-experienceYears"
-                            type="number"
-                            value={profileData.experienceYears === ('' as unknown as number) ? '' : profileData.experienceYears}
-                            onChange={(e) => handleInputChange('experienceYears', e.target.value === '' ? ('' as unknown as number) : Number(e.target.value))}
-                            className={cn("h-9 text-sm transition-all focus:ring-purple-500/20", errors.experienceYears && 'border-red-400 ring-2 ring-red-100')}
-                            placeholder="0"
-                        />
-                        {errors.experienceYears && <p className="text-[10px] text-red-500 flex items-center gap-1 mt-1 font-medium"><AlertCircle className="h-3 w-3" />{errors.experienceYears}</p>}
-                    </div>
-                    <div className="space-y-1.5">
-                        <Label htmlFor="invite-registrationYear" className="text-[11px] font-medium text-purple-900 dark:text-purple-300">
-                            {t('docProfile.fields.registrationYear.label')} <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                            id="invite-registrationYear"
-                            type="number"
-                            value={profileData.registrationYear || ''}
-                            onChange={(e) => handleInputChange('registrationYear', Number(e.target.value))}
-                            className={cn("h-9 text-sm transition-all focus:ring-purple-500/20", errors.registrationYear && 'border-red-400 ring-2 ring-red-100')}
-                        />
-                        {errors.registrationYear && <p className="text-[10px] text-red-500 flex items-center gap-1 mt-1 font-medium"><AlertCircle className="h-3 w-3" />{errors.registrationYear}</p>}
-                    </div>
-                </div>
-            </div>
+            )}
 
-            {/* Registration & Bio (combined) */}
-            <div className="group relative rounded-xl border border-amber-100/80 bg-white/70 backdrop-blur-md dark:border-amber-900/40 dark:bg-slate-900/50 p-4 space-y-3 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-50/20 to-transparent dark:from-amber-900/10 pointer-events-none" />
-                <div className="relative flex items-center gap-2 text-xs font-bold tracking-wide text-amber-700 dark:text-amber-400 uppercase">
-                    <div className="p-1.5 rounded-md bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-300">
-                        <Award className="h-3.5 w-3.5" />
+            {/* Credentials (Step 2) */}
+            {localStep === 2 && (
+                <>
+                    <div className="group relative rounded-xl border border-purple-100/80 bg-white/70 backdrop-blur-md dark:border-purple-900/40 dark:bg-slate-900/50 p-4 space-y-3 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500">
+                        <div className="absolute inset-0 bg-gradient-to-br from-purple-50/20 to-transparent dark:from-purple-900/10 pointer-events-none" />
+                        <div className="relative flex items-center gap-2 text-xs font-bold tracking-wide text-purple-700 dark:text-purple-400 uppercase">
+                            <div className="p-1.5 rounded-md bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-300">
+                                <BookOpen className="h-3.5 w-3.5" />
+                            </div>
+                            Credentials
+                        </div>
+                        <div className="relative grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5 mt-2">
+                            <div className="space-y-1.5">
+                                <Label htmlFor="invite-licenseNumber" className="text-[11px] font-medium text-purple-900 dark:text-purple-300">
+                                    {t('docProfile.fields.licenseNumber.label')} <span className="text-red-500">*</span>
+                                </Label>
+                                <Input
+                                    id="invite-licenseNumber"
+                                    value={profileData.licenseNumber}
+                                    onChange={(e) => handleInputChange('licenseNumber', e.target.value)}
+                                    className={cn("h-9 text-sm transition-all focus:ring-purple-500/20", errors.licenseNumber && 'border-red-400 ring-2 ring-red-100')}
+                                />
+                                {errors.licenseNumber && <p className="text-[10px] text-red-500 flex items-center gap-1 mt-1 font-medium"><AlertCircle className="h-3 w-3" />{errors.licenseNumber}</p>}
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="invite-experienceYears" className="text-[11px] font-medium text-purple-900 dark:text-purple-300">
+                                    {t('docProfile.fields.experienceYears.label')} <span className="text-red-500">*</span>
+                                </Label>
+                                <Input
+                                    id="invite-experienceYears"
+                                    type="number"
+                                    value={profileData.experienceYears === ('' as unknown as number) ? '' : profileData.experienceYears}
+                                    onChange={(e) => handleInputChange('experienceYears', e.target.value === '' ? ('' as unknown as number) : Number(e.target.value))}
+                                    className={cn("h-9 text-sm transition-all focus:ring-purple-500/20", errors.experienceYears && 'border-red-400 ring-2 ring-red-100')}
+                                    placeholder="0"
+                                />
+                                {errors.experienceYears && <p className="text-[10px] text-red-500 flex items-center gap-1 mt-1 font-medium"><AlertCircle className="h-3 w-3" />{errors.experienceYears}</p>}
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="invite-registrationYear" className="text-[11px] font-medium text-purple-900 dark:text-purple-300">
+                                    {t('docProfile.fields.registrationYear.label')} <span className="text-red-500">*</span>
+                                </Label>
+                                <Input
+                                    id="invite-registrationYear"
+                                    type="number"
+                                    value={profileData.registrationYear || ''}
+                                    onChange={(e) => handleInputChange('registrationYear', Number(e.target.value))}
+                                    className={cn("h-9 text-sm transition-all focus:ring-purple-500/20", errors.registrationYear && 'border-red-400 ring-2 ring-red-100')}
+                                />
+                                {errors.registrationYear && <p className="text-[10px] text-red-500 flex items-center gap-1 mt-1 font-medium"><AlertCircle className="h-3 w-3" />{errors.registrationYear}</p>}
+                            </div>
+                        </div>
                     </div>
-                    Registration & Bio
-                </div>
-                <div className="relative grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5 mt-2">
-                    <div className="space-y-1.5">
-                        <Label htmlFor="invite-medicalCouncil" className="text-[11px] font-medium text-amber-900 dark:text-amber-300">
-                            {t('docProfile.fields.medicalCouncil.label')} <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                            id="invite-medicalCouncil"
-                            value={profileData.medicalCouncil || ''}
-                            onChange={(e) => handleInputChange('medicalCouncil', e.target.value)}
-                            className={cn("h-9 text-sm transition-all focus:ring-amber-500/20", errors.medicalCouncil && 'border-red-400 ring-2 ring-red-100')}
-                        />
-                        {errors.medicalCouncil && <p className="text-[10px] text-red-500 flex items-center gap-1 mt-1 font-medium"><AlertCircle className="h-3 w-3" />{errors.medicalCouncil}</p>}
+
+                    {/* Registration & Bio (combined) */}
+                    <div className="group relative rounded-xl border border-amber-100/80 bg-white/70 backdrop-blur-md dark:border-amber-900/40 dark:bg-slate-900/50 p-4 space-y-3 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-br from-amber-50/20 to-transparent dark:from-amber-900/10 pointer-events-none" />
+                        <div className="relative flex items-center gap-2 text-xs font-bold tracking-wide text-amber-700 dark:text-amber-400 uppercase">
+                            <div className="p-1.5 rounded-md bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-300">
+                                <Award className="h-3.5 w-3.5" />
+                            </div>
+                            Registration & Bio
+                        </div>
+                        <div className="relative grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5 mt-2">
+                            <div className="space-y-1.5">
+                                <Label htmlFor="invite-medicalCouncil" className="text-[11px] font-medium text-amber-900 dark:text-amber-300">
+                                    {t('docProfile.fields.medicalCouncil.label')} <span className="text-red-500">*</span>
+                                </Label>
+                                <Input
+                                    id="invite-medicalCouncil"
+                                    value={profileData.medicalCouncil || ''}
+                                    onChange={(e) => handleInputChange('medicalCouncil', e.target.value)}
+                                    className={cn("h-9 text-sm transition-all focus:ring-amber-500/20", errors.medicalCouncil && 'border-red-400 ring-2 ring-red-100')}
+                                />
+                                {errors.medicalCouncil && <p className="text-[10px] text-red-500 flex items-center gap-1 mt-1 font-medium"><AlertCircle className="h-3 w-3" />{errors.medicalCouncil}</p>}
+                            </div>
+                            <div className="sm:col-span-2 space-y-1">
+                                <Label className="text-[11px] font-medium flex items-center gap-1">
+                                    <ClipboardList className="h-3 w-3 text-gray-400" />
+                                    {t('docProfile.fields.bio.label')} <span className="text-[9px] font-normal text-muted-foreground ml-auto">(Optional)</span>
+                                </Label>
+                                <Textarea
+                                    value={profileData.bio || ''}
+                                    onChange={(e) => handleInputChange('bio', e.target.value)}
+                                    placeholder={t('docProfile.fields.bio.placeholder')}
+                                    className="text-sm resize-none h-20 sm:h-8 transition-all focus:h-20"
+                                />
+                            </div>
+                        </div>
                     </div>
-                    <div className="sm:col-span-2 space-y-1">
-                        <Label className="text-[11px] font-medium flex items-center gap-1">
-                            <ClipboardList className="h-3 w-3 text-gray-400" />
-                            {t('docProfile.fields.bio.label')} <span className="text-[9px] font-normal text-muted-foreground ml-auto">(Optional)</span>
-                        </Label>
-                        <Textarea
-                            value={profileData.bio || ''}
-                            onChange={(e) => handleInputChange('bio', e.target.value)}
-                            placeholder={t('docProfile.fields.bio.placeholder')}
-                            className="text-sm resize-none h-20 sm:h-8 transition-all focus:h-20"
-                        />
-                    </div>
-                </div>
-            </div>
+                </>
+            )}
 
             {/* Error summary */}
             {Object.keys(errors).length > 0 && (
@@ -371,35 +408,54 @@ export const DoctorInviteForm: React.FC<DoctorInviteFormProps> = ({
                 </div>
             )}
 
-            {/* Actions */}
             <div className="flex justify-between pt-6 border-t border-slate-100 dark:border-slate-800/60 mt-4">
                 <Button
                     variant="outline"
-                    onClick={onBack}
+                    onClick={() => localStep === 1 ? onBack() : setLocalStep(1)}
                     className="h-10 px-6 gap-2 text-sm font-bold tracking-wide text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-all duration-300"
                 >
                     <ArrowLeft className="h-4 w-4" />
                     Back
                 </Button>
-                <div className="relative group">
-                    {/* Glowing background for enabled state */}
-                    {isFormValid && (
-                        <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 opacity-70 blur group-hover:opacity-100 transition-opacity duration-300" />
-                    )}
+
+                {localStep === 1 ? (
                     <Button
-                        onClick={handleNext}
-                        disabled={!isFormValid}
+                        onClick={() => {
+                            if (isStep1Valid) setLocalStep(2);
+                            else validate(); // Trigger error messages for UI
+                        }}
+                        disabled={!isStep1Valid}
                         className={cn(
                             "relative h-10 px-8 gap-2 text-sm font-bold uppercase tracking-wider transition-all duration-300",
-                            isFormValid
+                            isStep1Valid
                                 ? "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.3)] shadow-blue-500/25"
                                 : "bg-slate-100 text-slate-400 border border-slate-200 dark:bg-slate-800 dark:text-slate-500 dark:border-slate-700 cursor-not-allowed"
                         )}
                     >
-                        Next
-                        <ArrowRight className={cn("h-4 w-4 transition-transform", isFormValid && "group-hover:translate-x-1")} />
+                        Continue
+                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                     </Button>
-                </div>
+                ) : (
+                    <div className="relative group">
+                        {/* Glowing background for enabled state */}
+                        {isFormValid && (
+                            <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 opacity-70 blur group-hover:opacity-100 transition-opacity duration-300" />
+                        )}
+                        <Button
+                            onClick={handleNext}
+                            disabled={!isFormValid}
+                            className={cn(
+                                "relative h-10 px-8 gap-2 text-sm font-bold uppercase tracking-wider transition-all duration-300",
+                                isFormValid
+                                    ? "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.3)] shadow-blue-500/25"
+                                    : "bg-slate-100 text-slate-400 border border-slate-200 dark:bg-slate-800 dark:text-slate-500 dark:border-slate-700 cursor-not-allowed"
+                            )}
+                        >
+                            Complete Step
+                            <ArrowRight className={cn("h-4 w-4 transition-transform", isFormValid && "group-hover:translate-x-1")} />
+                        </Button>
+                    </div>
+                )}
             </div>
         </div >
     );

@@ -106,7 +106,13 @@ export const PersonalInfoInviteForm: React.FC<PersonalInfoInviteFormProps> = ({
 
     const handleInputChange = (field: string, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }));
-        if (errors[field]) setErrors(prev => ({ ...prev, [field]: undefined }));
+        if (errors[field]) {
+            setErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors[field];
+                return newErrors;
+            });
+        }
     };
 
     const validate = (): boolean => {

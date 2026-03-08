@@ -139,6 +139,7 @@ const UserOnboardingRegistration: React.FC = () => {
   const verifyOTPMutation = useAuthApi.verifyOTP();
   const setPasswordMutation = useAuthApi.setPassword(); // Use set-password API
   const { mutateAsync: validateTokenAsync } = useAuthApi.validateToken();
+  const { updateInvitedUser } = useUserManagementApi();
   const setAuthToken = useAuthStore((state) => state.setToken);
   const [lastCheckedToken, setLastCheckedToken] = useState<string | null>(null);
 
@@ -478,6 +479,18 @@ const UserOnboardingRegistration: React.FC = () => {
       });
 
       if (response.success) {
+        // Link the invitation to the finalized user account
+        if (invitationId && userId) {
+          try {
+            await updateInvitedUser.mutateAsync({
+              invitationId: invitationId,
+              userId: userId
+            });
+          } catch (updateError) {
+            console.error('Failed to update invited user status during onboarding registration:', updateError);
+          }
+        }
+
         // Show success popup only after password setup
         setShowSuccessPopup(true);
         console.log('Password setup successful, show success popup');
