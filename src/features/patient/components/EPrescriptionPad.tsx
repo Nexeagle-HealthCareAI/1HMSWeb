@@ -28,8 +28,13 @@ import {
   Shield,
   Stethoscope,
   Trash2,
-  User
+  User,
+  Settings,
+  TestTube
 } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { PrescriptionCustomizePanel } from '@/features/prescription/components/PrescriptionCustomizePanel';
+import { PatientLabTests } from './PatientLabTests';
 
 // Fix: Add missing Select import for Immunizations section
 import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select';
@@ -1345,17 +1350,17 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             .map((m, idx) => ({ ...m, _originalIdx: idx }))
             .sort((a, b) => (a.displayOrder ?? a._originalIdx) - (b.displayOrder ?? b._originalIdx))
             .map((m, idx) => ({
-            id: `draft-med-${idx}-${Date.now()}`,
-            name: m.drugName,
-            dosage: m.dose,
-            route: m.route,
-            frequency: m.frequency,
-            timing: '', // Not in draft
-            duration: m.duration ? m.duration.split(' ')[0] : '',
-            durationUnit: m.duration ? m.duration.split(' ')[1] || 'days' : 'days',
-            saltName: m.saltName,
-            instructions: m.instructions
-          })),
+              id: `draft-med-${idx}-${Date.now()}`,
+              name: m.drugName,
+              dosage: m.dose,
+              route: m.route,
+              frequency: m.frequency,
+              timing: '', // Not in draft
+              duration: m.duration ? m.duration.split(' ')[0] : '',
+              durationUnit: m.duration ? m.duration.split(' ')[1] || 'days' : 'days',
+              saltName: m.saltName,
+              instructions: m.instructions
+            })),
           nonPharmacologicalAdvice: (draft.nonPharmacologicalAdvice || []).map(a => ({
             advice: a.advice,
             category: '',
@@ -2120,6 +2125,42 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
           {/* Main Content */}
           <div className="flex-1 overflow-visible">
             <div className="w-full space-y-4">
+              {/* Top Action Bar */}
+              <div className="flex justify-end gap-2 mb-2">
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 shadow-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300">
+                      <TestTube className="w-4 h-4" />
+                      Lab Tests
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-[90vw] sm:w-[600px] md:w-[800px] lg:w-[900px] sm:max-w-none p-0 flex flex-col h-full bg-slate-50 dark:bg-slate-950 border-gray-200 dark:border-gray-800 [&>button]:right-6 [&>button]:top-4 [&>button]:text-gray-500 hover:[&>button]:text-gray-700">
+                    <SheetHeader className="px-6 py-4 border-b border-gray-100 dark:border-gray-800/60 bg-white dark:bg-slate-900">
+                      <SheetTitle className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-indigo-500 dark:from-indigo-400 dark:to-indigo-300">Lab Reports & Tests</SheetTitle>
+                    </SheetHeader>
+                    <div className="flex-1 overflow-y-auto w-full custom-scrollbar p-4 md:p-6">
+                      <PatientLabTests patientId={resolvedPatientId} appointmentId={resolvedAppointmentId} />
+                    </div>
+                  </SheetContent>
+                </Sheet>
+
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 shadow-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
+                      <Settings className="w-4 h-4" />
+                      Prescription Fields
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-[80vw] sm:w-[500px] md:w-[600px] lg:w-[700px] sm:max-w-none p-0 flex flex-col h-full bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 [&>button]:right-6 [&>button]:top-4 [&>button]:text-gray-500 hover:[&>button]:text-gray-700">
+                    <SheetHeader className="px-6 py-4 border-b border-gray-100 dark:border-gray-800/60 bg-white/50 dark:bg-gray-900/50">
+                      <SheetTitle className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-gray-100 dark:to-gray-400">Prescription Configuration</SheetTitle>
+                    </SheetHeader>
+                    <div className="flex-1 overflow-y-auto w-full custom-scrollbar">
+                      <PrescriptionCustomizePanel defaultTab="fields" showCloseButton={false} hidePersonalizedHeader={true} />
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </div>
 
               {/* Vitals Section */}
               {renderCollapsibleSection(
