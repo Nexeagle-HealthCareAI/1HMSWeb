@@ -60,6 +60,78 @@ import {
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { HeaderLanguageSelector } from '@/components/shared/HeaderLanguageSelector';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
+
+// --- Animated Gamified Clock Component ---
+const GamifiedClock = ({ currentTime }: { currentTime: Date }) => {
+  const hours = currentTime.getHours().toString().padStart(2, '0');
+  const minutes = currentTime.getMinutes().toString().padStart(2, '0');
+  const seconds = currentTime.getSeconds().toString().padStart(2, '0');
+
+  const flipVariants = {
+    initial: { y: -15, opacity: 0, scale: 0.9 },
+    animate: { y: 0, opacity: 1, scale: 1 },
+    exit: { y: 15, opacity: 0, scale: 0.9, position: 'absolute' }
+  };
+
+  const DigitRender = ({ val, id }: { val: string, id: string }) => (
+    <div className="relative overflow-hidden bg-white/20 dark:bg-black/40 rounded-md min-w-[28px] h-[32px] flex items-center justify-center font-mono font-bold shadow-inner border border-white/10 dark:border-gray-700/50 backdrop-blur-sm">
+      <AnimatePresence initial={false}>
+        <motion.span
+          key={`${id}-${val}`}
+          variants={flipVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="absolute"
+        >
+          {val}
+        </motion.span>
+      </AnimatePresence>
+    </div>
+  );
+
+  return (
+    <motion.div
+      whileHover={{ scale: 1.02 }}
+      className="hidden lg:flex items-center gap-3 pl-1.5 pr-4 py-1.5 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 dark:from-blue-900/20 dark:to-indigo-900/20 backdrop-blur-md border border-blue-200/50 dark:border-indigo-800/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group cursor-default mr-4 relative overflow-hidden"
+    >
+      {/* Background sweep effect */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 dark:via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+
+      {/* Clock Icon container with pulse */}
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
+        className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg shadow-indigo-500/30 text-white relative"
+      >
+        <motion.div
+          animate={{ scale: [1, 1.2, 1] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="absolute inset-0 bg-white/20 rounded-xl"
+        />
+        <Clock className="h-4 w-4 relative z-10" />
+      </motion.div>
+
+      <div className="flex flex-col items-start pt-0.5">
+        <span className="text-[10px] font-bold text-indigo-600/80 dark:text-indigo-400/80 uppercase tracking-widest leading-none mb-1">
+          {currentTime.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
+        </span>
+
+        {/* Gamified Time Display */}
+        <div className="flex items-center gap-1 text-base lg:text-lg text-gray-800 dark:text-gray-100 leading-none tracking-tight">
+          <DigitRender val={hours} id="h" />
+          <span className="text-indigo-400 dark:text-indigo-500 animate-pulse font-bold">:</span>
+          <DigitRender val={minutes} id="m" />
+          <span className="text-indigo-400 dark:text-indigo-500 font-bold">:</span>
+          <DigitRender val={seconds} id="s" />
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+// ----------------------------------------
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -412,19 +484,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
             <div className="flex items-center gap-4">
               {/* Date/Time Display */}
-              <div className="hidden lg:flex items-center gap-3 pl-1 pr-4 py-1 bg-white/50 dark:bg-gray-800/50 backdrop-blur-md border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group cursor-default mr-4">
-                <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg shadow-indigo-500/20 text-white group-hover:scale-105 group-hover:rotate-3 transition-all duration-300">
-                  <Clock className="h-4 w-4" />
-                </div>
-                <div className="flex flex-col items-start">
-                  <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider leading-none mb-0.5">
-                    {currentTime.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
-                  </span>
-                  <span className="text-lg font-black bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent leading-none tabular-nums tracking-tight">
-                    {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-              </div>
+              <GamifiedClock currentTime={currentTime} />
+
               {/* Sidebar Toggle Hint */}
               <div className="hidden lg:flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-md border border-gray-200 dark:border-gray-600">
                 <span className="font-medium">Ctrl+B</span>
