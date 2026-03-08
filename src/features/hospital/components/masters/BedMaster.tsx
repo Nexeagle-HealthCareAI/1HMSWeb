@@ -284,7 +284,7 @@ export const BedMaster = () => {
 
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                     <Button variant="outline" onClick={() => setShowBulkModal(true)} className="hidden md:flex gap-2 bg-white dark:bg-slate-900 shadow-sm text-gray-700 dark:text-gray-300">
-                        <Layers className="h-4 w-4" /> Bulk Update
+                        <Layers className="h-4 w-4" /> Bulk Update Rates
                     </Button>
                     <Button onClick={() => handleOpenDrawer(null)} className="flex-1 sm:flex-none gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20">
                         <Plus className="h-4 w-4" /> Add Bed

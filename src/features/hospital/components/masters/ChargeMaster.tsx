@@ -54,9 +54,7 @@ export const ChargeMaster = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
 
-    // Quick Add State
-    const [quickAdd, setQuickAdd] = useState({ name: '', appliesTo: 'OPD', category: 'CONSULT', rate: '' });
-
+    // Quick Add State removed
     // Keyboard Shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -103,15 +101,6 @@ export const ChargeMaster = () => {
             });
         }
         setIsDrawerOpen(true);
-    };
-
-    const handleDuplicate = (record: ChargeRecord) => {
-        handleOpenDrawer({
-            ...record,
-            id: '',
-            chargeCode: `${record.chargeCode}_COPY`,
-            displayName: `${record.displayName} (Copy)`
-        });
     };
 
     const handleDeleteCharge = (id: string) => {
@@ -169,37 +158,7 @@ export const ChargeMaster = () => {
         }, 1200);
     };
 
-    const handleQuickAdd = () => {
-        if (!quickAdd.name || !quickAdd.rate) return;
 
-        // Auto-generate code
-        const codePrefix = quickAdd.appliesTo.substring(0, 3).toUpperCase();
-        const words = quickAdd.name.substring(0, 10).toUpperCase().replace(/[^A-Z0-9]/g, '_');
-        const generatedCode = `${codePrefix}_${words}`;
-
-        handleOpenDrawer({
-            id: '',
-            chargeCode: generatedCode,
-            displayName: quickAdd.name,
-            appliesTo: quickAdd.appliesTo as any,
-            categoryCode: quickAdd.category as any,
-            defaultRate: Number(quickAdd.rate),
-            defaultQty: 1,
-            maxDiscountPercent: 0,
-            isActive: true,
-            sortOrder: (charges.length + 1) * 10
-        });
-
-        setQuickAdd({ name: '', appliesTo: 'OPD', category: 'CONSULT', rate: '' });
-
-        // Minor dopamine hit for quick add
-        confetti({
-            particleCount: 40,
-            spread: 50,
-            origin: { x: 0.9, y: 0.3 },
-            colors: ['#eab308', '#3b82f6'] // Yellow, Blue
-        });
-    };
 
     // --- Render ---
     return (
@@ -269,32 +228,6 @@ export const ChargeMaster = () => {
                 </div>
             </div>
 
-            {/* QUICK ADD BAR */}
-            <div className="px-4 py-3 bg-blue-50/50 dark:bg-blue-900/10 border-b border-blue-100 dark:border-blue-900/30 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-semibold text-sm hidden md:flex min-w-[max-content]">
-                    <Zap className="h-4 w-4" /> Quick Add
-                </div>
-                <div className="flex-1 flex flex-wrap lg:flex-nowrap gap-2 items-center">
-                    <Input placeholder="Service Name (e.g. ECG)" className="h-8 text-sm flex-1 min-w-[200px] bg-white dark:bg-slate-900"
-                        value={quickAdd.name} onChange={e => setQuickAdd(p => ({ ...p, name: e.target.value }))} />
-                    <Select value={quickAdd.appliesTo} onValueChange={v => setQuickAdd(p => ({ ...p, appliesTo: v }))}>
-                        <SelectTrigger className="w-[100px] h-8 text-sm bg-white dark:bg-slate-900"><SelectValue /></SelectTrigger>
-                        <SelectContent><SelectItem value="OPD">OPD</SelectItem><SelectItem value="IPD">IPD</SelectItem><SelectItem value="LAB">LAB</SelectItem></SelectContent>
-                    </Select>
-                    <Select value={quickAdd.category} onValueChange={v => setQuickAdd(p => ({ ...p, category: v }))}>
-                        <SelectTrigger className="w-[120px] h-8 text-sm bg-white dark:bg-slate-900"><SelectValue /></SelectTrigger>
-                        <SelectContent><SelectItem value="CONSULT">Consult</SelectItem><SelectItem value="PROCEDURE">Procedure</SelectItem><SelectItem value="LAB">Lab</SelectItem></SelectContent>
-                    </Select>
-                    <div className="relative">
-                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
-                        <Input type="number" placeholder="Rate" className="h-8 w-24 pl-6 text-sm bg-white dark:bg-slate-900"
-                            value={quickAdd.rate} onChange={e => setQuickAdd(p => ({ ...p, rate: e.target.value }))} />
-                    </div>
-                </div>
-                <Button size="sm" onClick={handleQuickAdd} disabled={!quickAdd.name || !quickAdd.rate} variant="secondary" className="h-8 px-4 bg-white hover:bg-gray-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-blue-700 dark:text-blue-300 font-semibold shadow-sm border border-gray-200 dark:border-gray-700">
-                    Add
-                </Button>
-            </div>
 
             {/* TABLE */}
             <div className="flex-1 overflow-auto p-4 hide-scrollbar relative">
@@ -353,9 +286,6 @@ export const ChargeMaster = () => {
                                         <div className="flex items-center justify-end gap-1 transition-opacity">
                                             <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800" onClick={() => handleOpenDrawer(charge)}>
                                                 <Pencil className="h-4 w-4" />
-                                            </Button>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-800" onClick={() => handleDuplicate(charge)} title="Duplicate">
-                                                <Copy className="h-4 w-4" />
                                             </Button>
                                             <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" onClick={() => handleDeleteCharge(charge.id)} title="Delete">
                                                 <Trash2 className="h-4 w-4" />

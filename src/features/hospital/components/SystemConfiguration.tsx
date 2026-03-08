@@ -89,7 +89,7 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
           <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
             <LayoutDashboard className="h-6 w-6" />
             {!isSidebarCollapsed && (
-              <span className="font-bold text-lg tracking-tight">Configuration</span>
+              <span className="font-bold text-lg tracking-tight">Settings</span>
             )}
           </div>
         </div>
