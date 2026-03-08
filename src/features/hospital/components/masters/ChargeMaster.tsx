@@ -350,7 +350,7 @@ export const ChargeMaster = () => {
                                         />
                                     </td>
                                     <td className="px-4 py-3 text-right">
-                                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex items-center justify-end gap-1 transition-opacity">
                                             <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800" onClick={() => handleOpenDrawer(charge)}>
                                                 <Pencil className="h-4 w-4" />
                                             </Button>
@@ -580,8 +580,8 @@ export const ChargeMaster = () => {
                                         disabled={isSaving || isSuccess}
                                         onClick={() => handleSaveDrawer(false)}
                                         className={`flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-md font-medium text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 min-w-[100px] h-10 ${isSuccess
-                                                ? 'bg-green-500 text-white shadow-lg shadow-green-500/30'
-                                                : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20'
+                                            ? 'bg-green-500 text-white shadow-lg shadow-green-500/30'
+                                            : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20'
                                             }`}
                                         animate={isSuccess ? { scale: [1, 1.05, 1], transition: { duration: 0.3 } } : {}}
                                         whileTap={{ scale: 0.95 }}

@@ -95,7 +95,7 @@ const GamifiedClock = ({ currentTime }: { currentTime: Date }) => {
   return (
     <motion.div
       whileHover={{ scale: 1.02 }}
-      className="hidden lg:flex items-center gap-3 pl-1.5 pr-4 py-1.5 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 dark:from-blue-900/20 dark:to-indigo-900/20 backdrop-blur-md border border-blue-200/50 dark:border-indigo-800/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group cursor-default mr-4 relative overflow-hidden"
+      className="hidden lg:flex items-center gap-3 pl-1.5 pr-4 py-1.5 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 dark:from-blue-900/20 dark:to-indigo-900/20 backdrop-blur-md border border-blue-200/50 dark:border-indigo-800/50 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 group cursor-default relative overflow-hidden"
     >
       {/* Background sweep effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 dark:via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
@@ -482,16 +482,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              {/* Date/Time Display */}
+            {/* Center Section - Date/Time Display */}
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto">
               <GamifiedClock currentTime={currentTime} />
+            </div>
 
-              {/* Sidebar Toggle Hint */}
-              <div className="hidden lg:flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-md border border-gray-200 dark:border-gray-600">
-                <span className="font-medium">Ctrl+B</span>
-                <span className="text-gray-500 dark:text-gray-400">{t('header.toggleSidebarHint')}</span>
-              </div>
-
+            <div className="flex items-center gap-4">
               {/* Profile Completion Indicator */}
               {profileScore < 100 && (
                 <Button
