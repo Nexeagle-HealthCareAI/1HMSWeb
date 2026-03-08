@@ -20,7 +20,7 @@ export interface BedRecord {
     id: string;
     wardCode: string;
     wardName: string;
-    wardType: 'GENERAL' | 'ICU' | 'NICU' | 'PRIVATE' | 'SEMI_PRIVATE' | 'OTHER';
+    wardType: 'GENERAL' | 'SEMI_PRIVATE' | 'PRIVATE' | 'DELUXE' | 'ICU' | 'NICU' | 'PICU' | 'HDU' | 'ISOLATION' | 'RECOVERY' | 'OTHER';
     floorNo?: string;
     roomCode?: string;
     roomType?: string;
@@ -62,7 +62,6 @@ export const BedMaster = () => {
     // Filters
     const [filterWardType, setFilterWardType] = useState<string>('ALL');
     const [filterWardCode, setFilterWardCode] = useState<string>('ALL');
-    const [filterStatus, setFilterStatus] = useState<string>('ALL');
 
     // UI Layout
     const [selectedWardNode, setSelectedWardNode] = useState<string>('ALL'); // Left panel selection
@@ -73,9 +72,6 @@ export const BedMaster = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
 
-    const [showBulkModal, setShowBulkModal] = useState(false);
-    const [bulkData, setBulkData] = useState({ wardCode: '', newRate: '', clearOverrides: false });
-    const [isBulkSuccess, setIsBulkSuccess] = useState(false);
 
     // Shortcuts
     useEffect(() => {
@@ -98,15 +94,14 @@ export const BedMaster = () => {
                 b.wardCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (b.roomCode && b.roomCode.toLowerCase().includes(searchTerm.toLowerCase()));
             const matchesWardType = filterWardType === 'ALL' || b.wardType === filterWardType;
-            const matchesStatus = filterStatus === 'ALL' || b.statusCode === filterStatus;
 
             // Left panel filtering overrides top filter if active
             const activeWardFilter = selectedWardNode !== 'ALL' ? selectedWardNode : (filterWardCode !== 'ALL' ? filterWardCode : 'ALL');
             const matchesWardNode = activeWardFilter === 'ALL' || b.wardCode === activeWardFilter;
 
-            return matchesSearch && matchesWardType && matchesStatus && matchesWardNode;
+            return matchesSearch && matchesWardType && matchesWardNode;
         });
-    }, [beds, searchTerm, filterWardType, filterWardCode, filterStatus, selectedWardNode]);
+    }, [beds, searchTerm, filterWardType, filterWardCode, selectedWardNode]);
 
     const wardStats = useMemo(() => {
         const stats: Record<string, { total: number, occupied: number, name: string, type: string }> = {};
@@ -182,45 +177,6 @@ export const BedMaster = () => {
         }, 1200);
     };
 
-    const handleBulkUpdate = async () => {
-        if (!bulkData.wardCode || !bulkData.newRate) return;
-
-        setIsSaving(true);
-        await new Promise(resolve => setTimeout(resolve, 800));
-
-        const newRateVal = Number(bulkData.newRate);
-        let updatedCount = 0;
-
-        setBeds(prev => prev.map(b => {
-            if (b.wardCode === bulkData.wardCode) {
-                updatedCount++;
-                return {
-                    ...b,
-                    wardRoomDailyRate: newRateVal,
-                    bedDailyRateOverride: bulkData.clearOverrides ? null : b.bedDailyRateOverride
-                };
-            }
-            return b;
-        }));
-
-        setIsSaving(false);
-        setIsBulkSuccess(true);
-
-        confetti({
-            particleCount: 150,
-            spread: 100,
-            origin: { y: 0.5 },
-            colors: ['#f59e0b', '#10b981', '#4f46e5'] // Amber, Emerald, Indigo
-        });
-
-        toast({ title: 'Bulk Update Complete', description: `Successfully updated ${updatedCount} beds.` });
-
-        setTimeout(() => {
-            setIsBulkSuccess(false);
-            setShowBulkModal(false);
-            setBulkData({ wardCode: '', newRate: '', clearOverrides: false });
-        }, 1200);
-    };
 
     const quickChangeStatus = (bedId: string, newStatus: BedRecord['statusCode']) => {
         setBeds(prev => prev.map(b => b.id === bedId ? { ...b, statusCode: newStatus } : b));
@@ -253,19 +209,6 @@ export const BedMaster = () => {
                         />
                     </div>
                     <div className="flex gap-2 text-sm w-full overflow-x-auto pb-1 sm:pb-0 hide-scrollbar">
-                        <Select value={filterStatus} onValueChange={setFilterStatus}>
-                            <SelectTrigger className="w-[130px] h-10 bg-gray-50 dark:bg-slate-950">
-                                <SelectValue placeholder="Status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="ALL">All Status</SelectItem>
-                                <SelectItem value="AVAILABLE">Available</SelectItem>
-                                <SelectItem value="OCCUPIED">Occupied</SelectItem>
-                                <SelectItem value="CLEANING">Cleaning</SelectItem>
-                                <SelectItem value="RESERVED">Reserved</SelectItem>
-                                <SelectItem value="BLOCKED">Blocked</SelectItem>
-                            </SelectContent>
-                        </Select>
                         <Select value={filterWardType} onValueChange={setFilterWardType}>
                             <SelectTrigger className="w-[120px] h-10 bg-gray-50 dark:bg-slate-950">
                                 <SelectValue placeholder="Ward Type" />
@@ -273,19 +216,22 @@ export const BedMaster = () => {
                             <SelectContent>
                                 <SelectItem value="ALL">All Types</SelectItem>
                                 <SelectItem value="GENERAL">General</SelectItem>
+                                <SelectItem value="SEMI_PRIVATE">Semi-Private</SelectItem>
+                                <SelectItem value="PRIVATE">Private</SelectItem>
+                                <SelectItem value="DELUXE">Deluxe</SelectItem>
                                 <SelectItem value="ICU">ICU</SelectItem>
                                 <SelectItem value="NICU">NICU</SelectItem>
-                                <SelectItem value="PRIVATE">Private</SelectItem>
-                                <SelectItem value="SEMI_PRIVATE">Semi-Private</SelectItem>
+                                <SelectItem value="PICU">PICU</SelectItem>
+                                <SelectItem value="HDU">HDU</SelectItem>
+                                <SelectItem value="ISOLATION">Isolation</SelectItem>
+                                <SelectItem value="RECOVERY">Recovery</SelectItem>
+                                <SelectItem value="OTHER">Other</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <Button variant="outline" onClick={() => setShowBulkModal(true)} className="hidden md:flex gap-2 bg-white dark:bg-slate-900 shadow-sm text-gray-700 dark:text-gray-300">
-                        <Layers className="h-4 w-4" /> Bulk Update Rates
-                    </Button>
                     <Button onClick={() => handleOpenDrawer(null)} className="flex-1 sm:flex-none gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20">
                         <Plus className="h-4 w-4" /> Add Bed
                     </Button>
@@ -414,7 +360,7 @@ export const BedMaster = () => {
                         <div className="flex flex-col items-center justify-center h-full text-center py-20 text-gray-500 dark:text-gray-400">
                             <Archive className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
                             <p className="font-semibold text-lg text-gray-700 dark:text-gray-300">No beds found</p>
-                            <p className="text-sm mt-1 max-w-sm">No beds match your current filters. Try selecting "All Facilities" or changing the status filter.</p>
+                            <p className="text-sm mt-1 max-w-sm">No beds match your current filters. Try selecting "All Facilities" or changing the ward type filter.</p>
                         </div>
                     )}
                 </div>
@@ -471,9 +417,16 @@ export const BedMaster = () => {
                                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="GENERAL">General</SelectItem>
+                                                    <SelectItem value="SEMI_PRIVATE">Semi-Private</SelectItem>
+                                                    <SelectItem value="PRIVATE">Private</SelectItem>
+                                                    <SelectItem value="DELUXE">Deluxe</SelectItem>
                                                     <SelectItem value="ICU">ICU</SelectItem>
                                                     <SelectItem value="NICU">NICU</SelectItem>
-                                                    <SelectItem value="PRIVATE">Private</SelectItem>
+                                                    <SelectItem value="PICU">PICU</SelectItem>
+                                                    <SelectItem value="HDU">HDU</SelectItem>
+                                                    <SelectItem value="ISOLATION">Isolation</SelectItem>
+                                                    <SelectItem value="RECOVERY">Recovery</SelectItem>
+                                                    <SelectItem value="OTHER">Other</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -573,58 +526,7 @@ export const BedMaster = () => {
                 )}
             </AnimatePresence>
 
-            {/* BULK UPDATE MODAL */}
-            <Dialog open={showBulkModal} onOpenChange={setShowBulkModal}>
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2"><Layers className="h-5 w-5 text-indigo-600" /> Bulk Update Ward Rates</DialogTitle>
-                        <DialogDescription>
-                            Apply a new Daily Rate to all beds within a specific Ward.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="wardSelect">Target Ward</Label>
-                            <Select value={bulkData.wardCode} onValueChange={v => setBulkData(p => ({ ...p, wardCode: v }))}>
-                                <SelectTrigger><SelectValue placeholder="Select Ward..." /></SelectTrigger>
-                                <SelectContent>
-                                    {uniqueWards.map(w => <SelectItem key={w} value={w}>{wardStats[w]?.name || w} ({w})</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="newRate">New Daily Rate (₹)</Label>
-                            <Input id="newRate" type="number" className="font-mono" value={bulkData.newRate} onChange={e => setBulkData(p => ({ ...p, newRate: e.target.value }))} />
-                        </div>
-                        <div className="flex items-start space-x-2 p-3 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/50 rounded-lg mt-2">
-                            <Checkbox id="clearOverrides" checked={bulkData.clearOverrides} onCheckedChange={(c) => setBulkData(p => ({ ...p, clearOverrides: c === true }))} />
-                            <div className="grid gap-1.5 leading-none">
-                                <label htmlFor="clearOverrides" className="text-sm font-medium leading-none text-amber-900 dark:text-amber-200 cursor-pointer">
-                                    Clear all specific Bed Overrides
-                                </label>
-                                <p className="text-xs text-amber-700/80 dark:text-amber-400/80">
-                                    If checked, any bed in this ward with a custom overridden price will have it cleared and inherit the new ward rate.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="ghost" onClick={() => setShowBulkModal(false)} disabled={isSaving || isBulkSuccess}>Cancel</Button>
-                        <motion.button
-                            onClick={handleBulkUpdate}
-                            disabled={!bulkData.wardCode || !bulkData.newRate || isSaving || isBulkSuccess}
-                            className={`flex items-center justify-center gap-2 rounded-md font-medium text-sm px-4 py-2 transition-all ${isBulkSuccess
-                                ? 'bg-green-500 text-white shadow-lg shadow-green-500/30'
-                                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                                }`}
-                            animate={isBulkSuccess ? { scale: [1, 1.05, 1], transition: { duration: 0.3 } } : {}}
-                            whileTap={{ scale: 0.95 }}
-                        >
-                            {isSaving ? 'Applying...' : isBulkSuccess ? <><CheckSquare className="h-4 w-4" /> Applied!</> : 'Apply Update'}
-                        </motion.button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+
         </div>
     );
 };
