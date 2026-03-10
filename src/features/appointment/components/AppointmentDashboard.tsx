@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
   Calendar,
@@ -30,6 +31,7 @@ import {
   Maximize2,
   HelpCircle,
   WifiOff,
+  IndianRupee,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -1431,6 +1433,19 @@ export const AppointmentDashboard = () => {
                                       {t('appointmentDashboard.actionButtons.vitals')}
                                     </Button>
                                   )}
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={appointment.finalStatusCode === 'CANCELLED'}
+                                    className={`h-7 px-2.5 text-xs font-bold transition-all duration-300 ${appointment.finalStatusCode === 'CANCELLED'
+                                      ? 'text-slate-400 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-50 bg-slate-50 dark:bg-slate-900/20'
+                                      : 'text-amber-600 border-amber-200 dark:border-amber-800/50 hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 dark:hover:from-amber-900/20 dark:hover:to-orange-900/20 shadow-sm hover:shadow-md hover:scale-105 hover:border-amber-300 dark:hover:border-amber-700'
+                                      }`}
+                                    onClick={() => handleAddBillClick(appointment)}
+                                  >
+                                    <IndianRupee className="h-3 w-3 mr-1.5 opacity-80" />
+                                    {t('appointmentDashboard.actionButtons.addBill', { defaultValue: 'Bill' })}
+                                  </Button>
                                 </div>
                               </TableCell>
                             )}
@@ -1567,6 +1582,16 @@ export const AppointmentDashboard = () => {
                             </Button>
                           )}
 
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={appointment.finalStatusCode === 'CANCELLED'}
+                            onClick={() => handleAddBillClick(appointment)}
+                            className={`h-9 text-xs font-bold rounded-xl transition-all shadow-sm ${appointment.finalStatusCode === 'CANCELLED' ? 'opacity-50 cursor-not-allowed bg-slate-50 text-slate-400 border-slate-200' : 'border-amber-200 text-amber-700 bg-white hover:bg-amber-50 hover:border-amber-300'}`}
+                          >
+                            <IndianRupee className="h-3.5 w-3.5 mr-1.5 opacity-80" /> Bill
+                          </Button>
+
                           <Button variant="outline" size="sm" onClick={() => handlePrintPrescription(appointment)} className="h-9 text-xs font-bold rounded-xl border-emerald-200 text-emerald-700 bg-white hover:bg-emerald-50 hover:border-emerald-300 transition-all shadow-sm">
                             <FileText className="h-3.5 w-3.5 mr-1.5 opacity-80" /> Rx Print
                           </Button>
@@ -1694,93 +1719,193 @@ export const AppointmentDashboard = () => {
         patientName={labAttachmentModal.patientName}
       />
 
-      {/* Add Bill Modal */}
-      <Dialog open={showAddBillModal} onOpenChange={handleAddBillModalChange}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{t('appointmentDashboard.addBill.title', { defaultValue: 'Add Bill' })}</DialogTitle>
-            <DialogDescription>
-              {t('appointmentDashboard.addBill.description', {
-                defaultValue: 'Review the appointment details and proceed to add billing information.',
-              })}
-            </DialogDescription>
-          </DialogHeader>
-
-          {appointmentForBilling && (
-            <div className="space-y-3 text-sm text-gray-700 dark:text-gray-200">
-              <div className="flex justify-between gap-4">
-                <span className="font-medium">{t('appointmentDashboard.dialog.patient', { defaultValue: 'Patient' })}</span>
-                <span className="text-right">{appointmentForBilling.patientFullName}</span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="font-medium">{t('appointmentDashboard.table.patientId')}</span>
-                <span className="text-right font-mono">{appointmentForBilling.patientId}</span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="font-medium">{t('appointmentDashboard.table.doctorName')}</span>
-                <span className="text-right">{appointmentForBilling.doctorName || t('appointmentDashboard.actionButtons.notApplicable')}</span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="font-medium">{t('appointmentDashboard.table.appointmentTime')}</span>
-                <span className="text-right">{format(new Date(appointmentForBilling.startAt), 'PPpp')}</span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="font-medium">{t('appointmentDashboard.table.tokenNo')}</span>
-                <span className="text-right font-mono">{appointmentForBilling.token?.tokenNumber || t('appointmentDashboard.actionButtons.notApplicable')}</span>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter className="flex gap-2">
-            <Button variant="outline" onClick={() => handleAddBillModalChange(false)}>
-              {t('common.close', { defaultValue: 'Close' })}
-            </Button>
-            <Button onClick={() => handleAddBillModalChange(false)} className="bg-indigo-600 text-white hover:bg-indigo-700">
-              {t('common.continue', { defaultValue: 'Proceed' })}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Cancel Confirmation Dialog */}
-      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t('appointmentDashboard.dialog.cancelTitle')}</DialogTitle>
-            <DialogDescription>
-              {t('appointmentDashboard.dialog.cancelDescription')}
-            </DialogDescription>
-          </DialogHeader>
-          {appointmentToCancel && (
-            <div className="py-4">
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                <div className="space-y-2 text-sm">
-                  <div><span className="font-medium">{t('appointmentDashboard.dialog.patient')}:</span> {appointmentToCancel.patientFullName}</div>
-                  <div><span className="font-medium">{t('appointmentDashboard.dialog.patientId')}:</span> {appointmentToCancel.patientId}</div>
-                  <div><span className="font-medium">{t('appointmentDashboard.dialog.doctor')}:</span> {appointmentToCancel.doctorName}</div>
-                  <div><span className="font-medium">{t('appointmentDashboard.dialog.appointmentId')}:</span> {appointmentToCancel.appointmentId}</div>
+      {/* Add Bill Modal Side Panel */}
+      <AnimatePresence>
+        {showAddBillModal && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => handleAddBillModalChange(false)}
+              className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-50"
+            />
+            {/* Drawer */}
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-y-0 right-0 w-full sm:w-[500px] md:w-[600px] bg-white dark:bg-gray-900 shadow-2xl z-50 flex flex-col overflow-hidden border-l border-gray-200 dark:border-gray-800"
+            >
+              <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-800 bg-indigo-50/50 dark:bg-indigo-900/10">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                      {t('appointmentDashboard.addBill.title', { defaultValue: 'Add Bill' })}
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {t('appointmentDashboard.addBill.description', {
+                        defaultValue: 'Review the appointment details and proceed to add billing information.',
+                      })}
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => handleAddBillModalChange(false)}
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 self-start shrink-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
-            </div>
-          )}
-          <DialogFooter className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handleCancelDialogClose}
-              disabled={isCancelling}
+
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+                {appointmentForBilling && (
+                  <div className="space-y-4 text-sm text-gray-700 dark:text-gray-200">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3 shadow-sm">
+                      <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700/50">
+                        <span className="font-medium text-gray-500">{t('appointmentDashboard.dialog.patient', { defaultValue: 'Patient' })}</span>
+                        <span className="font-semibold text-gray-900 dark:text-gray-100 text-right">{appointmentForBilling.patientFullName}</span>
+                      </div>
+                      <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700/50">
+                        <span className="font-medium text-gray-500">{t('appointmentDashboard.table.patientId')}</span>
+                        <span className="font-mono text-indigo-600 dark:text-indigo-400 text-right">{appointmentForBilling.patientId}</span>
+                      </div>
+                      <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700/50">
+                        <span className="font-medium text-gray-500">{t('appointmentDashboard.table.doctorName')}</span>
+                        <span className="text-right text-gray-900 dark:text-gray-100 font-medium">{appointmentForBilling.doctorName || t('appointmentDashboard.actionButtons.notApplicable')}</span>
+                      </div>
+                      <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700/50">
+                        <span className="font-medium text-gray-500">{t('appointmentDashboard.table.appointmentTime')}</span>
+                        <span className="text-right text-gray-900 dark:text-gray-100">{format(new Date(appointmentForBilling.startAt), 'PPpp')}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-gray-500">{t('appointmentDashboard.table.tokenNo')}</span>
+                        <span className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-sm font-semibold">{appointmentForBilling.token?.tokenNumber || t('appointmentDashboard.actionButtons.notApplicable')}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 sm:p-6 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3 shrink-0">
+                <Button variant="outline" onClick={() => handleAddBillModalChange(false)}>
+                  {t('common.close', { defaultValue: 'Close' })}
+                </Button>
+                <Button onClick={() => handleAddBillModalChange(false)} className="bg-indigo-600 text-white hover:bg-indigo-700">
+                  {t('common.continue', { defaultValue: 'Proceed' })}
+                </Button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Cancel Confirmation Side Panel */}
+      <AnimatePresence>
+        {cancelDialogOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                if (!isCancelling) handleCancelDialogClose();
+              }}
+              className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-50"
+            />
+            {/* Drawer */}
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-y-0 right-0 w-full sm:w-[400px] md:w-[500px] bg-white dark:bg-gray-900 shadow-2xl z-50 flex flex-col overflow-hidden border-l border-gray-200 dark:border-gray-800"
             >
-              {t('appointmentDashboard.dialog.keepAppointment')}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleCancelConfirm}
-              disabled={isCancelling}
-            >
-              {isCancelling ? t('appointmentDashboard.dialog.cancelling') : t('appointmentDashboard.dialog.confirmCancel')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-800 bg-red-50/50 dark:bg-red-900/10 shrink-0">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 flex items-center gap-2">
+                      <Ban className="h-5 w-5" />
+                      {t('appointmentDashboard.dialog.cancelTitle')}
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {t('appointmentDashboard.dialog.cancelDescription')}
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      if (!isCancelling) handleCancelDialogClose();
+                    }}
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 self-start shrink-0"
+                    disabled={isCancelling}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+                {appointmentToCancel && (
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3 shadow-sm text-sm text-gray-700 dark:text-gray-200">
+                    <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700/50">
+                      <span className="font-medium text-gray-500">{t('appointmentDashboard.dialog.patient')}</span>
+                      <span className="font-semibold text-gray-900 dark:text-gray-100 text-right">{appointmentToCancel.patientFullName}</span>
+                    </div>
+                    <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700/50">
+                      <span className="font-medium text-gray-500">{t('appointmentDashboard.dialog.patientId')}</span>
+                      <span className="font-mono text-indigo-600 dark:text-indigo-400 text-right">{appointmentToCancel.patientId}</span>
+                    </div>
+                    <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700/50">
+                      <span className="font-medium text-gray-500">{t('appointmentDashboard.dialog.doctor')}</span>
+                      <span className="text-right text-gray-900 dark:text-gray-100 font-medium">{appointmentToCancel.doctorName}</span>
+                    </div>
+                    <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700/50">
+                      <span className="font-medium text-gray-500">{t('appointmentDashboard.table.appointmentTime')}</span>
+                      <span className="text-right text-gray-900 dark:text-gray-100">{format(new Date(appointmentToCancel.startAt), 'PPpp')}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-gray-500">{t('appointmentDashboard.dialog.appointmentId')}</span>
+                      <span className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-sm font-semibold">{appointmentToCancel.appointmentId}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 sm:p-6 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3 shrink-0">
+                <Button
+                  variant="outline"
+                  onClick={handleCancelDialogClose}
+                  disabled={isCancelling}
+                >
+                  {t('appointmentDashboard.dialog.keepAppointment')}
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleCancelConfirm}
+                  disabled={isCancelling}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  {isCancelling ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {t('appointmentDashboard.dialog.cancelling')}
+                    </>
+                  ) : (
+                    t('appointmentDashboard.dialog.confirmCancel')
+                  )}
+                </Button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
       <AttachmentsSection
         open={labAttachmentModal.open}
         onOpenChange={(open) => setLabAttachmentModal((prev) => ({ ...prev, open }))}

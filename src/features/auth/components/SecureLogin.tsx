@@ -31,26 +31,26 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
   const { invalidateAuth } = useInvalidateQueries();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
-  
+
   // Using useAuthApi for all auth operations
   const loginMutation = useAuthApi.login();
   const sendOTPMutation = useAuthApi.sendOTP();
-  const verifyOTPMutation = useAuthApi.verifyOTP();  
+  const verifyOTPMutation = useAuthApi.verifyOTP();
   const resetPasswordWithUserIdMutation = useAuthApi.resetPasswordWithUserId();
-  
+
   const [loginType, setLoginType] = useState('password');
-  
+
   // Security states
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
   const [lockoutTimeRemaining, setLockoutTimeRemaining] = useState(0);
-  
+
   // Forgot password state
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  
+
   // Password reset success state
   const [showPasswordResetSuccess, setShowPasswordResetSuccess] = useState(false);
-  
+
   // Hospital mapping 404 state
   const [showHospitalMapping404, setShowHospitalMapping404] = useState(false);
   const [showHospitalBrandingModal, setShowHospitalBrandingModal] = useState(false);
@@ -65,7 +65,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
     // Handle Axios errors
     if (error?.response) {
       const { status, data } = error.response;
-      
+
       switch (status) {
         case 400:
           if (data?.message) {
@@ -146,7 +146,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
       setIsLocked(true);
       const remainingTime = Math.ceil((parseInt(lockoutUntil) - Date.now()) / 1000);
       setLockoutTimeRemaining(remainingTime);
-      
+
       if (remainingTime > 0) {
         toast({
           title: "Account Temporarily Locked",
@@ -166,7 +166,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
   // Countdown timer for lockout
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    
+
     if (isLocked && lockoutTimeRemaining > 0) {
       interval = setInterval(() => {
         setLockoutTimeRemaining(prev => {
@@ -296,20 +296,20 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
         password: sanitizedPassword,
         otp: ''
       });
-      
-             if (response.success) {
-         // Clear any existing auth data first to prevent stale data
-         const authStore = useAuthStore.getState();
-         authStore.clearSession();
-         
-         // Update auth store with new user data
-         setToken(response.accessToken!);
-         setUser({
-           id: response.userId || undefined,
-           email: sanitizedUserid,
-           mobile: sanitizedUserid,
-           name: sanitizedUserid,
-         });
+
+      if (response.success) {
+        // Clear any existing auth data first to prevent stale data
+        const authStore = useAuthStore.getState();
+        authStore.clearSession();
+
+        // Update auth store with new user data
+        setToken(response.accessToken!);
+        setUser({
+          id: response.userId || undefined,
+          email: sanitizedUserid,
+          mobile: sanitizedUserid,
+          name: sanitizedUserid,
+        });
 
         if (response.userId && response.accessToken) {
           try {
@@ -349,26 +349,26 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
             : "Welcome back! Complete your hospital information for full access.",
         });
         onLogin();
-       } else {
-         handleFailedLogin();
-       }
+      } else {
+        handleFailedLogin();
+      }
     } catch (error) {
       console.error('Login error:', error);
-      
+
       toast({
         title: "❌ Login Failed",
         description: getErrorMessage(error),
         variant: "destructive",
         duration: 5000,
       });
-      
+
       handleFailedLogin();
     }
   };
 
   const handleSendOTP = async (mobile: string) => {
     const sanitizedMobile = ValidationUtils.sanitizeInput(mobile);
-    
+
     if (!sanitizedMobile) {
       toast({
         title: "Invalid Mobile",
@@ -383,7 +383,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
 
     try {
       const response = await sendOTPMutation.mutateAsync({ mobileNumber: cleanMobile });
-      
+
       if (response.success) {
         toast({
           title: "OTP Sent",
@@ -426,38 +426,40 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
     try {
       // Clean mobile number for API
       const cleanMobile = ValidationUtils.cleanMobileNumber(mobile);
-      // Call OTP checker API to verify OTP (userId should already be stored from OTP generator)
-      const response = await verifyOTPMutation.mutateAsync({
-        mobileNumber: cleanMobile,
+      // Call login API with OTP string to verify & login
+      const response = await loginMutation.mutateAsync({
+        isLoginWithOtp: true,
+        emailOrPhone: cleanMobile,
+        password: '',
         otp: sanitizedOtp
       });
-      
-      
-      
+
+
+
       if (response.success) {
         // Store userId from OTP verification response
         if (response.userId) {
           useAuthStore.getState().setUserId(response.userId);
         }
-        
+
         // Store accessToken from OTP verification response
         if (response.accessToken) {
           useAuthStore.getState().setToken(response.accessToken);
         }
-        
+
         // For OTP login, check if we have userId from the response
         const storedUserId = response.userId || useAuthStore.getState().getUserId();
-        
-                 if (storedUserId) {
-           // Clear any existing auth data first to prevent stale data
-           const authStore = useAuthStore.getState();
-           authStore.clearSession();
-           
-           // For OTP login, we need to set the user as authenticated
-           // Use the actual accessToken from the response instead of placeholder
-           const tokenToUse = response.accessToken || 'otp-login';
-           authStore.setAuthenticatedUser(storedUserId, tokenToUse);
-           
+
+        if (storedUserId) {
+          // Clear any existing auth data first to prevent stale data
+          const authStore = useAuthStore.getState();
+          authStore.clearSession();
+
+          // For OTP login, we need to set the user as authenticated
+          // Use the actual accessToken from the response instead of placeholder
+          const tokenToUse = response.accessToken || 'otp-login';
+          authStore.setAuthenticatedUser(storedUserId, tokenToUse);
+
           if (response.accessToken) {
             try {
               await fetchAndStoreUserPermissions(storedUserId, response.accessToken);
@@ -482,7 +484,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
           } else {
             console.info('Hospital information incomplete; skipping doctor profile fetch.');
           }
-          
+
           toast({
             title: "Login Successful",
             description: hospitalResult === 'found'
@@ -490,12 +492,12 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
               : "Welcome back! Complete your hospital information for full access.",
           });
           onLogin();
-         } else {
-           toast({
-             title: "OTP Verification Failed",
-             description: "User ID not found. Please try again."
-           });
-         }
+        } else {
+          toast({
+            title: "OTP Verification Failed",
+            description: "User ID not found. Please try again."
+          });
+        }
       } else {
         throw new Error(response.message || 'OTP verification failed');
       }
@@ -509,10 +511,10 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
     }
   };
 
-  const handleForgotPasswordSendOTP = async (mobile: string) => {    
-    const sanitizedMobile = ValidationUtils.sanitizeInput(mobile);    
-    
-    if (!sanitizedMobile || !ValidationUtils.isValidMobile(sanitizedMobile)) {      
+  const handleForgotPasswordSendOTP = async (mobile: string) => {
+    const sanitizedMobile = ValidationUtils.sanitizeInput(mobile);
+
+    if (!sanitizedMobile || !ValidationUtils.isValidMobile(sanitizedMobile)) {
       toast({
         title: "Invalid Input",
         description: "Please enter a valid mobile number",
@@ -535,12 +537,12 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
     try {
       // Clean mobile number for API
       const cleanMobile = ValidationUtils.cleanMobileNumber(sanitizedMobile);
-      
+
       // Use sendOTP API for forgot password
-      const response = await sendOTPMutation.mutateAsync({ mobileNumber: cleanMobile });      
-      
+      const response = await sendOTPMutation.mutateAsync({ mobileNumber: cleanMobile });
+
       console.log('Send OTP response:', response);
-      
+
       // Store userId if returned from OTP generator
       if (response.success && response.userId) {
         useAuthStore.getState().setUserId(response.userId);
@@ -549,7 +551,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
         console.warn('OTP send failed or no userId returned');
         console.log('Response structure:', response);
       }
-      
+
       toast({
         title: "OTP Sent!",
         description: "Please check your mobile for the verification code"
@@ -583,22 +585,22 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
         mobileNumber: cleanMobile,
         otp: sanitizedOtp
       });
-      
+
       console.log('OTP verification response:', response);
-      
+
       if (response.success) {
         // Store userId from OTP verification response if available
         if (response.userId) {
           useAuthStore.getState().setUserId(response.userId);
           console.log('UserId stored from OTP verification:', response.userId);
         }
-        
+
         // Store access token if available for password reset
         if (response.accessToken) {
           useAuthStore.getState().setToken(response.accessToken);
           console.log('Access token stored from OTP verification for password reset');
         }
-        
+
         // Check if userId is stored (either from send OTP or verify OTP)
         const storedUserId = useAuthStore.getState().getUserId();
         if (storedUserId) {
@@ -606,7 +608,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
         } else {
           console.warn('No userId found in session. Please try the process again.');
         }
-        
+
         toast({
           title: "OTP Verified",
           description: "Please enter your new password"
@@ -625,15 +627,15 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
   };
 
   const handleForgotPasswordReset = async (mobile: string, otp: string, newPassword: string) => {
-    
+
     const sanitizedMobile = ValidationUtils.sanitizeInput(mobile);
-    const sanitizedNewPassword = ValidationUtils.sanitizeInput(newPassword);   
+    const sanitizedNewPassword = ValidationUtils.sanitizeInput(newPassword);
 
     try {
       // Get stored userId from auth store
       const storedUserId = useAuthStore.getState().getUserId();
       console.log('Attempting password reset with userId:', storedUserId);
-      
+
       if (!storedUserId) {
         console.error('No userId found in auth store for password reset');
         toast({
@@ -654,14 +656,14 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
         email: sanitizedMobile, // Using mobile as email for now
         password: sanitizedNewPassword
       });
-      
+
       if (response.success) {
         ValidationUtils.clearRateLimit(`forgot_otp_${sanitizedMobile}`);
         // Clear userId from session after successful password reset
         const authStore = useAuthStore.getState();
         authStore.clearToken();
         authStore.setUserId('');
-        
+
         // Show success popup instead of immediate redirect
         setShowPasswordResetSuccess(true);
       } else {
@@ -675,7 +677,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
         variant: "destructive",
         duration: 5000,
       });
-      
+
       // Ensure user stays in forgot password flow - DO NOT redirect
       // The user will remain on step 3 (password reset form) to try again
       console.log('Password reset failed - user remains in forgot password flow');
@@ -696,14 +698,14 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
   const handleFailedLogin = () => {
     setFailedAttempts(prev => {
       const newAttempts = prev + 1;
-      
+
       // Lock account after 5 failed attempts for 1 minute
       if (newAttempts >= 5) {
         const lockoutUntil = Date.now() + (1 * 60 * 1000); // 1 minute lockout
         localStorage.setItem('accountLockout', lockoutUntil.toString());
         setIsLocked(true);
         setLockoutTimeRemaining(60); // 60 seconds
-        
+
         toast({
           title: "🔒 Account Locked",
           description: "Too many failed attempts. Account locked for 1 minute.",
@@ -711,7 +713,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
           duration: 10000, // Show for 10 seconds
         });
       }
-      
+
       return newAttempts;
     });
   };
@@ -739,11 +741,11 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
     );
   }
 
-// Full-screen 404 Modal - Blocks all features
+  // Full-screen 404 Modal - Blocks all features
   if (showHospitalMapping404) {
     return (
-      <Dialog open={showHospitalMapping404} onOpenChange={() => {}}>
-        <DialogContent 
+      <Dialog open={showHospitalMapping404} onOpenChange={() => { }}>
+        <DialogContent
           className="max-w-2xl p-0 gap-0 overflow-hidden"
           onPointerDownOutside={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}
@@ -762,7 +764,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
                 </p>
               </div>
             </div>
-            
+
             <div className="bg-white dark:bg-gray-900 rounded-lg p-6 mb-6 border border-red-200 dark:border-red-800">
               <div className="flex items-center gap-3 mb-4">
                 <Building2 className="h-6 w-6 text-primary" />
@@ -783,7 +785,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
                 </li>
               </ul>
             </div>
-            
+
             <div className="flex justify-end gap-3">
               <Button
                 onClick={() => {
@@ -827,21 +829,21 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
     const forgotPasswordPromotionalContent = (
       <div className="text-white max-w-2xl">
         <div className="flex items-center gap-3 mb-6">
-          <img 
-            src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png" 
-            alt="Company Logo" 
-            className="h-12 w-12" 
-            style={{ width: '48px', height: '48px' }} 
+          <img
+            src="/Images/77834bc6-d9bc-41d2-8676-026af7cf79bc.png"
+            alt="Company Logo"
+            className="h-12 w-12"
+            style={{ width: '48px', height: '48px' }}
           />
-                      <h1 className="text-3xl font-bold">{t('auth.resetPasswordTitle')}</h1>
+          <h1 className="text-3xl font-bold">{t('auth.resetPasswordTitle')}</h1>
         </div>
-        
+
         <h2 className="text-xl font-semibold mb-4">
           Your Account Security Matters
         </h2>
-        
+
         <p className="text-lg opacity-90 mb-6 leading-relaxed">
-          We use advanced OTP verification to ensure your account remains secure 
+          We use advanced OTP verification to ensure your account remains secure
           while providing quick password recovery.
         </p>
       </div>
@@ -851,7 +853,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
       <LoginLayout
         title="Reset Password"
         subtitle="Secure password recovery"
-        promotionalContent={forgotPasswordPromotionalContent}        
+        promotionalContent={forgotPasswordPromotionalContent}
         loadingMessage="Resetting password..."
       >
         <ForgotPasswordForm
@@ -891,7 +893,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
           isLocked={isLocked}
         />
       )}
-      
+
       {/* Register Now Button - Compact */}
       <div className="mt-6 pt-4 border-t border-border">
         <div className="text-center space-y-3">
@@ -901,7 +903,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
           <Button
             onClick={onSwitchToRegister}
             className="w-full h-12 bg-gradient-to-r from-primary to-primary/80 text-white font-bold text-base rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
-            disabled={loginMutation.isPending || sendOTPMutation.isPending || verifyOTPMutation.isPending }
+            disabled={loginMutation.isPending || sendOTPMutation.isPending || verifyOTPMutation.isPending}
           >
             Register Now
           </Button>

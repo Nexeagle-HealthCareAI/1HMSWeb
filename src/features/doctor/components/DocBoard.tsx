@@ -2530,10 +2530,9 @@ export const ClinicalDashboard: React.FC = () => {
                             <TooltipTrigger asChild>
                               <TabsTrigger
                                 value="fields"
-                                className={`relative flex flex-col items-center justify-center w-full gap-1 h-auto py-2 rounded-xl transition-all duration-300 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-green-50 dark:hover:bg-green-900/20`}
+                                className={`relative flex items-center justify-center w-full h-10 rounded-xl transition-all duration-300 data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-green-50 dark:hover:bg-green-900/20`}
                               >
                                 <Settings className="h-5 w-5" />
-                                <span className="text-[10px] font-semibold leading-tight text-center w-full px-1 break-words">{t('docBoard.settings.fields')}</span>
                               </TabsTrigger>
                             </TooltipTrigger>
                             <TooltipContent side="right" className="ml-2 font-medium bg-gray-900 text-white border-0">{t('docBoard.settings.fields')}</TooltipContent>
@@ -2541,10 +2540,10 @@ export const ClinicalDashboard: React.FC = () => {
                         ) : (
                           <TabsTrigger
                             value="fields"
-                            className="flex-shrink-0 w-auto md:w-full justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-green-50 dark:hover:bg-green-900/20"
+                            className="flex-shrink-0 w-auto md:w-full flex items-center justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-green-50 dark:hover:bg-green-900/20 overflow-hidden"
                           >
-                            <Settings className="h-4 w-4" />
-                            <span className="font-medium whitespace-nowrap">{isMobile ? 'Fields' : t('docBoard.settings.fields')}</span>
+                            <Settings className="h-4 w-4 flex-shrink-0" />
+                            <span className="font-medium truncate block w-full text-left">{isMobile ? 'Fields' : t('docBoard.settings.fields')}</span>
                           </TabsTrigger>
                         ))}
 
@@ -2553,10 +2552,9 @@ export const ClinicalDashboard: React.FC = () => {
                             <TooltipTrigger asChild>
                               <TabsTrigger
                                 value="personalized"
-                                className={`relative flex flex-col items-center justify-center w-full gap-1 h-auto py-2 rounded-xl transition-all duration-300 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-purple-50 dark:hover:bg-purple-900/20`}
+                                className={`relative flex items-center justify-center w-full h-10 rounded-xl transition-all duration-300 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-purple-50 dark:hover:bg-purple-900/20`}
                               >
                                 <Database className="h-5 w-5" />
-                                <span className="text-[10px] font-semibold leading-tight text-center w-full px-1 break-words">{t('docBoard.settings.personalData')}</span>
                               </TabsTrigger>
                             </TooltipTrigger>
                             <TooltipContent side="right" className="ml-2 font-medium bg-gray-900 text-white border-0">{t('docBoard.settings.personalData')}</TooltipContent>
@@ -2564,10 +2562,10 @@ export const ClinicalDashboard: React.FC = () => {
                         ) : (
                           <TabsTrigger
                             value="personalized"
-                            className="flex-shrink-0 w-auto md:w-full justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                            className="flex-shrink-0 w-auto md:w-full flex items-center justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-purple-50 dark:hover:bg-purple-900/20 overflow-hidden"
                           >
-                            <Database className="h-4 w-4" />
-                            <span className="font-medium whitespace-nowrap">{isMobile ? 'Library' : t('docBoard.settings.personalData')}</span>
+                            <Database className="h-4 w-4 flex-shrink-0" />
+                            <span className="font-medium truncate block w-full text-left">{isMobile ? 'Library' : t('docBoard.settings.personalData')}</span>
                           </TabsTrigger>
                         ))}
 
@@ -2577,10 +2575,9 @@ export const ClinicalDashboard: React.FC = () => {
                               <TabsTrigger
                                 value="layout"
                                 onClick={handleLayoutTabClick}
-                                className={`relative flex flex-col items-center justify-center w-full gap-1 h-auto py-2 rounded-xl transition-all duration-300 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-blue-50 dark:hover:bg-blue-900/20`}
+                                className={`relative flex items-center justify-center w-full h-10 rounded-xl transition-all duration-300 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-blue-50 dark:hover:bg-blue-900/20`}
                               >
                                 <LayoutDashboard className="h-5 w-5" />
-                                <span className="text-[10px] font-semibold leading-tight text-center w-full px-1 break-words">{t('docBoard.settings.layoutLab')}</span>
                               </TabsTrigger>
                             </TooltipTrigger>
                             <TooltipContent side="right" className="ml-2 font-medium bg-gray-900 text-white border-0">{t('docBoard.settings.layoutLab')}</TooltipContent>
@@ -2589,10 +2586,10 @@ export const ClinicalDashboard: React.FC = () => {
                           <TabsTrigger
                             value="layout"
                             onClick={handleLayoutTabClick}
-                            className="flex-shrink-0 w-auto md:w-full justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                            className="flex-shrink-0 w-auto md:w-full flex items-center justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 overflow-hidden"
                           >
-                            <LayoutDashboard className="h-4 w-4" />
-                            <span className="font-medium whitespace-nowrap">{isMobile ? 'Layout' : t('docBoard.settings.layoutLab')}</span>
+                            <LayoutDashboard className="h-4 w-4 flex-shrink-0" />
+                            <span className="font-medium truncate block w-full text-left">{isMobile ? 'Layout' : t('docBoard.settings.layoutLab')}</span>
                           </TabsTrigger>
                         ))}
                       </TabsList>
@@ -2600,21 +2597,15 @@ export const ClinicalDashboard: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex-1 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-                  <TabsContent value="fields" className="m-0">
-                    <div className="p-2 sm:p-4">
-                      <PrescriptionCustomizePanel key="fields-panel" showCloseButton={false} defaultTab="fields" />
-                    </div>
+                <div className="flex-1 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm flex flex-col overflow-hidden">
+                  <TabsContent value="fields" className="m-0 flex-1 flex flex-col">
+                    <PrescriptionCustomizePanel key="fields-panel" showCloseButton={false} defaultTab="fields" />
                   </TabsContent>
-                  <TabsContent value="personalized" className="m-0">
-                    <div className="p-2 sm:p-4">
-                      <PrescriptionCustomizePanel key="personalized-panel" showCloseButton={false} defaultTab="personalized" />
-                    </div>
+                  <TabsContent value="personalized" className="m-0 flex-1 flex flex-col">
+                    <PrescriptionCustomizePanel key="personalized-panel" showCloseButton={false} defaultTab="personalized" />
                   </TabsContent>
-                  <TabsContent value="layout" className="m-0">
-                    <div className="p-2 sm:p-4">
-                      <PrescriptionLayout refreshToken={layoutRefreshToken} />
-                    </div>
+                  <TabsContent value="layout" className="m-0 flex-1 flex flex-col p-2 sm:p-4">
+                    <PrescriptionLayout refreshToken={layoutRefreshToken} />
                   </TabsContent>
                 </div>
               </Tabs>

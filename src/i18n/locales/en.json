@@ -3134,9 +3134,9 @@
       "marking": "Marking as Done..."
     },
     "settings": {
-      "fields": "Prescription Sections",
-      "personalData": "My Clinical Library",
-      "layoutLab": "Layout & Lab"
+      "fields": "Fields",
+      "personalData": "Library",
+      "layoutLab": "Layout"
     },
     "preview": {
       "title": "Prescription Preview",

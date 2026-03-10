@@ -137,7 +137,7 @@ const UserOnboardingRegistration: React.FC = () => {
   // API hooks
   const sendOTPMutation = useAuthApi.sendOTP();
   const verifyOTPMutation = useAuthApi.verifyOTP();
-  const setPasswordMutation = useAuthApi.setPassword(); // Use set-password API
+  const resetPasswordMutation = useAuthApi.resetPasswordWithUserId(); // Use reset-password API per user request
   const { mutateAsync: validateTokenAsync } = useAuthApi.validateToken();
   const { updateInvitedUser } = useUserManagementApi();
   const setAuthToken = useAuthStore((state) => state.setToken);
@@ -471,8 +471,8 @@ const UserOnboardingRegistration: React.FC = () => {
 
     try {
       setIsLoading(true);
-      // Call set-password API with the user data
-      const response = await setPasswordMutation.mutateAsync({
+      // Call reset-password API with the user data
+      const response = await resetPasswordMutation.mutateAsync({
         userId: userId, // Use userId from OTP verification
         email: formData.email || formData.mobileNumber, // Use email or mobile as fallback
         password: formData.password

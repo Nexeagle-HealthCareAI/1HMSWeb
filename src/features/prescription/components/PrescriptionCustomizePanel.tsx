@@ -877,10 +877,10 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
   }, [personalizedData]);
 
   return (
-    <div className="min-h-screen w-full bg-gray-50 dark:bg-gray-950 flex flex-col text-gray-900 dark:text-gray-100">
+    <div className="h-full w-full flex flex-col text-gray-900 dark:text-gray-100">
 
       {/* Direct Content - No Internal Navigation */}
-      <div className="flex-1 flex flex-col h-full max-w-6xl mx-auto w-full px-3 sm:px-4 lg:px-6 py-3 sm:py-4 gap-3 sm:gap-4">
+      <div className={`flex-1 flex flex-col h-full w-full gap-3 sm:gap-4 ${showCloseButton ? 'max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4' : 'p-2 sm:p-4'}`}>
         {customizeTab === 'fields' ? (
           <div className="h-full flex flex-col">
             {/* Enhanced Fields Header - Mobile Responsive */}
@@ -959,14 +959,18 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
           <div className="h-full flex flex-col">
             {/* Sidebar Layout - Mobile Responsive */}
             <div className="flex-1 flex flex-col sm:flex-row gap-3 sm:gap-4 overflow-visible">
-              {/* Enhanced Category Sidebar - Mobile Responsive: Horizontal Scroll on Mobile */}
-              <div className="w-full sm:w-64 flex-shrink-0 border border-gray-200 dark:border-gray-800 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 shadow-sm overflow-hidden">
-                <div className="p-2 sm:p-4">
-                  <div className="flex items-center gap-2 mb-2 sm:mb-4 px-1">
-                    <BookOpen className="h-3 w-3 sm:h-4 sm:w-4 text-gray-600 dark:text-gray-200" />
-                    <h4 className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200">Medical Categories</h4>
+              {/* Enhanced Category Sidebar - Mobile Responsive: Horizontal Scroll on Mobile, Vertical on Desktop */}
+              <div className="w-full sm:w-64 flex-shrink-0 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col overflow-hidden">
+                <div className="p-4 sm:p-5 flex-shrink-0 border-b border-gray-100 dark:border-gray-800/60 bg-gray-50/50 dark:bg-gray-900/50">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <BookOpen className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 tracking-tight">Medical Categories</h4>
                   </div>
-                  <div className="flex flex-row sm:flex-col gap-2 overflow-x-auto sm:overflow-visible pb-2 sm:pb-0 -mx-2 px-2 sm:mx-0 sm:px-0 no-scrollbar">
+                </div>
+                <div className="flex-1 overflow-y-auto overflow-x-auto sm:overflow-x-hidden p-3 no-scrollbar min-h-0 bg-white dark:bg-gray-900">
+                  <div className="flex flex-row sm:flex-col gap-1.5 w-full">
                     {personalizedDataCategories.map((category) => {
                       const IconComponent = category.icon;
                       const isSelected = selectedPersonalizedCategory === category.id;
@@ -975,18 +979,21 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                         <button
                           key={category.id}
                           onClick={() => setSelectedPersonalizedCategory(category.id)}
-                          className={`flex-shrink-0 sm:w-full flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg text-xs sm:text-sm transition-all duration-300 border ${isSelected
-                            ? 'bg-green-100 dark:bg-green-900/30 text-green-900 dark:text-green-200 border-green-300 dark:border-green-600 shadow-sm sm:shadow-lg sm:scale-105'
-                            : 'bg-white/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-transparent hover:scale-102'
+                          className={`group flex-shrink-0 sm:w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative overflow-hidden ${isSelected
+                            ? 'bg-blue-50/80 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
+                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-200'
                             }`}
                         >
-                          <div className={`p-1 rounded-md flex-shrink-0 ${isSelected ? 'bg-green-200 dark:bg-green-800' : 'bg-gray-100 dark:bg-gray-600'}`}>
-                            <IconComponent className={`h-3 w-3 sm:h-4 sm:w-4 ${category.color}`} />
-                          </div>
-                          <span className="whitespace-nowrap sm:whitespace-normal font-medium">{category.label}</span>
                           {isSelected && (
-                            <div className="hidden sm:block ml-auto w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-600 rounded-full animate-pulse"></div>
+                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-3/5 bg-blue-500 rounded-r-full" />
                           )}
+                          <div className={`p-1.5 rounded-md flex-shrink-0 transition-colors ${isSelected 
+                            ? 'bg-blue-100/50 dark:bg-blue-400/20 text-blue-600 dark:text-blue-400' 
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 group-hover:bg-gray-200 dark:group-hover:bg-gray-700'
+                          }`}>
+                            <IconComponent className="h-4 w-4" />
+                          </div>
+                          <span className="whitespace-nowrap sm:whitespace-normal truncate">{category.label}</span>
                         </button>
                       );
                     })}

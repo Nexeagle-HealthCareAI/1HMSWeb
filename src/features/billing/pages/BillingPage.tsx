@@ -1111,7 +1111,6 @@ function LedgerEntryForm({ type, onSubmit, onClose }: { type: EntryType, onSubmi
     // Charge specific
     const [qty, setQty] = useState(1);
     const [rate, setRate] = useState(0);
-    const [taxPercent, setTaxPercent] = useState(0);
     const [discountType, setDiscountType] = useState<DiscountType>('NONE');
     const [discountValue, setDiscountValue] = useState(0);
 
@@ -1127,16 +1126,14 @@ function LedgerEntryForm({ type, onSubmit, onClose }: { type: EntryType, onSubmi
         if (discountType === 'FLAT') disc = discountValue;
         if (discountType === 'PCT') disc = (gross * discountValue) / 100;
 
-        const taxable = Math.max(0, gross - disc);
-        const tax = (taxable * taxPercent) / 100;
-        const net = taxable + tax;
-        return { gross, disc, taxable, tax, net };
-    }, [type, qty, rate, taxPercent, discountType, discountValue, amount]);
+        const net = Math.max(0, gross - disc);
+        return { gross, disc, net };
+    }, [type, qty, rate, discountType, discountValue, amount]);
 
     const handleSave = () => {
         if (type === 'CHARGE') {
             onSubmit({
-                type, date, particular: particular || 'Charge', qty, rate, taxPercent, discountType, discountValue,
+                type, date, particular: particular || 'Charge', qty, rate, discountType, discountValue,
                 netDebit: calculated.net, credit: 0
             });
         } else {
@@ -1161,7 +1158,7 @@ function LedgerEntryForm({ type, onSubmit, onClose }: { type: EntryType, onSubmi
 
             {type === 'CHARGE' ? (
                 <>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                         <div>
                             <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono mb-2 block">QTY</Label>
                             <Input type="number" value={qty} onChange={e => setQty(Number(e.target.value))} className="bg-white border-slate-300 text-slate-800 font-mono text-center focus:border-cyan-500 shadow-sm" />
@@ -1169,10 +1166,6 @@ function LedgerEntryForm({ type, onSubmit, onClose }: { type: EntryType, onSubmi
                         <div>
                             <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono mb-2 block">RATE (₹)</Label>
                             <Input type="number" value={rate} onChange={e => setRate(Number(e.target.value))} className="bg-white border-slate-300 text-slate-800 font-mono text-right focus:border-cyan-500 shadow-sm" />
-                        </div>
-                        <div>
-                            <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono mb-2 block">TAX (%)</Label>
-                            <Input type="number" value={taxPercent} onChange={e => setTaxPercent(Number(e.target.value))} className="bg-white border-slate-300 text-slate-800 font-mono text-center focus:border-cyan-500 shadow-sm" />
                         </div>
                     </div>
 
