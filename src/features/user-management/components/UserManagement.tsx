@@ -183,10 +183,9 @@ export const UserManagement: React.FC = () => {
   };
   const validatePhone = (phone: string) => {
     if (!phone) return t('userManagement.validation.phoneRequired') || 'Phone number is required';
-    // Accepts 10 digit numbers only
-    return /^\d{10}$/.test(phone)
-      ? ''
-      : t('userManagement.validation.phone');
+    const error = ValidationUtils.validateMobileWithError(phone);
+    if (error) return error;
+    return '';
   };
 
   const navigationItems: Array<{

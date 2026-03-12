@@ -69,7 +69,7 @@ export const PersonalInfoInviteForm: React.FC<PersonalInfoInviteFormProps> = ({
 
     const [formData, setFormData] = useState<PersonalInfoFormData>({
         fullName: initialData?.fullName || prefillName,
-        phone: initialData?.phone || prefillPhone,
+        phone: prefillPhone,
         gender: initialData?.gender || '',
         dateOfBirth: initialData?.dateOfBirth || '',
         bloodGroup: initialData?.bloodGroup || '',
