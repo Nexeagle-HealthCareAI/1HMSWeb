@@ -103,7 +103,12 @@
       "जनरल हॉस्पिटल_en": "General Hospital",
       "मल्टीस्पेशलिटी हॉस्पिटल_en": "Multispeciality Hospital",
       "सुपर स्पेशलिटी हॉस्पिटल_en": "Super Speciality Hospital",
-      "अन्य_en": "Other"
+      "अन्य_en": "Other",
+      "hospital": "Hospital",
+      "medicalCenter": "Medical Center",
+      "diagnosticCenter": "Diagnostic Center",
+      "dentalClinic": "Dental Clinic",
+      "eyeClinic": "Eye Clinic"
     },
     "timeZones": {
       "asiaKolkata": "Asia/Kolkata",
@@ -112,7 +117,8 @@
       "americaLosAngeles": "America/Los Angeles",
       "europeLondon": "Europe/London",
       "asiaTokyo": "Asia/Tokyo",
-      "australiaSydney": "Australia/Sydney"
+      "australiaSydney": "Australia/Sydney",
+      "asiaSingapore": "Asia/Singapore (SGT)"
     },
     "validation": {
       "required": "{{field}} is required",
@@ -129,7 +135,10 @@
       "errorTitle": "Error",
       "missingUser": "User information is missing",
       "validationTitle": "Please fix the highlighted fields",
-      "validationDescription": "Some required fields are missing or invalid."
+      "validationDescription": "Some required fields are missing or invalid.",
+      "successTitle": "Success!",
+      "successDescription": "Hospital information saved successfully.",
+      "errorDescription": "Failed to save hospital information. Please try again."
     },
     "completion": {
       "title": "Profile complete!",
@@ -140,6 +149,17 @@
       "contactInfo": "Contact details",
       "statusComplete": "Complete",
       "statusPending": "Pending"
+    },
+    "modal": {
+      "headerTitle": "Complete Hospital Information",
+      "headerSubtitle": "Set up your hospital profile to get started",
+      "steps": {
+        "basicInfo": "Basic Information",
+        "location": "Location",
+        "registration": "Registration"
+      },
+      "nextStep": "Next Step",
+      "saveAndComplete": "Save and Complete"
     }
   },
   "common": {
@@ -1259,18 +1279,7 @@
         "cancelling": "Canceling..."
       }
     },
-    "loading": {
-      "initializingCalendar": "Initializing calendar...",
-      "loadingDoctorProfile": "Loading doctor profile...",
-      "loadingCalendarConfig": "Loading calendar configuration...",
-      "preparingCalendar": "Preparing your calendar...",
-      "loadingProfile": "Loading your profile...",
-      "loadingScheduleConfig": "Loading your schedule settings...",
-      "pleaseWait": "Please wait...",
-      "preparingMessage": "Setting up your personalized calendar experience",
-      "fetchingProfileMessage": "Fetching your doctor profile details",
-      "loadingScheduleMessage": "Loading your schedule settings"
-    },
+    "loading": "Loading...",
     "profile": {
       "doctorProfileRequired": "Doctor profile required",
       "initializingMessage": "Please wait while we prepare your calendar and load all data.",
@@ -1279,7 +1288,34 @@
       "profileLoadError": "Cannot load doctor profile. Please try refreshing the page.",
       "userIdRequired": "User ID required",
       "userIdRequiredMessage": "Cannot get user ID. Please try logging in again."
-    }
+    },
+    "userIdRequired": "User ID Required",
+    "userIdRequiredMessage": "Cannot get user ID. Please log in again.",
+    "initializingCalendar": "Initializing calendar...",
+    "loadingDoctorProfile": "Loading doctor profile...",
+    "loadingCalendarConfig": "Loading calendar configuration...",
+    "doctorProfileRequired": "Doctor Profile Required",
+    "initializingMessage": "Please wait while we prepare your calendar",
+    "loadingProfileMessage": "Please wait while we load your doctor profile",
+    "loadingConfigMessage": "Please wait while we load your work schedule configuration",
+    "profileLoadError": "Cannot load doctor profile. Please try refreshing the page.",
+    "retry": "Retry",
+    "preparingCalendar": "Preparing your calendar...",
+    "loadingProfile": "Loading your profile...",
+    "loadingScheduleConfig": "Loading your schedule settings...",
+    "shiftOverrideCanceled": "Shift override canceled successfully",
+    "timeOffDeleted": "Time off deleted successfully",
+    "error": "Error",
+    "success": "Success",
+    "failedToCancelOverride": "Failed to cancel shift override. Please try again.",
+    "failedToDeleteTimeOff": "Failed to delete time off",
+    "noOverrideData": "No data found for override",
+    "noAppointmentData": "No appointment data found for cancellation",
+    "invalidEventDate": "Invalid event date",
+    "eventMoved": "Event moved",
+    "eventResized": "Event resized",
+    "clickToManage": "Click to manage",
+    "personalized": "Personalized"
   },
   "analytics": {
     "title": "Practice Analytics",
@@ -1375,7 +1411,9 @@
     "validation": "Please check your input and try again",
     "timeout": "Request timeout. Please try again.",
     "genericError": "Something went wrong",
-    "failedToFetchAnalytics": "Failed to fetch analytics data"
+    "failedToFetchAnalytics": "Failed to fetch analytics data",
+    "fileTooLarge": "File is too large",
+    "doctorProfileError": "Error loading doctor profile"
   },
   "success": {
     "saved": "Saved successfully",
@@ -1419,12 +1457,26 @@
     "profile": "Profile",
     "settings": "Settings",
     "billing": "Billing",
-    "ipd": "IPD Center",
+    "ipd": "IPD",
     "collapseSidebar": "Collapse sidebar",
     "expandSidebar": "Expand sidebar",
     "toggleSidebarHint": "to toggle sidebar",
     "restrictedAccessMessage": "Restricted until hospital info complete",
-    "logoutSubtitle": "Sign out safely"
+    "logoutSubtitle": "Sign out safely",
+    "dashboard": "Dashboard",
+    "appointments": "Appointments",
+    "patients": "Patients",
+    "pcpndt": "PCPNDT",
+    "inventory": "Inventory",
+    "dayClose": "Day Close",
+    "revenue": "Revenue",
+    "bloodBank": "Blood Bank",
+    "mrd": "MRD",
+    "ipdAnalytics": "IPD Ops",
+    "mlc": "MLC",
+    "equipment": "Equipment",
+    "triage": "Triage",
+    "visitors": "Visitors"
   },
   "mainLayout": {
     "sidebar": "Sidebar",
@@ -2066,7 +2118,9 @@
     "bookedLegend": "Booked",
     "timeOffLegend": "Time Off",
     "selectedLegend": "Selected",
-    "tapAnySlotTip": "Tap any available slot to book an appointment."
+    "tapAnySlotTip": "Tap any available slot to book an appointment.",
+    "noSlotsAvailable": "No slots available",
+    "booked": "Booked"
   },
   "bookingSuccess": {
     "title": "Appointment Booked!",
@@ -3211,5 +3265,102 @@
     "plan": "Current Plan",
     "usage": "Usage",
     "upgrade": "Upgrade Plan"
+  },
+  "templates": {
+    "standardOPD": "Standard OPD",
+    "emergencySchedule": "Emergency Schedule",
+    "partTimeSchedule": "Part-Time Schedule",
+    "standardOPDDescription": "Standard outpatient department schedule",
+    "emergencyScheduleDescription": "24/7 emergency department schedule",
+    "partTimeScheduleDescription": "Part-time morning schedule"
+  },
+  "weeklyTemplates": {
+    "title": "Weekly Templates",
+    "description": "Configure recurring weekly shifts. Only active templates will be applied.",
+    "labels": {
+      "start": "Start",
+      "end": "End",
+      "slotMinutes": "Slot (minutes)",
+      "maxPatients": "Max Patients"
+    },
+    "placeholders": {
+      "maxPatients": "∞"
+    },
+    "actions": {
+      "reset": "Reset",
+      "save": "Save",
+      "saving": "Saving..."
+    },
+    "errors": {
+      "endAfterStart": "End time must be after start",
+      "slotDurationPositive": "Slot duration must be greater than 0",
+      "maxPatientsPositive": "Max patient count must be greater than 0"
+    },
+    "toast": {
+      "presetAppliedTitle": "Preset Applied",
+      "presetAppliedDescription": "\"{{preset}}\" schedule has been applied. Review and save.",
+      "dayCopiedTitle": "Day Copied",
+      "dayCopiedDescription": "{{day}} schedule copied to all other days.",
+      "validationTitle": "Validation Errors",
+      "validationDescription": "Please fix errors before saving.",
+      "saveSuccessTitle": "Templates Saved",
+      "saveSuccessDescription": "Weekly templates updated successfully.",
+      "saveFailedTitle": "Save Failed",
+      "saveFailedDescription": "Failed to save templates. Please try again."
+    }
+  },
+  "shiftDetails": {
+    "timeOff": "Time Off",
+    "timeOffUnknown": "Date not set",
+    "timeOffSummary": "Upcoming Time Off",
+    "entries": "Entries",
+    "timeOffConflictLabel": "(Time Off)",
+    "untitledShift": "Shift",
+    "customTiming": "Custom Timing",
+    "shiftOverview": "Shift Overview",
+    "timeRanges": "Slots",
+    "slots": "Slots",
+    "patients": "Patients",
+    "noTimeRanges": "No time ranges configured",
+    "defaultShiftNotice": "This is part of your default schedule and cannot be deleted",
+    "loadingShifts": "Loading shifts...",
+    "noShiftsScheduled": "No shifts scheduled"
+  },
+  "appointmentCancelDialog": {
+    "title": "Cancel Appointment",
+    "warningLabel": "Warning:",
+    "warningDescription": "This action cannot be undone. The appointment will be permanently cancelled.",
+    "patientAgeGender": "{{age}} years, {{gender}}",
+    "tokenLabel": "Token: {{token}}",
+    "confirmTitle": "Are you sure you want to cancel this appointment?",
+    "confirmSubtitle": "The patient should be notified about the cancellation.",
+    "actions": {
+      "keep": "Keep Appointment",
+      "confirm": "Yes, Cancel Appointment",
+      "pending": "Cancelling..."
+    },
+    "time": {
+      "am": "AM",
+      "pm": "PM"
+    }
+  },
+  "blockModal": {
+    "title": "Create Block",
+    "fields": {
+      "titleLabel": "Title",
+      "titlePlaceholder": "e.g., Annual leave, Surgery, Meeting",
+      "blockTypeLabel": "Block Type",
+      "blockType": {
+        "personal": "Personal"
+      },
+      "startLabel": "Start Date and Time",
+      "endLabel": "End Date and Time",
+      "durationLabel": "Block Duration:"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "create": "Create Block",
+      "pending": "Creating..."
+    }
   }
 }

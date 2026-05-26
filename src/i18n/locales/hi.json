@@ -60,10 +60,7 @@
       "country": "देश",
       "pincode": "पिन कोड",
       "timeZone": "समय क्षेत्र",
-      "registrationNumber": "पंजीकरण संख्या",
-      "gstin": "GSTIN",
-      "pan": "पैन (PAN)",
-      "nabhNumber": "NABH/NABL नंबर"
+      "registrationNumber": "पंजीकरण संख्या"
     },
     "placeholders": {
       "name": "अस्पताल का नाम दर्ज करें",
@@ -98,20 +95,11 @@
       "multispecialityHospital": "मल्टीस्पेशलिटी हॉस्पिटल",
       "superSpecialityHospital": "सुपर स्पेशलिटी हॉस्पिटल",
       "other": "अन्य",
-      "clinic_en": "Clinic",
-      "polyclinic_en": "Polyclinic",
-      "nursingHome_en": "Nursing Home",
-      "generalHospital_en": "General Hospital",
-      "multispecialityHospital_en": "Multispeciality Hospital",
-      "superSpecialityHospital_en": "Super Speciality Hospital",
-      "other_en": "Other",
-      "Clinic_hi": "क्लिनिक",
-      "Polyclinic_hi": "पॉलीक्लिनिक",
-      "Nursing Home_hi": "नर्सिंग होम",
-      "General Hospital_hi": "जनरल हॉस्पिटल",
-      "Multispeciality Hospital_hi": "मल्टीस्पेशलिटी हॉस्पिटल",
-      "Super Speciality Hospital_hi": "सुपर स्पेशलिटी हॉस्पिटल",
-      "Other_hi": "अन्य"
+      "hospital": "अस्पताल",
+      "medicalCenter": "मेडिकल सेंटर",
+      "diagnosticCenter": "डायग्नोस्टिक सेंटर",
+      "dentalClinic": "डेंटल क्लिनिक",
+      "eyeClinic": "आई क्लिनिक"
     },
     "timeZones": {
       "asiaKolkata": "एशिया/कोलकाता (IST)",
@@ -149,9 +137,7 @@
       "contactRequired": "प्राथमिक संपर्क आवश्यक है",
       "phoneInvalid": "कृपया मान्य फ़ोन नंबर दर्ज करें",
       "websiteInvalid": "कृपया मान्य वेबसाइट URL दर्ज करें",
-      "pincodeInvalid": "कृपया मान्य पिन कोड दर्ज करें (4-10 अंक)",
-      "gstinInvalid": "कृपया मान्य GSTIN दर्ज करें",
-      "panInvalid": "कृपया मान्य PAN दर्ज करें"
+      "pincodeInvalid": "कृपया मान्य पिन कोड दर्ज करें (4-10 अंक)"
     }
   },
   "common": {
@@ -276,47 +262,54 @@
   },
   "appointments": {
     "title": "अपॉइंटमेंट",
-    "newAppointment": "नया अपॉइंटमेंट",
-    "editAppointment": "अपॉइंटमेंट संपादित करें",
+    "scheduleAppointment": "अपॉइंटमेंट शेड्यूल करें",
+    "appointmentList": "अपॉइंटमेंट सूची",
+    "todayAppointments": "आज के अपॉइंटमेंट",
+    "upcomingAppointments": "आगामी अपॉइंटमेंट",
+    "pastAppointments": "पिछले अपॉइंटमेंट",
+    "noAppointments": "कोई अपॉइंटमेंट नहीं",
     "appointmentDetails": "अपॉइंटमेंट विवरण",
-    "patientName": "मरीज़ का नाम",
-    "doctorName": "डॉक्टर का नाम",
-    "date": "तारीख",
-    "time": "समय",
-    "status": "स्थिति",
-    "type": "प्रकार",
-    "notes": "नोट्स",
-    "scheduled": "शेड्यूल किया गया",
-    "confirmed": "पुष्टि की गई",
-    "completed": "पूर्ण",
-    "cancelled": "रद्द किया गया",
-    "noAppointments": "कोई अपॉइंटमेंट नहीं मिला",
-    "bookAppointment": "अपॉइंटमेंट बुक करें",
-    "reschedule": "पुनर्निर्धारण",
-    "cancelAppointment": "अपॉइंटमेंट रद्द करें"
+    "editAppointment": "अपॉइंटमेंट संपादित करें",
+    "cancelAppointment": "अपॉइंटमेंट रद्द करें",
+    "confirmCancel": "क्या आप वाकई इस अपॉइंटमेंट को रद्द करना चाहते हैं?",
+    "appointmentCancelled": "अपॉइंटमेंट सफलतापूर्वक रद्द किया गया",
+    "appointmentUpdated": "अपॉइंटमेंट सफलतापूर्वक अपडेट किया गया",
+    "appointmentCreated": "अपॉइंटमेंट सफलतापूर्वक बनाया गया",
+    "selectPatient": "मरीज़ चुनें",
+    "selectDoctor": "डॉक्टर चुनें",
+    "selectDate": "तिथि चुनें",
+    "selectTime": "समय चुनें",
+    "appointmentType": "अपॉइंटमेंट प्रकार",
+    "consultation": "परामर्श",
+    "followUp": "फॉलो-अप",
+    "emergency": "आपातकालीन",
+    "routine": "नियमित",
+    "notes": "नोट्स"
   },
   "patients": {
     "title": "मरीज़",
-    "newPatient": "नया मरीज़",
-    "editPatient": "मरीज़ संपादित करें",
+    "searchPatients": "मरीज़ खोजें",
+    "addNewPatient": "नया मरीज़ जोड़ें",
+    "patientList": "मरीज़ सूची",
+    "noPatientsFound": "कोई मरीज़ नहीं मिला",
     "patientDetails": "मरीज़ का विवरण",
-    "patientId": "मरीज़ आईडी",
-    "fullName": "पूरा नाम",
-    "dateOfBirth": "जन्म तिथि",
-    "gender": "लिंग",
-    "phone": "फ़ोन",
-    "address": "पता",
     "medicalHistory": "चिकित्सीय इतिहास",
-    "allergies": "एलर्जी",
-    "medications": "दवाएं",
-    "emergencyContact": "आपातकालीन संपर्क",
+    "appointments": "अपॉइंटमेंट",
+    "prescriptions": "पर्चे",
+    "billing": "बिलिंग",
+    "editPatient": "मरीज़ संपादित करें",
+    "deletePatient": "मरीज़ हटाएं",
+    "confirmDelete": "क्या आप वाकई इस मरीज़ को हटाना चाहते हैं?",
+    "patientDeleted": "मरीज़ सफलतापूर्वक हटाया गया",
+    "patientUpdated": "मरीज़ सफलतापूर्वक अपडेट किया गया",
+    "patientCreated": "मरीज़ सफलतापूर्वक बनाया गया",
+    "patientId": "मरीज़ आईडी",
+    "gender": "लिंग",
+    "bloodType": "रक्त समूह",
     "male": "पुरुष",
     "female": "महिला",
     "other": "अन्य",
-    "noPatients": "कोई मरीज़ नहीं मिला",
-    "addPatient": "मरीज़ जोड़ें",
-    "updatePatient": "मरीज़ अपडेट करें",
-    "deletePatient": "मरीज़ हटाएं"
+    "viewDetails": "विवरण देखें"
   },
   "doctors": {
     "title": "डॉक्टर",
@@ -355,15 +348,6 @@
       "previous": "पिछला",
       "next": "अगला",
       "today": "आज"
-    },
-    "days": {
-      "sunday": "रविवार",
-      "monday": "सोमवार",
-      "tuesday": "मंगलवार",
-      "wednesday": "बुधवार",
-      "thursday": "गुरुवार",
-      "friday": "शुक्रवार",
-      "saturday": "शनिवार"
     },
     "time": {
       "allDay": "पूरा दिन",
@@ -435,7 +419,8 @@
     "appointmentReminder": "अपॉइंटमेंट रिमाइंडर",
     "appointmentCancelled": "अपॉइंटमेंट रद्द किया गया",
     "patientUpdate": "मरीज़ की जानकारी अपडेट की गई",
-    "systemUpdate": "सिस्टम अपडेट उपलब्ध है"
+    "systemUpdate": "सिस्टम अपडेट उपलब्ध है",
+    "unreadCount": "{{count}} अनपढ़ी सूचनाएं"
   },
   "errors": {
     "general": "कुछ गलत हो गया",
@@ -445,7 +430,16 @@
     "notFound": "संसाधन नहीं मिला",
     "serverError": "सर्वर त्रुटि। कृपया बाद में पुनः प्रयास करें।",
     "validation": "कृपया अपना इनपुट जांचें और पुनः प्रयास करें",
-    "timeout": "अनुरोध समय समाप्त। कृपया पुनः प्रयास करें।"
+    "timeout": "अनुरोध समय समाप्त। कृपया पुनः प्रयास करें।",
+    "fileUploadError": "फ़ाइल अपलोड करने में त्रुटि",
+    "fileTooLarge": "फ़ाइल बहुत बड़ी है",
+    "invalidFileType": "अमान्य फ़ाइल प्रकार",
+    "requiredField": "यह फ़ील्ड आवश्यक है",
+    "invalidEmail": "अमान्य ईमेल पता",
+    "invalidPhone": "अमान्य फ़ोन नंबर",
+    "invalidDate": "अमान्य तिथि",
+    "invalidTime": "अमान्य समय",
+    "doctorProfileError": "डॉक्टर प्रोफ़ाइल लोड करने में त्रुटि"
   },
   "success": {
     "saved": "सफलतापूर्वक सहेजा गया",
@@ -454,7 +448,9 @@
     "created": "सफलतापूर्वक बनाया गया",
     "sent": "सफलतापूर्वक भेजा गया",
     "uploaded": "सफलतापूर्वक अपलोड किया गया",
-    "downloaded": "सफलतापूर्वक डाउनलोड किया गया"
+    "downloaded": "सफलतापूर्वक डाउनलोड किया गया",
+    "changesSaved": "परिवर्तन सफलतापूर्वक सहेजे गए",
+    "operationCompleted": "कार्य सफलतापूर्वक पूर्ण हुआ"
   },
   "validation": {
     "required": "यह फ़ील्ड आवश्यक है",
@@ -464,7 +460,14 @@
     "passwordMatch": "पासवर्ड मेल होना चाहिए",
     "phoneNumber": "कृपया एक वैध फ़ोन नंबर दर्ज करें",
     "date": "कृपया एक वैध तिथि दर्ज करें",
-    "time": "कृपया एक वैध समय दर्ज करें"
+    "time": "कृपया एक वैध समय दर्ज करें",
+    "passwordStrength": "पासवर्ड कमजोर है",
+    "passwordRequirements": "कम से कम 8 अक्षर, एक बड़ा अक्षर, एक छोटा अक्षर, एक संख्या और एक विशेष अक्षर शामिल करें",
+    "invalidFormat": "अमान्य प्रारूप",
+    "mustBeNumber": "संख्या होना चाहिए",
+    "mustBePositive": "सकारात्मक संख्या होना चाहिए",
+    "mustBeFuture": "भविष्य की तिथि होना चाहिए",
+    "mustBePast": "अतीत की तिथि होना चाहिए"
   },
   "inactivity": {
     "title": "सेशन टाइमआउट चेतावनी",
@@ -472,7 +475,6 @@
     "timeRemaining": "शेष समय: {{time}}",
     "stayConnected": "कनेक्टेड रहें",
     "logoutNow": "अभी लॉगआउट करें",
-    "loggingOut": "लॉगआउट हो रहा है...",
     "autoLogoutMessage": "यदि आप 2 मिनट के भीतर जवाब नहीं देते हैं, तो आपको स्वचालित रूप से लॉगआउट कर दिया जाएगा।"
   },
   "languages": {
@@ -487,18 +489,27 @@
     "appointmentScheduler": "अपॉइंटमेंट",
     "docAI": "एआई सहायक",
     "completeProfile": "प्रोफ़ाइल पूरा करें",
-    "personalProfile": "व्यक्तिगत प्रोफ़ाइल",
     "changeLanguage": "भाषा बदलें",
     "notifications": "सूचनाएं",
     "profile": "प्रोफ़ाइल",
     "settings": "सेटिंग्स",
     "billing": "बिलिंग",
-    "ipd": "IPD सेंटर",
-    "collapseSidebar": "साइडबार संक्षिप्त करें",
-    "expandSidebar": "साइडबार विस्तारित करें",
-    "toggleSidebarHint": "साइडबार टॉगल करें",
-    "restrictedAccessMessage": "हॉस्पिटल जानकारी पूर्ण होने तक सीमित",
-    "logoutSubtitle": "सुरक्षित रूप से साइन आउट करें"
+    "dashboard": "डैशबोर्ड",
+    "appointments": "अपॉइंटमेंट",
+    "patients": "मरीज़",
+    "ipd": "आईपीडी",
+    "pcpndt": "पीसीपीएनडीटी",
+    "inventory": "इन्वेंट्री",
+    "dayClose": "दिन समाप्ति",
+    "revenue": "राजस्व",
+    "bloodBank": "ब्लड बैंक",
+    "mrd": "एमआरडी",
+    "ipdAnalytics": "आईपीडी ऑप्स",
+    "mlc": "एमएलसी",
+    "equipment": "उपकरण",
+    "triage": "ट्रायाज",
+    "visitors": "विज़िटर",
+    "personalProfile": "व्यक्तिगत प्रोफ़ाइल"
   },
   "mainLayout": {
     "sidebar": "साइडबार",
@@ -611,7 +622,7 @@
     "doctorFallback": "डॉक्टर",
     "myCalendar": "मेरा कैलेंडर",
     "calendarView": "कैलेंडर दृश्य",
-    "scheduleAndTimeOff": "अनुसूची और समय बंद",
+    "scheduleAndTimeOff": "अनुसूची और अवकाश",
     "clickForToday": "आज के लिए क्लिक करें",
     "weekOf": "{{date}} का सप्ताह",
     "views": {
@@ -632,440 +643,80 @@
     "blockDetailsDescription": "{{title}}",
     "eventMovedDescription": "{{title}} को {{date}} पर ले जाया गया",
     "eventResizedDescription": "{{title}} का आकार बदला गया",
-    "hospitalContextMissing": "हॉस्पिटल संदर्भ अनुपलब्ध है। कृपया रीफ़्रेश करें और पुनः प्रयास करें।",
+    "hospitalContextMissing": "हॉस्पिटल संदर्भ अनुपलब्ध है। कृपया रीफ़्रेश करके पुनः प्रयास करें।",
     "successDialog": {
-      "continue": "बहुत बढ़िया! जारी रखें"
+      "continue": "ठीक है, जारी रखें"
     },
-    "confirmDeleteOverride": "ओवरराइड शिफ्ट हटाएं?",
-    "confirmDeleteOverrideMessage": "यह ओवरराइड हटा देगा और आपके डिफ़ॉल्ट शेड्यूल पर वापस लौट जाएगा:",
+    "confirmDeleteOverride": "ओवरराइड शिफ्ट हटाएँ?",
+    "confirmDeleteOverrideMessage": "यह ओवरराइड हटाकर डिफ़ॉल्ट शेड्यूल पर लौटाएगा:",
     "deleteOverrideIrreversible": "यह क्रिया पूर्ववत नहीं की जा सकती।",
     "deleting": "हटाया जा रहा है...",
-    "deleteOverride": "ओवरराइड हटाएं",
+    "deleteOverride": "ओवरराइड हटाएँ",
     "cancel": "रद्द करें",
-    "days": {
-      "sunday": "रविवार",
-      "monday": "सोमवार",
-      "tuesday": "मंगलवार",
-      "wednesday": "बुधवार",
-      "thursday": "गुरुवार",
-      "friday": "शुक्रवार",
-      "saturday": "शनिवार"
-    },
-    "shifts": {
-      "morning": "मॉर्निंग",
-      "afternoon": "दोपहर",
-      "evening": "शाम",
-      "night": "रात",
-      "morningOPDHours": "मॉर्निंग ओपीडी घंटे",
-      "afternoonOPDHours": "दोपहर ओपीडी घंटे",
-      "eveningOPDHours": "शाम ओपीडी घंटे",
-      "nightOPDHours": "रात ओपीडी घंटे"
-    },
-    "templates": {
-      "standardOPD": "मानक ओपीडी",
-      "emergencySchedule": "आपातकालीन अनुसूची",
-      "partTimeSchedule": "पार्ट-टाइम अनुसूची",
-      "standardOPDDescription": "मानक बाह्य रोगी विभाग अनुसूची",
-      "emergencyScheduleDescription": "24/7 आपातकालीन विभाग अनुसूची",
-      "partTimeScheduleDescription": "पार्ट-टाइम मॉर्निंग अनुसूची"
-    },
-    "weeklyTemplates": {
-      "title": "साप्ताहिक टेम्पलेट",
-      "description": "पुनरावर्ती साप्ताहिक शिफ्ट कॉन्फ़िगर करें। केवल सक्रिय टेम्पलेट लागू किए जाएंगे।",
-      "labels": {
-        "start": "प्रारंभ",
-        "end": "समाप्ति",
-        "slotMinutes": "स्लॉट (मिनट)",
-        "maxPatients": "अधिकतम मरीज़"
-      },
-      "placeholders": {
-        "maxPatients": "∞"
-      },
-      "actions": {
-        "reset": "रीसेट",
-        "save": "सहेजें",
-        "saving": "सहेजा जा रहा है..."
-      },
-      "errors": {
-        "endAfterStart": "समाप्ति समय प्रारंभ समय के बाद होना चाहिए",
-        "slotDurationPositive": "स्लॉट अवधि 0 से अधिक होनी चाहिए",
-        "maxPatientsPositive": "अधिकतम मरीज़ 0 से अधिक होने चाहिए"
-      },
-      "toast": {
-        "presetAppliedTitle": "प्रीसेट लागू",
-        "presetAppliedDescription": "\"{{preset}}\" अनुसूची लागू कर दी गई है। पुष्टि करने के लिए समीक्षा करें और सहेजें।",
-        "dayCopiedTitle": "दिन कॉपी किया गया",
-        "dayCopiedDescription": "{{day}} अनुसूची अन्य सभी दिनों में कॉपी कर दी गई है।",
-        "validationTitle": "सत्यापन त्रुटियां",
-        "validationDescription": "सहेजने से पहले कृपया त्रुटियां ठीक करें।",
-        "utilSuccessTitle": "टेम्पलेट सहेजे गए",
-        "saveSuccessDescription": "साप्ताहिक टेम्पलेट सफलतापूर्वक अपडेट कर दिए गए हैं।",
-        "saveFailedTitle": "सहेजना विफल",
-        "saveFailedDescription": "टेम्पलेट सहेजने में विफल। कृपया पुनः प्रयास करें।"
-      }
-    },
-    "shiftDetails": {
-      "calendarGuide": "कैलेंडर गाइड",
-      "dataSource": "डेटा स्रोत",
-      "personalizedSchedule": "व्यक्तिगत अनुसूची",
-      "personalizedScheduleActive": "व्यक्तिगत अनुसूची सक्रिय",
-      "usingDefaultSchedule": "डिफ़ॉल्ट अनुसूची का उपयोग",
-      "timeOffStatus": "समय-बंद स्थिति",
-      "active": "सक्रिय",
-      "workingShiftsNotApplicable": "⚠️ कार्य शिफ्ट लागू नहीं",
-      "timeOffOverlapMessage": "समय-बंद अवधि निर्धारित शिफ्ट के साथ ओवरलैप होती है। इस दौरान कोई अपॉइंटमेंट बुक नहीं किया जा सकता।",
-      "timeOffPeriodsActive": "📅 समय-बंद अवधि सक्रिय",
-      "timeOffAffectsShifts": "आपने समय-बंद अवधि निर्धारित की है। नियमित शिफ्ट प्रभावित हो सकती है।",
-      "timeOff": "समय बंद",
-      "timeOffUnknown": "तिथि तय होनी बाकी",
-      "timeOffSummary": "आगामी समय बंद",
-      "entries": "प्रविष्टियां",
-      "timeOffConflictLabel": "(समय-बंद)",
-      "untitledShift": "शिफ्ट",
-      "customTiming": "कस्टम समय",
-      "shiftOverview": "शिफ्ट अवलोकन",
-      "timeRanges": "स्लॉट",
-      "slots": "स्लॉट",
-      "patients": "मरीज़",
-      "noTimeRanges": "कोई समय सीमा कॉन्फ़िगर नहीं",
-      "defaultShiftNotice": "यह आपकी डिफ़ॉल्ट अनुसूची का हिस्सा है और इसे हटाया नहीं जा सकता।",
-      "allDay": "पूरा दिन",
-      "partial": "आंशिक",
-      "activeShifts": "सक्रिय शिफ्ट",
-      "types": "प्रकार",
-      "loadingShifts": "शिफ्ट लोड हो रही है...",
-      "noShiftsScheduled": "कोई शिफ्ट निर्धारित नहीं",
-      "howToUse": "कैसे उपयोग करें",
-      "clickShiftToScroll": "उस समय पर जाने के लिए किसी भी शिफ्ट पर क्लिक करें",
-      "doubleClickToEdit": "शिफ्ट विवरण संपादित करने के लिए डबल-क्लिक करें",
-      "useHeaderButtons": "तिथियों को नेविगेट करने के लिए हेडर बटन का उपयोग करें",
-      "clickTimeOffToCancel": "समय-बंद इवेंट्स को रद्द करने के लिए उन पर क्लिक करें",
-      "quickStats": "त्वरित आँकड़े",
-      "totalEvents": "कुल इवेंट्स:",
-      "shiftTypes": "शिफ्ट प्रकार:",
-      "timeOffPeriods": "समय-बंद अवधि:",
-      "scheduleType": "अनुसूची प्रकार:",
-      "colorGuide": "कलर गाइड",
-      "timeOffPeriodsLabel": "समय-बंद अवधि"
-    },
-    "schedule": {
-      "title": "अनुसूची",
-      "personalizedSchedule": "व्यक्तिगत अनुसूची",
-      "addOverride": "शिफ्ट ओवरराइड जोड़ें",
-      "editShift": "शिफ्ट संपादित करें",
-      "deleteShift": "शिफ्ट हटाएं",
-      "shiftOverride": "शिफ्ट ओवरराइड",
-      "timeOff": "समय बंद",
-      "scheduleTimeOff": "समय बंद निर्धारित करें",
-      "cancelTimeOff": "समय बंद रद्द करें",
-      "blockTime": "समय ब्लॉक करें",
-      "unblockTime": "समय अनब्लॉक करें"
-    },
-    "timeOff": {
-      "title": "समय बंद",
-      "requestTimeOff": "समय बंद का अनुरोध करें",
-      "approveTimeOff": "समय बंद स्वीकृत करें",
-      "rejectTimeOff": "समय बंद अस्वीकृत करें",
-      "timeOffRequested": "समय बंद अनुरोधित",
-      "timeOffApproved": "समय बंद स्वीकृत",
-      "timeOffRejected": "समय बंद अस्वीकृत",
-      "timeOffCancelled": "समय बंद रद्द"
-    },
-    "blocks": {
-      "title": "समय ब्लॉक",
-      "addBlock": "समय ब्लॉक जोड़ें",
-      "editBlock": "समय ब्लॉक संपादित करें",
-      "deleteBlock": "समय ब्लॉक हटाएं",
-      "blockTypes": {
-        "leave": "अवकाश",
-        "personal": "व्यक्तिगत",
-        "surgery": "सर्जरी",
-        "admin": "एडमिन",
-        "meeting": "मीटिंग",
-        "training": "प्रशिक्षण",
-        "emergency": "आपातकाल"
-      }
-    },
-    "appointments": {
-      "title": "अपॉइंटमेंट",
-      "newAppointment": "नया अपॉइंटमेंट",
-      "editAppointment": "अपॉइंटमेंट संपादित करें",
-      "cancelAppointment": "अपॉइंटमेंट रद्द करें",
-      "rescheduleAppointment": "अपॉइंटमेंट दोबारा निर्धारित करें",
-      "appointmentDetails": "अपॉइंटमेंट विवरण",
-      "patientName": "मरीज़ का नाम",
-      "patientPhone": "मरीज़ का फ़ोन",
-      "appointmentTime": "अपॉइंटमेंट समय",
-      "appointmentDate": "अपॉइंटमेंट तिथि",
-      "appointmentStatus": "अपॉइंटमेंट स्थिति",
-      "statuses": {
-        "scheduled": "निर्धारित",
-        "confirmed": "पुष्टि की गई",
-        "inProgress": "प्रगति में",
-        "completed": "पूर्ण",
-        "cancelled": "रद्द",
-        "noShow": "नहीं आए"
-      }
-    },
-    "settings": {
-      "title": "कैलेंडर सेटिंग्स",
-      "workingHours": "कार्य के घंटे",
-      "breakTime": "ब्रेक टाइम",
-      "slotDuration": "स्लॉट अवधि",
-      "maxPatients": "अधिकतम मरीज़",
-      "availability": "उपलब्धता",
-      "notifications": "सूचनाएं",
-      "reminders": "रिमाइंडर",
-      "autoConfirm": "स्वचालित पुष्टि",
-      "requireConfirmation": "पुष्टि की आवश्यकता"
-    },
-    "form": {
-      "title": "शीर्षक",
-      "reason": "कारण",
-      "description": "विवरण",
-      "startDateTime": "प्रारंभ तिथि और समय",
-      "endDateTime": "समाप्ति तिथि और समय",
-      "slotMinutes": "स्लॉट अवधि (मिनट)",
-      "maxPatientsOptional": "अधिकतम मरीज़ (वैकल्पिक)",
-      "reasonOptional": "कारण (वैकल्पिक)",
-      "selectShift": "शिफ्ट चुनें",
-      "selectBlockType": "ब्लॉक प्रकार चुनें",
-      "selectDateRange": "तिथि सीमा चुनें",
-      "enterTitle": "शीर्षक दर्ज करें",
-      "enterReason": "कारण दर्ज करें",
-      "enterDescription": "विवरण दर्ज करें"
-    },
-    "messages": {
-      "loading": "लोड हो रहा है...",
-      "saving": "सहेजा जा रहा है...",
-      "deleting": "हटाया जा रहा है...",
-      "confirmDelete": "क्या आप वाकई इसे हटाना चाहते हैं?",
-      "confirmDeleteMessage": "यह क्रिया पूर्ववत नहीं की जा सकती।",
-      "confirmCancel": "क्या आप वाकई इसे रद्द करना चाहते हैं?",
-      "confirmCancelMessage": "यह निर्धारित आइटम को रद्द कर देगा।",
-      "success": "सफल",
-      "error": "त्रुटि",
-      "info": "जानकारी",
-      "warning": "चेतावनी"
-    },
-    "notifications": {
-      "scheduleSaved": "अनुसूची सफलतापूर्वक सहेजी गई! 🎉",
-      "scheduleSavedMessage": "आपकी व्यक्तिगत अनुसूची सफलतापूर्वक सहेज ली गई है। आपके नए कार्य घंटे अब सक्रिय हैं।",
-      "overridesCreated": "{{count}} शिफ्ट ओवरराइड बनाया गया",
-      "overridesCreated_plural": "{{count}} शिफ्ट ओवरराइड बनाए गए",
-      "changesReflected": "परिवर्तन आपके कैलेंडर में तुरंत दिखाई देंगे",
-      "patientsCanBook": "मरीज़ अब आपके अपडेट किए गए घंटों के दौरान अपॉइंटमेंट बुक कर सकते हैं",
-      "partiallySaved": "आंशिक रूप से सहेजा गया ⚠️",
-      "partiallySavedMessage": "आपके कुछ शिफ्ट ओवरराइड सहेजे गए, लेकिन कुछ सहेजने में विफल रहे।",
-      "overridesSaved": "{{count}} ओवरराइड सफलतापूर्वक सहेजा गया",
-      "overridesSaved_plural": "{{count}} ओवरराइड सफलतापूर्वक सहेजे गए",
-      "overridesFailed": "{{count}} ओवरराइड सहेजने में विफल",
-      "overridesFailed_plural": "{{count}} ओवरराइड सहेजने में विफल",
-      "tryAgainFailed": "आप विफल ओवरराइड को फिर से सहेजने का प्रयास कर सकते हैं",
-      "timeOffScheduled": "समय बंद सफलतापूर्वक निर्धारित! 🏖️",
-      "timeOffScheduledMessage": "आपका समय बंद निर्धारित कर दिया गया है और आप चयनित अवधि के दौरान अनुपलब्ध रहेंगे।",
-      "timeOffBlocked": "आपके कैलेंडर में समय-बंद अवधि ब्लॉक कर दी गई है",
-      "duration": "अवधि",
-      "noAppointmentsBooked": "इस दौरान कोई अपॉइंटमेंट बुक नहीं किया जा सकता",
-      "cancelTimeOffAnytime": "आप इस समय बंद को अपने कैलेंडर से कभी भी रद्द कर सकते हैं",
-      "shiftOverrideCreated": "शिफ्ट ओवरराइड सफलतापूर्वक बनाया गया",
-      "shiftOverrideCanceled": "शिफ्ट ओवरराइड सफलतापूर्वक रद्द किया गया",
-      "timeOffDeleted": "समय बंद सफलतापूर्वक हटाया गया",
-      "appointmentCanceled": "अपॉइंटमेंट सफलतापूर्वक रद्द किया गया"
-    },
-    "errors": {
-      "failedToCreateOverride": "शिफ्ट ओवरराइड बनाने में विफल",
-      "failedToCancelOverride": "शिफ्ट ओवरराइड रद्द करने में विफल। कृपया पुनः प्रयास करें।",
-      "failedToDeleteTimeOff": "समय बंद हटाने में विफल",
-      "failedToScheduleTimeOff": "समय बंद निर्धारित करने में विफल",
-      "failedToCreateOverrides": "शिफ्ट ओवरराइड बनाने में विफल",
-      "failedToOpenModal": "व्यक्तिगत अनुसूची मोडल खोलने में विफल",
-      "noOverrideData": "कोई ओवरराइड डेटा नहीं मिला",
-      "noAppointmentData": "रद्दीकरण के लिए कोई अपॉइंटमेंट डेटा नहीं मिला",
-      "invalidEventDate": "अमान्य इवेंट तिथि",
-      "eventMoved": "इवेंट ले जाया गया",
-      "eventResized": "इवेंट का आकार बदला गया"
-    },
-    "conflicts": {
-      "shiftBlock": "शिफ्ट ब्लॉक",
-      "shiftBlockMessage": "यह समय अवधि एक शिफ्ट द्वारा कवर की गई है। कृपया कोई अलग समय चुनें या मौजूदा शिफ्ट को संशोधित करें।",
-      "timeOffConflict": "समय बंद संघर्ष",
-      "timeOffConflictMessage": "यह समय अवधि पहले से ही ब्लॉक है। कृपया कोई अलग समय चुनें या पहले मौजूदा समय बंद को रद्द करें।",
-      "timeOffConflictToday": "आपके पास आज के लिए पहले से ही समय बंद निर्धारित है। कृपया पहले मौजूदा समय बंद को रद्द करें या कोई अलग तिथि चुनें।"
-    },
-    "actions": {
-      "clickToManage": "प्रबंधित करने के लिए क्लिक करें",
-      "clickToCancel": "रद्द करने के लिए क्लिक करें",
-      "personalized": "व्यक्तिगत",
-      "retry": "पुनः प्रयास",
-      "tryAgain": "फिर से प्रयास करें"
-    },
-    "dateRangeSelection": {
-      "title": "तिथि सीमा चयन",
-      "description": "चयनित तिथि सीमा की समीक्षा करें और पुष्टि करें",
-      "viewTypes": {
-        "month": "महीना",
-        "week": "सप्ताह",
-        "day": "दिन",
-        "block": "कस्टम"
-      },
-      "viewDescriptions": {
-        "month": "पूरे महीने को कवर करने वाली सीमा चयनित है",
-        "week": "सोमवार से रविवार तक की सप्ताह सीमा चयनित है",
-        "day": "चयनित दिन को कवर करने वाली सीमा",
-        "block": "आपकी चुनी हुई तिथियों की कस्टम सीमा",
-        "default": "तिथि सीमा चयनित"
-      },
-      "selectedRange": "चयनित सीमा:",
-      "days": "{{count}} दिन",
-      "days_plural": "{{count}} दिन",
-      "to": "से",
-      "customizeRange": "सीमा अनुकूलित करें:",
-      "startDate": "प्रारंभ तिथि",
-      "endDate": "समाप्ति तिथि",
-      "daysIncluded": "शामिल दिन:",
-      "actions": {
-        "cancel": "रद्द करें",
-        "confirmRange": "सीमा की पुष्टि करें"
-      }
-    },
-    "deleteTimeOffDialog": {
-      "title": "समय बंद हटाएं",
-      "description": "क्या आप वाकई इस समय-बंद प्रविष्टि को हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।",
-      "detailsTitle": "समय बंद विवरण",
-      "detailsSubtitle": "हटाई जाने वाली प्रविष्टि",
-      "labels": {
-        "reason": "कारण:"
-      },
-      "warning": {
-        "title": "महत्वपूर्ण सूचना",
-        "bullet1": "यह समय-बंद प्रविष्टि स्थायी रूप से हट जाएगी",
-        "bullet2": "इस अवधि में अवरुद्ध अपॉइंटमेंट अनब्लॉक हो जाएँगे",
-        "bullet3": "यह क्रिया पूर्ववत नहीं की जा सकती",
-        "bullet4": "आपको प्रभावित अपॉइंटमेंट दोबारा शेड्यूल करने पड़ सकते हैं"
-      },
-      "actions": {
-        "cancel": "रद्द करें",
-        "delete": "समय बंद हटाएं",
-        "deleting": "हटाया जा रहा है..."
-      }
-    },
-    "editShiftModal": {
-      "title": "{{shiftName}} शिफ्ट संपादित करें - {{date}}",
-      "info": "परिवर्तन केवल चयनित तिथि पर इस विशिष्ट शिफ्ट पर लागू होंगे। आपकी डिफ़ॉल्ट साप्ताहिक अनुसूची अपरिवर्तित रहेगी।",
-      "unknownDate": "अज्ञात तिथि",
-      "labels": {
-        "overrideDate": "ओवरराइड तिथि",
-        "startDate": "प्रारंभ तिथि",
-        "endDate": "समाप्ति तिथि",
-        "startTime": "प्रारंभ समय",
-        "endTime": "समाप्ति समय",
-        "slotDuration": "स्लॉट अवधि (मिनट)"
-      },
-      "placeholders": {
-        "slotDuration": "कोई भी पूर्णांक दर्ज करें"
-      },
-      "actions": {
-        "delete": "ओवरराइड हटाएं",
-        "cancel": "रद्द करें",
-        "save": "ओवरराइड सहेजें",
-        "saving": "सहेजा जा रहा है..."
-      }
-    },
-    "legend": {
-      "defaultShifts": "डिफ़ॉल्ट शिफ्ट",
-      "personalizedShifts": "व्यक्तिगत शिफ्ट",
-      "unavailable": "उपलब्ध नहीं",
-      "caption": "नीला: कार्य घंटे, लाल: अनुपलब्ध अवधि"
-    },
-    "personalizedScheduleModal": {
-      "title": "अनुसूची और समय बंद प्रबंधन",
-      "blockTitle": "समय बंद और ब्लॉक प्रबंधन",
-      "tabs": {
-        "schedule": "अनुसूची",
-        "timeOff": "समय बंद"
-      },
-      "scheduleType": "अनुसूची प्रकार",
-      "scheduleModes": {
-        "single": "एक दिन",
-        "recurring": "पुनरावर्ती"
-      },
-      "dates": {
-        "scheduleDate": "अनुसूची तिथि",
-        "startDate": "प्रारंभ तिथि",
-        "endDate": "समाप्ति तिथि",
-        "recurringDays": "पुनरावर्ती दिन"
-      },
-      "shifts": {
-        "selectLabel": "शिफ्ट चुनें",
-        "startTime": "प्रारंभ समय",
-        "endTime": "समाप्ति समय",
-        "duration": "अवधि (मिनट)"
-      },
-      "days": {
-        "short": {
-          "mon": "सोम",
-          "tue": "मंगल",
-          "wed": "बुध",
-          "thu": "गुरु",
-          "fri": "शुक्र",
-          "sat": "शनि",
-          "sun": "रवि"
-        }
-      },
-      "block": {
-        "typeLabel": "समय बंद का प्रकार",
-        "startDateTime": "प्रारंभ तिथि और समय",
-        "endDateTime": "समाप्ति तिथि और समय",
-        "timeOff": "समय बंद",
-        "summaryTitle": "समय बंद सारांश",
-        "summary": {
-          "type": "प्रकार:",
-          "start": "प्रारंभ:",
-          "end": "समाप्ति:",
-          "notSet": "सेट नहीं"
-        }
-      },
-      "blockTypes": {
-        "annualLeave": "वार्षिक अवकाश",
-        "sickLeave": "बीमारी अवकाश",
-        "personal": "व्यक्तिगत",
-        "conference": "सम्मेलन",
-        "training": "प्रशिक्षण",
-        "meeting": "मीटिंग",
-        "emergency": "आपातकाल",
-        "other": "अन्य"
-      },
-      "actions": {
-        "saveSchedule": "अनुसूची सहेजें",
-        "saveTimeOff": "समय बंद सहेजें",
-        "saving": "सहेजा जा रहा है..."
-      },
-      "validation": {
-        "selectShift": {
-          "title": "कम से कम एक शिफ्ट चुनें",
-          "description": "सहेजने से पहले मॉर्निंग, दोपहर या शाम शिफ्ट चालू करें।"
-        },
-        "recurringDays": {
-          "title": "पुनरावर्ती दिन चुनें",
-          "description": "पुनरावर्ती अनुसूची के लिए सप्ताह का कम से कम एक दिन चुनें।"
-        },
-        "dateRange": {
-          "title": "पुनरावर्ती तिथि सीमा ठीक करें",
-          "description": "पुनरावर्ती अनुसूची के लिए समाप्ति तिथि प्रारंभ तिथि के बाद होनी चाहिए।"
-        },
-        "shiftTimes": {
-          "title": "शिफ्ट समय जांचें",
-          "description": "प्रत्येक चयनित शिफ्ट में मान्य प्रारंभ और समाप्ति समय होना चाहिए (समाप्ति समय प्रारंभ के बाद हो)।"
-        },
-        "noPayload": {
-          "title": "अभी सहेजने के लिए कुछ नहीं",
-          "description": "सहेजने से पहले कम से कम एक शिफ्ट चुनें और मान्य समय प्रदान करें।"
-        }
-      }
-    },
+    "userIdRequired": "उपयोगकर्ता आईडी आवश्यक",
+    "userIdRequiredMessage": "उपयोगकर्ता आईडी प्राप्त नहीं कर सकते। कृपया फिर से लॉगिन करने का प्रयास करें।",
+    "initializingCalendar": "कैलेंडर प्रारंभ हो रहा है...",
+    "loadingDoctorProfile": "डॉक्टर प्रोफाइल लोड हो रहा है...",
+    "loadingCalendarConfig": "कैलेंडर कॉन्फ़िगरेशन लोड हो रहा है...",
+    "doctorProfileRequired": "डॉक्टर प्रोफाइल आवश्यक",
+    "initializingMessage": "कृपया प्रतीक्षा करें जबकि हम आपका कैलेंडर तैयार कर रहे हैं और सभी डेटा लोड कर रहे हैं।",
+    "loadingProfileMessage": "कृपया प्रतीक्षा करें जबकि हम आपका डॉक्टर प्रोफाइल लोड कर रहे हैं।",
+    "loadingConfigMessage": "कृपया प्रतीक्षा करें जबकि हम आपकी कार्य अनुसूची कॉन्फ़िगरेशन लोड कर रहे हैं।",
+    "profileLoadError": "डॉक्टर प्रोफाइल लोड नहीं कर सकते। कृपया पेज रिफ्रेश करने का प्रयास करें।",
+    "retry": "पुनः प्रयास करें",
+    "preparingCalendar": "आपका कैलेंडर तैयार हो रहा है...",
+    "loadingProfile": "आपका प्रोफाइल लोड हो रहा है...",
+    "loadingScheduleConfig": "आपकी कार्य अनुसूची सेटिंग्स लोड हो रही हैं...",
+    "loading": "लोड हो रहा है...",
+    "preparingMessage": "आपका व्यक्तिगत कैलेंडर अनुभव सेटअप हो रहा है",
+    "fetchingProfileMessage": "आपके डॉक्टर प्रोफाइल विवरण प्राप्त कर रहे हैं",
+    "loadingScheduleMessage": "आपकी कार्य अनुसूची सेटिंग्स लोड हो रही हैं",
+    "pleaseWait": "कृपया प्रतीक्षा करें...",
+    "addOverride": "शिफ्ट ओवरराइड जोड़ें",
+    "scheduleSaved": "अनुसूची सफलतापूर्वक सहेजी गई! 🎉",
+    "scheduleSavedMessage": "आपकी व्यक्तिगत अनुसूची सफलतापूर्वक सहेजी गई है। आपके नए कार्य घंटे अब सक्रिय हैं।",
+    "overridesCreated": "शिफ्ट ओवरराइड बनाए गए",
+    "changesReflected": "परिवर्तन तुरंत आपके कैलेंडर में दिखाई देंगे",
+    "patientsCanBook": "मरीज़ अब आपके अपडेटेड घंटों के दौरान अपॉइंटमेंट बुक कर सकते हैं",
+    "partiallySaved": "आंशिक रूप से सहेजा गया ⚠️",
+    "partiallySavedMessage": "आपके कुछ शिफ्ट ओवरराइड सहेजे गए, लेकिन कुछ सहेजने में विफल रहे।",
+    "overridesSaved": "ओवरराइड सफलतापूर्वक सहेजे गए",
+    "overridesFailed": "ओवरराइड सहेजने में विफल",
+    "tryAgainFailed": "आप विफल ओवरराइड को फिर से सहेजने का प्रयास कर सकते हैं",
+    "timeOffScheduled": "समय बंद सफलतापूर्वक अनुसूचित किया गया! 🏖️",
+    "timeOffScheduledMessage": "आपका समय बंद अनुसूचित किया गया है और आप चयनित अवधि के दौरान अनुपलब्ध रहेंगे।",
+    "timeOffBlocked": "समय बंद अवधि आपके कैलेंडर में ब्लॉक की गई",
+    "duration": "अवधि",
+    "noAppointmentsBooked": "इस समय के दौरान कोई अपॉइंटमेंट बुक नहीं किया जा सकता",
+    "cancelTimeOffAnytime": "आप कैलेंडर से कभी भी इस समय बंद को रद्द कर सकते हैं",
+    "shiftOverrideCreated": "शिफ्ट ओवरराइड सफलतापूर्वक बनाया गया",
+    "shiftOverrideCanceled": "शिफ्ट ओवरराइड सफलतापूर्वक रद्द किया गया",
+    "timeOffDeleted": "समय बंद सफलतापूर्वक हटाया गया",
+    "appointmentCanceled": "अपॉइंटमेंट सफलतापूर्वक रद्द किया गया",
+    "error": "त्रुटि",
+    "success": "सफलता",
+    "info": "जानकारी",
+    "failedToCreateOverride": "शिफ्ट ओवरराइड बनाने में विफल",
+    "failedToCancelOverride": "शिफ्ट ओवरराइड रद्द करने में विफल। कृपया पुनः प्रयास करें।",
+    "failedToDeleteTimeOff": "समय बंद हटाने में विफल",
+    "failedToScheduleTimeOff": "समय बंद अनुसूचित करने में विफल",
+    "failedToCreateOverrides": "शिफ्ट ओवरराइड बनाने में विफल",
+    "failedToOpenModal": "व्यक्तिगत अनुसूची मॉडल खोलने में विफल",
+    "noOverrideData": "ओवरराइड के लिए कोई डेटा नहीं मिला",
+    "noAppointmentData": "रद्द करने के लिए कोई अपॉइंटमेंट डेटा नहीं मिला",
+    "invalidEventDate": "अमान्य इवेंट तिथि",
+    "eventMoved": "इवेंट स्थानांतरित किया गया",
+    "eventResized": "इवेंट का आकार बदला गया",
+    "shiftBlock": "शिफ्ट ब्लॉक",
+    "shiftBlockMessage": "यह समय अवधि शिफ्ट द्वारा कवर की गई है। कृपया अलग समय चुनें या मौजूदा शिफ्ट को संशोधित करें।",
+    "timeOffConflict": "समय बंद संघर्ष",
+    "timeOffConflictMessage": "यह समय अवधि पहले से ही ब्लॉक है। कृपया अलग समय चुनें या पहले मौजूदा समय बंद को रद्द करें।",
+    "timeOffConflictToday": "आपके पास पहले से ही आज के लिए समय बंद अनुसूचित है। कृपया पहले मौजूदा समय बंद को रद्द करें या अलग तिथि चुनें।",
+    "deleteOverrideNotImplemented": "ओवरराइड हटाने की कार्यक्षमता अभी तक लागू नहीं की गई है",
+    "clickToManage": "प्रबंधन के लिए क्लिक करें",
+    "clickToCancel": "रद्द करने के लिए क्लिक करें",
     "overrideActionDialog": {
-      "title": "ओवरराइड अनुसूची विकल्प",
+      "title": "ओवरराइड शेड्यूल विकल्प",
       "description": "आप इस ओवरराइड अनुसूची के साथ क्या करना चाहेंगे?",
       "detailsTitle": "ओवरराइड विवरण:",
       "labels": {
@@ -1080,47 +731,13 @@
         },
         "cancel": {
           "title": "ओवरराइड रद्द करें",
-          "description": "हटाएं और डिफ़ॉल्ट टेम्पलेट पर वापस लौटें"
+          "description": "हटाएं और डिफ़ॉल्ट टेम्पलेट पर लौटें"
         },
         "close": "बंद करें"
       },
-      "warning": "⚠️ रद्द करने से यह ओवरराइड स्थायी रूप से हट जाएगा और डिफ़ॉल्ट टेम्पलेट अनुसूची लागू हो जाएगी।"
+      "warning": "⚠️ रद्द करने से यह ओवरराइड स्थायी रूप से हट जाएगा और डिफ़ॉल्ट टेम्पलेट शेड्यूल पुनर्स्थापित होगा।"
     },
-    "cancelOverrideDialog": {
-      "title": "शिफ्ट ओवरराइड रद्द करें",
-      "description": "क्या आप वाकई इस शिफ्ट ओवरराइड को रद्द करना चाहते हैं? इससे व्यक्तिगत अनुसूची हट जाएगी और डिफ़ॉल्ट टेम्पलेट लागू हो जाएगा।",
-      "detailsTitle": "ओवरराइड विवरण:",
-      "shiftLabel": "शिफ्ट",
-      "dateLabel": "तिथि",
-      "timeLabel": "समय",
-      "warning": "⚠️ यह क्रिया पूर्ववत नहीं की जा सकती। शिफ्ट डिफ़ॉल्ट टेम्पलेट अनुसूची पर लौट आएगी।",
-      "actions": {
-        "keepOverride": "ओवरराइड रखें",
-        "confirm": "हाँ, ओवरराइड रद्द करें",
-        "cancelling": "रद्द किया जा रहा है..."
-      }
-    },
-    "loading": {
-      "initializingCalendar": "कैलेंडर प्रारंभ किया जा रहा है...",
-      "loadingDoctorProfile": "डॉक्टर प्रोफ़ाइल लोड हो रही है...",
-      "loadingCalendarConfig": "कैलेंडर कॉन्फ़िगरेशन लोड हो रहा है...",
-      "preparingCalendar": "आपका कैलेंडर तैयार किया जा रहा है...",
-      "loadingProfile": "आपकी प्रोफ़ाइल लोड हो रही है...",
-      "loadingScheduleConfig": "आपकी अनुसूची सेटिंग्स लोड हो रही हैं...",
-      "pleaseWait": "कृपया प्रतीक्षा करें...",
-      "preparingMessage": "आपके व्यक्तिगत कैलेंडर अनुभव को सेटअप किया जा रहा है",
-      "fetchingProfileMessage": "आपके डॉक्टर प्रोफ़ाइल विवरण प्राप्त किए जा रहे हैं",
-      "loadingScheduleMessage": "आपकी अनुसूची सेटिंग्स लोड की जा रही हैं"
-    },
-    "profile": {
-      "doctorProfileRequired": "डॉक्टर प्रोफ़ाइल आवश्यक",
-      "initializingMessage": "कृपया तब तक प्रतीक्षा करें जब तक हम आपका कैलेंडर तैयार करते हैं और सारा डेटा लोड करते हैं।",
-      "loadingProfileMessage": "कृपया प्रतीक्षा करें जब तक हम आपकी डॉक्टर प्रोफ़ाइल लोड करते हैं।",
-      "loadingConfigMessage": "कृपया प्रतीक्षा करें जब तक हम आपका कार्य अनुसूची कॉन्फ़िगरेशन लोड करते हैं।",
-      "profileLoadError": "डॉक्टर प्रोफ़ाइल लोड नहीं की जा सकती। कृपया पेज को रीफ़्रेश करने का प्रयास करें।",
-      "userIdRequired": "उपयोगकर्ता आईडी आवश्यक",
-      "userIdRequiredMessage": "उपयोगकर्ता आईडी प्राप्त नहीं की जा सकती। कृपया पुन: लॉगिन करने का प्रयास करें।"
-    }
+    "personalized": "व्यक्तिगत"
   },
   "settingsPage": {
     "title": "सेटिंग्स",
@@ -1199,6 +816,8 @@
     "userManagement": "उपयोगकर्ता प्रबंधन",
     "patientManagement": "मरीज़ प्रबंधन",
     "appointmentOversight": "अपॉइंटमेंट निरीक्षण",
+    "billingManagement": "बिलिंग प्रबंधन",
+    "billingDescription": "सदस्यता और बिलिंग प्रबंधित करें",
     "billingInsurance": "बिलिंग और बीमा",
     "bulkMessaging": "बल्क मैसेजिंग",
     "systemConfiguration": "सिस्टम कॉन्फ़िगरेशन",
@@ -1219,6 +838,8 @@
     "inactiveUsers": "निष्क्रिय उपयोगकर्ता",
     "totalUsers": "कुल उपयोगकर्ता",
     "hospitalRegistrationProgress": "🏥 हॉस्पिटल पंजीकरण प्रगति",
+    "ageDistribution": "आयु वितरण",
+    "totalVisits": "कुल विज़िट",
     "completeHospitalDetails": "सभी एडमिन सुविधाओं को अनलॉक करने के लिए हॉस्पिटल विवरण पूर्ण करें",
     "complete": "पूर्ण",
     "progress": "प्रगति",
@@ -1249,48 +870,7 @@
     "confirmed": "पुष्टि की गई",
     "pending": "लंबित",
     "cancelled": "रद्द किया गया",
-    "vsLastPeriod": "पिछली अवधि की तुलना में",
-    "hospitalAccessFallback": "पूर्ण एक्सेस के लिए हॉस्पिटल जानकारी पूरी करें।",
-    "hospitalIdLabel": "हॉस्पिटल आईडी:",
-    "hospitalIdCopySr": "हॉस्पिटल आईडी कॉपी करें",
-    "regulatoryUpdateRequired": "आवश्यक कार्रवाई: वैधानिक जानकारी अपडेट करें",
-    "regulatoryUpdateDescription": "अपने प्रोफ़ाइल को पूरा करने के लिए कृपया अपने हॉस्पिटल का GSTIN, PAN और NABH/NABL नंबर प्रदान करें।",
-    "updateNow": "अभी अपडेट करें",
-    "cta": {
-      "completeInfo": "जानकारी पूर्ण करें",
-      "updateDetails": "विवरण अपडेट करें"
-    },
-    "checklist": {
-      "basicInfoLabel": "मूल जानकारी",
-      "basicInfoHelper": "कानूनी इकाई और वैधानिक विवरण",
-      "locationLabel": "स्थान और अधिसंरचना",
-      "locationHelper": "भौगोलिक कवरेज, शाखाएं, बेड",
-      "contactLabel": "संपर्क और सहायता",
-      "contactHelper": "हॉटलाइन, एस्केलेशन, बिलिंग संपर्क"
-    },
-    "exec": {
-      "profileScoreLabel": "प्रोफ़ाइल स्कोर",
-      "profileScoreHelperUnlocked": "उन्नत मॉड्यूल अनलॉक",
-      "profileScoreHelperLocked": "उन्नत मॉड्यूल अनलॉक करने के लिए सेटअप पूरा करें",
-      "checklistLabel": "चेकलिस्ट प्रगति",
-      "checklistHelperDone": "सभी कार्य पूर्ण",
-      "checklistHelperPending": "{{count}} कार्य लंबित",
-      "accessLabelUnlocked": "एक्सेस स्थिति",
-      "accessLabelRestricted": "एक्सेस प्रतिबंधित",
-      "accessValueUnlocked": "अनलॉक",
-      "accessValueRestricted": "प्रतिबंधित",
-      "accessHelperUnlocked": "टीम सभी मॉड्यूल प्रबंधित कर सकती है",
-      "accessHelperRestricted": "अनलॉक करने के लिए बेसिक + स्थान विवरण पूर्ण करें"
-    },
-    "quickActions": {
-      "brandingLabel": "हॉस्पिटल जानकारी अपडेट करें",
-      "brandingDescription": "हॉस्पिटल प्रोफ़ाइल, ब्रांडिंग और अनुपालन विवरण पूरा करें।",
-      "systemConfigLabel": "सिस्टम कॉन्फ़िग की समीक्षा करें",
-      "systemConfigDescription": "मॉड्यूल, टेम्पलेट और इंटीग्रेशन का ऑडिट करें।",
-      "userAccessLabel": "रोल और एक्सेस प्रबंधन",
-      "userAccessDescription": "एडमिन, डॉक्टर और फाइनेंस पार्टनर आमंत्रित करें।",
-      "openModule": "मॉड्यूल खोलें"
-    }
+    "vsLastPeriod": "पिछली अवधि की तुलना में"
   },
   "dashboardOverview": {
     "kpi": {
@@ -1382,67 +962,6 @@
       "message": "बहुत अधिक असफल प्रयासों के कारण आपका खाता अस्थायी रूप से लॉक हो गया है।",
       "timeRemaining": "शेष समय: {{time}}",
       "unlockIn": "{{time}} में अनलॉक होगा"
-    }
-  },
-  "mobileVerification": {
-    "titles": {
-      "registration": "मोबाइल सत्यापन",
-      "login": "OTP से लॉगिन",
-      "forgot-password": "पासवर्ड रीसेट"
-    },
-    "subtitles": {
-      "registration": "अपना मोबाइल नंबर दर्ज करें और अपना खाता सत्यापित करें",
-      "login": "लॉगिन OTP प्राप्त करने के लिए अपना मोबाइल नंबर दर्ज करें",
-      "forgot-password": "अपना पासवर्ड रीसेट करने के लिए अपना मोबाइल नंबर दर्ज करें"
-    },
-    "labels": {
-      "mobile": "मोबाइल नंबर",
-      "otp": "OTP दर्ज करें"
-    },
-    "placeholders": {
-      "mobile": "+91-XXX-XXX-XXXX",
-      "otp": "6-अंकों का OTP दर्ज करें"
-    },
-    "progress": {
-      "step": "चरण {{currentStep}} में से {{totalSteps}}",
-      "percent": "{{percent}}%"
-    },
-    "buttons": {
-      "sendOtp": "OTP भेजें",
-      "sendingOtp": "OTP भेजा जा रहा है...",
-      "verifyOtp": "OTP सत्यापित करें",
-      "verifying": "सत्यापित किया जा रहा है...",
-      "resendOtp": "OTP पुनः भेजें",
-      "resendIn": "{{seconds}} सेकंड में OTP पुनः भेजें",
-      "back": "वापस",
-      "next": "आगे"
-    },
-    "errors": {
-      "mobileRequired": "मोबाइल नंबर आवश्यक है",
-      "mobileInvalid": "कृपया वैध मोबाइल नंबर दर्ज करें",
-      "otpInvalid": "कृपया वैध 6-अंकों का OTP दर्ज करें"
-    },
-    "messages": {
-      "changeMobileToResend": "नया OTP भेजने के लिए मोबाइल नंबर बदलें",
-      "autoVerifying": "OTP स्वचालित रूप से सत्यापित किया जा रहा है..."
-    }
-  },
-  "prescriptionPreview": {
-    "title": "प्रिस्क्रिप्शन पूर्वावलोकन",
-    "description": "बनाए गए प्रिस्क्रिप्शन को देखें, डाउनलोड करें, साझा करें या प्रिंट करें।",
-    "previewFrameTitle": "प्रिस्क्रिप्शन पूर्वावलोकन",
-    "actions": {
-      "title": "प्रिस्क्रिप्शन क्रियाएं",
-      "description": "अपना प्रिस्क्रिप्शन PDF डाउनलोड, साझा या प्रिंट करें। ये विकल्प इसे सहेजने, भेजने या उपयोग करने में मदद करते हैं।",
-      "tip": "सुझाव: सर्वोत्तम प्रिंट परिणामों के लिए A4 पेपर और न्यूनतम मार्जिन चुनें।",
-      "download": "PDF डाउनलोड करें",
-      "share": "शेयर करें",
-      "print": "प्रिंट करें"
-    },
-    "share": {
-      "title": "प्रिस्क्रिप्शन",
-      "text": "प्रिस्क्रिप्शन PDF",
-      "unsupported": "इस ब्राउज़र में शेयरिंग समर्थित नहीं है।"
     }
   },
   "passwordResetSuccess": {
@@ -1562,400 +1081,6 @@
     "reactivateAccount": "खाता पुनः सक्रिय करें",
     "accountDeactivated": "खाता निष्क्रिय किया गया",
     "accountReactivated": "खाता पुनः सक्रिय किया गया"
-  },
-  "patients": {
-    "title": "मरीज़",
-    "searchPatients": "मरीज़ खोजें",
-    "addNewPatient": "नया मरीज़ जोड़ें",
-    "patientList": "मरीज़ सूची",
-    "noPatientsFound": "कोई मरीज़ नहीं मिला",
-    "patientDetails": "मरीज़ का विवरण",
-    "medicalHistory": "चिकित्सीय इतिहास",
-    "appointments": "अपॉइंटमेंट",
-    "prescriptions": "पर्चे",
-    "billing": "बिलिंग",
-    "editPatient": "मरीज़ संपादित करें",
-    "deletePatient": "मरीज़ हटाएं",
-    "confirmDelete": "क्या आप वाकई इस मरीज़ को हटाना चाहते हैं?",
-    "patientDeleted": "मरीज़ सफलतापूर्वक हटाया गया",
-    "patientUpdated": "मरीज़ सफलतापूर्वक अपडेट किया गया",
-    "patientCreated": "मरीज़ सफलतापूर्वक बनाया गया",
-    "patientId": "मरीज़ आईडी",
-    "gender": "लिंग",
-    "bloodType": "रक्त समूह",
-    "male": "पुरुष",
-    "female": "महिला",
-    "other": "अन्य",
-    "viewDetails": "विवरण देखें"
-  },
-  "appointments": {
-    "title": "अपॉइंटमेंट",
-    "scheduleAppointment": "अपॉइंटमेंट शेड्यूल करें",
-    "appointmentList": "अपॉइंटमेंट सूची",
-    "todayAppointments": "आज के अपॉइंटमेंट",
-    "upcomingAppointments": "आगामी अपॉइंटमेंट",
-    "pastAppointments": "पिछले अपॉइंटमेंट",
-    "noAppointments": "कोई अपॉइंटमेंट नहीं",
-    "appointmentDetails": "अपॉइंटमेंट विवरण",
-    "editAppointment": "अपॉइंटमेंट संपादित करें",
-    "cancelAppointment": "अपॉइंटमेंट रद्द करें",
-    "confirmCancel": "क्या आप वाकई इस अपॉइंटमेंट को रद्द करना चाहते हैं?",
-    "appointmentCancelled": "अपॉइंटमेंट सफलतापूर्वक रद्द किया गया",
-    "appointmentUpdated": "अपॉइंटमेंट सफलतापूर्वक अपडेट किया गया",
-    "appointmentCreated": "अपॉइंटमेंट सफलतापूर्वक बनाया गया",
-    "selectPatient": "मरीज़ चुनें",
-    "selectDoctor": "डॉक्टर चुनें",
-    "selectDate": "तिथि चुनें",
-    "selectTime": "समय चुनें",
-    "appointmentType": "अपॉइंटमेंट प्रकार",
-    "consultation": "परामर्श",
-    "followUp": "फॉलो-अप",
-    "emergency": "आपातकालीन",
-    "routine": "नियमित",
-    "notes": "नोट्स",
-    "status": {
-      "scheduled": "शेड्यूल किया गया",
-      "confirmed": "पुष्टि की गई",
-      "completed": "पूर्ण",
-      "cancelled": "रद्द किया गया",
-      "noShow": "नहीं आया"
-    }
-  },
-  "calendar": {
-    "title": "कैलेंडर",
-    "today": "आज",
-    "week": "सप्ताह",
-    "month": "महीना",
-    "year": "वर्ष",
-    "agenda": "कार्यसूची",
-    "noEvents": "इस अवधि के लिए कोई कार्यक्रम नहीं",
-    "addEvent": "कार्यक्रम जोड़ें",
-    "editEvent": "कार्यक्रम संपादित करें",
-    "deleteEvent": "कार्यक्रम हटाएं",
-    "view": "दृश्य",
-    "views": {
-      "day": "दिन",
-      "week": "सप्ताह",
-      "month": "महीना",
-      "agenda": "कार्यसूची"
-    },
-    "navigation": {
-      "previous": "पिछला",
-      "next": "अगला",
-      "today": "आज"
-    },
-    "time": {
-      "allDay": "पूरा दिन",
-      "am": "पूर्वाह्न",
-      "pm": "अपराह्न",
-      "time": "समय",
-      "startTime": "प्रारंभ समय",
-      "endTime": "समाप्ति समय",
-      "duration": "अवधि"
-    },
-    "date": {
-      "date": "तिथि",
-      "startDate": "प्रारंभ तिथि",
-      "endDate": "समाप्ति तिथि",
-      "selectDate": "तिथि चुनें",
-      "selectDateRange": "तिथि सीमा चुनें"
-    },
-    "actions": {
-      "add": "जोड़ें",
-      "edit": "संपादित करें",
-      "delete": "हटाएं",
-      "save": "सहेजें",
-      "cancel": "रद्द करें",
-      "confirm": "पुष्टि करें",
-      "close": "बंद करें",
-      "apply": "लागू करें",
-      "clear": "साफ़ करें",
-      "reset": "रीसेट करें"
-    },
-    "status": {
-      "busy": "व्यस्त",
-      "free": "मुक्त",
-      "tentative": "अनिश्चित",
-      "outOfOffice": "कार्यालय से बाहर"
-    },
-    "messages": {
-      "loading": "कैलेंडर लोड हो रहा है...",
-      "noEventsFound": "इस अवधि के लिए कोई कार्यक्रम नहीं मिला",
-      "eventSaved": "कार्यक्रम सफलतापूर्वक सहेजा गया",
-      "eventDeleted": "कार्यक्रम सफलतापूर्वक हटाया गया",
-      "eventUpdated": "कार्यक्रम सफलतापूर्वक अपडेट किया गया",
-      "confirmDelete": "क्या आप वाकई इस कार्यक्रम को हटाना चाहते हैं?",
-      "confirmDeleteMessage": "यह कार्य पूर्ववत नहीं किया जा सकता।"
-    }
-  },
-  "settings": {
-    "title": "सेटिंग्स",
-    "general": "सामान्य",
-    "appearance": "दिखावट",
-    "notifications": "सूचनाएं",
-    "privacy": "गोपनीयता",
-    "security": "सुरक्षा",
-    "language": "भाषा",
-    "timezone": "समय क्षेत्र",
-    "dateFormat": "तिथि प्रारूप",
-    "timeFormat": "समय प्रारूप",
-    "currency": "मुद्रा",
-    "units": "इकाइयां",
-    "saveSettings": "सेटिंग्स सहेजें",
-    "resetSettings": "सेटिंग्स रीसेट करें",
-    "settingsSaved": "सेटिंग्स सफलतापूर्वक सहेजी गईं",
-    "settingsReset": "सेटिंग्स डिफ़ॉल्ट पर रीसेट की गईं"
-  },
-  "notifications": {
-    "title": "सूचनाएं",
-    "markAllRead": "सभी को पढ़ा हुआ चिह्नित करें",
-    "noNotifications": "कोई सूचना नहीं",
-    "newAppointment": "नया अपॉइंटमेंट शेड्यूल किया गया",
-    "appointmentReminder": "अपॉइंटमेंट रिमाइंडर",
-    "appointmentCancelled": "अपॉइंटमेंट रद्द किया गया",
-    "patientUpdate": "मरीज़ की जानकारी अपडेट की गई",
-    "systemUpdate": "सिस्टम अपडेट उपलब्ध है",
-    "unreadCount": "{{count}} अनपढ़ी सूचनाएं"
-  },
-  "errors": {
-    "general": "कुछ गलत हो गया",
-    "network": "नेटवर्क त्रुटि। कृपया अपना कनेक्शन जांचें।",
-    "unauthorized": "आपको यह कार्य करने की अनुमति नहीं है",
-    "forbidden": "पहुंच अस्वीकृत",
-    "notFound": "संसाधन नहीं मिला",
-    "serverError": "सर्वर त्रुटि। कृपया बाद में पुनः प्रयास करें।",
-    "validation": "कृपया अपना इनपुट जांचें और पुनः प्रयास करें",
-    "timeout": "अनुरोध समय समाप्त। कृपया पुनः प्रयास करें।",
-    "fileUploadError": "फ़ाइल अपलोड करने में त्रुटि",
-    "fileTooLarge": "फ़ाइल बहुत बड़ी है",
-    "invalidFileType": "अमान्य फ़ाइल प्रकार",
-    "requiredField": "यह फ़ील्ड आवश्यक है",
-    "invalidEmail": "अमान्य ईमेल पता",
-    "invalidPhone": "अमान्य फ़ोन नंबर",
-    "invalidDate": "अमान्य तिथि",
-    "invalidTime": "अमान्य समय",
-    "doctorProfileError": "डॉक्टर प्रोफ़ाइल लोड करने में त्रुटि",
-    "genericError": "कुछ गलत हो गया",
-    "failedToFetchAnalytics": "एनालिटिक्स डेटा लाने में विफल"
-  },
-  "success": {
-    "saved": "सफलतापूर्वक सहेजा गया",
-    "updated": "सफलतापूर्वक अपडेट किया गया",
-    "deleted": "सफलतापूर्वक हटाया गया",
-    "created": "सफलतापूर्वक बनाया गया",
-    "sent": "सफलतापूर्वक भेजा गया",
-    "uploaded": "सफलतापूर्वक अपलोड किया गया",
-    "downloaded": "सफलतापूर्वक डाउनलोड किया गया",
-    "changesSaved": "परिवर्तन सफलतापूर्वक सहेजे गए",
-    "operationCompleted": "कार्य सफलतापूर्वक पूर्ण हुआ"
-  },
-  "validation": {
-    "required": "यह फ़ील्ड आवश्यक है",
-    "email": "कृपया एक वैध ईमेल पता दर्ज करें",
-    "minLength": "न्यूनतम {{min}} अक्षर आवश्यक हैं",
-    "maxLength": "अधिकतम {{max}} अक्षर अनुमत हैं",
-    "passwordMatch": "पासवर्ड मेल होना चाहिए",
-    "phoneNumber": "कृपया एक वैध फ़ोन नंबर दर्ज करें",
-    "date": "कृपया एक वैध तिथि दर्ज करें",
-    "time": "कृपया एक वैध समय दर्ज करें",
-    "passwordStrength": "पासवर्ड कमजोर है",
-    "passwordRequirements": "कम से कम 8 अक्षर, एक बड़ा अक्षर, एक छोटा अक्षर, एक संख्या और एक विशेष अक्षर शामिल करें",
-    "invalidFormat": "अमान्य प्रारूप",
-    "mustBeNumber": "संख्या होना चाहिए",
-    "mustBePositive": "सकारात्मक संख्या होना चाहिए",
-    "mustBeFuture": "भविष्य की तिथि होना चाहिए",
-    "mustBePast": "अतीत की तिथि होना चाहिए"
-  },
-  "inactivity": {
-    "title": "सेशन टाइमआउट चेतावनी",
-    "message": "आप 15 मिनट से निष्क्रिय हैं। आपका सेशन जल्द ही समाप्त हो जाएगा।",
-    "timeRemaining": "शेष समय: {{time}}",
-    "stayConnected": "कनेक्टेड रहें",
-    "logoutNow": "अभी लॉगआउट करें",
-    "autoLogoutMessage": "यदि आप 2 मिनट के भीतर जवाब नहीं देते हैं, तो आपको स्वचालित रूप से लॉगआउट कर दिया जाएगा।"
-  },
-  "languages": {
-    "en": "English",
-    "hi": "हिंदी"
-  },
-  "header": {
-    "welcomeBack": "वापसी पर स्वागत है",
-    "clinicalDashboard": "डॉक बोर्ड",
-    "adminPanel": "एडमिन",
-    "doctorCalendar": "मेरा कैलेंडर",
-    "appointmentScheduler": "अपॉइंटमेंट",
-    "docAI": "एआई सहायक",
-    "completeProfile": "प्रोफ़ाइल पूरा करें",
-    "changeLanguage": "भाषा बदलें",
-    "notifications": "सूचनाएं",
-    "profile": "प्रोफ़ाइल",
-    "settings": "सेटिंग्स",
-    "billing": "बिलिंग"
-  },
-  "mainLayout": {
-    "sidebar": "साइडबार",
-    "navigation": "नेविगेशन",
-    "quickActions": "त्वरित कार्य",
-    "recentActivity": "हाल की गतिविधि",
-    "systemStatus": "सिस्टम स्थिति"
-  },
-  "languageSelector": {
-    "selectLanguage": "भाषा चुनें",
-    "chooseLanguage": "अपनी पसंदीदा भाषा चुनें",
-    "current": "वर्तमान",
-    "changesApplyImmediately": "परिवर्तन तुरंत लागू होते हैं",
-    "rtlLayoutActive": "RTL लेआउट सक्रिय है",
-    "internationalEnglish": "अंतर्राष्ट्रीय अंग्रेज़ी",
-    "hindiIndia": "हिंदी (भारत)",
-    "languages": {
-      "en": {
-        "name": "अंग्रेज़ी",
-        "nativeName": "English",
-        "description": "अंतर्राष्ट्रीय अंग्रेज़ी",
-        "region": "वैश्विक"
-      },
-      "hi": {
-        "name": "हिंदी",
-        "nativeName": "हिंदी",
-        "description": "हिंदी (भारत)",
-        "region": "भारत"
-      }
-    }
-  },
-  "settingsPage": {
-    "title": "सेटिंग्स",
-    "subtitle": "अपने अनुभव को अनुकूलित करें और अपनी खाता प्राथमिकताएं प्रबंधित करें",
-    "allSystemsOperational": "सभी सिस्टम संचालन में",
-    "theme": "थीम",
-    "notifications": "सूचनाएं",
-    "security": "सुरक्षा",
-    "data": "डेटा",
-    "languageSettings": "भाषा सेटिंग्स",
-    "languageDescription": "अपनी पसंदीदा भाषा चुनें। परिवर्तन तुरंत लागू होते हैं।",
-    "applicationLanguage": "एप्लिकेशन भाषा",
-    "languageFeatures": "भाषा सुविधाएं",
-    "immediateApplication": "तत्काल अनुप्रयोग",
-    "rtlSupport": "RTL समर्थन",
-    "persistentSettings": "स्थायी सेटिंग्स",
-    "completeTranslation": "पूर्ण अनुवाद"
-  },
-  "doctorDashboard": {
-    "title": "डॉक्टर डैशबोर्ड",
-    "patientFlow": "मरीज़ प्रबंधन",
-    "currentPatients": "वर्तमान मरीज़",
-    "pastPatients": "पिछले मरीज़",
-    "futurePatients": "भविष्य के मरीज़",
-    "patientId": "मरीज़ आईडी",
-    "patientName": "मरीज़ का नाम",
-    "doctorName": "डॉक्टर का नाम",
-    "appointmentTime": "अपॉइंटमेंट समय",
-    "appointmentDate": "अपॉइंटमेंट तिथि",
-    "tokenNo": "टोकन नंबर",
-    "vitalsUpdated": "जीवन संकेत अपडेट किए गए",
-    "status": "स्थिति",
-    "phone": "फ़ोन",
-    "vitalsRequired": "जीवन संकेत आवश्यक",
-    "readyConsultation": "परामर्श के लिए तैयार",
-    "completed": "पूर्ण",
-    "viewDetails": "विवरण देखें",
-    "updateVitals": "जीवन संकेत अपडेट करें",
-    "clinicalNotes": "क्लिनिकल नोट्स",
-    "bloodPressure": "रक्तचाप",
-    "temperature": "तापमान",
-    "pulse": "नाड़ी",
-    "weight": "वजन",
-    "underConsultation": "परामर्श जारी",
-    "labTestRequired": "लैब टेस्ट आवश्यक",
-    "awaitingReconsultation": "पुनः परामर्श की प्रतीक्षा",
-    "searchPatients": "मरीज़ खोजें",
-    "filterByStatus": "स्थिति के अनुसार फ़िल्टर करें",
-    "filterByDate": "तिथि के अनुसार फ़िल्टर करें",
-    "allStatuses": "सभी स्थितियां",
-    "allDates": "सभी तिथियां",
-    "noPatientsFound": "कोई मरीज़ नहीं मिला",
-    "totalPatients": "कुल मरीज़",
-    "todayAppointments": "आज के अपॉइंटमेंट",
-    "pendingVitals": "लंबित जीवन संकेत",
-    "consultationsToday": "आज के परामर्श",
-    "patientDetails": "मरीज़ का विवरण",
-    "symptoms": "लक्षण",
-    "diagnosis": "निदान",
-    "prescription": "प्रिस्क्रिप्शन",
-    "notes": "टिप्पणियां",
-    "saveChanges": "परिवर्तन सहेजें",
-    "cancel": "रद्द करें",
-    "editPatient": "मरीज़ संपादित करें",
-    "age": "आयु",
-    "gender": "लिंग",
-    "address": "पता",
-    "lastVisit": "अंतिम भ्रमण",
-    "nextAppointment": "अगला अपॉइंटमेंट"
-  },
-  "admin": {
-    "title": "एडमिन पैनल",
-    "dashboard": "एडमिन डैशबोर्ड",
-    "adminBoard": "एडमिन बोर्ड",
-    "hospitalManagementOverview": "हॉस्पिटल प्रबंधन अवलोकन",
-    "userManagement": "उपयोगकर्ता प्रबंधन",
-    "patientManagement": "मरीज़ प्रबंधन",
-    "appointmentOversight": "अपॉइंटमेंट निरीक्षण",
-    "billingManagement": "बिलिंग प्रबंधन",
-    "billingDescription": "सदस्यता और बिलिंग प्रबंधित करें",
-    "billingInsurance": "बिलिंग और बीमा",
-    "bulkMessaging": "बल्क मैसेजिंग",
-    "systemConfiguration": "सिस्टम कॉन्फ़िगरेशन",
-    "auditSecurity": "ऑडिट और सुरक्षा",
-    "systemSettings": "सिस्टम सेटिंग्स",
-    "reports": "रिपोर्ट",
-    "analytics": "विश्लेषण",
-    "backup": "बैकअप",
-    "logs": "लॉग",
-    "users": "उपयोगकर्ता",
-    "roles": "भूमिकाएं",
-    "permissions": "अनुमतियां",
-    "addUser": "उपयोगकर्ता जोड़ें",
-    "editUser": "उपयोगकर्ता संपादित करें",
-    "deleteUser": "उपयोगकर्ता हटाएं",
-    "userDetails": "उपयोगकर्ता विवरण",
-    "activeUsers": "सक्रिय उपयोगकर्ता",
-    "inactiveUsers": "निष्क्रिय उपयोगकर्ता",
-    "totalUsers": "कुल उपयोगकर्ता",
-    "hospitalRegistrationProgress": "🏥 हॉस्पिटल पंजीकरण प्रगति",
-    "ageDistribution": "आयु वितरण",
-    "adminBoard": "एडमिन बोर्ड",
-    "dashboard": "डैशबोर्ड",
-    "totalVisits": "कुल विज़िट",
-    "completeHospitalDetails": "सभी एडमिन सुविधाओं को अनलॉक करने के लिए हॉस्पिटल विवरण पूर्ण करें",
-    "complete": "पूर्ण",
-    "progress": "प्रगति",
-    "adminFeaturesLocked": "एडमिन सुविधाएं लॉक - आवश्यक फ़ील्ड पूर्ण करें",
-    "basicFeaturesUnlocked": "बुनियादी सुविधाएं अनलॉक - पूर्ण पहुंच के लिए पूर्ण करें",
-    "completeHospitalInfo": "हॉस्पिटल जानकारी पूर्ण करें",
-    "updateHospitalDetails": "हॉस्पिटल विवरण अपडेट करें",
-    "setupComplete": "सेटअप पूर्ण",
-    "welcomeToNexEagle": "NexEagle HMS में आपका स्वागत है! आपका हॉस्पिटल प्रबंधन सिस्टम उपयोग के लिए तैयार है।",
-    "getStarted": "शुरू करें",
-    "hospitalSetup100": "हॉस्पिटल सेटअप 100%",
-    "today": "आज",
-    "thisWeek": "इस सप्ताह",
-    "thisMonth": "इस महीने",
-    "thisYear": "इस वर्ष",
-    "export": "निर्यात",
-    "overviewAnalytics": "अवलोकन और विश्लेषण",
-    "usersRolesPermissions": "उपयोगकर्ता, भूमिकाएं और अनुमतियां",
-    "patientRecordsData": "मरीज़ रिकॉर्ड और डेटा",
-    "appointmentManagement": "अपॉइंटमेंट प्रबंधन",
-    "financialManagement": "वित्तीय प्रबंधन",
-    "communicationManagement": "संचार प्रबंधन",
-    "hospitalSettings": "हॉस्पिटल सेटिंग्स",
-    "logsSecurity": "लॉग और सुरक्षा",
-    "featureLocked": "सुविधा लॉक",
-    "completeHospitalRegistration": "इस सुविधा को अनलॉक करने के लिए हॉस्पिटल पंजीकरण पूर्ण करें।",
-    "locked": "लॉक",
-    "confirmed": "पुष्टि की गई",
-    "pending": "लंबित",
-    "cancelled": "रद्द किया गया",
-    "vsLastPeriod": "पिछली अवधि की तुलना में"
   },
   "userManagement": {
     "title": "उपयोगकर्ता प्रबंधन",
@@ -2153,12 +1278,45 @@
     "liveUpdates": "लाइव अपडेट",
     "totalToday": "आज कुल",
     "priorityActions": "प्राथमिकता कार्य:",
-    "searchAppointments": "अपॉइंटमेंट खोजें",
-    "filterByStatus": "स्थिति के अनुसार फ़िल्टर करें",
-    "filterByDoctor": "डॉक्टर के अनुसार फ़िल्टर करें",
-    "allStatuses": "सभी स्थितियां",
+    "tabs": {
+      "current": "वर्तमान अपॉइंटमेंट",
+      "past": "पिछले अपॉइंटमेंट",
+      "future": "भविष्य के अपॉइंटमेंट"
+    },
+    "searchPlaceholder": "मरीज़ आईडी या नाम से खोजें",
+    "doctorLabel": "डॉक्टर",
     "allDoctors": "सभी डॉक्टर",
-    "noAppointmentsFound": "कोई अपॉइंटमेंट नहीं मिला",
+    "dateRange": {
+      "label": "तिथि सीमा",
+      "start": "आरंभ तिथि",
+      "end": "समाप्ति तिथि",
+      "to": "से"
+    },
+    "statusFilters": {
+      "all": "सभी",
+      "vitalsRequired": "वाइटल्स आवश्यक",
+      "ready": "तैयार",
+      "underConsult": "परामर्श जारी",
+      "labRequired": "लैब आवश्यक",
+      "awaitingReconsult": "पुनः परामर्श प्रतीक्षित",
+      "completed": "पूर्ण",
+      "cancelled": "रद्द"
+    },
+    "statusLabels": {
+      "vitalsRequired": "वाइटल्स",
+      "ready": "तैयार",
+      "underConsult": "परामर्श",
+      "labRequired": "लैब",
+      "awaitingReconsult": "पुनः परामर्श",
+      "completed": "पूर्ण",
+      "scheduled": "शेड्यूल",
+      "cancelled": "रद्द"
+    },
+    "refreshNow": "अभी ताज़ा करें",
+    "loadingAppointments": "अपॉइंटमेंट लोड हो रहे हैं...",
+    "errorTitle": "अपॉइंटमेंट लोड करने में त्रुटि",
+    "errorDescription": "अपॉइंटमेंट लोड करने में विफल",
+    "tryAgain": "पुनः प्रयास करें",
     "kpis": {
       "total": "कुल",
       "vitals": "वाइटल्स",
@@ -2198,7 +1356,52 @@
       "status": "स्थिति",
       "phone": "फ़ोन",
       "actions": "कार्य",
-      "case": "केस"
+      "lastAppointmentDate": "अंतिम अपॉइंटमेंट तिथि",
+      "lastCompletedStatus": "अंतिम पूर्ण स्थिति",
+      "currentStatus": "वर्तमान स्थिति",
+      "printPrescription": "प्रिस्क्रिप्शन प्रिंट करें",
+      "printToken": "टोकन प्रिंट",
+      "nextFollowUpDate": "अगली फॉलो-अप तिथि",
+      "isCompleted": "पूर्ण है"
+    },
+    "emptyStates": {
+      "current": "कोई वर्तमान अपॉइंटमेंट नहीं मिला",
+      "past": "कोई पिछले अपॉइंटमेंट नहीं मिले",
+      "future": "कोई भविष्य के अपॉइंटमेंट नहीं मिले",
+      "adjustFilters": "अपनी खोज या डॉक्टर फ़िल्टर समायोजित करें"
+    },
+    "quickTip": {
+      "title": "त्वरित सुझाव:",
+      "description": "किसी भी मरीज़ आईडी पर क्लिक करें और पूरा प्रोफ़ाइल व मेडिकल इतिहास देखें"
+    },
+    "tooltip": {
+      "viewProfile": "प्रोफ़ाइल देखने के लिए क्लिक करें"
+    },
+    "actionButtons": {
+      "vitals": "वाइटल्स",
+      "preparing": "तैयार किया जा रहा है",
+      "notApplicable": "प्रासंगिक नहीं",
+      "completed": "पूर्ण"
+    },
+    "toast": {
+      "missingHospitalTitle": "हॉस्पिटल संदर्भ नहीं",
+      "missingHospitalDescription": "प्रिस्क्रिप्शन बनाने से पहले कृपया हॉस्पिटल चुनें।",
+      "missingAppointmentDataTitle": "अपूर्ण अपॉइंटमेंट डेटा",
+      "missingAppointmentDataDescription": "इस अपॉइंटमेंट में प्रिस्क्रिप्शन के लिए आवश्यक पहचानकर्ता नहीं हैं।"
+    },
+    "dialog": {
+      "cancelTitle": "अपॉइंटमेंट रद्द करें",
+      "cancelDescription": "क्या आप वाकई इस अपॉइंटमेंट को रद्द करना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।",
+      "patient": "मरीज़",
+      "patientId": "मरीज़ आईडी",
+      "doctor": "डॉक्टर",
+      "appointmentId": "अपॉइंटमेंट आईडी",
+      "keepAppointment": "अपॉइंटमेंट रखें",
+      "confirmCancel": "अपॉइंटमेंट रद्द करें",
+      "cancelling": "रद्द किया जा रहा है..."
+    },
+    "pagination": {
+      "showing": "कुल {{total}} में से {{from}} से {{to}} तक दिखा रहा है"
     }
   },
   "appointmentBooking": {
@@ -2472,268 +1675,6 @@
       "followUpScheduledTitle": "फॉलो-अप शेड्यूल किया गया",
       "followUpScheduledDescription": "फॉलो-अप {{date}} के लिए निर्धारित"
     }
-  },
-  "appointmentDashboard": {
-    "title": "अपॉइंटमेंट डैशबोर्ड",
-    "subtitle": "मरीज़ के अपॉइंटमेंट को कुशलतापूर्वक प्रबंधित करें",
-    "bookAppointment": "अपॉइंटमेंट बुक करें",
-    "back": "वापस",
-    "bookNewAppointment": "📋 नया अपॉइंटमेंट बुक करें",
-    "currentAppointments": "वर्तमान अपॉइंटमेंट",
-    "pastHistory": "पिछला इतिहास",
-    "futureAppointments": "भविष्य के अपॉइंटमेंट",
-    "managePatientFlow": "आज के मरीज़ प्रवाह का प्रबंधन करें और प्रगति ट्रैक करें",
-    "liveUpdates": "लाइव अपडेट",
-    "totalToday": "आज कुल",
-    "priorityActions": "प्राथमिकता कार्य:",
-    "tabs": {
-      "current": "वर्तमान अपॉइंटमेंट",
-      "past": "पिछले अपॉइंटमेंट",
-      "future": "भविष्य के अपॉइंटमेंट"
-    },
-    "searchPlaceholder": "मरीज़ आईडी या नाम से खोजें",
-    "doctorLabel": "डॉक्टर",
-    "allDoctors": "सभी डॉक्टर",
-    "dateRange": {
-      "label": "तिथि सीमा",
-      "start": "आरंभ तिथि",
-      "end": "समाप्ति तिथि",
-      "to": "से"
-    },
-    "statusFilters": {
-      "all": "सभी",
-      "vitalsRequired": "वाइटल्स आवश्यक",
-      "ready": "तैयार",
-      "underConsult": "परामर्श जारी",
-      "labRequired": "लैब आवश्यक",
-      "awaitingReconsult": "पुनः परामर्श प्रतीक्षित",
-      "completed": "पूर्ण",
-      "cancelled": "रद्द"
-    },
-    "statusLabels": {
-      "vitalsRequired": "वाइटल्स",
-      "ready": "तैयार",
-      "underConsult": "परामर्श",
-      "labRequired": "लैब",
-      "awaitingReconsult": "पुनः परामर्श",
-      "completed": "पूर्ण",
-      "scheduled": "शेड्यूल",
-      "cancelled": "रद्द"
-    },
-    "refreshNow": "अभी ताज़ा करें",
-    "loadingAppointments": "अपॉइंटमेंट लोड हो रहे हैं...",
-    "errorTitle": "अपॉइंटमेंट लोड करने में त्रुटि",
-    "errorDescription": "अपॉइंटमेंट लोड करने में विफल",
-    "tryAgain": "पुनः प्रयास करें",
-    "kpis": {
-      "total": "कुल",
-      "vitals": "वाइटल्स",
-      "ready": "तैयार",
-      "consulting": "परामर्श",
-      "labTests": "लैब टेस्ट",
-      "followUps": "फॉलो-अप",
-      "completed": "पूर्ण",
-      "totalPast": "कुल पिछले",
-      "uniqueDates": "अद्वितीय तिथियां",
-      "filtered": "फ़िल्टर किए गए",
-      "totalFuture": "कुल भविष्य"
-    },
-    "status": {
-      "vitalsRequired": "❤️ वाइटल्स",
-      "readyConsultation": "✅ तैयार",
-      "underConsultation": "👨‍⚕️ परामर्श",
-      "labTestRequired": "🧪 लैब टेस्ट",
-      "awaitingReconsultation": "⏳ फॉलो-अप",
-      "completed": "🏁 पूर्ण"
-    },
-    "actions": {
-      "viewDetails": "विवरण देखें",
-      "updateVitals": "वाइटल्स अपडेट करें",
-      "startConsultation": "परामर्श शुरू करें",
-      "completeAppointment": "अपॉइंटमेंट पूर्ण करें",
-      "reschedule": "पुनर्निर्धारित करें",
-      "cancel": "रद्द करें"
-    },
-    "table": {
-      "patientId": "मरीज़ आईडी",
-      "patientName": "मरीज़ का नाम",
-      "doctorName": "डॉक्टर का नाम",
-      "appointmentTime": "अपॉइंटमेंट समय",
-      "appointmentDate": "अपॉइंटमेंट तिथि",
-      "tokenNo": "टोकन नंबर",
-      "status": "स्थिति",
-      "phone": "फ़ोन",
-      "actions": "कार्य",
-      "lastAppointmentDate": "अंतिम अपॉइंटमेंट तिथि",
-      "lastCompletedStatus": "अंतिम पूर्ण स्थिति",
-      "currentStatus": "वर्तमान स्थिति",
-      "printPrescription": "प्रिस्क्रिप्शन प्रिंट करें",
-      "printToken": "टोकन प्रिंट",
-      "nextFollowUpDate": "अगली फॉलो-अप तिथि",
-      "isCompleted": "पूर्ण है"
-    },
-    "emptyStates": {
-      "current": "कोई वर्तमान अपॉइंटमेंट नहीं मिला",
-      "past": "कोई पिछले अपॉइंटमेंट नहीं मिले",
-      "future": "कोई भविष्य के अपॉइंटमेंट नहीं मिले",
-      "adjustFilters": "अपनी खोज या डॉक्टर फ़िल्टर समायोजित करें"
-    },
-    "quickTip": {
-      "title": "त्वरित सुझाव:",
-      "description": "किसी भी मरीज़ आईडी पर क्लिक करें और पूरा प्रोफ़ाइल व मेडिकल इतिहास देखें"
-    },
-    "tooltip": {
-      "viewProfile": "प्रोफ़ाइल देखने के लिए क्लिक करें"
-    },
-    "actionButtons": {
-      "vitals": "वाइटल्स",
-      "preparing": "तैयार किया जा रहा है",
-      "notApplicable": "प्रासंगिक नहीं",
-      "completed": "पूर्ण"
-    },
-    "toast": {
-      "missingHospitalTitle": "हॉस्पिटल संदर्भ नहीं",
-      "missingHospitalDescription": "प्रिस्क्रिप्शन बनाने से पहले कृपया हॉस्पिटल चुनें।",
-      "missingAppointmentDataTitle": "अपूर्ण अपॉइंटमेंट डेटा",
-      "missingAppointmentDataDescription": "इस अपॉइंटमेंट में प्रिस्क्रिप्शन के लिए आवश्यक पहचानकर्ता नहीं हैं।"
-    },
-    "dialog": {
-      "cancelTitle": "अपॉइंटमेंट रद्द करें",
-      "cancelDescription": "क्या आप वाकई इस अपॉइंटमेंट को रद्द करना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।",
-      "patient": "मरीज़",
-      "patientId": "मरीज़ आईडी",
-      "doctor": "डॉक्टर",
-      "appointmentId": "अपॉइंटमेंट आईडी",
-      "keepAppointment": "अपॉइंटमेंट रखें",
-      "confirmCancel": "अपॉइंटमेंट रद्द करें",
-      "cancelling": "रद्द किया जा रहा है..."
-    },
-    "pagination": {
-      "showing": "कुल {{total}} में से {{from}} से {{to}} तक दिखा रहा है"
-    }
-  },
-  "doctorCalendar": {
-    "title": "डॉक्टर कैलेंडर",
-    "doctorPrefix": "डॉ. {{name}}",
-    "doctorFallback": "डॉक्टर",
-    "myCalendar": "मेरा कैलेंडर",
-    "calendarView": "कैलेंडर दृश्य",
-    "scheduleAndTimeOff": "अनुसूची और अवकाश",
-    "clickForToday": "आज के लिए क्लिक करें",
-    "weekOf": "{{date}} का सप्ताह",
-    "views": {
-      "month": "महीना",
-      "week": "सप्ताह",
-      "day": "दिन"
-    },
-    "navigation": {
-      "previous": "पिछला",
-      "next": "अगला",
-      "today": "आज"
-    },
-    "overrideBadge": "ओवरराइड",
-    "clickToManageHint": "ओवरराइड प्रबंधित करने के लिए टैप करें",
-    "appointmentDetailsFallbackTitle": "अपॉइंटमेंट विवरण",
-    "appointmentDetailsFallbackDescription": "मरीज़: {{patient}}, टोकन: {{token}}",
-    "blockDetailsTitle": "ब्लॉक विवरण",
-    "blockDetailsDescription": "{{title}}",
-    "eventMovedDescription": "{{title}} को {{date}} पर ले जाया गया",
-    "eventResizedDescription": "{{title}} का आकार बदला गया",
-    "hospitalContextMissing": "हॉस्पिटल संदर्भ अनुपलब्ध है। कृपया रीफ़्रेश करके पुनः प्रयास करें।",
-    "successDialog": {
-      "continue": "ठीक है, जारी रखें"
-    },
-    "confirmDeleteOverride": "ओवरराइड शिफ्ट हटाएँ?",
-    "confirmDeleteOverrideMessage": "यह ओवरराइड हटाकर डिफ़ॉल्ट शेड्यूल पर लौटाएगा:",
-    "deleteOverrideIrreversible": "यह क्रिया पूर्ववत नहीं की जा सकती।",
-    "deleting": "हटाया जा रहा है...",
-    "deleteOverride": "ओवरराइड हटाएँ",
-    "cancel": "रद्द करें",
-    "userIdRequired": "उपयोगकर्ता आईडी आवश्यक",
-    "userIdRequiredMessage": "उपयोगकर्ता आईडी प्राप्त नहीं कर सकते। कृपया फिर से लॉगिन करने का प्रयास करें।",
-    "initializingCalendar": "कैलेंडर प्रारंभ हो रहा है...",
-    "loadingDoctorProfile": "डॉक्टर प्रोफाइल लोड हो रहा है...",
-    "loadingCalendarConfig": "कैलेंडर कॉन्फ़िगरेशन लोड हो रहा है...",
-    "doctorProfileRequired": "डॉक्टर प्रोफाइल आवश्यक",
-    "initializingMessage": "कृपया प्रतीक्षा करें जबकि हम आपका कैलेंडर तैयार कर रहे हैं और सभी डेटा लोड कर रहे हैं।",
-    "loadingProfileMessage": "कृपया प्रतीक्षा करें जबकि हम आपका डॉक्टर प्रोफाइल लोड कर रहे हैं।",
-    "loadingConfigMessage": "कृपया प्रतीक्षा करें जबकि हम आपकी कार्य अनुसूची कॉन्फ़िगरेशन लोड कर रहे हैं।",
-    "profileLoadError": "डॉक्टर प्रोफाइल लोड नहीं कर सकते। कृपया पेज रिफ्रेश करने का प्रयास करें।",
-    "retry": "पुनः प्रयास करें",
-    "preparingCalendar": "आपका कैलेंडर तैयार हो रहा है...",
-    "loadingProfile": "आपका प्रोफाइल लोड हो रहा है...",
-    "loadingScheduleConfig": "आपकी कार्य अनुसूची सेटिंग्स लोड हो रही हैं...",
-    "loading": "लोड हो रहा है...",
-    "preparingMessage": "आपका व्यक्तिगत कैलेंडर अनुभव सेटअप हो रहा है",
-    "fetchingProfileMessage": "आपके डॉक्टर प्रोफाइल विवरण प्राप्त कर रहे हैं",
-    "loadingScheduleMessage": "आपकी कार्य अनुसूची सेटिंग्स लोड हो रही हैं",
-    "pleaseWait": "कृपया प्रतीक्षा करें...",
-    "addOverride": "शिफ्ट ओवरराइड जोड़ें",
-    "scheduleSaved": "अनुसूची सफलतापूर्वक सहेजी गई! 🎉",
-    "scheduleSavedMessage": "आपकी व्यक्तिगत अनुसूची सफलतापूर्वक सहेजी गई है। आपके नए कार्य घंटे अब सक्रिय हैं।",
-    "overridesCreated": "शिफ्ट ओवरराइड बनाए गए",
-    "changesReflected": "परिवर्तन तुरंत आपके कैलेंडर में दिखाई देंगे",
-    "patientsCanBook": "मरीज़ अब आपके अपडेटेड घंटों के दौरान अपॉइंटमेंट बुक कर सकते हैं",
-    "partiallySaved": "आंशिक रूप से सहेजा गया ⚠️",
-    "partiallySavedMessage": "आपके कुछ शिफ्ट ओवरराइड सहेजे गए, लेकिन कुछ सहेजने में विफल रहे।",
-    "overridesSaved": "ओवरराइड सफलतापूर्वक सहेजे गए",
-    "overridesFailed": "ओवरराइड सहेजने में विफल",
-    "tryAgainFailed": "आप विफल ओवरराइड को फिर से सहेजने का प्रयास कर सकते हैं",
-    "timeOffScheduled": "समय बंद सफलतापूर्वक अनुसूचित किया गया! 🏖️",
-    "timeOffScheduledMessage": "आपका समय बंद अनुसूचित किया गया है और आप चयनित अवधि के दौरान अनुपलब्ध रहेंगे।",
-    "timeOffBlocked": "समय बंद अवधि आपके कैलेंडर में ब्लॉक की गई",
-    "duration": "अवधि",
-    "noAppointmentsBooked": "इस समय के दौरान कोई अपॉइंटमेंट बुक नहीं किया जा सकता",
-    "cancelTimeOffAnytime": "आप कैलेंडर से कभी भी इस समय बंद को रद्द कर सकते हैं",
-    "shiftOverrideCreated": "शिफ्ट ओवरराइड सफलतापूर्वक बनाया गया",
-    "shiftOverrideCanceled": "शिफ्ट ओवरराइड सफलतापूर्वक रद्द किया गया",
-    "timeOffDeleted": "समय बंद सफलतापूर्वक हटाया गया",
-    "appointmentCanceled": "अपॉइंटमेंट सफलतापूर्वक रद्द किया गया",
-    "error": "त्रुटि",
-    "success": "सफलता",
-    "info": "जानकारी",
-    "failedToCreateOverride": "शिफ्ट ओवरराइड बनाने में विफल",
-    "failedToCancelOverride": "शिफ्ट ओवरराइड रद्द करने में विफल। कृपया पुनः प्रयास करें।",
-    "failedToDeleteTimeOff": "समय बंद हटाने में विफल",
-    "failedToScheduleTimeOff": "समय बंद अनुसूचित करने में विफल",
-    "failedToCreateOverrides": "शिफ्ट ओवरराइड बनाने में विफल",
-    "failedToOpenModal": "व्यक्तिगत अनुसूची मॉडल खोलने में विफल",
-    "noOverrideData": "ओवरराइड के लिए कोई डेटा नहीं मिला",
-    "noAppointmentData": "रद्द करने के लिए कोई अपॉइंटमेंट डेटा नहीं मिला",
-    "invalidEventDate": "अमान्य इवेंट तिथि",
-    "eventMoved": "इवेंट स्थानांतरित किया गया",
-    "eventResized": "इवेंट का आकार बदला गया",
-    "shiftBlock": "शिफ्ट ब्लॉक",
-    "shiftBlockMessage": "यह समय अवधि शिफ्ट द्वारा कवर की गई है। कृपया अलग समय चुनें या मौजूदा शिफ्ट को संशोधित करें।",
-    "timeOffConflict": "समय बंद संघर्ष",
-    "timeOffConflictMessage": "यह समय अवधि पहले से ही ब्लॉक है। कृपया अलग समय चुनें या पहले मौजूदा समय बंद को रद्द करें।",
-    "timeOffConflictToday": "आपके पास पहले से ही आज के लिए समय बंद अनुसूचित है। कृपया पहले मौजूदा समय बंद को रद्द करें या अलग तिथि चुनें।",
-    "deleteOverrideNotImplemented": "ओवरराइड हटाने की कार्यक्षमता अभी तक लागू नहीं की गई है",
-    "clickToManage": "प्रबंधन के लिए क्लिक करें",
-    "clickToCancel": "रद्द करने के लिए क्लिक करें",
-    "overrideActionDialog": {
-      "title": "ओवरराइड शेड्यूल विकल्प",
-      "description": "आप इस ओवरराइड अनुसूची के साथ क्या करना चाहेंगे?",
-      "detailsTitle": "ओवरराइड विवरण:",
-      "labels": {
-        "shift": "शिफ्ट",
-        "date": "तिथि",
-        "time": "समय"
-      },
-      "actions": {
-        "update": {
-          "title": "ओवरराइड अपडेट करें",
-          "description": "अनुसूची विवरण संशोधित करें"
-        },
-        "cancel": {
-          "title": "ओवरराइड रद्द करें",
-          "description": "हटाएं और डिफ़ॉल्ट टेम्पलेट पर लौटें"
-        },
-        "close": "बंद करें"
-      },
-      "warning": "⚠️ रद्द करने से यह ओवरराइड स्थायी रूप से हट जाएगा और डिफ़ॉल्ट टेम्पलेट शेड्यूल पुनर्स्थापित होगा।"
-    },
-    "personalized": "व्यक्तिगत"
   },
   "templates": {
     "standardOPD": "मानक OPD",
@@ -3353,156 +2294,6 @@
     },
     "help": "आप कई विशेषताएं चुन सकते हैं। यदि आवश्यक विशेषता नहीं मिलती, तो कस्टम जोड़ें।"
   },
-  "hospitalBranding": {
-    "title": "अस्पताल जानकारी",
-    "subtitle": "अपने अस्पताल की पूरी जानकारी कॉन्फ़िगर करें",
-    "loading": {
-      "title": "अस्पताल जानकारी लोड हो रही है...",
-      "message": "कृपया प्रतीक्षा करें, हम आपकी अस्पताल जानकारी ला रहे हैं।"
-    },
-    "error": {
-      "title": "अस्पताल जानकारी लोड करने में विफल",
-      "message": "कृपया पेज रिफ्रेश करने का प्रयास करें"
-    },
-    "buttons": {
-      "editDetails": "विवरण संपादित करें",
-      "cancel": "रद्द करें",
-      "saveChanges": "परिवर्तन सहेजें",
-      "saving": "सहेजा जा रहा है...",
-      "saveInfo": "अस्पताल जानकारी सहेजें",
-      "continue": "जारी रखें"
-    },
-    "modal": {
-      "headerTitle": "अस्पताल जानकारी पूर्ण करें",
-      "headerSubtitle": "शुरू करने के लिए अपना अस्पताल प्रोफ़ाइल सेट करें",
-      "steps": {
-        "basicInfo": "मूल जानकारी",
-        "location": "स्थान",
-        "registration": "पंजीकरण"
-      },
-      "nextStep": "अगला चरण",
-      "saveAndComplete": "सहेजें और पूर्ण करें"
-    },
-    "sections": {
-      "core": {
-        "title": "मुख्य जानकारी",
-        "subtitle": "मूल अस्पताल विवरण और पहचान"
-      },
-      "contact": {
-        "title": "संपर्क जानकारी",
-        "subtitle": "प्राथमिक और द्वितीयक संपर्क विवरण"
-      },
-      "location": {
-        "title": "स्थान जानकारी",
-        "subtitle": "पूरा पता और स्थान विवरण"
-      },
-      "config": {
-        "title": "कॉन्फ़िगरेशन और मेटाडेटा",
-        "subtitle": "सिस्टम कॉन्फ़िगरेशन और नियामक जानकारी"
-      }
-    },
-    "labels": {
-      "name": "अस्पताल का नाम",
-      "type": "अस्पताल प्रकार",
-      "email": "ईमेल पता",
-      "contact": "प्राथमिक संपर्क",
-      "alternateContact": "वैकल्पिक संपर्क",
-      "website": "वेबसाइट",
-      "location": "सड़क का पता",
-      "city": "शहर",
-      "state": "राज्य/प्रांत",
-      "country": "देश",
-      "pincode": "पिन कोड",
-      "timeZone": "समय क्षेत्र",
-      "registrationNumber": "पंजीकरण संख्या"
-    },
-    "placeholders": {
-      "name": "अस्पताल का नाम दर्ज करें",
-      "type": "अस्पताल प्रकार चुनें",
-      "email": "ईमेल पता दर्ज करें",
-      "contact": "प्राथमिक फोन नंबर दर्ज करें",
-      "alternateContact": "वैकल्पिक फोन नंबर दर्ज करें",
-      "website": "वेबसाइट URL दर्ज करें",
-      "location": "पूरा सड़क पता दर्ज करें",
-      "city": "शहर का नाम दर्ज करें",
-      "state": "राज्य या प्रांत दर्ज करें",
-      "country": "देश का नाम दर्ज करें",
-      "pincode": "पिन कोड दर्ज करें",
-      "registrationNumber": "अस्पताल पंजीकरण संख्या दर्ज करें",
-      "timeZone": "समय क्षेत्र चुनें"
-    },
-    "helpers": {
-      "name": "अधिकतम 150 अक्षर",
-      "primaryContact": "मुख्य संपर्क नंबर",
-      "alternateContact": "द्वितीयक संपर्क नंबर",
-      "email": "संचार के लिए प्राथमिक ईमेल",
-      "website": "अस्पताल की आधिकारिक वेबसाइट",
-      "location": "विस्तृत सड़क का पता",
-      "registrationNumber": "आधिकारिक अस्पताल पंजीकरण संख्या",
-      "timeZone": "अस्पताल का परिचालन समय क्षेत्र"
-    },
-    "hospitalTypes": {
-      "clinic": "क्लिनिक",
-      "polyclinic": "पॉलीक्लिनिक",
-      "nursingHome": "नर्सिंग होम",
-      "generalHospital": "जनरल हॉस्पिटल",
-      "multispecialityHospital": "मल्टीस्पेशलिटी हॉस्पिटल",
-      "superSpecialityHospital": "सुपर स्पेशलिटी हॉस्पिटल",
-      "other": "अन्य",
-      "clinic_en": "Clinic",
-      "polyclinic_en": "Polyclinic",
-      "nursingHome_en": "Nursing Home",
-      "generalHospital_en": "General Hospital",
-      "multispecialityHospital_en": "Multispeciality Hospital",
-      "superSpecialityHospital_en": "Super Speciality Hospital",
-      "other_en": "Other",
-      "Clinic_hi": "क्लिनिक",
-      "Polyclinic_hi": "पॉलीक्लिनिक",
-      "Nursing Home_hi": "नर्सिंग होम",
-      "General Hospital_hi": "जनरल हॉस्पिटल",
-      "Multispeciality Hospital_hi": "मल्टीस्पेशलिटी हॉस्पिटल",
-      "Super Speciality Hospital_hi": "सुपर स्पेशलिटी हॉस्पिटल",
-      "Other_hi": "अन्य"
-    },
-    "timeZones": {
-      "asiaKolkata": "एशिया/कोलकाता (IST)",
-      "americaNewYork": "अमेरिका/न्यूयॉर्क (EST)",
-      "americaLosAngeles": "अमेरिका/लॉस एंजिलिस (PST)",
-      "europeLondon": "यूरोप/लंदन (GMT)",
-      "asiaDubai": "एशिया/दुबई (GST)",
-      "asiaSingapore": "एशिया/सिंगापुर (SGT)",
-      "asiaTokyo": "एशिया/टोक्यो (JST)",
-      "australiaSydney": "ऑस्ट्रेलिया/सिडनी (AEST)"
-    },
-    "completion": {
-      "title": "अस्पताल प्रोफ़ाइल पूर्ण!",
-      "description": "सभी आवश्यक अस्पताल विवरण सत्यापित हो गए हैं। एडमिन सुविधाएँ अब पूरी तरह अनलॉक हैं।",
-      "score": "पूर्णता स्कोर",
-      "basicInfo": "मूल जानकारी",
-      "locationInfo": "स्थान विवरण",
-      "contactInfo": "संपर्क जानकारी",
-      "statusComplete": "पूर्ण",
-      "statusPending": "लंबित"
-    },
-    "toast": {
-      "errorTitle": "त्रुटि",
-      "missingUser": "यूज़र आईडी नहीं मिली। कृपया दोबारा लॉगिन करें।",
-      "validationTitle": "मान्यकरण त्रुटि",
-      "validationDescription": "कृपया सहेजने से पहले सभी आवश्यक फ़ील्ड पूरा करें।",
-      "successTitle": "सफल!",
-      "successDescription": "अस्पताल जानकारी सफलतापूर्वक सहेजी गई।",
-      "errorDescription": "अस्पताल जानकारी सहेजने में विफल। कृपया पुनः प्रयास करें।"
-    },
-    "validation": {
-      "required": "{{field}} आवश्यक है",
-      "emailRequired": "ईमेल पता आवश्यक है",
-      "emailInvalid": "कृपया मान्य ईमेल पता दर्ज करें",
-      "contactRequired": "प्राथमिक संपर्क आवश्यक है",
-      "phoneInvalid": "कृपया मान्य फ़ोन नंबर दर्ज करें",
-      "websiteInvalid": "कृपया मान्य वेबसाइट URL दर्ज करें",
-      "pincodeInvalid": "कृपया मान्य पिन कोड दर्ज करें (4-10 अंक)"
-    }
-  },
   "appointmentCancelDialog": {
     "title": "अपॉइंटमेंट रद्द करें",
     "warningLabel": "चेतावनी:",
@@ -3743,64 +2534,6 @@
       }
     }
   },
-  "notifications": {
-    "title": "सूचनाएं",
-    "markAllRead": "सभी को पढ़ा हुआ चिह्नित करें",
-    "noNotifications": "कोई सूचना नहीं",
-    "newAppointment": "नया अपॉइंटमेंट शेड्यूल किया गया",
-    "appointmentReminder": "अपॉइंटमेंट रिमाइंडर",
-    "appointmentCancelled": "अपॉइंटमेंट रद्द किया गया",
-    "patientUpdate": "मरीज़ की जानकारी अपडेट की गई",
-    "systemUpdate": "सिस्टम अपडेट उपलब्ध है",
-    "unreadCount": "{{count}} अनपढ़ी सूचनाएं"
-  },
-  "errors": {
-    "general": "कुछ गलत हो गया",
-    "network": "नेटवर्क त्रुटि। कृपया अपना कनेक्शन जांचें।",
-    "unauthorized": "आपको यह कार्य करने की अनुमति नहीं है",
-    "forbidden": "पहुंच अस्वीकृत",
-    "notFound": "संसाधन नहीं मिला",
-    "serverError": "सर्वर त्रुटि। कृपया बाद में पुनः प्रयास करें।",
-    "validation": "कृपया अपना इनपुट जांचें और पुनः प्रयास करें",
-    "timeout": "अनुरोध समय समाप्त। कृपया पुनः प्रयास करें।",
-    "fileUploadError": "फ़ाइल अपलोड करने में त्रुटि",
-    "fileTooLarge": "फ़ाइल बहुत बड़ी है",
-    "invalidFileType": "अमान्य फ़ाइल प्रकार",
-    "requiredField": "यह फ़ील्ड आवश्यक है",
-    "invalidEmail": "अमान्य ईमेल पता",
-    "invalidPhone": "अमान्य फ़ोन नंबर",
-    "invalidDate": "अमान्य तिथि",
-    "invalidTime": "अमान्य समय",
-    "doctorProfileError": "डॉक्टर प्रोफ़ाइल लोड करने में त्रुटि"
-  },
-  "success": {
-    "saved": "सफलतापूर्वक सहेजा गया",
-    "updated": "सफलतापूर्वक अपडेट किया गया",
-    "deleted": "सफलतापूर्वक हटाया गया",
-    "created": "सफलतापूर्वक बनाया गया",
-    "sent": "सफलतापूर्वक भेजा गया",
-    "uploaded": "सफलतापूर्वक अपलोड किया गया",
-    "downloaded": "सफलतापूर्वक डाउनलोड किया गया",
-    "changesSaved": "परिवर्तन सफलतापूर्वक सहेजे गए",
-    "operationCompleted": "कार्य सफलतापूर्वक पूर्ण हुआ"
-  },
-  "validation": {
-    "required": "यह फ़ील्ड आवश्यक है",
-    "email": "कृपया एक वैध ईमेल पता दर्ज करें",
-    "minLength": "न्यूनतम {{min}} अक्षर आवश्यक हैं",
-    "maxLength": "अधिकतम {{max}} अक्षर अनुमत हैं",
-    "passwordMatch": "पासवर्ड मेल होना चाहिए",
-    "phoneNumber": "कृपया एक वैध फ़ोन नंबर दर्ज करें",
-    "date": "कृपया एक वैध तिथि दर्ज करें",
-    "time": "कृपया एक वैध समय दर्ज करें",
-    "passwordStrength": "पासवर्ड कमजोर है",
-    "passwordRequirements": "कम से कम 8 अक्षर, एक बड़ा अक्षर, एक छोटा अक्षर, एक संख्या और एक विशेष अक्षर शामिल करें",
-    "invalidFormat": "अमान्य प्रारूप",
-    "mustBeNumber": "संख्या होना चाहिए",
-    "mustBePositive": "सकारात्मक संख्या होना चाहिए",
-    "mustBeFuture": "भविष्य की तिथि होना चाहिए",
-    "mustBePast": "अतीत की तिथि होना चाहिए"
-  },
   "docBoard": {
     "header": {
       "title": "क्लीनिकल डैशबोर्ड",
@@ -3978,24 +2711,6 @@
     },
     "alerts": {
       "previewMissingContext": "पूर्वावलोकन नहीं कर सकते: मरीज़ या डॉक्टर संदर्भ गायब है"
-    }
-  },
-  "prescriptionPreview": {
-    "title": "प्रिस्क्रिप्शन पूर्वावलोकन",
-    "description": "जेनरेट किए गए प्रिस्क्रिप्शन की समीक्षा करें, डाउनलोड करें, साझा करें या प्रिंट करें।",
-    "previewFrameTitle": "प्रिस्क्रिप्शन पूर्वावलोकन",
-    "actions": {
-      "title": "प्रिस्क्रिप्शन क्रियाएं",
-      "description": "अपनी प्रिस्क्रिप्शन पीडीएफ डाउनलोड करें, साझा करें या प्रिंट करें। ये विकल्प आपको अपनी आवश्यकतानुसार प्रिस्क्रिप्शन रखने, भेजने या उपयोग करने में मदद करते हैं।",
-      "tip": "सुझाव: सर्वोत्तम प्रिंट परिणामों के लिए, A4 पेपर का उपयोग करें और मार्जिन को न्यूनतम पर सेट करें।",
-      "download": "पीडीएफ डाउनलोड करें",
-      "share": "साझा करें",
-      "print": "प्रिंट करें"
-    },
-    "share": {
-      "title": "प्रिस्क्रिप्शन",
-      "text": "प्रिस्क्रिप्शन पीडीएफ",
-      "unsupported": "इस ब्राउज़र में साझा करना समर्थित नहीं है।"
     }
   },
   "prescriptionDesigner": {

@@ -327,7 +327,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         overflow-hidden transition-transform duration-300 ease-in-out
       `}>
-        <div className="relative h-full w-full overflow-hidden">
+        <div className="relative h-full w-full overflow-hidden flex flex-col">
           {/* Sidebar Toggle Button - Right Side (Only visible when expanded) */}
           {!sidebarCollapsed && (
             <div className="absolute top-4 right-3 z-20 group">
@@ -356,7 +356,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           )}
 
           {/* Navigation */}
-          <nav className={`${sidebarCollapsed ? 'p-3' : 'p-4'} space-y-3 mt-3 overflow-y-auto overflow-x-hidden`}>
+          <nav className={`${sidebarCollapsed ? 'p-3' : 'p-4'} space-y-3 mt-3 flex-1 min-h-0 overflow-y-auto overflow-x-hidden`}>
 
 
             {navigation.map((item, index) => {
@@ -397,7 +397,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     </div>
 
                     {sidebarCollapsed && (
-                      <span className="text-[9px] leading-tight text-center font-medium truncate w-full px-0.5" title={item.name}>
+                      <span className="text-[9px] leading-tight text-center font-medium line-clamp-2 w-full px-0.5 break-words" title={item.name}>
                         {item.name}
                       </span>
                     )}
@@ -460,7 +460,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           )}
 
           {/* Bottom Section - Logout Only */}
-          <div className={`absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-600 bg-[#4f46e5] dark:bg-gray-800 shadow-lg overflow-hidden`}>
+          <div className={`flex-none p-4 border-t border-gray-200 dark:border-gray-600 bg-[#4f46e5] dark:bg-gray-800 shadow-lg overflow-hidden`}>
             {/* Logout Button */}
             <Button
               variant="ghost"
@@ -481,7 +481,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               </div>
 
               {sidebarCollapsed && (
-                <span className="text-[9px] leading-tight text-center font-medium truncate w-full relative z-10 px-0.5">
+                <span className="text-[9px] leading-tight text-center font-medium line-clamp-2 w-full relative z-10 px-0.5 break-words">
                   {t('common.logout')}
                 </span>
               )}
