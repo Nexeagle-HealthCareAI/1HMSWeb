@@ -49,7 +49,10 @@
       "country": "Country",
       "pincode": "Pincode",
       "timeZone": "Time Zone",
-      "registrationNumber": "Registration Number"
+      "registrationNumber": "Registration Number",
+      "gstin": "GSTIN",
+      "pan": "PAN",
+      "nabhNumber": "NABH/NABL No."
     },
     "placeholders": {
       "name": "Enter hospital name",
@@ -64,7 +67,10 @@
       "country": "Enter country",
       "pincode": "Enter pincode",
       "timeZone": "Select time zone",
-      "registrationNumber": "Enter hospital registration number"
+      "registrationNumber": "Enter hospital registration number",
+      "gstin": "Enter GSTIN number",
+      "pan": "Enter PAN number",
+      "nabhNumber": "Enter NABH/NABL No."
     },
     "helpers": {
       "name": "Up to 150 characters",
@@ -115,7 +121,9 @@
       "contactRequired": "Contact number is required",
       "phoneInvalid": "Invalid phone number",
       "websiteInvalid": "Invalid website URL",
-      "pincodeInvalid": "Invalid pincode"
+      "pincodeInvalid": "Invalid pincode",
+      "gstinInvalid": "Invalid GSTIN format",
+      "panInvalid": "Invalid PAN format"
     },
     "toast": {
       "errorTitle": "Error",
@@ -223,25 +231,66 @@
     "manual": "Manual"
   },
   "auth": {
-    "signIn": "Sign In",
-    "signUp": "Sign Up",
-    "signOut": "Sign Out",
-    "email": "Email",
-    "password": "Password",
-    "confirmPassword": "Confirm Password",
-    "forgotPassword": "Forgot Password?",
-    "resetPassword": "Reset Password",
     "resetPasswordTitle": "Reset Password",
-    "rememberMe": "Remember Me",
-    "dontHaveAccount": "Don't have an account?",
-    "alreadyHaveAccount": "Already have an account?",
-    "invalidCredentials": "Invalid email or password",
-    "passwordMismatch": "Passwords do not match",
-    "emailRequired": "Email is required",
-    "passwordRequired": "Password is required",
-    "loginSuccess": "Login successful",
-    "logoutSuccess": "Logout successful",
-    "sessionExpired": "Your session has expired. Please login again.",
+    "login": {
+      "title": "Secure Login",
+      "subtitle": "Sign in to your account",
+      "emailPlaceholder": "Email or mobile number",
+      "passwordPlaceholder": "Password",
+      "loginButton": "Sign in",
+      "forgotPassword": "Forgot password?",
+      "noAccount": "Don't have an account?",
+      "createAccount": "Create account",
+      "orDivider": "or",
+      "otpLogin": "Sign in with OTP",
+      "passwordLogin": "Sign in with password",
+      "signingIn": "Signing you in…",
+      "invalidCredentials": "Invalid credentials. Please check your mobile/email and password.",
+      "userNotFound": "User not found. Please check your mobile number or email.",
+      "tooManyAttempts": "Too many login attempts. Please wait a moment and try again.",
+      "networkError": "Network error. Please check your internet connection.",
+      "serverError": "Server error. Please try again later.",
+      "timeoutError": "Request timed out. Please try again.",
+      "genericError": "Something went wrong. Please try again."
+    },
+    "otp": {
+      "title": "OTP Verification",
+      "subtitle": "Enter the OTP sent to your mobile number",
+      "otpPlaceholder": "Enter OTP",
+      "verifyButton": "Verify",
+      "resendButton": "Resend",
+      "resendIn": "Resend in {{time}}s",
+      "invalidOTP": "Invalid OTP. Please enter the correct OTP.",
+      "otpExpired": "OTP has expired. Please request a new one.",
+      "sendingOTP": "Sending OTP…",
+      "verifyingOTP": "Verifying OTP…"
+    },
+    "forgotPassword": {
+      "title": "Reset Password",
+      "subtitle": "Enter your mobile number to reset your password",
+      "mobilePlaceholder": "Mobile number",
+      "sendResetButton": "Send reset link",
+      "backToLogin": "Back to login",
+      "resetLinkSent": "Reset link has been sent to your mobile",
+      "sendingResetLink": "Sending reset link…"
+    },
+    "registration": {
+      "title": "Create Account",
+      "subtitle": "Enter your details to create a new account",
+      "fullNamePlaceholder": "Full name",
+      "emailPlaceholder": "Email address",
+      "mobilePlaceholder": "Mobile number",
+      "passwordPlaceholder": "Password",
+      "confirmPasswordPlaceholder": "Confirm password",
+      "registerButton": "Create account",
+      "alreadyHaveAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "creatingAccount": "Creating account…",
+      "passwordMismatch": "Passwords do not match",
+      "weakPassword": "Password is too weak. Use at least 8 characters with one uppercase, one lowercase, one number and one special character.",
+      "emailAlreadyExists": "This email address already exists",
+      "mobileAlreadyExists": "This mobile number already exists"
+    },
     "lockedAccount": {
       "title": "Account Locked",
       "message": "Your account has been temporarily locked due to too many failed attempts.",
@@ -1370,6 +1419,7 @@
     "profile": "Profile",
     "settings": "Settings",
     "billing": "Billing",
+    "ipd": "IPD Center",
     "collapseSidebar": "Collapse sidebar",
     "expandSidebar": "Expand sidebar",
     "toggleSidebarHint": "to toggle sidebar",
@@ -1616,6 +1666,9 @@
     "hospitalAccessFallback": "Complete hospital information to unlock full access.",
     "hospitalIdLabel": "Hospital ID:",
     "hospitalIdCopySr": "Copy Hospital ID",
+    "regulatoryUpdateRequired": "Action Required: Update Regulatory Information",
+    "regulatoryUpdateDescription": "Please provide your hospital's GSTIN, PAN, and NABH/NABL number to complete your profile.",
+    "updateNow": "Update Now",
     "cta": {
       "completeInfo": "Complete Info",
       "updateDetails": "Update Details"
@@ -2357,6 +2410,8 @@
       "cityRequired": "City is required",
       "pincodeRequired": "Pincode is required",
       "pincodeInvalid": "Pincode must be exactly 6 digits",
+      "gstinInvalid": "Please enter a valid GSTIN",
+      "panInvalid": "Please enter a valid PAN",
       "paymentModeRequired": "Payment mode is required when paid"
     }
   },

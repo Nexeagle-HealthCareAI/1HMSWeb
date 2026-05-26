@@ -42,7 +42,10 @@ export const buildInvoiceA4 = (data: InvoicePrintData, settings: PrintSettings):
         <div class="header">
             <h1 class="hA">${settings.hospitalName}</h1>
             <p class="hSub">${settings.address} | ${settings.phone}</p>
-            ${settings.gstin ? `<p class="hSub">GSTIN: ${settings.gstin}</p>` : ''}
+            ${settings.gstin ? `<span style="margin-right:15px;">GSTIN: ${settings.gstin}</span>` : ''}
+            ${settings.pan ? `<span style="margin-right:15px;">PAN: ${settings.pan}</span>` : ''}
+            ${settings.nabhNumber ? `<span style="margin-right:15px;">NABH/NABL No.: ${settings.nabhNumber}</span>` : ''}
+            </p>
         </div>
 
         <div class="meta-grid">

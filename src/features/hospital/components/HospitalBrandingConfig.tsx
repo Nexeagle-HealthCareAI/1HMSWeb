@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import confetti from 'canvas-confetti';
@@ -42,6 +42,9 @@ export interface HospitalBranding {
   pincode: string;
   timeZone: string;
   registrationNumber: string;
+  gstin?: string;
+  pan?: string;
+  nabhNumber?: string;
 }
 
 interface HospitalBrandingConfigProps {
@@ -100,7 +103,10 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
       country: translate('hospitalBranding.labels.country', 'Country'),
       pincode: translate('hospitalBranding.labels.pincode', 'Pincode'),
       timeZone: translate('hospitalBranding.labels.timeZone', 'Time Zone'),
-      registrationNumber: translate('hospitalBranding.labels.registrationNumber', 'Registration Number')
+      registrationNumber: translate('hospitalBranding.labels.registrationNumber', 'Registration Number'),
+      gstin: translate('hospitalBranding.labels.gstin', 'GSTIN'),
+      pan: translate('hospitalBranding.labels.pan', 'PAN'),
+      nabhNumber: translate('hospitalBranding.labels.nabhNumber', 'NABH/NABL No.')
     }),
     [translate, i18n.language]
   );
@@ -194,6 +200,18 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
     return pincodeRegex.test(pincode) ? null : translate('hospitalBranding.validation.pincodeInvalid', 'Invalid pincode');
   };
 
+  const validateGSTIN = (gstin: string): string | null => {
+    if (!gstin) return null;
+    const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+    return gstinRegex.test(gstin) ? null : translate('hospitalBranding.validation.gstinInvalid', 'Invalid GSTIN format');
+  };
+
+  const validatePAN = (pan: string): string | null => {
+    if (!pan) return null;
+    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+    return panRegex.test(pan) ? null : translate('hospitalBranding.validation.panInvalid', 'Invalid PAN format');
+  };
+
   const validateField = (field: keyof HospitalBranding, value: string): string | null => {
     const trimmedValue = value?.trim() ?? '';
 
@@ -212,6 +230,10 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
         return validateWebsite(value);
       case 'pincode':
         return validatePincode(value);
+      case 'gstin':
+        return validateGSTIN(value);
+      case 'pan':
+        return validatePAN(value);
       default:
         return null;
     }
@@ -227,9 +249,9 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
       }
     });
 
-    const optionalChecks: Array<keyof HospitalBranding> = ['alternateContact', 'website', 'timeZone'];
+    const optionalChecks: Array<keyof HospitalBranding> = ['alternateContact', 'website', 'timeZone', 'gstin', 'pan', 'nabhNumber'];
     optionalChecks.forEach((field) => {
-      const error = validateField(field, data[field]);
+      const error = validateField(field, data[field] || '');
       if (error) {
         errors[field] = error;
       }
@@ -272,7 +294,10 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
         country: hospitalData.country || '',
         pincode: hospitalData.pincode || '',
         timeZone: hospitalData.timeZone || '',
-        registrationNumber: hospitalData.registrationNumber || ''
+        registrationNumber: hospitalData.registrationNumber || '',
+        gstin: hospitalData.gstin || '',
+        pan: hospitalData.pan || '',
+        nabhNumber: hospitalData.nabhNumber || ''
       };
 
       const hasChanges = Object.keys(updatedBranding).some(
@@ -324,7 +349,10 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
           state: branding.state,
           country: branding.country,
           pincode: branding.pincode,
-          timeZone: branding.timeZone
+          timeZone: branding.timeZone || '',
+          gstin: branding.gstin,
+          pan: branding.pan,
+          nabhNumber: branding.nabhNumber
         });
 
         if (response.success) {
@@ -353,7 +381,10 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
           state: branding.state,
           country: branding.country,
           pincode: branding.pincode,
-          timeZone: branding.timeZone
+          timeZone: branding.timeZone || '',
+          gstin: branding.gstin,
+          pan: branding.pan,
+          nabhNumber: branding.nabhNumber
         });
 
         if (response.success) {
@@ -850,6 +881,65 @@ export const HospitalBrandingConfig: React.FC<HospitalBrandingConfigProps> = ({
                     </div>
                   )}
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="gstin" className="flex items-center gap-2">
+                    <Hash className="h-4 w-4" />
+                    {t('hospitalBranding.labels.gstin')}
+                  </Label>
+                  <Input
+                    id="gstin"
+                    value={branding.gstin || ''}
+                    onChange={(e) => updateBranding('gstin', e.target.value)}
+                    placeholder={t('hospitalBranding.placeholders.gstin')}
+                    disabled={isExistingHospital && !isEditMode}
+                    className={validationErrors.gstin ? 'border-red-500 focus:border-red-500' : ''}
+                  />
+                  {validationErrors.gstin && (
+                    <div className="flex items-center gap-1 text-xs text-red-500">
+                      <AlertCircle className="h-3 w-3" />
+                      {validationErrors.gstin}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="pan" className="flex items-center gap-2">
+                    <Hash className="h-4 w-4" />
+                    {t('hospitalBranding.labels.pan')}
+                  </Label>
+                  <Input
+                    id="pan"
+                    value={branding.pan || ''}
+                    onChange={(e) => updateBranding('pan', e.target.value)}
+                    placeholder={t('hospitalBranding.placeholders.pan')}
+                    disabled={isExistingHospital && !isEditMode}
+                    className={validationErrors.pan ? 'border-red-500 focus:border-red-500' : ''}
+                  />
+                  {validationErrors.pan && (
+                    <div className="flex items-center gap-1 text-xs text-red-500">
+                      <AlertCircle className="h-3 w-3" />
+                      {validationErrors.pan}
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="nabhNumber" className="flex items-center gap-2">
+                    <Hash className="h-4 w-4" />
+                    {t('hospitalBranding.labels.nabhNumber')}
+                  </Label>
+                  <Input
+                    id="nabhNumber"
+                    value={branding.nabhNumber || ''}
+                    onChange={(e) => updateBranding('nabhNumber', e.target.value)}
+                    placeholder={t('hospitalBranding.placeholders.nabhNumber')}
+                    disabled={isExistingHospital && !isEditMode}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="timeZone" className="flex items-center gap-2">
                     <Clock className="h-4 w-4" />

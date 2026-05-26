@@ -49,7 +49,8 @@ import {
   Download,
   Upload,
   Phone,
-  Clock
+  Clock,
+  LogOut
 } from 'lucide-react';
 
 interface FieldConfig {
@@ -97,6 +98,7 @@ interface PersonalizedData {
   investigations: PersonalizedDataItem[];
   procedures: PersonalizedDataItem[];
   medications: PersonalizedDataItem[];
+  discharge: PersonalizedDataItem[];
 }
 
 interface PrescriptionCustomizePanelProps {
@@ -138,7 +140,8 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
     diagnosis: [],
     investigations: [],
     procedures: [],
-    medications: []
+    medications: [],
+    discharge: []
   });
 
   const [selectedPersonalizedCategory, setSelectedPersonalizedCategory] = useState<string>('chiefComplaint');
@@ -204,7 +207,8 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
     { id: 'diagnosis', label: 'Diagnosis', icon: Microscope, color: 'text-indigo-600' },
     { id: 'investigations', label: 'Investigations', icon: TestTube, color: 'text-cyan-600' },
     { id: 'procedures', label: 'Procedures', icon: Syringe, color: 'text-orange-600' },
-    { id: 'medications', label: 'Medications', icon: Pill, color: 'text-green-600' }
+    { id: 'medications', label: 'Medications', icon: Pill, color: 'text-green-600' },
+    { id: 'discharge', label: 'Discharge Advice', icon: LogOut, color: 'text-rose-600' }
   ];
 
   // Field configuration is now handled by the API hook
@@ -221,6 +225,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
       investigations: <TestTube className="h-4 w-4" />,
       procedures: <Syringe className="h-4 w-4" />,
       medications: <Pill className="h-4 w-4" />,
+      discharge: <LogOut className="h-4 w-4" />,
       nonPharmacologicalAdvice: <ClipboardList className="h-4 w-4" />,
       privateNotes: <FileText className="h-4 w-4" />,
       certificatesNotes: <Shield className="h-4 w-4" />,
@@ -257,6 +262,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
       investigations: 'INVESTIGATION',
       procedures: 'PROCEDURE',
       medications: 'MEDICATION',
+      discharge: 'DISCHARGE',
     };
 
     const isMedication = selectedPersonalizedCategory === 'medications';
@@ -526,6 +532,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
       investigations: 'INVESTIGATION',
       procedures: 'PROCEDURE',
       medications: 'MEDICATION',
+      discharge: 'DISCHARGE',
     };
 
     const isMedication = selectedPersonalizedCategory === 'medications';
@@ -679,7 +686,8 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
       diagnosis: 'e.g., Myocardial infarction',
       investigations: 'e.g., ECG, Blood tests',
       procedures: 'e.g., Angioplasty',
-      medications: 'e.g., Atorvastatin'
+      medications: 'e.g., Atorvastatin',
+      discharge: 'e.g., Complete bed rest for 1 week'
     };
     return placeholders[category] || 'Enter name';
   };
@@ -693,6 +701,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
       diagnosis: 'e.g., DX001',
       investigations: 'e.g., INV001',
       procedures: 'e.g., PROC001',
+      discharge: 'e.g., DA001',
     };
     return placeholders[category] || 'Enter code';
   };
@@ -706,7 +715,8 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
       diagnosis: 'e.g., Acute coronary syndrome',
       investigations: 'e.g., Cardiac enzymes',
       procedures: 'e.g., Percutaneous intervention',
-      medications: 'e.g., Lipid-lowering agent'
+      medications: 'e.g., Lipid-lowering agent',
+      discharge: 'e.g., Restrict activity, avoid exertion'
     };
     return placeholders[category] || 'Enter description';
   };
@@ -720,7 +730,8 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
       diagnosis: 'e.g., MI, Heart attack',
       investigations: 'e.g., Lab tests, Diagnostic tests',
       procedures: 'e.g., PCI, Stent placement',
-      medications: 'e.g., Statin, Lipid drug'
+      medications: 'e.g., Statin, Lipid drug',
+      discharge: 'e.g., Rest, Activity restriction'
     };
     return placeholders[category] || 'Enter synonyms';
   };
@@ -785,6 +796,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
       investigations: 'INVESTIGATION',
       procedures: 'PROCEDURE',
       medications: 'MEDICATION',
+      discharge: 'DISCHARGE',
     };
 
     const fetchCategory = async () => {

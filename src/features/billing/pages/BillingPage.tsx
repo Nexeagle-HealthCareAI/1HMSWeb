@@ -4,7 +4,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Search, Plus, Receipt, User, CreditCard,
     ArrowLeftRight, RotateCcw, Lock, Unlock,
-    Printer, DollarSign, FileText, ChevronRight, Trash2,
+    Printer, DollarSign, FileText, ChevronRight, Trash2, Ban, MessageSquare,
     TrendingDown, TrendingUp, AlertCircle, ArrowLeft, IndianRupee, Check, X, Calendar, BadgePercent, Edit2, Wallet
 } from 'lucide-react';
 
@@ -24,6 +24,7 @@ import {
 import {
     Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from '@/lib/utils';
@@ -130,7 +131,11 @@ export const BillingPage: React.FC = () => {
     const [receiptsHistory, setReceiptsHistory] = useState<ReceiptPrintData[]>([]);
 
     // Sidebar State
-    const [sidebarMode, setSidebarMode] = useState<'CHARGE' | 'PAYMENT' | null>(null);
+    const [sidebarMode, setSidebarMode] = useState<{ type: EntryType, amount?: number } | null>(null);
+    const [cancelVisitId, setCancelVisitId] = useState<string | null>(null);
+    const [cancelReason, setCancelReason] = useState('');
+    const [isReopenSheetOpen, setIsReopenSheetOpen] = useState(false);
+    const [reopenReasonText, setReopenReasonText] = useState('');
 
     // Sync with URL params
     useEffect(() => {
@@ -171,6 +176,8 @@ export const BillingPage: React.FC = () => {
             .sort((a, b) => a.createdAt - b.createdAt)
             .map(entry => {
                 const entryVisit = visits.find(v => v.id === entry.visitId);
+                // If visit is cancelled, it shouldn't contribute to balance but we still track it in ledger if needed
+                // Actually, for a single visit view, if it's cancelled, we show it but totals will be handled below.
                 runningBal += (entry.netDebit - entry.credit);
                 return {
                     ...entry,
@@ -181,11 +188,14 @@ export const BillingPage: React.FC = () => {
     }, [ledger, selectedVisitId, selectedPatientId, visits]);
 
     const totals = useMemo(() => {
+        if (!selectedVisit || selectedVisit.status === 'CANCELLED') {
+            return { debit: 0, credit: 0 };
+        }
         return visitLedger.reduce((acc, curr) => ({
             debit: acc.debit + curr.netDebit,
             credit: acc.credit + curr.credit,
         }), { debit: 0, credit: 0 });
-    }, [visitLedger]);
+    }, [visitLedger, selectedVisit]);
 
     const balance = totals.debit - totals.credit;
 
@@ -245,16 +255,16 @@ export const BillingPage: React.FC = () => {
         toast({ title: "Entry Voided" });
     };
 
-    const handleDeleteVisit = (visitId: string, event: React.MouseEvent) => {
-        event.stopPropagation();
-        if (confirm('Are you sure you want to delete this visit? This action cannot be undone.')) {
-            setVisits(prev => prev.filter(v => v.id !== visitId));
-            setLedger(prev => prev.filter(e => e.visitId !== visitId));
-            if (selectedVisitId === visitId) {
-                setSelectedVisitId(null);
-            }
-            toast({ title: "Visit Deleted", description: "The visit and all its entries have been removed." });
-        }
+    const handleConfirmCancelVisit = () => {
+        if (!cancelVisitId) return;
+        setVisits(prev => prev.map(v => v.id === cancelVisitId ? {
+            ...v,
+            status: 'CANCELLED',
+            cancelReason: cancelReason
+        } : v));
+        setCancelVisitId(null);
+        setCancelReason('');
+        toast({ title: "Visit Cancelled", description: "The session has been marked as cancelled." });
     };
     const handleSaveEdit = () => {
         if (!editRowId) return;
@@ -338,17 +348,52 @@ export const BillingPage: React.FC = () => {
 
     const handleToggleStatus = () => {
         if (!selectedVisit) return;
-        const newStatus = selectedVisit.status === 'OPEN' ? 'FINAL' : 'OPEN';
+        
+        if (selectedVisit.status === 'FINAL') {
+            // If finalizing -> reopening, show the sheet
+            setIsReopenSheetOpen(true);
+            setReopenReasonText('');
+            return;
+        }
+
+        // Just finalizing
+        const newStatus = 'FINAL';
         setVisits(prev => prev.map(v => v.id === selectedVisit.id ? { ...v, status: newStatus } : v));
         toast({
-            title: newStatus === 'FINAL' ? "Visit Finalized" : "Visit Reopened",
-            description: newStatus === 'FINAL' ? "Charges are now locked." : "You can now add charges."
+            title: "Visit Finalized",
+            description: "Charges are now locked."
+        });
+    };
+
+    const handleConfirmReopen = () => {
+        if (!selectedVisit) return;
+        if (!reopenReasonText.trim()) {
+            toast({
+                variant: 'destructive',
+                title: "Reason Required",
+                description: "Please provide a reason to reopen this finalized bill."
+            });
+            return;
+        }
+
+        setVisits(prev => prev.map(v => v.id === selectedVisit.id ? { 
+            ...v, 
+            status: 'OPEN',
+            reopenReason: reopenReasonText 
+        } : v));
+        
+        setIsReopenSheetOpen(false);
+        setReopenReasonText('');
+        
+        toast({
+            title: "Visit Reopened",
+            description: "You can now add charges."
         });
     };
 
     const handleRefundCredit = (amount: number) => {
         if (!selectedVisitId || amount <= 0) return;
-        setSidebarMode('CHARGE');
+        setSidebarMode({ type: 'REFUND', amount });
         toast({ title: "Refund Form Opened", description: "Please enter refund details." });
     };
 
@@ -420,30 +465,50 @@ export const BillingPage: React.FC = () => {
                                 </Button>
                             </div>
 
-                            {balance < 0 && (
+                            {balance !== 0 && (
                                 <>
                                     <div className="h-8 w-px bg-slate-200 mx-1" />
-                                    <div className="flex items-center gap-3 bg-emerald-50/80 px-4 py-2 rounded-xl border border-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.2)] backdrop-blur-md">
-                                        <div className="bg-emerald-100 p-2 rounded-full border border-emerald-300">
-                                            <Wallet className="h-4 w-4 text-emerald-600 drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
+                                    <div className={cn(
+                                        "flex items-center gap-3 px-4 py-2 rounded-xl border shadow-[0_0_15px_rgba(0,0,0,0.05)] backdrop-blur-md animate-in zoom-in duration-300",
+                                        balance < 0 ? "bg-emerald-50/80 border-emerald-300 text-emerald-700 shadow-emerald-500/10" : "bg-rose-50/80 border-rose-300 text-rose-700 shadow-rose-500/10"
+                                    )}>
+                                        <div className={cn(
+                                            "p-2 rounded-full border",
+                                            balance < 0 ? "bg-emerald-100 border-emerald-300" : "bg-rose-100 border-rose-300"
+                                        )}>
+                                            {balance < 0 ? (
+                                                <Wallet className="h-4 w-4 text-emerald-600 drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
+                                            ) : (
+                                                <TrendingDown className="h-4 w-4 text-rose-600 drop-shadow-[0_0_5px_rgba(244,63,94,0.5)]" />
+                                            )}
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className="text-[9px] font-bold text-emerald-700 tracking-wider uppercase">Available Credit</span>
-                                            <span className="text-base font-bold text-emerald-700 font-mono tracking-tight leading-none mt-0.5 text-shadow-sm">
+                                            <span className={cn(
+                                                "text-[9px] font-bold tracking-wider uppercase",
+                                                balance < 0 ? "text-emerald-700" : "text-rose-700"
+                                            )}>{balance < 0 ? 'Available Credit' : 'Outstanding Due'}</span>
+                                            <span className={cn(
+                                                "text-base font-bold font-mono tracking-tight leading-none mt-0.5 text-shadow-sm",
+                                                balance < 0 ? "text-emerald-700" : "text-rose-700"
+                                            )}>
                                                 ₹ {Math.abs(balance).toLocaleString()}
                                             </span>
                                         </div>
-                                        <div className="h-8 w-px bg-emerald-200 mx-1" />
-                                        <div className="flex flex-col gap-1">
-                                            <button className="text-[9px] font-bold tracking-widest uppercase text-emerald-600 hover:text-emerald-500 hover:drop-shadow-[0_0_8px_rgba(16,185,129,0.4)] transition-all text-left"
-                                                onClick={handleApplyCredit}>
-                                                Apply
-                                            </button>
-                                            <button className="text-[9px] font-bold tracking-widest uppercase text-rose-600 hover:text-rose-500 hover:drop-shadow-[0_0_8px_rgba(244,63,94,0.4)] transition-all text-left"
-                                                onClick={() => handleRefundCredit(Math.abs(balance))}>
-                                                Refund
-                                            </button>
-                                        </div>
+                                        {balance < 0 && (
+                                            <>
+                                                <div className={cn("h-8 w-px mx-1", balance < 0 ? "bg-emerald-200" : "bg-rose-200")} />
+                                                <div className="flex flex-col gap-1">
+                                                    <button className="text-[9px] font-bold tracking-widest uppercase text-emerald-600 hover:text-emerald-500 hover:drop-shadow-[0_0_8px_rgba(16,185,129,0.4)] transition-all text-left"
+                                                        onClick={handleApplyCredit}>
+                                                        Apply
+                                                    </button>
+                                                    <button className="text-[9px] font-bold tracking-widest uppercase text-rose-600 hover:text-rose-500 hover:drop-shadow-[0_0_8px_rgba(244,63,94,0.4)] transition-all text-left"
+                                                        onClick={() => handleRefundCredit(Math.abs(balance))}>
+                                                        Refund
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 </>
                             )}
@@ -547,6 +612,11 @@ export const BillingPage: React.FC = () => {
                                                             : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"
                                                     )}
                                                 >
+                                                    {v.status === 'CANCELLED' && (
+                                                        <div className="absolute inset-0 bg-slate-100/50 backdrop-blur-[1px] z-10 flex items-center justify-center">
+                                                            <Badge variant="destructive" className="bg-rose-100 text-rose-700 border-rose-300 text-[8px] tracking-widest uppercase py-0 px-1.5 opacity-80 rotate-12 border-2">CANCELLED</Badge>
+                                                        </div>
+                                                    )}
                                                     {selectedVisitId === v.id && (
                                                         <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"></div>
                                                     )}
@@ -568,11 +638,17 @@ export const BillingPage: React.FC = () => {
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-6 w-6 text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors -mt-1 -mr-1"
-                                                            onClick={(e) => handleDeleteVisit(v.id, e)}
-                                                            title="Delete Visit"
+                                                            className={cn(
+                                                                "h-6 w-6 text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors -mt-1 -mr-1 z-20",
+                                                                v.status === 'CANCELLED' && "opacity-0 pointer-events-none"
+                                                            )}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setCancelVisitId(v.id);
+                                                            }}
+                                                            title="Cancel Visit"
                                                         >
-                                                            <Trash2 className="h-3 w-3" />
+                                                            <Ban className="h-3 w-3" />
                                                         </Button>
                                                     </div>
                                                 </div>
@@ -602,9 +678,10 @@ export const BillingPage: React.FC = () => {
                             </h3>
 
                             <div className="flex items-center gap-2">
+
                                 {selectedVisit && selectedVisit.status === 'OPEN' && (
                                     <>
-                                        <Button size="sm" className="h-8 text-[10px] uppercase tracking-widest font-bold bg-cyan-600 hover:bg-cyan-500 text-white shadow-[0_0_15px_rgba(8,145,178,0.5)] border border-cyan-400/50 transition-all hover:shadow-[0_0_25px_rgba(8,145,178,0.8)] active:scale-95" onClick={() => setSidebarMode('CHARGE')}>
+                                        <Button size="sm" className="h-8 text-[10px] uppercase tracking-widest font-bold bg-cyan-600 hover:bg-cyan-500 text-white shadow-[0_0_15px_rgba(8,145,178,0.5)] border border-cyan-400/50 transition-all hover:shadow-[0_0_25px_rgba(8,145,178,0.8)] active:scale-95" onClick={() => setSidebarMode({ type: 'CHARGE' })}>
                                             <Plus className="h-3 w-3 mr-1.5 stroke-[3]" /> Add Charges
                                         </Button>
 
@@ -651,8 +728,6 @@ export const BillingPage: React.FC = () => {
                             </div>
                         </div>
 
-
-
                         <div className="flex-1 min-h-0 overflow-auto bg-white scrollbar-thin scrollbar-thumb-slate-200">
                             {!selectedVisit ? (
                                 <div className="h-full flex flex-col items-center justify-center text-slate-400 font-mono text-[10px] uppercase tracking-widest animate-pulse">
@@ -663,7 +738,6 @@ export const BillingPage: React.FC = () => {
                                     <TableHeader className="bg-slate-50/90 text-slate-500 font-mono sticky top-0 z-10 backdrop-blur-md">
                                         <TableRow className="border-b border-slate-200">
                                             <TableHead className="w-[90px] font-bold">DATE</TableHead>
-
                                             <TableHead className="w-[90px] font-bold">TYPE</TableHead>
                                             <TableHead className="w-[80px] font-bold">MODE</TableHead>
                                             <TableHead className="font-bold">PARTICULARS</TableHead>
@@ -687,11 +761,12 @@ export const BillingPage: React.FC = () => {
                                                     <TableCell>
                                                         <Badge variant="outline" className={cn(
                                                             "text-[9px] px-1.5 py-0 font-bold tracking-widest uppercase border",
-                                                            entry.type === 'CHARGE' ? "border-cyan-300 text-cyan-700 bg-cyan-50" :
+                                                            entry.type === 'CHARGE' ? "border-indigo-300 text-indigo-700 bg-indigo-50" :
                                                                 entry.type === 'PAYMENT' ? "border-emerald-300 text-emerald-700 bg-emerald-50" :
-                                                                    entry.type === 'REFUND' ? "border-rose-300 text-rose-700 bg-rose-50" :
-                                                                        entry.type === 'ADJUSTMENT' ? "border-amber-300 text-amber-700 bg-amber-50" :
-                                                                            "border-indigo-300 text-indigo-700 bg-indigo-50"
+                                                                    entry.type === 'ADVANCE' ? "border-violet-300 text-violet-700 bg-violet-50" :
+                                                                        entry.type === 'REFUND' ? "border-rose-300 text-rose-700 bg-rose-50" :
+                                                                            entry.type === 'ADJUSTMENT' ? "border-amber-300 text-amber-700 bg-amber-50" :
+                                                                                "border-slate-300 text-slate-700 bg-slate-50"
                                                         )}>
                                                             {entry.type}
                                                         </Badge>
@@ -769,12 +844,6 @@ export const BillingPage: React.FC = () => {
                                                             </div>
                                                         ) : (
                                                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                {/* Edit action not implemented yet in this iteration, hiding button but fixing onClick if visible
-                                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-full transition-colors"
-                                                                    onClick={() => { setEditRowId(entry.id); setEditValues(entry); } }>
-                                                                    <Edit2 className="h-3 w-3" />
-                                                                </Button>
-                                                                */}
                                                                 <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-colors"
                                                                     onClick={() => handleVoidEntry(entry.id)}>
                                                                     <span className="text-inherit hover:text-rose-600 text-base leading-none mb-1">×</span>
@@ -851,8 +920,8 @@ export const BillingPage: React.FC = () => {
 
                             <div className="pt-4">
                                 <Button className="w-full bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/50 font-bold tracking-widest uppercase text-[10px] shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_20px_rgba(16,185,129,0.5)] transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none disabled:shadow-none"
-                                    disabled={!selectedVisit || balance <= 0}
-                                    onClick={() => setSidebarMode('PAYMENT')}>
+                                    disabled={!selectedVisit}
+                                    onClick={() => setSidebarMode({ type: 'PAYMENT' })}>
                                     COLLECT PAYMENT
                                 </Button>
                             </div>
@@ -1058,7 +1127,7 @@ export const BillingPage: React.FC = () => {
                     <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-cyan-500 via-indigo-500 to-rose-500"></div>
                     <SheetHeader className="mb-0 p-6 pb-4 border-b border-slate-200 bg-slate-50/50">
                         <SheetTitle className="text-slate-900 font-mono tracking-widest uppercase flex items-center gap-2 text-lg">
-                            {sidebarMode === 'CHARGE' ? <><Plus className="h-5 w-5 text-cyan-500" /> ADD CHARGES</> : sidebarMode === 'PAYMENT' ? <><Wallet className="h-5 w-5 text-emerald-500" /> COLLECT PAYMENT</> : 'NEW ENTRY'}
+                            {sidebarMode?.type === 'CHARGE' ? <><Plus className="h-5 w-5 text-cyan-500" /> ADD CHARGES</> : sidebarMode?.type === 'PAYMENT' ? <><Wallet className="h-5 w-5 text-emerald-500" /> COLLECT PAYMENT</> : sidebarMode?.type === 'REFUND' ? <><RotateCcw className="h-5 w-5 text-rose-500" /> REFUND CREDIT</> : 'NEW ENTRY'}
                         </SheetTitle>
                         <SheetDescription className="text-slate-500 font-mono text-[10px] tracking-widest uppercase">
                             Enter details to update the patient ledger.
@@ -1067,7 +1136,9 @@ export const BillingPage: React.FC = () => {
                     <div className="p-6 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
                         {sidebarMode && (
                             <LedgerEntryForm
-                                type={sidebarMode}
+                                type={sidebarMode.type}
+                                initialAmount={sidebarMode.amount}
+                                maxPayable={balance > 0 ? balance : 0}
                                 onSubmit={handleAddEntry}
                                 onClose={() => setSidebarMode(null)}
                             />
@@ -1076,6 +1147,131 @@ export const BillingPage: React.FC = () => {
                 </SheetContent>
             </Sheet>
 
+            {/* Cancellation Reason Side Popup */}
+            <Sheet open={cancelVisitId !== null} onOpenChange={(open) => !open && setCancelVisitId(null)}>
+                <SheetContent side="right" className="w-[400px] sm:max-w-md bg-white border-l border-rose-200 shadow-[-10px_0_30px_rgba(0,0,0,0.05)] p-0 flex flex-col">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-rose-500"></div>
+                    <SheetHeader className="p-6 pb-4 border-b border-slate-200 bg-rose-50/50">
+                        <SheetTitle className="flex items-center gap-2 text-rose-700 font-mono tracking-widest uppercase text-lg">
+                            <Ban className="h-5 w-5" /> Cancel Session
+                        </SheetTitle>
+                        <SheetDescription className="font-mono text-[10px] tracking-widest uppercase text-rose-600/70">
+                            Please provide a reason for cancelling this bill.
+                        </SheetDescription>
+                    </SheetHeader>
+                    
+                    <div className="p-6 flex-1">
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Cancellation Reason</Label>
+                                <div className="relative">
+                                    <MessageSquare className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                                    <textarea
+                                        className="w-full h-48 pl-10 pr-4 py-3 border border-slate-200 rounded-xl bg-slate-50/50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-300 transition-all font-mono text-xs resize-none"
+                                        placeholder="e.g. Patient changed mind, Wrong bill type, Consultation cancelled..."
+                                        value={cancelReason}
+                                        onChange={(e) => setCancelReason(e.target.value)}
+                                        autoFocus
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 flex items-start gap-3">
+                                <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                                <p className="text-[10px] text-amber-700 leading-relaxed font-mono uppercase tracking-tight">
+                                    Cancelling this session will exclude all associated charges and payments from the patient's balance. This action is tracked for audit purposes.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="p-6 bg-slate-50 border-t border-slate-200 flex flex-col gap-3">
+                        <Button
+                            onClick={handleConfirmCancelVisit}
+                            disabled={!cancelReason.trim()}
+                            className="w-full h-11 bg-rose-600 hover:bg-rose-500 text-white border border-rose-400/50 font-bold tracking-widest uppercase text-xs shadow-[0_0_15px_rgba(244,63,94,0.3)] hover:shadow-[0_0_20px_rgba(244,63,94,0.5)] transition-all active:scale-95 disabled:opacity-50"
+                        >
+                            CONFIRM CANCELLATION
+                        </Button>
+                        <Button variant="ghost" onClick={() => setCancelVisitId(null)} className="w-full h-10 font-mono text-[10px] tracking-widest uppercase text-slate-500 hover:text-slate-800 hover:bg-slate-200">
+                            Keep Visit
+                        </Button>
+                    </div>
+                </SheetContent>
+            </Sheet>
+
+            {/* Reopen Bill Reason Sheet */}
+            <Sheet open={isReopenSheetOpen} onOpenChange={setIsReopenSheetOpen}>
+                <SheetContent side="right" className="w-[400px] sm:w-[540px] border-l border-amber-200 bg-white p-0 overflow-hidden flex flex-col">
+                    <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600" />
+                    
+                    <SheetHeader className="p-8 pb-4 space-y-4">
+                        <div className="flex items-center gap-4">
+                            <div className="h-14 w-14 rounded-2xl bg-amber-50 flex items-center justify-center border border-amber-200 shadow-[0_0_20px_rgba(245,158,11,0.15)]">
+                                <Unlock className="h-7 w-7 text-amber-600 drop-shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
+                            </div>
+                            <div>
+                                <SheetTitle className="text-2xl font-black tracking-tight text-slate-900 uppercase italic">
+                                    Reopen Session
+                                </SheetTitle>
+                                <SheetDescription className="text-slate-500 font-medium">
+                                    Capture the justification for auditing and transparency.
+                                </SheetDescription>
+                            </div>
+                        </div>
+                    </SheetHeader>
+
+                    <div className="flex-1 px-8 py-6 space-y-8 overflow-y-auto">
+                        <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Target Session</span>
+                                <Badge variant="outline" className="bg-white text-indigo-600 border-indigo-200 border-2 font-mono text-[10px]">
+                                    #{selectedVisit?.id}
+                                </Badge>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <span className="text-sm font-bold text-slate-700">{selectedPatient?.name}</span>
+                                <span className="text-xs text-slate-500 italic opacity-70">Finalized on: {selectedVisit ? format(new Date(selectedVisit.date), 'dd MMM yyyy, HH:mm') : '-'}</span>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <Label className="text-sm font-bold text-slate-700">Reason for Reopening</Label>
+                                <span className="text-[10px] text-amber-600 font-black tracking-widest uppercase">* REQUIRED</span>
+                            </div>
+                            <Textarea
+                                placeholder="E.g., Correction required in consultation fee, adding missed diagnostics charge..."
+                                className="min-h-[160px] bg-slate-50 border-slate-200 focus:border-amber-400 focus:ring-amber-500/20 text-slate-800 placeholder:text-slate-400 rounded-xl resize-none shadow-inner transition-all text-sm leading-relaxed"
+                                value={reopenReasonText}
+                                onChange={(e) => setReopenReasonText(e.target.value)}
+                            />
+                            <p className="text-[10px] text-slate-400 flex items-center gap-2 italic">
+                                <AlertCircle className="h-3 w-3 text-amber-500" />
+                                This reason will be logged against the visit record.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="p-8 pt-4 border-t border-slate-100 bg-slate-50/50 backdrop-blur-sm">
+                        <div className="flex flex-col gap-3">
+                            <Button 
+                                onClick={handleConfirmReopen}
+                                className="w-full h-12 bg-amber-600 hover:bg-amber-700 text-white font-black tracking-widest uppercase shadow-[0_10px_20px_rgba(217,119,6,0.25)] border-b-4 border-amber-800 active:border-b-0 active:translate-y-1 transition-all flex items-center justify-center gap-2"
+                            >
+                                <Unlock className="h-5 w-5" /> Confirm & Reopen
+                            </Button>
+                            <Button 
+                                variant="ghost" 
+                                onClick={() => setIsReopenSheetOpen(false)}
+                                className="w-full h-10 text-slate-500 hover:text-slate-800 hover:bg-white border-transparent font-bold tracking-widest uppercase transition-colors"
+                            >
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
+                </SheetContent>
+            </Sheet>
         </div >
     );
 };
@@ -1103,7 +1299,8 @@ function NewPatientForm({ onSubmit, onClose }: { onSubmit: (data: any) => void, 
     );
 }
 
-function LedgerEntryForm({ type, onSubmit, onClose }: { type: EntryType, onSubmit: (val: any) => void, onClose: () => void }) {
+function LedgerEntryForm({ type, onSubmit, onClose, initialAmount, maxPayable }: { type: EntryType, onSubmit: (val: any) => void, onClose: () => void, initialAmount?: number, maxPayable?: number }) {
+    const [localType, setLocalType] = useState<EntryType>(type);
     // Common
     const [date] = useState(new Date().toISOString().slice(0, 16));
     const [particular, setParticular] = useState('');
@@ -1115,12 +1312,23 @@ function LedgerEntryForm({ type, onSubmit, onClose }: { type: EntryType, onSubmi
     const [discountValue, setDiscountValue] = useState(0);
 
     // Payment specific
-    const [amount, setAmount] = useState(0);
+    const [amount, setAmount] = useState<number>(initialAmount || 0);
+
+    // Sync amount if initialAmount changes (important for tab switching or buttons)
+    useEffect(() => {
+        if (initialAmount !== undefined) {
+            setAmount(initialAmount);
+        }
+    }, [initialAmount]);
     const [mode, setMode] = useState<PaymentMode>('CASH');
     const [ref, setRef] = useState('');
 
+    const isOverpaying = useMemo(() => {
+        return localType === 'PAYMENT' && maxPayable !== undefined && amount > maxPayable;
+    }, [localType, amount, maxPayable]);
+
     const calculated = useMemo(() => {
-        if (type !== 'CHARGE') return { net: amount || 0 };
+        if (localType !== 'CHARGE') return { net: amount || 0 };
         const gross = qty * rate;
         let disc = 0;
         if (discountType === 'FLAT') disc = discountValue;
@@ -1128,35 +1336,68 @@ function LedgerEntryForm({ type, onSubmit, onClose }: { type: EntryType, onSubmi
 
         const net = Math.max(0, gross - disc);
         return { gross, disc, net };
-    }, [type, qty, rate, discountType, discountValue, amount]);
+    }, [localType, qty, rate, discountType, discountValue, amount]);
 
     const handleSave = () => {
-        if (type === 'CHARGE') {
+        if (isOverpaying) return;
+
+        if (localType === 'CHARGE') {
             onSubmit({
-                type, date, particular: particular || 'Charge', qty, rate, discountType, discountValue,
+                type: localType, date, particular: particular || 'Charge', qty, rate, discountType, discountValue,
                 netDebit: calculated.net, credit: 0
             });
         } else {
             // Logic for PAYMENT, ADVANCE, REFUND, ADJUSTMENT
-            const isAdjustment = type === 'ADJUSTMENT';
+            const isAdjustment = localType === 'ADJUSTMENT';
+            const isRefund = localType === 'REFUND';
             onSubmit({
-                type, date, particular: particular || (type === 'PAYMENT' ? 'Payment' : type),
+                type: localType, date, particular: particular || (localType === 'PAYMENT' ? 'Payment' : localType),
                 amount: amount, mode: isAdjustment ? undefined : mode, ref,
-                netDebit: 0, credit: amount
+                netDebit: isRefund ? amount : 0, 
+                credit: isRefund ? 0 : amount
             });
         }
     };
 
     return (
         <div className="space-y-4">
+            {type !== 'CHARGE' && (
+                <div className="flex p-1 bg-slate-100 rounded-lg gap-1">
+                    {(['PAYMENT', 'ADVANCE', 'REFUND'] as EntryType[]).map((t) => (
+                        <Button
+                            key={t}
+                            variant="ghost"
+                            size="sm"
+                            className={cn(
+                                "flex-1 text-[10px] font-bold tracking-widest uppercase h-8 transition-all",
+                                localType === t 
+                                    ? t === 'PAYMENT' ? "bg-emerald-600 text-white shadow-sm" :
+                                      t === 'ADVANCE' ? "bg-violet-600 text-white shadow-sm" :
+                                      "bg-rose-600 text-white shadow-sm"
+                                    : "text-slate-500 hover:bg-slate-200"
+                            )}
+                            onClick={() => setLocalType(t)}
+                        >
+                            {t}
+                        </Button>
+                    ))}
+                </div>
+            )}
+
             <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-3">
-                    <Label className="text-[10px] font-bold text-cyan-600 uppercase tracking-widest font-mono mb-2 block object-left">PARTICULARS / DESCRIPTION</Label>
-                    <Input autoFocus value={particular} onChange={e => setParticular(e.target.value)} placeholder={type === 'CHARGE' ? "e.g. MRI Scan" : "Payment reference"} className="bg-white border-slate-300 text-slate-800 font-mono focus:border-cyan-500 focus:ring-cyan-500/20 shadow-sm" />
+                    <Label className={cn(
+                        "text-[10px] font-bold uppercase tracking-widest font-mono mb-2 block object-left",
+                        localType === 'CHARGE' ? "text-indigo-600" :
+                        localType === 'PAYMENT' ? "text-emerald-600" :
+                        localType === 'ADVANCE' ? "text-violet-600" :
+                        "text-rose-600"
+                    )}>PARTICULARS / DESCRIPTION</Label>
+                    <Input autoFocus value={particular} onChange={e => setParticular(e.target.value)} placeholder={localType === 'CHARGE' ? "e.g. MRI Scan" : "Payment reference"} className="bg-white border-slate-300 text-slate-800 font-mono focus:border-cyan-500 focus:ring-cyan-500/20 shadow-sm" />
                 </div>
             </div>
 
-            {type === 'CHARGE' ? (
+            {localType === 'CHARGE' ? (
                 <>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -1191,24 +1432,54 @@ function LedgerEntryForm({ type, onSubmit, onClose }: { type: EntryType, onSubmi
 
                     <div className="bg-white border border-slate-200 p-4 rounded-lg flex justify-between items-center text-xs font-medium shadow-[0_0_15px_rgba(0,0,0,0.05)]">
                         <span className="text-slate-500 font-mono tracking-widest uppercase text-[10px]">NET TOTAL:</span>
-                        <span className="text-2xl font-bold font-mono text-cyan-600 drop-shadow-[0_0_5px_rgba(8,145,178,0.3)]">₹ {calculated.net.toLocaleString()}</span>
+                        <span className="text-2xl font-bold font-mono text-indigo-600 drop-shadow-[0_0_5px_rgba(79,70,229,0.3)]">₹ {calculated.net.toLocaleString()}</span>
                     </div>
                 </>
             ) : (
                 <>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-2">
-                            <Label className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest font-mono mb-2 block">AMOUNT RECEIVED (₹)</Label>
-                            <Input type="number" autoFocus value={amount} onChange={e => setAmount(Number(e.target.value))} className="bg-white border-emerald-200 text-emerald-600 font-mono text-2xl h-14 text-right focus:border-emerald-500 focus:ring-emerald-500/20 shadow-sm" />
+                            <Label className={cn(
+                                "text-[10px] font-bold uppercase tracking-widest font-mono mb-2 block",
+                                localType === 'PAYMENT' ? "text-emerald-600" :
+                                localType === 'ADVANCE' ? "text-cyan-600" :
+                                "text-rose-600"
+                            )}>
+                                {localType === 'REFUND' ? 'AMOUNT REFUNDED (₹)' : 'AMOUNT RECEIVED (₹)'}
+                            </Label>
+                            <Input type="number" autoFocus value={amount} onChange={e => setAmount(Number(e.target.value))} 
+                                className={cn(
+                                    "bg-white font-mono text-2xl h-14 text-right shadow-sm",
+                                    localType === 'PAYMENT' ? "border-emerald-200 text-emerald-600 focus:border-emerald-500" :
+                                    localType === 'ADVANCE' ? "border-violet-200 text-violet-600 focus:border-violet-500" :
+                                    "border-rose-200 text-rose-600 focus:border-rose-500",
+                                    isOverpaying && "border-rose-500 ring-rose-500/20"
+                                )} 
+                            />
+                            {isOverpaying && (
+                                <div className="mt-2 p-2 bg-rose-50 border border-rose-200 rounded-lg flex items-center gap-2 animate-in slide-in-from-top-1">
+                                    <AlertCircle className="h-3 w-3 text-rose-600" />
+                                    <span className="text-[10px] font-bold text-rose-700 uppercase tracking-tight">
+                                        Payment exceeds charges (Max: ₹ {maxPayable?.toLocaleString()})
+                                    </span>
+                                </div>
+                            )}
                         </div>
                         <div>
                             <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono mb-2 block">PAYMENT MODE</Label>
-                            <Select value={mode} onValueChange={(v: PaymentMode) => setMode(v)} disabled={type === 'ADJUSTMENT'}>
-                                <SelectTrigger className={cn("bg-white border-slate-300 text-slate-700 font-mono focus:ring-emerald-500/20", type === 'ADJUSTMENT' ? "opacity-50" : "")}><SelectValue /></SelectTrigger>
+                            <Select value={mode} onValueChange={(v: PaymentMode) => setMode(v)} disabled={localType === 'ADJUSTMENT'}>
+                                <SelectTrigger className={cn("bg-white border-slate-300 text-slate-700 font-mono focus:ring-emerald-500/20", localType === 'ADJUSTMENT' ? "opacity-50" : "")}><SelectValue /></SelectTrigger>
                                 <SelectContent className="bg-white border-slate-200 text-slate-700 font-mono">
                                     <SelectItem value="CASH" className="hover:bg-slate-100">CASH</SelectItem>
-                                    <SelectItem value="UPI" className="hover:bg-slate-100">UPI</SelectItem>
-                                    <SelectItem value="CARD" className="hover:bg-slate-100">CARD</SelectItem>
+                                    <SelectItem value="UPI" className="hover:bg-slate-100">UPI / QR CODE</SelectItem>
+                                    <SelectItem value="CARD" className="hover:bg-slate-100">CARD (GENERAL)</SelectItem>
+                                    <SelectItem value="DEBIT_CARD" className="hover:bg-slate-100">DEBIT CARD</SelectItem>
+                                    <SelectItem value="CREDIT_CARD" className="hover:bg-slate-100">CREDIT CARD</SelectItem>
+                                    <SelectItem value="BANK_TRANSFER" className="hover:bg-slate-100">BANK TRANSFER / NEFT</SelectItem>
+                                    <SelectItem value="CHEQUE" className="hover:bg-slate-100">CHEQUE</SelectItem>
+                                    <SelectItem value="INSURANCE" className="hover:bg-slate-100">INSURANCE / TPA</SelectItem>
+                                    <SelectItem value="CORPORATE" className="hover:bg-slate-100">CORPORATE</SelectItem>
+                                    <SelectItem value="OTHER" className="hover:bg-slate-100">OTHER</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -1222,8 +1493,16 @@ function LedgerEntryForm({ type, onSubmit, onClose }: { type: EntryType, onSubmi
 
             <div className="flex gap-3 justify-end pt-4 border-t border-slate-200 mt-6">
                 <Button variant="outline" onClick={onClose} className="bg-transparent border-slate-300 text-slate-500 hover:bg-slate-100 hover:text-slate-800 font-mono text-[10px] uppercase tracking-widest shadow-sm">CANCEL</Button>
-                <Button onClick={handleSave} className="bg-cyan-600 hover:bg-cyan-500 text-white font-mono text-[10px] uppercase tracking-widest font-bold border border-cyan-400/50 shadow-[0_0_15px_rgba(8,145,178,0.3)] hover:shadow-[0_0_20px_rgba(8,145,178,0.5)] disabled:opacity-50" disabled={(type === 'CHARGE' && calculated.net <= 0) || (type !== 'CHARGE' && amount <= 0)}>
-                    SAVE
+                <Button onClick={handleSave} 
+                    className={cn(
+                        "text-white font-mono text-[10px] uppercase tracking-widest font-bold border disabled:opacity-50 transition-all",
+                        localType === 'CHARGE' ? "bg-indigo-600 hover:bg-indigo-500 border-indigo-400/50 shadow-[0_0_15px_rgba(79,70,229,0.3)]" :
+                        localType === 'PAYMENT' ? "bg-emerald-600 hover:bg-emerald-500 border-emerald-400/50 shadow-[0_0_15px_rgba(16,185,129,0.3)]" :
+                        localType === 'ADVANCE' ? "bg-violet-600 hover:bg-violet-500 border-violet-400/50 shadow-[0_0_15px_rgba(139,92,246,0.3)]" :
+                        "bg-rose-600 hover:bg-rose-500 border-rose-400/50 shadow-[0_0_15px_rgba(244,63,94,0.3)]"
+                    )}
+                    disabled={(localType === 'CHARGE' && calculated.net <= 0) || (localType !== 'CHARGE' && amount <= 0) || isOverpaying}>
+                    SAVE {localType}
                 </Button>
             </div>
         </div>

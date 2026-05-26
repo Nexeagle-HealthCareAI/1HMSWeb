@@ -46,7 +46,18 @@ import {
   LayoutDashboard,
   Receipt,
   Shield,
-  IndianRupee
+  IndianRupee,
+  Hotel,
+  FileCheck,
+  Boxes,
+  BookLock,
+  Droplet,
+  FolderSearch,
+  Activity as ActivityIcon,
+  Siren,
+  Wrench,
+  Ambulance,
+  UserSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -59,6 +70,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { HeaderLanguageSelector } from '@/components/shared/HeaderLanguageSelector';
+import { AlertBell } from '@/features/alerts/components/AlertBell';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -211,6 +223,18 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       path: '/appointment-dashboard',
     },
     { id: 'billing', name: t('header.billing') || 'Billing', icon: IndianRupee, path: '/billing' },
+    { id: 'ipd', name: t('header.ipd') || 'IPD', icon: Hotel, path: '/ipd' },
+    { id: 'pcpndt', name: t('header.pcpndt') || 'PCPNDT', icon: FileCheck, path: '/pcpndt' },
+    { id: 'inventory', name: t('header.inventory') || 'Inventory', icon: Boxes, path: '/inventory' },
+    { id: 'day-close', name: t('header.dayClose') || 'Day Close', icon: BookLock, path: '/day-close' },
+    { id: 'revenue', name: t('header.revenue') || 'Revenue', icon: TrendingUp, path: '/revenue' },
+    { id: 'blood-bank', name: t('header.bloodBank') || 'Blood Bank', icon: Droplet, path: '/blood-bank' },
+    { id: 'mrd', name: t('header.mrd') || 'MRD', icon: FolderSearch, path: '/mrd' },
+    { id: 'ipd-analytics', name: t('header.ipdAnalytics') || 'IPD Ops', icon: ActivityIcon, path: '/ipd-analytics' },
+    { id: 'mlc', name: t('header.mlc') || 'MLC', icon: Siren, path: '/mlc' },
+    { id: 'equipment', name: t('header.equipment') || 'Equipment', icon: Wrench, path: '/equipment' },
+    { id: 'triage', name: t('header.triage') || 'Triage', icon: Ambulance, path: '/triage' },
+    { id: 'visitors', name: t('header.visitors') || 'Visitors', icon: UserSquare, path: '/visitors' },
   ];
 
   // Filter navigation items based on user role
@@ -224,8 +248,35 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     if (item.id === 'appointments') {
       return userRole === 'Admin' || userRole === 'AdminDoctor' || userRole === 'Receptionist' || userRole === 'Nurse';
     }
-    if (item.id === 'billing') {
+    if (item.id === 'billing' || item.id === 'ipd' || item.id === 'pcpndt') {
+      return userRole === 'Admin' || userRole === 'AdminDoctor' || userRole === 'Doctor';
+    }
+    if (item.id === 'inventory') {
+      return userRole === 'Admin' || userRole === 'AdminDoctor' || userRole === 'Doctor' || userRole === 'Nurse';
+    }
+    if (item.id === 'day-close' || item.id === 'revenue') {
       return userRole === 'Admin' || userRole === 'AdminDoctor';
+    }
+    if (item.id === 'blood-bank') {
+      return userRole === 'Admin' || userRole === 'AdminDoctor' || userRole === 'Doctor' || userRole === 'Nurse';
+    }
+    if (item.id === 'mrd') {
+      return userRole === 'Admin' || userRole === 'AdminDoctor' || userRole === 'Doctor';
+    }
+    if (item.id === 'ipd-analytics') {
+      return userRole === 'Admin' || userRole === 'AdminDoctor';
+    }
+    if (item.id === 'mlc') {
+      return userRole === 'Admin' || userRole === 'AdminDoctor' || userRole === 'Doctor';
+    }
+    if (item.id === 'equipment') {
+      return userRole === 'Admin' || userRole === 'AdminDoctor' || userRole === 'Doctor' || userRole === 'Nurse';
+    }
+    if (item.id === 'triage') {
+      return userRole === 'Admin' || userRole === 'AdminDoctor' || userRole === 'Doctor' || userRole === 'Nurse';
+    }
+    if (item.id === 'visitors') {
+      return userRole === 'Admin' || userRole === 'AdminDoctor' || userRole === 'Receptionist' || userRole === 'Nurse';
     }
     return true;
   });
@@ -500,6 +551,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   <span className="text-sm font-medium">{personalProfileLabel} ({profileScore}%)</span>
                 </Button>
               )}
+
+              {/* Alerts */}
+              <AlertBell />
 
               {/* Theme Toggle */}
               <ThemeToggle

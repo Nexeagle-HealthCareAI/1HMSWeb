@@ -7,7 +7,7 @@ export type Patient = {
     sex: 'M' | 'F';
 };
 
-export type VisitStatus = 'OPEN' | 'FINAL';
+export type VisitStatus = 'OPEN' | 'FINAL' | 'CANCELLED';
 export type VisitType = 'OPD' | 'IPD' | 'LAB' | 'PHARMACY' | 'ER' | 'OTHER';
 
 export type Visit = {
@@ -17,6 +17,8 @@ export type Visit = {
     date: string;
     status: VisitStatus;
     doctorName?: string;
+    cancelReason?: string;
+    reopenReason?: string;
     // Optional fields for dashboard display
     patientName?: string;
     patientIdDisplay?: string;
@@ -30,7 +32,7 @@ export type Visit = {
 
 export type EntryType = 'CHARGE' | 'PAYMENT' | 'ADVANCE' | 'REFUND' | 'ADJUSTMENT';
 export type DiscountType = 'NONE' | 'PCT' | 'FLAT';
-export type PaymentMode = 'CASH' | 'UPI' | 'CARD' | 'BANK';
+export type PaymentMode = 'CASH' | 'UPI' | 'CARD' | 'DEBIT_CARD' | 'CREDIT_CARD' | 'BANK_TRANSFER' | 'CHEQUE' | 'INSURANCE' | 'CORPORATE' | 'OTHER';
 
 export type LedgerEntry = {
     id: string;

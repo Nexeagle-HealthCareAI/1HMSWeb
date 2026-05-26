@@ -5,6 +5,8 @@ export interface PrintSettings {
     email: string;
     website: string;
     gstin?: string;
+    pan?: string;
+    nabhNumber?: string;
     logoUrl?: string;
     footerText?: string;
     terms?: string[];

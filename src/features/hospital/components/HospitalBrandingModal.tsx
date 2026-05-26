@@ -49,7 +49,10 @@ const defaultBranding: HospitalBranding = {
   country: '',
   pincode: '',
   timeZone: '',
-  registrationNumber: ''
+  registrationNumber: '',
+  gstin: '',
+  pan: '',
+  nabhNumber: ''
 };
 
 const requiredFields: ReadonlyArray<keyof HospitalBranding> = [
@@ -97,7 +100,10 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
       country: t('hospitalBranding.labels.country'),
       pincode: t('hospitalBranding.labels.pincode'),
       timeZone: t('hospitalBranding.labels.timeZone'),
-      registrationNumber: t('hospitalBranding.labels.registrationNumber')
+      registrationNumber: t('hospitalBranding.labels.registrationNumber'),
+      gstin: t('hospitalBranding.labels.gstin'),
+      pan: t('hospitalBranding.labels.pan'),
+      nabhNumber: t('hospitalBranding.labels.nabhNumber')
     }),
     [t]
   );
@@ -188,6 +194,16 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
         return validateWebsite(value);
       case 'pincode':
         return validatePincode(value);
+      case 'gstin':
+        if (trimmedValue && !trimmedValue.match(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/)) {
+          return t('hospitalBranding.validation.gstinInvalid');
+        }
+        return undefined;
+      case 'pan':
+        if (trimmedValue && !trimmedValue.match(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/)) {
+          return t('hospitalBranding.validation.panInvalid');
+        }
+        return undefined;
       default:
         return undefined;
     }
@@ -244,7 +260,7 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
   const stepFieldMap: Record<number, ReadonlyArray<keyof HospitalBranding>> = {
     1: ['name', 'type', 'email', 'contact', 'alternateContact', 'website'],
     2: ['location', 'city', 'state', 'country', 'pincode'],
-    3: ['registrationNumber', 'timeZone'],
+    3: ['registrationNumber', 'gstin', 'pan', 'nabhNumber', 'timeZone'],
   };
 
   const validateStep = (step: number): boolean => {
@@ -307,7 +323,10 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
         state: branding.state,
         country: branding.country,
         pincode: branding.pincode,
-        timeZone: branding.timeZone || 'Asia/Kolkata'
+        timeZone: branding.timeZone || 'Asia/Kolkata',
+        gstin: branding.gstin,
+        pan: branding.pan,
+        nabhNumber: branding.nabhNumber
       });
 
       if (response.success) {
@@ -680,6 +699,63 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
                     <p className="text-xs text-muted-foreground">{t('hospitalBranding.helpers.registrationNumber')}</p>
                   </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="gstin" className="flex items-center gap-2">
+                      <Hash className="h-4 w-4" />
+                      {t('hospitalBranding.labels.gstin')}
+                    </Label>
+                    <Input
+                      id="gstin"
+                      value={branding.gstin || ''}
+                      onChange={(e) => updateBranding('gstin', e.target.value)}
+                      placeholder={t('hospitalBranding.placeholders.gstin')}
+                      className={validationErrors.gstin ? 'border-red-500' : ''}
+                    />
+                    {validationErrors.gstin && (
+                      <p className="text-xs text-red-500 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        {validationErrors.gstin}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="pan" className="flex items-center gap-2">
+                      <Hash className="h-4 w-4" />
+                      {t('hospitalBranding.labels.pan')}
+                    </Label>
+                    <Input
+                      id="pan"
+                      value={branding.pan || ''}
+                      onChange={(e) => updateBranding('pan', e.target.value)}
+                      placeholder={t('hospitalBranding.placeholders.pan')}
+                      className={validationErrors.pan ? 'border-red-500' : ''}
+                    />
+                    {validationErrors.pan && (
+                      <p className="text-xs text-red-500 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        {validationErrors.pan}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="nabhNumber" className="flex items-center gap-2">
+                      <Hash className="h-4 w-4" />
+                      {t('hospitalBranding.labels.nabhNumber')}
+                    </Label>
+                    <Input
+                      id="nabhNumber"
+                      value={branding.nabhNumber || ''}
+                      onChange={(e) => updateBranding('nabhNumber', e.target.value)}
+                      placeholder={t('hospitalBranding.placeholders.nabhNumber')}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="timeZone" className="flex items-center gap-2">
                       <Clock className="h-4 w-4" />

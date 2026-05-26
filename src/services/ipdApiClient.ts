@@ -1,0 +1,87 @@
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError, InternalAxiosRequestConfig, AxiosHeaders } from 'axios';
+import { useAuthStore } from '@/store/authStore';
+import { IPD_API_BASE_URL } from '@/app/api';
+
+const API_TIMEOUT = 30000;
+
+const ipdAxios: AxiosInstance = axios.create({
+    baseURL: IPD_API_BASE_URL,
+    timeout: API_TIMEOUT,
+    headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+    },
+    withCredentials: false,
+});
+
+ipdAxios.interceptors.request.use(
+    (config: InternalAxiosRequestConfig) => {
+        if (import.meta.env.DEV) {
+            console.log('IPD API Request:', {
+                method: config.method?.toUpperCase(),
+                url: config.url,
+                baseURL: config.baseURL,
+            });
+        }
+
+        const token = useAuthStore.getState().getToken();
+        if (token) {
+            const headers = config.headers instanceof AxiosHeaders
+                ? config.headers
+                : AxiosHeaders.from(config.headers || {});
+            headers.set('Authorization', `Bearer ${token}`);
+            config.headers = headers;
+        }
+
+        const csrfToken = localStorage.getItem('csrf-token');
+        if (csrfToken && config.headers) {
+            (config.headers as any)['X-CSRF-Token'] = csrfToken;
+        }
+
+        return config;
+    },
+    (error: AxiosError) => Promise.reject(error),
+);
+
+ipdAxios.interceptors.response.use(
+    (response: AxiosResponse) => {
+        if (import.meta.env.DEV) {
+            console.log('IPD API Response:', {
+                status: response.status,
+                url: response.config.url,
+            });
+        }
+        return response;
+    },
+    (error: AxiosError) => {
+        if (error.response) {
+            const { status, data } = error.response;
+            if (status === 401) {
+                useAuthStore.getState().logout();
+                window.location.href = '/login';
+            } else {
+                console.error(`IPD API HTTP ${status}:`, data);
+            }
+        } else if (error.request) {
+            console.error('IPD API network error:', error.request);
+        } else {
+            console.error('IPD API error:', error.message);
+        }
+        return Promise.reject(error);
+    },
+);
+
+export const ipdApiClient = {
+    get: <T = any>(url: string, config?: AxiosRequestConfig): Promise<T> =>
+        ipdAxios.get(url, config).then(r => r.data),
+    post: <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> =>
+        ipdAxios.post(url, data, config).then(r => r.data),
+    put: <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> =>
+        ipdAxios.put(url, data, config).then(r => r.data),
+    patch: <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> =>
+        ipdAxios.patch(url, data, config).then(r => r.data),
+    delete: <T = any>(url: string, config?: AxiosRequestConfig): Promise<T> =>
+        ipdAxios.delete(url, config).then(r => r.data),
+};
+
+export { ipdAxios };

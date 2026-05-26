@@ -1,0 +1,15 @@
+{
+    "receiptNo": "RCPT-2526-000801",
+    "date": "2026-01-27T10:45:00",
+    "invoiceNo": "OPD-2526-000124",
+    "patientName": "Rahul Sharma",
+    "patientId": "XZY-9080",
+    "amount": 500,
+    "mode": "UPI",
+    "transactionId": "UPI-1234567890",
+    "receivedBy": "Admin User",
+    "remarks": "Advance payment",
+    "invoiceTotal": 1550,
+    "invoiceBalanceBefore": 1550,
+    "invoiceBalanceAfter": 1050
+}

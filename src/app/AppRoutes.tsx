@@ -45,6 +45,20 @@ const PatientProfilePage = lazy(() => import('@/features/patient/pages/PatientPr
 const BillingPage = lazy(() => import('@/features/billing/pages/BillingPage').then(module => ({ default: module.BillingPage })));
 const BillingDashboard = lazy(() => import('@/features/billing/pages/BillingDashboard').then(module => ({ default: module.BillingDashboard })));
 const PrintPreviewPage = lazy(() => import('@/features/billing/pages/PrintPreviewPage').then(module => ({ default: module.PrintPreviewPage })));
+const IPDDashboard = lazy(() => import('@/features/ipd/pages/IPDDashboard').then(module => ({ default: module.default })));
+const IPDPatientWorkspace = lazy(() => import('@/features/ipd/pages/IPDPatientWorkspace').then(module => ({ default: module.default })));
+const PcpndtPage = lazy(() => import('@/features/ipd/pages/PcpndtPage').then(module => ({ default: module.default })));
+const InventoryPage = lazy(() => import('@/features/inventory/pages/InventoryPage').then(module => ({ default: module.default })));
+const DayClosePage = lazy(() => import('@/features/billing/pages/DayClosePage').then(module => ({ default: module.default })));
+const RevenuePage = lazy(() => import('@/features/billing/pages/RevenuePage').then(module => ({ default: module.default })));
+const IpdAnalyticsPage = lazy(() => import('@/features/billing/pages/IpdAnalyticsPage').then(module => ({ default: module.default })));
+const BloodBankPage = lazy(() => import('@/features/bloodBank/pages/BloodBankPage').then(module => ({ default: module.default })));
+const MrdPage = lazy(() => import('@/features/mrd/pages/MrdPage').then(module => ({ default: module.default })));
+const MlcPage = lazy(() => import('@/features/mlc/pages/MlcPage').then(module => ({ default: module.default })));
+const EquipmentPage = lazy(() => import('@/features/equipment/pages/EquipmentPage').then(module => ({ default: module.default })));
+const TriagePage = lazy(() => import('@/features/triage/pages/TriagePage').then(module => ({ default: module.default })));
+const VisitorsPage = lazy(() => import('@/features/visitors/pages/VisitorsPage').then(module => ({ default: module.default })));
+const EncounterBillingPage = lazy(() => import('@/features/billing/pages/EncounterBillingPage').then(module => ({ default: module.default })));
 
 
 // Loading component for lazy routes
@@ -310,6 +324,148 @@ export const AppRoutes: React.FC = () => {
                 <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
                   <MainLayout>
                     <BillingPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/billing/encounter/:encounterId"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Receptionist', 'Nurse']}>
+                  <MainLayout>
+                    <EncounterBillingPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+
+            {/* IPD Routes */}
+            <Route
+              path="/ipd"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor']}>
+                  <MainLayout>
+                    <IPDDashboard />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/ipd/patient/:admissionId"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor']}>
+                  <MainLayout>
+                    <IPDPatientWorkspace />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/pcpndt"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor']}>
+                  <MainLayout>
+                    <PcpndtPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/inventory"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Nurse']}>
+                  <MainLayout>
+                    <InventoryPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/day-close"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                  <MainLayout>
+                    <DayClosePage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/revenue"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                  <MainLayout>
+                    <RevenuePage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/blood-bank"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Nurse']}>
+                  <MainLayout>
+                    <BloodBankPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/mrd"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor']}>
+                  <MainLayout>
+                    <MrdPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/ipd-analytics"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                  <MainLayout>
+                    <IpdAnalyticsPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/mlc"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor']}>
+                  <MainLayout>
+                    <MlcPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/equipment"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Nurse']}>
+                  <MainLayout>
+                    <EquipmentPage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/triage"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor', 'Nurse']}>
+                  <MainLayout>
+                    <TriagePage />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/visitors"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Receptionist', 'Nurse']}>
+                  <MainLayout>
+                    <VisitorsPage />
                   </MainLayout>
                 </RouteGuard>
               }

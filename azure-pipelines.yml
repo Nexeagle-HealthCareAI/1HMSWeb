@@ -47,33 +47,10 @@ stages:
       env:
         VITE_API_BASE_URL: $(VITE_API_BASE_URL)
 
-# ============ QA ============
-- stage: Deploy_QA
-  displayName: Deploy to QA
-  dependsOn: Deploy_Dev
-  condition: succeeded()
-  variables:
-  - group: swa-secrets-qa    # SWA_DEPLOYMENT_TOKEN_WEB_QA, VITE_API_BASE_URL
-  jobs:
-  - job: QA
-    displayName: Deploy (QA) via SWA build
-    steps:
-    - checkout: self
-    - task: AzureStaticWebApp@0
-      displayName: 'Deploy to Azure Static Web App (QA)'
-      inputs:
-        app_location: '$(appLocation)'
-        api_location: ''
-        output_location: '$(buildDir)'
-        skip_app_build: false
-        azure_static_web_apps_api_token: $(SWA_DEPLOYMENT_TOKEN_WEB_QA)
-      env:
-        VITE_API_BASE_URL: $(VITE_API_BASE_URL)
-
 # ============ PROD GATE (agentless manual approval) ============
 - stage: Prod_Gate
   displayName: "Prod Gate (Manual Approval)"
-  dependsOn: Deploy_QA
+  dependsOn: Deploy_Dev
   condition: and(succeeded(), eq('${{ parameters.deployProd }}','true'))
   jobs:
   - job: ManualApproval

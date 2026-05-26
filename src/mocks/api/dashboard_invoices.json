@@ -1,0 +1,23 @@
+[
+    {
+        "id": "OPD-2526-000124",
+        "patientName": "Rahul Sharma",
+        "patientId": "XZY-9080",
+        "date": "2026-01-27T10:30:00",
+        "status": "FINAL",
+        "totalAmount": 1550,
+        "paidAmount": 1000,
+        "dueAmount": 550,
+        "latestReceiptNo": "RCPT-2526-000802"
+    },
+    {
+        "id": "OPD-2526-000125",
+        "patientName": "Amit Hines",
+        "patientId": "XZY-9081",
+        "date": "2026-01-27T11:15:00",
+        "status": "OPEN",
+        "totalAmount": 500,
+        "paidAmount": 0,
+        "dueAmount": 500
+    }
+]

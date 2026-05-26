@@ -5,10 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --mode development",
-    "dev:qa": "vite --mode qa",
     "build": "vite build",
     "build:dev": "vite build --mode development",
-    "build:qa": "vite build --mode qa",
     "build:prod": "vite build --mode production",
     "build:deploy": "npm run clean:build && vite build --mode production",
     "preview": "vite preview",

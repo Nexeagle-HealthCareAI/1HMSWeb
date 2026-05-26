@@ -39,7 +39,7 @@ import { useToast } from "@/hooks/use-toast";
 export const BillingDashboard: React.FC = () => {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState<'ALL' | 'OPEN' | 'FINAL'>('ALL');
+    const [statusFilter, setStatusFilter] = useState<'ALL' | 'OPEN' | 'FINAL' | 'CANCELLED'>('OPEN');
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
     const { toast } = useToast();
@@ -85,6 +85,13 @@ export const BillingDashboard: React.FC = () => {
             const matchesStatus = statusFilter === 'ALL' || row.status === statusFilter;
 
             return matchesSearch && matchesStatus;
+        }).sort((a, b) => {
+            // Priority 1: Open Bills First
+            if (a.status === 'OPEN' && b.status !== 'OPEN') return -1;
+            if (a.status !== 'OPEN' && b.status === 'OPEN') return 1;
+            
+            // Priority 2: Most Recent Date
+            return new Date(b.date).getTime() - new Date(a.date).getTime();
         });
     }, [billingData, searchTerm, statusFilter]);
 
@@ -124,18 +131,20 @@ export const BillingDashboard: React.FC = () => {
             <Card className="border border-slate-200 shadow-[0_0_15px_rgba(0,0,0,0.03)] flex flex-col flex-1 overflow-hidden bg-white">
                 <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50">
                     <div className="flex items-center p-1 bg-white rounded-xl border border-slate-200 shadow-sm backdrop-blur-sm">
-                        {['ALL', 'OPEN', 'FINAL'].map((status) => (
+                        {['OPEN', 'FINAL', 'CANCELLED', 'ALL'].map((status) => (
                             <button
                                 key={status}
                                 onClick={() => { setStatusFilter(status as any); setCurrentPage(1); }}
                                 className={cn(
                                     "px-4 py-2 rounded-lg text-sm font-semibold tracking-wide transition-all duration-200 ease-out",
                                     statusFilter === status
-                                        ? "bg-indigo-50 text-indigo-700 shadow-sm ring-1 ring-indigo-200 scale-[1.02] font-bold"
+                                        ? status === 'CANCELLED' ? "bg-rose-50 text-rose-700 shadow-sm ring-1 ring-rose-200 scale-[1.02] font-bold"
+                                          : status === 'OPEN' ? "bg-emerald-50 text-emerald-700 shadow-sm ring-1 ring-emerald-200 scale-[1.02] font-bold"
+                                          : "bg-indigo-50 text-indigo-700 shadow-sm ring-1 ring-indigo-200 scale-[1.02] font-bold"
                                         : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
                                 )}
                             >
-                                {status === 'ALL' ? 'ALL RECORDS' : status === 'OPEN' ? 'OPEN BILLS' : 'FINALIZED'}
+                                {status === 'ALL' ? 'ALL RECORDS' : status === 'OPEN' ? 'OPEN BILLS' : status === 'FINAL' ? 'FINALIZED' : 'CANCELLED'}
                             </button>
                         ))}
                     </div>
@@ -208,7 +217,9 @@ export const BillingDashboard: React.FC = () => {
                                             <Badge variant={row.status === 'OPEN' ? 'default' : 'secondary'}
                                                 className={cn(
                                                     "text-xs px-2 py-0.5 border font-semibold tracking-wide uppercase rounded shadow-sm",
-                                                    row.status === 'OPEN' ? "bg-emerald-50 text-emerald-700 border-emerald-200 shadow-[0_0_10px_rgba(16,185,129,0.1)]" : "bg-slate-100 text-slate-600 border-slate-300"
+                                                    row.status === 'OPEN' ? "bg-emerald-50 text-emerald-700 border-emerald-200 shadow-[0_0_10px_rgba(16,185,129,0.1)]" : 
+                                                    row.status === 'CANCELLED' ? "bg-rose-50 text-rose-600 border-rose-200" :
+                                                    "bg-slate-100 text-slate-600 border-slate-300"
                                                 )}>
                                                 {row.status}
                                             </Badge>

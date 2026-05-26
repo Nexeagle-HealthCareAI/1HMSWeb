@@ -29,6 +29,8 @@ export const buildReceiptThermal80 = (data: ReceiptPrintData, settings: PrintSet
         <div class="text-center">
             <div class="bold" style="font-size:11pt;">${settings.hospitalName}</div>
             <div style="font-size:7pt;">${settings.phone}</div>
+            ${settings.gstin ? `<div style="font-size:7pt;">GSTIN: ${settings.gstin}</div>` : ''}
+            ${settings.pan ? `<div style="font-size:7pt;">PAN: ${settings.pan}</div>` : ''}
         </div>
 
         <div class="divider"></div>

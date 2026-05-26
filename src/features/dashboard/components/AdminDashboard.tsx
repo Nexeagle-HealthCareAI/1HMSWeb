@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { useTranslation } from 'react-i18next';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import { CityMap } from './CityMap';
 import {
@@ -75,6 +76,9 @@ export const AdminDashboard = () => {
   const [currentView, setCurrentView] = useState('dashboard');
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [regulatoryBannerDismissed, setRegulatoryBannerDismissed] = useState(() => {
+    return localStorage.getItem(`regulatory_banner_dismissed_${hospitalId}`) === 'true';
+  });
 
   const [showHospitalRegistrationDialog, setShowHospitalRegistrationDialog] = useState(false);
 
@@ -148,6 +152,14 @@ export const AdminDashboard = () => {
   const shouldShowPopupForMissingHospital = isAdminRole && hospitalAccessRestricted && (!hospitalId || (!hospitalData && (hospitalError || hasCompletedHospitalProfileFetch)));
   const shouldShowHospitalPopup = !bannerDismissed && (shouldShowPopupForIncompleteProfile || shouldShowPopupForMissingHospital);
   const dashboardRootRef = useRef<HTMLDivElement | null>(null);
+
+  const isRegulatoryDataMissing = !!hospitalData && (!hospitalData.gstin || !hospitalData.pan || !hospitalData.nabhNumber);
+  const shouldShowRegulatoryBanner = !regulatoryBannerDismissed && isRegulatoryDataMissing && isAdminRole;
+
+  const handleDismissRegulatoryBanner = () => {
+    setRegulatoryBannerDismissed(true);
+    localStorage.setItem(`regulatory_banner_dismissed_${hospitalId}`, 'true');
+  };
 
   // Show Hospital Registration Dialog when admin lands on admin board and hospital is not 100% complete
   useEffect(() => {
@@ -342,6 +354,59 @@ export const AdminDashboard = () => {
 
 
 
+
+      {/* Regulatory Details Update notification */}
+      <AnimatePresence>
+        {shouldShowRegulatoryBanner && (
+          <motion.div
+            initial={{ height: 0, opacity: 0, y: -20 }}
+            animate={{ height: 'auto', opacity: 1, y: 0 }}
+            exit={{ height: 0, opacity: 0, y: -20 }}
+            className="overflow-hidden mb-4"
+          >
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border border-amber-200/50 dark:border-amber-500/20 px-4 py-3 sm:px-6 shadow-sm backdrop-blur-md">
+              {/* Decorative background flare */}
+              <div className="absolute -top-24 -right-24 w-48 h-48 bg-amber-400/10 rounded-full blur-3xl pointer-events-none"></div>
+              
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="shrink-0 p-2 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
+                    <ShieldCheck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-amber-900 dark:text-amber-100 leading-tight">
+                      {t('admin.regulatoryUpdateRequired')}
+                    </h4>
+                    <p className="text-xs text-amber-800/80 dark:text-amber-300/80 mt-0.5 max-w-2xl">
+                      {t('admin.regulatoryUpdateDescription')}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <Button
+                    size="sm"
+                    onClick={() => setCurrentView('system-config-hospital')}
+                    className="flex-1 sm:flex-none bg-amber-600 hover:bg-amber-700 text-white border-none shadow-md shadow-amber-600/20 font-semibold"
+                  >
+                    {t('admin.updateNow')}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={handleDismissRegulatoryBanner}
+                    className="h-8 w-8 text-amber-800/40 hover:text-amber-800/80 dark:text-amber-300/40 dark:hover:text-amber-300/80 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg shrink-0"
+                    aria-label="Dismiss"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Enhanced Top Navigation with Hospital ID and Modernized Nav Tabs - Mobile Optimized */}
       <section className={`mb-4 z-40 ${(currentView === 'system-config' || currentView === 'system-config-hospital') ? 'mx-2 sm:mx-4 lg:mx-6' : ''}`}>

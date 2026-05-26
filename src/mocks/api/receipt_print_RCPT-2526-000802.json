@@ -1,0 +1,13 @@
+{
+    "receiptNo": "RCPT-2526-000802",
+    "date": "2026-01-27T11:00:00",
+    "invoiceNo": "OPD-2526-000124",
+    "patientName": "Rahul Sharma",
+    "patientId": "XZY-9080",
+    "amount": 500,
+    "mode": "CASH",
+    "receivedBy": "Admin User",
+    "invoiceTotal": 1550,
+    "invoiceBalanceBefore": 1050,
+    "invoiceBalanceAfter": 550
+}

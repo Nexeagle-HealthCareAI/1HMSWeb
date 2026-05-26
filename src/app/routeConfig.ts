@@ -32,6 +32,7 @@ export const ROUTES = {
   PATIENTS: '/patients',
   PROFILE: '/profile',
   PRESCRIPTION: '/prescription/:patientId',
+  IPD: '/ipd',
 } as const;
 
 export const ROUTE_CONFIG: RouteConfig[] = [
@@ -170,6 +171,13 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   {
     path: ROUTES.PRESCRIPTION,
     component: 'EPrescription',
+    allowedRoles: ['doctor', 'admin'],
+    requiresAuth: true,
+    layout: 'MainLayout',
+  },
+  {
+    path: ROUTES.IPD,
+    component: 'IPDDashboard',
     allowedRoles: ['doctor', 'admin'],
     requiresAuth: true,
     layout: 'MainLayout',

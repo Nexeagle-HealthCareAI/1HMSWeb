@@ -9,7 +9,8 @@ export type PersonalizedLookupType =
   | 'DIAGNOSIS'
   | 'INVESTIGATION'
   | 'PROCEDURE'
-  | 'MEDICATION';
+  | 'MEDICATION'
+  | 'DISCHARGE';
 
 export interface PersonalizedDataPayload {
   personalId: string | null;

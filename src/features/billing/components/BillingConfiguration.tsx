@@ -207,6 +207,8 @@ const ChargeCatalog: React.FC = () => {
             defaultQty: 1,
             defaultRate: 0,
             defaultDiscountPercent: 0,
+            isActive: true,
+            sortOrder: 0,
             updatedAt: new Date().toISOString(),
             updatedBy: ''
         };

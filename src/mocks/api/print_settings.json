@@ -1,0 +1,13 @@
+{
+    "hospitalName": "Nexeagle General Hospital",
+    "address": "123, Health Avenue, Medicare City, Mumbai - 400001",
+    "phone": "+91 98765 43210",
+    "email": "billing@nexeagle.com",
+    "website": "www.nexeagle.com",
+    "gstin": "27ABCDE1234F1Z5",
+    "footerText": "Thank you for choosing Nexeagle. Get well soon!",
+    "terms": [
+        "Payment is due upon receipt.",
+        "Please retain this invoice for your records."
+    ]
+}

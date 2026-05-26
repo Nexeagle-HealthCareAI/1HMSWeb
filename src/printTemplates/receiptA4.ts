@@ -31,7 +31,12 @@ export const buildReceiptA4 = (data: ReceiptPrintData, settings: PrintSettings):
     <body>
         <div class="header">
             <h1 class="hA">${settings.hospitalName}</h1>
-            <p class="hSub">${settings.address}</p>
+            <p class="hSub">${settings.address} | ${settings.phone}</p>
+            <p class="hSub">
+            ${settings.gstin ? `<span style="margin-right:15px;">GSTIN: ${settings.gstin}</span>` : ''}
+            ${settings.pan ? `<span style="margin-right:15px;">PAN: ${settings.pan}</span>` : ''}
+            ${settings.nabhNumber ? `<span style="margin-right:15px;">NABH/NABL No.: ${settings.nabhNumber}</span>` : ''}
+            </p>
         </div>
 
         <div class="box">

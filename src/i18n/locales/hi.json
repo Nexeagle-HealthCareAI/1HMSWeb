@@ -60,7 +60,10 @@
       "country": "देश",
       "pincode": "पिन कोड",
       "timeZone": "समय क्षेत्र",
-      "registrationNumber": "पंजीकरण संख्या"
+      "registrationNumber": "पंजीकरण संख्या",
+      "gstin": "GSTIN",
+      "pan": "पैन (PAN)",
+      "nabhNumber": "NABH/NABL नंबर"
     },
     "placeholders": {
       "name": "अस्पताल का नाम दर्ज करें",
@@ -146,7 +149,9 @@
       "contactRequired": "प्राथमिक संपर्क आवश्यक है",
       "phoneInvalid": "कृपया मान्य फ़ोन नंबर दर्ज करें",
       "websiteInvalid": "कृपया मान्य वेबसाइट URL दर्ज करें",
-      "pincodeInvalid": "कृपया मान्य पिन कोड दर्ज करें (4-10 अंक)"
+      "pincodeInvalid": "कृपया मान्य पिन कोड दर्ज करें (4-10 अंक)",
+      "gstinInvalid": "कृपया मान्य GSTIN दर्ज करें",
+      "panInvalid": "कृपया मान्य PAN दर्ज करें"
     }
   },
   "common": {
@@ -194,33 +199,6 @@
     "years": "वर्ष",
     "viewDetails": "विवरण देखें",
     "print": "प्रिंट"
-  },
-  "auth": {
-    "signIn": "साइन इन",
-    "signUp": "साइन अप",
-    "signOut": "साइन आउट",
-    "email": "ईमेल",
-    "password": "पासवर्ड",
-    "confirmPassword": "पासवर्ड की पुष्टि करें",
-    "forgotPassword": "पासवर्ड भूल गए?",
-    "resetPassword": "पासवर्ड रीसेट करें",
-    "resetPasswordTitle": "पासवर्ड रीसेट करें",
-    "rememberMe": "मुझे याद रखें",
-    "dontHaveAccount": "खाता नहीं है?",
-    "alreadyHaveAccount": "पहले से खाता है?",
-    "invalidCredentials": "अमान्य ईमेल या पासवर्ड",
-    "passwordMismatch": "पासवर्ड मेल नहीं खाते",
-    "emailRequired": "ईमेल आवश्यक है",
-    "passwordRequired": "पासवर्ड आवश्यक है",
-    "loginSuccess": "लॉगिन सफल",
-    "logoutSuccess": "लॉगआउट सफल",
-    "sessionExpired": "आपका सेशन समाप्त हो गया है। कृपया फिर से लॉगिन करें।",
-    "lockedAccount": {
-      "title": "खाता लॉक",
-      "message": "बहुत अधिक असफल प्रयासों के कारण आपका खाता अस्थायी रूप से लॉक हो गया है।",
-      "timeRemaining": "शेष समय: {{time}}",
-      "unlockIn": "{{time}} में अनलॉक होगा"
-    }
   },
   "mobileVerification": {
     "titles": {
@@ -514,6 +492,8 @@
     "notifications": "सूचनाएं",
     "profile": "प्रोफ़ाइल",
     "settings": "सेटिंग्स",
+    "billing": "बिलिंग",
+    "ipd": "IPD सेंटर",
     "collapseSidebar": "साइडबार संक्षिप्त करें",
     "expandSidebar": "साइडबार विस्तारित करें",
     "toggleSidebarHint": "साइडबार टॉगल करें",
@@ -1273,6 +1253,9 @@
     "hospitalAccessFallback": "पूर्ण एक्सेस के लिए हॉस्पिटल जानकारी पूरी करें।",
     "hospitalIdLabel": "हॉस्पिटल आईडी:",
     "hospitalIdCopySr": "हॉस्पिटल आईडी कॉपी करें",
+    "regulatoryUpdateRequired": "आवश्यक कार्रवाई: वैधानिक जानकारी अपडेट करें",
+    "regulatoryUpdateDescription": "अपने प्रोफ़ाइल को पूरा करने के लिए कृपया अपने हॉस्पिटल का GSTIN, PAN और NABH/NABL नंबर प्रदान करें।",
+    "updateNow": "अभी अपडेट करें",
     "cta": {
       "completeInfo": "जानकारी पूर्ण करें",
       "updateDetails": "विवरण अपडेट करें"
@@ -1334,6 +1317,7 @@
     }
   },
   "auth": {
+    "resetPasswordTitle": "पासवर्ड रीसेट",
     "login": {
       "title": "सुरक्षित लॉगिन",
       "subtitle": "अपने खाते में साइन इन करें",

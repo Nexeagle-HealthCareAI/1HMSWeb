@@ -1,0 +1,43 @@
+{
+    "invoiceNo": "OPD-2526-000124",
+    "date": "2026-01-27T10:30:00",
+    "patientName": "Rahul Sharma",
+    "patientId": "XZY-9080",
+    "ageGender": "34 Y / M",
+    "mobile": "9876543210",
+    "doctorName": "Dr. A. Gupta",
+    "department": "General Medicine",
+    "status": "FINAL",
+    "items": [
+        {
+            "srNo": 1,
+            "description": "Consultation Fee",
+            "qty": 1,
+            "rate": 500,
+            "discount": 0,
+            "total": 500
+        },
+        {
+            "srNo": 2,
+            "description": "CBC Test",
+            "qty": 1,
+            "rate": 300,
+            "discount": 0,
+            "total": 300
+        },
+        {
+            "srNo": 3,
+            "description": "X-Ray Chest PA",
+            "qty": 1,
+            "rate": 800,
+            "discount": 50,
+            "total": 750
+        }
+    ],
+    "subTotal": 1600,
+    "discountTotal": 50,
+    "taxTotal": 0,
+    "grandTotal": 1550,
+    "amountPaid": 1000,
+    "balanceDue": 550
+}

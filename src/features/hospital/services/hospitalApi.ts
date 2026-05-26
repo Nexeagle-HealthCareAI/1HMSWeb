@@ -17,6 +17,9 @@ export interface HospitalRegistrationRequest {
   country: string;
   pincode: string;
   timeZone: string;
+  gstin?: string;
+  pan?: string;
+  nabhNumber?: string;
 }
 
 export interface HospitalRegistrationResponse {
@@ -40,6 +43,9 @@ export interface HospitalUpdateRequest {
   pincode: string;
   registrationNumber: string;
   timeZone: string;
+  gstin?: string;
+  pan?: string;
+  nabhNumber?: string;
 }
 
 export interface HospitalUpdateResponse {
@@ -71,6 +77,9 @@ export interface HospitalData {
   pincode: string;
   registrationNumber: string;
   timeZone: string;
+  gstin?: string;
+  pan?: string;
+  nabhNumber?: string;
   isActive: boolean;
   createdAt: string;
   lastUpdatedAt: string;

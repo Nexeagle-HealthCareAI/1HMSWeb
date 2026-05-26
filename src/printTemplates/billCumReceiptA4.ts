@@ -33,6 +33,11 @@ export const buildBillCumReceiptA4 = (data: BillCumReceiptPrintData, settings: P
         <div class="header">
              <h1 class="h1">${settings.hospitalName}</h1>
              <p>${settings.address}</p>
+             <p style="font-size: 8pt; color: #666;">
+                ${settings.gstin ? `<span style="margin-right:10px;">GSTIN: ${settings.gstin}</span>` : ''}
+                ${settings.pan ? `<span style="margin-right:10px;">PAN: ${settings.pan}</span>` : ''}
+                ${settings.nabhNumber ? `<span style="margin-right:10px;">NABH/NABL No.: ${settings.nabhNumber}</span>` : ''}
+             </p>
              <h3>INVOICE CUM RECEIPTS</h3>
         </div>
 

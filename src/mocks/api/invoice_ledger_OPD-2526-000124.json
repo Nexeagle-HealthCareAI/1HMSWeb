@@ -1,0 +1,50 @@
+[
+    {
+        "date": "2026-01-27T10:30:00",
+        "particulars": "Consultation Fee",
+        "type": "CHARGE",
+        "debit": 500,
+        "credit": 0,
+        "balance": 500
+    },
+    {
+        "date": "2026-01-27T10:35:00",
+        "particulars": "CBC Test",
+        "type": "CHARGE",
+        "debit": 300,
+        "credit": 0,
+        "balance": 800
+    },
+    {
+        "date": "2026-01-27T10:40:00",
+        "particulars": "X-Ray Chest PA",
+        "type": "CHARGE",
+        "debit": 800,
+        "credit": 0,
+        "balance": 1600
+    },
+    {
+        "date": "2026-01-27T10:40:00",
+        "particulars": "Discount on X-Ray",
+        "type": "DISCOUNT",
+        "debit": 0,
+        "credit": 50,
+        "balance": 1550
+    },
+    {
+        "date": "2026-01-27T10:45:00",
+        "particulars": "Payment via UPI",
+        "type": "PAYMENT",
+        "debit": 0,
+        "credit": 500,
+        "balance": 1050
+    },
+    {
+        "date": "2026-01-27T11:00:00",
+        "particulars": "Payment via Cash",
+        "type": "PAYMENT",
+        "debit": 0,
+        "credit": 500,
+        "balance": 550
+    }
+]
