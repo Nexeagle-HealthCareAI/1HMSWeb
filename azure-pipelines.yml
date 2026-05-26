@@ -30,7 +30,7 @@ stages:
 - stage: Deploy_Dev
   displayName: Deploy to Dev
   variables:
-  - group: swa-secrets-dev   # SWA_DEPLOYMENT_TOKEN_WEB_DEV, VITE_API_BASE_URL
+  - group: swa-secrets-dev   # SWA_DEPLOYMENT_TOKEN_WEB_DEV, VITE_API_BASE_URL, VITE_IPD_API_BASE_URL
   jobs:
   - job: Dev
     displayName: Deploy (Dev) via SWA build
@@ -46,6 +46,7 @@ stages:
         azure_static_web_apps_api_token: $(SWA_DEPLOYMENT_TOKEN_WEB_DEV)
       env:
         VITE_API_BASE_URL: $(VITE_API_BASE_URL)
+        VITE_IPD_API_BASE_URL: $(VITE_IPD_API_BASE_URL)
 
 # ============ PROD GATE (agentless manual approval) ============
 - stage: Prod_Gate
@@ -76,7 +77,7 @@ stages:
     - Prod_Gate
   condition: and(succeeded(), eq('${{ parameters.deployProd }}','true'))
   variables:
-  - group: swa-secrets-prod  # SWA_DEPLOYMENT_TOKEN_WEB_PROD, VITE_API_BASE_URL
+  - group: swa-secrets-prod  # SWA_DEPLOYMENT_TOKEN_WEB_PROD, VITE_API_BASE_URL, VITE_IPD_API_BASE_URL
   jobs:
   - deployment: Prod
     displayName: Deploy (Prod) via SWA build
@@ -128,3 +129,4 @@ stages:
               azure_static_web_apps_api_token: $(SWA_DEPLOYMENT_TOKEN_WEB_PROD)
             env:
               VITE_API_BASE_URL: $(VITE_API_BASE_URL)
+              VITE_IPD_API_BASE_URL: $(VITE_IPD_API_BASE_URL)

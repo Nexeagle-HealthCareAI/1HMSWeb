@@ -8,8 +8,17 @@ const join = (base: string, path: string) => `${trimEnd(base)}/${trimStart(path)
 const rawApiUrl = import.meta.env.VITE_API_BASE_URL
   || 'easyhmsapiservices-bgasabd9ddbbdden.centralindia-01.azurewebsites.net';
 
-const rawIpdApiUrl = import.meta.env.VITE_IPD_API_BASE_URL
-  || rawApiUrl;
+// IPD API is a *separate* Azure deployment. Falling back to the OPD host silently routes IPD
+// calls to the wrong server (404s on /alerts/*, /admission/*, /billing/* etc.) — surface a loud
+// warning so the misconfig shows up in DevTools instead of looking like a random API outage.
+const rawIpdApiUrl = import.meta.env.VITE_IPD_API_BASE_URL || rawApiUrl;
+if (!import.meta.env.VITE_IPD_API_BASE_URL && typeof console !== 'undefined') {
+  // eslint-disable-next-line no-console
+  console.warn(
+    '[api] VITE_IPD_API_BASE_URL is not set. IPD endpoints (admission, billing, alerts, etc.) ' +
+    'will incorrectly be sent to the OPD host. Set this env var to the IPD API base URL.'
+  );
+}
 
 export const API_BASE_URL = ensureProtocol(rawApiUrl);
 export const IPD_API_BASE_URL = ensureProtocol(rawIpdApiUrl);

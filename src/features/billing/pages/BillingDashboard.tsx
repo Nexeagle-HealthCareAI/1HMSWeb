@@ -1,6 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-// import { mockApi } from '@/services/mockApi';
 import { buildInvoiceA4 } from '@/printTemplates/invoiceA4';
 import { buildReceiptA4 } from '@/printTemplates/receiptA4';
 import { buildBillCumReceiptA4 } from '@/printTemplates/billCumReceiptA4';
@@ -8,8 +7,11 @@ import { openPrintHtml } from '@/utils/printUtils';
 import {
     Search, Plus, Receipt, Calendar, ArrowRight, User, Settings,
     TrendingUp, AlertCircle, CheckCircle2, IndianRupee, Filter,
-    ChevronLeft, ChevronRight, LayoutDashboard, Printer, MoreHorizontal, FileText, Download
+    ChevronLeft, ChevronRight, LayoutDashboard, Printer, MoreHorizontal, FileText, Download,
+    Loader2, RefreshCw
 } from 'lucide-react';
+import { ipdBillingService } from '../services/ipdBillingService';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +38,15 @@ import { LedgerEntry, Visit, Patient } from '../types';
 
 import { useToast } from "@/hooks/use-toast";
 
+// Map backend status to UI filter values
+const mapStatus = (s?: string | null, isCancelled?: boolean): 'OPEN' | 'FINAL' | 'CANCELLED' => {
+    if (isCancelled) return 'CANCELLED';
+    const upper = (s ?? '').toUpperCase();
+    if (upper === 'FINALIZED' || upper === 'FINAL' || upper === 'PAID') return 'FINAL';
+    if (upper === 'CANCELLED' || upper === 'CANCELED') return 'CANCELLED';
+    return 'OPEN'; // DRAFT / PARTIAL / PENDING all bucket as open
+};
+
 export const BillingDashboard: React.FC = () => {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
@@ -44,37 +55,59 @@ export const BillingDashboard: React.FC = () => {
     const itemsPerPage = 5;
     const { toast } = useToast();
 
+    const [billingData, setBillingData] = useState<Visit[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const loadDashboard = useCallback(async (silent = false) => {
+        if (silent) setRefreshing(true); else setLoading(true);
+        setError(null);
+        try {
+            const res: any = await ipdBillingService.dashboard();
+            if (res && res.success === false) {
+                throw new Error(res.message ?? 'Could not load dashboard');
+            }
+            const rows: Visit[] = [];
+            for (const patient of (res?.data ?? [])) {
+                for (const enc of (patient.encounters ?? [])) {
+                    rows.push({
+                        id: enc.encounterId,
+                        patientId: patient.patientId ?? '',
+                        type: (enc.visitType as any) ?? 'OPD',
+                        date: enc.invoiceDate ?? enc.updatedAt ?? new Date().toISOString(),
+                        status: mapStatus(enc.status, enc.isCancelled),
+                        doctorName: enc.doctorName ?? undefined,
+                        cancelReason: enc.cancelReason ?? undefined,
+                        patientName: patient.patientName ?? '—',
+                        patientIdDisplay: patient.patientId ?? '',
+                        totalDebit: Number(enc.netAmount ?? 0),
+                        totalCredit: Number(enc.paidAmount ?? 0),
+                        balance: Number(enc.dueAmount ?? 0),
+                    });
+                }
+            }
+            setBillingData(rows);
+        } catch (e: any) {
+            setError(e?.message ?? 'Failed to load billing dashboard');
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }, []);
+
+    useEffect(() => { loadDashboard(); }, [loadDashboard]);
+
     const handlePrintInvoice = async (visitId: string, type: 'invoice' | 'receipt' | 'bill-cum-receipt') => {
         try {
             toast({ title: "Generating Print...", description: "Please wait while we prepare the document." });
-            // Placeholder: When backend APIs are ready, fetch the real invoice/receipt data here
             toast({ variant: 'default', title: "Not Supported", description: "Backend print API is not implemented yet. Please hold." });
             console.log(`Print requested for ${type} against visit ${visitId}`);
-            /*
-            if (type === 'invoice') { ... } 
-            else if (type === 'receipt') { ... } 
-            else if (type === 'bill-cum-receipt') { ... }
-            */
         } catch (e) {
             console.error(e);
             toast({ variant: 'destructive', title: "Print Failed", description: "Could not fetch print data." });
         }
     };
-
-
-    // --- Analytics & Data Prep ---
-
-    // --- Analytics & Data Prep ---
-
-    // For now, initialize empty. In future, fetch from API.
-    const [billingData, setBillingData] = useState<Visit[]>([]);
-
-    // TODO: Fetch real data
-    /*
-    useEffect(() => {
-        // fetchBillingData().then(data => setBillingData(data));
-    }, []);
-    */
 
     const filteredRows = useMemo(() => {
         return billingData.filter(row => {
@@ -121,6 +154,10 @@ export const BillingDashboard: React.FC = () => {
                             navigate('/billing/ledger');
                         }}>
                             <Plus className="h-3.5 w-3.5" /> NEW BILL
+                        </Button>
+                        <Button size="sm" variant="outline" className="ml-1 gap-1.5 h-8 text-xs" onClick={() => loadDashboard(true)} disabled={refreshing || loading}>
+                            <RefreshCw className={cn('h-3.5 w-3.5', refreshing && 'animate-spin')} />
+                            REFRESH
                         </Button>
                     </div>
                     <p className="text-sm font-medium text-slate-500 tracking-wide">Administer invoicing, settlements, and financial overview.</p>
@@ -178,12 +215,32 @@ export const BillingDashboard: React.FC = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {paginatedRows.length === 0 ? (
+                            {loading ? (
+                                Array.from({ length: 3 }).map((_, i) => (
+                                    <TableRow key={`sk-${i}`}>
+                                        <TableCell colSpan={8} className="py-3">
+                                            <Skeleton className="h-10 w-full" />
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : error ? (
+                                <TableRow>
+                                    <TableCell colSpan={8} className="text-center h-48 text-rose-600">
+                                        <div className="flex flex-col items-center justify-center gap-2">
+                                            <AlertCircle className="h-8 w-8 text-rose-500" />
+                                            <p className="text-xs tracking-wider uppercase font-semibold">{error}</p>
+                                            <Button size="sm" variant="outline" onClick={() => loadDashboard(true)} className="mt-2 h-7 text-xs">
+                                                <RefreshCw className="h-3 w-3 mr-1" /> Retry
+                                            </Button>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ) : paginatedRows.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={8} className="text-center h-48 text-slate-400">
                                         <div className="flex flex-col items-center justify-center gap-2">
                                             <Search className="h-8 w-8 opacity-20 text-indigo-500" />
-                                            <p className="text-xs tracking-wider uppercase">NO BILLING RECORDS FOUND MATCHING YOUR FILTERS</p>
+                                            <p className="text-xs tracking-wider uppercase">{billingData.length === 0 ? 'NO BILLING RECORDS YET' : 'NO BILLING RECORDS FOUND MATCHING YOUR FILTERS'}</p>
                                         </div>
                                     </TableCell>
                                 </TableRow>

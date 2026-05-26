@@ -1,8 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Search, Filter, Plus, Upload, Download, MoreVertical,
-    Copy, Pencil, Trash2, CheckCircle2, AlertCircle, X, Zap
+    Copy, Pencil, Trash2, CheckCircle2, AlertCircle, X, Zap, Loader2, RefreshCw
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ipdBillingService, type ChargeMaster as BackendChargeMaster, type UpsertChargeMasterRequest } from '@/features/billing/services/ipdBillingService';
 
 // --- Types & Mock Data ---
 
@@ -31,18 +33,27 @@ export interface ChargeRecord {
     notes?: string;
 }
 
-const INITIAL_MOCK_DATA: ChargeRecord[] = [
-    { id: '1', chargeCode: 'OPD_CONS_GEN', displayName: 'General Physician Consultation', appliesTo: 'OPD', categoryCode: 'CONSULT', defaultRate: 500, defaultQty: 1, maxDiscountPercent: 10, isActive: true, sortOrder: 10 },
-    { id: '2', chargeCode: 'OPD_CONS_SPEC', displayName: 'Specialist Consultation', appliesTo: 'OPD', categoryCode: 'CONSULT', defaultRate: 800, defaultQty: 1, maxDiscountPercent: 10, isActive: true, sortOrder: 20 },
-    { id: '3', chargeCode: 'LAB_CBC', displayName: 'Complete Blood Count (CBC)', appliesTo: 'LAB', categoryCode: 'LAB', defaultRate: 350, defaultQty: 1, maxDiscountPercent: 0, isActive: true, sortOrder: 30 },
-    { id: '4', chargeCode: 'RAD_XRAY_CHEST', displayName: 'X-Ray Chest PA View', appliesTo: 'RAD', categoryCode: 'RAD', defaultRate: 600, defaultQty: 1, maxDiscountPercent: 5, isActive: true, sortOrder: 40 },
-    { id: '5', chargeCode: 'IPD_NURSING_GEN', displayName: 'Nursing Charges (General Ward)', appliesTo: 'IPD', categoryCode: 'SERVICE', defaultRate: 1200, defaultQty: 1, maxDiscountPercent: 15, isActive: true, sortOrder: 50 },
-    { id: '6', chargeCode: 'IPD_OX_PER_HR', displayName: 'Oxygen Cylinder (Per Hour)', appliesTo: 'IPD', categoryCode: 'CONSUMABLE', defaultRate: 150, defaultQty: 1, maxDiscountPercent: 0, isActive: false, sortOrder: 60 },
-];
+const fromBackend = (m: BackendChargeMaster): ChargeRecord => ({
+    id: m.chargeId,
+    chargeCode: m.chargeCode ?? '',
+    displayName: m.displayName ?? '',
+    appliesTo: (m.appliesTo as ChargeRecord['appliesTo']) ?? 'ANY',
+    categoryCode: (m.categoryCode as ChargeRecord['categoryCode']) ?? 'OTHER',
+    subCategoryCode: m.subCategoryCode,
+    defaultRate: Number(m.defaultRate ?? 0),
+    defaultQty: Number(m.defaultQty ?? 1),
+    maxDiscountPercent: Number(m.maxDiscountPercent ?? 0),
+    isActive: m.isActive,
+    sortOrder: Number(m.sortOrder ?? 0),
+});
 
 export const ChargeMaster = () => {
     // --- State ---
-    const [charges, setCharges] = useState<ChargeRecord[]>(INITIAL_MOCK_DATA);
+    const [charges, setCharges] = useState<ChargeRecord[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [busyId, setBusyId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterAppliesTo, setFilterAppliesTo] = useState<string>('ALL');
     const [filterCategory, setFilterCategory] = useState<string>('ALL');
@@ -54,7 +65,23 @@ export const ChargeMaster = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
 
-    // Quick Add State removed
+    const loadCharges = useCallback(async (silent = false) => {
+        if (silent) setRefreshing(true); else setLoading(true);
+        setLoadError(null);
+        try {
+            const res = await ipdBillingService.listChargeMasters({ pageSize: 500 });
+            const items = (res?.items ?? []).map(fromBackend);
+            setCharges(items);
+        } catch (e: any) {
+            setLoadError(e?.message ?? 'Failed to load charges');
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }, []);
+
+    useEffect(() => { loadCharges(); }, [loadCharges]);
+
     // Keyboard Shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -86,9 +113,24 @@ export const ChargeMaster = () => {
     }, [charges, searchTerm, filterAppliesTo, filterCategory, filterActive]);
 
     // --- Actions ---
-    const handleToggleActive = (id: string) => {
-        setCharges(prev => prev.map(c => c.id === id ? { ...c, isActive: !c.isActive } : c));
-        toast({ title: 'Status Updated', description: 'Charge status updated successfully.' });
+    const handleToggleActive = async (id: string) => {
+        const current = charges.find(c => c.id === id);
+        if (!current || busyId) return;
+        const next = !current.isActive;
+        // Optimistic flip
+        setCharges(prev => prev.map(c => c.id === id ? { ...c, isActive: next } : c));
+        setBusyId(id);
+        try {
+            const res: any = await ipdBillingService.updateChargeMasterStatus(id, next);
+            if (res && res.isSucess === false) throw new Error(res.message ?? 'Could not update');
+            toast({ title: 'Status Updated', description: `Charge ${next ? 'activated' : 'deactivated'}.` });
+        } catch (e: any) {
+            // Roll back on failure
+            setCharges(prev => prev.map(c => c.id === id ? { ...c, isActive: !next } : c));
+            toast({ title: 'Could not update status', description: e?.message ?? '', variant: 'destructive' });
+        } finally {
+            setBusyId(null);
+        }
     };
 
     const handleOpenDrawer = (record: ChargeRecord | null = null) => {
@@ -103,10 +145,19 @@ export const ChargeMaster = () => {
         setIsDrawerOpen(true);
     };
 
-    const handleDeleteCharge = (id: string) => {
-        if (window.confirm("Are you sure you want to permanently delete this charge definition? This action cannot be undone.")) {
+    const handleDeleteCharge = async (id: string) => {
+        if (!window.confirm("Are you sure you want to permanently delete this charge definition? This action cannot be undone.")) return;
+        if (busyId) return;
+        setBusyId(id);
+        try {
+            const res: any = await ipdBillingService.deleteChargeMaster(id);
+            if (res && res.isSucess === false) throw new Error(res.message ?? 'Could not delete');
             setCharges(prev => prev.filter(c => c.id !== id));
             toast({ title: 'Charge Deleted', description: 'The charge has been removed from the catalog.' });
+        } catch (e: any) {
+            toast({ title: 'Could not delete', description: e?.message ?? '', variant: 'destructive' });
+        } finally {
+            setBusyId(null);
         }
     };
 
@@ -117,19 +168,35 @@ export const ChargeMaster = () => {
         }
 
         setIsSaving(true);
-        // Simulate network
-        await new Promise(resolve => setTimeout(resolve, 600));
-
         const isNew = !editingRecord.id;
-        const savedRecord = {
-            ...editingRecord,
-            id: isNew ? Math.random().toString(36).substr(2, 9) : editingRecord.id,
-        } as ChargeRecord;
-
-        setCharges(prev => {
-            if (isNew) return [...prev, savedRecord];
-            return prev.map(c => c.id === savedRecord.id ? savedRecord : c);
-        });
+        let savedRecord: ChargeRecord;
+        try {
+            const req: UpsertChargeMasterRequest = {
+                chargeId: editingRecord.id,
+                chargeCode: editingRecord.chargeCode,
+                displayName: editingRecord.displayName!,
+                appliesTo: editingRecord.appliesTo ?? 'ANY',
+                categoryCode: editingRecord.categoryCode ?? 'OTHER',
+                subCategoryCode: editingRecord.subCategoryCode,
+                defaultRate: Number(editingRecord.defaultRate ?? 0),
+                defaultQty: Number(editingRecord.defaultQty ?? 1),
+                maxDiscountPercent: Number(editingRecord.maxDiscountPercent ?? 0),
+                isActive: editingRecord.isActive ?? true,
+                sortOrder: Number(editingRecord.sortOrder ?? 0),
+            };
+            const res: any = await ipdBillingService.upsertChargeMaster(req);
+            if (res && res.isSucess === false) throw new Error(res.message ?? 'Could not save');
+            const newId = res?.chargeId ?? editingRecord.id ?? '';
+            savedRecord = { ...(editingRecord as ChargeRecord), id: newId };
+            setCharges(prev => {
+                if (isNew) return [...prev, savedRecord];
+                return prev.map(c => c.id === savedRecord.id ? savedRecord : c);
+            });
+        } catch (e: any) {
+            setIsSaving(false);
+            toast({ title: 'Save failed', description: e?.message ?? '', variant: 'destructive' });
+            return;
+        }
 
         setIsSaving(false);
         setIsSuccess(true);
@@ -219,6 +286,9 @@ export const ChargeMaster = () => {
                 </div>
 
                 <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                    <Button variant="outline" size="sm" onClick={() => loadCharges(true)} disabled={refreshing || loading} className="gap-1.5 bg-white dark:bg-slate-900 shadow-sm text-gray-700 dark:text-gray-300">
+                        <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
+                    </Button>
                     <Button variant="outline" className="hidden lg:flex gap-2 bg-white dark:bg-slate-900 shadow-sm text-gray-700 dark:text-gray-300">
                         <Upload className="h-4 w-4" /> Import
                     </Button>
@@ -245,7 +315,27 @@ export const ChargeMaster = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                            {filteredCharges.map(charge => (
+                            {loading && Array.from({ length: 4 }).map((_, i) => (
+                                <tr key={`sk-${i}`}>
+                                    <td colSpan={7} className="px-4 py-3">
+                                        <Skeleton className="h-9 w-full" />
+                                    </td>
+                                </tr>
+                            ))}
+                            {!loading && loadError && (
+                                <tr>
+                                    <td colSpan={7} className="px-4 py-12 text-center">
+                                        <div className="flex flex-col items-center gap-2 text-rose-600">
+                                            <AlertCircle className="h-8 w-8" />
+                                            <p className="font-semibold">{loadError}</p>
+                                            <Button size="sm" variant="outline" onClick={() => loadCharges(true)} className="mt-2 h-7 text-xs">
+                                                <RefreshCw className="h-3 w-3 mr-1" /> Retry
+                                            </Button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )}
+                            {!loading && !loadError && filteredCharges.map(charge => (
                                 <motion.tr
                                     layout
                                     initial={{ opacity: 0, y: -10 }}
@@ -294,13 +384,13 @@ export const ChargeMaster = () => {
                                     </td>
                                 </motion.tr>
                             ))}
-                            {filteredCharges.length === 0 && (
+                            {!loading && !loadError && filteredCharges.length === 0 && (
                                 <tr>
                                     <td colSpan={7} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
                                         <div className="flex flex-col items-center gap-2">
                                             <Search className="h-8 w-8 text-gray-300 dark:text-gray-600 mb-2" />
-                                            <p className="font-medium text-base">No charges found</p>
-                                            <p className="text-sm">Try tweaking your search or filters.</p>
+                                            <p className="font-medium text-base">{charges.length === 0 ? 'No charges configured yet' : 'No charges match your filters'}</p>
+                                            <p className="text-sm">{charges.length === 0 ? 'Click "New Charge" to add your first charge definition.' : 'Try tweaking your search or filters.'}</p>
                                         </div>
                                     </td>
                                 </tr>

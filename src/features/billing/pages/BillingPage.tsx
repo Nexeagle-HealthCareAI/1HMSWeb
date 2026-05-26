@@ -1,1510 +1,891 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-    Search, Plus, Receipt, User, CreditCard,
-    ArrowLeftRight, RotateCcw, Lock, Unlock,
-    Printer, DollarSign, FileText, ChevronRight, Trash2, Ban, MessageSquare,
-    TrendingDown, TrendingUp, AlertCircle, ArrowLeft, IndianRupee, Check, X, Calendar, BadgePercent, Edit2, Wallet
+    Search, Plus, Receipt, ArrowLeft, IndianRupee, Loader2, RefreshCw,
+    AlertCircle, X, Wallet, TrendingDown, Trash2, Printer, Lock, FileText, CreditCard,
 } from 'lucide-react';
-
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
-    Select, SelectContent, SelectItem, SelectTrigger, SelectValue
-} from "@/components/ui/select";
+    Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
 import {
-    Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import {
-    Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-    Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
-} from "@/components/ui/sheet";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+    AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-// import { mockApi } from '@/services/mockApi';
-import { buildReceiptA4 } from '@/printTemplates/receiptA4';
-import { buildReceiptThermal80 } from '@/printTemplates/receiptThermal80';
-import { buildBillCumReceiptA4 } from '@/printTemplates/billCumReceiptA4';
-import { openPrintHtml } from '@/utils/printUtils';
-import { ReceiptPrintData } from '@/types/print';
-
-// Import Shared Data & Types
-import {
-    Patient, Visit, LedgerEntry, EntryType, DiscountType, PaymentMode, VisitType
-} from '../types';
-import { patientService } from '../services/patientService';
+import { format, parseISO } from 'date-fns';
 import { debounce } from 'lodash';
 
-// --- Components ---
+import { patientService } from '../services/patientService';
+import {
+    ipdBillingService,
+    type ChargeMaster, type BillingChargeRow, type BillingPaymentRow,
+    type GetEncounterEventsResponse, type AddChargeEventRequest, type AddPaymentRequest,
+    type PaymentMode, type PaymentType, type AppliesTo,
+} from '../services/ipdBillingService';
+import type { Patient } from '../types';
+
+// ─── Local view models ──────────────────────────────────────────────────────
+
+type Encounter = {
+    encounterId: string;
+    invoiceNo?: string;
+    invoiceDate: string;
+    doctorName?: string;
+    status: string;
+    isCancelled: boolean;
+    cancelReason?: string;
+};
+
+const PAYMENT_MODES: { value: PaymentMode; label: string }[] = [
+    { value: 'CASH',      label: 'Cash' },
+    { value: 'UPI',       label: 'UPI' },
+    { value: 'CARD',      label: 'Card' },
+    { value: 'BANK',      label: 'Bank Transfer' },
+    { value: 'INSURANCE', label: 'Insurance' },
+];
+
+const VISIT_TYPES: { value: 'OPD' | 'IPD' | 'ER' | 'LAB' | 'PHARMACY'; label: string }[] = [
+    { value: 'OPD',      label: 'OPD' },
+    { value: 'IPD',      label: 'IPD' },
+    { value: 'ER',       label: 'Emergency' },
+    { value: 'LAB',      label: 'Lab' },
+    { value: 'PHARMACY', label: 'Pharmacy' },
+];
+
+// ─── Add charge dialog ──────────────────────────────────────────────────────
+
+const AddChargeDialog: React.FC<{
+    open: boolean;
+    onOpenChange: (v: boolean) => void;
+    patientId: string;
+    encounterId: string;
+    onSaved: () => void;
+}> = ({ open, onOpenChange, patientId, encounterId, onSaved }) => {
+    const { toast } = useToast();
+    const [chargeMasters, setChargeMasters] = useState<ChargeMaster[]>([]);
+    const [chargeMasterFilter, setChargeMasterFilter] = useState('');
+    const [loadingMasters, setLoadingMasters] = useState(false);
+    const [selectedMaster, setSelectedMaster] = useState<ChargeMaster | null>(null);
+    const [qty, setQty] = useState(1);
+    const [rate, setRate] = useState(0);
+    const [discountPercent, setDiscountPercent] = useState(0);
+    const [submitting, setSubmitting] = useState(false);
+
+    useEffect(() => {
+        if (!open) return;
+        setSelectedMaster(null);
+        setQty(1);
+        setRate(0);
+        setDiscountPercent(0);
+        setChargeMasterFilter('');
+        let cancelled = false;
+        (async () => {
+            setLoadingMasters(true);
+            try {
+                const res = await ipdBillingService.listChargeMasters({ pageSize: 500 });
+                if (!cancelled) setChargeMasters((res?.items ?? []).filter(m => m.isActive));
+            } catch (e: any) {
+                if (!cancelled) toast({ title: 'Could not load charge catalog', description: e?.message ?? '', variant: 'destructive' });
+            } finally {
+                if (!cancelled) setLoadingMasters(false);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [open, toast]);
+
+    const filteredMasters = useMemo(() => {
+        const q = chargeMasterFilter.trim().toLowerCase();
+        if (!q) return chargeMasters;
+        return chargeMasters.filter(m =>
+            (m.displayName ?? '').toLowerCase().includes(q)
+            || (m.chargeCode ?? '').toLowerCase().includes(q)
+            || (m.categoryCode ?? '').toLowerCase().includes(q)
+        );
+    }, [chargeMasters, chargeMasterFilter]);
+
+    const pickMaster = (m: ChargeMaster) => {
+        setSelectedMaster(m);
+        setQty(m.defaultQty || 1);
+        setRate(Number(m.defaultRate || 0));
+    };
+
+    const submit = async () => {
+        if (submitting) return;
+        if (!selectedMaster) { toast({ title: 'Pick a charge from the catalog', variant: 'destructive' }); return; }
+        if (qty <= 0)        { toast({ title: 'Quantity must be > 0', variant: 'destructive' }); return; }
+        if (rate < 0)        { toast({ title: 'Rate cannot be negative', variant: 'destructive' }); return; }
+
+        setSubmitting(true);
+        try {
+            const req: AddChargeEventRequest = {
+                patientId,
+                encounterId,
+                charges: [{
+                    chargeId: selectedMaster.chargeId,
+                    displayName: selectedMaster.displayName ?? '',
+                    qty,
+                    rate,
+                    discountPercent,
+                    categoryCode: selectedMaster.categoryCode ?? 'OTHER',
+                }],
+            };
+            const res = await ipdBillingService.addChargeEvents(req);
+            if (!res?.success) throw new Error(res?.message ?? 'Could not add charge');
+            toast({ title: 'Charge added', description: selectedMaster.displayName ?? '' });
+            onSaved();
+            onOpenChange(false);
+        } catch (e: any) {
+            toast({ title: 'Could not add charge', description: e?.message ?? '', variant: 'destructive' });
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const gross = qty * rate;
+    const discountAmount = (gross * Math.max(0, Math.min(100, discountPercent))) / 100;
+    const net = gross - discountAmount;
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2"><Plus className="h-5 w-5 text-indigo-600" /> Add Charge</DialogTitle>
+                    <DialogDescription>Pick from the charge catalog and adjust quantity / discount.</DialogDescription>
+                </DialogHeader>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-slate-700">Charge catalog</Label>
+                        <div className="relative">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                            <Input value={chargeMasterFilter} onChange={(e) => setChargeMasterFilter(e.target.value)} placeholder="Search charges…" className="h-8 pl-8 text-xs" />
+                        </div>
+                        <div className="border border-slate-200 rounded-md max-h-[280px] overflow-auto bg-white">
+                            {loadingMasters ? (
+                                <div className="p-3 space-y-2">{[0, 1, 2].map(i => <Skeleton key={i} className="h-8 w-full" />)}</div>
+                            ) : filteredMasters.length === 0 ? (
+                                <div className="p-4 text-center text-xs text-slate-500">No charges configured</div>
+                            ) : (
+                                filteredMasters.map(m => (
+                                    <button
+                                        key={m.chargeId}
+                                        type="button"
+                                        onClick={() => pickMaster(m)}
+                                        className={cn(
+                                            'w-full text-left px-3 py-2 border-b border-slate-100 hover:bg-indigo-50/40 text-xs',
+                                            selectedMaster?.chargeId === m.chargeId && 'bg-indigo-50 border-l-2 border-l-indigo-500'
+                                        )}
+                                    >
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="min-w-0 flex-1">
+                                                <p className="font-semibold text-slate-900 truncate">{m.displayName}</p>
+                                                <p className="text-[10px] text-slate-500 font-mono">{m.chargeCode} · {m.categoryCode} · {m.appliesTo}</p>
+                                            </div>
+                                            <span className="text-xs font-bold text-slate-700 whitespace-nowrap">₹{Number(m.defaultRate).toLocaleString('en-IN')}</span>
+                                        </div>
+                                    </button>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <div>
+                            <Label className="text-xs font-semibold text-slate-700">Selected</Label>
+                            <div className="h-9 mt-1 px-2 flex items-center text-sm border border-slate-200 rounded-md bg-slate-50">
+                                {selectedMaster ? <span className="truncate font-semibold">{selectedMaster.displayName}</span> : <span className="text-slate-400 italic">No charge selected</span>}
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                            <div>
+                                <Label className="text-xs font-semibold text-slate-700">Qty</Label>
+                                <Input type="number" min={1} value={qty} onChange={(e) => setQty(parseInt(e.target.value || '0', 10))} className="h-9 mt-1" />
+                            </div>
+                            <div>
+                                <Label className="text-xs font-semibold text-slate-700">Rate</Label>
+                                <Input type="number" min={0} step="0.01" value={rate} onChange={(e) => setRate(parseFloat(e.target.value || '0'))} className="h-9 mt-1" />
+                            </div>
+                            <div>
+                                <Label className="text-xs font-semibold text-slate-700">Disc %</Label>
+                                <Input type="number" min={0} max={100} step="0.01" value={discountPercent} onChange={(e) => setDiscountPercent(parseFloat(e.target.value || '0'))} className="h-9 mt-1" />
+                            </div>
+                        </div>
+                        <div className="rounded-lg border border-slate-200 p-3 bg-slate-50 space-y-1.5">
+                            <div className="flex justify-between text-xs"><span className="text-slate-500">Gross</span><span className="font-mono font-semibold">₹{gross.toFixed(2)}</span></div>
+                            <div className="flex justify-between text-xs"><span className="text-slate-500">Discount</span><span className="font-mono font-semibold text-rose-600">- ₹{discountAmount.toFixed(2)}</span></div>
+                            <div className="flex justify-between text-sm pt-1.5 border-t border-slate-200"><span className="font-bold text-slate-800">Net</span><span className="font-mono font-bold text-emerald-700">₹{net.toFixed(2)}</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>Cancel</Button>
+                    <Button onClick={submit} disabled={submitting || !selectedMaster} className="bg-indigo-600 hover:bg-indigo-700">
+                        {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Adding…</> : <><Plus className="h-4 w-4 mr-2" />Add Charge</>}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
+// ─── Add payment dialog ─────────────────────────────────────────────────────
+
+const AddPaymentDialog: React.FC<{
+    open: boolean;
+    onOpenChange: (v: boolean) => void;
+    patientId: string;
+    encounterId: string;
+    suggestedAmount: number;
+    onSaved: () => void;
+}> = ({ open, onOpenChange, patientId, encounterId, suggestedAmount, onSaved }) => {
+    const { toast } = useToast();
+    const [paymentType, setPaymentType] = useState<PaymentType>('PAYMENT');
+    const [paymentMode, setPaymentMode] = useState<PaymentMode>('CASH');
+    const [amount, setAmount] = useState(0);
+    const [description, setDescription] = useState('');
+    const [transactionId, setTransactionId] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+
+    useEffect(() => {
+        if (open) {
+            setPaymentType('PAYMENT');
+            setPaymentMode('CASH');
+            setAmount(Math.max(0, suggestedAmount));
+            setDescription('');
+            setTransactionId('');
+        }
+    }, [open, suggestedAmount]);
+
+    const submit = async () => {
+        if (submitting) return;
+        if (amount <= 0) { toast({ title: 'Amount must be > 0', variant: 'destructive' }); return; }
+        setSubmitting(true);
+        try {
+            const req: AddPaymentRequest = {
+                patientId,
+                encounterId,
+                payment: {
+                    paymentType,
+                    paymentMode,
+                    amount,
+                    description: description.trim() || undefined,
+                    transactionId: transactionId.trim() || undefined,
+                },
+            };
+            const res = await ipdBillingService.addPayment(req);
+            if (!res?.success) throw new Error(res?.message ?? 'Could not record payment');
+            toast({ title: 'Payment recorded', description: `${paymentMode} · ₹${amount.toLocaleString('en-IN')}` });
+            onSaved();
+            onOpenChange(false);
+        } catch (e: any) {
+            toast({ title: 'Could not record payment', description: e?.message ?? '', variant: 'destructive' });
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5 text-emerald-600" /> Record Payment</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <Label className="text-xs font-semibold text-slate-700">Type</Label>
+                            <Select value={paymentType} onValueChange={(v) => setPaymentType(v as PaymentType)}>
+                                <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="PAYMENT">Payment</SelectItem>
+                                    <SelectItem value="ADVANCE">Advance / Deposit</SelectItem>
+                                    <SelectItem value="REFUND">Refund</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label className="text-xs font-semibold text-slate-700">Mode</Label>
+                            <Select value={paymentMode} onValueChange={(v) => setPaymentMode(v as PaymentMode)}>
+                                <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {PAYMENT_MODES.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <div>
+                        <Label className="text-xs font-semibold text-slate-700">Amount</Label>
+                        <Input type="number" min={0} step="0.01" value={amount} onChange={(e) => setAmount(parseFloat(e.target.value || '0'))} className="h-9 mt-1 font-mono text-lg font-semibold" />
+                    </div>
+                    {paymentMode !== 'CASH' && (
+                        <div>
+                            <Label className="text-xs font-semibold text-slate-700">Transaction / Ref #</Label>
+                            <Input value={transactionId} onChange={(e) => setTransactionId(e.target.value)} className="h-9 mt-1 font-mono" />
+                        </div>
+                    )}
+                    <div>
+                        <Label className="text-xs font-semibold text-slate-700">Notes</Label>
+                        <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="text-sm mt-1" placeholder="Optional" />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>Cancel</Button>
+                    <Button onClick={submit} disabled={submitting} className="bg-emerald-600 hover:bg-emerald-700">
+                        {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Recording…</> : <><CreditCard className="h-4 w-4 mr-2" />Record</>}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
+// ─── Main BillingPage ───────────────────────────────────────────────────────
 
 export const BillingPage: React.FC = () => {
-    const { t } = useTranslation();
     const { toast } = useToast();
     const { appointmentId } = useParams<{ appointmentId: string }>();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const initialPatientId = searchParams.get('patientId');
 
-    // State (In-memory, initialized empty)
-    const [patients, setPatients] = useState<Patient[]>([]);
-    const [visits, setVisits] = useState<Visit[]>([]);
-    const [ledger, setLedger] = useState<LedgerEntry[]>([]);
-
-    const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-    const [selectedVisitId, setSelectedVisitId] = useState<string | null>(appointmentId || null);
+    // Patient panel
     const [patientSearch, setPatientSearch] = useState('');
     const [searchResults, setSearchResults] = useState<Patient[]>([]);
     const [isSearching, setIsSearching] = useState(false);
+    const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
-    // Debounced Search Handler
+    // Encounters (visits)
+    const [encounters, setEncounters] = useState<Encounter[]>([]);
+    const [encountersLoading, setEncountersLoading] = useState(false);
+    const [encountersError, setEncountersError] = useState<string | null>(null);
+
+    // Selected encounter + its events
+    const [selectedEncounterId, setSelectedEncounterId] = useState<string | null>(appointmentId || null);
+    const [eventsData, setEventsData] = useState<GetEncounterEventsResponse['data'] | null>(null);
+    const [eventsLoading, setEventsLoading] = useState(false);
+    const [eventsError, setEventsError] = useState<string | null>(null);
+
+    // Dialogs
+    const [showAddCharge, setShowAddCharge] = useState(false);
+    const [showAddPayment, setShowAddPayment] = useState(false);
+    const [showNewVisit, setShowNewVisit] = useState(false);
+    const [newVisitType, setNewVisitType] = useState<'OPD' | 'IPD' | 'ER' | 'LAB' | 'PHARMACY'>('OPD');
+    const [creatingVisit, setCreatingVisit] = useState(false);
+    const [voidConfirm, setVoidConfirm] = useState<{ kind: 'charge' | 'payment'; id: string; label: string } | null>(null);
+    const [voidBusy, setVoidBusy] = useState(false);
+
+    // ─── Patient search ─────
     const debouncedSearch = useMemo(
         () => debounce(async (query: string) => {
-            if (!query || query.length < 3) {
-                setSearchResults([]);
-                setIsSearching(false);
-                return;
-            }
-
+            if (!query || query.length < 3) { setSearchResults([]); setIsSearching(false); return; }
             setIsSearching(true);
             let by: 'patientId' | 'name' | 'contact' = 'name';
-
-            // Auto-detect search criteria
-            if (query.toUpperCase().startsWith('PTID')) {
-                by = 'patientId';
-            } else if (/^\d+$/.test(query) && query.length >= 4) {
-                // Adjusted length check to 4 to allow partial mobile matches if supported, 
-                // but implementation plan said >= 10. Let's stick to plan logic or be smarter. 
-                // Mobile numbers are unique enough. 
-                by = 'contact';
-            }
-
+            if (query.toUpperCase().startsWith('PT')) by = 'patientId';
+            else if (/^\d{4,}$/.test(query)) by = 'contact';
             try {
                 const results = await patientService.searchPatients(query, by);
                 setSearchResults(results);
-            } catch (error) {
-                console.error("Search failed:", error);
-                toast({ variant: "destructive", title: "Search Failed", description: "Could not fetch patients." });
+            } catch {
+                toast({ variant: 'destructive', title: 'Search failed', description: 'Could not fetch patients.' });
             } finally {
                 setIsSearching(false);
             }
         }, 500),
-        []
+        [toast]
     );
 
     useEffect(() => {
         debouncedSearch(patientSearch);
-        return () => {
-            debouncedSearch.cancel();
-        };
+        return () => { debouncedSearch.cancel(); };
     }, [patientSearch, debouncedSearch]);
 
-    // Modals
-    const [showNewPatient, setShowNewPatient] = useState(false);
-    const [showEntryModal, setShowEntryModal] = useState(false);
-    const [showVisitTypeModal, setShowVisitTypeModal] = useState(false);
-    const [entryType, setEntryType] = useState<EntryType>('CHARGE');
-    const [newVisitDoctor, setNewVisitDoctor] = useState<string>('Dr. Unassigned');
-    const [selectedVisitType, setSelectedVisitType] = useState<VisitType>('OPD');
-
-    // Inline Editing
-    const [editRowId, setEditRowId] = useState<string | null>(null);
-    const [editValues, setEditValues] = useState<Partial<LedgerEntry>>({});
-
-    // Credit Modal
-    const [showApplyCreditModal, setShowApplyCreditModal] = useState(false);
-    const [showReceiptHistory, setShowReceiptHistory] = useState(false);
-    const [receiptsHistory, setReceiptsHistory] = useState<ReceiptPrintData[]>([]);
-
-    // Sidebar State
-    const [sidebarMode, setSidebarMode] = useState<{ type: EntryType, amount?: number } | null>(null);
-    const [cancelVisitId, setCancelVisitId] = useState<string | null>(null);
-    const [cancelReason, setCancelReason] = useState('');
-    const [isReopenSheetOpen, setIsReopenSheetOpen] = useState(false);
-    const [reopenReasonText, setReopenReasonText] = useState('');
-
-    // Sync with URL params
-    useEffect(() => {
-        if (appointmentId) {
-            setSelectedVisitId(appointmentId);
-            // Find patient for this visit
-            const visit = visits.find(v => v.id === appointmentId);
-            if (visit) {
-                setSelectedPatientId(visit.patientId);
-            }
-        }
-    }, [appointmentId, visits]);
-
-    // Derived
-    const selectedPatient = useMemo(() => patients.find(p => p.id === selectedPatientId), [patients, selectedPatientId]);
-
-    const patientVisits = useMemo(() =>
-        visits.filter(v => v.patientId === selectedPatientId).sort((a, b) => b.date.localeCompare(a.date)),
-        [visits, selectedPatientId]);
-
-    const selectedVisit = useMemo(() => visits.find(v => v.id === selectedVisitId), [visits, selectedVisitId]);
-
-    const visitLedger = useMemo(() => {
-        if (!selectedVisitId) return [];
-        let runningBal = 0;
-
-        // Filter logic: specific visit OR all visits for this patient
-        const relevantEntries = ledger.filter(e => {
-            if (selectedVisitId === 'ALL') {
-                // Check if entry belongs to any visit of the current patient
-                const entryVisit = visits.find(v => v.id === e.visitId);
-                return entryVisit && entryVisit.patientId === selectedPatientId;
-            }
-            return e.visitId === selectedVisitId;
-        });
-
-        return relevantEntries
-            .sort((a, b) => a.createdAt - b.createdAt)
-            .map(entry => {
-                const entryVisit = visits.find(v => v.id === entry.visitId);
-                // If visit is cancelled, it shouldn't contribute to balance but we still track it in ledger if needed
-                // Actually, for a single visit view, if it's cancelled, we show it but totals will be handled below.
-                runningBal += (entry.netDebit - entry.credit);
-                return {
-                    ...entry,
-                    runningBalance: runningBal,
-                    visitType: entry.visitType || entryVisit?.type || 'OPD'
-                };
-            });
-    }, [ledger, selectedVisitId, selectedPatientId, visits]);
-
-    const totals = useMemo(() => {
-        if (!selectedVisit || selectedVisit.status === 'CANCELLED') {
-            return { debit: 0, credit: 0 };
-        }
-        return visitLedger.reduce((acc, curr) => ({
-            debit: acc.debit + curr.netDebit,
-            credit: acc.credit + curr.credit,
-        }), { debit: 0, credit: 0 });
-    }, [visitLedger, selectedVisit]);
-
-    const balance = totals.debit - totals.credit;
-
-    // Effects logic for auto-selection
-    useEffect(() => {
-        if (selectedPatientId && patientVisits.length > 0 && !selectedVisitId) {
-            // Only auto-select if NOT in new bill mode to avoid overriding
-            setSelectedVisitId(patientVisits[0].id);
-        } else if (selectedPatientId && patientVisits.length === 0) {
-            setSelectedVisitId(null);
-        }
-    }, [selectedPatientId, patientVisits, selectedVisitId]);
-
-    // Handlers
-    const handleCreateVisit = (type: VisitType = 'OPD') => {
-        if (!selectedPatientId) return;
-        const newVisitId = 'v' + Math.random().toString(36).substr(2, 6);
-        const newVisit: Visit = {
-            id: newVisitId,
-            patientId: selectedPatientId,
-            date: new Date().toISOString(),
-            type: type,
-            status: 'OPEN',
-            doctorName: newVisitDoctor // Use the selected doctor
-        };
-        setVisits(prev => [newVisit, ...prev]);
-        setSelectedVisitId(newVisitId);
-        setShowVisitTypeModal(false);
-        // Reset doctor for next time
-        setNewVisitDoctor('Dr. Unassigned');
-        navigate(`/billing/${newVisitId}`);
-        toast({ title: "New Bill Created", description: `A new ${type} visit has been started.` });
-    };
-
-    const handleAddEntry = (entry: Omit<LedgerEntry, 'id' | 'createdAt' | 'visitId'>) => {
-        if (!selectedVisitId) return;
-
-        const newEntry: LedgerEntry = {
-            ...entry,
-            id: Math.random().toString(36).substr(2, 9),
-            visitId: selectedVisitId,
-            createdAt: Date.now(),
-        };
-
-        setLedger(prev => [...prev, newEntry]);
-        setShowEntryModal(false);
-        setSidebarMode(null);
-        toast({ title: "Saved", description: `${entry.type} entry added successfully.` });
-    };
-
-    const handleVoidEntry = (entryId: string) => {
-        if (selectedVisit?.status === 'FINAL') {
-            toast({ variant: 'destructive', title: "Locked", description: "Cannot void entries in a FINAL visit." });
-            return;
-        }
-        setLedger(prev => prev.filter(e => e.id !== entryId));
-        toast({ title: "Entry Voided" });
-    };
-
-    const handleConfirmCancelVisit = () => {
-        if (!cancelVisitId) return;
-        setVisits(prev => prev.map(v => v.id === cancelVisitId ? {
-            ...v,
-            status: 'CANCELLED',
-            cancelReason: cancelReason
-        } : v));
-        setCancelVisitId(null);
-        setCancelReason('');
-        toast({ title: "Visit Cancelled", description: "The session has been marked as cancelled." });
-    };
-    const handleSaveEdit = () => {
-        if (!editRowId) return;
-
-        setLedger(prev => prev.map(entry => {
-            if (entry.id === editRowId) {
-                const amount = parseFloat(editValues.rate?.toString() || '0');
-                const discount = parseFloat(editValues.discountValue?.toString() || '0');
-                const type = entry.type;
-
-                let netDebit = 0;
-                let credit = 0;
-
-                if (type === 'CHARGE') {
-                    netDebit = amount - discount; // Simple recalculation, assuming singular qty for simplification or keeping standard logic
-                    // If original had tax/etc, we should respect it, but for now simplistic:
-                    // Current system: entry.netDebit = entry.rate - (entry.rate*entry.taxPercent/100)? No, logic in saveSingleRow was:
-                    // netDebit: amount
-                    // Actually logic in saveSingleRow for CHARGE: netDebit = amount. 
-                    // Wait, in saveSingleRow: netDebit: (type==='CHARGE') ? amount : 0;
-                    // But there is discount logic in the TABLE render (lines 719 for pending).
-                    // For committed ledger, netDebit usually stores the FINAL amount? 
-                    // Let's check LedgerEntry interface or usage.
-                    // usage: runningBal += (entry.netDebit - entry.credit);
-                    // So netDebit IS the effective charge amount.
-                    // If I edit 'rate' (Amount) and 'discount', I should update netDebit.
-                    // Assuming flat discount value for now based on `discountValue`.
-                    netDebit = amount - discount;
-                } else if (['PAYMENT', 'ADVANCE'].includes(type)) {
-                    credit = amount;
-                } else if (type === 'REFUND') {
-                    netDebit = amount; // Refunds act as Debit (increasing balance due/reducing credit)
-                } else if (type === 'ADJUSTMENT') {
-                    credit = amount;
-                }
-
-                return {
-                    ...entry,
-                    particular: editValues.particular || entry.particular,
-                    rate: amount,
-                    discountValue: discount,
-                    netDebit,
-                    credit
-                };
-            }
-            return entry;
-        }));
-
-        setEditRowId(null);
-        setEditValues({});
-        toast({ title: "Updated", description: "Entry updated successfully." });
-    };
-
-    const handleCreatePatient = (data: Partial<Patient>) => {
-        const newId = 'p' + Math.random().toString(36).substr(2, 5);
-        const newPatient: Patient = {
-            id: newId,
-            patientId: 'PT' + Math.floor(Math.random() * 1000000),
-            name: data.name || 'Unknown',
-            mobile: data.mobile || '',
-            age: data.age || 0,
-            sex: data.sex || 'M'
-        };
-        setPatients(prev => [...prev, newPatient]);
-
-        // Auto creates a visit for them
-        const newVisit: Visit = {
-            id: 'v' + Math.random().toString(36).substr(2, 5),
-            patientId: newId,
-            type: 'OPD',
-            date: new Date().toISOString().split('T')[0],
-            status: 'OPEN',
-            doctorName: 'Dr. Unassigned'
-        };
-        setVisits(prev => [...prev, newVisit]);
-
-        setSelectedPatientId(newId);
-        setShowNewPatient(false);
-        toast({ title: "Patient Created", description: "New patient and visit created." });
-    };
-
-    const handleToggleStatus = () => {
-        if (!selectedVisit) return;
-        
-        if (selectedVisit.status === 'FINAL') {
-            // If finalizing -> reopening, show the sheet
-            setIsReopenSheetOpen(true);
-            setReopenReasonText('');
-            return;
-        }
-
-        // Just finalizing
-        const newStatus = 'FINAL';
-        setVisits(prev => prev.map(v => v.id === selectedVisit.id ? { ...v, status: newStatus } : v));
-        toast({
-            title: "Visit Finalized",
-            description: "Charges are now locked."
-        });
-    };
-
-    const handleConfirmReopen = () => {
-        if (!selectedVisit) return;
-        if (!reopenReasonText.trim()) {
-            toast({
-                variant: 'destructive',
-                title: "Reason Required",
-                description: "Please provide a reason to reopen this finalized bill."
-            });
-            return;
-        }
-
-        setVisits(prev => prev.map(v => v.id === selectedVisit.id ? { 
-            ...v, 
-            status: 'OPEN',
-            reopenReason: reopenReasonText 
-        } : v));
-        
-        setIsReopenSheetOpen(false);
-        setReopenReasonText('');
-        
-        toast({
-            title: "Visit Reopened",
-            description: "You can now add charges."
-        });
-    };
-
-    const handleRefundCredit = (amount: number) => {
-        if (!selectedVisitId || amount <= 0) return;
-        setSidebarMode({ type: 'REFUND', amount });
-        toast({ title: "Refund Form Opened", description: "Please enter refund details." });
-    };
-
-    const handleApplyCredit = () => {
-        setShowApplyCreditModal(true);
-    };
-
-    const handlePrint = async (type: 'invoice' | 'receipt' | 'receipt-thermal' | 'bill-cum-receipt', receiptId?: string) => {
-        if (!selectedVisitId) return;
+    // ─── Load encounters for selected patient ─────
+    const loadEncounters = useCallback(async (patientIdValue: string) => {
+        setEncountersLoading(true);
+        setEncountersError(null);
         try {
-            toast({ variant: 'default', title: "Not Supported", description: "Backend print API is not implemented yet." });
-            console.log(`Print requested for ${type} against visit ${selectedVisitId}`);
-            // TODO: Fetch real settings and data from billingService when ready
-            /*
-            // const settings = await billingService.getPrintSettings();
-            if (type === 'invoice') { ... }
-            else if (type === 'receipt') { ... }
-            else if (type === 'receipt-thermal') { ... }
-            else if (type === 'bill-cum-receipt') { ... }
-            */
-        } catch (e) {
-            console.error(e);
-            toast({ variant: 'destructive', title: "Error", description: "Failed to load print data." });
+            const res: any = await ipdBillingService.getPatientEvents(patientIdValue);
+            if (res?.success === false) throw new Error(res.message ?? 'Could not load visits');
+            const list: Encounter[] = (res?.data?.encounters ?? []).map((e: any) => ({
+                encounterId: e.encounterId,
+                invoiceNo: e.invoiceNo ?? undefined,
+                invoiceDate: e.invoiceDate ?? new Date().toISOString(),
+                doctorName: e.doctorName ?? undefined,
+                status: e.status ?? 'OPEN',
+                isCancelled: !!e.isCancelled,
+                cancelReason: e.cancelReason ?? undefined,
+            })).sort((a: Encounter, b: Encounter) => b.invoiceDate.localeCompare(a.invoiceDate));
+            setEncounters(list);
+            if (!selectedEncounterId && list.length > 0) setSelectedEncounterId(list[0].encounterId);
+            else if (list.length === 0) setSelectedEncounterId(null);
+        } catch (e: any) {
+            setEncountersError(e?.message ?? 'Failed to load visits');
+        } finally {
+            setEncountersLoading(false);
+        }
+    }, [selectedEncounterId]);
+
+    // ─── Load events for selected encounter ─────
+    const loadEvents = useCallback(async () => {
+        if (!selectedPatient || !selectedEncounterId) {
+            setEventsData(null);
+            return;
+        }
+        setEventsLoading(true);
+        setEventsError(null);
+        try {
+            const res = await ipdBillingService.getEncounterEvents(selectedEncounterId, selectedPatient.patientId);
+            if (!res?.success) throw new Error(res?.message ?? 'Could not load events');
+            setEventsData(res.data ?? null);
+        } catch (e: any) {
+            setEventsError(e?.message ?? 'Failed to load events');
+        } finally {
+            setEventsLoading(false);
+        }
+    }, [selectedPatient, selectedEncounterId]);
+
+    useEffect(() => { loadEvents(); }, [loadEvents]);
+
+    useEffect(() => {
+        if (selectedPatient) loadEncounters(selectedPatient.patientId);
+    }, [selectedPatient, loadEncounters]);
+
+    // Auto-select patient from initial URL param (best effort)
+    useEffect(() => {
+        if (!initialPatientId || selectedPatient) return;
+        (async () => {
+            try {
+                const results = await patientService.searchPatients(initialPatientId, 'patientId');
+                if (results.length > 0) setSelectedPatient(results[0]);
+            } catch { /* ignore */ }
+        })();
+    }, [initialPatientId, selectedPatient]);
+
+    // ─── Mutations ─────
+
+    const handleCreateVisit = async () => {
+        if (!selectedPatient || creatingVisit) return;
+        setCreatingVisit(true);
+        try {
+            const res = await ipdBillingService.createEncounter({
+                patientId: selectedPatient.patientId,
+                encounterType: newVisitType,
+            });
+            if (!res?.success || !res.data?.encounterId) throw new Error(res?.message ?? 'Could not create visit');
+            const newId = res.data.encounterId;
+            toast({ title: 'Visit created', description: `${newVisitType} visit ready for billing` });
+            await loadEncounters(selectedPatient.patientId);
+            setSelectedEncounterId(newId);
+            setShowNewVisit(false);
+        } catch (e: any) {
+            toast({ title: 'Could not create visit', description: e?.message ?? '', variant: 'destructive' });
+        } finally {
+            setCreatingVisit(false);
         }
     };
 
-    const fetchReceiptHistory = async () => {
-        // In a real app, we'd fetch receipts list for this visit. 
-        setShowReceiptHistory(true);
-        // Set empty until backend is ready
-        setReceiptsHistory([]);
+    const handleVoid = async () => {
+        if (!voidConfirm || !selectedPatient || voidBusy) return;
+        setVoidBusy(true);
+        try {
+            const type = voidConfirm.kind === 'charge' ? 'Charges' : 'Payment';
+            const res: any = await ipdBillingService.deleteEvent(voidConfirm.id, type, selectedPatient.patientId);
+            if (res?.success === false) throw new Error(res.message ?? 'Could not delete');
+            toast({ title: `${voidConfirm.kind === 'charge' ? 'Charge' : 'Payment'} removed` });
+            setVoidConfirm(null);
+            loadEvents();
+        } catch (e: any) {
+            toast({ title: 'Could not delete', description: e?.message ?? '', variant: 'destructive' });
+        } finally {
+            setVoidBusy(false);
+        }
     };
 
-    return (
-        <div className="flex flex-col h-[calc(100vh-4rem)] bg-slate-50 px-1 pb-4 pt-1 gap-4 text-sm text-slate-800">
-            {/* Top Bar */}
-            <div className="flex items-center justify-between gap-4 bg-white/80 backdrop-blur-md p-4 rounded-xl border border-slate-200 shadow-[0_0_15px_rgba(0,0,0,0.05)]">
-                <div className="flex items-center gap-3 w-full">
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/billing')}>
-                        <ArrowLeft className="h-5 w-5 text-gray-500" />
-                    </Button>
+    const handlePrint = async () => {
+        if (!selectedPatient || !selectedEncounterId) return;
+        try {
+            await ipdBillingService.print(selectedPatient.patientId, selectedEncounterId);
+            toast({ title: 'Print request sent' });
+        } catch (e: any) {
+            toast({ title: 'Print failed', description: e?.message ?? '', variant: 'destructive' });
+        }
+    };
 
-                    <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-200 shadow-[0_0_10px_rgba(99,102,241,0.2)]">
-                        <IndianRupee className="h-6 w-6 text-indigo-600 drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
+    // ─── Derived totals ─────
+    const totals = useMemo(() => {
+        const debit = eventsData?.totalBilledAmount ?? 0;
+        const credit = eventsData?.amountReceived ?? 0;
+        const balance = eventsData?.netBalance ?? (debit - credit);
+        return { debit, credit, balance };
+    }, [eventsData]);
+
+    const selectedEncounter = useMemo(
+        () => encounters.find(e => e.encounterId === selectedEncounterId) ?? null,
+        [encounters, selectedEncounterId]
+    );
+
+    const isFinalized = (eventsData?.currentInvoice?.statusCode ?? '').toUpperCase() === 'FINALIZED';
+
+    // ─── Render ─────
+    return (
+        <div className="flex flex-col h-[calc(100vh-4rem)] bg-slate-50 px-2 sm:px-4 pb-4 pt-1 gap-4 text-sm text-slate-800">
+            {/* Top bar */}
+            <div className="flex items-center justify-between gap-4 bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <Button variant="ghost" size="icon" onClick={() => navigate('/billing')}>
+                        <ArrowLeft className="h-5 w-5 text-slate-500" />
+                    </Button>
+                    <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-200">
+                        <IndianRupee className="h-5 w-5 text-indigo-600" />
                     </div>
-                    <div>
-                        <h1 className="text-lg font-bold tracking-widest text-slate-900 uppercase">Billing Ledger</h1>
-                        <p className="text-[10px] text-slate-500 font-mono tracking-wider">VISIT ID: {selectedVisitId ? selectedVisitId : 'NONE'}</p>
+                    <div className="min-w-0">
+                        <h1 className="text-base sm:text-lg font-bold tracking-wide text-slate-900 uppercase">Billing Ledger</h1>
+                        <p className="text-[10px] text-slate-500 font-mono">Encounter: {selectedEncounterId ?? '—'}</p>
                     </div>
 
                     {selectedPatient && (
-                        <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-2">
-                            <div className="h-8 w-px bg-slate-200 mx-2" />
-                            <div className="flex items-center gap-3 mr-4">
-                                <div className="h-10 w-10 rounded-full bg-cyan-50 flex items-center justify-center text-xs font-bold text-cyan-600 border border-cyan-300 shadow-[0_0_10px_rgba(34,211,238,0.4)]">
+                        <div className="flex items-center gap-3 ml-3 min-w-0">
+                            <div className="h-8 w-px bg-slate-200" />
+                            <div className="flex items-center gap-2 min-w-0">
+                                <div className="h-9 w-9 rounded-full bg-cyan-50 flex items-center justify-center text-xs font-bold text-cyan-700 border border-cyan-300 shrink-0">
                                     {selectedPatient.name.charAt(0)}
                                 </div>
-                                <div className="flex flex-col">
+                                <div className="flex flex-col min-w-0">
                                     <div className="flex items-center gap-2">
-                                        <h3 className="font-bold text-slate-800">{selectedPatient.name}</h3>
-                                        <Badge variant="outline" className="text-[9px] h-5 px-1.5 bg-slate-50 text-cyan-700 border-cyan-300">
-                                            {selectedPatient.age} Y / {selectedPatient.sex}
-                                        </Badge>
+                                        <h3 className="font-bold text-slate-800 truncate">{selectedPatient.name}</h3>
+                                        <Badge variant="outline" className="text-[9px] h-5 px-1.5 shrink-0">{selectedPatient.age}Y / {selectedPatient.sex}</Badge>
                                     </div>
-                                    <span className="text-[10px] text-cyan-600/80 font-mono">{selectedPatient.patientId}</span>
+                                    <span className="text-[10px] text-cyan-700 font-mono">{selectedPatient.patientId}</span>
                                 </div>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-rose-600 hover:bg-rose-50 -ml-1 rounded-full transition-all" onClick={() => setSelectedPatientId(null)} title="Close Patient">
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-rose-600" onClick={() => { setSelectedPatient(null); setEncounters([]); setSelectedEncounterId(null); setEventsData(null); }}>
                                     <X className="h-3.5 w-3.5" />
                                 </Button>
                             </div>
 
-                            {balance !== 0 && (
-                                <>
-                                    <div className="h-8 w-px bg-slate-200 mx-1" />
-                                    <div className={cn(
-                                        "flex items-center gap-3 px-4 py-2 rounded-xl border shadow-[0_0_15px_rgba(0,0,0,0.05)] backdrop-blur-md animate-in zoom-in duration-300",
-                                        balance < 0 ? "bg-emerald-50/80 border-emerald-300 text-emerald-700 shadow-emerald-500/10" : "bg-rose-50/80 border-rose-300 text-rose-700 shadow-rose-500/10"
-                                    )}>
-                                        <div className={cn(
-                                            "p-2 rounded-full border",
-                                            balance < 0 ? "bg-emerald-100 border-emerald-300" : "bg-rose-100 border-rose-300"
-                                        )}>
-                                            {balance < 0 ? (
-                                                <Wallet className="h-4 w-4 text-emerald-600 drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
-                                            ) : (
-                                                <TrendingDown className="h-4 w-4 text-rose-600 drop-shadow-[0_0_5px_rgba(244,63,94,0.5)]" />
-                                            )}
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className={cn(
-                                                "text-[9px] font-bold tracking-wider uppercase",
-                                                balance < 0 ? "text-emerald-700" : "text-rose-700"
-                                            )}>{balance < 0 ? 'Available Credit' : 'Outstanding Due'}</span>
-                                            <span className={cn(
-                                                "text-base font-bold font-mono tracking-tight leading-none mt-0.5 text-shadow-sm",
-                                                balance < 0 ? "text-emerald-700" : "text-rose-700"
-                                            )}>
-                                                ₹ {Math.abs(balance).toLocaleString()}
-                                            </span>
-                                        </div>
-                                        {balance < 0 && (
-                                            <>
-                                                <div className={cn("h-8 w-px mx-1", balance < 0 ? "bg-emerald-200" : "bg-rose-200")} />
-                                                <div className="flex flex-col gap-1">
-                                                    <button className="text-[9px] font-bold tracking-widest uppercase text-emerald-600 hover:text-emerald-500 hover:drop-shadow-[0_0_8px_rgba(16,185,129,0.4)] transition-all text-left"
-                                                        onClick={handleApplyCredit}>
-                                                        Apply
-                                                    </button>
-                                                    <button className="text-[9px] font-bold tracking-widest uppercase text-rose-600 hover:text-rose-500 hover:drop-shadow-[0_0_8px_rgba(244,63,94,0.4)] transition-all text-left"
-                                                        onClick={() => handleRefundCredit(Math.abs(balance))}>
-                                                        Refund
-                                                    </button>
-                                                </div>
-                                            </>
-                                        )}
+                            {totals.balance !== 0 && (
+                                <div className={cn(
+                                    'flex items-center gap-2 px-3 py-1.5 rounded-lg border ml-2',
+                                    totals.balance < 0 ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-rose-50 border-rose-300 text-rose-700'
+                                )}>
+                                    {totals.balance < 0 ? <Wallet className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] font-bold tracking-wider uppercase">{totals.balance < 0 ? 'Credit' : 'Due'}</span>
+                                        <span className="text-sm font-bold font-mono">₹ {Math.abs(totals.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                     </div>
-                                </>
+                                </div>
                             )}
-
                         </div>
                     )}
                 </div>
             </div>
+
+            {/* Main 3-column layout */}
             <div className="grid grid-cols-12 gap-4 flex-1 overflow-hidden">
 
-                {/* Left Panel: Patient & Visit Context */}
-                <div className="col-span-2 flex flex-col gap-4">
-                    <Card className="flex-1 border-slate-200 bg-white/60 backdrop-blur-md shadow-[0_0_20px_rgba(0,0,0,0.05)] flex flex-col rounded-xl overflow-hidden">
-                        <CardHeader className="pb-2 bg-slate-50/80 border-b border-slate-200">
-                            <CardTitle className="text-xs font-bold text-slate-500 uppercase tracking-widest font-mono">Database Search</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-0 flex-1 flex flex-col min-h-0">
-                            <div className="h-full flex flex-col animate-in fade-in slide-in-from-left-4 duration-500">
-                                <div className="space-y-2 p-4 pb-2">
-                                    <Label className="text-slate-600 font-mono text-[10px] uppercase">Identify Target</Label>
-                                    <div className="relative group">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-cyan-500 transition-colors" />
-                                        <Input
-                                            placeholder="SYS_ID or ALIAS..."
-                                            className="pl-9 bg-white border-slate-200 text-slate-800 font-mono focus:border-cyan-400 focus:ring-cyan-500/20 placeholder:text-slate-400 transition-all shadow-inner"
-                                            value={patientSearch}
-                                            onChange={(e) => setPatientSearch(e.target.value)}
-                                            autoFocus
-                                        />
-                                    </div>
-                                    {patientSearch && (
-                                        <div className="border border-slate-200 rounded-md max-h-[200px] overflow-auto bg-white shadow-[0_0_15px_rgba(0,0,0,0.1)] mt-2 font-mono">
-                                            {isSearching && (
-                                                <div className="p-3 text-xs text-center text-cyan-600 animate-pulse">Scanning DB...</div>
-                                            )}
-                                            {!isSearching && searchResults.length === 0 && patientSearch.length >= 3 && (
-                                                <div className="p-3 text-[10px] text-rose-500 text-center">NO PATIENTS FOUND</div>
-                                            )}
-                                            {!isSearching && patientSearch.length < 3 && (
-                                                <div className="p-3 text-[10px] text-slate-400 text-center">TYPE AT LEAST 3 CHARACTERS...</div>
-                                            )}
-                                            {!isSearching && searchResults.map(p => (
-                                                <div key={p.id}
-                                                    className="p-3 text-xs hover:bg-cyan-50 cursor-pointer border-b border-slate-100 last:border-0 flex justify-between items-center group transition-colors"
-                                                    onClick={() => {
-                                                        setPatients(prev => {
-                                                            // Avoid duplicates based on patientId
-                                                            if (prev.some(existing => existing.patientId === p.patientId)) {
-                                                                return prev;
-                                                            }
-                                                            return [...prev, p];
-                                                        });
+                {/* Left: patient search */}
+                <Card className="col-span-12 md:col-span-3 lg:col-span-2 border-slate-200 bg-white flex flex-col overflow-hidden">
+                    <CardHeader className="pb-2 border-b border-slate-200 bg-slate-50">
+                        <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-wider">Patient</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-3 flex-1 flex flex-col min-h-0">
+                        <div className="relative mb-2">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                            <Input value={patientSearch} onChange={(e) => setPatientSearch(e.target.value)} placeholder="PTID / name / mobile" className="h-9 pl-8 text-xs" autoFocus />
+                        </div>
 
-                                                        // If patient already exists locally with a different internal ID (e.g. from seed), prefer that one?
-                                                        // Actually, sticking to the API ID (which is patientId) is safer for future.
-                                                        // BUT if we have a local one with data (like visits), we might want that.
-                                                        // For now, let's just use the API ID as the selected ID. 
-                                                        // Wait, if I don't add duplicate, I must find the existing one's ID to select it.
-                                                        const existing = patients.find(ep => ep.patientId === p.patientId);
-                                                        if (existing) {
-                                                            setSelectedPatientId(existing.id);
-                                                        } else {
-                                                            setSelectedPatientId(p.id);
-                                                        }
+                        {patientSearch.length > 0 && (
+                            <div className="border border-slate-200 rounded-md flex-1 overflow-auto bg-white text-xs">
+                                {isSearching && (
+                                    <div className="p-3 flex items-center gap-2 text-cyan-700"><Loader2 className="h-3 w-3 animate-spin" /> Searching…</div>
+                                )}
+                                {!isSearching && patientSearch.length >= 3 && searchResults.length === 0 && (
+                                    <div className="p-3 text-rose-600 text-[10px] text-center">No patients found</div>
+                                )}
+                                {!isSearching && patientSearch.length < 3 && (
+                                    <div className="p-3 text-slate-400 text-[10px] text-center">Type at least 3 characters</div>
+                                )}
+                                {searchResults.map(p => (
+                                    <button key={p.patientId} type="button" onClick={() => { setSelectedPatient(p); setPatientSearch(''); setSearchResults([]); setSelectedEncounterId(null); setEventsData(null); }} className="w-full text-left px-3 py-2 border-b border-slate-100 hover:bg-cyan-50">
+                                        <p className="font-semibold text-slate-900 truncate">{p.name}</p>
+                                        <p className="text-[10px] text-slate-500 font-mono">{p.patientId} · {p.mobile} · {p.age}y/{p.sex}</p>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
 
-                                                        setPatientSearch('');
-                                                        setSearchResults([]);
-                                                    }}>
-                                                    <div>
-                                                        <div className="font-bold text-slate-700 group-hover:text-cyan-600 transition-colors uppercase">{p.name}</div>
-                                                        <div className="text-[10px] text-slate-400">{p.patientId} • {p.age}Y/{p.sex} • {p.mobile}</div>
-                                                    </div>
-                                                    <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-cyan-500 group-hover:translate-x-1 transition-all" />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                                {selectedPatient && !patientSearch ? (
-                                    <div className="flex-1 overflow-auto animate-in fade-in slide-in-from-bottom-2 duration-500 px-4 scrollbar-thin scrollbar-thumb-zinc-800">
-                                        <div className="flex justify-center mb-4 mt-2">
-                                            <Button size="sm" className="h-9 w-full text-[11px] bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-[0_0_15px_rgba(79,70,229,0.3)] border border-indigo-400/50 hover:shadow-[0_0_20px_rgba(79,70,229,0.5)] hover:scale-[1.02] transition-all duration-300 group" title="New Session" onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleCreateVisit('OPD');
-                                            }}>
-                                                <Plus className="h-4 w-4 mr-1.5 stroke-[3] group-hover:rotate-90 transition-transform duration-300" /> NEW BILL
-                                            </Button>
-                                        </div>
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Session History</Label>
-                                            <Badge variant="secondary" className="text-[9px] h-5 px-1.5 bg-slate-100 text-slate-500 font-mono border-slate-200">{patientVisits.length}</Badge>
-                                        </div>
-                                        <div className="space-y-3 pb-2">
-                                            {patientVisits.map(v => (
-                                                <div key={v.id}
-                                                    onClick={() => setSelectedVisitId(v.id)}
-                                                    className={cn(
-                                                        "p-3 rounded-lg border cursor-pointer transition-all flex flex-col gap-1 relative overflow-hidden group",
-                                                        selectedVisitId === v.id
-                                                            ? "bg-indigo-50 border-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.15)]"
-                                                            : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"
-                                                    )}
-                                                >
-                                                    {v.status === 'CANCELLED' && (
-                                                        <div className="absolute inset-0 bg-slate-100/50 backdrop-blur-[1px] z-10 flex items-center justify-center">
-                                                            <Badge variant="destructive" className="bg-rose-100 text-rose-700 border-rose-300 text-[8px] tracking-widest uppercase py-0 px-1.5 opacity-80 rotate-12 border-2">CANCELLED</Badge>
-                                                        </div>
-                                                    )}
-                                                    {selectedVisitId === v.id && (
-                                                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]"></div>
-                                                    )}
-                                                    <div className="flex justify-between items-start">
-                                                        <div className="flex flex-col gap-1">
-                                                            <span className="text-[9px] text-indigo-600 font-mono font-bold tracking-tight uppercase">
-                                                                #{v.id}
-                                                            </span>
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-xs font-bold text-slate-800">{v.type}</span>
-                                                                <span className="text-[10px] font-bold text-slate-500">
-                                                                    {format(new Date(v.date), 'dd MMM yyyy')}
-                                                                </span>
-                                                            </div>
-                                                            <span className="text-[10px] text-slate-500 truncate max-w-[140px] flex items-center gap-1">
-                                                                <User className="h-3 w-3 opacity-50" /> {v.doctorName || 'Dr. Unassigned'}
-                                                            </span>
-                                                        </div>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className={cn(
-                                                                "h-6 w-6 text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors -mt-1 -mr-1 z-20",
-                                                                v.status === 'CANCELLED' && "opacity-0 pointer-events-none"
-                                                            )}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setCancelVisitId(v.id);
-                                                            }}
-                                                            title="Cancel Visit"
-                                                        >
-                                                            <Ban className="h-3 w-3" />
+                        {patientSearch.length === 0 && !selectedPatient && (
+                            <div className="flex-1 flex items-center justify-center text-center text-[11px] text-slate-400 px-3">
+                                Search by patient ID, name, or mobile to start billing.
+                            </div>
+                        )}
+
+                        {patientSearch.length === 0 && selectedPatient && (
+                            <div className="text-[11px] text-slate-500 px-1 leading-relaxed">
+                                Showing ledger for <span className="font-semibold text-slate-700">{selectedPatient.name}</span>. Search again to switch patient.
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Middle: encounters + ledger */}
+                <Card className="col-span-12 md:col-span-9 lg:col-span-7 border-slate-200 bg-white flex flex-col overflow-hidden">
+                    <CardHeader className="pb-2 border-b border-slate-200 bg-slate-50 flex flex-row items-center justify-between gap-2">
+                        <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-wider">Visits</CardTitle>
+                        <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => selectedPatient && loadEncounters(selectedPatient.patientId)} disabled={!selectedPatient || encountersLoading}>
+                                <RefreshCw className={cn('h-3 w-3 mr-1', encountersLoading && 'animate-spin')} /> Refresh
+                            </Button>
+                            <Button size="sm" className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700" onClick={() => setShowNewVisit(true)} disabled={!selectedPatient}>
+                                <Plus className="h-3 w-3 mr-1" /> New Visit
+                            </Button>
+                        </div>
+                    </CardHeader>
+
+                    <div className="border-b border-slate-200 bg-white">
+                        {!selectedPatient ? (
+                            <div className="p-6 text-center text-xs text-slate-400">Select a patient to view their visits.</div>
+                        ) : encountersLoading ? (
+                            <div className="p-3 space-y-2">{[0, 1].map(i => <Skeleton key={i} className="h-10 w-full" />)}</div>
+                        ) : encountersError ? (
+                            <div className="p-4 text-center text-rose-600 text-xs flex items-center justify-center gap-2"><AlertCircle className="h-4 w-4" /> {encountersError}</div>
+                        ) : encounters.length === 0 ? (
+                            <div className="p-6 text-center text-xs text-slate-400">No visits yet for this patient. Click "New Visit" to start.</div>
+                        ) : (
+                            <div className="flex overflow-x-auto p-2 gap-2">
+                                {encounters.map(enc => {
+                                    const active = enc.encounterId === selectedEncounterId;
+                                    return (
+                                        <button
+                                            key={enc.encounterId}
+                                            type="button"
+                                            onClick={() => setSelectedEncounterId(enc.encounterId)}
+                                            className={cn(
+                                                'shrink-0 px-3 py-1.5 rounded-md border text-xs text-left transition-all min-w-[160px]',
+                                                active ? 'border-indigo-500 bg-indigo-50 text-indigo-900' : 'border-slate-200 bg-white hover:border-slate-300',
+                                                enc.isCancelled && 'opacity-60'
+                                            )}
+                                        >
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="font-mono font-bold text-[10px]">{enc.invoiceNo ?? enc.encounterId.slice(0, 8)}</span>
+                                                <Badge variant="outline" className="text-[9px] h-4 px-1">{enc.status}</Badge>
+                                                {enc.isCancelled && <Badge variant="outline" className="text-[9px] h-4 px-1 bg-rose-50 text-rose-700 border-rose-200">VOID</Badge>}
+                                            </div>
+                                            <p className="text-[10px] text-slate-500 mt-0.5">
+                                                {format(parseISO(enc.invoiceDate), 'dd MMM yyyy')}
+                                                {enc.doctorName ? ` · ${enc.doctorName}` : ''}
+                                            </p>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Ledger */}
+                    <CardContent className="p-0 flex-1 overflow-auto">
+                        {!selectedEncounterId ? (
+                            <div className="p-8 text-center text-xs text-slate-400">
+                                {selectedPatient ? 'Pick a visit above (or create one) to see the ledger.' : 'Select a patient first.'}
+                            </div>
+                        ) : eventsLoading ? (
+                            <div className="p-3 space-y-2">{[0, 1, 2].map(i => <Skeleton key={i} className="h-9 w-full" />)}</div>
+                        ) : eventsError ? (
+                            <div className="p-6 text-center text-rose-600 text-xs flex flex-col items-center gap-2">
+                                <AlertCircle className="h-6 w-6" /> {eventsError}
+                                <Button size="sm" variant="outline" onClick={loadEvents} className="mt-1 h-7 text-xs"><RefreshCw className="h-3 w-3 mr-1" /> Retry</Button>
+                            </div>
+                        ) : (
+                            <>
+                                <table className="w-full text-xs">
+                                    <thead className="bg-slate-50 sticky top-0">
+                                        <tr className="border-b border-slate-200">
+                                            <th className="text-left px-3 py-2 font-semibold text-slate-600 uppercase tracking-wider">Date</th>
+                                            <th className="text-left px-3 py-2 font-semibold text-slate-600 uppercase tracking-wider">Particular</th>
+                                            <th className="text-left px-3 py-2 font-semibold text-slate-600 uppercase tracking-wider">Category</th>
+                                            <th className="text-right px-3 py-2 font-semibold text-slate-600 uppercase tracking-wider">Qty × Rate</th>
+                                            <th className="text-right px-3 py-2 font-semibold text-slate-600 uppercase tracking-wider">Debit</th>
+                                            <th className="text-right px-3 py-2 font-semibold text-slate-600 uppercase tracking-wider">Credit</th>
+                                            <th className="w-px" />
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(eventsData?.charges ?? []).map((c: BillingChargeRow) => (
+                                            <tr key={c.chargeEventId} className="border-b border-slate-100 hover:bg-slate-50">
+                                                <td className="px-3 py-2 whitespace-nowrap text-slate-600">{format(parseISO(c.createdDateTime), 'dd MMM HH:mm')}</td>
+                                                <td className="px-3 py-2"><div className="font-semibold text-slate-800 truncate max-w-[260px]">{c.displayName ?? '—'}</div></td>
+                                                <td className="px-3 py-2 text-[10px] font-mono uppercase text-slate-500">{c.categoryCode ?? '—'}</td>
+                                                <td className="px-3 py-2 text-right font-mono">{c.qty} × ₹{Number(c.rate).toFixed(2)}</td>
+                                                <td className="px-3 py-2 text-right font-mono font-semibold text-slate-800">₹{Number(c.netAmount).toFixed(2)}</td>
+                                                <td className="px-3 py-2 text-right text-slate-300">—</td>
+                                                <td className="px-2 py-2 text-right">
+                                                    {!isFinalized && (
+                                                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-slate-400 hover:text-rose-600" onClick={() => setVoidConfirm({ kind: 'charge', id: c.chargeEventId, label: c.displayName ?? 'Charge' })}>
+                                                            <Trash2 className="h-3 w-3" />
                                                         </Button>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    !patientSearch && (
-                                        <div className="flex flex-col items-center justify-center flex-1 text-slate-400 text-center font-mono animate-pulse">
-                                            <User className="h-10 w-10 mb-2 opacity-20" />
-                                            <p className="text-[10px] tracking-widest">SELECT A PATIENT</p>
-                                        </div>
-                                    )
-                                )}
-                            </div>
-                        </CardContent>
-
-                    </Card>
-                </div>
-
-                {/* Center Panel: Ledger Table */}
-                <div className="col-span-8 flex flex-col gap-4 h-full overflow-hidden">
-                    <Card className="flex-1 border-slate-200 shadow-[0_0_20px_rgba(0,0,0,0.05)] rounded-xl flex flex-col h-full overflow-hidden bg-white">
-                        <div className="min-h-[60px] p-2 border-b border-slate-200 flex items-center justify-between gap-2 bg-slate-50/50 backdrop-blur-sm">
-                            <h3 className="font-bold tracking-widest uppercase text-slate-800 font-mono ml-2 flex items-center gap-2">
-                                <Receipt className="h-4 w-4 text-cyan-500" /> Ledger Stream
-                            </h3>
-
-                            <div className="flex items-center gap-2">
-
-                                {selectedVisit && selectedVisit.status === 'OPEN' && (
-                                    <>
-                                        <Button size="sm" className="h-8 text-[10px] uppercase tracking-widest font-bold bg-cyan-600 hover:bg-cyan-500 text-white shadow-[0_0_15px_rgba(8,145,178,0.5)] border border-cyan-400/50 transition-all hover:shadow-[0_0_25px_rgba(8,145,178,0.8)] active:scale-95" onClick={() => setSidebarMode({ type: 'CHARGE' })}>
-                                            <Plus className="h-3 w-3 mr-1.5 stroke-[3]" /> Add Charges
-                                        </Button>
-
-                                        <Button size="sm" variant="outline" className="h-8 text-[10px] uppercase tracking-widest font-bold text-emerald-600 border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 shadow-[0_0_10px_rgba(16,185,129,0.1)] transition-all" onClick={handleToggleStatus}>
-                                            <Lock className="h-3 w-3 mr-1.5" /> Finalize
-                                        </Button>
-                                    </>
-                                )}
-                                {selectedVisit && selectedVisit.status === 'FINAL' && (
-                                    <Button size="sm" variant="secondary" className="h-8 text-[10px] shadow-sm bg-slate-100 text-slate-600 hover:bg-slate-200" onClick={handleToggleStatus}>
-                                        <Unlock className="h-3 w-3 mr-1.5" /> Reopen
-                                    </Button>
-                                )}
-
-                                {selectedVisit && (
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button size="sm" variant="outline" className="h-8 text-[10px] uppercase tracking-widest font-bold bg-white text-slate-700 border-slate-300 hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm">
-                                                <Printer className="h-3 w-3 mr-1.5" /> Print
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>Print Documents</DropdownMenuLabel>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem onClick={() => handlePrint('invoice')}>
-                                                <FileText className="mr-2 h-4 w-4" /> Print Invoice (A4)
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => handlePrint('receipt')}>
-                                                <Receipt className="mr-2 h-4 w-4" /> Print Latest Receipt (A4)
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => handlePrint('receipt-thermal')}>
-                                                <Receipt className="mr-2 h-4 w-4" /> Print Latest Receipt (Thermal)
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => handlePrint('bill-cum-receipt')}>
-                                                <FileText className="mr-2 h-4 w-4" /> Bill-cum-Receipt
-                                            </DropdownMenuItem>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem onClick={fetchReceiptHistory}>
-                                                <RotateCcw className="mr-2 h-4 w-4" /> Receipt History...
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="flex-1 min-h-0 overflow-auto bg-white scrollbar-thin scrollbar-thumb-slate-200">
-                            {!selectedVisit ? (
-                                <div className="h-full flex flex-col items-center justify-center text-slate-400 font-mono text-[10px] uppercase tracking-widest animate-pulse">
-                                    <p>No Patient Visit Selected.</p>
-                                </div>
-                            ) : (
-                                <table className="w-full caption-bottom text-xs text-left">
-                                    <TableHeader className="bg-slate-50/90 text-slate-500 font-mono sticky top-0 z-10 backdrop-blur-md">
-                                        <TableRow className="border-b border-slate-200">
-                                            <TableHead className="w-[90px] font-bold">DATE</TableHead>
-                                            <TableHead className="w-[90px] font-bold">TYPE</TableHead>
-                                            <TableHead className="w-[80px] font-bold">MODE</TableHead>
-                                            <TableHead className="font-bold">PARTICULARS</TableHead>
-                                            <TableHead className="text-right w-[100px] border-l border-slate-200 pl-2 font-bold">RATE</TableHead>
-                                            <TableHead className="text-right w-[60px] font-bold">QTY</TableHead>
-                                            <TableHead className="text-center w-[70px] font-bold">DISC%</TableHead>
-                                            <TableHead className="text-right w-[90px] font-bold">NET</TableHead>
-                                            <TableHead className="text-right w-[110px] border-l border-slate-200 pl-2 font-bold">BALANCE</TableHead>
-                                            <TableHead className="w-[50px]"></TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {visitLedger.map((entry) => {
-                                            const isEditing = editRowId === entry.id;
-                                            return (
-                                                <TableRow key={entry.id} className="group hover:bg-cyan-50 hover:border-l-2 hover:border-cyan-400 transition-all border-b border-slate-100">
-                                                    <TableCell className="text-[10px] text-slate-500 whitespace-nowrap font-mono">
-                                                        {format(new Date(entry.date), 'dd/MM HH:mm')}
-                                                    </TableCell>
-
-                                                    <TableCell>
-                                                        <Badge variant="outline" className={cn(
-                                                            "text-[9px] px-1.5 py-0 font-bold tracking-widest uppercase border",
-                                                            entry.type === 'CHARGE' ? "border-indigo-300 text-indigo-700 bg-indigo-50" :
-                                                                entry.type === 'PAYMENT' ? "border-emerald-300 text-emerald-700 bg-emerald-50" :
-                                                                    entry.type === 'ADVANCE' ? "border-violet-300 text-violet-700 bg-violet-50" :
-                                                                        entry.type === 'REFUND' ? "border-rose-300 text-rose-700 bg-rose-50" :
-                                                                            entry.type === 'ADJUSTMENT' ? "border-amber-300 text-amber-700 bg-amber-50" :
-                                                                                "border-slate-300 text-slate-700 bg-slate-50"
-                                                        )}>
-                                                            {entry.type}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {['PAYMENT', 'ADVANCE', 'REFUND'].includes(entry.type) ? (
-                                                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-slate-300 text-slate-500 bg-slate-50 font-mono tracking-widest">
-                                                                {entry.mode}
-                                                            </Badge>
-                                                        ) : (
-                                                            <span className="text-slate-300 text-[10px] pl-2 font-mono">-</span>
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {isEditing ? (
-                                                            <Input
-                                                                className="h-7 text-[10px]"
-                                                                value={editValues.particular || ''}
-                                                                onChange={(e) => setEditValues({ ...editValues, particular: e.target.value })}
-                                                            />
-                                                        ) : (
-                                                            <div className="flex flex-col">
-                                                                <span className="font-bold text-xs text-slate-800 uppercase tracking-wide group-hover:text-cyan-800 transition-colors">{entry.particular}</span>
-                                                                {entry.type === 'CHARGE' && entry.qty > 1 && (
-                                                                    <span className="text-[9px] text-cyan-600/80 font-mono">{entry.qty} x {entry.rate}</span>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell className="text-right text-[10px] text-slate-500 border-l border-slate-200 pl-2 font-mono">
-                                                        {isEditing ? (
-                                                            <Input
-                                                                className="h-7 text-[10px] text-right w-[80px] ml-auto"
-                                                                type="number"
-                                                                value={editValues.rate}
-                                                                onChange={(e) => setEditValues({ ...editValues, rate: parseFloat(e.target.value) })}
-                                                            />
-                                                        ) : (
-                                                            entry.type === 'CHARGE' ? entry.rate.toLocaleString() : '-'
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell className="text-right text-[10px] text-slate-500 font-mono">
-                                                        {entry.qty}
-                                                    </TableCell>
-                                                    <TableCell className="text-center text-[10px] text-rose-500 font-mono">
-                                                        {isEditing && entry.type === 'CHARGE' ? (
-                                                            <Input
-                                                                className="h-7 text-[10px] text-center w-[50px] mx-auto"
-                                                                type="number"
-                                                                placeholder="0"
-                                                                value={editValues.discountValue}
-                                                                onChange={(e) => setEditValues({ ...editValues, discountValue: parseFloat(e.target.value) })}
-                                                            />
-                                                        ) : (
-                                                            entry.discountValue > 0 ? entry.discountValue : '-'
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell className="text-right font-bold text-sm font-mono tracking-tight drop-shadow-sm">
-                                                        <span className={entry.netDebit > 0 ? "text-slate-900" : "text-emerald-600"}>
-                                                            {entry.netDebit > 0 ? entry.netDebit.toLocaleString() : entry.credit.toLocaleString()}
-                                                        </span>
-                                                    </TableCell>
-                                                    <TableCell className="text-right text-cyan-600/80 font-bold border-l border-slate-200 pl-2 font-mono group-hover:text-cyan-600 transition-colors">
-                                                        {entry.runningBalance.toLocaleString()}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {isEditing ? (
-                                                            <div className="flex items-center gap-1">
-                                                                <Button size="icon" variant="ghost" className="h-6 w-6 text-emerald-600 hover:bg-emerald-50 rounded-full" onClick={handleSaveEdit}>
-                                                                    <Check className="h-4 w-4" />
-                                                                </Button>
-                                                                <Button size="icon" variant="ghost" className="h-6 w-6 text-slate-400 hover:bg-slate-100 rounded-full" onClick={() => { setEditValues({}); setEditRowId(null); }}>
-                                                                    <X className="h-4 w-4" />
-                                                                </Button>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-colors"
-                                                                    onClick={() => handleVoidEntry(entry.id)}>
-                                                                    <span className="text-inherit hover:text-rose-600 text-base leading-none mb-1">×</span>
-                                                                </Button>
-                                                            </div>
-                                                        )}
-                                                    </TableCell>
-                                                </TableRow>
-                                            );
-                                        })}
-
-
-
-                                        {/* Inline / Pending Rows removed - using Sidebar instead */}
-                                    </TableBody >
-                                </table >
-                            )}
-                        </div >
-
-                        {selectedPatient && (
-                            <CardFooter className="bg-slate-50/50 border-t border-slate-200 p-2 text-[10px] text-slate-500 flex items-center justify-center gap-2">
-                                <AlertCircle className="h-3 w-3 text-emerald-500" />
-                                <span className="uppercase tracking-widest font-mono">Auto-synced. Actions are disabled for finalized visits.</span>
-                            </CardFooter>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {(eventsData?.payments ?? []).map((p: BillingPaymentRow) => (
+                                            <tr key={p.paymentId} className="border-b border-slate-100 hover:bg-slate-50 bg-emerald-50/20">
+                                                <td className="px-3 py-2 whitespace-nowrap text-slate-600">{format(parseISO(p.createdDateTime), 'dd MMM HH:mm')}</td>
+                                                <td className="px-3 py-2">
+                                                    <div className="font-semibold text-emerald-700">{p.paymentType ?? 'PAYMENT'} · {p.paymentMode ?? '—'}</div>
+                                                    <div className="text-[10px] text-slate-500">{p.receiptNo ? `Receipt ${p.receiptNo}` : ''}{p.paymentDescription ? ` · ${p.paymentDescription}` : ''}</div>
+                                                </td>
+                                                <td className="px-3 py-2 text-[10px] font-mono uppercase text-slate-500">PAYMENT</td>
+                                                <td className="px-3 py-2 text-right text-slate-300 font-mono">—</td>
+                                                <td className="px-3 py-2 text-right text-slate-300">—</td>
+                                                <td className="px-3 py-2 text-right font-mono font-semibold text-emerald-700">₹{Number(p.amount).toFixed(2)}</td>
+                                                <td className="px-2 py-2 text-right">
+                                                    {!isFinalized && (
+                                                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-slate-400 hover:text-rose-600" onClick={() => setVoidConfirm({ kind: 'payment', id: p.paymentId, label: p.paymentType ?? 'Payment' })}>
+                                                            <Trash2 className="h-3 w-3" />
+                                                        </Button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {(eventsData?.charges?.length ?? 0) === 0 && (eventsData?.payments?.length ?? 0) === 0 && (
+                                            <tr>
+                                                <td colSpan={7} className="px-3 py-12 text-center text-xs text-slate-400">
+                                                    No entries on this visit yet. Use the right panel to add a charge or payment.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </>
                         )}
-                    </Card >
-                </div >
+                    </CardContent>
+                </Card>
 
-                {/* Right Panel: Summary */}
-                <div className="col-span-2 flex flex-col gap-4">
-
-                    <Card className="border-none shadow-[0_0_25px_rgba(0,0,0,0.05)] bg-white border border-slate-200 text-slate-800 overflow-hidden relative">
-                        {/* Decorative gaming panel grid lines */}
-                        <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.03)_1px,transparent_1px)] bg-[size:10px_10px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_100%)] pointer-events-none"></div>
-
-                        <CardHeader className="pb-2 relative z-10 border-b border-slate-200/80 bg-slate-50/50 backdrop-blur-md">
-                            <CardTitle className="text-xs font-bold text-slate-500 uppercase tracking-widest font-mono flex items-center gap-2">
-                                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                System Status
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-6 relative z-10 pt-6">
-                            <div>
-                                <span className="text-3xl font-bold tracking-tighter text-slate-900 font-mono drop-shadow-[0_0_10px_rgba(0,0,0,0.1)]">
-                                    ₹ {Math.abs(balance).toLocaleString()}
+                {/* Right: actions */}
+                <Card className="col-span-12 lg:col-span-3 border-slate-200 bg-white flex flex-col overflow-hidden">
+                    <CardHeader className="pb-2 border-b border-slate-200 bg-slate-50">
+                        <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-wider">Actions</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 flex-1 overflow-auto space-y-3">
+                        {/* Totals summary */}
+                        <div className="rounded-lg border border-slate-200 p-3 bg-slate-50">
+                            <div className="flex justify-between text-xs"><span className="text-slate-500">Gross Charged</span><span className="font-mono font-semibold">₹{totals.debit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                            <div className="flex justify-between text-xs mt-1"><span className="text-slate-500">Received</span><span className="font-mono font-semibold text-emerald-700">₹{totals.credit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                            <div className="flex justify-between text-sm pt-2 mt-2 border-t border-slate-200">
+                                <span className="font-bold">Balance</span>
+                                <span className={cn('font-mono font-bold', totals.balance > 0 ? 'text-rose-700' : totals.balance < 0 ? 'text-emerald-700' : 'text-slate-700')}>
+                                    ₹{Math.abs(totals.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })} {totals.balance < 0 ? 'CR' : totals.balance > 0 ? 'DR' : ''}
                                 </span>
-                                <div className="flex items-center gap-2 mt-2">
-                                    <Badge className={cn(
-                                        "border border-transparent font-bold tracking-widest text-[9px] uppercase",
-                                        balance > 0 ? "bg-rose-50 border-rose-200 text-rose-600 shadow-[0_0_10px_rgba(244,63,94,0.2)]" : "bg-emerald-50 border-emerald-200 text-emerald-600 shadow-[0_0_10px_rgba(16,185,129,0.2)]"
-                                    )}>
-                                        {balance > 0 ? "PAYMENT DUE" : balance < 0 ? "ADVANCE BALANCE" : "SETTLED"}
-                                    </Badge>
-                                </div>
                             </div>
+                            {isFinalized && (
+                                <div className="mt-3 flex items-center gap-1.5 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                                    <Lock className="h-3 w-3" /> Invoice {eventsData?.currentInvoice?.invoiceNo ?? ''} finalized — entries locked.
+                                </div>
+                            )}
+                        </div>
 
-                            <div className="space-y-3 pt-4 border-t border-slate-200">
-                                <div className="flex justify-between items-center text-xs">
-                                    <span className="text-slate-500 font-bold uppercase tracking-widest font-mono text-[9px]">TOTAL BILLED</span>
-                                    <span className="font-bold text-slate-700 font-mono">₹ {totals.debit.toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between items-center text-xs">
-                                    <span className="text-slate-500 font-bold uppercase tracking-widest font-mono text-[9px]">AMOUNT RECEIVED</span>
-                                    <span className="font-bold text-emerald-600 font-mono">₹ {totals.credit.toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between items-center text-xs pt-3 mt-1 border-t border-dashed border-slate-300">
-                                    <span className="font-bold text-slate-700 uppercase tracking-widest font-mono text-[10px]">NET BALANCE</span>
-                                    <span className={cn(
-                                        "font-bold text-base font-mono drop-shadow-[0_0_5px_currentColor]",
-                                        balance > 0 ? "text-rose-600" : "text-emerald-600"
-                                    )}>₹ {balance.toLocaleString()}</span>
-                                </div>
-                            </div>
-
-                            <div className="pt-4">
-                                <Button className="w-full bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/50 font-bold tracking-widest uppercase text-[10px] shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_20px_rgba(16,185,129,0.5)] transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none disabled:shadow-none"
-                                    disabled={!selectedVisit}
-                                    onClick={() => setSidebarMode({ type: 'PAYMENT' })}>
-                                    COLLECT PAYMENT
+                        {/* Action buttons */}
+                        <div className="grid grid-cols-1 gap-2">
+                            <Button onClick={() => setShowAddCharge(true)} disabled={!selectedEncounterId || isFinalized} className="bg-indigo-600 hover:bg-indigo-700 h-10">
+                                <Plus className="h-4 w-4 mr-1" /> Add Charge
+                            </Button>
+                            <Button onClick={() => setShowAddPayment(true)} disabled={!selectedEncounterId || isFinalized} className="bg-emerald-600 hover:bg-emerald-700 h-10">
+                                <CreditCard className="h-4 w-4 mr-1" /> Record Payment
+                            </Button>
+                            <Button onClick={handlePrint} variant="outline" disabled={!selectedEncounterId} className="h-10">
+                                <Printer className="h-4 w-4 mr-1" /> Print Bill
+                            </Button>
+                            {selectedEncounterId && (
+                                <Button onClick={() => navigate(`/billing/encounter/${selectedEncounterId}`)} variant="outline" className="h-10">
+                                    <FileText className="h-4 w-4 mr-1" /> Open Encounter View
                                 </Button>
+                            )}
+                        </div>
+
+                        {selectedEncounter?.isCancelled && (
+                            <div className="rounded-lg border border-rose-200 bg-rose-50 p-2 text-[10px] text-rose-700">
+                                <p className="font-bold">VISIT CANCELLED</p>
+                                {selectedEncounter.cancelReason && <p className="mt-1">{selectedEncounter.cancelReason}</p>}
                             </div>
-                        </CardContent>
-                    </Card>
-
-
-
-                    <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 text-[10px] text-amber-700 font-mono shadow-[0_0_15px_rgba(245,158,11,0.2)] backdrop-blur-sm">
-                        <div className="font-bold tracking-widest uppercase mb-1.5 flex items-center gap-1.5">
-                            <AlertCircle className="h-3.5 w-3.5" /> IMPORTANT NOTICE
-                        </div>
-                        This view is specific to the selected visit. Prior outstanding balances from other visits are not included here.
-                    </div>
-                </div >
-            </div >
-
-            {/* --- Dialogs --- */}
-
-            {/* New Patient Modal */}
-            <Dialog open={showNewPatient} onOpenChange={setShowNewPatient}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Register New Patient</DialogTitle>
-                        <DialogDescription>Quick registration for billing.</DialogDescription>
-                    </DialogHeader>
-                    <NewPatientForm onSubmit={handleCreatePatient} onClose={() => setShowNewPatient(false)} />
-                </DialogContent>
-            </Dialog>
-
-            {/* Entry Modal */}
-            <Dialog open={showEntryModal} onOpenChange={setShowEntryModal}>
-                <DialogContent className="bg-white/95 backdrop-blur-xl border border-slate-200 text-slate-800 shadow-xl">
-                    <DialogHeader>
-                        <DialogTitle className="font-mono tracking-widest uppercase text-slate-900">ADD ENTRY :: {entryType}</DialogTitle>
-                    </DialogHeader>
-                    {showEntryModal && (
-                        <LedgerEntryForm
-                            type={entryType}
-                            onSubmit={handleAddEntry}
-                            onClose={() => setShowEntryModal(false)}
-                        />
-                    )}
-                </DialogContent>
-            </Dialog>
-
-            {/* Visit Type Modal */}
-            <Dialog open={showVisitTypeModal} onOpenChange={setShowVisitTypeModal}>
-                <DialogContent className="max-w-sm bg-white/95 backdrop-blur-xl border border-slate-200 text-slate-800 shadow-xl">
-                    <DialogHeader>
-                        <DialogTitle className="font-mono tracking-widest uppercase flex items-center gap-2 text-slate-900"><Plus className="h-4 w-4 text-cyan-500" /> INITIALIZE_SESSION</DialogTitle>
-                        <DialogDescription className="text-slate-500 font-mono text-[10px] tracking-widest uppercase">Select session protocol.</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-200">
-                            <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono mb-2 flex items-center gap-1.5 block">
-                                <User className="h-3.5 w-3.5" /> ASSIGN_OPERATOR
-                            </Label>
-                            <Select value={newVisitDoctor} onValueChange={setNewVisitDoctor}>
-                                <SelectTrigger className="bg-white border-slate-300 h-9 font-mono text-slate-700 focus:ring-cyan-500/20">
-                                    <SelectValue placeholder="Select Doctor" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white border-slate-200 text-slate-700 font-mono">
-                                    <SelectItem value="Dr. Unassigned" className="hover:bg-slate-100 focus:bg-slate-100">UNASSIGNED (SKIP)</SelectItem>
-                                    <SelectItem value="Dr. Sharma" className="hover:bg-slate-100 focus:bg-slate-100">DR. SHARMA</SelectItem>
-                                    <SelectItem value="Dr. Gupta" className="hover:bg-slate-100 focus:bg-slate-100">DR. GUPTA</SelectItem>
-                                    <SelectItem value="Dr. Rakesh" className="hover:bg-slate-100 focus:bg-slate-100">DR. RAKESH</SelectItem>
-                                    <SelectItem value="Dr. Verma" className="hover:bg-slate-100 focus:bg-slate-100">DR. VERMA</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            {([
-                                { type: 'OPD', color: 'from-cyan-500 to-cyan-400 border-cyan-400', glow: 'shadow-[0_0_15px_rgba(34,211,238,0.5)]', icon: User },
-                                { type: 'IPD', color: 'from-indigo-500 to-indigo-400 border-indigo-400', glow: 'shadow-[0_0_15px_rgba(99,102,241,0.5)]', icon: Receipt }
-                            ] as const).map((item) => (
-                                <Button
-                                    key={item.type}
-                                    variant="ghost"
-                                    className={cn(
-                                        "justify-start h-auto py-3 px-4 relative overflow-hidden group border hover:border-transparent transition-all duration-300 font-mono uppercase tracking-widest",
-                                        selectedVisitType === item.type
-                                            ? cn("bg-gradient-to-br text-white transform scale-[1.02]", item.color, item.glow)
-                                            : "bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                                    )}
-                                    onClick={() => setSelectedVisitType(item.type as VisitType)}
-                                >
-                                    {selectedVisitType === item.type && (
-                                        <div className="absolute inset-0 bg-white/10 transition-colors pointer-events-none"></div>
-                                    )}
-                                    <div className="text-left relative z-10 flex items-center gap-3">
-                                        <div className={cn(
-                                            "p-1.5 rounded-lg transition-colors",
-                                            selectedVisitType === item.type ? "bg-black/20 text-white" : "bg-white text-slate-400 group-hover:text-cyan-500 border border-slate-200"
-                                        )}>
-                                            <item.icon className="h-4 w-4" />
-                                        </div>
-                                        <div>
-                                            <div className="font-bold text-shadow-sm transition-colors text-sm">{item.type}</div>
-                                            <div className="text-[8px] font-normal transition-colors opacity-70">SESSION</div>
-                                        </div>
-                                    </div>
-                                    {selectedVisitType === item.type && (
-                                        <div className="absolute top-2 right-2">
-                                            <Check className="h-3 w-3 text-white drop-shadow-md" />
-                                        </div>
-                                    )}
-                                </Button>
-                            ))}
-                        </div>
-                    </div>
-                    <DialogFooter className="flex gap-2 sm:justify-end border-t border-slate-200 pt-4 mt-2">
-                        <Button variant="outline" onClick={() => setShowVisitTypeModal(false)} className="bg-transparent border-slate-300 text-slate-500 hover:bg-slate-100 hover:text-slate-800 font-mono text-[10px] uppercase tracking-widest">ABORT</Button>
-                        <Button
-                            onClick={() => handleCreateVisit(selectedVisitType)}
-                            className="bg-cyan-600 hover:bg-cyan-500 text-white font-mono text-[10px] uppercase tracking-widest font-bold shadow-[0_0_15px_rgba(8,145,178,0.3)] hover:shadow-[0_0_20px_rgba(8,145,178,0.5)] border border-cyan-500"
-                        >
-                            EXECUTE_CREATION
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-
-            {/* Receipt History Modal */}
-            <Dialog open={showReceiptHistory} onOpenChange={setShowReceiptHistory}>
-                <DialogContent className="sm:max-w-md bg-white/95 backdrop-blur-xl border border-slate-200 text-slate-800 shadow-xl">
-                    <DialogHeader>
-                        <DialogTitle className="font-mono tracking-widest uppercase flex items-center gap-2 text-slate-900"><Printer className="h-4 w-4 text-cyan-500" /> OUTPUT_LOGS</DialogTitle>
-                        <DialogDescription className="text-slate-500 font-mono text-[10px] tracking-widest uppercase">View generated artifacts.</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        {receiptsHistory.length === 0 ? (
-                            <div className="text-center py-6 text-slate-400 font-mono text-[10px] uppercase tracking-widest animate-pulse border border-slate-300 rounded-lg border-dashed">
-                                NO_ARTIFACTS_FOUND
-                            </div>
-                        ) : receiptsHistory.map((rcpt) => (
-                            <div key={rcpt.receiptNo} className="flex items-center justify-between p-3 border border-slate-200 rounded-lg bg-slate-50 transition-colors hover:bg-slate-100 group">
-                                <div>
-                                    <div className="font-bold text-sm text-slate-800 font-mono">{rcpt.receiptNo}</div>
-                                    <div className="text-[10px] text-slate-500 font-mono">{format(new Date(rcpt.date), 'dd MMM yyyy, hh:mm a')}</div>
-                                    <div className="text-[10px] font-bold text-emerald-600 mt-1 font-mono tracking-widest drop-shadow-[0_0_5px_currentColor]">₹ {rcpt.amount.toLocaleString()} ({rcpt.mode})</div>
-                                </div>
-                                <div className="flex gap-2">
-                                    <Button size="icon" variant="ghost" title="A4 Print" className="h-8 w-8 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50" onClick={() => handlePrint('receipt', rcpt.receiptNo)}>
-                                        <FileText className="h-4 w-4" />
-                                    </Button>
-                                    <Button size="icon" variant="ghost" title="Thermal Print" className="h-8 w-8 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50" onClick={() => handlePrint('receipt-thermal', rcpt.receiptNo)}>
-                                        <Receipt className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </DialogContent>
-            </Dialog>
-
-            {/* Apply Credit Modal */}
-            <Dialog open={showApplyCreditModal} onOpenChange={setShowApplyCreditModal}>
-                <DialogContent className="bg-white/95 backdrop-blur-xl border border-slate-200 text-slate-800 shadow-xl">
-                    <DialogHeader>
-                        <DialogTitle className="font-mono tracking-widest uppercase flex items-center gap-2 text-slate-900">
-                            <Wallet className="h-5 w-5 text-emerald-500" />
-                            APPLY_AVAILABLE_CREDIT
-                        </DialogTitle>
-                        <DialogDescription className="text-slate-500 font-mono text-[10px] tracking-widest uppercase">
-                            Confirm application of available credit balance to future sequential charges.
-                        </DialogDescription>
-                    </DialogHeader>
-
-                    <div className="bg-emerald-50 border border-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.1)] rounded-lg p-4 space-y-3 my-2">
-                        <div className="flex justify-between items-center text-xs">
-                            <span className="text-emerald-700 font-bold font-mono tracking-widest uppercase text-[9px]">AVAILABLE_BALANCE</span>
-                            <span className="font-bold text-emerald-600 font-mono text-base">₹ {Math.abs(balance).toLocaleString()}</span>
-                        </div>
-                        <p className="text-[10px] text-slate-600 leading-relaxed border-t border-emerald-200 pt-3">
-                            This credit amount is already in the ledger as "Advance Received".
-                            It will be automatically deducted from future charges. No action is needed for automatic adjustment.
-                            <br /><br />
-                            <span className="text-emerald-700">Clicking <strong className="text-emerald-600 uppercase tracking-widest">Acknowledge</strong> registers this balance.</span>
-                        </p>
-                    </div>
-
-                    <DialogFooter className="border-t border-slate-200 pt-4 mt-2">
-                        <Button variant="outline" onClick={() => setShowApplyCreditModal(false)} className="bg-transparent border-slate-300 text-slate-500 hover:bg-slate-100 hover:text-slate-800 font-mono text-[10px] uppercase tracking-widest">Cancel</Button>
-                        <Button
-                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-[10px] uppercase tracking-widest font-bold border border-emerald-400/50 shadow-[0_0_15px_rgba(16,185,129,0.5)] hover:shadow-[0_0_20px_rgba(16,185,129,0.8)]"
-                            onClick={() => {
-                                toast({ title: "Credit Acknowledged", description: "Available credit remains for future deductions." });
-                                setShowApplyCreditModal(false);
-                            }}
-                        >
-                            <Check className="h-4 w-4 mr-2" /> ACKNOWLEDGE
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* Sidebar Data Entry */}
-            <Sheet open={sidebarMode !== null} onOpenChange={(open) => !open && setSidebarMode(null)}>
-                <SheetContent side="right" className="w-[400px] sm:max-w-md overflow-y-auto bg-white/95 backdrop-blur-xl border-l border-cyan-200 shadow-[-10px_0_30px_rgba(0,0,0,0.05)] text-slate-800 p-0 flex flex-col">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-cyan-500 via-indigo-500 to-rose-500"></div>
-                    <SheetHeader className="mb-0 p-6 pb-4 border-b border-slate-200 bg-slate-50/50">
-                        <SheetTitle className="text-slate-900 font-mono tracking-widest uppercase flex items-center gap-2 text-lg">
-                            {sidebarMode?.type === 'CHARGE' ? <><Plus className="h-5 w-5 text-cyan-500" /> ADD CHARGES</> : sidebarMode?.type === 'PAYMENT' ? <><Wallet className="h-5 w-5 text-emerald-500" /> COLLECT PAYMENT</> : sidebarMode?.type === 'REFUND' ? <><RotateCcw className="h-5 w-5 text-rose-500" /> REFUND CREDIT</> : 'NEW ENTRY'}
-                        </SheetTitle>
-                        <SheetDescription className="text-slate-500 font-mono text-[10px] tracking-widest uppercase">
-                            Enter details to update the patient ledger.
-                        </SheetDescription>
-                    </SheetHeader>
-                    <div className="p-6 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
-                        {sidebarMode && (
-                            <LedgerEntryForm
-                                type={sidebarMode.type}
-                                initialAmount={sidebarMode.amount}
-                                maxPayable={balance > 0 ? balance : 0}
-                                onSubmit={handleAddEntry}
-                                onClose={() => setSidebarMode(null)}
-                            />
                         )}
-                    </div>
-                </SheetContent>
-            </Sheet>
+                    </CardContent>
+                </Card>
+            </div>
 
-            {/* Cancellation Reason Side Popup */}
-            <Sheet open={cancelVisitId !== null} onOpenChange={(open) => !open && setCancelVisitId(null)}>
-                <SheetContent side="right" className="w-[400px] sm:max-w-md bg-white border-l border-rose-200 shadow-[-10px_0_30px_rgba(0,0,0,0.05)] p-0 flex flex-col">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-rose-500"></div>
-                    <SheetHeader className="p-6 pb-4 border-b border-slate-200 bg-rose-50/50">
-                        <SheetTitle className="flex items-center gap-2 text-rose-700 font-mono tracking-widest uppercase text-lg">
-                            <Ban className="h-5 w-5" /> Cancel Session
-                        </SheetTitle>
-                        <SheetDescription className="font-mono text-[10px] tracking-widest uppercase text-rose-600/70">
-                            Please provide a reason for cancelling this bill.
-                        </SheetDescription>
-                    </SheetHeader>
-                    
-                    <div className="p-6 flex-1">
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Cancellation Reason</Label>
-                                <div className="relative">
-                                    <MessageSquare className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                                    <textarea
-                                        className="w-full h-48 pl-10 pr-4 py-3 border border-slate-200 rounded-xl bg-slate-50/50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-300 transition-all font-mono text-xs resize-none"
-                                        placeholder="e.g. Patient changed mind, Wrong bill type, Consultation cancelled..."
-                                        value={cancelReason}
-                                        onChange={(e) => setCancelReason(e.target.value)}
-                                        autoFocus
-                                    />
-                                </div>
-                            </div>
-                            
-                            <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 flex items-start gap-3">
-                                <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-                                <p className="text-[10px] text-amber-700 leading-relaxed font-mono uppercase tracking-tight">
-                                    Cancelling this session will exclude all associated charges and payments from the patient's balance. This action is tracked for audit purposes.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+            {/* Dialogs */}
+            {selectedPatient && selectedEncounterId && (
+                <AddChargeDialog
+                    open={showAddCharge}
+                    onOpenChange={setShowAddCharge}
+                    patientId={selectedPatient.patientId}
+                    encounterId={selectedEncounterId}
+                    onSaved={loadEvents}
+                />
+            )}
+            {selectedPatient && selectedEncounterId && (
+                <AddPaymentDialog
+                    open={showAddPayment}
+                    onOpenChange={setShowAddPayment}
+                    patientId={selectedPatient.patientId}
+                    encounterId={selectedEncounterId}
+                    suggestedAmount={Math.max(0, totals.balance)}
+                    onSaved={loadEvents}
+                />
+            )}
 
-                    <div className="p-6 bg-slate-50 border-t border-slate-200 flex flex-col gap-3">
-                        <Button
-                            onClick={handleConfirmCancelVisit}
-                            disabled={!cancelReason.trim()}
-                            className="w-full h-11 bg-rose-600 hover:bg-rose-500 text-white border border-rose-400/50 font-bold tracking-widest uppercase text-xs shadow-[0_0_15px_rgba(244,63,94,0.3)] hover:shadow-[0_0_20px_rgba(244,63,94,0.5)] transition-all active:scale-95 disabled:opacity-50"
-                        >
-                            CONFIRM CANCELLATION
+            {/* New visit dialog */}
+            <Dialog open={showNewVisit} onOpenChange={setShowNewVisit}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>New Visit</DialogTitle>
+                        <DialogDescription>Start a new billing encounter for {selectedPatient?.name}.</DialogDescription>
+                    </DialogHeader>
+                    <div>
+                        <Label className="text-xs font-semibold text-slate-700">Visit type</Label>
+                        <Select value={newVisitType} onValueChange={(v) => setNewVisitType(v as any)}>
+                            <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                {VISIT_TYPES.map(v => <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowNewVisit(false)} disabled={creatingVisit}>Cancel</Button>
+                        <Button onClick={handleCreateVisit} disabled={creatingVisit} className="bg-indigo-600 hover:bg-indigo-700">
+                            {creatingVisit ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Creating…</> : 'Create Visit'}
                         </Button>
-                        <Button variant="ghost" onClick={() => setCancelVisitId(null)} className="w-full h-10 font-mono text-[10px] tracking-widest uppercase text-slate-500 hover:text-slate-800 hover:bg-slate-200">
-                            Keep Visit
-                        </Button>
-                    </div>
-                </SheetContent>
-            </Sheet>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
-            {/* Reopen Bill Reason Sheet */}
-            <Sheet open={isReopenSheetOpen} onOpenChange={setIsReopenSheetOpen}>
-                <SheetContent side="right" className="w-[400px] sm:w-[540px] border-l border-amber-200 bg-white p-0 overflow-hidden flex flex-col">
-                    <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600" />
-                    
-                    <SheetHeader className="p-8 pb-4 space-y-4">
-                        <div className="flex items-center gap-4">
-                            <div className="h-14 w-14 rounded-2xl bg-amber-50 flex items-center justify-center border border-amber-200 shadow-[0_0_20px_rgba(245,158,11,0.15)]">
-                                <Unlock className="h-7 w-7 text-amber-600 drop-shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
-                            </div>
-                            <div>
-                                <SheetTitle className="text-2xl font-black tracking-tight text-slate-900 uppercase italic">
-                                    Reopen Session
-                                </SheetTitle>
-                                <SheetDescription className="text-slate-500 font-medium">
-                                    Capture the justification for auditing and transparency.
-                                </SheetDescription>
-                            </div>
-                        </div>
-                    </SheetHeader>
-
-                    <div className="flex-1 px-8 py-6 space-y-8 overflow-y-auto">
-                        <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-3">
-                            <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Target Session</span>
-                                <Badge variant="outline" className="bg-white text-indigo-600 border-indigo-200 border-2 font-mono text-[10px]">
-                                    #{selectedVisit?.id}
-                                </Badge>
-                            </div>
-                            <div className="flex flex-col gap-1">
-                                <span className="text-sm font-bold text-slate-700">{selectedPatient?.name}</span>
-                                <span className="text-xs text-slate-500 italic opacity-70">Finalized on: {selectedVisit ? format(new Date(selectedVisit.date), 'dd MMM yyyy, HH:mm') : '-'}</span>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <Label className="text-sm font-bold text-slate-700">Reason for Reopening</Label>
-                                <span className="text-[10px] text-amber-600 font-black tracking-widest uppercase">* REQUIRED</span>
-                            </div>
-                            <Textarea
-                                placeholder="E.g., Correction required in consultation fee, adding missed diagnostics charge..."
-                                className="min-h-[160px] bg-slate-50 border-slate-200 focus:border-amber-400 focus:ring-amber-500/20 text-slate-800 placeholder:text-slate-400 rounded-xl resize-none shadow-inner transition-all text-sm leading-relaxed"
-                                value={reopenReasonText}
-                                onChange={(e) => setReopenReasonText(e.target.value)}
-                            />
-                            <p className="text-[10px] text-slate-400 flex items-center gap-2 italic">
-                                <AlertCircle className="h-3 w-3 text-amber-500" />
-                                This reason will be logged against the visit record.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="p-8 pt-4 border-t border-slate-100 bg-slate-50/50 backdrop-blur-sm">
-                        <div className="flex flex-col gap-3">
-                            <Button 
-                                onClick={handleConfirmReopen}
-                                className="w-full h-12 bg-amber-600 hover:bg-amber-700 text-white font-black tracking-widest uppercase shadow-[0_10px_20px_rgba(217,119,6,0.25)] border-b-4 border-amber-800 active:border-b-0 active:translate-y-1 transition-all flex items-center justify-center gap-2"
-                            >
-                                <Unlock className="h-5 w-5" /> Confirm & Reopen
-                            </Button>
-                            <Button 
-                                variant="ghost" 
-                                onClick={() => setIsReopenSheetOpen(false)}
-                                className="w-full h-10 text-slate-500 hover:text-slate-800 hover:bg-white border-transparent font-bold tracking-widest uppercase transition-colors"
-                            >
-                                Cancel
-                            </Button>
-                        </div>
-                    </div>
-                </SheetContent>
-            </Sheet>
-        </div >
+            {/* Void confirm */}
+            <AlertDialog open={!!voidConfirm} onOpenChange={(o) => { if (!o) setVoidConfirm(null); }}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete this entry?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Remove <span className="font-semibold">{voidConfirm?.label}</span> from this visit. This cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={voidBusy}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleVoid} disabled={voidBusy} className="bg-rose-600 hover:bg-rose-700">
+                            {voidBusy ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Removing…</> : 'Delete'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </div>
     );
 };
 
-// --- Sub Components ---
-
-function NewPatientForm({ onSubmit, onClose }: { onSubmit: (data: any) => void, onClose: () => void }) {
-    const [name, setName] = useState('');
-    const [mobile, setMobile] = useState('');
-    return (
-        <div className="space-y-4">
-            <div className="grid gap-2">
-                <Label>Full Name</Label>
-                <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Anand Gupta" />
-            </div>
-            <div className="grid gap-2">
-                <Label>Mobile Number</Label>
-                <Input value={mobile} onChange={e => setMobile(e.target.value)} placeholder="10 digits" />
-            </div>
-            <DialogFooter>
-                <Button variant="outline" onClick={onClose}>Cancel</Button>
-                <Button onClick={() => onSubmit({ name, mobile })}>Create</Button>
-            </DialogFooter>
-        </div>
-    );
-}
-
-function LedgerEntryForm({ type, onSubmit, onClose, initialAmount, maxPayable }: { type: EntryType, onSubmit: (val: any) => void, onClose: () => void, initialAmount?: number, maxPayable?: number }) {
-    const [localType, setLocalType] = useState<EntryType>(type);
-    // Common
-    const [date] = useState(new Date().toISOString().slice(0, 16));
-    const [particular, setParticular] = useState('');
-
-    // Charge specific
-    const [qty, setQty] = useState(1);
-    const [rate, setRate] = useState(0);
-    const [discountType, setDiscountType] = useState<DiscountType>('NONE');
-    const [discountValue, setDiscountValue] = useState(0);
-
-    // Payment specific
-    const [amount, setAmount] = useState<number>(initialAmount || 0);
-
-    // Sync amount if initialAmount changes (important for tab switching or buttons)
-    useEffect(() => {
-        if (initialAmount !== undefined) {
-            setAmount(initialAmount);
-        }
-    }, [initialAmount]);
-    const [mode, setMode] = useState<PaymentMode>('CASH');
-    const [ref, setRef] = useState('');
-
-    const isOverpaying = useMemo(() => {
-        return localType === 'PAYMENT' && maxPayable !== undefined && amount > maxPayable;
-    }, [localType, amount, maxPayable]);
-
-    const calculated = useMemo(() => {
-        if (localType !== 'CHARGE') return { net: amount || 0 };
-        const gross = qty * rate;
-        let disc = 0;
-        if (discountType === 'FLAT') disc = discountValue;
-        if (discountType === 'PCT') disc = (gross * discountValue) / 100;
-
-        const net = Math.max(0, gross - disc);
-        return { gross, disc, net };
-    }, [localType, qty, rate, discountType, discountValue, amount]);
-
-    const handleSave = () => {
-        if (isOverpaying) return;
-
-        if (localType === 'CHARGE') {
-            onSubmit({
-                type: localType, date, particular: particular || 'Charge', qty, rate, discountType, discountValue,
-                netDebit: calculated.net, credit: 0
-            });
-        } else {
-            // Logic for PAYMENT, ADVANCE, REFUND, ADJUSTMENT
-            const isAdjustment = localType === 'ADJUSTMENT';
-            const isRefund = localType === 'REFUND';
-            onSubmit({
-                type: localType, date, particular: particular || (localType === 'PAYMENT' ? 'Payment' : localType),
-                amount: amount, mode: isAdjustment ? undefined : mode, ref,
-                netDebit: isRefund ? amount : 0, 
-                credit: isRefund ? 0 : amount
-            });
-        }
-    };
-
-    return (
-        <div className="space-y-4">
-            {type !== 'CHARGE' && (
-                <div className="flex p-1 bg-slate-100 rounded-lg gap-1">
-                    {(['PAYMENT', 'ADVANCE', 'REFUND'] as EntryType[]).map((t) => (
-                        <Button
-                            key={t}
-                            variant="ghost"
-                            size="sm"
-                            className={cn(
-                                "flex-1 text-[10px] font-bold tracking-widest uppercase h-8 transition-all",
-                                localType === t 
-                                    ? t === 'PAYMENT' ? "bg-emerald-600 text-white shadow-sm" :
-                                      t === 'ADVANCE' ? "bg-violet-600 text-white shadow-sm" :
-                                      "bg-rose-600 text-white shadow-sm"
-                                    : "text-slate-500 hover:bg-slate-200"
-                            )}
-                            onClick={() => setLocalType(t)}
-                        >
-                            {t}
-                        </Button>
-                    ))}
-                </div>
-            )}
-
-            <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-3">
-                    <Label className={cn(
-                        "text-[10px] font-bold uppercase tracking-widest font-mono mb-2 block object-left",
-                        localType === 'CHARGE' ? "text-indigo-600" :
-                        localType === 'PAYMENT' ? "text-emerald-600" :
-                        localType === 'ADVANCE' ? "text-violet-600" :
-                        "text-rose-600"
-                    )}>PARTICULARS / DESCRIPTION</Label>
-                    <Input autoFocus value={particular} onChange={e => setParticular(e.target.value)} placeholder={localType === 'CHARGE' ? "e.g. MRI Scan" : "Payment reference"} className="bg-white border-slate-300 text-slate-800 font-mono focus:border-cyan-500 focus:ring-cyan-500/20 shadow-sm" />
-                </div>
-            </div>
-
-            {localType === 'CHARGE' ? (
-                <>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono mb-2 block">QTY</Label>
-                            <Input type="number" value={qty} onChange={e => setQty(Number(e.target.value))} className="bg-white border-slate-300 text-slate-800 font-mono text-center focus:border-cyan-500 shadow-sm" />
-                        </div>
-                        <div>
-                            <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono mb-2 block">RATE (₹)</Label>
-                            <Input type="number" value={rate} onChange={e => setRate(Number(e.target.value))} className="bg-white border-slate-300 text-slate-800 font-mono text-right focus:border-cyan-500 shadow-sm" />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4 p-4 border border-slate-200 rounded-lg bg-slate-50/80">
-                        <div className="col-span-1">
-                            <Label className="text-[10px] font-bold text-rose-600/80 uppercase tracking-widest font-mono mb-2 block">DISCOUNT TYPE</Label>
-                            <Select value={discountType} onValueChange={(v: DiscountType) => setDiscountType(v)}>
-                                <SelectTrigger className="bg-white border-slate-300 font-mono text-rose-600 focus:ring-rose-500/20"><SelectValue /></SelectTrigger>
-                                <SelectContent className="bg-white border-slate-200 text-slate-700 font-mono">
-                                    <SelectItem value="NONE" className="hover:bg-slate-100 focus:bg-slate-100">NONE</SelectItem>
-                                    <SelectItem value="FLAT" className="hover:bg-slate-100 flex focus:bg-slate-100">FLAT ₹</SelectItem>
-                                    <SelectItem value="PCT" className="hover:bg-slate-100 focus:bg-slate-100">PERCENT %</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        {discountType !== 'NONE' && (
-                            <div className="col-span-2">
-                                <Label className="text-[10px] font-bold text-rose-600/80 uppercase tracking-widest font-mono mb-2 block">DISCOUNT AMOUNT</Label>
-                                <Input type="number" value={discountValue} onChange={e => setDiscountValue(Number(e.target.value))} className="bg-white border-rose-200 text-rose-600 font-mono text-right focus:border-rose-500 focus:ring-rose-500/20 shadow-sm" />
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="bg-white border border-slate-200 p-4 rounded-lg flex justify-between items-center text-xs font-medium shadow-[0_0_15px_rgba(0,0,0,0.05)]">
-                        <span className="text-slate-500 font-mono tracking-widest uppercase text-[10px]">NET TOTAL:</span>
-                        <span className="text-2xl font-bold font-mono text-indigo-600 drop-shadow-[0_0_5px_rgba(79,70,229,0.3)]">₹ {calculated.net.toLocaleString()}</span>
-                    </div>
-                </>
-            ) : (
-                <>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="col-span-2">
-                            <Label className={cn(
-                                "text-[10px] font-bold uppercase tracking-widest font-mono mb-2 block",
-                                localType === 'PAYMENT' ? "text-emerald-600" :
-                                localType === 'ADVANCE' ? "text-cyan-600" :
-                                "text-rose-600"
-                            )}>
-                                {localType === 'REFUND' ? 'AMOUNT REFUNDED (₹)' : 'AMOUNT RECEIVED (₹)'}
-                            </Label>
-                            <Input type="number" autoFocus value={amount} onChange={e => setAmount(Number(e.target.value))} 
-                                className={cn(
-                                    "bg-white font-mono text-2xl h-14 text-right shadow-sm",
-                                    localType === 'PAYMENT' ? "border-emerald-200 text-emerald-600 focus:border-emerald-500" :
-                                    localType === 'ADVANCE' ? "border-violet-200 text-violet-600 focus:border-violet-500" :
-                                    "border-rose-200 text-rose-600 focus:border-rose-500",
-                                    isOverpaying && "border-rose-500 ring-rose-500/20"
-                                )} 
-                            />
-                            {isOverpaying && (
-                                <div className="mt-2 p-2 bg-rose-50 border border-rose-200 rounded-lg flex items-center gap-2 animate-in slide-in-from-top-1">
-                                    <AlertCircle className="h-3 w-3 text-rose-600" />
-                                    <span className="text-[10px] font-bold text-rose-700 uppercase tracking-tight">
-                                        Payment exceeds charges (Max: ₹ {maxPayable?.toLocaleString()})
-                                    </span>
-                                </div>
-                            )}
-                        </div>
-                        <div>
-                            <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono mb-2 block">PAYMENT MODE</Label>
-                            <Select value={mode} onValueChange={(v: PaymentMode) => setMode(v)} disabled={localType === 'ADJUSTMENT'}>
-                                <SelectTrigger className={cn("bg-white border-slate-300 text-slate-700 font-mono focus:ring-emerald-500/20", localType === 'ADJUSTMENT' ? "opacity-50" : "")}><SelectValue /></SelectTrigger>
-                                <SelectContent className="bg-white border-slate-200 text-slate-700 font-mono">
-                                    <SelectItem value="CASH" className="hover:bg-slate-100">CASH</SelectItem>
-                                    <SelectItem value="UPI" className="hover:bg-slate-100">UPI / QR CODE</SelectItem>
-                                    <SelectItem value="CARD" className="hover:bg-slate-100">CARD (GENERAL)</SelectItem>
-                                    <SelectItem value="DEBIT_CARD" className="hover:bg-slate-100">DEBIT CARD</SelectItem>
-                                    <SelectItem value="CREDIT_CARD" className="hover:bg-slate-100">CREDIT CARD</SelectItem>
-                                    <SelectItem value="BANK_TRANSFER" className="hover:bg-slate-100">BANK TRANSFER / NEFT</SelectItem>
-                                    <SelectItem value="CHEQUE" className="hover:bg-slate-100">CHEQUE</SelectItem>
-                                    <SelectItem value="INSURANCE" className="hover:bg-slate-100">INSURANCE / TPA</SelectItem>
-                                    <SelectItem value="CORPORATE" className="hover:bg-slate-100">CORPORATE</SelectItem>
-                                    <SelectItem value="OTHER" className="hover:bg-slate-100">OTHER</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div>
-                            <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono mb-2 block">TRANSACTION ID</Label>
-                            <Input value={ref} onChange={e => setRef(e.target.value)} placeholder="Optional Reference" className="bg-white border-slate-300 text-slate-600 font-mono focus:border-emerald-500 shadow-sm" />
-                        </div>
-                    </div>
-                </>
-            )}
-
-            <div className="flex gap-3 justify-end pt-4 border-t border-slate-200 mt-6">
-                <Button variant="outline" onClick={onClose} className="bg-transparent border-slate-300 text-slate-500 hover:bg-slate-100 hover:text-slate-800 font-mono text-[10px] uppercase tracking-widest shadow-sm">CANCEL</Button>
-                <Button onClick={handleSave} 
-                    className={cn(
-                        "text-white font-mono text-[10px] uppercase tracking-widest font-bold border disabled:opacity-50 transition-all",
-                        localType === 'CHARGE' ? "bg-indigo-600 hover:bg-indigo-500 border-indigo-400/50 shadow-[0_0_15px_rgba(79,70,229,0.3)]" :
-                        localType === 'PAYMENT' ? "bg-emerald-600 hover:bg-emerald-500 border-emerald-400/50 shadow-[0_0_15px_rgba(16,185,129,0.3)]" :
-                        localType === 'ADVANCE' ? "bg-violet-600 hover:bg-violet-500 border-violet-400/50 shadow-[0_0_15px_rgba(139,92,246,0.3)]" :
-                        "bg-rose-600 hover:bg-rose-500 border-rose-400/50 shadow-[0_0_15px_rgba(244,63,94,0.3)]"
-                    )}
-                    disabled={(localType === 'CHARGE' && calculated.net <= 0) || (localType !== 'CHARGE' && amount <= 0) || isOverpaying}>
-                    SAVE {localType}
-                </Button>
-            </div>
-        </div>
-    );
-}
+export default BillingPage;
