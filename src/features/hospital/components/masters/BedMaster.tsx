@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Search, Filter, Plus, Layers, Edit2, Bed, Beaker, Archive, User, Activity, AlertCircle, X, CheckSquare, Settings2, Trash2
+    Search, Filter, Plus, Layers, Edit2, Bed, Beaker, Archive, User, Activity, AlertCircle, X, CheckSquare, Settings2, Trash2, RefreshCw, Loader2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,8 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
+import { bedService, type BedMasterItem, type UpsertBedMasterRequest } from '@/features/ipd/services/bedService';
 
 // --- Types & Mock Data ---
 
@@ -35,16 +37,24 @@ export interface BedRecord {
     lastStatusAt?: string;
 }
 
-const INITIAL_MOCK_DATA: BedRecord[] = [
-    { id: '1', wardCode: 'W-GEN-01', wardName: 'Male General Ward', wardType: 'GENERAL', floorNo: '1', bedCode: 'MGW-01', wardRoomDailyRate: 1000, statusCode: 'AVAILABLE', isActive: true, genderRestriction: 'MALE_ONLY' },
-    { id: '2', wardCode: 'W-GEN-01', wardName: 'Male General Ward', wardType: 'GENERAL', floorNo: '1', bedCode: 'MGW-02', wardRoomDailyRate: 1000, statusCode: 'OCCUPIED', isActive: true, genderRestriction: 'MALE_ONLY' },
-    { id: '3', wardCode: 'W-ICU-01', wardName: 'Intensive Care Unit', wardType: 'ICU', floorNo: '2', bedCode: 'ICU-B1', wardRoomDailyRate: 5000, statusCode: 'AVAILABLE', isActive: true },
-    { id: '4', wardCode: 'W-ICU-01', wardName: 'Intensive Care Unit', wardType: 'ICU', floorNo: '2', bedCode: 'ICU-B2', wardRoomDailyRate: 5000, bedDailyRateOverride: 6500, statusCode: 'OCCUPIED', isActive: true },
-    { id: '5', wardCode: 'W-PRV-R01', wardName: 'Private Deluxe', wardType: 'PRIVATE', roomCode: 'R101', floorNo: '3', bedCode: 'P-101-A', wardRoomDailyRate: 8000, statusCode: 'CLEANING', isActive: true },
-    { id: '6', wardCode: 'W-PRV-R01', wardName: 'Private Deluxe', wardType: 'PRIVATE', roomCode: 'R101', floorNo: '3', bedCode: 'P-101-B', wardRoomDailyRate: 8000, statusCode: 'AVAILABLE', isActive: true },
-    { id: '7', wardCode: 'W-NICU-01', wardName: 'Neonatal ICU', wardType: 'NICU', floorNo: '2', bedCode: 'NICU-01', wardRoomDailyRate: 4500, statusCode: 'RESERVED', isActive: true },
-    { id: '8', wardCode: 'W-GEN-02', wardName: 'Female General Ward', wardType: 'GENERAL', floorNo: '1', bedCode: 'FGW-01', wardRoomDailyRate: 1000, statusCode: 'BLOCKED', isActive: false, genderRestriction: 'FEMALE_ONLY' },
-];
+const fromBackend = (b: BedMasterItem): BedRecord => ({
+    id: b.bedId,
+    wardCode: b.wardCode ?? '',
+    wardName: b.wardName ?? '',
+    wardType: (b.wardType as BedRecord['wardType']) ?? 'GENERAL',
+    floorNo: b.floorNo,
+    roomCode: b.roomCode,
+    roomType: b.roomType,
+    capacityInRoom: b.capacityInRoom,
+    bedCode: b.bedCode ?? '',
+    bedName: b.bedName,
+    genderRestriction: (b.genderRestriction as BedRecord['genderRestriction']) ?? 'NONE',
+    wardRoomDailyRate: Number(b.wardRoomDailyRate ?? 0),
+    bedDailyRateOverride: b.bedDailyRateOverride != null ? Number(b.bedDailyRateOverride) : null,
+    statusCode: (b.statusCode as BedRecord['statusCode']) ?? 'AVAILABLE',
+    isActive: b.isActive,
+    lastStatusAt: b.lastStatusAt,
+});
 
 const STATUS_COLORS = {
     AVAILABLE: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
@@ -56,7 +66,11 @@ const STATUS_COLORS = {
 
 export const BedMaster = () => {
     // --- State ---
-    const [beds, setBeds] = useState<BedRecord[]>(INITIAL_MOCK_DATA);
+    const [beds, setBeds] = useState<BedRecord[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [busyId, setBusyId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
     // Filters
@@ -72,6 +86,22 @@ export const BedMaster = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
 
+
+    const loadBeds = useCallback(async (silent = false) => {
+        if (silent) setRefreshing(true); else setLoading(true);
+        setLoadError(null);
+        try {
+            const res = await bedService.list({ pageSize: 500 });
+            setBeds((res?.items ?? []).map(fromBackend));
+        } catch (e: any) {
+            setLoadError(e?.message ?? 'Failed to load beds');
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }, []);
+
+    useEffect(() => { loadBeds(); }, [loadBeds]);
 
     // Shortcuts
     useEffect(() => {
@@ -133,19 +163,42 @@ export const BedMaster = () => {
         }
 
         setIsSaving(true);
-        await new Promise(resolve => setTimeout(resolve, 600));
-
         const isNew = !editingRecord.id;
-        const savedRecord = {
-            ...editingRecord,
-            id: isNew ? Math.random().toString(36).substr(2, 9) : editingRecord.id,
-            bedDailyRateOverride: editingRecord.bedDailyRateOverride ? Number(editingRecord.bedDailyRateOverride) : null
-        } as BedRecord;
-
-        setBeds(prev => {
-            if (isNew) return [...prev, savedRecord];
-            return prev.map(b => b.id === savedRecord.id ? savedRecord : b);
-        });
+        let savedRecord: BedRecord;
+        try {
+            const req: UpsertBedMasterRequest = {
+                bedId: editingRecord.id || undefined,
+                wardCode: editingRecord.wardCode,
+                wardName: editingRecord.wardName ?? '',
+                wardType: editingRecord.wardType,
+                floorNo: editingRecord.floorNo,
+                roomCode: editingRecord.roomCode,
+                roomType: editingRecord.roomType,
+                capacityInRoom: editingRecord.capacityInRoom,
+                wardRoomDailyRate: Number(editingRecord.wardRoomDailyRate ?? 0),
+                bedDailyRateOverride: editingRecord.bedDailyRateOverride != null ? Number(editingRecord.bedDailyRateOverride) : undefined,
+                bedCode: editingRecord.bedCode,
+                bedName: editingRecord.bedName,
+                statusCode: editingRecord.statusCode,
+                genderRestriction: editingRecord.genderRestriction,
+                isActive: editingRecord.isActive ?? true,
+            };
+            const res = await bedService.upsert(req);
+            const newId = res?.bedId || editingRecord.id || '';
+            savedRecord = {
+                ...(editingRecord as BedRecord),
+                id: newId,
+                bedDailyRateOverride: editingRecord.bedDailyRateOverride != null ? Number(editingRecord.bedDailyRateOverride) : null,
+            };
+            setBeds(prev => {
+                if (isNew) return [...prev, savedRecord];
+                return prev.map(b => b.id === savedRecord.id ? savedRecord : b);
+            });
+        } catch (e: any) {
+            setIsSaving(false);
+            toast({ title: 'Save failed', description: e?.message ?? '', variant: 'destructive' });
+            return;
+        }
 
         setIsSaving(false);
         setIsSuccess(true);
@@ -178,16 +231,74 @@ export const BedMaster = () => {
     };
 
 
-    const quickChangeStatus = (bedId: string, newStatus: BedRecord['statusCode']) => {
+    const quickChangeStatus = async (bedId: string, newStatus: BedRecord['statusCode']) => {
+        const bed = beds.find(b => b.id === bedId);
+        if (!bed || busyId) return;
+        const previous = bed.statusCode;
+        // Optimistic
         setBeds(prev => prev.map(b => b.id === bedId ? { ...b, statusCode: newStatus } : b));
-        toast({ title: 'Status Changed', description: `Bed status mapped to ${newStatus}.` });
+        setBusyId(bedId);
+        try {
+            const req: UpsertBedMasterRequest = {
+                bedId,
+                wardCode: bed.wardCode,
+                wardName: bed.wardName,
+                wardType: bed.wardType,
+                floorNo: bed.floorNo,
+                roomCode: bed.roomCode,
+                roomType: bed.roomType,
+                capacityInRoom: bed.capacityInRoom,
+                wardRoomDailyRate: bed.wardRoomDailyRate,
+                bedDailyRateOverride: bed.bedDailyRateOverride ?? undefined,
+                bedCode: bed.bedCode,
+                bedName: bed.bedName,
+                statusCode: newStatus,
+                genderRestriction: bed.genderRestriction,
+                isActive: bed.isActive,
+            };
+            await bedService.upsert(req);
+            toast({ title: 'Status updated', description: `${bed.bedCode}: ${newStatus}` });
+        } catch (e: any) {
+            // Roll back
+            setBeds(prev => prev.map(b => b.id === bedId ? { ...b, statusCode: previous } : b));
+            toast({ title: 'Could not update status', description: e?.message ?? '', variant: 'destructive' });
+        } finally {
+            setBusyId(null);
+        }
     };
 
-    const handleDeleteBed = (bedId: string) => {
-        if (window.confirm("Are you sure you want to completely remove this bed? This action cannot be undone.")) {
-            // In a real app, this would be an API call, and we'd check if the bed has previous billing history.
-            setBeds(prev => prev.filter(b => b.id !== bedId));
-            toast({ title: 'Bed Removed', description: 'The bed has been successfully deleted from the master list.' });
+    // Soft-delete a bed by flipping isActive=false (backend has no DELETE endpoint for beds —
+    // they keep history attached). The visual list filter hides inactive items.
+    const handleDeleteBed = async (bedId: string) => {
+        if (!window.confirm("Mark this bed as inactive? It will be hidden from the live list but retained for history.")) return;
+        const bed = beds.find(b => b.id === bedId);
+        if (!bed || busyId) return;
+        setBusyId(bedId);
+        try {
+            const req: UpsertBedMasterRequest = {
+                bedId,
+                wardCode: bed.wardCode,
+                wardName: bed.wardName,
+                wardType: bed.wardType,
+                floorNo: bed.floorNo,
+                roomCode: bed.roomCode,
+                roomType: bed.roomType,
+                capacityInRoom: bed.capacityInRoom,
+                wardRoomDailyRate: bed.wardRoomDailyRate,
+                bedDailyRateOverride: bed.bedDailyRateOverride ?? undefined,
+                bedCode: bed.bedCode,
+                bedName: bed.bedName,
+                statusCode: bed.statusCode,
+                genderRestriction: bed.genderRestriction,
+                isActive: false,
+            };
+            await bedService.upsert(req);
+            setBeds(prev => prev.map(b => b.id === bedId ? { ...b, isActive: false } : b));
+            toast({ title: 'Bed deactivated', description: 'Hidden from active list.' });
+        } catch (e: any) {
+            toast({ title: 'Could not deactivate', description: e?.message ?? '', variant: 'destructive' });
+        } finally {
+            setBusyId(null);
         }
     };
 
@@ -232,6 +343,9 @@ export const BedMaster = () => {
                 </div>
 
                 <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Button variant="outline" size="sm" onClick={() => loadBeds(true)} disabled={refreshing || loading} className="gap-1.5">
+                        <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
+                    </Button>
                     <Button onClick={() => handleOpenDrawer(null)} className="flex-1 sm:flex-none gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20">
                         <Plus className="h-4 w-4" /> Add Bed
                     </Button>
@@ -279,6 +393,21 @@ export const BedMaster = () => {
 
                 {/* BED GRID (RIGHT PANEL) */}
                 <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50/50 dark:bg-slate-950/50">
+                    {loading && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-4">
+                            {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-xl" />)}
+                        </div>
+                    )}
+                    {!loading && loadError && (
+                        <div className="flex flex-col items-center justify-center py-20 text-rose-600 gap-2">
+                            <AlertCircle className="h-8 w-8" />
+                            <p className="font-semibold">{loadError}</p>
+                            <Button size="sm" variant="outline" onClick={() => loadBeds(true)} className="mt-2">
+                                <RefreshCw className="h-3 w-3 mr-1" /> Retry
+                            </Button>
+                        </div>
+                    )}
+                    {!loading && !loadError && filteredBeds.length > 0 && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 ml:grid-cols-3 2xl:grid-cols-4 gap-4">
                         {filteredBeds.map(bed => {
                             const effectiveRate = bed.bedDailyRateOverride ?? bed.wardRoomDailyRate;
@@ -356,11 +485,12 @@ export const BedMaster = () => {
                             );
                         })}
                     </div>
-                    {filteredBeds.length === 0 && (
+                    )}
+                    {!loading && !loadError && filteredBeds.length === 0 && (
                         <div className="flex flex-col items-center justify-center h-full text-center py-20 text-gray-500 dark:text-gray-400">
                             <Archive className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
-                            <p className="font-semibold text-lg text-gray-700 dark:text-gray-300">No beds found</p>
-                            <p className="text-sm mt-1 max-w-sm">No beds match your current filters. Try selecting "All Facilities" or changing the ward type filter.</p>
+                            <p className="font-semibold text-lg text-gray-700 dark:text-gray-300">{beds.length === 0 ? 'No beds configured yet' : 'No beds match your filters'}</p>
+                            <p className="text-sm mt-1 max-w-sm">{beds.length === 0 ? 'Click "Add Bed" to create your first bed in this hospital.' : 'Try selecting "All Facilities" or changing the ward type filter.'}</p>
                         </div>
                     )}
                 </div>

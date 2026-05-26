@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,11 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Save, Receipt, Calculator, Settings2, Link as LinkIcon, CheckCircle2, Sparkles, Hash } from 'lucide-react';
+import { Save, Receipt, Calculator, Settings2, Link as LinkIcon, CheckCircle2, Sparkles, Hash, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ipdBillingService } from '@/features/billing/services/ipdBillingService';
 
 export const BillingPolicyConfig = () => {
-    // Temporary local state for the form until API is connected
     const [config, setConfig] = useState({
         requirePostBeforeInvoice: true,
         maxAutoDiscountPercent: '10.00',
@@ -24,13 +25,60 @@ export const BillingPolicyConfig = () => {
 
     const [isSaving, setIsSaving] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
 
     type SequenceType = 'INV' | 'RCPT';
     const [selectedSequence, setSelectedSequence] = useState<SequenceType>('INV');
-    const [sequenceConfigs, setSequenceConfigs] = useState<Record<SequenceType, { prefix: string, yearFormat: string, separator: string, currentValue: string, padLength: string }>>({
-        INV: { prefix: 'INV', yearFormat: 'YYYY', separator: '-', currentValue: '1', padLength: '6' },
-        RCPT: { prefix: 'RCPT', yearFormat: 'YYYY', separator: '-', currentValue: '1', padLength: '6' }
+    const [sequenceConfigs, setSequenceConfigs] = useState<Record<SequenceType, { prefix: string, yearFormat: string, separator: string, currentValue: string, padLength: string, isActive: boolean }>>({
+        INV: { prefix: 'INV', yearFormat: 'YYYY', separator: '-', currentValue: '1', padLength: '6', isActive: true },
+        RCPT: { prefix: 'RCPT', yearFormat: 'YYYY', separator: '-', currentValue: '1', padLength: '6', isActive: true }
     });
+
+    const loadPolicy = useCallback(async () => {
+        setLoading(true);
+        setLoadError(null);
+        try {
+            const res: any = await ipdBillingService.getPolicy();
+            if (res?.success === false) throw new Error(res.message ?? 'Could not load policy');
+            const d = res?.data;
+            if (d) {
+                setConfig({
+                    requirePostBeforeInvoice: !!d.requirePostBeforeInvoice,
+                    maxAutoDiscountPercent: String(d.maxAutoDiscountPercent ?? '10.00'),
+                    labPathTrigger:    d.labPathTrigger    ?? 'OFF',
+                    labRadTrigger:     d.labRadTrigger     ?? 'OFF',
+                    pharmacyIpdTrigger: d.pharmacyIpdTrigger ?? 'OFF',
+                    opdConsultTrigger: d.opdConsultTrigger ?? 'OFF',
+                    ipdBedChargeMode:  d.ipdBedChargeMode  ?? 'OFF',
+                });
+                const ns = d.numberSeries ?? {};
+                const pickSeries = (code: 'INV' | 'RCPT', fallbackPrefix: string) => {
+                    // Backend returns keyed by code (lowercase or upper)
+                    const found = ns[code] ?? ns[code.toLowerCase()] ?? ns[code.toUpperCase()];
+                    if (!found) return { prefix: fallbackPrefix, yearFormat: 'YYYY', separator: '-', currentValue: '1', padLength: '6', isActive: true };
+                    return {
+                        prefix:       found.prefix ?? fallbackPrefix,
+                        yearFormat:   found.yearFormat ?? 'YYYY',
+                        separator:    found.separator ?? '-',
+                        currentValue: String(found.currentValue ?? '1'),
+                        padLength:    String(found.padLength ?? '6'),
+                        isActive:     found.isActive ?? true,
+                    };
+                };
+                setSequenceConfigs({
+                    INV:  pickSeries('INV',  'INV'),
+                    RCPT: pickSeries('RCPT', 'RCPT'),
+                });
+            }
+        } catch (e: any) {
+            setLoadError(e?.message ?? 'Failed to load billing policy');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => { loadPolicy(); }, [loadPolicy]);
 
     const handleToggle = (key: keyof typeof config) => {
         setConfig(prev => ({ ...prev, [key]: !prev[key] }));
@@ -53,8 +101,28 @@ export const BillingPolicyConfig = () => {
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 800));
+            const seriesItem = (s: typeof sequenceConfigs['INV']) => ({
+                prefix: s.prefix,
+                yearFormat: s.yearFormat,
+                separator: s.separator,
+                padLength: parseInt(s.padLength || '6', 10),
+                isActive: s.isActive,
+            });
+            const req = {
+                requirePostBeforeInvoice: config.requirePostBeforeInvoice,
+                maxAutoDiscountPercent: parseFloat(config.maxAutoDiscountPercent || '0'),
+                labPathTrigger: config.labPathTrigger,
+                labRadTrigger: config.labRadTrigger,
+                pharmacyIpdTrigger: config.pharmacyIpdTrigger,
+                opdConsultTrigger: config.opdConsultTrigger,
+                ipdBedChargeMode: config.ipdBedChargeMode,
+                numberSeries: {
+                    invoice: seriesItem(sequenceConfigs.INV),
+                    receipt: seriesItem(sequenceConfigs.RCPT),
+                },
+            };
+            const res: any = await ipdBillingService.updatePolicy(req);
+            if (res && res.success === false) throw new Error(res.message ?? 'Save failed');
 
             setShowSuccess(true);
 
@@ -103,6 +171,29 @@ export const BillingPolicyConfig = () => {
             setIsSaving(false);
         }
     };
+
+    if (loading) {
+        return (
+            <div className="max-w-5xl mx-auto space-y-4">
+                <Skeleton className="h-10 w-1/3" />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <Skeleton className="h-64 w-full" />
+                    <Skeleton className="h-64 w-full" />
+                </div>
+                <Skeleton className="h-40 w-full" />
+            </div>
+        );
+    }
+
+    if (loadError) {
+        return (
+            <div className="max-w-5xl mx-auto p-6 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 flex items-center gap-3">
+                <AlertCircle className="h-5 w-5" />
+                <span className="flex-1">{loadError}</span>
+                <Button size="sm" variant="outline" onClick={loadPolicy}><RefreshCw className="h-3 w-3 mr-1" /> Retry</Button>
+            </div>
+        );
+    }
 
     return (
         <motion.div
