@@ -22,6 +22,7 @@ export interface ChargeMaster {
     defaultRate: number;
     defaultQty: number;
     maxDiscountPercent?: number;
+    incentiveAmount?: number;
 
     // GST
     hsnSacCode?: string;
@@ -54,6 +55,7 @@ export interface UpsertChargeMasterRequest {
     defaultRate: number;
     defaultQty: number;
     maxDiscountPercent?: number;
+    incentiveAmount?: number;
 
     // GST
     hsnSacCode?: string;

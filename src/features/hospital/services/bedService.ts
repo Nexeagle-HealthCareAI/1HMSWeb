@@ -16,6 +16,7 @@ export interface BedMasterItem {
     wardRoomDailyRate: number;
     bedDailyRateOverride?: number;
     effectiveDailyRate: number;
+    incentiveAmount?: number;
     bedCode?: string;
     bedName?: string;
     statusCode?: ApiBedStatus | string;
@@ -52,6 +53,7 @@ export interface UpsertBedMasterRequest {
     capacityInRoom?: number;
     wardRoomDailyRate: number;
     bedDailyRateOverride?: number;
+    incentiveAmount?: number;
     bedCode?: string;
     bedName?: string;
     statusCode?: string;

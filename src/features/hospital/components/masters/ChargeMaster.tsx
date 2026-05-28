@@ -28,6 +28,7 @@ export interface ChargeRecord {
     defaultRate: number;
     defaultQty: number;
     maxDiscountPercent: number;
+    incentiveAmount: number;
     isActive: boolean;
     sortOrder: number;
     notes?: string;
@@ -43,8 +44,10 @@ const fromBackend = (m: BackendChargeMaster): ChargeRecord => ({
     defaultRate: Number(m.defaultRate ?? 0),
     defaultQty: Number(m.defaultQty ?? 1),
     maxDiscountPercent: Number(m.maxDiscountPercent ?? 0),
+    incentiveAmount: Number(m.incentiveAmount ?? 0),
     isActive: m.isActive,
     sortOrder: Number(m.sortOrder ?? 0),
+    notes: m.notes,
 });
 
 export const ChargeMaster = () => {
@@ -139,7 +142,7 @@ export const ChargeMaster = () => {
         } else {
             setEditingRecord({
                 chargeCode: '', displayName: '', appliesTo: 'OPD', categoryCode: 'CONSULT',
-                defaultRate: 0, defaultQty: 1, maxDiscountPercent: 0, isActive: true, sortOrder: (charges.length + 1) * 10
+                defaultRate: 0, defaultQty: 1, maxDiscountPercent: 0, incentiveAmount: 0, isActive: true, sortOrder: (charges.length + 1) * 10
             });
         }
         setIsDrawerOpen(true);
@@ -181,8 +184,10 @@ export const ChargeMaster = () => {
                 defaultRate: Number(editingRecord.defaultRate ?? 0),
                 defaultQty: Number(editingRecord.defaultQty ?? 1),
                 maxDiscountPercent: Number(editingRecord.maxDiscountPercent ?? 0),
+                incentiveAmount: Number(editingRecord.incentiveAmount ?? 0),
                 isActive: editingRecord.isActive ?? true,
                 sortOrder: Number(editingRecord.sortOrder ?? 0),
+                notes: editingRecord.notes,
             };
             const res: any = await ipdBillingService.upsertChargeMaster(req);
             if (res && res.isSucess === false) throw new Error(res.message ?? 'Could not save');
@@ -216,7 +221,7 @@ export const ChargeMaster = () => {
             if (addAnother) {
                 setEditingRecord({
                     chargeCode: '', displayName: '', appliesTo: savedRecord.appliesTo, categoryCode: savedRecord.categoryCode,
-                    defaultRate: 0, defaultQty: 1, maxDiscountPercent: 0, isActive: true, sortOrder: savedRecord.sortOrder + 10
+                    defaultRate: 0, defaultQty: 1, maxDiscountPercent: 0, incentiveAmount: 0, isActive: true, sortOrder: savedRecord.sortOrder + 10
                 });
             } else {
                 setIsDrawerOpen(false);
@@ -538,6 +543,23 @@ export const ChargeMaster = () => {
                                                     onChange={e => setEditingRecord(p => ({ ...p!, maxDiscountPercent: Number(e.target.value) }))}
                                                 />
                                                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
+                                            </div>
+                                        </div>
+                                        <div className="grid gap-2 col-span-2">
+                                            <Label className="flex justify-between">
+                                                <span>Incentive (₹)</span>
+                                                <span className="text-xs text-muted-foreground font-normal">Default per unit · editable at billing · blank/0 = none</span>
+                                            </Label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
+                                                <Input
+                                                    type="number"
+                                                    min="0"
+                                                    className="font-mono pl-7"
+                                                    placeholder="0"
+                                                    value={editingRecord?.incentiveAmount === 0 ? '0' : editingRecord?.incentiveAmount || ''}
+                                                    onChange={e => setEditingRecord(p => ({ ...p!, incentiveAmount: Number(e.target.value) }))}
+                                                />
                                             </div>
                                         </div>
                                     </div>

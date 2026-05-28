@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Hotel, Plus, BedDouble, Activity, IndianRupee, TrendingUp, Search, ChevronRight, AlertTriangle, Zap, Moon } from 'lucide-react';
+import { Hotel, Plus, BedDouble, Activity, IndianRupee, TrendingUp, Search, ChevronRight, AlertTriangle, Zap, Moon, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -21,9 +21,10 @@ const BED_TONE: Record<BedStatus, string> = {
 interface Props {
     onOpenAdmission: (admissionId: string) => void;
     onAdmit: () => void;
+    onOpenIncentives: () => void;
 }
 
-export const IpdDashboard: React.FC<Props> = ({ onOpenAdmission, onAdmit }) => {
+export const IpdDashboard: React.FC<Props> = ({ onOpenAdmission, onAdmit, onOpenIncentives }) => {
     const { toast } = useToast();
     const wards = useIpdStore(s => s.wards);
     const beds = useIpdStore(s => s.beds);
@@ -96,6 +97,9 @@ export const IpdDashboard: React.FC<Props> = ({ onOpenAdmission, onAdmit }) => {
                         <Badge variant="outline" className={cn('ml-2 text-[9px] font-bold', (policy.autoConsultFeeOnAdmission || policy.autoDailyBedCharge) ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500')}>
                             {(policy.autoConsultFeeOnAdmission || policy.autoDailyBedCharge) ? 'ON' : 'OFF'}
                         </Badge>
+                    </Button>
+                    <Button onClick={onOpenIncentives} variant="outline" className="h-10 border-fuchsia-200 text-fuchsia-700 hover:bg-fuchsia-50">
+                        <Gift className="h-4 w-4 mr-2" /> Incentives
                     </Button>
                     <Button onClick={onAdmit} className="h-10 bg-indigo-600 hover:bg-indigo-700 font-semibold">
                         <Plus className="h-4 w-4 mr-2" /> Admit Patient

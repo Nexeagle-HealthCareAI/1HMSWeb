@@ -32,6 +32,7 @@ export interface BedRecord {
     genderRestriction?: 'MALE_ONLY' | 'FEMALE_ONLY' | 'NONE';
     wardRoomDailyRate: number;
     bedDailyRateOverride?: number | null;
+    incentiveAmount?: number | null;
     statusCode: 'AVAILABLE' | 'OCCUPIED' | 'CLEANING' | 'RESERVED' | 'BLOCKED';
     isActive: boolean;
     lastStatusAt?: string;
@@ -51,6 +52,7 @@ const fromBackend = (b: BedMasterItem): BedRecord => ({
     genderRestriction: (b.genderRestriction as BedRecord['genderRestriction']) ?? 'NONE',
     wardRoomDailyRate: Number(b.wardRoomDailyRate ?? 0),
     bedDailyRateOverride: b.bedDailyRateOverride != null ? Number(b.bedDailyRateOverride) : null,
+    incentiveAmount: b.incentiveAmount != null ? Number(b.incentiveAmount) : null,
     statusCode: (b.statusCode as BedRecord['statusCode']) ?? 'AVAILABLE',
     isActive: b.isActive,
     lastStatusAt: b.lastStatusAt,
@@ -177,6 +179,7 @@ export const BedMaster = () => {
                 capacityInRoom: editingRecord.capacityInRoom,
                 wardRoomDailyRate: Number(editingRecord.wardRoomDailyRate ?? 0),
                 bedDailyRateOverride: editingRecord.bedDailyRateOverride != null ? Number(editingRecord.bedDailyRateOverride) : undefined,
+                incentiveAmount: editingRecord.incentiveAmount != null ? Number(editingRecord.incentiveAmount) : undefined,
                 bedCode: editingRecord.bedCode,
                 bedName: editingRecord.bedName,
                 statusCode: editingRecord.statusCode,
@@ -250,6 +253,7 @@ export const BedMaster = () => {
                 capacityInRoom: bed.capacityInRoom,
                 wardRoomDailyRate: bed.wardRoomDailyRate,
                 bedDailyRateOverride: bed.bedDailyRateOverride ?? undefined,
+                incentiveAmount: bed.incentiveAmount ?? undefined,
                 bedCode: bed.bedCode,
                 bedName: bed.bedName,
                 statusCode: newStatus,
@@ -286,6 +290,7 @@ export const BedMaster = () => {
                 capacityInRoom: bed.capacityInRoom,
                 wardRoomDailyRate: bed.wardRoomDailyRate,
                 bedDailyRateOverride: bed.bedDailyRateOverride ?? undefined,
+                incentiveAmount: bed.incentiveAmount ?? undefined,
                 bedCode: bed.bedCode,
                 bedName: bed.bedName,
                 statusCode: bed.statusCode,
@@ -628,6 +633,15 @@ export const BedMaster = () => {
                                                     onChange={e => setEditingRecord(p => ({ ...p!, bedDailyRateOverride: e.target.value ? Number(e.target.value) : null }))}
                                                 />
                                                 <p className="text-[10px] text-amber-600 dark:text-amber-500 font-medium">Use only if this specific bed costs differently than others in the same room.</p>
+                                            </div>
+
+                                            <div className="border-t border-gray-200 dark:border-gray-800 pt-4 grid gap-2">
+                                                <Label>Incentive (₹) <span className="text-xs text-muted-foreground font-normal">(Optional)</span></Label>
+                                                <Input type="number" min="0" className="font-mono bg-white dark:bg-slate-950" placeholder="0"
+                                                    value={editingRecord?.incentiveAmount ?? ''}
+                                                    onChange={e => setEditingRecord(p => ({ ...p!, incentiveAmount: e.target.value ? Number(e.target.value) : null }))}
+                                                />
+                                                <p className="text-[10px] text-muted-foreground">Default per day · editable at billing · blank/0 = none.</p>
                                             </div>
                                         </div>
                                     </div>

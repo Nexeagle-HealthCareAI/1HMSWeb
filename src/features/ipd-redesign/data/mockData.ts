@@ -1,6 +1,18 @@
 import {
     Ward, Room, Bed, Patient, Admission, VitalReading, MedicationDose, RoundNote, LedgerEntry, IcdCode, BillingPolicy,
+    Beneficiary, IncentiveAccrual,
 } from '../types';
+
+// Charge categories that earn a referral incentive (exclude pass-through: BED, PHARMACY, CONSUMABLE).
+export const COMMISSIONABLE_CATEGORIES = ['CONSULT', 'LAB', 'PROCEDURE'];
+
+// ── Beneficiaries (referrers earning incentives) ────────────────────────────────
+export const beneficiaries: Beneficiary[] = [
+    { beneficiaryId: 'bf1', name: 'Dr. Anand (External GP)', type: 'REFERRER', phone: '9810011111', email: 'dr.anand@example.com', address: '12 Civil Lines, Kanpur', pan: 'ABCPA1234A', defaultRatePercent: 10, isActive: true },
+    { beneficiaryId: 'bf2', name: 'CarePlus Diagnostics (Agent)', type: 'AGENT', phone: '9810022222', email: 'ops@careplus.in', address: '88 Mall Road, Lucknow', pan: 'AAACX5678B', defaultRatePercent: 12, isActive: true },
+    { beneficiaryId: 'bf3', name: 'Sunrise Polyclinic', type: 'REFERRER', phone: '9810033333', address: 'Sector 4, Indira Nagar', defaultRatePercent: 8, isActive: true },
+    { beneficiaryId: 'bf4', name: 'Walk-in / Self', type: 'REFERRER', defaultRatePercent: 0, isActive: true },
+];
 
 // ── Auto-billing policy (defaults) ──────────────────────────────────────────────
 export const billingPolicy: BillingPolicy = {
@@ -97,9 +109,9 @@ const todayAt = (h: number) => { const d = new Date(); d.setHours(h, 0, 0, 0); r
 const icd = (code: string) => icdCatalog.find(c => c.code === code);
 
 export const admissions: Admission[] = [
-    { admissionId: 'a1', admissionNo: 'ADM-2026-0041', patientId: 'p1', wardId: 'w1', roomId: 'rm1', bedId: 'b1', admissionType: 'EMERGENCY', attendingDoctor: 'Dr. Mehta', treatingTeam: ['Dr. Mehta', 'Dr. Sharma (Resident)'], admittedAt: daysAgo(3), status: 'ADMITTED', provisionalDiagnosis: 'Community-acquired pneumonia', icd: icd('J18.9'), consentCaptured: true, depositPaid: 10000, estimatedDailyCost: 3500, expectedDischarge: todayAt(16), isMlc: false },
+    { admissionId: 'a1', admissionNo: 'ADM-2026-0041', patientId: 'p1', wardId: 'w1', roomId: 'rm1', bedId: 'b1', admissionType: 'EMERGENCY', attendingDoctor: 'Dr. Mehta', treatingTeam: ['Dr. Mehta', 'Dr. Sharma (Resident)'], admittedAt: daysAgo(3), status: 'ADMITTED', provisionalDiagnosis: 'Community-acquired pneumonia', icd: icd('J18.9'), beneficiaryId: 'bf1', consentCaptured: true, depositPaid: 10000, estimatedDailyCost: 3500, expectedDischarge: todayAt(16), isMlc: false },
     { admissionId: 'a2', admissionNo: 'ADM-2026-0042', patientId: 'p2', wardId: 'w1', roomId: 'rm1', bedId: 'b2', admissionType: 'EMERGENCY', attendingDoctor: 'Dr. Rao', admittedAt: daysAgo(1), status: 'ADMITTED', provisionalDiagnosis: 'Acute gastroenteritis', icd: icd('A09'), consentCaptured: true, depositPaid: 5000, estimatedDailyCost: 2800 },
-    { admissionId: 'a3', admissionNo: 'ADM-2026-0043', patientId: 'p3', wardId: 'w2', roomId: 'rm2', bedId: 'b7', admissionType: 'EMERGENCY', attendingDoctor: 'Dr. Kapoor', admittedAt: daysAgo(2), status: 'ADMITTED', provisionalDiagnosis: 'Dengue fever', icd: icd('A90'), consentCaptured: true, depositPaid: 8000, estimatedDailyCost: 3000 },
+    { admissionId: 'a3', admissionNo: 'ADM-2026-0043', patientId: 'p3', wardId: 'w2', roomId: 'rm2', bedId: 'b7', admissionType: 'EMERGENCY', attendingDoctor: 'Dr. Kapoor', admittedAt: daysAgo(2), status: 'ADMITTED', provisionalDiagnosis: 'Dengue fever', icd: icd('A90'), beneficiaryId: 'bf2', consentCaptured: true, depositPaid: 8000, estimatedDailyCost: 3000 },
     { admissionId: 'a4', admissionNo: 'ADM-2026-0044', patientId: 'p4', wardId: 'w3', roomId: 'rm3', bedId: 'b13', admissionType: 'EMERGENCY', attendingDoctor: 'Dr. Mehta', admittedAt: daysAgo(5), status: 'ADMITTED', provisionalDiagnosis: 'Acute MI, post-PCI', icd: icd('I21.9'), consentCaptured: true, depositPaid: 50000, estimatedDailyCost: 12000 },
     { admissionId: 'a5', admissionNo: 'ADM-2026-0045', patientId: 'p5', wardId: 'w3', roomId: 'rm3', bedId: 'b14', admissionType: 'EMERGENCY', attendingDoctor: 'Dr. Rao', admittedAt: daysAgo(1), status: 'ADMITTED', provisionalDiagnosis: 'Septic shock', icd: icd('A41.9'), consentCaptured: true, depositPaid: 40000, estimatedDailyCost: 14000 },
     { admissionId: 'a6', admissionNo: 'ADM-2026-0046', patientId: 'p6', wardId: 'w4', roomId: 'rm4', bedId: 'b17', admissionType: 'ELECTIVE', attendingDoctor: 'Dr. Kapoor', admittedAt: daysAgo(2), status: 'DISCHARGE_INITIATED', provisionalDiagnosis: 'Elective hernia repair', icd: icd('K40.9'), finalDiagnosis: 'Inguinal hernia — repaired', consentCaptured: true, depositPaid: 25000, estimatedDailyCost: 6000, expectedDischarge: todayAt(12) },
@@ -138,4 +150,11 @@ export const ledger: LedgerEntry[] = [
     { id: 'l7', admissionId: 'a1', kind: 'CHARGE', at: daysAgo(1), description: 'Bed charge — General Ward', category: 'BED', qty: 1, rate: 1200, amount: 1200 },
     { id: 'l8', admissionId: 'a1', kind: 'CHARGE', at: daysAgo(1), description: 'Chest X-ray PA', category: 'LAB', qty: 1, rate: 600, amount: 600 },
     { id: 'l9', admissionId: 'a1', kind: 'PAYMENT', at: daysAgo(1), description: 'Interim payment', category: 'PAYMENT', amount: 3000, mode: 'CASH' },
+];
+
+// ── Seeded incentive accruals ───────────────────────────────────────────────────
+// a1 referred by bf1 (Dr. Anand, 10%). The ₹3,000 interim payment accrued an incentive
+// on its commissionable share (CONSULT+LAB charges on the bill).
+export const incentiveAccruals: IncentiveAccrual[] = [
+    { accrualId: 'ia1', beneficiaryId: 'bf1', sourceModule: 'IPD', patientId: 'p1', admissionId: 'a1', paymentId: 'l9', eligibleAmount: 1300, ratePercent: 10, incentiveAmount: 130, status: 'ACCRUED', accruedAt: daysAgo(1) },
 ];

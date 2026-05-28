@@ -39,7 +39,9 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     const beds = useIpdStore(s => s.beds);
     const admissions = useIpdStore(s => s.admissions);
     const icdCatalog = useIpdStore(s => s.icdCatalog);
+    const beneficiaries = useIpdStore(s => s.beneficiaries);
     const admitPatient = useIpdStore(s => s.admitPatient);
+    const upsertBeneficiary = useIpdStore(s => s.upsertBeneficiary);
 
     const [admissionType, setAdmissionType] = useState<AdmissionType>('EMERGENCY');
     const [patientSearch, setPatientSearch] = useState('');
@@ -54,6 +56,12 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
     const [consent, setConsent] = useState(false);
     const [deposit, setDeposit] = useState(0);
     const [isMlc, setIsMlc] = useState(false);
+    const [beneficiaryId, setBeneficiaryId] = useState('');
+    // Inline new-referrer capture (when beneficiaryId === '__new__')
+    const [newRefName, setNewRefName] = useState('');
+    const [newRefPhone, setNewRefPhone] = useState('');
+    const [newRefAddress, setNewRefAddress] = useState('');
+    const [newRefRate, setNewRefRate] = useState(10);
 
     const admittedPatientIds = new Set(admissions.filter(a => a.status === 'ADMITTED' || a.status === 'DISCHARGE_INITIATED').map(a => a.patientId));
     const candidatePatients = useMemo(() => {
@@ -77,19 +85,33 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
         setAdmissionType('EMERGENCY'); setPatientSearch(''); setPatientId(null);
         setWardId(''); setRoomId(''); setBedId(''); setDoctor('');
         setIcdQuery(''); setIcd(null); setDiagnosis(''); setConsent(false); setDeposit(0); setIsMlc(false);
+        setBeneficiaryId('');
+        setNewRefName(''); setNewRefPhone(''); setNewRefAddress(''); setNewRefRate(10);
     };
 
-    const canSubmit = patientId && wardId && roomId && bedId && doctor && diagnosis.trim() && consent;
+    const creatingNewRef = beneficiaryId === '__new__';
+    const canSubmit = patientId && wardId && roomId && bedId && doctor && diagnosis.trim() && consent
+        && (!creatingNewRef || newRefName.trim());
 
     const submit = () => {
         if (!canSubmit) {
             toast({ title: 'Incomplete', description: 'Patient, bed, doctor, diagnosis and consent are all required.', variant: 'destructive' });
             return;
         }
+        // Inline-create the referrer in the Referee master, then attach to this admission.
+        let resolvedBeneficiaryId = beneficiaryId || undefined;
+        if (creatingNewRef) {
+            resolvedBeneficiaryId = upsertBeneficiary({
+                name: newRefName.trim(), type: 'REFERRER',
+                phone: newRefPhone.trim() || undefined, address: newRefAddress.trim() || undefined,
+                defaultRatePercent: newRefRate, isActive: true,
+            });
+        }
         const id = admitPatient({
             patientId: patientId!, wardId, roomId, bedId, admissionType, attendingDoctor: doctor,
             provisionalDiagnosis: diagnosis.trim(), icd: icd ?? undefined, consentCaptured: consent,
             depositPaid: deposit, estimatedDailyCost: selectedRoom?.dailyTariff ?? 0, isMlc,
+            beneficiaryId: resolvedBeneficiaryId,
         });
         toast({ title: 'Patient admitted', description: `${selectedPatient?.name} → ${beds.find(b => b.bedId === bedId)?.bedCode}` });
         reset();
@@ -224,6 +246,38 @@ export const AdmitPatientSheet: React.FC<Props> = ({ open, onOpenChange, onAdmit
                         <div>
                             <Label className="text-xs font-semibold text-slate-700">Diagnosis note</Label>
                             <Textarea value={diagnosis} onChange={e => setDiagnosis(e.target.value)} rows={2} className="text-sm mt-1" placeholder="Free-text diagnosis / chief complaint" />
+                        </div>
+                        <div>
+                            <Label className="text-xs font-semibold text-slate-700">Referred by (earns referral incentive)</Label>
+                            <select value={beneficiaryId} onChange={e => setBeneficiaryId(e.target.value)} className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-md px-2 bg-white">
+                                <option value="">— None / not referred —</option>
+                                {beneficiaries.filter(b => b.isActive).map(b => (
+                                    <option key={b.beneficiaryId} value={b.beneficiaryId}>{b.name} · {b.type}{b.defaultRatePercent > 0 ? ` · ${b.defaultRatePercent}%` : ''}</option>
+                                ))}
+                                <option value="__new__">+ New referrer…</option>
+                            </select>
+                            {creatingNewRef && (
+                                <div className="mt-2 grid grid-cols-2 gap-2 rounded-lg border-2 border-indigo-200 bg-indigo-50/40 p-3">
+                                    <div className="col-span-2">
+                                        <Label className="text-[11px] font-semibold text-slate-700">Referrer name <span className="text-rose-500">*</span></Label>
+                                        <Input value={newRefName} onChange={e => setNewRefName(e.target.value)} placeholder="Dr. / clinic / agent name" className="h-8 mt-1 text-sm" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-[11px] font-semibold text-slate-700">Contact number</Label>
+                                        <Input value={newRefPhone} onChange={e => setNewRefPhone(e.target.value)} placeholder="Mobile" className="h-8 mt-1 text-sm font-mono" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-[11px] font-semibold text-slate-700">Incentive %</Label>
+                                        <Input type="number" min={0} max={100} value={newRefRate} onChange={e => setNewRefRate(parseInt(e.target.value || '0', 10))} className="h-8 mt-1 text-sm font-mono" />
+                                    </div>
+                                    <div className="col-span-2">
+                                        <Label className="text-[11px] font-semibold text-slate-700">Address</Label>
+                                        <Input value={newRefAddress} onChange={e => setNewRefAddress(e.target.value)} placeholder="City / clinic address" className="h-8 mt-1 text-sm" />
+                                    </div>
+                                    <p className="col-span-2 text-[11px] text-slate-500">Saved to the referrer master so future visits can reuse this contact.</p>
+                                </div>
+                            )}
+                            <p className="text-[11px] text-slate-500 mt-1">Incentive accrues on commissionable charges (consult/lab/procedure) when payment is received.</p>
                         </div>
                     </section>
 

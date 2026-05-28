@@ -7,11 +7,13 @@ import { NurseDashboard } from './screens/NurseDashboard';
 import { PatientWorkspace } from './screens/PatientWorkspace';
 import { AdmitPatientSheet } from './screens/AdmitPatientSheet';
 import { DischargeFlow } from './screens/DischargeFlow';
+import { IncentivesScreen } from './screens/IncentivesScreen';
 import type { UserRole } from './types';
 
 type View =
     | { name: 'dashboard' }
-    | { name: 'workspace'; admissionId: string };
+    | { name: 'workspace'; admissionId: string }
+    | { name: 'incentives' };
 
 const ROLES: { id: UserRole; label: string; icon: React.ReactNode }[] = [
     { id: 'RECEPTION', label: 'Reception / Admin', icon: <ClipboardList className="h-4 w-4" /> },
@@ -49,7 +51,11 @@ export const IpdWorkflowApp: React.FC = () => {
             </div>
 
             {view.name === 'dashboard' && role === 'RECEPTION' && (
-                <IpdDashboard onOpenAdmission={openAdmission} onAdmit={() => setAdmitOpen(true)} />
+                <IpdDashboard onOpenAdmission={openAdmission} onAdmit={() => setAdmitOpen(true)} onOpenIncentives={() => setView({ name: 'incentives' })} />
+            )}
+
+            {view.name === 'incentives' && (
+                <IncentivesScreen onBack={() => setView({ name: 'dashboard' })} />
             )}
             {view.name === 'dashboard' && role === 'DOCTOR' && (
                 <DoctorDashboard onOpenAdmission={openAdmission} />

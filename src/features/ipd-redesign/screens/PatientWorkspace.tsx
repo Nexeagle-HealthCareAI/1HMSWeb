@@ -108,6 +108,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admissionId, onBack, onDisch
 // ─── Overview ─────────────────────────────────────────────────────────────────
 const OverviewTab: React.FC<{ admissionId: string }> = ({ admissionId }) => {
     const v = useIpdStore(s => s.admissionView(admissionId))!;
+    const referredBy = useIpdStore(s => s.beneficiaryName(v.beneficiaryId));
     const vitals = useIpdStore(s => s.vitals).filter(x => x.admissionId === admissionId);
     const meds = useIpdStore(s => s.medications).filter(x => x.admissionId === admissionId);
     const latest = vitals[vitals.length - 1];
@@ -126,6 +127,7 @@ const OverviewTab: React.FC<{ admissionId: string }> = ({ admissionId }) => {
                         {v.finalDiagnosis && <Field label="Final Dx" value={v.finalDiagnosis} />}
                         <Field label="Est. daily cost" value={`₹${v.estimatedDailyCost.toLocaleString('en-IN')}`} />
                         <Field label="LOS" value={`${v.lengthOfStayDays} day(s)`} />
+                        {referredBy && <Field label="Referred by" value={referredBy} />}
                     </dl>
                 </Card>
             </div>

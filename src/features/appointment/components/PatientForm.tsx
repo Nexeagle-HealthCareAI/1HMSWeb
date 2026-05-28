@@ -6,6 +6,7 @@ import { RegisterAppointmentRequest, generatePatientId } from '../services/appoi
 import { useAppointmentBooking } from '../hooks/useAppointmentBooking';
 import { usePatientSearch } from '../hooks/usePatientSearch';
 import { PatientSearchItem } from '../services/appointmentApi';
+import { useReferrers, useCreateReferrer } from '../hooks/useReferrers';
 import { useAuthStore } from '@/store/authStore';
 
 // Define types locally to avoid import issues
@@ -36,8 +37,8 @@ interface TimeSlot {
 type PatientFormState = {
   patientId: string;
   name: string;
-  referenceName: string;
-  referenceRelation: string;
+  referrerId: string;
+  referrerRelation: string;
   phone: string;
   age: string;
   gender: string;
@@ -58,8 +59,8 @@ const RELATION_OPTIONS = ['C/O', 'S/O', 'D/O', 'W/O', 'H/O', 'G/O', 'F/O', 'M/O'
 const createInitialFormState = (): PatientFormState => ({
   patientId: '',
   name: '',
-  referenceName: '',
-  referenceRelation: 'C/O',
+  referrerId: '',
+  referrerRelation: 'C/O',
   phone: '',
   age: '',
   gender: '',
@@ -158,6 +159,16 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const { bookAppointment, isLoading: isBookingLoading, error: bookingError, clearError } = useAppointmentBooking();
   const { searchPatients, isLoading: isSearchLoading, error: searchError, clearError: clearSearchError } = usePatientSearch();
   const { getUserId } = useAuthStore();
+
+  // ── Referral ("Referred By") ──────────────────────────────────────────────
+  const [referrerSearch, setReferrerSearch] = useState('');
+  const [referrerFocused, setReferrerFocused] = useState(false);
+  const [creatingReferrer, setCreatingReferrer] = useState(false);
+  const [newReferrer, setNewReferrer] = useState({ name: '', phone: '', address: '', rate: '10' });
+  const { data: referrersData } = useReferrers(hospitalId || '', referrerSearch.trim() || undefined);
+  const createReferrer = useCreateReferrer(hospitalId || '');
+  const referrers = referrersData?.referrers ?? [];
+  const selectedReferrer = referrers.find(r => r.referrerId === formData.referrerId);
   const pendingValidationErrors = useMemo(() => collectValidationErrors(formData), [formData]);
   const isFormReady = Object.keys(pendingValidationErrors).length === 0;
 
@@ -228,8 +239,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     setFormData({
       patientId: patient.patientId,
       name: patient.fullName,
-      referenceName: '', // Reset reference name on patient select
-      referenceRelation: 'C/O',
+      referrerId: '', // Reset referral on patient select
+      referrerRelation: 'C/O',
       phone: formatPhoneNumber(patient.mobile || ''),
       age: patient.age.toString(),
       gender: patient.sex,
@@ -309,10 +320,23 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       // Generate patient ID automatically before sending request
       const generatedPatientId = formData.patientId || generatePatientId();
 
+      // Resolve the referrer: inline-create a new one if the user typed one, else use the picked id.
+      let referredByReferrerId = formData.referrerId || undefined;
+      if (creatingReferrer && newReferrer.name.trim()) {
+        const created = await createReferrer.mutateAsync({
+          referrerName: newReferrer.name.trim(),
+          referrerType: 'REFERRER',
+          phone: newReferrer.phone.trim() || undefined,
+          address: newReferrer.address.trim() || undefined,
+          defaultRatePercent: 0, // incentive rate set later by admin, not at booking
+        });
+        referredByReferrerId = created.referrerId;
+      }
+
       // Prepare the appointment request
       const appointmentRequest: RegisterAppointmentRequest = {
         patient: {
-          fullName: formData.referenceName ? `${formData.name}-${formData.referenceRelation} ${formData.referenceName}` : formData.name,
+          fullName: formData.name,
           mobile: formatPhoneNumber(formData.phone), // Use formatted phone number
           ageYears: parseInt(formData.age),
           sex: formData.gender,
@@ -328,7 +352,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({
         startAt: selectedSlot.date + 'T' + selectedSlot.time + ':00', // Keep as local time string, don't convert to UTC
         reason: formData.reason || t('patientForm.reason.general'),
         slotTimeInMinutes: selectedSlot.slotDurationInMinutes || 10, // Use slot duration from UI or default to 10
-        userId: getUserId() || ''
+        userId: getUserId() || '',
+        referredByReferrerId,
+        referrerRelation: referredByReferrerId ? formData.referrerRelation : undefined,
       };
 
       // Call the API using the hook
@@ -502,13 +528,13 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                   </div>
 
                   <div className="xl:col-span-4">
-                    <Label htmlFor="referenceName" className="text-sm md:text-base font-medium dark:text-gray-300">
-                      Reference Name
+                    <Label className="text-sm md:text-base font-medium dark:text-gray-300">
+                      Referred By
                     </Label>
                     <div className="flex">
                       <Select
-                        value={formData.referenceRelation}
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, referenceRelation: value }))}
+                        value={formData.referrerRelation}
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, referrerRelation: value }))}
                       >
                         <SelectTrigger className="w-[85px] h-10 text-sm md:text-base mt-1.5 rounded-r-none border-r-0 focus:ring-0 focus:ring-offset-0 focus:z-10 bg-muted/50">
                           <SelectValue placeholder="Rel" />
@@ -521,14 +547,89 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                           ))}
                         </SelectContent>
                       </Select>
-                      <Input
-                        id="referenceName"
-                        value={formData.referenceName}
-                        onChange={(e) => setFormData(prev => ({ ...prev, referenceName: e.target.value }))}
-                        placeholder="Enter Reference Name"
-                        className="flex-1 h-10 text-sm md:text-base mt-1.5 rounded-l-none focus:z-10"
-                      />
+
+                      {selectedReferrer ? (
+                        <div className="flex-1 h-10 mt-1.5 rounded-l-none rounded-r-md border border-l-0 border-input bg-indigo-50 dark:bg-indigo-900/20 px-3 flex items-center justify-between">
+                          <span className="text-sm truncate">
+                            {selectedReferrer.referrerName}
+                            {selectedReferrer.defaultRatePercent > 0 && (
+                              <span className="text-muted-foreground"> · {selectedReferrer.defaultRatePercent}%</span>
+                            )}
+                          </span>
+                          <button type="button" onClick={() => setFormData(prev => ({ ...prev, referrerId: '' }))} className="ml-2 text-gray-400 hover:text-red-500">
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : creatingReferrer ? (
+                        <Input
+                          value={newReferrer.name}
+                          onChange={(e) => setNewReferrer(prev => ({ ...prev, name: e.target.value }))}
+                          placeholder="New referrer name"
+                          autoFocus
+                          className="flex-1 h-10 text-sm md:text-base mt-1.5 rounded-l-none focus:z-10"
+                        />
+                      ) : (
+                        <div className="relative flex-1">
+                          <Input
+                            value={referrerSearch}
+                            onChange={(e) => setReferrerSearch(e.target.value)}
+                            onFocus={() => setReferrerFocused(true)}
+                            onBlur={() => setTimeout(() => setReferrerFocused(false), 150)}
+                            placeholder="Search or add referrer…"
+                            className="h-10 text-sm md:text-base mt-1.5 rounded-l-none focus:z-10"
+                          />
+                          {(referrerFocused || referrerSearch.trim()) && (
+                            <div className="absolute z-20 left-0 right-0 mt-1 max-h-48 overflow-auto rounded-md border bg-popover shadow-lg">
+                              {referrers.length === 0 && (
+                                <div className="px-3 py-2 text-xs text-muted-foreground">No referrers yet — add one below.</div>
+                              )}
+                              {referrers.map(r => (
+                                <button
+                                  key={r.referrerId}
+                                  type="button"
+                                  onClick={() => { setFormData(prev => ({ ...prev, referrerId: r.referrerId })); setReferrerSearch(''); }}
+                                  className="w-full text-left px-3 py-2 text-sm hover:bg-accent border-b last:border-b-0"
+                                >
+                                  <span className="font-medium">{r.referrerName}</span>
+                                  <span className="text-muted-foreground text-xs"> · {r.referrerType}{r.defaultRatePercent > 0 ? ` · ${r.defaultRatePercent}%` : ''}{r.phone ? ` · ${r.phone}` : ''}</span>
+                                </button>
+                              ))}
+                              <button
+                                type="button"
+                                onClick={() => { setCreatingReferrer(true); setNewReferrer(prev => ({ ...prev, name: referrerSearch.trim() })); setReferrerSearch(''); }}
+                                className="w-full text-left px-3 py-2 text-sm text-indigo-600 hover:bg-accent font-medium"
+                              >
+                                + Add new referrer{referrerSearch.trim() ? ` "${referrerSearch.trim()}"` : ''}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
+
+                    {creatingReferrer && (
+                      <div className="mt-2 grid grid-cols-2 gap-2 rounded-md border border-indigo-200 bg-indigo-50/40 dark:bg-indigo-900/10 p-2">
+                        <Input
+                          value={newReferrer.phone}
+                          onChange={(e) => setNewReferrer(prev => ({ ...prev, phone: e.target.value }))}
+                          placeholder="Phone"
+                          className="h-8 text-xs"
+                        />
+                        <Input
+                          value={newReferrer.address}
+                          onChange={(e) => setNewReferrer(prev => ({ ...prev, address: e.target.value }))}
+                          placeholder="Address"
+                          className="h-8 text-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => { setCreatingReferrer(false); setNewReferrer({ name: '', phone: '', address: '', rate: '10' }); }}
+                          className="col-span-2 text-left text-xs text-gray-500 hover:text-red-500"
+                        >
+                          Cancel new referrer
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="xl:col-span-2">

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import {
     Ward, Room, Bed, Patient, Admission, VitalReading, MedicationDose, RoundNote, LedgerEntry, AdmissionView,
-    AdmissionType, IcdCode, BillingPolicy,
+    AdmissionType, IcdCode, BillingPolicy, Beneficiary, IncentiveAccrual,
 } from './types';
 import * as mock from './data/mockData';
 
@@ -13,6 +13,7 @@ interface AdmitInput {
     admissionType: AdmissionType; attendingDoctor: string;
     provisionalDiagnosis: string; icd?: IcdCode; consentCaptured: boolean;
     depositPaid: number; estimatedDailyCost: number; isMlc?: boolean;
+    beneficiaryId?: string;
 }
 
 interface IpdState {
@@ -27,6 +28,8 @@ interface IpdState {
     ledger: LedgerEntry[];
     icdCatalog: IcdCode[];
     policy: BillingPolicy;
+    beneficiaries: Beneficiary[];
+    incentiveAccruals: IncentiveAccrual[];
 
     // selectors
     admissionViews: () => AdmissionView[];
@@ -35,10 +38,16 @@ interface IpdState {
     hasCriticalVitals: (admissionId: string) => boolean;
     pendingTaskCount: (admissionId: string) => number;
 
+    // incentive selectors
+    accrualsByBeneficiary: (beneficiaryId: string, status?: string) => IncentiveAccrual[];
+    beneficiaryName: (beneficiaryId?: string) => string | undefined;
+
     // actions
     setPolicy: (patch: Partial<BillingPolicy>) => void;
     runNightlyBilling: () => { bedCharges: number; total: number };
     admitPatient: (input: AdmitInput) => string;
+    upsertBeneficiary: (b: Omit<Beneficiary, 'beneficiaryId'> & { beneficiaryId?: string }) => string;
+    payoutBeneficiary: (beneficiaryId: string) => { count: number; total: number };
     initiateDischarge: (admissionId: string, finalDiagnosis: string) => void;
     completeDischarge: (admissionId: string) => void;
     giveMedication: (medId: string, by: string) => void;
@@ -67,6 +76,8 @@ export const useIpdStore = create<IpdState>((set, get) => ({
     ledger: mock.ledger.map(l => ({ ...l })),
     icdCatalog: mock.icdCatalog,
     policy: { ...mock.billingPolicy, doctorConsultFees: { ...mock.billingPolicy.doctorConsultFees } },
+    beneficiaries: mock.beneficiaries.map(b => ({ ...b })),
+    incentiveAccruals: mock.incentiveAccruals.map(a => ({ ...a })),
 
     admissionViews: () => {
         const s = get();
@@ -112,6 +123,12 @@ export const useIpdStore = create<IpdState>((set, get) => ({
 
     pendingTaskCount: (admissionId: string) =>
         get().medications.filter(m => m.admissionId === admissionId && m.status === 'DUE').length,
+
+    accrualsByBeneficiary: (beneficiaryId: string, status?: string) =>
+        get().incentiveAccruals.filter(a => a.beneficiaryId === beneficiaryId && (!status || a.status === status)),
+
+    beneficiaryName: (beneficiaryId?: string) =>
+        beneficiaryId ? get().beneficiaries.find(b => b.beneficiaryId === beneficiaryId)?.name : undefined,
 
     setPolicy: (patch) => set(state => ({ policy: { ...state.policy, ...patch } })),
 
@@ -169,6 +186,7 @@ export const useIpdStore = create<IpdState>((set, get) => ({
                     admissionType: input.admissionType, attendingDoctor: input.attendingDoctor,
                     admittedAt: at, status: 'ADMITTED',
                     provisionalDiagnosis: input.provisionalDiagnosis, icd: input.icd,
+                    beneficiaryId: input.beneficiaryId,
                     consentCaptured: input.consentCaptured, depositPaid: input.depositPaid,
                     estimatedDailyCost: input.estimatedDailyCost, isMlc: input.isMlc,
                 },
@@ -213,10 +231,66 @@ export const useIpdStore = create<IpdState>((set, get) => ({
         })),
 
     addPayment: (admissionId, amount, mode) =>
-        set(state => ({
-            ledger: [...state.ledger, {
-                id: nextId('l'), admissionId, kind: 'PAYMENT', at: new Date().toISOString(),
+        set(state => {
+            const at = new Date().toISOString();
+            const paymentId = nextId('l');
+            const ledger = [...state.ledger, {
+                id: paymentId, admissionId, kind: 'PAYMENT' as const, at,
                 description: 'Payment received', category: 'PAYMENT', amount, mode,
-            }],
-        })),
+            }];
+
+            // ── Incentive accrual on payment received ──────────────────────────
+            // Eligible = commissionable share of this payment (referral incentive accrues
+            // only on money actually collected). Pass-through categories (BED/PHARMACY) excluded.
+            const newAccruals: IncentiveAccrual[] = [];
+            const admission = state.admissions.find(a => a.admissionId === admissionId);
+            const beneficiary = admission?.beneficiaryId
+                ? state.beneficiaries.find(b => b.beneficiaryId === admission.beneficiaryId && b.isActive)
+                : undefined;
+            if (beneficiary && beneficiary.defaultRatePercent > 0) {
+                const charges = state.ledger.filter(l => l.admissionId === admissionId && l.kind === 'CHARGE');
+                const totalCharges = charges.reduce((t, c) => t + c.amount, 0);
+                const commissionable = charges
+                    .filter(c => mock.COMMISSIONABLE_CATEGORIES.includes(c.category))
+                    .reduce((t, c) => t + c.amount, 0);
+                const share = totalCharges > 0 ? commissionable / totalCharges : 0;
+                const eligible = Math.round(amount * share);
+                const incentive = Math.round(eligible * beneficiary.defaultRatePercent / 100);
+                if (incentive > 0) {
+                    newAccruals.push({
+                        accrualId: nextId('ia'), beneficiaryId: beneficiary.beneficiaryId,
+                        sourceModule: 'IPD', patientId: admission!.patientId, admissionId,
+                        paymentId, eligibleAmount: eligible, ratePercent: beneficiary.defaultRatePercent,
+                        incentiveAmount: incentive, status: 'ACCRUED', accruedAt: at,
+                    });
+                }
+            }
+
+            return {
+                ledger,
+                incentiveAccruals: newAccruals.length ? [...state.incentiveAccruals, ...newAccruals] : state.incentiveAccruals,
+            };
+        }),
+
+    upsertBeneficiary: (b) => {
+        const id = b.beneficiaryId ?? nextId('bf');
+        set(state => ({
+            beneficiaries: b.beneficiaryId
+                ? state.beneficiaries.map(x => x.beneficiaryId === b.beneficiaryId ? { ...x, ...b, beneficiaryId: id } : x)
+                : [...state.beneficiaries, { ...b, beneficiaryId: id }],
+        }));
+        return id;
+    },
+
+    payoutBeneficiary: (beneficiaryId) => {
+        const pending = get().incentiveAccruals.filter(a => a.beneficiaryId === beneficiaryId && a.status === 'ACCRUED');
+        const total = pending.reduce((t, a) => t + a.incentiveAmount, 0);
+        if (pending.length) {
+            set(state => ({
+                incentiveAccruals: state.incentiveAccruals.map(a =>
+                    a.beneficiaryId === beneficiaryId && a.status === 'ACCRUED' ? { ...a, status: 'PAID' as const } : a),
+            }));
+        }
+        return { count: pending.length, total };
+    },
 }));

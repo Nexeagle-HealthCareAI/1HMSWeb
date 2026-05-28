@@ -74,6 +74,7 @@ export interface Admission {
     provisionalDiagnosis: string;
     icd?: IcdCode;            // structured diagnosis
     finalDiagnosis?: string;
+    beneficiaryId?: string;   // "Referred by" — who earns the referral incentive for this visit
     consentCaptured: boolean;
     depositPaid: number;
     estimatedDailyCost: number;
@@ -137,6 +138,44 @@ export interface LedgerEntry {
     mode?: string;           // for payments: CASH/UPI/CARD
     auto?: boolean;          // true when posted by an auto-billing rule (not entered by hand)
     autoSource?: string;     // which rule posted it, e.g. 'BED_NIGHTLY' / 'CONSULT_ADMIT'
+}
+
+// ── Incentive system ────────────────────────────────────────────────────────
+// Referral is one scheme type. A Beneficiary earns an incentive on the commissionable
+// portion of bills, accrued when payment is RECEIVED (never on unpaid/cancelled bills).
+export type BeneficiaryType = 'REFERRER' | 'DOCTOR' | 'STAFF' | 'AGENT' | 'DEPARTMENT';
+
+// Which clinical module the incentive originated from — lets the ledger be sliced per department.
+export type ServiceModule = 'OPD' | 'IPD' | 'LAB' | 'RAD' | 'PHARMACY';
+
+// Referee master — captured at booking/admission so every referrer is trackable
+// independent of any single visit.
+export interface Beneficiary {
+    beneficiaryId: string;
+    name: string;
+    type: BeneficiaryType;
+    phone?: string;
+    email?: string;
+    address?: string;
+    pan?: string;
+    defaultRatePercent: number;   // % of commissionable amount (v1: REFERRAL scheme)
+    isActive: boolean;
+}
+
+export type IncentiveStatus = 'ACCRUED' | 'PAID' | 'CANCELLED';
+
+export interface IncentiveAccrual {
+    accrualId: string;
+    beneficiaryId: string;
+    sourceModule: ServiceModule;  // OPD / IPD / LAB / RAD — slice the ledger by department
+    patientId: string;            // who the incentive was earned "for"
+    admissionId: string;
+    paymentId: string;            // the payment that triggered this accrual
+    eligibleAmount: number;       // commissionable portion of the payment
+    ratePercent: number;
+    incentiveAmount: number;
+    status: IncentiveStatus;
+    accruedAt: string;
 }
 
 // Auto-billing policy (prototype mirror of the real Billing Policy "integration triggers").

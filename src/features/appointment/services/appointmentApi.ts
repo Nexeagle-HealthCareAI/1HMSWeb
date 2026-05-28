@@ -201,6 +201,8 @@ export interface RegisterAppointmentRequest {
   reason: string;
   slotTimeInMinutes: number;
   userId: string;
+  referredByReferrerId?: string;
+  referrerRelation?: string;
 }
 
 export interface RegisterAppointmentResponse {

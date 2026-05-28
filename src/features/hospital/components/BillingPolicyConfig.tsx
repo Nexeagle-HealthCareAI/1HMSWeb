@@ -12,6 +12,17 @@ import { toast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ipdBillingService } from '@/features/billing/services/ipdBillingService';
 
+type TriggerKey = 'opdConsultTrigger' | 'ipdBedChargeMode' | 'pharmacyIpdTrigger' | 'labPathTrigger' | 'labRadTrigger';
+
+// Per-module auto-billing rules. onValue = the trigger value that means "auto-post"; 'OFF' = manual.
+const AUTO_BILLING_RULES: { key: TriggerKey; label: string; desc: string; onValue: string }[] = [
+    { key: 'opdConsultTrigger', label: 'OPD Consultation', desc: 'Post the consult fee automatically when an appointment is booked.', onValue: 'AUTO' },
+    { key: 'ipdBedChargeMode', label: 'IPD Bed Charge', desc: 'Post the daily bed charge automatically each midnight.', onValue: 'AUTO' },
+    { key: 'pharmacyIpdTrigger', label: 'IPD Pharmacy', desc: 'Post the charge automatically when medicines are issued to an IPD patient.', onValue: 'ISSUED' },
+    { key: 'labPathTrigger', label: 'Pathology (Lab)', desc: 'Post the charge automatically when a pathology test is released.', onValue: 'RELEASED' },
+    { key: 'labRadTrigger', label: 'Radiology', desc: 'Post the charge automatically when a radiology study is released.', onValue: 'RELEASED' },
+];
+
 export const BillingPolicyConfig = () => {
     const [config, setConfig] = useState({
         requirePostBeforeInvoice: true,
@@ -308,7 +319,7 @@ export const BillingPolicyConfig = () => {
                     </Card>
                 </motion.div>
 
-                {/* Integration Triggers */}
+                {/* Auto-Billing Rules */}
                 <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -320,104 +331,47 @@ export const BillingPolicyConfig = () => {
                                 <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg group-hover:bg-indigo-200 dark:group-hover:bg-indigo-800/50 transition-colors">
                                     <LinkIcon className="h-5 w-5 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
                                 </div>
-                                <div className="flex-1 flex justify-between items-start">
-                                    <div>
-                                        <CardTitle className="text-lg flex items-center gap-2">
-                                            Integration Triggers
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border border-orange-200 dark:border-orange-800/50">
-                                                Coming Soon
-                                            </span>
-                                        </CardTitle>
-                                        <CardDescription>Automated charge triggers for clinical modules</CardDescription>
-                                    </div>
+                                <div>
+                                    <CardTitle className="text-lg">Auto-Billing Rules</CardTitle>
+                                    <CardDescription>Auto = charge posts to the bill automatically. Manual = staff adds it. Services &amp; amounts come from Charge Master.</CardDescription>
                                 </div>
                             </div>
                         </CardHeader>
-                        <CardContent className="space-y-5 pt-6 opacity-50 pointer-events-none select-none grayscale-[0.5]">
-
-                            <div className="grid grid-cols-[1fr_140px] items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/30 p-2 -mx-2 rounded-lg transition-colors">
-                                <div>
-                                    <Label className="font-semibold text-gray-900 dark:text-gray-100">Pathology Trigger</Label>
-                                    <div className="text-xs text-muted-foreground">Triggers charge based on lab sample flow</div>
-                                </div>
-                                <Select disabled value={config.labPathTrigger} onValueChange={(val) => handleChange('labPathTrigger', val)}>
-                                    <SelectTrigger className="font-medium bg-white dark:bg-gray-900">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="ORDERED">ORDERED</SelectItem>
-                                        <SelectItem value="RELEASED">RELEASED</SelectItem>
-                                        <SelectItem value="OFF">OFF</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="grid grid-cols-[1fr_140px] items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/30 p-2 -mx-2 rounded-lg transition-colors">
-                                <div>
-                                    <Label className="font-semibold text-gray-900 dark:text-gray-100">Radiology Trigger</Label>
-                                    <div className="text-xs text-muted-foreground">Triggers charge based on radiology flow</div>
-                                </div>
-                                <Select disabled value={config.labRadTrigger} onValueChange={(val) => handleChange('labRadTrigger', val)}>
-                                    <SelectTrigger className="font-medium bg-white dark:bg-gray-900">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="ORDERED">ORDERED</SelectItem>
-                                        <SelectItem value="RELEASED">RELEASED</SelectItem>
-                                        <SelectItem value="OFF">OFF</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="grid grid-cols-[1fr_140px] items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/30 p-2 -mx-2 rounded-lg transition-colors">
-                                <div>
-                                    <Label className="font-semibold text-gray-900 dark:text-gray-100">IPD Pharmacy Trigger</Label>
-                                    <div className="text-xs text-muted-foreground">Triggers charge based on med issuance</div>
-                                </div>
-                                <Select disabled value={config.pharmacyIpdTrigger} onValueChange={(val) => handleChange('pharmacyIpdTrigger', val)}>
-                                    <SelectTrigger className="font-medium bg-white dark:bg-gray-900">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="ORDERED">ORDERED</SelectItem>
-                                        <SelectItem value="ISSUED">ISSUED</SelectItem>
-                                        <SelectItem value="OFF">OFF</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="grid grid-cols-[1fr_140px] items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/30 p-2 -mx-2 rounded-lg transition-colors border-t border-gray-100 dark:border-gray-800 mt-2 pt-4">
-                                <div>
-                                    <Label className="font-semibold text-gray-900 dark:text-gray-100">OPD Consult Trigger</Label>
-                                    <div className="text-xs text-muted-foreground">Controls OPD standard charges</div>
-                                </div>
-                                <Select disabled value={config.opdConsultTrigger} onValueChange={(val) => handleChange('opdConsultTrigger', val)}>
-                                    <SelectTrigger className="font-medium bg-white dark:bg-gray-900">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="AUTO">AUTO</SelectItem>
-                                        <SelectItem value="OFF">OFF</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="grid grid-cols-[1fr_140px] items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/30 p-2 -mx-2 rounded-lg transition-colors">
-                                <div>
-                                    <Label className="font-semibold text-gray-900 dark:text-gray-100">IPD Bed Charge Mode</Label>
-                                    <div className="text-xs text-muted-foreground">Controls automated midnight bed charges</div>
-                                </div>
-                                <Select disabled value={config.ipdBedChargeMode} onValueChange={(val) => handleChange('ipdBedChargeMode', val)}>
-                                    <SelectTrigger className="font-medium bg-white dark:bg-gray-900">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="AUTO">AUTO</SelectItem>
-                                        <SelectItem value="OFF">OFF</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
+                        <CardContent className="space-y-1 pt-4">
+                            {AUTO_BILLING_RULES.map((rule, idx) => {
+                                const isAuto = !!config[rule.key] && config[rule.key] !== 'OFF';
+                                return (
+                                    <div
+                                        key={rule.key}
+                                        className={`grid grid-cols-[1fr_170px] items-center gap-4 p-2 -mx-2 rounded-lg transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/30 ${idx > 0 ? 'border-t border-gray-100 dark:border-gray-800' : ''}`}
+                                    >
+                                        <div>
+                                            <Label className="font-semibold text-gray-900 dark:text-gray-100">{rule.label}</Label>
+                                            <div className="text-xs text-muted-foreground">{rule.desc}</div>
+                                        </div>
+                                        <div className="inline-flex p-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg" role="radiogroup" aria-label={rule.label}>
+                                            <button
+                                                type="button"
+                                                role="radio"
+                                                aria-checked={!isAuto}
+                                                onClick={() => handleChange(rule.key, 'OFF')}
+                                                className={`flex-1 h-8 px-3 rounded-md text-xs font-bold transition-all ${!isAuto ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                                            >
+                                                Manual
+                                            </button>
+                                            <button
+                                                type="button"
+                                                role="radio"
+                                                aria-checked={isAuto}
+                                                onClick={() => handleChange(rule.key, rule.onValue)}
+                                                className={`flex-1 h-8 px-3 rounded-md text-xs font-bold transition-all ${isAuto ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                                            >
+                                                Auto
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </CardContent>
                     </Card>
                 </motion.div>
