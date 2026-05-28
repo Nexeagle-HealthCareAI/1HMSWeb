@@ -51,7 +51,6 @@ import {
 import {
   UserManagementModule,
   PatientManagementModule,
-  AdminConfigModule,
 } from './index';
 // Removed ProfileCompletionBanner from Admin panel
 import { useHospitalApi } from '@/hooks/useApi';
@@ -190,7 +189,7 @@ export const AdminDashboard = () => {
     { id: 'user-management', name: t('admin.userManagement'), icon: Users, description: t('admin.usersRolesPermissions') },
     { id: 'patient-management', name: t('admin.patientManagement'), icon: UserCheck, description: t('admin.patientRecordsData') },
     //{ id: 'appointment-oversight', name: t('admin.appointmentOversight') || 'Appointments', icon: Calendar, description: t('admin.appointmentManagement') || 'Manage System Appointments' },
-    { id: 'billing-management', name: t('admin.billingManagement') || 'Configuration', icon: IndianRupee, description: t('admin.billingDescription') || 'Manage all OPD, IPD billings' },
+    // 'billing-management' (Configuration) moved to top-level nav at /configuration
     // { id: 'billing-insurance', name: t('admin.billingInsurance'), icon: CreditCard, description: t('admin.financialManagement') },
     //{ id: 'bulk-messaging', name: t('admin.bulkMessaging'), icon: MessageSquare, description: t('admin.communicationManagement') },
     { id: 'system-config', name: 'Settings', icon: Settings, description: 'General system preferences' },
@@ -1121,12 +1120,7 @@ export const AdminDashboard = () => {
       {/* Patient Management Module */}
       {currentView === 'patient-management' && <PatientManagementModule />}
 
-      {/* Configuration Module (formerly Billing Management) */}
-      {currentView === 'billing-management' && (
-        <div className="animate-in fade-in duration-500 p-2 sm:p-0 h-[calc(100vh-140px)] w-full relative z-10">
-          <AdminConfigModule />
-        </div>
-      )}
+      {/* Configuration module has been promoted to a top-level route (/configuration). */}
 
 
 

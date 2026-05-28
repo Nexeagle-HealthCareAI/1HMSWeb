@@ -215,6 +215,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   // Navigation items with role-based filtering
   const allNavigationItems: NavigationItem[] = [
     { id: 'admin', name: t('header.adminPanel'), icon: Shield, path: '/admin' },
+    { id: 'configuration', name: t('header.configuration') || 'Configuration', icon: Settings, path: '/configuration' },
     { id: 'dashboard', name: t('header.clinicalDashboard'), icon: LayoutDashboard, path: '/dashboard' },
     {
       id: 'appointments',
@@ -223,23 +224,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       path: '/appointment-dashboard',
     },
     { id: 'billing', name: t('header.billing') || 'Billing', icon: IndianRupee, path: '/billing' },
-    { id: 'ipd', name: t('header.ipd') || 'IPD', icon: Hotel, path: '/ipd' },
-    { id: 'pcpndt', name: t('header.pcpndt') || 'PCPNDT', icon: FileCheck, path: '/pcpndt' },
-    { id: 'inventory', name: t('header.inventory') || 'Inventory', icon: Boxes, path: '/inventory' },
-    { id: 'day-close', name: t('header.dayClose') || 'Day Close', icon: BookLock, path: '/day-close' },
-    { id: 'revenue', name: t('header.revenue') || 'Revenue', icon: TrendingUp, path: '/revenue' },
-    { id: 'blood-bank', name: t('header.bloodBank') || 'Blood Bank', icon: Droplet, path: '/blood-bank' },
-    { id: 'mrd', name: t('header.mrd') || 'MRD', icon: FolderSearch, path: '/mrd' },
-    { id: 'ipd-analytics', name: t('header.ipdAnalytics') || 'IPD Ops', icon: ActivityIcon, path: '/ipd-analytics' },
-    { id: 'mlc', name: t('header.mlc') || 'MLC', icon: Siren, path: '/mlc' },
-    { id: 'equipment', name: t('header.equipment') || 'Equipment', icon: Wrench, path: '/equipment' },
-    { id: 'triage', name: t('header.triage') || 'Triage', icon: Ambulance, path: '/triage' },
-    { id: 'visitors', name: t('header.visitors') || 'Visitors', icon: UserSquare, path: '/visitors' },
+    { id: 'ipd-redesign', name: 'IPD (new)', icon: Hotel, path: '/ipd-redesign' },
   ];
 
   // Filter navigation items based on user role
   const navigation: NavigationItem[] = allNavigationItems.filter(item => {
-    if (item.id === 'admin') {
+    if (item.id === 'admin' || item.id === 'configuration') {
       return userRole === 'Admin' || userRole === 'AdminDoctor';
     }
     if (item.id === 'dashboard' || item.id === 'doc-ai' || item.id === 'calendar') {
@@ -248,35 +238,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     if (item.id === 'appointments') {
       return userRole === 'Admin' || userRole === 'AdminDoctor' || userRole === 'Receptionist' || userRole === 'Nurse';
     }
-    if (item.id === 'billing' || item.id === 'ipd' || item.id === 'pcpndt') {
+    if (item.id === 'billing') {
       return userRole === 'Admin' || userRole === 'AdminDoctor' || userRole === 'Doctor';
     }
-    if (item.id === 'inventory') {
+    if (item.id === 'ipd-redesign') {
       return userRole === 'Admin' || userRole === 'AdminDoctor' || userRole === 'Doctor' || userRole === 'Nurse';
-    }
-    if (item.id === 'day-close' || item.id === 'revenue') {
-      return userRole === 'Admin' || userRole === 'AdminDoctor';
-    }
-    if (item.id === 'blood-bank') {
-      return userRole === 'Admin' || userRole === 'AdminDoctor' || userRole === 'Doctor' || userRole === 'Nurse';
-    }
-    if (item.id === 'mrd') {
-      return userRole === 'Admin' || userRole === 'AdminDoctor' || userRole === 'Doctor';
-    }
-    if (item.id === 'ipd-analytics') {
-      return userRole === 'Admin' || userRole === 'AdminDoctor';
-    }
-    if (item.id === 'mlc') {
-      return userRole === 'Admin' || userRole === 'AdminDoctor' || userRole === 'Doctor';
-    }
-    if (item.id === 'equipment') {
-      return userRole === 'Admin' || userRole === 'AdminDoctor' || userRole === 'Doctor' || userRole === 'Nurse';
-    }
-    if (item.id === 'triage') {
-      return userRole === 'Admin' || userRole === 'AdminDoctor' || userRole === 'Doctor' || userRole === 'Nurse';
-    }
-    if (item.id === 'visitors') {
-      return userRole === 'Admin' || userRole === 'AdminDoctor' || userRole === 'Receptionist' || userRole === 'Nurse';
     }
     return true;
   });

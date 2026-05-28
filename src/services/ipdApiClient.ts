@@ -1,11 +1,12 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError, InternalAxiosRequestConfig, AxiosHeaders } from 'axios';
 import { useAuthStore } from '@/store/authStore';
-import { IPD_API_BASE_URL } from '@/app/api';
+import { API_BASE_URL } from '@/app/api';
 
 const API_TIMEOUT = 30000;
 
+// Consolidated: this client targets the single easyHMSAPI host (no separate IPD host).
 const ipdAxios: AxiosInstance = axios.create({
-    baseURL: IPD_API_BASE_URL,
+    baseURL: API_BASE_URL,
     timeout: API_TIMEOUT,
     headers: {
         'Content-Type': 'application/json',

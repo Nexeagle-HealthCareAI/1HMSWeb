@@ -14,7 +14,7 @@ import { toast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { bedService, type BedMasterItem, type UpsertBedMasterRequest } from '@/features/ipd/services/bedService';
+import { bedService, type BedMasterItem, type UpsertBedMasterRequest } from '@/features/hospital/services/bedService';
 
 // --- Types & Mock Data ---
 
