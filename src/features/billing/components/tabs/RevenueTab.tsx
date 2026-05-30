@@ -83,6 +83,13 @@ export const RevenueTab: React.FC = () => {
 
     useEffect(() => { loadDashboard(); }, [loadDashboard]);
 
+    // Open a bill in the ledger. The ledger needs the patient (to load the visit list
+    // and its events) plus the encounter to pre-select — pass both.
+    const openBill = useCallback((row: Visit) => {
+        const path = `/billing/${row.id}`;
+        navigate(row.patientId ? `${path}?patientId=${encodeURIComponent(row.patientId)}` : path);
+    }, [navigate]);
+
     // KPIs across all non-cancelled bills
     const kpis = useMemo(() => {
         let billed = 0, collected = 0, due = 0;
@@ -194,7 +201,7 @@ export const RevenueTab: React.FC = () => {
                                 </TableCell></TableRow>
                             ) : (
                                 paginatedRows.map((row) => (
-                                    <TableRow key={row.id} className="group hover:bg-indigo-50/50 border-b border-slate-100 cursor-pointer" onClick={() => navigate(`/billing/${row.id}`)}>
+                                    <TableRow key={row.id} className="group hover:bg-indigo-50/50 border-b border-slate-100 cursor-pointer" onClick={() => openBill(row)}>
                                         <TableCell>
                                             <div className="flex items-center gap-3">
                                                 <div className="h-9 w-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">{row.patientName.charAt(0)}</div>
@@ -223,7 +230,7 @@ export const RevenueTab: React.FC = () => {
                                                 : <span className="text-xs font-semibold text-slate-400 uppercase border border-slate-200 px-2 py-0.5 rounded bg-slate-50">Settled</span>}
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <Button variant="outline" size="sm" className="h-7 px-2 text-xs font-semibold border-cyan-200 bg-cyan-50 text-cyan-700 hover:bg-cyan-100/50 uppercase" onClick={(e) => { e.stopPropagation(); navigate(`/billing/${row.id}`); }}>
+                                            <Button variant="outline" size="sm" className="h-7 px-2 text-xs font-semibold border-cyan-200 bg-cyan-50 text-cyan-700 hover:bg-cyan-100/50 uppercase" onClick={(e) => { e.stopPropagation(); openBill(row); }}>
                                                 <ArrowRight className="h-3 w-3 mr-1" /> Bill
                                             </Button>
                                         </TableCell>

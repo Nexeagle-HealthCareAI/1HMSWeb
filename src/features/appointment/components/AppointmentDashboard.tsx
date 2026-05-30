@@ -260,6 +260,16 @@ export const AppointmentDashboard = () => {
 
   const fmtBillTimelineDate = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
+  // Days until the free follow-up window closes (after which the next consult is chargeable again).
+  const daysLeftText = (iso: string): string => {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const upto = new Date(iso); upto.setHours(0, 0, 0, 0);
+    const days = Math.round((upto.getTime() - today.getTime()) / 86400000);
+    if (days < 0) return t('patientForm.timeline.expired', { defaultValue: 'Window closed' });
+    if (days === 0) return t('patientForm.timeline.lastDay', { defaultValue: 'Last free day' });
+    return t('patientForm.timeline.daysLeft', { count: days, defaultValue: '{{count}} days left' });
+  };
+
   const handleAddBillClick = (appointment: AppointmentDetail) => {
     setAppointmentForBilling(appointment);
     setBillConsultCtx({ autoConsult: false, fee: 0 });
@@ -1869,7 +1879,10 @@ export const AppointmentDashboard = () => {
                           {!billTimeline.neverExpires && billTimeline.validUptoDate && (
                             <>
                               <span className="text-muted-foreground">{t('patientForm.timeline.validUpto', { defaultValue: 'Free until' })}</span>
-                              <span className="text-right font-medium">{fmtBillTimelineDate(billTimeline.validUptoDate)}</span>
+                              <span className="text-right font-medium">
+                                {fmtBillTimelineDate(billTimeline.validUptoDate)}
+                                <span className="block text-[11px] font-normal text-blue-600 dark:text-blue-400">{daysLeftText(billTimeline.validUptoDate)}</span>
+                              </span>
                             </>
                           )}
                           <span className="text-muted-foreground">{t('patientForm.timeline.thisVisit', { defaultValue: 'This visit' })}</span>
