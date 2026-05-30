@@ -2420,12 +2420,33 @@
     },
     "payment": {
       "completed": "Payment Completed",
+      "consultationFee": "Consultation Fee",
+      "markConsultPaid": "Mark consultation fee as paid",
       "modePlaceholder": "Payment mode",
       "modes": {
         "cash": "Cash",
         "upi": "UPI",
         "card": "Card"
       }
+    },
+    "consultToast": {
+      "collectedTitle": "Consultation fee collected",
+      "addedTitle": "Consultation charge added",
+      "paidDesc": "₹{{amount}} marked paid.",
+      "unpaidDesc": "₹{{amount}} (unpaid).",
+      "failTitle": "Appointment booked",
+      "failDesc": "But the consultation fee could not be added automatically. You can collect it from the dashboard."
+    },
+    "timeline": {
+      "title": "Consultation history",
+      "lastPaid": "Last paid",
+      "never": "Never",
+      "freeSince": "Free follow-ups since",
+      "validUpto": "Free until",
+      "thisVisit": "This visit",
+      "noFee": "Follow-up — No fee",
+      "typeNew": "New",
+      "typeOldFee": "Follow-up (fee due)"
     },
     "actions": {
       "cancel": "Cancel",
@@ -3203,7 +3224,28 @@
       "ctaHelper": "Use the settings tab to update your details"
     },
     "addBill": {
-      "description": "Create a bill for this appointment"
+      "title": "Add Bill",
+      "description": "Create a bill for this appointment",
+      "consultTitle": "Consultation Fee",
+      "paymentMode": "Payment Mode",
+      "markPaid": "Mark Paid",
+      "markUnpaid": "Mark Unpaid",
+      "saving": "Saving…",
+      "status": "Status",
+      "statusPaid": "Paid",
+      "statusUnpaid": "Unpaid",
+      "statusNotCharged": "Not charged yet",
+      "toast": {
+        "collectedTitle": "Consultation fee collected",
+        "alreadyTitle": "Already charged",
+        "addedTitle": "Consultation charge added",
+        "paidDesc": "₹{{amount}} marked paid.",
+        "unpaidDesc": "₹{{amount}} (unpaid).",
+        "alreadyDesc": "₹{{amount}}.",
+        "nothingTitle": "Nothing to collect",
+        "nothingDesc": "No consultation fee applies to this visit.",
+        "failTitle": "Could not record consultation fee"
+      }
     },
     "table": {
       "addBill": "Add Bill",

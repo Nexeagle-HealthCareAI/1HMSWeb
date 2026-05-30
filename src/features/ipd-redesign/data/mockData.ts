@@ -18,8 +18,6 @@ export const beneficiaries: Beneficiary[] = [
 export const billingPolicy: BillingPolicy = {
     autoConsultFeeOnAdmission: true,
     autoDailyBedCharge: true,
-    requirePostBeforeInvoice: true,
-    maxAutoDiscountPercent: 10,
     doctorConsultFees: {
         'Dr. Mehta': 800,
         'Dr. Rao': 600,

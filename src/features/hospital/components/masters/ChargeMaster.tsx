@@ -16,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ipdBillingService, type ChargeMaster as BackendChargeMaster, type UpsertChargeMasterRequest } from '@/features/billing/services/ipdBillingService';
 
-// --- Types & Mock Data ---
+// --- Types ---
 
 export interface ChargeRecord {
     id: string;

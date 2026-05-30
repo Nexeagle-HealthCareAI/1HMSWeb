@@ -79,6 +79,8 @@ export interface CreateEncounterRequest {
     hospitalId?: string;
     patientId: string;
     encounterType: 'OPD' | 'IPD' | 'ER' | 'LAB' | 'PHARMACY';
+    // Specific appointment to bill against. When omitted, the patient's latest is used.
+    appointmentId?: string;
 }
 
 export interface CreateEncounterResponse {
@@ -87,6 +89,11 @@ export interface CreateEncounterResponse {
     data?: {
         encounterId: string;
         doctorName?: string;
+        // OPD consult auto-charge outcome
+        consultChargePosted?: boolean;   // a consult charge was posted on this call
+        consultFee?: number;             // the fee amount (0 when none)
+        consultAlreadyCharged?: boolean; // an existing consult charge was found (idempotent reuse)
+        consultChargeEventId?: string | null;
     };
 }
 

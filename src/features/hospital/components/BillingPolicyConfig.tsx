@@ -4,10 +4,9 @@ import confetti from 'canvas-confetti';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Save, Receipt, Calculator, Settings2, Link as LinkIcon, CheckCircle2, Sparkles, Hash, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Save, Receipt, Settings2, Link as LinkIcon, CheckCircle2, Sparkles, Hash, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ipdBillingService } from '@/features/billing/services/ipdBillingService';
@@ -25,8 +24,6 @@ const AUTO_BILLING_RULES: { key: TriggerKey; label: string; desc: string; onValu
 
 export const BillingPolicyConfig = () => {
     const [config, setConfig] = useState({
-        requirePostBeforeInvoice: true,
-        maxAutoDiscountPercent: '10.00',
         labPathTrigger: 'OFF',
         labRadTrigger: 'OFF',
         pharmacyIpdTrigger: 'OFF',
@@ -55,8 +52,6 @@ export const BillingPolicyConfig = () => {
             const d = res?.data;
             if (d) {
                 setConfig({
-                    requirePostBeforeInvoice: !!d.requirePostBeforeInvoice,
-                    maxAutoDiscountPercent: String(d.maxAutoDiscountPercent ?? '10.00'),
                     labPathTrigger:    d.labPathTrigger    ?? 'OFF',
                     labRadTrigger:     d.labRadTrigger     ?? 'OFF',
                     pharmacyIpdTrigger: d.pharmacyIpdTrigger ?? 'OFF',
@@ -91,10 +86,6 @@ export const BillingPolicyConfig = () => {
 
     useEffect(() => { loadPolicy(); }, [loadPolicy]);
 
-    const handleToggle = (key: keyof typeof config) => {
-        setConfig(prev => ({ ...prev, [key]: !prev[key] }));
-    };
-
     const handleChange = (key: keyof typeof config, value: string) => {
         setConfig(prev => ({ ...prev, [key]: value }));
     };
@@ -109,6 +100,11 @@ export const BillingPolicyConfig = () => {
         }));
     };
 
+    // The pad-length field is free-text (HTML max= doesn't block typing), so an
+    // out-of-range value like 999999999 would make padStart throw "Invalid string
+    // length". Clamp to the input's intended 1..10 range wherever the value is used.
+    const safePadLength = (raw: string) => Math.min(Math.max(parseInt(raw || '6', 10) || 6, 1), 10);
+
     const handleSave = async () => {
         setIsSaving(true);
         try {
@@ -116,12 +112,10 @@ export const BillingPolicyConfig = () => {
                 prefix: s.prefix,
                 yearFormat: s.yearFormat,
                 separator: s.separator,
-                padLength: parseInt(s.padLength || '6', 10),
+                padLength: safePadLength(s.padLength),
                 isActive: s.isActive,
             });
             const req = {
-                requirePostBeforeInvoice: config.requirePostBeforeInvoice,
-                maxAutoDiscountPercent: parseFloat(config.maxAutoDiscountPercent || '0'),
                 labPathTrigger: config.labPathTrigger,
                 labRadTrigger: config.labRadTrigger,
                 pharmacyIpdTrigger: config.pharmacyIpdTrigger,
@@ -262,62 +256,7 @@ export const BillingPolicyConfig = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-                {/* Core Rules & Discounts */}
-                <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.5, delay: 0.1 }}
-                >
-                    <Card className="border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden group hover:shadow-md transition-shadow duration-300">
-                        <CardHeader className="bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-800">
-                            <div className="flex items-center gap-2">
-                                <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg group-hover:bg-blue-200 dark:group-hover:bg-blue-800/50 transition-colors">
-                                    <Calculator className="h-5 w-5 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
-                                </div>
-                                <div>
-                                    <CardTitle className="text-lg">Core Rules & limits</CardTitle>
-                                    <CardDescription>Fundamental policies and discount limits</CardDescription>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-6 pt-6">
-
-                            <div className="flex items-center justify-between group/item">
-                                <div className="space-y-0.5">
-                                    <Label className="text-base font-semibold group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400 transition-colors">Finalize Charges Before Billing</Label>
-                                    <div className="text-sm text-muted-foreground">All patient charges must be finalized before a bill can be generated.</div>
-                                </div>
-                                <Switch
-                                    checked={config.requirePostBeforeInvoice}
-                                    onCheckedChange={() => handleToggle('requirePostBeforeInvoice')}
-                                    className="data-[state=checked]:bg-blue-600"
-                                />
-                            </div>
-
-                            <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
-                                <Label className="text-base font-semibold flex items-center gap-2 mb-3 mt-2">
-                                    Maximum Auto-Discount (%)
-                                </Label>
-                                <div className="relative max-w-[200px]">
-                                    <Input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        max="100"
-                                        value={config.maxAutoDiscountPercent}
-                                        onChange={(e) => handleChange('maxAutoDiscountPercent', e.target.value)}
-                                        className="pl-3 pr-8 font-mono focus-visible:ring-blue-500"
-                                    />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">%</span>
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-2">Simple cap without approval flow (v1)</p>
-                            </div>
-
-                        </CardContent>
-                    </Card>
-                </motion.div>
+            <div className="grid grid-cols-1 gap-6">
 
                 {/* Auto-Billing Rules */}
                 <motion.div
@@ -486,7 +425,7 @@ export const BillingPolicyConfig = () => {
                                         {sequenceConfigs[selectedSequence].separator}
                                         {sequenceConfigs[selectedSequence].yearFormat === 'YYYY' ? new Date().getFullYear() : sequenceConfigs[selectedSequence].yearFormat === 'YY' ? new Date().getFullYear().toString().slice(-2) : sequenceConfigs[selectedSequence].yearFormat === 'YYYYMM' ? `${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}` : ''}
                                         {sequenceConfigs[selectedSequence].yearFormat !== 'OFF' ? sequenceConfigs[selectedSequence].separator : ''}
-                                        {sequenceConfigs[selectedSequence].currentValue.padStart(Number(sequenceConfigs[selectedSequence].padLength) || 6, '0')}
+                                        {sequenceConfigs[selectedSequence].currentValue.padStart(safePadLength(sequenceConfigs[selectedSequence].padLength), '0')}
                                     </div>
                                 </div>
                             </div>

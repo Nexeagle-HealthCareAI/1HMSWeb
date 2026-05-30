@@ -182,8 +182,6 @@ export interface IncentiveAccrual {
 export interface BillingPolicy {
     autoConsultFeeOnAdmission: boolean;   // post the admitting consultant's fee at admission
     autoDailyBedCharge: boolean;          // post one bed charge per admission per day (nightly tick)
-    requirePostBeforeInvoice: boolean;
-    maxAutoDiscountPercent: number;
     // OPD consult fee source = per attending doctor (recommendation C)
     doctorConsultFees: Record<string, number>;
 }

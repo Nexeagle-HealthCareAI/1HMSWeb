@@ -58,10 +58,11 @@ import { useAppointmentDetails } from '../hooks/useAppointmentDetails';
 import { useAuthStore, useAppStore } from '@/store';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { AppointmentDetail, appointmentApi } from '../services/appointmentApi';
+import { AppointmentDetail, appointmentApi, ConsultTimelineResponse } from '../services/appointmentApi';
 import { PrescriptionPreviewModal, type GeneratePrescriptionDetailsRequest } from '@/components/shared/prescription-preview';
 import AttachmentsSection from '@/features/patient/components/AttachmentsSection';
 import { PatientProfileModal } from '@/features/patient/components/PatientProfileModal';
+import { getOpdConsultContext, postOpdConsult } from '@/features/billing/services/consultCharge';
 
 export const AppointmentDashboard = () => {
   const { t } = useTranslation();
@@ -90,6 +91,15 @@ export const AppointmentDashboard = () => {
   const [previewRequest, setPreviewRequest] = useState<GeneratePrescriptionDetailsRequest | null>(null);
   const [showAddBillModal, setShowAddBillModal] = useState(false);
   const [appointmentForBilling, setAppointmentForBilling] = useState<AppointmentDetail | null>(null);
+  // OPD consult fee for the Add Bill panel (mark paid/unpaid when patient arrives).
+  const [billConsultCtx, setBillConsultCtx] = useState<{ autoConsult: boolean; fee: number }>({ autoConsult: false, fee: 0 });
+  const [billPaymentMode, setBillPaymentMode] = useState<string>('cash');
+  const [billBusy, setBillBusy] = useState(false);
+  // Current consult status for the selected appointment (so we can show Paid/Unpaid and avoid double-pay).
+  const [billStatus, setBillStatus] = useState<{ consultCharged: boolean; consultPaid: boolean; amount: number; receiptNo: string | null } | null>(null);
+  // Full consult timeline for the selected appointment — drives the next-visit fee preview
+  // (free follow-up window, last paid date, whether this visit is chargeable).
+  const [billTimeline, setBillTimeline] = useState<ConsultTimelineResponse | null>(null);
   const [labAttachmentModal, setLabAttachmentModal] = useState<{ open: boolean; patientId?: string; patientName?: string; appointmentId?: string }>({ open: false });
   const [labAttachments, setLabAttachments] = useState<Record<string, string[]>>({});
   const [showPatientProfileModal, setShowPatientProfileModal] = useState(false);
@@ -235,15 +245,70 @@ export const AppointmentDashboard = () => {
 
 
 
+  const loadBillStatus = (appointment: AppointmentDetail) => {
+    if (!hospitalId || !appointment.patientId || !appointment.doctorId) { setBillStatus(null); setBillTimeline(null); return; }
+    appointmentApi.getConsultTimeline(hospitalId, appointment.patientId, String(appointment.doctorId), appointment.appointmentDate)
+      .then(tl => {
+        setBillTimeline(tl);
+        const entry = tl.history?.find(h => h.appointmentId === appointment.appointmentId);
+        setBillStatus(entry
+          ? { consultCharged: entry.consultCharged, consultPaid: entry.consultPaid, amount: entry.amount, receiptNo: entry.receiptNo }
+          : { consultCharged: false, consultPaid: false, amount: 0, receiptNo: null });
+      })
+      .catch(() => { setBillStatus(null); setBillTimeline(null); });
+  };
+
+  const fmtBillTimelineDate = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
   const handleAddBillClick = (appointment: AppointmentDetail) => {
     setAppointmentForBilling(appointment);
+    setBillConsultCtx({ autoConsult: false, fee: 0 });
+    setBillPaymentMode('cash');
+    setBillStatus(null);
+    setBillTimeline(null);
     setShowAddBillModal(true);
+    if (appointment.doctorId) {
+      getOpdConsultContext(String(appointment.doctorId)).then(setBillConsultCtx).catch(() => { });
+    }
+    loadBillStatus(appointment);
   };
 
   const handleAddBillModalChange = (open: boolean) => {
     setShowAddBillModal(open);
     if (!open) {
       setAppointmentForBilling(null);
+      setBillConsultCtx({ autoConsult: false, fee: 0 });
+      setBillStatus(null);
+      setBillTimeline(null);
+    }
+  };
+
+  // Post the consult charge (and record payment when marked paid) for an appointment whose
+  // patient has arrived. Backend is idempotent, so this won't double-charge.
+  const handleCollectConsult = async (markPaid: boolean) => {
+    if (!appointmentForBilling?.patientId || billBusy) return;
+    setBillBusy(true);
+    try {
+      const r = await postOpdConsult(appointmentForBilling.patientId, { markPaid, paymentMode: billPaymentMode, appointmentId: appointmentForBilling.appointmentId });
+      if (r.posted || r.alreadyCharged) {
+        const amount = r.consultFee.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+        const receiptSuffix = r.receiptNo ? ` · ${r.receiptNo}` : '';
+        toast({
+          title: r.paymentRecorded
+            ? t('appointmentDashboard.addBill.toast.collectedTitle')
+            : (r.alreadyCharged ? t('appointmentDashboard.addBill.toast.alreadyTitle') : t('appointmentDashboard.addBill.toast.addedTitle')),
+          description: r.paymentRecorded
+            ? t('appointmentDashboard.addBill.toast.paidDesc', { amount }) + receiptSuffix
+            : (r.alreadyCharged ? t('appointmentDashboard.addBill.toast.alreadyDesc', { amount }) : t('appointmentDashboard.addBill.toast.unpaidDesc', { amount })),
+        });
+      } else {
+        toast({ title: t('appointmentDashboard.addBill.toast.nothingTitle'), description: t('appointmentDashboard.addBill.toast.nothingDesc') });
+      }
+      handleAddBillModalChange(false);
+    } catch (e: any) {
+      toast({ title: t('appointmentDashboard.addBill.toast.failTitle'), description: e?.message ?? '', variant: 'destructive' });
+    } finally {
+      setBillBusy(false);
     }
   };
 
@@ -1787,17 +1852,96 @@ export const AppointmentDashboard = () => {
                         <span className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-sm font-semibold">{appointmentForBilling.token?.tokenNumber || t('appointmentDashboard.actionButtons.notApplicable')}</span>
                       </div>
                     </div>
+
+                    {/* Consultation timeline — last paid, free follow-up window, next-visit fee preview */}
+                    {billTimeline && (
+                      <div className="rounded-xl border border-blue-100 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-900/10 p-4 space-y-2">
+                        <div className="flex items-center gap-2 font-semibold text-blue-800 dark:text-blue-300 text-sm">
+                          <Clock className="h-4 w-4" /> {t('patientForm.timeline.title', { defaultValue: 'Consultation history' })}
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:text-sm">
+                          <span className="text-muted-foreground">{t('patientForm.timeline.lastPaid', { defaultValue: 'Last paid' })}</span>
+                          <span className="text-right font-medium">
+                            {billTimeline.lastPaidDate ? fmtBillTimelineDate(billTimeline.lastPaidDate) : t('patientForm.timeline.never', { defaultValue: 'Never' })}
+                          </span>
+                          <span className="text-muted-foreground">{t('patientForm.timeline.freeSince', { defaultValue: 'Free follow-ups since' })}</span>
+                          <span className="text-right font-medium">{billTimeline.freeFollowUpCount}</span>
+                          {!billTimeline.neverExpires && billTimeline.validUptoDate && (
+                            <>
+                              <span className="text-muted-foreground">{t('patientForm.timeline.validUpto', { defaultValue: 'Free until' })}</span>
+                              <span className="text-right font-medium">{fmtBillTimelineDate(billTimeline.validUptoDate)}</span>
+                            </>
+                          )}
+                          <span className="text-muted-foreground">{t('patientForm.timeline.thisVisit', { defaultValue: 'This visit' })}</span>
+                          <span className={`text-right font-semibold ${billTimeline.nextVisit.feeApplies ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-600 dark:text-gray-400'}`}>
+                            {billTimeline.nextVisit.feeApplies
+                              ? `${billTimeline.nextVisit.appointmentType === 'New' ? t('patientForm.timeline.typeNew', { defaultValue: 'New' }) : t('patientForm.timeline.typeOldFee', { defaultValue: 'Follow-up (fee due)' })} · ₹${billTimeline.nextVisit.fee.toLocaleString('en-IN')}`
+                              : t('patientForm.timeline.noFee', { defaultValue: 'Follow-up — No fee' })}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* OPD consultation fee — present only when policy = AUTO and a fee is set */}
+                    {billConsultCtx.autoConsult && billConsultCtx.fee > 0 && appointmentForBilling.appointmentType !== 'Old/No-Fee' && (
+                      <div className="rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/60 dark:bg-emerald-900/10 p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-emerald-800 dark:text-emerald-300">{t('appointmentDashboard.addBill.consultTitle')}</span>
+                          <span className="text-lg font-bold font-mono text-emerald-700 dark:text-emerald-300">₹{billConsultCtx.fee.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-xs font-medium text-gray-500">{t('appointmentDashboard.addBill.status')}</span>
+                          {billStatus?.consultPaid ? (
+                            <span className="font-semibold text-emerald-700 dark:text-emerald-300">
+                              {t('appointmentDashboard.addBill.statusPaid')}{billStatus.receiptNo ? ` · ${billStatus.receiptNo}` : ''}
+                            </span>
+                          ) : billStatus?.consultCharged ? (
+                            <span className="font-semibold text-amber-700 dark:text-amber-300">{t('appointmentDashboard.addBill.statusUnpaid')}</span>
+                          ) : (
+                            <span className="font-medium text-gray-500">{t('appointmentDashboard.addBill.statusNotCharged')}</span>
+                          )}
+                        </div>
+                        {!billStatus?.consultPaid && (
+                          <div className="space-y-1">
+                            <span className="text-xs font-medium text-gray-500">{t('appointmentDashboard.addBill.paymentMode')}</span>
+                            <Select value={billPaymentMode} onValueChange={setBillPaymentMode}>
+                              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="cash">Cash</SelectItem>
+                                <SelectItem value="upi">UPI</SelectItem>
+                                <SelectItem value="card">Card</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
               <div className="p-4 sm:p-6 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3 shrink-0">
-                <Button variant="outline" onClick={() => handleAddBillModalChange(false)}>
+                <Button variant="outline" onClick={() => handleAddBillModalChange(false)} disabled={billBusy}>
                   {t('common.close', { defaultValue: 'Close' })}
                 </Button>
-                <Button onClick={() => handleAddBillModalChange(false)} className="bg-indigo-600 text-white hover:bg-indigo-700">
-                  {t('common.continue', { defaultValue: 'Proceed' })}
-                </Button>
+                {billConsultCtx.autoConsult && billConsultCtx.fee > 0 && appointmentForBilling?.appointmentType !== 'Old/No-Fee' ? (
+                  billStatus?.consultPaid ? null : (
+                    <>
+                      {!billStatus?.consultCharged && (
+                        <Button variant="outline" onClick={() => handleCollectConsult(false)} disabled={billBusy} className="border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-300">
+                          {t('appointmentDashboard.addBill.markUnpaid')}
+                        </Button>
+                      )}
+                      <Button onClick={() => handleCollectConsult(true)} disabled={billBusy} className="bg-emerald-600 text-white hover:bg-emerald-700">
+                        {billBusy ? t('appointmentDashboard.addBill.saving') : t('appointmentDashboard.addBill.markPaid')}
+                      </Button>
+                    </>
+                  )
+                ) : (
+                  <Button onClick={() => handleAddBillModalChange(false)} className="bg-indigo-600 text-white hover:bg-indigo-700">
+                    {t('common.continue', { defaultValue: 'Proceed' })}
+                  </Button>
+                )}
               </div>
             </motion.div>
           </>

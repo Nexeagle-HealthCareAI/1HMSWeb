@@ -1,13 +1,15 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Shield, Search, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { RegisterAppointmentRequest, generatePatientId } from '../services/appointmentApi';
+import { RegisterAppointmentRequest, generatePatientId, appointmentApi, type ConsultTimelineResponse } from '../services/appointmentApi';
 import { useAppointmentBooking } from '../hooks/useAppointmentBooking';
 import { usePatientSearch } from '../hooks/usePatientSearch';
 import { PatientSearchItem } from '../services/appointmentApi';
 import { useReferrers, useCreateReferrer } from '../hooks/useReferrers';
 import { useAuthStore } from '@/store/authStore';
+import { getOpdConsultContext, postOpdConsult } from '@/features/billing/services/consultCharge';
+import { toast } from '@/hooks/use-toast';
 
 // Define types locally to avoid import issues
 interface Doctor {
@@ -159,6 +161,45 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const { bookAppointment, isLoading: isBookingLoading, error: bookingError, clearError } = useAppointmentBooking();
   const { searchPatients, isLoading: isSearchLoading, error: searchError, clearError: clearSearchError } = usePatientSearch();
   const { getUserId } = useAuthStore();
+
+  // OPD consult fee: shown + collectable only for SAME-DAY bookings when Billing Policy
+  // OPD trigger = AUTO and the doctor has a consult fee. Future bookings are handled later
+  // from the dashboard.
+  const [consultCtx, setConsultCtx] = useState<{ autoConsult: boolean; fee: number }>({ autoConsult: false, fee: 0 });
+  const [timeline, setTimeline] = useState<ConsultTimelineResponse | null>(null);
+  const isSameDay = useMemo(() => {
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    return selectedSlot?.date === todayStr;
+  }, [selectedSlot?.date]);
+  // For an existing patient the server tells us whether the next visit is chargeable; a new
+  // patient (no id, no timeline) is always a fee visit.
+  const nextFeeApplies = timeline ? timeline.nextVisit.feeApplies : true;
+  const consultFee = (timeline && timeline.nextVisit.fee > 0) ? timeline.nextVisit.fee : consultCtx.fee;
+  const showConsult = consultCtx.autoConsult && consultFee > 0 && isSameDay && nextFeeApplies;
+
+  useEffect(() => {
+    if (!doctor?.id || !isSameDay) { setConsultCtx({ autoConsult: false, fee: 0 }); return; }
+    let active = true;
+    getOpdConsultContext(doctor.id, hospitalId).then(ctx => { if (active) setConsultCtx(ctx); });
+    return () => { active = false; };
+  }, [doctor?.id, hospitalId, isSameDay]);
+
+  // Consult timeline (last paid, free follow-ups, next-visit preview) for an existing patient.
+  useEffect(() => {
+    if (!doctor?.id || !hospitalId || !formData.patientId) { setTimeline(null); return; }
+    let active = true;
+    appointmentApi.getConsultTimeline(hospitalId, formData.patientId, doctor.id, selectedSlot?.date)
+      .then(t => { if (active) setTimeline(t); })
+      .catch(() => { if (active) setTimeline(null); });
+    return () => { active = false; };
+  }, [doctor?.id, hospitalId, formData.patientId, selectedSlot?.date]);
+
+  const fmtTimelineDate = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const nextVisitLabel = (type: string) =>
+    type === 'New'
+      ? t('patientForm.timeline.typeNew', { defaultValue: 'New' })
+      : t('patientForm.timeline.typeOldFee', { defaultValue: 'Follow-up (fee due)' });
 
   // ── Referral ("Referred By") ──────────────────────────────────────────────
   const [referrerSearch, setReferrerSearch] = useState('');
@@ -375,6 +416,35 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       // Pass the response data to the parent component
       const finalPatientId = response.patientId || generatedPatientId;
       console.log('Final patientId being passed:', finalPatientId);
+
+      // Same-day OPD with policy AUTO: auto-create the encounter + consult charge, and
+      // record the payment if marked paid. Non-blocking — the appointment is already booked.
+      if (showConsult) {
+        try {
+          const r = await postOpdConsult(finalPatientId, {
+            markPaid: formData.isPaid,
+            paymentMode: formData.paymentMode,
+            hospitalId,
+            appointmentId: response.appointmentId,
+          });
+          if (r.posted || r.alreadyCharged) {
+            const amount = r.consultFee.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+            toast({
+              title: r.paymentRecorded ? t('patientForm.consultToast.collectedTitle') : t('patientForm.consultToast.addedTitle'),
+              description: r.paymentRecorded
+                ? t('patientForm.consultToast.paidDesc', { amount }) + (r.receiptNo ? ` · ${r.receiptNo}` : '')
+                : t('patientForm.consultToast.unpaidDesc', { amount }),
+            });
+          }
+        } catch (consultErr) {
+          console.error('Failed to post OPD consult charge:', consultErr);
+          toast({
+            title: t('patientForm.consultToast.failTitle'),
+            description: t('patientForm.consultToast.failDesc'),
+            variant: 'destructive',
+          });
+        }
+      }
 
       onSubmit({
         ...formData,
@@ -800,8 +870,49 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                       )}
                     </div>
 
+                    {/* Consultation timeline (existing patient) */}
+                    {timeline && (
+                      <div className="border-t pt-3 md:pt-4">
+                        <div className="rounded-lg border border-blue-100 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-900/10 p-3 space-y-2">
+                          <div className="flex items-center gap-2 font-semibold text-blue-800 dark:text-blue-300 text-sm">
+                            <Clock className="h-4 w-4" /> {t('patientForm.timeline.title', { defaultValue: 'Consultation history' })}
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs md:text-sm">
+                            <span className="text-muted-foreground">{t('patientForm.timeline.lastPaid', { defaultValue: 'Last paid' })}</span>
+                            <span className="text-right font-medium">
+                              {timeline.lastPaidDate ? fmtTimelineDate(timeline.lastPaidDate) : t('patientForm.timeline.never', { defaultValue: 'Never' })}
+                            </span>
+                            <span className="text-muted-foreground">{t('patientForm.timeline.freeSince', { defaultValue: 'Free follow-ups since' })}</span>
+                            <span className="text-right font-medium">{timeline.freeFollowUpCount}</span>
+                            {!timeline.neverExpires && timeline.validUptoDate && (
+                              <>
+                                <span className="text-muted-foreground">{t('patientForm.timeline.validUpto', { defaultValue: 'Free until' })}</span>
+                                <span className="text-right font-medium">{fmtTimelineDate(timeline.validUptoDate)}</span>
+                              </>
+                            )}
+                            <span className="text-muted-foreground">{t('patientForm.timeline.thisVisit', { defaultValue: 'This visit' })}</span>
+                            <span className={`text-right font-semibold ${timeline.nextVisit.feeApplies ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-600 dark:text-gray-400'}`}>
+                              {timeline.nextVisit.feeApplies
+                                ? `${nextVisitLabel(timeline.nextVisit.appointmentType)} · ₹${timeline.nextVisit.fee.toLocaleString('en-IN')}`
+                                : t('patientForm.timeline.noFee', { defaultValue: 'Follow-up — No fee' })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Payment Section */}
                     <div className="border-t pt-3 md:pt-4 space-y-3">
+                      {showConsult && (
+                        <div className="flex items-center justify-between rounded-lg border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/60 dark:bg-emerald-900/10 px-3 py-2">
+                          <span className="text-sm md:text-base font-medium text-emerald-800 dark:text-emerald-300">
+                            {t('patientForm.payment.consultationFee', { defaultValue: 'Consultation Fee' })}
+                          </span>
+                          <span className="text-base md:text-lg font-bold font-mono text-emerald-700 dark:text-emerald-300">
+                            ₹{consultFee.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex items-center space-x-3">
                         <Checkbox
                           id="isPaid"
@@ -810,7 +921,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                           className="h-4 w-4 md:h-5 md:w-5"
                         />
                         <Label htmlFor="isPaid" className="text-sm md:text-base font-medium">
-                          {t('patientForm.payment.completed')}
+                          {showConsult
+                            ? t('patientForm.payment.markConsultPaid', { defaultValue: 'Mark consultation fee as paid' })
+                            : t('patientForm.payment.completed')}
                         </Label>
                       </div>
 

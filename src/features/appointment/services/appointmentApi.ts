@@ -277,8 +277,45 @@ export interface AppointmentDetail {
   departmentName?: string;
 }
 
+export interface ConsultTimelineVisit {
+  appointmentId: string;
+  apptDate: string;
+  appointmentType: string | null;
+  statusCode: string | null;
+  consultCharged: boolean;
+  consultPaid: boolean;
+  amount: number;
+  receiptNo: string | null;
+}
+
+export interface ConsultNextVisit {
+  appointmentType: string;   // New / Old/Fee / Old/No-Fee
+  feeApplies: boolean;
+  fee: number;
+}
+
+export interface ConsultTimelineResponse {
+  success: boolean;
+  message?: string;
+  prescriptionValidDays: number;
+  neverExpires: boolean;
+  lastFeeVisit: ConsultTimelineVisit | null;
+  lastPaidDate: string | null;
+  validUptoDate: string | null;
+  freeFollowUpCount: number;
+  nextVisit: ConsultNextVisit;
+  history: ConsultTimelineVisit[];
+}
+
 // Appointment API service
 export const appointmentApi = {
+
+  // OPD consult fee timeline (last paid, free follow-ups since, next-visit fee preview)
+  getConsultTimeline: (hospitalId: string, patientId: string, doctorId: string, targetDate?: string): Promise<ConsultTimelineResponse> => {
+    const params = new URLSearchParams({ hospitalId, patientId, doctorId });
+    if (targetDate) params.set('targetDate', targetDate);
+    return apiClient.get(`/appointments/consult-timeline?${params.toString()}`);
+  },
 
   // Get all departments
   getDepartments: (hospitalId: string): Promise<{ departments: Department[] }> => {

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { IndianRupee, FileText, ChevronRight, ChevronLeft, Settings2, Database, Bed } from 'lucide-react';
+import { IndianRupee, FileText, ChevronRight, ChevronLeft, Settings2, Database, Bed, Stethoscope } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { BillingPolicyConfig } from '@/features/hospital/components/BillingPolicyConfig';
 import { PrescriptionConfig } from '@/features/prescription/components/PrescriptionConfig';
 import { ChargeMaster } from '@/features/hospital/components/masters/ChargeMaster';
 import { BedMaster } from '@/features/hospital/components/masters/BedMaster';
+import { DoctorFees } from '@/features/hospital/components/masters/DoctorFees';
 
 export const AdminConfigModule = () => {
     const [activeTab, setActiveTab] = useState('billing');
@@ -35,6 +36,12 @@ export const AdminConfigModule = () => {
             label: 'Bed Master',
             description: 'Configure wards, rooms, beds and daily rates',
             icon: Bed,
+        },
+        {
+            id: 'doctor-fees',
+            label: 'Doctor Fees',
+            description: 'Set per-doctor OPD consult & IPD visit fees',
+            icon: Stethoscope,
         },
     ];
 
@@ -118,6 +125,7 @@ export const AdminConfigModule = () => {
                     {activeTab === 'prescriptions' && <PrescriptionConfig />}
                     {activeTab === 'charge-master' && <ChargeMaster />}
                     {activeTab === 'bed-master' && <BedMaster />}
+                    {activeTab === 'doctor-fees' && <DoctorFees />}
                 </div>
             </main>
         </div>

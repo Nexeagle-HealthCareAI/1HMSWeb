@@ -1854,12 +1854,33 @@
     },
     "payment": {
       "completed": "भुगतान पूरा",
+      "consultationFee": "परामर्श शुल्क",
+      "markConsultPaid": "परामर्श शुल्क को भुगतान के रूप में चिह्नित करें",
       "modePlaceholder": "भुगतान मोड",
       "modes": {
         "cash": "नकद",
         "upi": "यूपीआई",
         "card": "कार्ड"
       }
+    },
+    "consultToast": {
+      "collectedTitle": "परामर्श शुल्क प्राप्त हुआ",
+      "addedTitle": "परामर्श शुल्क जोड़ा गया",
+      "paidDesc": "₹{{amount}} भुगतान के रूप में चिह्नित।",
+      "unpaidDesc": "₹{{amount}} (अवैतनिक)।",
+      "failTitle": "अपॉइंटमेंट बुक हो गई",
+      "failDesc": "लेकिन परामर्श शुल्क स्वचालित रूप से नहीं जोड़ा जा सका। आप इसे डैशबोर्ड से प्राप्त कर सकते हैं।"
+    },
+    "timeline": {
+      "title": "परामर्श इतिहास",
+      "lastPaid": "अंतिम भुगतान",
+      "never": "कभी नहीं",
+      "freeSince": "तब से निःशुल्क फॉलो-अप",
+      "validUpto": "निःशुल्क अवधि",
+      "thisVisit": "यह विज़िट",
+      "noFee": "फॉलो-अप — कोई शुल्क नहीं",
+      "typeNew": "नया",
+      "typeOldFee": "फॉलो-अप (शुल्क देय)"
     },
     "actions": {
       "cancel": "रद्द करें",
@@ -2661,7 +2682,28 @@
       "ctaHelper": "अपना विवरण अपडेट करने के लिए सेटिंग्स टैब का उपयोग करें"
     },
     "addBill": {
-      "description": "इस अपॉइंटमेंट के लिए बिल बनाएं"
+      "title": "बिल जोड़ें",
+      "description": "इस अपॉइंटमेंट के लिए बिल बनाएं",
+      "consultTitle": "परामर्श शुल्क",
+      "paymentMode": "भुगतान मोड",
+      "markPaid": "भुगतान चिह्नित करें",
+      "markUnpaid": "अवैतनिक चिह्नित करें",
+      "saving": "सहेजा जा रहा है…",
+      "status": "स्थिति",
+      "statusPaid": "भुगतान हो गया",
+      "statusUnpaid": "अवैतनिक",
+      "statusNotCharged": "अभी तक शुल्क नहीं",
+      "toast": {
+        "collectedTitle": "परामर्श शुल्क प्राप्त हुआ",
+        "alreadyTitle": "पहले से शुल्कित",
+        "addedTitle": "परामर्श शुल्क जोड़ा गया",
+        "paidDesc": "₹{{amount}} भुगतान के रूप में चिह्नित।",
+        "unpaidDesc": "₹{{amount}} (अवैतनिक)।",
+        "alreadyDesc": "₹{{amount}}।",
+        "nothingTitle": "प्राप्त करने के लिए कुछ नहीं",
+        "nothingDesc": "इस विज़िट पर कोई परामर्श शुल्क लागू नहीं होता।",
+        "failTitle": "परामर्श शुल्क दर्ज नहीं किया जा सका"
+      }
     },
     "table": {
       "addBill": "बिल जोड़ें",

@@ -1,0 +1,19 @@
+{
+	"folders": [
+		{
+			"path": "../../../../easyHMSAPI"
+		},
+		{
+			"path": "../../../../easyHMSAPIIPD"
+		},
+		{
+			"path": "../../../../easyHMSDatabase"
+		},
+		{
+			"path": "../../../../easyHMSNightJob"
+		},
+		{
+			"path": "../../.."
+		}
+	]
+}
