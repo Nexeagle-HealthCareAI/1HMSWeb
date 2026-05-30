@@ -24,8 +24,10 @@ import {
   ArrowRight,
   MapPin,
   Calendar,
-  History
+  History,
+  Share2
 } from 'lucide-react';
+import { ReferrersPanel } from './ReferrersPanel';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -64,7 +66,7 @@ import { format } from 'date-fns';
 
 import { Patient360Analysis } from './Patient360Analysis';
 
-type Tab = 'today' | 'upcoming' | 'past' | 'patient360';
+type Tab = 'today' | 'upcoming' | 'past' | 'patient360' | 'referrers';
 type ViewMode = 'list' | 'analysis';
 
 export const PatientsPage: React.FC = () => {
@@ -580,6 +582,11 @@ export const PatientsPage: React.FC = () => {
       label: 'Patient 360',
       icon: Users,
     },
+    {
+      id: 'referrers' as Tab,
+      label: 'Referrers',
+      icon: Share2,
+    },
   ];
 
   const getStatusIcon = (status: StatusTransitionStep['status']) => {
@@ -793,6 +800,9 @@ export const PatientsPage: React.FC = () => {
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto relative w-full h-full bg-gray-50/50 dark:bg-black/20 p-2 sm:p-4 lg:p-6">
+        {activeTab === 'referrers' && (
+          <ReferrersPanel />
+        )}
         {activeTab === 'today' && (
           <div className="max-w-5xl mx-auto space-y-6">
             <div className="flex items-center justify-between mb-2">

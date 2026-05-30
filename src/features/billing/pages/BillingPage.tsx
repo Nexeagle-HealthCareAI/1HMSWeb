@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
     Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -27,11 +26,12 @@ import { debounce } from 'lodash';
 import { patientService } from '../services/patientService';
 import {
     ipdBillingService,
-    type ChargeMaster, type BillingChargeRow, type BillingPaymentRow,
-    type GetEncounterEventsResponse, type AddChargeEventRequest, type AddPaymentRequest,
-    type PaymentMode, type PaymentType, type AppliesTo,
+    type BillingChargeRow, type BillingPaymentRow, type GetEncounterEventsResponse,
 } from '../services/ipdBillingService';
 import type { Patient } from '../types';
+import { AddChargeDialog } from '../components/dialogs/AddChargeDialog';
+import { AddPaymentDialog } from '../components/dialogs/AddPaymentDialog';
+import { VISIT_TYPES } from '../utils/constants';
 
 // ─── Local view models ──────────────────────────────────────────────────────
 
@@ -45,309 +45,6 @@ type Encounter = {
     cancelReason?: string;
 };
 
-const PAYMENT_MODES: { value: PaymentMode; label: string }[] = [
-    { value: 'CASH',      label: 'Cash' },
-    { value: 'UPI',       label: 'UPI' },
-    { value: 'CARD',      label: 'Card' },
-    { value: 'BANK',      label: 'Bank Transfer' },
-    { value: 'INSURANCE', label: 'Insurance' },
-];
-
-const VISIT_TYPES: { value: 'OPD' | 'IPD' | 'ER' | 'LAB' | 'PHARMACY'; label: string }[] = [
-    { value: 'OPD',      label: 'OPD' },
-    { value: 'IPD',      label: 'IPD' },
-    { value: 'ER',       label: 'Emergency' },
-    { value: 'LAB',      label: 'Lab' },
-    { value: 'PHARMACY', label: 'Pharmacy' },
-];
-
-// ─── Add charge dialog ──────────────────────────────────────────────────────
-
-const AddChargeDialog: React.FC<{
-    open: boolean;
-    onOpenChange: (v: boolean) => void;
-    patientId: string;
-    encounterId: string;
-    onSaved: () => void;
-}> = ({ open, onOpenChange, patientId, encounterId, onSaved }) => {
-    const { toast } = useToast();
-    const [chargeMasters, setChargeMasters] = useState<ChargeMaster[]>([]);
-    const [chargeMasterFilter, setChargeMasterFilter] = useState('');
-    const [loadingMasters, setLoadingMasters] = useState(false);
-    const [selectedMaster, setSelectedMaster] = useState<ChargeMaster | null>(null);
-    const [qty, setQty] = useState(1);
-    const [rate, setRate] = useState(0);
-    const [discountPercent, setDiscountPercent] = useState(0);
-    const [submitting, setSubmitting] = useState(false);
-
-    useEffect(() => {
-        if (!open) return;
-        setSelectedMaster(null);
-        setQty(1);
-        setRate(0);
-        setDiscountPercent(0);
-        setChargeMasterFilter('');
-        let cancelled = false;
-        (async () => {
-            setLoadingMasters(true);
-            try {
-                const res = await ipdBillingService.listChargeMasters({ pageSize: 500 });
-                if (!cancelled) setChargeMasters((res?.items ?? []).filter(m => m.isActive));
-            } catch (e: any) {
-                if (!cancelled) toast({ title: 'Could not load charge catalog', description: e?.message ?? '', variant: 'destructive' });
-            } finally {
-                if (!cancelled) setLoadingMasters(false);
-            }
-        })();
-        return () => { cancelled = true; };
-    }, [open, toast]);
-
-    const filteredMasters = useMemo(() => {
-        const q = chargeMasterFilter.trim().toLowerCase();
-        if (!q) return chargeMasters;
-        return chargeMasters.filter(m =>
-            (m.displayName ?? '').toLowerCase().includes(q)
-            || (m.chargeCode ?? '').toLowerCase().includes(q)
-            || (m.categoryCode ?? '').toLowerCase().includes(q)
-        );
-    }, [chargeMasters, chargeMasterFilter]);
-
-    const pickMaster = (m: ChargeMaster) => {
-        setSelectedMaster(m);
-        setQty(m.defaultQty || 1);
-        setRate(Number(m.defaultRate || 0));
-    };
-
-    const submit = async () => {
-        if (submitting) return;
-        if (!selectedMaster) { toast({ title: 'Pick a charge from the catalog', variant: 'destructive' }); return; }
-        if (qty <= 0)        { toast({ title: 'Quantity must be > 0', variant: 'destructive' }); return; }
-        if (rate < 0)        { toast({ title: 'Rate cannot be negative', variant: 'destructive' }); return; }
-
-        setSubmitting(true);
-        try {
-            const req: AddChargeEventRequest = {
-                patientId,
-                encounterId,
-                charges: [{
-                    chargeId: selectedMaster.chargeId,
-                    displayName: selectedMaster.displayName ?? '',
-                    qty,
-                    rate,
-                    discountPercent,
-                    categoryCode: selectedMaster.categoryCode ?? 'OTHER',
-                }],
-            };
-            const res = await ipdBillingService.addChargeEvents(req);
-            if (!res?.success) throw new Error(res?.message ?? 'Could not add charge');
-            toast({ title: 'Charge added', description: selectedMaster.displayName ?? '' });
-            onSaved();
-            onOpenChange(false);
-        } catch (e: any) {
-            toast({ title: 'Could not add charge', description: e?.message ?? '', variant: 'destructive' });
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    const gross = qty * rate;
-    const discountAmount = (gross * Math.max(0, Math.min(100, discountPercent))) / 100;
-    const net = gross - discountAmount;
-
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2"><Plus className="h-5 w-5 text-indigo-600" /> Add Charge</DialogTitle>
-                    <DialogDescription>Pick from the charge catalog and adjust quantity / discount.</DialogDescription>
-                </DialogHeader>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label className="text-xs font-semibold text-slate-700">Charge catalog</Label>
-                        <div className="relative">
-                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                            <Input value={chargeMasterFilter} onChange={(e) => setChargeMasterFilter(e.target.value)} placeholder="Search charges…" className="h-8 pl-8 text-xs" />
-                        </div>
-                        <div className="border border-slate-200 rounded-md max-h-[280px] overflow-auto bg-white">
-                            {loadingMasters ? (
-                                <div className="p-3 space-y-2">{[0, 1, 2].map(i => <Skeleton key={i} className="h-8 w-full" />)}</div>
-                            ) : filteredMasters.length === 0 ? (
-                                <div className="p-4 text-center text-xs text-slate-500">No charges configured</div>
-                            ) : (
-                                filteredMasters.map(m => (
-                                    <button
-                                        key={m.chargeId}
-                                        type="button"
-                                        onClick={() => pickMaster(m)}
-                                        className={cn(
-                                            'w-full text-left px-3 py-2 border-b border-slate-100 hover:bg-indigo-50/40 text-xs',
-                                            selectedMaster?.chargeId === m.chargeId && 'bg-indigo-50 border-l-2 border-l-indigo-500'
-                                        )}
-                                    >
-                                        <div className="flex items-center justify-between gap-2">
-                                            <div className="min-w-0 flex-1">
-                                                <p className="font-semibold text-slate-900 truncate">{m.displayName}</p>
-                                                <p className="text-[10px] text-slate-500 font-mono">{m.chargeCode} · {m.categoryCode} · {m.appliesTo}</p>
-                                            </div>
-                                            <span className="text-xs font-bold text-slate-700 whitespace-nowrap">₹{Number(m.defaultRate).toLocaleString('en-IN')}</span>
-                                        </div>
-                                    </button>
-                                ))
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="space-y-3">
-                        <div>
-                            <Label className="text-xs font-semibold text-slate-700">Selected</Label>
-                            <div className="h-9 mt-1 px-2 flex items-center text-sm border border-slate-200 rounded-md bg-slate-50">
-                                {selectedMaster ? <span className="truncate font-semibold">{selectedMaster.displayName}</span> : <span className="text-slate-400 italic">No charge selected</span>}
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                            <div>
-                                <Label className="text-xs font-semibold text-slate-700">Qty</Label>
-                                <Input type="number" min={1} value={qty} onChange={(e) => setQty(parseInt(e.target.value || '0', 10))} className="h-9 mt-1" />
-                            </div>
-                            <div>
-                                <Label className="text-xs font-semibold text-slate-700">Rate</Label>
-                                <Input type="number" min={0} step="0.01" value={rate} onChange={(e) => setRate(parseFloat(e.target.value || '0'))} className="h-9 mt-1" />
-                            </div>
-                            <div>
-                                <Label className="text-xs font-semibold text-slate-700">Disc %</Label>
-                                <Input type="number" min={0} max={100} step="0.01" value={discountPercent} onChange={(e) => setDiscountPercent(parseFloat(e.target.value || '0'))} className="h-9 mt-1" />
-                            </div>
-                        </div>
-                        <div className="rounded-lg border border-slate-200 p-3 bg-slate-50 space-y-1.5">
-                            <div className="flex justify-between text-xs"><span className="text-slate-500">Gross</span><span className="font-mono font-semibold">₹{gross.toFixed(2)}</span></div>
-                            <div className="flex justify-between text-xs"><span className="text-slate-500">Discount</span><span className="font-mono font-semibold text-rose-600">- ₹{discountAmount.toFixed(2)}</span></div>
-                            <div className="flex justify-between text-sm pt-1.5 border-t border-slate-200"><span className="font-bold text-slate-800">Net</span><span className="font-mono font-bold text-emerald-700">₹{net.toFixed(2)}</span></div>
-                        </div>
-                    </div>
-                </div>
-
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>Cancel</Button>
-                    <Button onClick={submit} disabled={submitting || !selectedMaster} className="bg-indigo-600 hover:bg-indigo-700">
-                        {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Adding…</> : <><Plus className="h-4 w-4 mr-2" />Add Charge</>}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
-};
-
-// ─── Add payment dialog ─────────────────────────────────────────────────────
-
-const AddPaymentDialog: React.FC<{
-    open: boolean;
-    onOpenChange: (v: boolean) => void;
-    patientId: string;
-    encounterId: string;
-    suggestedAmount: number;
-    onSaved: () => void;
-}> = ({ open, onOpenChange, patientId, encounterId, suggestedAmount, onSaved }) => {
-    const { toast } = useToast();
-    const [paymentType, setPaymentType] = useState<PaymentType>('PAYMENT');
-    const [paymentMode, setPaymentMode] = useState<PaymentMode>('CASH');
-    const [amount, setAmount] = useState(0);
-    const [description, setDescription] = useState('');
-    const [transactionId, setTransactionId] = useState('');
-    const [submitting, setSubmitting] = useState(false);
-
-    useEffect(() => {
-        if (open) {
-            setPaymentType('PAYMENT');
-            setPaymentMode('CASH');
-            setAmount(Math.max(0, suggestedAmount));
-            setDescription('');
-            setTransactionId('');
-        }
-    }, [open, suggestedAmount]);
-
-    const submit = async () => {
-        if (submitting) return;
-        if (amount <= 0) { toast({ title: 'Amount must be > 0', variant: 'destructive' }); return; }
-        setSubmitting(true);
-        try {
-            const req: AddPaymentRequest = {
-                patientId,
-                encounterId,
-                payment: {
-                    paymentType,
-                    paymentMode,
-                    amount,
-                    description: description.trim() || undefined,
-                    transactionId: transactionId.trim() || undefined,
-                },
-            };
-            const res = await ipdBillingService.addPayment(req);
-            if (!res?.success) throw new Error(res?.message ?? 'Could not record payment');
-            toast({ title: 'Payment recorded', description: `${paymentMode} · ₹${amount.toLocaleString('en-IN')}` });
-            onSaved();
-            onOpenChange(false);
-        } catch (e: any) {
-            toast({ title: 'Could not record payment', description: e?.message ?? '', variant: 'destructive' });
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-md">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5 text-emerald-600" /> Record Payment</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <Label className="text-xs font-semibold text-slate-700">Type</Label>
-                            <Select value={paymentType} onValueChange={(v) => setPaymentType(v as PaymentType)}>
-                                <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="PAYMENT">Payment</SelectItem>
-                                    <SelectItem value="ADVANCE">Advance / Deposit</SelectItem>
-                                    <SelectItem value="REFUND">Refund</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div>
-                            <Label className="text-xs font-semibold text-slate-700">Mode</Label>
-                            <Select value={paymentMode} onValueChange={(v) => setPaymentMode(v as PaymentMode)}>
-                                <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    {PAYMENT_MODES.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                    <div>
-                        <Label className="text-xs font-semibold text-slate-700">Amount</Label>
-                        <Input type="number" min={0} step="0.01" value={amount} onChange={(e) => setAmount(parseFloat(e.target.value || '0'))} className="h-9 mt-1 font-mono text-lg font-semibold" />
-                    </div>
-                    {paymentMode !== 'CASH' && (
-                        <div>
-                            <Label className="text-xs font-semibold text-slate-700">Transaction / Ref #</Label>
-                            <Input value={transactionId} onChange={(e) => setTransactionId(e.target.value)} className="h-9 mt-1 font-mono" />
-                        </div>
-                    )}
-                    <div>
-                        <Label className="text-xs font-semibold text-slate-700">Notes</Label>
-                        <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="text-sm mt-1" placeholder="Optional" />
-                    </div>
-                </div>
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>Cancel</Button>
-                    <Button onClick={submit} disabled={submitting} className="bg-emerald-600 hover:bg-emerald-700">
-                        {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Recording…</> : <><CreditCard className="h-4 w-4 mr-2" />Record</>}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
-};
 
 // ─── Main BillingPage ───────────────────────────────────────────────────────
 
@@ -538,15 +235,15 @@ export const BillingPage: React.FC = () => {
 
     // ─── Render ─────
     return (
-        <div className="flex flex-col h-[calc(100vh-4rem)] bg-slate-50 px-2 sm:px-4 pb-4 pt-1 gap-4 text-sm text-slate-800">
+        <div className="flex flex-col h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-50 to-slate-100/60 px-2 sm:px-4 pb-4 pt-1 gap-4 text-sm text-slate-800">
             {/* Top bar */}
-            <div className="flex items-center justify-between gap-4 bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-sm">
+            <div className="flex items-center justify-between gap-4 bg-white/80 backdrop-blur-xl p-3 sm:p-4 rounded-2xl border border-white/40 ring-1 ring-black/5 shadow-lg shadow-indigo-500/5">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/billing')}>
+                    <Button variant="ghost" size="icon" className="rounded-xl hover:bg-slate-100" onClick={() => navigate('/billing')}>
                         <ArrowLeft className="h-5 w-5 text-slate-500" />
                     </Button>
-                    <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-200">
-                        <IndianRupee className="h-5 w-5 text-indigo-600" />
+                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md shadow-indigo-500/30">
+                        <IndianRupee className="h-5 w-5 text-white" />
                     </div>
                     <div className="min-w-0">
                         <h1 className="text-base sm:text-lg font-bold tracking-wide text-slate-900 uppercase">Billing Ledger</h1>
@@ -593,7 +290,7 @@ export const BillingPage: React.FC = () => {
             <div className="grid grid-cols-12 gap-4 flex-1 overflow-hidden">
 
                 {/* Left: patient search */}
-                <Card className="col-span-12 md:col-span-3 lg:col-span-2 border-slate-200 bg-white flex flex-col overflow-hidden">
+                <Card className="col-span-12 md:col-span-3 lg:col-span-2 border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-indigo-500/5 bg-white flex flex-col overflow-hidden">
                     <CardHeader className="pb-2 border-b border-slate-200 bg-slate-50">
                         <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-wider">Patient</CardTitle>
                     </CardHeader>
@@ -638,7 +335,7 @@ export const BillingPage: React.FC = () => {
                 </Card>
 
                 {/* Middle: encounters + ledger */}
-                <Card className="col-span-12 md:col-span-9 lg:col-span-7 border-slate-200 bg-white flex flex-col overflow-hidden">
+                <Card className="col-span-12 md:col-span-9 lg:col-span-7 border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-indigo-500/5 bg-white flex flex-col overflow-hidden">
                     <CardHeader className="pb-2 border-b border-slate-200 bg-slate-50 flex flex-row items-center justify-between gap-2">
                         <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-wider">Visits</CardTitle>
                         <div className="flex items-center gap-2">
@@ -670,17 +367,17 @@ export const BillingPage: React.FC = () => {
                                             type="button"
                                             onClick={() => setSelectedEncounterId(enc.encounterId)}
                                             className={cn(
-                                                'shrink-0 px-3 py-1.5 rounded-md border text-xs text-left transition-all min-w-[160px]',
-                                                active ? 'border-indigo-500 bg-indigo-50 text-indigo-900' : 'border-slate-200 bg-white hover:border-slate-300',
+                                                'shrink-0 px-3 py-2 rounded-xl border text-xs text-left transition-all min-w-[160px]',
+                                                active ? 'border-transparent bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30' : 'border-slate-200 bg-white hover:border-indigo-300 hover:-translate-y-0.5 hover:shadow-sm',
                                                 enc.isCancelled && 'opacity-60'
                                             )}
                                         >
                                             <div className="flex items-center gap-1.5">
                                                 <span className="font-mono font-bold text-[10px]">{enc.invoiceNo ?? enc.encounterId.slice(0, 8)}</span>
-                                                <Badge variant="outline" className="text-[9px] h-4 px-1">{enc.status}</Badge>
+                                                <Badge variant="outline" className={cn('text-[9px] h-4 px-1', active && 'bg-white/20 text-white border-white/30')}>{enc.status}</Badge>
                                                 {enc.isCancelled && <Badge variant="outline" className="text-[9px] h-4 px-1 bg-rose-50 text-rose-700 border-rose-200">VOID</Badge>}
                                             </div>
-                                            <p className="text-[10px] text-slate-500 mt-0.5">
+                                            <p className={cn('text-[10px] mt-0.5', active ? 'text-indigo-100' : 'text-slate-500')}>
                                                 {format(parseISO(enc.invoiceDate), 'dd MMM yyyy')}
                                                 {enc.doctorName ? ` · ${enc.doctorName}` : ''}
                                             </p>
@@ -707,20 +404,20 @@ export const BillingPage: React.FC = () => {
                         ) : (
                             <>
                                 <table className="w-full text-xs">
-                                    <thead className="bg-slate-50 sticky top-0">
+                                    <thead className="bg-slate-50/80 backdrop-blur sticky top-0 z-10">
                                         <tr className="border-b border-slate-200">
-                                            <th className="text-left px-3 py-2 font-semibold text-slate-600 uppercase tracking-wider">Date</th>
-                                            <th className="text-left px-3 py-2 font-semibold text-slate-600 uppercase tracking-wider">Particular</th>
-                                            <th className="text-left px-3 py-2 font-semibold text-slate-600 uppercase tracking-wider">Category</th>
-                                            <th className="text-right px-3 py-2 font-semibold text-slate-600 uppercase tracking-wider">Qty × Rate</th>
-                                            <th className="text-right px-3 py-2 font-semibold text-slate-600 uppercase tracking-wider">Debit</th>
-                                            <th className="text-right px-3 py-2 font-semibold text-slate-600 uppercase tracking-wider">Credit</th>
+                                            <th className="text-left px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Date</th>
+                                            <th className="text-left px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Particular</th>
+                                            <th className="text-left px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Category</th>
+                                            <th className="text-right px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Qty × Rate</th>
+                                            <th className="text-right px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Debit</th>
+                                            <th className="text-right px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Credit</th>
                                             <th className="w-px" />
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {(eventsData?.charges ?? []).map((c: BillingChargeRow) => (
-                                            <tr key={c.chargeEventId} className="border-b border-slate-100 hover:bg-slate-50">
+                                            <tr key={c.chargeEventId} className="border-b border-slate-100 border-l-2 border-l-transparent hover:border-l-indigo-300 hover:bg-slate-50 transition-colors">
                                                 <td className="px-3 py-2 whitespace-nowrap text-slate-600">{format(parseISO(c.createdDateTime), 'dd MMM HH:mm')}</td>
                                                 <td className="px-3 py-2"><div className="font-semibold text-slate-800 truncate max-w-[260px]">{c.displayName ?? '—'}</div></td>
                                                 <td className="px-3 py-2 text-[10px] font-mono uppercase text-slate-500">{c.categoryCode ?? '—'}</td>
@@ -737,7 +434,7 @@ export const BillingPage: React.FC = () => {
                                             </tr>
                                         ))}
                                         {(eventsData?.payments ?? []).map((p: BillingPaymentRow) => (
-                                            <tr key={p.paymentId} className="border-b border-slate-100 hover:bg-slate-50 bg-emerald-50/20">
+                                            <tr key={p.paymentId} className="border-b border-slate-100 border-l-2 border-l-emerald-300 hover:bg-emerald-50/40 bg-emerald-50/20 transition-colors">
                                                 <td className="px-3 py-2 whitespace-nowrap text-slate-600">{format(parseISO(p.createdDateTime), 'dd MMM HH:mm')}</td>
                                                 <td className="px-3 py-2">
                                                     <div className="font-semibold text-emerald-700">{p.paymentType ?? 'PAYMENT'} · {p.paymentMode ?? '—'}</div>
@@ -771,18 +468,19 @@ export const BillingPage: React.FC = () => {
                 </Card>
 
                 {/* Right: actions */}
-                <Card className="col-span-12 lg:col-span-3 border-slate-200 bg-white flex flex-col overflow-hidden">
+                <Card className="col-span-12 lg:col-span-3 border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-indigo-500/5 bg-white flex flex-col overflow-hidden">
                     <CardHeader className="pb-2 border-b border-slate-200 bg-slate-50">
                         <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-wider">Actions</CardTitle>
                     </CardHeader>
                     <CardContent className="p-4 flex-1 overflow-auto space-y-3">
                         {/* Totals summary */}
-                        <div className="rounded-lg border border-slate-200 p-3 bg-slate-50">
-                            <div className="flex justify-between text-xs"><span className="text-slate-500">Gross Charged</span><span className="font-mono font-semibold">₹{totals.debit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
-                            <div className="flex justify-between text-xs mt-1"><span className="text-slate-500">Received</span><span className="font-mono font-semibold text-emerald-700">₹{totals.credit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
-                            <div className="flex justify-between text-sm pt-2 mt-2 border-t border-slate-200">
-                                <span className="font-bold">Balance</span>
-                                <span className={cn('font-mono font-bold', totals.balance > 0 ? 'text-rose-700' : totals.balance < 0 ? 'text-emerald-700' : 'text-slate-700')}>
+                        <div className="relative overflow-hidden rounded-2xl border border-indigo-100 p-4 bg-gradient-to-br from-indigo-50 to-violet-50 ring-1 ring-black/5">
+                            <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full bg-white/40 blur-2xl pointer-events-none" />
+                            <div className="relative flex justify-between text-xs"><span className="text-slate-500">Gross Charged</span><span className="font-mono font-semibold tabular-nums">₹{totals.debit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                            <div className="relative flex justify-between text-xs mt-1.5"><span className="text-slate-500">Received</span><span className="font-mono font-semibold text-emerald-700 tabular-nums">₹{totals.credit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                            <div className="relative flex justify-between items-baseline text-sm pt-2.5 mt-2.5 border-t border-indigo-200/60">
+                                <span className="font-bold text-slate-700">Balance</span>
+                                <span className={cn('font-mono font-black text-lg tabular-nums', totals.balance > 0 ? 'text-rose-700' : totals.balance < 0 ? 'text-emerald-700' : 'text-slate-700')}>
                                     ₹{Math.abs(totals.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })} {totals.balance < 0 ? 'CR' : totals.balance > 0 ? 'DR' : ''}
                                 </span>
                             </div>
@@ -795,17 +493,17 @@ export const BillingPage: React.FC = () => {
 
                         {/* Action buttons */}
                         <div className="grid grid-cols-1 gap-2">
-                            <Button onClick={() => setShowAddCharge(true)} disabled={!selectedEncounterId || isFinalized} className="bg-indigo-600 hover:bg-indigo-700 h-10">
+                            <Button onClick={() => setShowAddCharge(true)} disabled={!selectedEncounterId || isFinalized} className="h-10 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 shadow-md shadow-indigo-500/20 transition-all active:scale-[0.98]">
                                 <Plus className="h-4 w-4 mr-1" /> Add Charge
                             </Button>
-                            <Button onClick={() => setShowAddPayment(true)} disabled={!selectedEncounterId || isFinalized} className="bg-emerald-600 hover:bg-emerald-700 h-10">
+                            <Button onClick={() => setShowAddPayment(true)} disabled={!selectedEncounterId || isFinalized} className="h-10 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-md shadow-emerald-500/20 transition-all active:scale-[0.98]">
                                 <CreditCard className="h-4 w-4 mr-1" /> Record Payment
                             </Button>
-                            <Button onClick={handlePrint} variant="outline" disabled={!selectedEncounterId} className="h-10">
+                            <Button onClick={handlePrint} variant="outline" disabled={!selectedEncounterId} className="h-10 rounded-xl">
                                 <Printer className="h-4 w-4 mr-1" /> Print Bill
                             </Button>
                             {selectedEncounterId && (
-                                <Button onClick={() => navigate(`/billing/encounter/${selectedEncounterId}`)} variant="outline" className="h-10">
+                                <Button onClick={() => navigate(`/billing/encounter/${selectedEncounterId}`)} variant="outline" className="h-10 rounded-xl">
                                     <FileText className="h-4 w-4 mr-1" /> Open Encounter View
                                 </Button>
                             )}
@@ -846,7 +544,10 @@ export const BillingPage: React.FC = () => {
             <Dialog open={showNewVisit} onOpenChange={setShowNewVisit}>
                 <DialogContent className="max-w-sm">
                     <DialogHeader>
-                        <DialogTitle>New Visit</DialogTitle>
+                        <DialogTitle className="flex items-center gap-2.5">
+                            <span className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/30"><Plus className="h-4 w-4" /></span>
+                            New Visit
+                        </DialogTitle>
                         <DialogDescription>Start a new billing encounter for {selectedPatient?.name}.</DialogDescription>
                     </DialogHeader>
                     <div>

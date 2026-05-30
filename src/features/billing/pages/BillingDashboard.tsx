@@ -1,47 +1,84 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { IndianRupee, TrendingUp, TrendingDown, Gift } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 import { RevenueTab } from '../components/tabs/RevenueTab';
 import { ExpenseTab } from '../components/tabs/ExpenseTab';
 import { IncentiveTab } from '../components/tabs/IncentiveTab';
+
+// Card-style nav matching the Admin / Appointment board: icon chip + label + description,
+// blue→indigo gradient when active.
+const TABS = [
+    { id: 'revenue', label: 'Revenue', description: 'Bills & collections', icon: TrendingUp },
+    { id: 'expense', label: 'Expense', description: 'Operational spend', icon: TrendingDown },
+    { id: 'incentive', label: 'Incentive', description: 'Referral payouts', icon: Gift },
+] as const;
+
+const TAB_TRIGGER = cn(
+    'group flex-1 min-w-[110px] sm:min-w-[150px] h-auto flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 whitespace-normal',
+    'rounded-xl px-2.5 py-1.5 border border-transparent transition-all duration-300',
+    'text-gray-600 hover:bg-white hover:text-gray-900 hover:-translate-y-0.5',
+    'data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600',
+    'data-[state=active]:text-white data-[state=active]:border-transparent data-[state=active]:shadow-xl data-[state=active]:shadow-blue-500/30',
+);
+
+const fadeIn = {
+    initial: { opacity: 0, y: 10 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.3, ease: 'easeOut' as const },
+};
 
 export const BillingDashboard: React.FC = () => {
     const [tab, setTab] = useState('revenue');
 
     return (
-        <div className="flex flex-col h-[calc(100vh-4rem)] bg-slate-50 px-4 sm:px-6 pt-2 pb-4 gap-4 overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-200">
-                    <IndianRupee className="h-5 w-5 text-indigo-600" />
-                </div>
-                <div>
-                    <h1 className="text-xl font-bold text-slate-900 tracking-tight">Billing</h1>
-                    <p className="text-xs text-slate-500">Revenue, expenses and referral incentives.</p>
-                </div>
-            </div>
-
+        <div className="flex flex-col h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-50 to-slate-100/60 px-4 sm:px-6 pt-2 pb-4 gap-4 overflow-hidden">
             <Tabs value={tab} onValueChange={setTab} className="flex flex-col flex-1 min-h-0">
-                <TabsList className="bg-white border border-slate-200 shadow-sm w-fit">
-                    <TabsTrigger value="revenue" className="gap-1.5 data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">
-                        <TrendingUp className="h-4 w-4" /> Revenue
-                    </TabsTrigger>
-                    <TabsTrigger value="expense" className="gap-1.5 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
-                        <TrendingDown className="h-4 w-4" /> Expense
-                    </TabsTrigger>
-                    <TabsTrigger value="incentive" className="gap-1.5 data-[state=active]:bg-fuchsia-50 data-[state=active]:text-fuchsia-700">
-                        <Gift className="h-4 w-4" /> Incentive
-                    </TabsTrigger>
-                </TabsList>
+                {/* Header + tab navigation in one row (matches the Admin / Appointment board) */}
+                <div className="flex flex-col xl:flex-row items-center justify-between gap-3 rounded-2xl border border-white/40 bg-white/80 backdrop-blur-xl px-3 py-3 sm:px-4 shadow-lg shadow-indigo-500/5 ring-1 ring-black/5">
+                    <div className="flex items-center gap-3 w-full xl:w-auto shrink-0">
+                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-indigo-500/30">
+                            <IndianRupee className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0">
+                            <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 leading-tight">Billing</h1>
+                            <p className="text-xs text-slate-500 truncate">Revenue, expenses and referral incentives.</p>
+                        </div>
+                    </div>
+
+                    <TabsList className="h-auto w-full xl:w-auto xl:flex-1 xl:max-w-2xl flex flex-nowrap overflow-x-auto justify-start xl:justify-end gap-2 rounded-2xl border border-slate-200 bg-white/70 p-1 shadow-inner ring-1 ring-black/5">
+                        {TABS.map((t) => (
+                            <TabsTrigger key={t.id} value={t.id} className={TAB_TRIGGER} title={t.description}>
+                                <div className="flex items-center justify-center sm:justify-start gap-1.5 font-semibold w-full">
+                                    <span className="p-1 rounded-lg bg-gray-100 group-data-[state=active]:bg-white/20">
+                                        <t.icon className="h-3.5 w-3.5 shrink-0 text-blue-500 group-data-[state=active]:text-white" />
+                                    </span>
+                                    <span className="hidden sm:inline text-[12px] line-clamp-1">{t.label}</span>
+                                </div>
+                                <span className="sm:hidden text-[10px] font-medium w-full text-center line-clamp-1 leading-tight">{t.label}</span>
+                                <p className="hidden sm:block text-[10px] leading-snug w-full line-clamp-2 opacity-90 mt-0.5 text-gray-500 group-data-[state=active]:text-white/90">
+                                    {t.description}
+                                </p>
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
+                </div>
 
                 <TabsContent value="revenue" className="flex-1 min-h-0 mt-3 data-[state=inactive]:hidden">
-                    <RevenueTab />
+                    <motion.div key="revenue" {...fadeIn} className="h-full">
+                        <RevenueTab />
+                    </motion.div>
                 </TabsContent>
                 <TabsContent value="expense" className="flex-1 min-h-0 mt-3 data-[state=inactive]:hidden">
-                    <ExpenseTab />
+                    <motion.div key="expense" {...fadeIn} className="h-full">
+                        <ExpenseTab />
+                    </motion.div>
                 </TabsContent>
                 <TabsContent value="incentive" className="flex-1 min-h-0 mt-3 data-[state=inactive]:hidden">
-                    <IncentiveTab />
+                    <motion.div key="incentive" {...fadeIn} className="h-full">
+                        <IncentiveTab />
+                    </motion.div>
                 </TabsContent>
             </Tabs>
         </div>

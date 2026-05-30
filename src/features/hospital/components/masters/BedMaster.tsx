@@ -66,6 +66,21 @@ const STATUS_COLORS = {
     BLOCKED: 'bg-slate-100 text-slate-800 dark:bg-slate-500/20 dark:text-slate-300 border-slate-200 dark:border-slate-800'
 };
 
+// Default Ward Code / Name / Room Code / Bed Code suggested for each Ward Type when adding a bed.
+const WARD_TYPE_DEFAULTS: Record<string, { code: string; name: string; room: string; bed: string }> = {
+    GENERAL:      { code: 'W-GEN',  name: 'General Ward',      room: 'R-GEN',  bed: 'GEN-01' },
+    SEMI_PRIVATE: { code: 'W-SEMI', name: 'Semi-Private Ward', room: 'R-SEMI', bed: 'SEMI-01' },
+    PRIVATE:      { code: 'W-PVT',  name: 'Private Room',      room: 'R-PVT',  bed: 'PVT-01' },
+    DELUXE:       { code: 'W-DLX',  name: 'Deluxe Room',       room: 'R-DLX',  bed: 'DLX-01' },
+    ICU:          { code: 'W-ICU',  name: 'ICU',               room: 'R-ICU',  bed: 'ICU-01' },
+    NICU:         { code: 'W-NICU', name: 'NICU',              room: 'R-NICU', bed: 'NICU-01' },
+    PICU:         { code: 'W-PICU', name: 'PICU',              room: 'R-PICU', bed: 'PICU-01' },
+    HDU:          { code: 'W-HDU',  name: 'HDU',               room: 'R-HDU',  bed: 'HDU-01' },
+    ISOLATION:    { code: 'W-ISO',  name: 'Isolation Ward',    room: 'R-ISO',  bed: 'ISO-01' },
+    RECOVERY:     { code: 'W-REC',  name: 'Recovery Room',     room: 'R-REC',  bed: 'REC-01' },
+    OTHER:        { code: 'W-OTH',  name: 'Other',             room: 'R-OTH',  bed: 'OTH-01' },
+};
+
 export const BedMaster = () => {
     // --- State ---
     const [beds, setBeds] = useState<BedRecord[]>([]);
@@ -150,9 +165,10 @@ export const BedMaster = () => {
         if (record) {
             setEditingRecord({ ...record });
         } else {
+            const def = WARD_TYPE_DEFAULTS.GENERAL;
             setEditingRecord({
-                wardCode: '', wardName: '', wardType: 'GENERAL', statusCode: 'AVAILABLE',
-                bedCode: '', wardRoomDailyRate: 0, isActive: true, genderRestriction: 'NONE'
+                wardCode: def.code, wardName: def.name, wardType: 'GENERAL', statusCode: 'AVAILABLE',
+                roomCode: def.room, bedCode: def.bed, wardRoomDailyRate: 0, isActive: true, genderRestriction: 'NONE'
             });
         }
         setIsDrawerOpen(true);
@@ -548,7 +564,20 @@ export const BedMaster = () => {
                                         </div>
                                         <div className="grid gap-2">
                                             <Label>Ward Type</Label>
-                                            <Select value={editingRecord?.wardType} onValueChange={v => setEditingRecord(p => ({ ...p!, wardType: v as any }))}>
+                                            <Select value={editingRecord?.wardType} onValueChange={v => setEditingRecord(p => {
+                                                if (!p) return p;
+                                                const next = { ...p, wardType: v as any };
+                                                const oldDef = WARD_TYPE_DEFAULTS[p.wardType as string];
+                                                const newDef = WARD_TYPE_DEFAULTS[v];
+                                                // Auto-fill Code/Name/Room/Bed from the chosen type, but keep any value the user typed.
+                                                if (newDef) {
+                                                    if (!p.wardName || (oldDef && p.wardName === oldDef.name)) next.wardName = newDef.name;
+                                                    if (!p.wardCode || (oldDef && p.wardCode === oldDef.code)) next.wardCode = newDef.code;
+                                                    if (!p.roomCode || (oldDef && p.roomCode === oldDef.room)) next.roomCode = newDef.room;
+                                                    if (!p.bedCode || (oldDef && p.bedCode === oldDef.bed)) next.bedCode = newDef.bed;
+                                                }
+                                                return next;
+                                            })}>
                                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="GENERAL">General</SelectItem>

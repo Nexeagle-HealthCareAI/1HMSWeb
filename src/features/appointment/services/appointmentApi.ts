@@ -275,6 +275,12 @@ export interface AppointmentDetail {
   departments?: string[];
   departmentId?: string;
   departmentName?: string;
+  // OPD consult billing status (set by the appointment-details API).
+  encounterId?: string | null;
+  consultCharged?: boolean;
+  consultPaid?: boolean;
+  consultAmount?: number;
+  consultReceiptNo?: string | null;
 }
 
 export interface ConsultTimelineVisit {
@@ -286,6 +292,7 @@ export interface ConsultTimelineVisit {
   consultPaid: boolean;
   amount: number;
   receiptNo: string | null;
+  encounterId?: string | null;
 }
 
 export interface ConsultNextVisit {

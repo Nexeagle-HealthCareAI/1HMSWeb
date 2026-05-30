@@ -94,6 +94,8 @@ export interface CreateEncounterResponse {
         consultFee?: number;             // the fee amount (0 when none)
         consultAlreadyCharged?: boolean; // an existing consult charge was found (idempotent reuse)
         consultChargeEventId?: string | null;
+        consultPaid?: boolean;           // the existing consult charge is already fully paid
+        receiptNo?: string | null;       // latest receipt for the consult, when paid
     };
 }
 

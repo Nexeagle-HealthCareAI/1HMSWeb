@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Shield, Search, Loader2, X } from 'lucide-react';
+import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Search, Loader2, X, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RegisterAppointmentRequest, generatePatientId, appointmentApi, type ConsultTimelineResponse } from '../services/appointmentApi';
 import { useAppointmentBooking } from '../hooks/useAppointmentBooking';
@@ -832,53 +832,14 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 </Card>
 
 
-                {/* Insurance & Payment Combined */}
+                {/* Consultation & Payment — shown when there is consult history or a fee to collect */}
+                {(timeline || showConsult) && (
                 <Card className="p-4 md:p-6 shadow-sm">
                   <h3 className="font-bold text-base md:text-lg text-foreground mb-3 md:mb-4 flex items-center gap-2">
-                    <Shield className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
-                    {t('patientForm.insurance.title')}
+                    <CreditCard className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
+                    {t('patientForm.payment.title', { defaultValue: 'Consultation & Payment' })}
                   </h3>
                   <div className="space-y-3 md:space-y-5">
-                    {/* Insurance Section */}
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-3">
-                        <Checkbox
-                          id="hasInsurance"
-                          checked={formData.hasInsurance}
-                          onCheckedChange={(checked) => setFormData(prev => ({
-                            ...prev,
-                            hasInsurance: !!checked,
-                            insuranceId: !!checked ? prev.insuranceId : '',
-                            insuranceType: !!checked ? prev.insuranceType : ''
-                          }))}
-                          className="h-4 w-4 md:h-5 md:w-5"
-                        />
-                        <Label htmlFor="hasInsurance" className="text-sm md:text-base font-medium">
-                          {t('patientForm.insurance.hasInsurance')}
-                        </Label>
-                      </div>
-
-                      {formData.hasInsurance && (
-                        <div className="grid grid-cols-2 gap-3">
-                          <Select value={formData.insuranceType} onValueChange={(value) => setFormData(prev => ({ ...prev, insuranceType: value }))}>
-                            <SelectTrigger className="h-10 text-sm md:text-base">
-                              <SelectValue placeholder={t('patientForm.insurance.typePlaceholder')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="insurance">{t('patientForm.insurance.types.insurance')}</SelectItem>
-                              <SelectItem value="abha">{t('patientForm.insurance.types.abha')}</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Input
-                            value={formData.insuranceId}
-                            onChange={(e) => setFormData(prev => ({ ...prev, insuranceId: e.target.value }))}
-                            placeholder={formData.insuranceType === 'abha' ? t('patientForm.insurance.types.abha') : t('patientForm.insurance.types.insurance')}
-                            className="h-10 text-sm md:text-base"
-                          />
-                        </div>
-                      )}
-                    </div>
-
                     {/* Consultation timeline (existing patient) */}
                     {timeline && (
                       <div className="border-t pt-3 md:pt-4">
@@ -889,7 +850,11 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs md:text-sm">
                             <span className="text-muted-foreground">{t('patientForm.timeline.lastPaid', { defaultValue: 'Last paid' })}</span>
                             <span className="text-right font-medium">
-                              {timeline.lastPaidDate ? fmtTimelineDate(timeline.lastPaidDate) : t('patientForm.timeline.never', { defaultValue: 'Never' })}
+                              {timeline.lastPaidDate ? (
+                                <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-300 font-semibold">
+                                  <CheckCircle2 className="h-3.5 w-3.5" /> {fmtTimelineDate(timeline.lastPaidDate)}
+                                </span>
+                              ) : t('patientForm.timeline.never', { defaultValue: 'Never' })}
                             </span>
                             <span className="text-muted-foreground">{t('patientForm.timeline.freeSince', { defaultValue: 'Free follow-ups since' })}</span>
                             <span className="text-right font-medium">{timeline.freeFollowUpCount}</span>
@@ -925,19 +890,19 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                           </span>
                         </div>
                       )}
-                      <div className="flex items-center space-x-3">
-                        <Checkbox
-                          id="isPaid"
-                          checked={formData.isPaid}
-                          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPaid: !!checked, paymentMode: !!checked ? prev.paymentMode : '' }))}
-                          className="h-4 w-4 md:h-5 md:w-5"
-                        />
-                        <Label htmlFor="isPaid" className="text-sm md:text-base font-medium">
-                          {showConsult
-                            ? t('patientForm.payment.markConsultPaid', { defaultValue: 'Mark consultation fee as paid' })
-                            : t('patientForm.payment.completed')}
-                        </Label>
-                      </div>
+                      {showConsult && (
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            id="isPaid"
+                            checked={formData.isPaid}
+                            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPaid: !!checked, paymentMode: !!checked ? prev.paymentMode : '' }))}
+                            className="h-4 w-4 md:h-5 md:w-5"
+                          />
+                          <Label htmlFor="isPaid" className="text-sm md:text-base font-medium">
+                            {t('patientForm.payment.markConsultPaid', { defaultValue: 'Mark consultation fee as paid' })}
+                          </Label>
+                        </div>
+                      )}
 
                       {formData.isPaid && (
                         <Select value={formData.paymentMode} onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMode: value }))}>
@@ -957,6 +922,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     </div>
                   </div>
                 </Card>
+                )}
               </div>
 
             </form>

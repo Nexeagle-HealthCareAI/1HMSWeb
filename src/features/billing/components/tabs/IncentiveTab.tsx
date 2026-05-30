@@ -1,136 +1,100 @@
-import React, { useMemo, useState } from 'react';
-import { Gift, Users, Wallet, Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React, { useState } from 'react';
+import { Gift, Users, Wallet, Phone, Percent } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { toast } from '@/hooks/use-toast';
+import { useAuthStore } from '@/store';
+import { useReferrers } from '@/features/appointment/hooks/useReferrers';
+import type { Referrer } from '@/features/appointment/services/referrerApi';
+import { KpiStat } from '../KpiStat';
+import { LoadingState, EmptyState, ErrorState } from '../StatePanel';
 
-// NOTE: Mock data — incentive accrual backend not built yet. Wire to ReferralIncentive API later.
-type Referrer = { id: string; name: string; type: string; phone?: string; accrued: number; paid: number };
-type Accrual = { id: string; referrerId: string; module: 'OPD' | 'IPD' | 'LAB' | 'RAD'; patient: string; eligible: number; incentive: number; status: 'ACCRUED' | 'PAID'; at: string };
-
-const MODULE_TONE: Record<string, string> = {
-    OPD: 'bg-sky-50 text-sky-700 border-sky-200',
-    IPD: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    LAB: 'bg-violet-50 text-violet-700 border-violet-200',
-    RAD: 'bg-teal-50 text-teal-700 border-teal-200',
-};
-
-const MOCK_REFERRERS: Referrer[] = [
-    { id: 'r1', name: 'Dr. Anand (External GP)', type: 'REFERRER', phone: '9810011111', accrued: 1300, paid: 4200 },
-    { id: 'r2', name: 'CarePlus Diagnostics', type: 'AGENT', phone: '9810022222', accrued: 2640, paid: 1500 },
-    { id: 'r3', name: 'Sunrise Polyclinic', type: 'REFERRER', phone: '9810033333', accrued: 0, paid: 900 },
-];
-
-const MOCK_ACCRUALS: Accrual[] = [
-    { id: 'a1', referrerId: 'r1', module: 'IPD', patient: 'Ramesh Kumar', eligible: 13000, incentive: 1300, status: 'ACCRUED', at: '2026-05-27T10:30:00' },
-    { id: 'a2', referrerId: 'r2', module: 'LAB', patient: 'Sita Devi', eligible: 12000, incentive: 1440, status: 'ACCRUED', at: '2026-05-26T16:10:00' },
-    { id: 'a3', referrerId: 'r2', module: 'RAD', patient: 'Imran Khan', eligible: 10000, incentive: 1200, status: 'ACCRUED', at: '2026-05-25T12:05:00' },
-    { id: 'a4', referrerId: 'r1', module: 'OPD', patient: 'Geeta Sharma', eligible: 4200, incentive: 420, status: 'PAID', at: '2026-05-20T09:00:00' },
-];
-
-const inr = (n: number) => `₹ ${n.toLocaleString('en-IN')}`;
-
-const KpiCard: React.FC<{ label: string; value: string; icon: React.ReactNode; tone: string }> = ({ label, value, icon, tone }) => (
-    <Card className={cn('border p-4 flex items-center gap-3', tone)}>
-        <div className="h-10 w-10 rounded-xl bg-white/60 flex items-center justify-center shrink-0">{icon}</div>
-        <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">{label}</p>
-            <p className="text-xl font-black truncate">{value}</p>
-        </div>
-    </Card>
-);
-
+// Real referrer master comes from the referrals API. Incentive ACCRUAL (per-visit incentive
+// amounts, payouts) has no backend yet, so those figures are shown as "—" / empty rather than
+// fabricated. Wire the accrual ledger here once the ReferralIncentive API exists.
 export const IncentiveTab: React.FC = () => {
-    const [selectedId, setSelectedId] = useState<string>(MOCK_REFERRERS[0].id);
+    const { hospitalId } = useAuthStore();
+    const { data, isLoading, isError, refetch } = useReferrers(hospitalId || '');
+    // Only list referrers that actually have an incentive configured (a non-zero rate/amount).
+    const referrers: Referrer[] = (data?.referrers ?? []).filter(r => (r.defaultRatePercent ?? 0) > 0);
 
-    const kpis = useMemo(() => {
-        const accrued = MOCK_REFERRERS.reduce((t, r) => t + r.accrued, 0);
-        const paid = MOCK_REFERRERS.reduce((t, r) => t + r.paid, 0);
-        return { accrued, paid, count: MOCK_REFERRERS.length };
-    }, []);
-
-    const selected = MOCK_REFERRERS.find(r => r.id === selectedId)!;
-    const selectedAccruals = MOCK_ACCRUALS.filter(a => a.referrerId === selectedId)
-        .sort((a, b) => b.at.localeCompare(a.at));
-
-    const mockAction = () => toast({ title: 'Mock UI', description: 'Incentive accrual & payout backend is not built yet.' });
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const selected = referrers.find(r => r.referrerId === selectedId) ?? referrers[0] ?? null;
 
     return (
         <div className="flex flex-col gap-4 h-full">
-            <div className="rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-[11px] px-3 py-1.5">
-                Preview — incentive accrual has no backend yet. Internal ledger only; never shown on patient/GST invoices. TDS u/s 194H applies at payout.
+            <div className="rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[11px] px-3 py-2">
+                Incentive accrual & payout engine is not yet available. The referrer master below is live; per-visit accruals and payouts will appear here once the backend is built. (Internal ledger only — never shown on patient/GST invoices; TDS u/s 194H applies at payout.)
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <KpiCard label="Payable (Accrued)" value={inr(kpis.accrued)} icon={<Wallet className="h-5 w-5 text-amber-600" />} tone="border-amber-100 bg-amber-50 text-amber-900" />
-                <KpiCard label="Paid to Date" value={inr(kpis.paid)} icon={<Gift className="h-5 w-5 text-emerald-600" />} tone="border-emerald-100 bg-emerald-50 text-emerald-900" />
-                <KpiCard label="Referrers" value={String(kpis.count)} icon={<Users className="h-5 w-5 text-fuchsia-600" />} tone="border-fuchsia-100 bg-fuchsia-50 text-fuchsia-900" />
+                <KpiStat label="Payable (Accrued)" value="—" icon={<Wallet className="h-5 w-5 text-amber-600" />} tone="from-amber-50 to-yellow-100/50 text-amber-900" hint="Accrual engine pending" />
+                <KpiStat label="Paid to Date" value="—" icon={<Gift className="h-5 w-5 text-emerald-600" />} tone="from-emerald-50 to-teal-100/50 text-emerald-900" hint="Payout engine pending" />
+                <KpiStat label="Referrers" value={isLoading ? '…' : String(referrers.length)} icon={<Users className="h-5 w-5 text-fuchsia-600" />} tone="from-fuchsia-50 to-purple-100/50 text-fuchsia-900" />
             </div>
 
             <div className="grid grid-cols-12 gap-3 flex-1 min-h-0">
-                {/* Referrer list */}
-                <Card className="col-span-12 md:col-span-4 border-slate-200 bg-white overflow-hidden flex flex-col">
-                    <div className="px-3 py-2 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> Referrers</span>
-                        <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px] text-fuchsia-700" onClick={mockAction}><Plus className="h-3 w-3 mr-1" /> Add</Button>
+                {/* Referrer master (real data) */}
+                <Card className="col-span-12 md:col-span-4 border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-fuchsia-500/5 bg-white overflow-hidden flex flex-col">
+                    <div className="px-3 py-2.5 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> Referrers</span>
                     </div>
-                    <div className="divide-y divide-slate-100 overflow-auto">
-                        {MOCK_REFERRERS.map(r => (
-                            <button key={r.id} onClick={() => setSelectedId(r.id)} className={cn('w-full text-left px-3 py-2.5 hover:bg-fuchsia-50/40', selectedId === r.id && 'bg-fuchsia-50 border-l-2 border-l-fuchsia-500')}>
-                                <p className="font-semibold text-slate-900 text-sm truncate">{r.name}</p>
-                                <div className="flex items-center justify-between mt-0.5">
-                                    <span className="text-[10px] text-slate-500">{r.type}</span>
-                                    {r.accrued > 0 && <span className="text-[10px] font-bold text-amber-700">{inr(r.accrued)} due</span>}
-                                </div>
-                            </button>
-                        ))}
+                    <div className="flex-1 overflow-auto">
+                        {isLoading ? (
+                            <LoadingState rows={5} />
+                        ) : isError ? (
+                            <ErrorState message="Could not load referrers" onRetry={() => refetch()} />
+                        ) : referrers.length === 0 ? (
+                            <EmptyState icon={<Users className="h-6 w-6" />} title="No referrers with an incentive" hint="Only referrers configured with an incentive rate appear here." />
+                        ) : (
+                            <div className="divide-y divide-slate-100">
+                                {referrers.map(r => {
+                                    const active = (selected?.referrerId ?? '') === r.referrerId;
+                                    return (
+                                        <button
+                                            key={r.referrerId}
+                                            onClick={() => setSelectedId(r.referrerId)}
+                                            className={cn('w-full text-left px-3 py-2.5 transition-colors hover:bg-fuchsia-50/40', active && 'bg-fuchsia-50 border-l-2 border-l-fuchsia-500')}
+                                        >
+                                            <p className="font-semibold text-slate-900 text-sm truncate">{r.referrerName}</p>
+                                            <div className="flex items-center justify-between mt-0.5">
+                                                <span className="text-[10px] uppercase tracking-wide text-slate-500">{r.referrerType}</span>
+                                                <span className="text-[10px] font-semibold text-fuchsia-700 tabular-nums">{r.defaultRatePercent}%</span>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 </Card>
 
-                {/* Accrual ledger */}
-                <Card className="col-span-12 md:col-span-8 border-slate-200 bg-white overflow-hidden flex flex-col">
-                    <div className="px-4 py-2.5 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-2">
-                        <div>
-                            <p className="font-bold text-slate-900">{selected.name}</p>
-                            <p className="text-[11px] text-slate-500">{selected.type}{selected.phone ? ` · ${selected.phone}` : ''}</p>
+                {/* Selected referrer + accrual ledger (empty until backend exists) */}
+                <Card className="col-span-12 md:col-span-8 border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-fuchsia-500/5 bg-white overflow-hidden flex flex-col">
+                    {selected ? (
+                        <>
+                            <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/60">
+                                <p className="font-bold text-slate-900">{selected.referrerName}</p>
+                                <div className="flex items-center flex-wrap gap-x-3 gap-y-0.5 mt-1 text-[11px] text-slate-500">
+                                    <Badge variant="outline" className="text-[10px] font-bold rounded-full bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200">{selected.referrerType}</Badge>
+                                    {selected.phone && <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" /> {selected.phone}</span>}
+                                    <span className="inline-flex items-center gap-1"><Percent className="h-3 w-3" /> {selected.defaultRatePercent}% default</span>
+                                    {selected.pan && <span className="font-mono">PAN: {selected.pan}</span>}
+                                </div>
+                            </div>
+                            <div className="flex-1 overflow-auto">
+                                <EmptyState
+                                    icon={<Gift className="h-6 w-6" />}
+                                    title="No incentive accruals"
+                                    hint="Per-visit accruals and payouts for this referrer will appear here once the incentive engine is enabled."
+                                />
+                            </div>
+                        </>
+                    ) : (
+                        <div className="flex-1 overflow-auto">
+                            <EmptyState icon={<Gift className="h-6 w-6" />} title="Select a referrer" hint="Pick a referrer on the left to view their incentive ledger." />
                         </div>
-                        <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700" disabled={selected.accrued <= 0} onClick={mockAction}>
-                            <Wallet className="h-3.5 w-3.5 mr-1" /> Pay {inr(selected.accrued)}
-                        </Button>
-                    </div>
-                    <div className="flex-1 overflow-auto">
-                        <Table>
-                            <TableHeader className="bg-slate-50 sticky top-0">
-                                <TableRow>
-                                    <TableHead className="text-[10px] uppercase tracking-wider text-slate-500">Accrued</TableHead>
-                                    <TableHead className="text-[10px] uppercase tracking-wider text-slate-500">Source</TableHead>
-                                    <TableHead className="text-[10px] uppercase tracking-wider text-slate-500">Patient</TableHead>
-                                    <TableHead className="text-right text-[10px] uppercase tracking-wider text-slate-500">Eligible</TableHead>
-                                    <TableHead className="text-right text-[10px] uppercase tracking-wider text-slate-500">Incentive</TableHead>
-                                    <TableHead className="text-[10px] uppercase tracking-wider text-slate-500">Status</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {selectedAccruals.map(a => (
-                                    <TableRow key={a.id} className="border-b border-slate-100">
-                                        <TableCell className="text-xs whitespace-nowrap">{format(new Date(a.at), 'd MMM HH:mm')}</TableCell>
-                                        <TableCell><Badge variant="outline" className={cn('text-[10px] font-bold', MODULE_TONE[a.module])}>{a.module}</Badge></TableCell>
-                                        <TableCell className="text-xs">{a.patient}</TableCell>
-                                        <TableCell className="text-right font-mono text-xs">{inr(a.eligible)}</TableCell>
-                                        <TableCell className="text-right font-mono font-bold text-slate-800">{inr(a.incentive)}</TableCell>
-                                        <TableCell><Badge variant="outline" className={cn('text-[10px] font-bold', a.status === 'PAID' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200')}>{a.status}</Badge></TableCell>
-                                    </TableRow>
-                                ))}
-                                {selectedAccruals.length === 0 && (
-                                    <TableRow><TableCell colSpan={6} className="text-center h-28 text-slate-400 text-xs">No incentives accrued for this referrer.</TableCell></TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
+                    )}
                 </Card>
             </div>
         </div>

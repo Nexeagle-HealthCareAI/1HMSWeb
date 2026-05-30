@@ -42,6 +42,7 @@ export const getOpdConsultContext = async (
 export interface PostOpdConsultResult {
     posted: boolean;          // a consult charge was posted on this call
     alreadyCharged: boolean;  // a consult charge already existed (idempotent reuse)
+    alreadyPaid: boolean;     // the consult was already fully paid before this call (no payment made)
     consultFee: number;
     encounterId?: string;
     paymentRecorded: boolean;
@@ -70,15 +71,19 @@ export const postOpdConsult = async (
     const d = enc?.data;
     const posted = !!d?.consultChargePosted;
     const alreadyCharged = !!d?.consultAlreadyCharged;
+    const alreadyPaid = !!d?.consultPaid;
     const consultFee = Number(d?.consultFee ?? 0);
     const encounterId = d?.encounterId;
 
     const result: PostOpdConsultResult = {
-        posted, alreadyCharged, consultFee, encounterId, paymentRecorded: false, invoiceNo: null, receiptNo: null,
+        posted, alreadyCharged, alreadyPaid, consultFee, encounterId, paymentRecorded: false,
+        invoiceNo: null, receiptNo: d?.receiptNo ?? null,
     };
 
+    // Guard against double payment: if the backend reports the consult is already fully paid,
+    // never record another payment — surface the existing receipt instead.
     const hasCharge = (posted || alreadyCharged) && consultFee > 0 && !!encounterId;
-    if (!opts.markPaid || !hasCharge) return result;
+    if (!opts.markPaid || !hasCharge || alreadyPaid) return result;
 
     // 1) Generate the invoice (draft) for the encounter's posted charge(s).
     const inv = await ipdBillingService.createDraftInvoice({ patientId, encounterId: encounterId!, hospitalId: opts.hospitalId });

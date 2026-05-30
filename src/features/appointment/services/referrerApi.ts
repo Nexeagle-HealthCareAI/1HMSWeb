@@ -10,6 +10,7 @@ export interface Referrer {
   pan?: string | null;
   defaultRatePercent: number;
   isActive: boolean;
+  referredPatientCount?: number;   // distinct patients referred by this referrer
 }
 
 export interface GetReferrersResponse {
@@ -31,6 +32,24 @@ export interface CreateReferrerResponse {
   message?: string;
 }
 
+export interface UpdateReferrerRequest {
+  referrerId: string;
+  referrerName: string;
+  referrerType?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  pan?: string;
+  defaultRatePercent: number;
+  isActive?: boolean;
+}
+
+export interface UpdateReferrerResponse {
+  success: boolean;
+  referrerId: string;
+  message?: string;
+}
+
 export const referrerApi = {
   // List referrers for a hospital (active by default)
   getReferrers: (hospitalId: string, search?: string, activeOnly = true): Promise<GetReferrersResponse> => {
@@ -42,5 +61,10 @@ export const referrerApi = {
   // Create a new referrer
   createReferrer: (hospitalId: string, request: CreateReferrerRequest): Promise<CreateReferrerResponse> => {
     return apiClient.post(`/referrers?hospitalId=${hospitalId}`, request);
+  },
+
+  // Update an existing referrer
+  updateReferrer: (hospitalId: string, request: UpdateReferrerRequest): Promise<UpdateReferrerResponse> => {
+    return apiClient.put(`/referrers?hospitalId=${hospitalId}`, request);
   },
 };

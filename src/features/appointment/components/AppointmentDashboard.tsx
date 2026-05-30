@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import {
   Calendar,
   Plus,
@@ -32,6 +33,9 @@ import {
   HelpCircle,
   WifiOff,
   IndianRupee,
+  Download,
+  CheckCircle2,
+  ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -63,12 +67,20 @@ import { PrescriptionPreviewModal, type GeneratePrescriptionDetailsRequest } fro
 import AttachmentsSection from '@/features/patient/components/AttachmentsSection';
 import { PatientProfileModal } from '@/features/patient/components/PatientProfileModal';
 import { getOpdConsultContext, postOpdConsult } from '@/features/billing/services/consultCharge';
+import { doctorFeeService } from '@/features/hospital/services/doctorFeeService';
+import { ipdBillingService } from '@/features/billing/services/ipdBillingService';
+import { openPrintHtml, downloadHtmlAsPdf } from '@/utils/printUtils';
+import { getOpdDocHtml, buildPrintSettingsFromHospital, type OpdDocKind } from '@/features/billing/utils/opdDocuments';
+import { useHospitalApi } from '@/hooks/useApi';
 
 export const AppointmentDashboard = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { hospitalId } = useAuthStore();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  // Hospital profile drives the print header (name/address/GSTIN) for OPD documents.
+  const { data: hospitalData } = useHospitalApi.getHospitalById(hospitalId ?? '');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDoctor, setSelectedDoctor] = useState('all');
   const [activeTab, setActiveTab] = useState<'current' | 'past' | 'future'>('current');
@@ -96,10 +108,16 @@ export const AppointmentDashboard = () => {
   const [billPaymentMode, setBillPaymentMode] = useState<string>('cash');
   const [billBusy, setBillBusy] = useState(false);
   // Current consult status for the selected appointment (so we can show Paid/Unpaid and avoid double-pay).
-  const [billStatus, setBillStatus] = useState<{ consultCharged: boolean; consultPaid: boolean; amount: number; receiptNo: string | null } | null>(null);
+  const [billStatus, setBillStatus] = useState<{ consultCharged: boolean; consultPaid: boolean; amount: number; receiptNo: string | null; encounterId: string | null } | null>(null);
   // Full consult timeline for the selected appointment — drives the next-visit fee preview
   // (free follow-up window, last paid date, whether this visit is chargeable).
   const [billTimeline, setBillTimeline] = useState<ConsultTimelineResponse | null>(null);
+  // Success popup shown after a consult fee is collected, with the invoice/receipt to retrieve.
+  const [paidSuccess, setPaidSuccess] = useState<{ amount: number; invoiceNo: string | null; receiptNo: string | null; encounterId: string | null; patient: AppointmentDetail } | null>(null);
+  // Busy guard while a document (invoice/receipt) is being generated.
+  const [docBusy, setDocBusy] = useState(false);
+  // Per-doctor OPD consult fee, shown in the Case column. Loaded once per hospital.
+  const [doctorFeeMap, setDoctorFeeMap] = useState<Record<string, number>>({});
   const [labAttachmentModal, setLabAttachmentModal] = useState<{ open: boolean; patientId?: string; patientName?: string; appointmentId?: string }>({ open: false });
   const [labAttachments, setLabAttachments] = useState<Record<string, string[]>>({});
   const [showPatientProfileModal, setShowPatientProfileModal] = useState(false);
@@ -252,8 +270,8 @@ export const AppointmentDashboard = () => {
         setBillTimeline(tl);
         const entry = tl.history?.find(h => h.appointmentId === appointment.appointmentId);
         setBillStatus(entry
-          ? { consultCharged: entry.consultCharged, consultPaid: entry.consultPaid, amount: entry.amount, receiptNo: entry.receiptNo }
-          : { consultCharged: false, consultPaid: false, amount: 0, receiptNo: null });
+          ? { consultCharged: entry.consultCharged, consultPaid: entry.consultPaid, amount: entry.amount, receiptNo: entry.receiptNo, encounterId: entry.encounterId ?? null }
+          : { consultCharged: false, consultPaid: false, amount: 0, receiptNo: null, encounterId: null });
       })
       .catch(() => { setBillStatus(null); setBillTimeline(null); });
   };
@@ -270,11 +288,59 @@ export const AppointmentDashboard = () => {
     return t('patientForm.timeline.daysLeft', { count: days, defaultValue: '{{count}} days left' });
   };
 
+  // Load per-doctor OPD consult fees once so the Case column can show the amount.
+  useEffect(() => {
+    if (!hospitalId) return;
+    doctorFeeService.list(hospitalId)
+      .then(r => {
+        const map: Record<string, number> = {};
+        (r.items ?? []).forEach(f => { map[String(f.doctorId)] = Number(f.opdConsultFee ?? 0); });
+        setDoctorFeeMap(map);
+      })
+      .catch(() => { /* non-fatal — column just omits the amount */ });
+  }, [hospitalId]);
+
+  // OPD consult fee that applies to an appointment (0 for a no-fee follow-up).
+  const opdFeeFor = (appt: AppointmentDetail): number => {
+    const type = (appt.appointmentType ?? '').toLowerCase();
+    if (type.includes('no-fee') || type.includes('no fee')) return 0;
+    return doctorFeeMap[String(appt.doctorId)] ?? 0;
+  };
+
+  // Human label for the visit's case type (New / fee follow-up / free follow-up).
+  const caseTypeLabel = (type?: string | null): string => {
+    const v = (type ?? '').toLowerCase();
+    if (v === 'new') return t('patientForm.timeline.typeNew', { defaultValue: 'New' });
+    if (v.includes('no-fee') || v.includes('no fee')) return t('patientForm.timeline.noFee', { defaultValue: 'Follow-up — No fee' });
+    if (v.includes('old') || v.includes('follow')) return t('patientForm.timeline.typeOldFee', { defaultValue: 'Follow-up (fee due)' });
+    return type ?? '—';
+  };
+
   const handleAddBillClick = (appointment: AppointmentDetail) => {
+    // Already-paid OPD consult → go straight to the premium payment-success popup (req 6),
+    // seeded from the row's billing status (no extra fetch needed to display it).
+    if (appointment.consultPaid) {
+      setPaidSuccess({
+        amount: appointment.consultAmount ?? 0,
+        invoiceNo: null,
+        receiptNo: appointment.consultReceiptNo ?? null,
+        encounterId: appointment.encounterId ?? null,
+        patient: appointment,
+      });
+      return;
+    }
+
     setAppointmentForBilling(appointment);
     setBillConsultCtx({ autoConsult: false, fee: 0 });
     setBillPaymentMode('cash');
-    setBillStatus(null);
+    // Seed status from the row so it shows instantly; the timeline fetch refines it + adds history.
+    setBillStatus({
+      consultCharged: !!appointment.consultCharged,
+      consultPaid: !!appointment.consultPaid,
+      amount: appointment.consultAmount ?? 0,
+      receiptNo: appointment.consultReceiptNo ?? null,
+      encounterId: appointment.encounterId ?? null,
+    });
     setBillTimeline(null);
     setShowAddBillModal(true);
     if (appointment.doctorId) {
@@ -314,12 +380,88 @@ export const AppointmentDashboard = () => {
       } else {
         toast({ title: t('appointmentDashboard.addBill.toast.nothingTitle'), description: t('appointmentDashboard.addBill.toast.nothingDesc') });
       }
+      // On a fresh collection — or when the backend reports it was already paid — surface the
+      // premium success popup with the invoice/receipt (never recording a second payment).
+      const appt = appointmentForBilling;
+      if (markPaid && (r.paymentRecorded || r.alreadyPaid) && appt) {
+        setPaidSuccess({
+          amount: r.consultFee,
+          invoiceNo: r.invoiceNo ?? null,
+          receiptNo: r.receiptNo ?? null,
+          encounterId: r.encounterId ?? null,
+          patient: appt,
+        });
+      }
       handleAddBillModalChange(false);
     } catch (e: any) {
       toast({ title: t('appointmentDashboard.addBill.toast.failTitle'), description: e?.message ?? '', variant: 'destructive' });
     } finally {
       setBillBusy(false);
     }
+  };
+
+  // Fetch the encounter's billing events and render the requested OPD document (invoice /
+  // receipt / bill-cum-receipt), either to a print window or as a downloaded PDF.
+  const openOpdDoc = async (kind: OpdDocKind, mode: 'print' | 'download', appt: AppointmentDetail | null, encounterId: string | null) => {
+    if (!appt?.patientId || !encounterId || docBusy) return;
+    setDocBusy(true);
+    try {
+      const events = await ipdBillingService.getEncounterEvents(encounterId, appt.patientId, hospitalId ?? undefined);
+      if (!events?.success || !events.data) throw new Error(events?.message ?? t('appointmentDashboard.addBill.docFailDesc', { defaultValue: 'Could not load the bill.' }));
+      const settings = buildPrintSettingsFromHospital(hospitalData);
+      const ctx = {
+        patientName: appt.patientFullName,
+        patientId: appt.patientId,
+        ageGender: [appt.patientAgeYears, appt.patientSex].filter(Boolean).join(' / '),
+        mobile: appt.patientMobile,
+        doctorName: appt.doctorName ?? undefined,
+        department: appt.departmentName,
+      };
+      const html = getOpdDocHtml(kind, events.data, settings, ctx);
+      if (mode === 'print') openPrintHtml(html);
+      else await downloadHtmlAsPdf(html, `${kind}-${appt.patientId}.pdf`);
+    } catch (e: any) {
+      toast({ title: t('appointmentDashboard.addBill.docFailTitle', { defaultValue: 'Could not generate document' }), description: e?.message ?? '', variant: 'destructive' });
+    } finally {
+      setDocBusy(false);
+    }
+  };
+
+  // Opens the full billing ledger for this patient/visit so staff can add charges and bill.
+  // Uses the visit's encounter when known, otherwise the ledger resolves the patient by id.
+  const goToBilling = (appt: AppointmentDetail | null) => {
+    if (!appt?.patientId) return;
+    const enc = billStatus?.encounterId;
+    const base = enc ? `/billing/${enc}` : '/billing/ledger';
+    handleAddBillModalChange(false);
+    navigate(`${base}?patientId=${encodeURIComponent(appt.patientId)}`);
+  };
+
+  // Invoice / Receipt / Bill-cum-Receipt buttons, each with Print + PDF download.
+  // Receipt and bill-cum-receipt need a recorded payment, so they are gated by `allowReceipt`.
+  const renderDocButtons = (appt: AppointmentDetail | null, encounterId: string | null, allowReceipt: boolean) => {
+    const docs: { kind: OpdDocKind; label: string; show: boolean }[] = [
+      { kind: 'invoice', label: t('appointmentDashboard.addBill.docInvoice', { defaultValue: 'Invoice' }), show: true },
+      { kind: 'receipt', label: t('appointmentDashboard.addBill.docReceipt', { defaultValue: 'Receipt' }), show: allowReceipt },
+      { kind: 'billcum', label: t('appointmentDashboard.addBill.docBillCum', { defaultValue: 'Bill + Receipt' }), show: allowReceipt },
+    ];
+    return (
+      <div className="space-y-2">
+        {docs.filter(d => d.show).map(d => (
+          <div key={d.kind} className="flex items-center justify-between gap-2 text-xs">
+            <span className="font-medium text-gray-600 dark:text-gray-300">{d.label}</span>
+            <div className="flex gap-1.5">
+              <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={docBusy || !encounterId} onClick={() => openOpdDoc(d.kind, 'print', appt, encounterId)}>
+                <Printer className="h-3 w-3 mr-1" /> {t('appointmentDashboard.addBill.print', { defaultValue: 'Print' })}
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={docBusy || !encounterId} onClick={() => openOpdDoc(d.kind, 'download', appt, encounterId)}>
+                <Download className="h-3 w-3 mr-1" /> {t('appointmentDashboard.addBill.download', { defaultValue: 'PDF' })}
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   const handleBookingClick = () => {
@@ -1460,9 +1602,16 @@ export const AppointmentDashboard = () => {
 
                             {/* Case */}
                             <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                              <Badge className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50 text-[10px] px-2 py-0.5 font-bold shadow-sm">
-                                {appointment.appointmentType || 'New / Fee'}
-                              </Badge>
+                              <div className="flex flex-col items-start gap-0.5">
+                                <Badge className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50 text-[10px] px-2 py-0.5 font-bold shadow-sm">
+                                  {appointment.appointmentType || 'New / Fee'}
+                                </Badge>
+                                {opdFeeFor(appointment) > 0 && (
+                                  <span className="text-[10px] font-mono font-semibold text-emerald-700 dark:text-emerald-300">
+                                    ₹{opdFeeFor(appointment).toLocaleString('en-IN')}
+                                  </span>
+                                )}
+                              </div>
                             </TableCell>
 
 
@@ -1512,14 +1661,20 @@ export const AppointmentDashboard = () => {
                                     variant="outline"
                                     size="sm"
                                     disabled={appointment.finalStatusCode === 'CANCELLED'}
+                                    title={appointment.consultPaid ? t('appointmentDashboard.addBill.statusPaid') : undefined}
                                     className={`h-7 px-2.5 text-xs font-bold transition-all duration-300 ${appointment.finalStatusCode === 'CANCELLED'
                                       ? 'text-slate-400 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-50 bg-slate-50 dark:bg-slate-900/20'
-                                      : 'text-amber-600 border-amber-200 dark:border-amber-800/50 hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 dark:hover:from-amber-900/20 dark:hover:to-orange-900/20 shadow-sm hover:shadow-md hover:scale-105 hover:border-amber-300 dark:hover:border-amber-700'
+                                      : appointment.consultPaid
+                                        ? 'text-emerald-700 border-emerald-200 dark:border-emerald-800/50 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 shadow-sm hover:shadow-md'
+                                        : 'text-amber-600 border-amber-200 dark:border-amber-800/50 hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 dark:hover:from-amber-900/20 dark:hover:to-orange-900/20 shadow-sm hover:shadow-md hover:scale-105 hover:border-amber-300 dark:hover:border-amber-700'
                                       }`}
                                     onClick={() => handleAddBillClick(appointment)}
                                   >
-                                    <IndianRupee className="h-3 w-3 mr-1.5 opacity-80" />
-                                    {t('appointmentDashboard.actionButtons.addBill', { defaultValue: 'Bill' })}
+                                    {appointment.consultPaid ? (
+                                      <><CheckCircle2 className="h-3 w-3 mr-1.5" /> {t('appointmentDashboard.addBill.statusPaid')}</>
+                                    ) : (
+                                      <><IndianRupee className="h-3 w-3 mr-1.5 opacity-80" /> {t('appointmentDashboard.actionButtons.addBill', { defaultValue: 'Bill' })}</>
+                                    )}
                                   </Button>
                                 </div>
                               </TableCell>
@@ -1661,10 +1816,15 @@ export const AppointmentDashboard = () => {
                             variant="outline"
                             size="sm"
                             disabled={appointment.finalStatusCode === 'CANCELLED'}
+                            title={appointment.consultPaid ? t('appointmentDashboard.addBill.statusPaid') : undefined}
                             onClick={() => handleAddBillClick(appointment)}
-                            className={`h-9 text-xs font-bold rounded-xl transition-all shadow-sm ${appointment.finalStatusCode === 'CANCELLED' ? 'opacity-50 cursor-not-allowed bg-slate-50 text-slate-400 border-slate-200' : 'border-amber-200 text-amber-700 bg-white hover:bg-amber-50 hover:border-amber-300'}`}
+                            className={`h-9 text-xs font-bold rounded-xl transition-all shadow-sm ${appointment.finalStatusCode === 'CANCELLED' ? 'opacity-50 cursor-not-allowed bg-slate-50 text-slate-400 border-slate-200' : appointment.consultPaid ? 'border-emerald-200 text-emerald-700 bg-gradient-to-r from-emerald-50 to-teal-50 hover:border-emerald-300' : 'border-amber-200 text-amber-700 bg-white hover:bg-amber-50 hover:border-amber-300'}`}
                           >
-                            <IndianRupee className="h-3.5 w-3.5 mr-1.5 opacity-80" /> Bill
+                            {appointment.consultPaid ? (
+                              <><CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> {t('appointmentDashboard.addBill.statusPaid')}</>
+                            ) : (
+                              <><IndianRupee className="h-3.5 w-3.5 mr-1.5 opacity-80" /> Bill</>
+                            )}
                           </Button>
 
                           <Button variant="outline" size="sm" onClick={() => handlePrintPrescription(appointment)} className="h-9 text-xs font-bold rounded-xl border-emerald-200 text-emerald-700 bg-white hover:bg-emerald-50 hover:border-emerald-300 transition-all shadow-sm">
@@ -1840,6 +2000,30 @@ export const AppointmentDashboard = () => {
               <div className="flex-1 overflow-y-auto p-4 sm:p-6">
                 {appointmentForBilling && (
                   <div className="space-y-4 text-sm text-gray-700 dark:text-gray-200">
+                    {/* Premium Paid banner — shown whenever this visit's consult is already paid */}
+                    {billStatus?.consultPaid && (
+                      <div className="relative overflow-hidden rounded-2xl border border-emerald-200/70 dark:border-emerald-800/50 bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-50 dark:from-emerald-950/40 dark:via-teal-950/30 dark:to-emerald-950/40 p-4 shadow-sm">
+                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-400/10 rounded-full blur-2xl pointer-events-none" />
+                        <div className="relative flex items-center gap-3">
+                          <div className="h-11 w-11 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-600/30 shrink-0">
+                            <CheckCircle2 className="h-6 w-6" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xs font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-300">{t('appointmentDashboard.addBill.statusPaid')}</div>
+                            <div className="text-2xl font-black text-emerald-800 dark:text-emerald-200 leading-tight">₹{billStatus.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-[11px] text-emerald-700/80 dark:text-emerald-300/80">
+                              {billStatus.receiptNo && <span className="font-mono">{t('appointmentDashboard.addBill.docReceipt')}: {billStatus.receiptNo}</span>}
+                              {billTimeline?.lastPaidDate && <span>{fmtBillTimelineDate(billTimeline.lastPaidDate)}</span>}
+                            </div>
+                          </div>
+                        </div>
+                        {billStatus.encounterId && (
+                          <div className="relative mt-3 pt-3 border-t border-emerald-200/60 dark:border-emerald-800/40">
+                            {renderDocButtons(appointmentForBilling, billStatus.encounterId, true)}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3 shadow-sm">
                       <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700/50">
                         <span className="font-medium text-gray-500">{t('appointmentDashboard.dialog.patient', { defaultValue: 'Patient' })}</span>
@@ -1892,6 +2076,31 @@ export const AppointmentDashboard = () => {
                               : t('patientForm.timeline.noFee', { defaultValue: 'Follow-up — No fee' })}
                           </span>
                         </div>
+
+                        {/* Per-visit payment timeline: date · case type · amount · status · receipt */}
+                        {(billTimeline.history?.length ?? 0) > 0 && (
+                          <div className="pt-2 mt-1 border-t border-blue-100 dark:border-blue-900/40 space-y-1.5">
+                            <div className="text-xs font-semibold text-blue-800 dark:text-blue-300">{t('appointmentDashboard.addBill.paymentTimeline', { defaultValue: 'Payment timeline' })}</div>
+                            {[...billTimeline.history].sort((a, b) => b.apptDate.localeCompare(a.apptDate)).map((v) => (
+                              <div key={v.appointmentId} className="flex items-center justify-between gap-2 text-[11px] sm:text-xs">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="text-muted-foreground whitespace-nowrap">{fmtBillTimelineDate(v.apptDate)}</span>
+                                  <span className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">{caseTypeLabel(v.appointmentType)}</span>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {v.amount > 0 && <span className="font-mono text-gray-700 dark:text-gray-300">₹{v.amount.toLocaleString('en-IN')}</span>}
+                                  {v.consultPaid ? (
+                                    <span className="text-emerald-700 dark:text-emerald-300 font-semibold">{t('appointmentDashboard.addBill.statusPaid')}{v.receiptNo ? ` · ${v.receiptNo}` : ''}</span>
+                                  ) : v.consultCharged ? (
+                                    <span className="text-amber-700 dark:text-amber-300 font-semibold">{t('appointmentDashboard.addBill.statusUnpaid')}</span>
+                                  ) : (
+                                    <span className="text-gray-400">{t('appointmentDashboard.addBill.statusNotCharged')}</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -1929,6 +2138,17 @@ export const AppointmentDashboard = () => {
                         )}
                       </div>
                     )}
+
+                    {/* Documents — for a charged-but-unpaid visit (invoice only). When paid,
+                        the premium Paid banner above already carries the document buttons. */}
+                    {billStatus?.consultCharged && !billStatus.consultPaid && billStatus.encounterId && (
+                      <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                          <FileText className="h-4 w-4" /> {t('appointmentDashboard.addBill.documents', { defaultValue: 'Documents' })}
+                        </div>
+                        {renderDocButtons(appointmentForBilling, billStatus.encounterId, false)}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1951,8 +2171,9 @@ export const AppointmentDashboard = () => {
                     </>
                   )
                 ) : (
-                  <Button onClick={() => handleAddBillModalChange(false)} className="bg-indigo-600 text-white hover:bg-indigo-700">
-                    {t('common.continue', { defaultValue: 'Proceed' })}
+                  <Button onClick={() => goToBilling(appointmentForBilling)} className="bg-indigo-600 text-white hover:bg-indigo-700">
+                    {t('appointmentDashboard.addBill.goToBilling', { defaultValue: 'Go to Billing' })}
+                    <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 )}
               </div>
@@ -1960,6 +2181,37 @@ export const AppointmentDashboard = () => {
           </>
         )}
       </AnimatePresence>
+
+      {/* Consult fee collected — success popup with invoice/receipt retrieval */}
+      <Dialog open={!!paidSuccess} onOpenChange={(open) => { if (!open) setPaidSuccess(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+              <CheckCircle2 className="h-5 w-5" /> {t('appointmentDashboard.addBill.successTitle', { defaultValue: 'Payment collected' })}
+            </DialogTitle>
+            <DialogDescription>
+              {t('appointmentDashboard.addBill.successDesc', { defaultValue: 'The consultation fee has been recorded.' })}
+            </DialogDescription>
+          </DialogHeader>
+          {paidSuccess && (
+            <div className="space-y-3">
+              <div className="rounded-lg border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/60 dark:bg-emerald-900/10 p-3 text-sm space-y-1">
+                <div className="flex justify-between"><span className="text-gray-500">{t('appointmentDashboard.addBill.consultTitle')}</span><span className="font-mono font-bold text-emerald-700 dark:text-emerald-300">₹{paidSuccess.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                {paidSuccess.invoiceNo && <div className="flex justify-between"><span className="text-gray-500">{t('appointmentDashboard.addBill.docInvoice', { defaultValue: 'Invoice' })}</span><span className="font-mono">{paidSuccess.invoiceNo}</span></div>}
+                {paidSuccess.receiptNo && <div className="flex justify-between"><span className="text-gray-500">{t('appointmentDashboard.addBill.docReceipt', { defaultValue: 'Receipt' })}</span><span className="font-mono">{paidSuccess.receiptNo}</span></div>}
+              </div>
+              <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                {renderDocButtons(paidSuccess.patient, paidSuccess.encounterId, true)}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setPaidSuccess(null)} className="bg-indigo-600 text-white hover:bg-indigo-700">
+              {t('common.done', { defaultValue: 'Done' })}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Cancel Confirmation Side Panel */}
       <AnimatePresence>
