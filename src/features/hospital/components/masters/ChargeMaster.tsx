@@ -411,7 +411,7 @@ export const ChargeMaster = () => {
                     <>
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-40"
+                            className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-[55]"
                             onClick={() => setIsDrawerOpen(false)}
                         />
                         <motion.div
@@ -419,7 +419,7 @@ export const ChargeMaster = () => {
                             animate={{ x: 0, boxShadow: '-10px 0 30px rgba(0,0,0,0.1)' }}
                             exit={{ x: '100%', boxShadow: '-10px 0 30px rgba(0,0,0,0)' }}
                             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="absolute top-0 right-0 bottom-0 w-full md:w-[500px] bg-white dark:bg-slate-950 border-l border-gray-200 dark:border-gray-800 shadow-2xl z-50 flex flex-col"
+                            className="fixed inset-y-0 right-0 w-full md:w-[500px] bg-white dark:bg-slate-950 border-l border-gray-200 dark:border-gray-800 shadow-2xl z-[60] flex flex-col"
                         >
                             {/* Drawer Header */}
                             <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">

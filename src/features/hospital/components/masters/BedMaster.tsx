@@ -66,19 +66,20 @@ const STATUS_COLORS = {
     BLOCKED: 'bg-slate-100 text-slate-800 dark:bg-slate-500/20 dark:text-slate-300 border-slate-200 dark:border-slate-800'
 };
 
-// Default Ward Code / Name / Room Code / Bed Code suggested for each Ward Type when adding a bed.
-const WARD_TYPE_DEFAULTS: Record<string, { code: string; name: string; room: string; bed: string }> = {
-    GENERAL:      { code: 'W-GEN',  name: 'General Ward',      room: 'R-GEN',  bed: 'GEN-01' },
-    SEMI_PRIVATE: { code: 'W-SEMI', name: 'Semi-Private Ward', room: 'R-SEMI', bed: 'SEMI-01' },
-    PRIVATE:      { code: 'W-PVT',  name: 'Private Room',      room: 'R-PVT',  bed: 'PVT-01' },
-    DELUXE:       { code: 'W-DLX',  name: 'Deluxe Room',       room: 'R-DLX',  bed: 'DLX-01' },
-    ICU:          { code: 'W-ICU',  name: 'ICU',               room: 'R-ICU',  bed: 'ICU-01' },
-    NICU:         { code: 'W-NICU', name: 'NICU',              room: 'R-NICU', bed: 'NICU-01' },
-    PICU:         { code: 'W-PICU', name: 'PICU',              room: 'R-PICU', bed: 'PICU-01' },
-    HDU:          { code: 'W-HDU',  name: 'HDU',               room: 'R-HDU',  bed: 'HDU-01' },
-    ISOLATION:    { code: 'W-ISO',  name: 'Isolation Ward',    room: 'R-ISO',  bed: 'ISO-01' },
-    RECOVERY:     { code: 'W-REC',  name: 'Recovery Room',     room: 'R-REC',  bed: 'REC-01' },
-    OTHER:        { code: 'W-OTH',  name: 'Other',             room: 'R-OTH',  bed: 'OTH-01' },
+// Default Ward Code / Name / Room Code + Bed Code prefix suggested for each Ward Type when adding
+// a bed. The bed code number is auto-incremented per prefix from the existing beds (e.g. ICU-03).
+const WARD_TYPE_DEFAULTS: Record<string, { code: string; name: string; room: string; bedPrefix: string }> = {
+    GENERAL:      { code: 'W-GEN',  name: 'General Ward',      room: 'R-GEN',  bedPrefix: 'GEN' },
+    SEMI_PRIVATE: { code: 'W-SEMI', name: 'Semi-Private Ward', room: 'R-SEMI', bedPrefix: 'SEMI' },
+    PRIVATE:      { code: 'W-PVT',  name: 'Private Room',      room: 'R-PVT',  bedPrefix: 'PVT' },
+    DELUXE:       { code: 'W-DLX',  name: 'Deluxe Room',       room: 'R-DLX',  bedPrefix: 'DLX' },
+    ICU:          { code: 'W-ICU',  name: 'ICU',               room: 'R-ICU',  bedPrefix: 'ICU' },
+    NICU:         { code: 'W-NICU', name: 'NICU',              room: 'R-NICU', bedPrefix: 'NICU' },
+    PICU:         { code: 'W-PICU', name: 'PICU',              room: 'R-PICU', bedPrefix: 'PICU' },
+    HDU:          { code: 'W-HDU',  name: 'HDU',               room: 'R-HDU',  bedPrefix: 'HDU' },
+    ISOLATION:    { code: 'W-ISO',  name: 'Isolation Ward',    room: 'R-ISO',  bedPrefix: 'ISO' },
+    RECOVERY:     { code: 'W-REC',  name: 'Recovery Room',     room: 'R-REC',  bedPrefix: 'REC' },
+    OTHER:        { code: 'W-OTH',  name: 'Other',             room: 'R-OTH',  bedPrefix: 'OTH' },
 };
 
 export const BedMaster = () => {
@@ -160,6 +161,17 @@ export const BedMaster = () => {
         return stats;
     }, [beds]);
 
+    // Next free bed code for a ward-type prefix, e.g. ICU-01, ICU-02… (scans existing beds).
+    const nextBedCode = (prefix: string): string => {
+        const re = new RegExp(`^${prefix}-(\\d+)$`, 'i');
+        let max = 0;
+        for (const b of beds) {
+            const m = (b.bedCode ?? '').match(re);
+            if (m) max = Math.max(max, parseInt(m[1], 10));
+        }
+        return `${prefix}-${String(max + 1).padStart(2, '0')}`;
+    };
+
     // --- Actions ---
     const handleOpenDrawer = (record: BedRecord | null = null) => {
         if (record) {
@@ -168,7 +180,7 @@ export const BedMaster = () => {
             const def = WARD_TYPE_DEFAULTS.GENERAL;
             setEditingRecord({
                 wardCode: def.code, wardName: def.name, wardType: 'GENERAL', statusCode: 'AVAILABLE',
-                roomCode: def.room, bedCode: def.bed, wardRoomDailyRate: 0, isActive: true, genderRestriction: 'NONE'
+                roomCode: def.room, bedCode: nextBedCode(def.bedPrefix), wardRoomDailyRate: 0, isActive: true, genderRestriction: 'NONE'
             });
         }
         setIsDrawerOpen(true);
@@ -523,7 +535,7 @@ export const BedMaster = () => {
                     <>
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-40"
+                            className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-[55]"
                             onClick={() => setIsDrawerOpen(false)}
                         />
                         <motion.div
@@ -531,7 +543,7 @@ export const BedMaster = () => {
                             animate={{ x: 0, boxShadow: '-10px 0 30px rgba(0,0,0,0.1)' }}
                             exit={{ x: '100%', boxShadow: '-10px 0 30px rgba(0,0,0,0)' }}
                             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                            className="absolute top-0 right-0 bottom-0 w-full md:w-[500px] bg-white dark:bg-slate-950 border-l border-gray-200 dark:border-gray-800 shadow-2xl z-50 flex flex-col"
+                            className="fixed inset-y-0 right-0 w-full md:w-[500px] bg-white dark:bg-slate-950 border-l border-gray-200 dark:border-gray-800 shadow-2xl z-[60] flex flex-col"
                         >
                             <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
                                 <div>
@@ -574,7 +586,9 @@ export const BedMaster = () => {
                                                     if (!p.wardName || (oldDef && p.wardName === oldDef.name)) next.wardName = newDef.name;
                                                     if (!p.wardCode || (oldDef && p.wardCode === oldDef.code)) next.wardCode = newDef.code;
                                                     if (!p.roomCode || (oldDef && p.roomCode === oldDef.room)) next.roomCode = newDef.room;
-                                                    if (!p.bedCode || (oldDef && p.bedCode === oldDef.bed)) next.bedCode = newDef.bed;
+                                                    // Regenerate the bed code only when blank or still an auto code for the old type.
+                                                    const looksAuto = oldDef ? new RegExp(`^${oldDef.bedPrefix}-\\d+$`, 'i').test(p.bedCode ?? '') : false;
+                                                    if (!p.bedCode || looksAuto) next.bedCode = nextBedCode(newDef.bedPrefix);
                                                 }
                                                 return next;
                                             })}>
@@ -597,6 +611,16 @@ export const BedMaster = () => {
                                         <div className="grid gap-2">
                                             <Label>Room Code <span className="text-xs text-muted-foreground font-normal">(Opt)</span></Label>
                                             <Input className="font-mono uppercase" placeholder="e.g. R-101" value={editingRecord?.roomCode || ''} onChange={e => setEditingRecord(p => ({ ...p!, roomCode: e.target.value }))} />
+                                        </div>
+                                        <div className="grid gap-2">
+                                            <Label>Capacity in Room <span className="text-xs text-muted-foreground font-normal">(Opt)</span></Label>
+                                            <Input
+                                                type="number"
+                                                min={1}
+                                                placeholder="e.g. 4 (leave blank if N/A)"
+                                                value={editingRecord?.capacityInRoom ?? ''}
+                                                onChange={e => setEditingRecord(p => ({ ...p!, capacityInRoom: e.target.value === '' ? undefined : Math.max(1, Number(e.target.value)) }))}
+                                            />
                                         </div>
                                     </div>
                                 </section>

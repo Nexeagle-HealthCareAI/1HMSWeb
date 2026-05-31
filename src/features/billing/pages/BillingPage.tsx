@@ -32,6 +32,11 @@ import type { Patient } from '../types';
 import { AddChargeDialog } from '../components/dialogs/AddChargeDialog';
 import { AddPaymentDialog } from '../components/dialogs/AddPaymentDialog';
 import { VISIT_TYPES } from '../utils/constants';
+import { useAuthStore } from '@/store/authStore';
+import { useHospitalApi } from '@/hooks/useApi';
+import { openPrintHtml, downloadHtmlAsPdf } from '@/utils/printUtils';
+import { getOpdDocHtml, buildPrintSettingsFromHospital, type OpdDocKind } from '../utils/opdDocuments';
+import { FileSpreadsheet, Download } from 'lucide-react';
 
 // ─── Local view models ──────────────────────────────────────────────────────
 
@@ -54,6 +59,10 @@ export const BillingPage: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const initialPatientId = searchParams.get('patientId');
+    const { hospitalId } = useAuthStore();
+    const { data: hospitalData } = useHospitalApi.getHospitalById(hospitalId ?? '');
+    const [invoicing, setInvoicing] = useState(false);
+    const [docBusy, setDocBusy] = useState(false);
 
     // Patient panel
     const [patientSearch, setPatientSearch] = useState('');
@@ -208,13 +217,45 @@ export const BillingPage: React.FC = () => {
         }
     };
 
-    const handlePrint = async () => {
-        if (!selectedPatient || !selectedEncounterId) return;
+    // Create the draft invoice for this encounter's posted charges (and finalize, best-effort)
+    // so the visit has a numbered invoice before collecting payment.
+    const handleGenerateInvoice = async () => {
+        if (!selectedPatient || !selectedEncounterId || invoicing) return;
+        setInvoicing(true);
         try {
-            await ipdBillingService.print(selectedPatient.patientId, selectedEncounterId);
-            toast({ title: 'Print request sent' });
+            const inv = await ipdBillingService.createDraftInvoice({ patientId: selectedPatient.patientId, encounterId: selectedEncounterId });
+            if (inv?.success === false) throw new Error(inv?.message ?? 'Could not create invoice');
+            try { await ipdBillingService.finalize('finalize', { patientId: selectedPatient.patientId, encounterId: selectedEncounterId }); } catch { /* draft still accepts payment */ }
+            toast({ title: 'Invoice generated', description: inv?.data?.invoiceNo ? `Invoice ${inv.data.invoiceNo}` : undefined });
+            loadEvents();
         } catch (e: any) {
-            toast({ title: 'Print failed', description: e?.message ?? '', variant: 'destructive' });
+            toast({ title: 'Could not generate invoice', description: e?.message ?? '', variant: 'destructive' });
+        } finally {
+            setInvoicing(false);
+        }
+    };
+
+    // Render the bill (invoice / receipt / bill-cum-receipt) from the loaded ledger data
+    // using the shared A4 templates — print to a window or download as PDF.
+    const handleDoc = async (kind: OpdDocKind, mode: 'print' | 'download') => {
+        if (!selectedPatient || !eventsData || docBusy) return;
+        setDocBusy(true);
+        try {
+            const settings = buildPrintSettingsFromHospital(hospitalData);
+            const ctx = {
+                patientName: selectedPatient.name,
+                patientId: selectedPatient.patientId,
+                ageGender: [selectedPatient.age, selectedPatient.sex].filter(Boolean).join(' / '),
+                mobile: selectedPatient.mobile,
+                doctorName: selectedEncounter?.doctorName,
+            };
+            const html = getOpdDocHtml(kind, eventsData, settings, ctx);
+            if (mode === 'print') openPrintHtml(html);
+            else await downloadHtmlAsPdf(html, `${kind}-${selectedPatient.patientId}.pdf`);
+        } catch (e: any) {
+            toast({ title: 'Could not generate document', description: e?.message ?? '', variant: 'destructive' });
+        } finally {
+            setDocBusy(false);
         }
     };
 
@@ -499,9 +540,30 @@ export const BillingPage: React.FC = () => {
                             <Button onClick={() => setShowAddPayment(true)} disabled={!selectedEncounterId || isFinalized} className="h-10 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-md shadow-emerald-500/20 transition-all active:scale-[0.98]">
                                 <CreditCard className="h-4 w-4 mr-1" /> Record Payment
                             </Button>
-                            <Button onClick={handlePrint} variant="outline" disabled={!selectedEncounterId} className="h-10 rounded-xl">
-                                <Printer className="h-4 w-4 mr-1" /> Print Bill
-                            </Button>
+                            {/* Generate the invoice when the visit has charges but no invoice yet. */}
+                            {selectedEncounterId && !eventsData?.currentInvoice && (
+                                <Button onClick={handleGenerateInvoice} disabled={isFinalized || invoicing || (eventsData?.charges?.length ?? 0) === 0} variant="outline" className="h-10 rounded-xl border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300">
+                                    {invoicing ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Generating…</> : <><FileSpreadsheet className="h-4 w-4 mr-1" /> Generate Invoice</>}
+                                </Button>
+                            )}
+
+                            {/* Documents — printable / downloadable once an invoice exists. */}
+                            {eventsData?.currentInvoice && (
+                                <div className="rounded-xl border border-slate-200 p-2.5 space-y-1.5">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-0.5">Documents</p>
+                                    {([['invoice', 'Invoice'], ['receipt', 'Receipt'], ['billcum', 'Bill + Receipt']] as const)
+                                        .filter(([kind]) => kind === 'invoice' || (eventsData?.payments?.length ?? 0) > 0)
+                                        .map(([kind, label]) => (
+                                            <div key={kind} className="flex items-center justify-between gap-2 text-xs">
+                                                <span className="font-medium text-slate-600">{label}</span>
+                                                <div className="flex gap-1.5">
+                                                    <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={docBusy} onClick={() => handleDoc(kind, 'print')}><Printer className="h-3 w-3 mr-1" /> Print</Button>
+                                                    <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={docBusy} onClick={() => handleDoc(kind, 'download')}><Download className="h-3 w-3 mr-1" /> PDF</Button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                </div>
+                            )}
                             {selectedEncounterId && (
                                 <Button onClick={() => navigate(`/billing/encounter/${selectedEncounterId}`)} variant="outline" className="h-10 rounded-xl">
                                     <FileText className="h-4 w-4 mr-1" /> Open Encounter View
