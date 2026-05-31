@@ -103,6 +103,8 @@ export const BedMaster = () => {
     const [editingRecord, setEditingRecord] = useState<Partial<BedRecord> | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    // Number of beds to create at once (bulk add); 1 = single bed.
+    const [bedCount, setBedCount] = useState(1);
 
 
     const loadBeds = useCallback(async (silent = false) => {
@@ -172,8 +174,19 @@ export const BedMaster = () => {
         return `${prefix}-${String(max + 1).padStart(2, '0')}`;
     };
 
+    // Increment the trailing number of a bed code, preserving its prefix and zero-padding width
+    // (e.g. ICU-01 → ICU-02, GEN-09 → GEN-10). Used after "Save & Add Next" — reliable even before
+    // the bed list state has refreshed. Returns the code unchanged if it has no trailing number.
+    const incrementBedCode = (code: string): string => {
+        const m = (code ?? '').match(/^(.*?)(\d+)$/);
+        if (!m) return code ?? '';
+        const next = parseInt(m[2], 10) + 1;
+        return m[1] + String(next).padStart(m[2].length, '0');
+    };
+
     // --- Actions ---
     const handleOpenDrawer = (record: BedRecord | null = null) => {
+        setBedCount(1);
         if (record) {
             setEditingRecord({ ...record });
         } else {
@@ -194,6 +207,42 @@ export const BedMaster = () => {
 
         setIsSaving(true);
         const isNew = !editingRecord.id;
+
+        // Bulk create: generate N beds in one go with server-side auto-incremented codes.
+        if (isNew && bedCount > 1) {
+            try {
+                const prefix = ((editingRecord.bedCode ?? '').replace(/[-_\s]?\d+$/, '').trim())
+                    || WARD_TYPE_DEFAULTS[editingRecord.wardType as string]?.bedPrefix
+                    || 'BED';
+                const res = await bedService.bulkCreate({
+                    wardCode: editingRecord.wardCode,
+                    wardName: editingRecord.wardName ?? '',
+                    wardType: editingRecord.wardType,
+                    floorNo: editingRecord.floorNo,
+                    roomCode: editingRecord.roomCode,
+                    roomType: editingRecord.roomType,
+                    capacityInRoom: editingRecord.capacityInRoom,
+                    wardRoomDailyRate: Number(editingRecord.wardRoomDailyRate ?? 0),
+                    bedDailyRateOverride: editingRecord.bedDailyRateOverride != null ? Number(editingRecord.bedDailyRateOverride) : undefined,
+                    incentiveAmount: editingRecord.incentiveAmount != null ? Number(editingRecord.incentiveAmount) : undefined,
+                    genderRestriction: editingRecord.genderRestriction,
+                    statusCode: editingRecord.statusCode,
+                    isActive: editingRecord.isActive ?? true,
+                    bedCodePrefix: prefix,
+                    count: bedCount,
+                });
+                if (res?.success === false) throw new Error(res.message ?? 'Bulk create failed');
+                setIsSaving(false);
+                toast({ title: 'Beds created', description: res?.message ?? `${res?.createdCount ?? bedCount} beds created.` });
+                await loadBeds(true);
+                setIsDrawerOpen(false);
+            } catch (e: any) {
+                setIsSaving(false);
+                toast({ title: 'Bulk create failed', description: e?.message ?? '', variant: 'destructive' });
+            }
+            return;
+        }
+
         let savedRecord: BedRecord;
         try {
             const req: UpsertBedMasterRequest = {
@@ -246,11 +295,11 @@ export const BedMaster = () => {
         setTimeout(() => {
             setIsSuccess(false);
             if (addNext) {
-                // Keep ward details, clear bed details
+                // Keep ward details; advance the bed code to the next number (ICU-01 → ICU-02).
                 setEditingRecord({
                     ...savedRecord,
                     id: '',
-                    bedCode: '',
+                    bedCode: incrementBedCode(savedRecord.bedCode),
                     bedName: '',
                     bedDailyRateOverride: null,
                     statusCode: 'AVAILABLE'
@@ -633,7 +682,25 @@ export const BedMaster = () => {
                                         <div className="grid gap-2 col-span-2 sm:col-span-1">
                                             <Label>Bed Code <span className="text-red-500">*</span></Label>
                                             <Input className="font-mono uppercase" placeholder="e.g. B-01" value={editingRecord?.bedCode || ''} onChange={e => setEditingRecord(p => ({ ...p!, bedCode: e.target.value.toUpperCase() }))} />
+                                            {!editingRecord?.id && bedCount > 1 && (
+                                                <p className="text-[10px] text-indigo-600 dark:text-indigo-400">
+                                                    Used as the prefix — codes auto-generate as {((editingRecord?.bedCode ?? '').replace(/[-_\s]?\d+$/, '') || 'BED')}-NN.
+                                                </p>
+                                            )}
                                         </div>
+                                        {!editingRecord?.id && (
+                                            <div className="grid gap-2 col-span-2 sm:col-span-1">
+                                                <Label>Number of beds</Label>
+                                                <Input
+                                                    type="number"
+                                                    min={1}
+                                                    max={200}
+                                                    value={bedCount}
+                                                    onChange={e => setBedCount(Math.max(1, Math.min(200, Math.floor(Number(e.target.value)) || 1)))}
+                                                />
+                                                <p className="text-[10px] text-muted-foreground">Set &gt; 1 to create several beds at once (auto-numbered).</p>
+                                            </div>
+                                        )}
                                         <div className="grid gap-2 col-span-2 sm:col-span-1">
                                             <Label>Gender Restriction</Label>
                                             <Select value={editingRecord?.genderRestriction || 'NONE'} onValueChange={v => setEditingRecord(p => ({ ...p!, genderRestriction: v as any }))}>
@@ -704,7 +771,9 @@ export const BedMaster = () => {
 
                             <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-950 flex justify-end gap-2">
                                 <Button variant="ghost" onClick={() => setIsDrawerOpen(false)}>Cancel</Button>
-                                <Button variant="outline" disabled={isSaving || isSuccess} onClick={() => handleSaveDrawer(true)} className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-400">Save & Add Next in Ward</Button>
+                                {bedCount <= 1 && (
+                                    <Button variant="outline" disabled={isSaving || isSuccess} onClick={() => handleSaveDrawer(true)} className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-400">Save & Add Next in Ward</Button>
+                                )}
                                 <motion.button
                                     disabled={isSaving || isSuccess}
                                     onClick={() => handleSaveDrawer(false)}
@@ -715,7 +784,7 @@ export const BedMaster = () => {
                                     animate={isSuccess ? { scale: [1, 1.05, 1], transition: { duration: 0.3 } } : {}}
                                     whileTap={{ scale: 0.95 }}
                                 >
-                                    {isSaving ? "Saving..." : isSuccess ? <><CheckSquare className="h-4 w-4" /> Saved!</> : "Save"}
+                                    {isSaving ? "Saving..." : isSuccess ? <><CheckSquare className="h-4 w-4" /> Saved!</> : (!editingRecord?.id && bedCount > 1 ? `Create ${bedCount} Beds` : "Save")}
                                 </motion.button>
                             </div>
                         </motion.div>

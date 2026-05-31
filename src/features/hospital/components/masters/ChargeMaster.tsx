@@ -315,6 +315,7 @@ export const ChargeMaster = () => {
                                 <th className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">Module</th>
                                 <th className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">Category</th>
                                 <th className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 text-right">Rate</th>
+                                <th className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 text-right">Incentive</th>
                                 <th className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 text-center">Active</th>
                                 <th className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 text-right">Actions</th>
                             </tr>
@@ -322,14 +323,14 @@ export const ChargeMaster = () => {
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                             {loading && Array.from({ length: 4 }).map((_, i) => (
                                 <tr key={`sk-${i}`}>
-                                    <td colSpan={7} className="px-4 py-3">
+                                    <td colSpan={8} className="px-4 py-3">
                                         <Skeleton className="h-9 w-full" />
                                     </td>
                                 </tr>
                             ))}
                             {!loading && loadError && (
                                 <tr>
-                                    <td colSpan={7} className="px-4 py-12 text-center">
+                                    <td colSpan={8} className="px-4 py-12 text-center">
                                         <div className="flex flex-col items-center gap-2 text-rose-600">
                                             <AlertCircle className="h-8 w-8" />
                                             <p className="font-semibold">{loadError}</p>
@@ -370,6 +371,11 @@ export const ChargeMaster = () => {
                                     <td className="px-4 py-3 text-right font-mono font-semibold text-gray-900 dark:text-gray-100">
                                         ₹{charge.defaultRate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                     </td>
+                                    <td className="px-4 py-3 text-right font-mono">
+                                        {charge.incentiveAmount > 0
+                                            ? <span className="font-semibold text-emerald-600 dark:text-emerald-400">₹{charge.incentiveAmount.toLocaleString('en-IN')}</span>
+                                            : <span className="text-gray-300 dark:text-gray-600">—</span>}
+                                    </td>
                                     <td className="px-4 py-3 text-center">
                                         <Switch
                                             checked={charge.isActive}
@@ -391,7 +397,7 @@ export const ChargeMaster = () => {
                             ))}
                             {!loading && !loadError && filteredCharges.length === 0 && (
                                 <tr>
-                                    <td colSpan={7} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+                                    <td colSpan={8} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
                                         <div className="flex flex-col items-center gap-2">
                                             <Search className="h-8 w-8 text-gray-300 dark:text-gray-600 mb-2" />
                                             <p className="font-medium text-base">{charges.length === 0 ? 'No charges configured yet' : 'No charges match your filters'}</p>

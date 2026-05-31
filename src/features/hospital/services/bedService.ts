@@ -69,6 +69,33 @@ export interface UpsertBedMasterResponse {
     updatedBy?: string;
 }
 
+export interface BulkCreateBedMasterRequest {
+    hospitalId?: string;
+    wardCode?: string;
+    wardName?: string;
+    wardType?: string;
+    floorNo?: string;
+    roomCode?: string;
+    roomType?: string;
+    capacityInRoom?: number;
+    wardRoomDailyRate: number;
+    bedDailyRateOverride?: number;
+    incentiveAmount?: number;
+    genderRestriction?: string;
+    statusCode?: string;
+    isActive: boolean;
+    bedCodePrefix?: string;
+    count: number;
+}
+
+export interface BulkCreateBedMasterResponse {
+    success: boolean;
+    createdCount: number;
+    firstBedCode?: string;
+    lastBedCode?: string;
+    message?: string;
+}
+
 const hospitalIdOrThrow = (override?: string) => {
     const id = override ?? useAuthStore.getState().getHospitalId();
     if (!id) throw new Error('Hospital ID is not available on the current user session.');
@@ -88,6 +115,12 @@ export const bedService = {
 
     upsert: (req: UpsertBedMasterRequest): Promise<UpsertBedMasterResponse> =>
         ipdApiClient.put(IPD_API_ENDPOINTS.BED.UPSERT_MASTER, {
+            ...req,
+            hospitalId: hospitalIdOrThrow(req.hospitalId),
+        }),
+
+    bulkCreate: (req: BulkCreateBedMasterRequest): Promise<BulkCreateBedMasterResponse> =>
+        ipdApiClient.post(IPD_API_ENDPOINTS.BED.BULK_CREATE, {
             ...req,
             hospitalId: hospitalIdOrThrow(req.hospitalId),
         }),

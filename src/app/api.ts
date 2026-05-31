@@ -210,6 +210,7 @@ export const IPD_API_ENDPOINTS = {
     GET_MASTER_BY_ID: (bedId: string, hospitalId: string) =>
       `bed/master/${encodeURIComponent(bedId)}?hospitalId=${encodeURIComponent(hospitalId)}`,
     UPSERT_MASTER: 'bed/master',
+    BULK_CREATE: 'bed/master/bulk',
   },
   ALERTS: {
     LIST: (hospitalId: string, opts?: { status?: string; severity?: string; alertCode?: string; admissionId?: string; audienceUserId?: string; role?: string; fromUtc?: string; toUtc?: string; take?: number }) => {
