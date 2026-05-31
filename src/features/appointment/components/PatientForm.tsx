@@ -895,7 +895,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                           <Checkbox
                             id="isPaid"
                             checked={formData.isPaid}
-                            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPaid: !!checked, paymentMode: !!checked ? prev.paymentMode : '' }))}
+                            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isPaid: !!checked, paymentMode: !!checked ? (prev.paymentMode || 'cash') : '' }))}
                             className="h-4 w-4 md:h-5 md:w-5"
                           />
                           <Label htmlFor="isPaid" className="text-sm md:text-base font-medium">
