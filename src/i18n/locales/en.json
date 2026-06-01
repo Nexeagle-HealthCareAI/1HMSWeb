@@ -2489,6 +2489,12 @@
       "typeNew": "New",
       "typeOldFee": "Follow-up (fee due)"
     },
+    "duplicate": {
+      "title": "Duplicate appointment?",
+      "message": "{{name}} already has an appointment with {{doctor}} on this day.",
+      "cancel": "Go back",
+      "proceed": "Book anyway"
+    },
     "actions": {
       "cancel": "Cancel",
       "submit": "Book Appointment",

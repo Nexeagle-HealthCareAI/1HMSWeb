@@ -15,6 +15,7 @@ export interface PrintSettings {
 export interface PrintItem {
     srNo: number;
     description: string;
+    period?: string;   // e.g. bed/room stay date-range
     qty: number;
     rate: number;
     discount: number;
@@ -59,6 +60,28 @@ export interface ReceiptPrintData {
 export interface BillCumReceiptPrintData {
     invoice: InvoicePrintData;
     receipt: ReceiptPrintData;
+}
+
+export interface PaymentStatementLine {
+    srNo: number;
+    date: string;
+    receiptNo: string;
+    mode: string;
+    type: string; // PAYMENT | ADVANCE | REFUND
+    amount: number;
+}
+
+export interface PaymentStatementPrintData {
+    invoiceNo: string;
+    patientName: string;
+    patientId: string;
+    ageGender?: string;
+    mobile?: string;
+    date: string;
+    invoiceTotal: number;
+    totalReceived: number;
+    balanceDue: number;
+    payments: PaymentStatementLine[];
 }
 
 export interface DashboardInvoice {

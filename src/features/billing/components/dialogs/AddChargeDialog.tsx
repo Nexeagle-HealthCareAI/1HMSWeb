@@ -1,13 +1,15 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Plus, Loader2 } from 'lucide-react';
+import { Search, Plus, Loader2, BedDouble, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { ipdBillingService, type ChargeMaster, type AddChargeEventRequest } from '../../services/ipdBillingService';
+import { bedService, type BedMasterItem } from '@/features/hospital/services/bedService';
 
 export interface AddChargeDialogProps {
     open: boolean;
@@ -17,24 +19,58 @@ export interface AddChargeDialogProps {
     onSaved: () => void;
 }
 
+type Source = 'catalog' | 'bed' | 'manual';
+const MANUAL_CATEGORIES = ['OTHER', 'PROCEDURE', 'LAB', 'RADIOLOGY', 'PHARMACY', 'CONSUMABLE', 'CONSULT'];
+
 export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenChange, patientId, encounterId, onSaved }) => {
     const { toast } = useToast();
+    const [source, setSource] = useState<Source>('catalog');
+
+    // Catalog
     const [chargeMasters, setChargeMasters] = useState<ChargeMaster[]>([]);
     const [chargeMasterFilter, setChargeMasterFilter] = useState('');
     const [loadingMasters, setLoadingMasters] = useState(false);
     const [selectedMaster, setSelectedMaster] = useState<ChargeMaster | null>(null);
+
+    // Bed / Room
+    const [beds, setBeds] = useState<BedMasterItem[]>([]);
+    const [bedFilter, setBedFilter] = useState('');
+    const [loadingBeds, setLoadingBeds] = useState(false);
+    const [selectedBed, setSelectedBed] = useState<BedMasterItem | null>(null);
+    const [bedFrom, setBedFrom] = useState('');
+    const [bedTo, setBedTo] = useState('');
+
+    // Manual
+    const [manualName, setManualName] = useState('');
+    const [manualCategory, setManualCategory] = useState('OTHER');
+    const [manualGstRate, setManualGstRate] = useState('');
+    const [manualIncentive, setManualIncentive] = useState('');
+
+    // Shared line inputs
     const [qty, setQty] = useState(1);
     const [rate, setRate] = useState(0);
-    const [discountPercent, setDiscountPercent] = useState(0);
+    const [discountKind, setDiscountKind] = useState<'percent' | 'amount'>('amount');
+    const [discountValue, setDiscountValue] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
+    // Reset + load catalog on open
     useEffect(() => {
         if (!open) return;
+        setSource('catalog');
         setSelectedMaster(null);
+        setChargeMasterFilter('');
+        setSelectedBed(null);
+        setBedFilter('');
+        setBedFrom('');
+        setBedTo('');
+        setManualName('');
+        setManualCategory('OTHER');
+        setManualGstRate('');
+        setManualIncentive('');
         setQty(1);
         setRate(0);
-        setDiscountPercent(0);
-        setChargeMasterFilter('');
+        setDiscountKind('amount');
+        setDiscountValue('');
         let cancelled = false;
         (async () => {
             setLoadingMasters(true);
@@ -50,6 +86,27 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
         return () => { cancelled = true; };
     }, [open, toast]);
 
+    // Lazy-load beds the first time the Bed tab is opened. NOTE: keep deps to [open, source]
+    // only — including loadingBeds/beds.length would re-run the effect mid-flight and its
+    // cleanup would cancel the in-progress request, leaving the list empty.
+    useEffect(() => {
+        if (!open || source !== 'bed' || beds.length > 0) return;
+        let cancelled = false;
+        (async () => {
+            setLoadingBeds(true);
+            try {
+                const res = await bedService.list({ pageSize: 500 });
+                if (!cancelled) setBeds((res?.items ?? []).filter(b => b.isActive !== false));
+            } catch (e: any) {
+                if (!cancelled) toast({ title: 'Could not load beds', description: e?.message ?? '', variant: 'destructive' });
+            } finally {
+                if (!cancelled) setLoadingBeds(false);
+            }
+        })();
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, source]);
+
     const filteredMasters = useMemo(() => {
         const q = chargeMasterFilter.trim().toLowerCase();
         if (!q) return chargeMasters;
@@ -60,35 +117,103 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
         );
     }, [chargeMasters, chargeMasterFilter]);
 
+    const filteredBeds = useMemo(() => {
+        const q = bedFilter.trim().toLowerCase();
+        if (!q) return beds;
+        return beds.filter(b =>
+            [b.wardType, b.wardName, b.roomType, b.bedName, b.bedCode].filter(Boolean).join(' ').toLowerCase().includes(q)
+        );
+    }, [beds, bedFilter]);
+
+    // Inclusive day count: 01 May → 03 May = 3 days.
+    const bedDays = useMemo(() => {
+        if (!bedFrom || !bedTo) return 0;
+        const f = new Date(bedFrom); const t = new Date(bedTo);
+        if (isNaN(f.getTime()) || isNaN(t.getTime()) || t < f) return 0;
+        return Math.floor((t.getTime() - f.getTime()) / 86400000) + 1;
+    }, [bedFrom, bedTo]);
+
+    // In bed mode the day count drives the quantity.
+    useEffect(() => {
+        if (source === 'bed' && bedDays > 0) setQty(bedDays);
+    }, [source, bedDays]);
+
     const pickMaster = (m: ChargeMaster) => {
         setSelectedMaster(m);
         setQty(m.defaultQty || 1);
         setRate(Number(m.defaultRate || 0));
     };
 
+    const pickBed = (b: BedMasterItem) => {
+        setSelectedBed(b);
+        setRate(Number(b.effectiveDailyRate || b.bedDailyRateOverride || b.wardRoomDailyRate || 0));
+        if (bedDays > 0) setQty(bedDays);
+    };
+
+    const switchSource = (s: Source) => {
+        setSource(s);
+        if (s !== 'catalog') setSelectedMaster(null);
+        if (s !== 'bed') setSelectedBed(null);
+        if (s === 'manual') { setQty(1); }
+    };
+
+    const fmtDate = (d: string) => {
+        const x = new Date(d);
+        return isNaN(x.getTime()) ? d : x.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    };
+
+    const bedLabel = selectedBed
+        ? `Room/Bed — ${[selectedBed.wardType || selectedBed.wardName, selectedBed.roomType, selectedBed.bedName].filter(Boolean).join(' · ')}`
+          + (bedFrom && bedTo ? ` (${fmtDate(bedFrom)}–${fmtDate(bedTo)}, ${bedDays}d)` : '')
+        : '';
+
+    const canSubmit =
+        source === 'manual' ? manualName.trim().length > 0
+        : source === 'bed' ? (!!selectedBed && bedDays > 0)
+        : !!selectedMaster;
+
+    const gross = qty * rate;
+    const cap = selectedMaster?.maxDiscountPercent ?? 100;
+    const rawDisc = parseFloat(discountValue || '0') || 0;
+    const discountAmount = Math.max(0, Math.min(gross, discountKind === 'amount' ? rawDisc : (gross * rawDisc) / 100));
+    const discountPercent = gross > 0 ? (discountAmount / gross) * 100 : 0;
+    const net = gross - discountAmount;
+    const needsApproval = discountPercent > cap + 0.001;
+
     const submit = async () => {
         if (submitting) return;
-        if (!selectedMaster) { toast({ title: 'Pick a charge from the catalog', variant: 'destructive' }); return; }
-        if (qty <= 0) { toast({ title: 'Quantity must be > 0', variant: 'destructive' }); return; }
+        if (source === 'manual' && !manualName.trim()) { toast({ title: 'Enter a charge name', variant: 'destructive' }); return; }
+        if (source === 'bed' && (!selectedBed || bedDays <= 0)) { toast({ title: 'Pick a bed and a valid date range', variant: 'destructive' }); return; }
+        if (source === 'catalog' && !selectedMaster) { toast({ title: 'Pick a charge from the catalog', variant: 'destructive' }); return; }
+        if (qty <= 0) { toast({ title: 'Quantity / days must be > 0', variant: 'destructive' }); return; }
         if (rate < 0) { toast({ title: 'Rate cannot be negative', variant: 'destructive' }); return; }
 
         setSubmitting(true);
         try {
-            const req: AddChargeEventRequest = {
-                patientId,
-                encounterId,
-                charges: [{
-                    chargeId: selectedMaster.chargeId,
-                    displayName: selectedMaster.displayName ?? '',
+            const manualGst = parseFloat(manualGstRate || '');
+            const manualInc = parseFloat(manualIncentive || '');
+            let charge: AddChargeEventRequest['charges'][number];
+            if (source === 'bed' && selectedBed) {
+                charge = {
+                    displayName: bedLabel,
                     qty,
                     rate,
                     discountPercent,
-                    categoryCode: selectedMaster.categoryCode ?? 'OTHER',
-                }],
-            };
-            const res = await ipdBillingService.addChargeEvents(req);
+                    categoryCode: 'BED',
+                    incentiveAmount: selectedBed.incentiveAmount ? selectedBed.incentiveAmount * qty : undefined,
+                };
+            } else if (source === 'manual') {
+                charge = {
+                    displayName: manualName.trim(), qty, rate, discountPercent, categoryCode: manualCategory,
+                    gstRate: Number.isFinite(manualGst) && manualGst > 0 ? manualGst : undefined,
+                    incentiveAmount: Number.isFinite(manualInc) && manualInc > 0 ? manualInc : undefined,
+                };
+            } else {
+                charge = { chargeId: selectedMaster!.chargeId, displayName: selectedMaster!.displayName ?? '', qty, rate, discountPercent, categoryCode: selectedMaster!.categoryCode ?? 'OTHER' };
+            }
+            const res = await ipdBillingService.addChargeEvents({ patientId, encounterId, charges: [charge] });
             if (!res?.success) throw new Error(res?.message ?? 'Could not add charge');
-            toast({ title: 'Charge added', description: selectedMaster.displayName ?? '' });
+            toast({ title: 'Charge added', description: charge.displayName });
             onSaved();
             onOpenChange(false);
         } catch (e: any) {
@@ -98,94 +223,195 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
         }
     };
 
-    const gross = qty * rate;
-    const discountAmount = (gross * Math.max(0, Math.min(100, discountPercent))) / 100;
-    const net = gross - discountAmount;
+    const tabClass = (active: boolean) => cn('px-3 py-1.5 font-semibold transition-colors', active ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50');
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2.5">
-                        <span className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/30"><Plus className="h-4 w-4" /></span>
-                        Add Charge
-                    </DialogTitle>
-                    <DialogDescription>Pick from the charge catalog and adjust quantity / discount.</DialogDescription>
-                </DialogHeader>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label className="text-xs font-semibold text-slate-700">Charge catalog</Label>
-                        <div className="relative">
-                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                            <Input value={chargeMasterFilter} onChange={(e) => setChargeMasterFilter(e.target.value)} placeholder="Search charges…" className="h-8 pl-8 text-xs" />
+        <Sheet open={open} onOpenChange={onOpenChange}>
+            <SheetContent side="right" className="w-full sm:max-w-md p-0 gap-0 flex flex-col bg-white dark:bg-slate-950">
+                {/* Premium gradient header */}
+                <div className="px-6 py-5 bg-gradient-to-r from-indigo-500 to-violet-600">
+                    <div className="flex items-center gap-3">
+                        <div className="h-11 w-11 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0">
+                            <Plus className="h-5 w-5 text-white" />
                         </div>
-                        <div className="border border-slate-200 rounded-md max-h-[280px] overflow-auto bg-white">
-                            {loadingMasters ? (
-                                <div className="p-3 space-y-2">{[0, 1, 2].map(i => <Skeleton key={i} className="h-8 w-full" />)}</div>
-                            ) : filteredMasters.length === 0 ? (
-                                <div className="p-4 text-center text-xs text-slate-500">No charges configured</div>
-                            ) : (
-                                filteredMasters.map(m => (
-                                    <button
-                                        key={m.chargeId}
-                                        type="button"
-                                        onClick={() => pickMaster(m)}
-                                        className={cn(
-                                            'w-full text-left px-3 py-2 border-b border-slate-100 hover:bg-indigo-50/40 text-xs',
-                                            selectedMaster?.chargeId === m.chargeId && 'bg-indigo-50 border-l-2 border-l-indigo-500'
-                                        )}
-                                    >
-                                        <div className="flex items-center justify-between gap-2">
-                                            <div className="min-w-0 flex-1">
-                                                <p className="font-semibold text-slate-900 truncate">{m.displayName}</p>
-                                                <p className="text-[10px] text-slate-500 font-mono">{m.chargeCode} · {m.categoryCode} · {m.appliesTo}</p>
-                                            </div>
-                                            <span className="text-xs font-bold text-slate-700 whitespace-nowrap">₹{Number(m.defaultRate).toLocaleString('en-IN')}</span>
-                                        </div>
-                                    </button>
-                                ))
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="space-y-3">
                         <div>
-                            <Label className="text-xs font-semibold text-slate-700">Selected</Label>
-                            <div className="h-9 mt-1 px-2 flex items-center text-sm border border-slate-200 rounded-md bg-slate-50">
-                                {selectedMaster ? <span className="truncate font-semibold">{selectedMaster.displayName}</span> : <span className="text-slate-400 italic">No charge selected</span>}
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                            <div>
-                                <Label className="text-xs font-semibold text-slate-700">Qty</Label>
-                                <Input type="number" min={1} value={qty} onChange={(e) => setQty(parseInt(e.target.value || '0', 10))} className="h-9 mt-1" />
-                            </div>
-                            <div>
-                                <Label className="text-xs font-semibold text-slate-700">Rate</Label>
-                                <Input type="number" min={0} step="0.01" value={rate} onChange={(e) => setRate(parseFloat(e.target.value || '0'))} className="h-9 mt-1" />
-                            </div>
-                            <div>
-                                <Label className="text-xs font-semibold text-slate-700">Disc %</Label>
-                                <Input type="number" min={0} max={100} step="0.01" value={discountPercent} onChange={(e) => setDiscountPercent(parseFloat(e.target.value || '0'))} className="h-9 mt-1" />
-                            </div>
-                        </div>
-                        <div className="rounded-lg border border-slate-200 p-3 bg-slate-50 space-y-1.5">
-                            <div className="flex justify-between text-xs"><span className="text-slate-500">Gross</span><span className="font-mono font-semibold">₹{gross.toFixed(2)}</span></div>
-                            <div className="flex justify-between text-xs"><span className="text-slate-500">Discount</span><span className="font-mono font-semibold text-rose-600">- ₹{discountAmount.toFixed(2)}</span></div>
-                            <div className="flex justify-between text-sm pt-1.5 border-t border-slate-200"><span className="font-bold text-slate-800">Net</span><span className="font-mono font-bold text-emerald-700">₹{net.toFixed(2)}</span></div>
+                            <SheetTitle className="text-white text-lg font-bold">Add Charge</SheetTitle>
+                            <p className="text-indigo-50/90 text-xs mt-0.5">Catalog item, bed by date range, or a custom charge</p>
                         </div>
                     </div>
                 </div>
 
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>Cancel</Button>
-                    <Button onClick={submit} disabled={submitting || !selectedMaster} className="bg-indigo-600 hover:bg-indigo-700">
+                <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                    {/* Source toggle */}
+                    <div className="inline-flex rounded-xl border border-slate-200 overflow-hidden text-xs">
+                        <button type="button" onClick={() => switchSource('catalog')} className={tabClass(source === 'catalog')}>Catalog</button>
+                        <button type="button" onClick={() => switchSource('bed')} className={tabClass(source === 'bed')}>Bed / Room</button>
+                        <button type="button" onClick={() => switchSource('manual')} className={tabClass(source === 'manual')}>Manual</button>
+                    </div>
+
+                    {source === 'catalog' && (
+                        <>
+                            <div className="space-y-2">
+                                <Label className="text-xs font-semibold text-slate-700">Charge catalog</Label>
+                                <div className="relative">
+                                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                                    <Input value={chargeMasterFilter} onChange={(e) => setChargeMasterFilter(e.target.value)} placeholder="Search charges…" className="h-9 pl-8 text-sm rounded-xl" />
+                                </div>
+                                <div className="border border-slate-200 rounded-xl max-h-[220px] overflow-auto bg-white">
+                                    {loadingMasters ? (
+                                        <div className="p-3 space-y-2">{[0, 1, 2].map(i => <Skeleton key={i} className="h-9 w-full" />)}</div>
+                                    ) : filteredMasters.length === 0 ? (
+                                        <div className="p-4 text-center text-xs text-slate-500">No charges found. Switch to <button type="button" onClick={() => switchSource('manual')} className="text-indigo-600 underline font-semibold">Manual</button>.</div>
+                                    ) : (
+                                        filteredMasters.map(m => (
+                                            <button key={m.chargeId} type="button" onClick={() => pickMaster(m)}
+                                                className={cn('w-full text-left px-3 py-2 border-b border-slate-100 hover:bg-indigo-50/40 text-xs transition-colors', selectedMaster?.chargeId === m.chargeId && 'bg-indigo-50 border-l-2 border-l-indigo-500')}>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="font-semibold text-slate-900 truncate">{m.displayName}</p>
+                                                        <p className="text-[10px] text-slate-500 font-mono">{m.chargeCode} · {m.categoryCode} · {m.appliesTo}</p>
+                                                    </div>
+                                                    <span className="text-xs font-bold text-slate-700 whitespace-nowrap tabular-nums">₹{Number(m.defaultRate).toLocaleString('en-IN')}</span>
+                                                </div>
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                            <div>
+                                <Label className="text-xs font-semibold text-slate-700">Selected</Label>
+                                <div className="h-10 mt-1 px-3 flex items-center text-sm border border-slate-200 rounded-xl bg-slate-50">
+                                    {selectedMaster ? <span className="truncate font-semibold">{selectedMaster.displayName}</span> : <span className="text-slate-400 italic">No charge selected</span>}
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+                    {source === 'bed' && (
+                        <>
+                            <div className="space-y-2">
+                                <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5"><BedDouble className="h-3.5 w-3.5 text-indigo-500" /> Bed / Room</Label>
+                                <div className="relative">
+                                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                                    <Input value={bedFilter} onChange={(e) => setBedFilter(e.target.value)} placeholder="Search ward / room / bed…" className="h-9 pl-8 text-sm rounded-xl" />
+                                </div>
+                                <div className="border border-slate-200 rounded-xl max-h-[180px] overflow-auto bg-white">
+                                    {loadingBeds ? (
+                                        <div className="p-3 space-y-2">{[0, 1, 2].map(i => <Skeleton key={i} className="h-9 w-full" />)}</div>
+                                    ) : filteredBeds.length === 0 ? (
+                                        <div className="p-4 text-center text-xs text-slate-500">No beds configured.</div>
+                                    ) : (
+                                        filteredBeds.map(b => (
+                                            <button key={b.bedId} type="button" onClick={() => pickBed(b)}
+                                                className={cn('w-full text-left px-3 py-2 border-b border-slate-100 hover:bg-indigo-50/40 text-xs transition-colors', selectedBed?.bedId === b.bedId && 'bg-indigo-50 border-l-2 border-l-indigo-500')}>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="font-semibold text-slate-900 truncate">{[b.wardType || b.wardName, b.bedName || b.bedCode].filter(Boolean).join(' · ') || 'Bed'}</p>
+                                                        <p className="text-[10px] text-slate-500 font-mono">{[b.roomType, b.roomCode].filter(Boolean).join(' · ')}</p>
+                                                    </div>
+                                                    <span className="text-xs font-bold text-slate-700 whitespace-nowrap tabular-nums">₹{Number(b.effectiveDailyRate).toLocaleString('en-IN')}/day</span>
+                                                </div>
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <Label className="text-xs font-semibold text-slate-700">From</Label>
+                                    <Input type="date" value={bedFrom} onChange={(e) => setBedFrom(e.target.value)} className="h-10 mt-1 rounded-xl" />
+                                </div>
+                                <div>
+                                    <Label className="text-xs font-semibold text-slate-700">To</Label>
+                                    <Input type="date" value={bedTo} min={bedFrom || undefined} onChange={(e) => setBedTo(e.target.value)} className="h-10 mt-1 rounded-xl" />
+                                </div>
+                            </div>
+
+                            {bedFrom && bedTo && (
+                                <div className={cn('flex items-center gap-2 rounded-xl px-3 py-2 text-xs', bedDays > 0 ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-rose-50 text-rose-700 border border-rose-200')}>
+                                    <CalendarDays className="h-4 w-4" />
+                                    {bedDays > 0
+                                        ? <span><b>{bedDays}</b> day{bedDays === 1 ? '' : 's'} × ₹{rate.toLocaleString('en-IN')}/day (inclusive of both dates)</span>
+                                        : <span>“To” date must be on or after “From”.</span>}
+                                </div>
+                            )}
+                        </>
+                    )}
+
+                    {source === 'manual' && (
+                        <>
+                            <div>
+                                <Label className="text-xs font-semibold text-slate-700">Charge name <span className="text-rose-500">*</span></Label>
+                                <Input value={manualName} onChange={(e) => setManualName(e.target.value)} placeholder="e.g. Dressing, X-Ray, Ambulance…" className="h-10 mt-1 rounded-xl" autoFocus />
+                            </div>
+                            <div>
+                                <Label className="text-xs font-semibold text-slate-700">Category</Label>
+                                <Select value={manualCategory} onValueChange={setManualCategory}>
+                                    <SelectTrigger className="h-10 mt-1 rounded-xl"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        {MANUAL_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <Label className="text-xs font-semibold text-slate-700">GST Rate (%)</Label>
+                                    <Input type="number" min={0} max={28} step="0.01" value={manualGstRate} onChange={(e) => setManualGstRate(e.target.value)} placeholder="0 (no tax)" className="h-10 mt-1 rounded-xl" />
+                                </div>
+                                <div>
+                                    <Label className="text-xs font-semibold text-slate-700">Incentive (₹)</Label>
+                                    <Input type="number" min={0} step="0.01" value={manualIncentive} onChange={(e) => setManualIncentive(e.target.value)} placeholder="0" className="h-10 mt-1 rounded-xl" />
+                                </div>
+                            </div>
+                            <p className="text-[10px] text-slate-400">Optional. GST falls back to the hospital policy default when left blank; incentive accrues to the visit's referrer.</p>
+                        </>
+                    )}
+
+                    {/* Qty / Rate / Discount */}
+                    <div className="grid grid-cols-3 gap-2">
+                        <div>
+                            <Label className="text-xs font-semibold text-slate-700">{source === 'bed' ? 'Days' : 'Qty'}</Label>
+                            <Input type="number" min={1} value={qty} onChange={(e) => setQty(parseInt(e.target.value || '0', 10))} className="h-10 mt-1 rounded-xl" />
+                        </div>
+                        <div>
+                            <Label className="text-xs font-semibold text-slate-700">{source === 'bed' ? 'Rate/day' : 'Rate'}</Label>
+                            <Input type="number" min={0} step="0.01" value={rate} onChange={(e) => setRate(parseFloat(e.target.value || '0'))} className="h-10 mt-1 rounded-xl" />
+                        </div>
+                        <div>
+                            <div className="flex items-center justify-between">
+                                <Label className="text-xs font-semibold text-slate-700">Disc</Label>
+                                <div className="inline-flex rounded-md border border-slate-200 overflow-hidden">
+                                    <button type="button" onClick={() => setDiscountKind('percent')} className={cn('px-1.5 text-[10px] font-bold leading-5', discountKind === 'percent' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500')}>%</button>
+                                    <button type="button" onClick={() => setDiscountKind('amount')} className={cn('px-1.5 text-[10px] font-bold leading-5', discountKind === 'amount' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500')}>₹</button>
+                                </div>
+                            </div>
+                            <Input type="number" min={0} step="0.01" value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} placeholder={discountKind === 'percent' ? '0%' : '₹0'} className="h-10 mt-1 rounded-xl" />
+                        </div>
+                    </div>
+
+                    {/* Live preview */}
+                    <div className="rounded-xl border border-slate-200 p-3 bg-slate-50 space-y-1.5">
+                        <div className="flex justify-between text-xs"><span className="text-slate-500">Gross {source === 'bed' && bedDays > 0 ? `(${qty} × ₹${rate.toLocaleString('en-IN')})` : ''}</span><span className="tabular-nums font-semibold">₹{gross.toFixed(2)}</span></div>
+                        <div className="flex justify-between text-xs"><span className="text-slate-500">Discount {discountAmount > 0 ? `(${discountPercent.toFixed(1)}%)` : ''}</span><span className="tabular-nums font-semibold text-rose-600">- ₹{discountAmount.toFixed(2)}</span></div>
+                        <div className="flex justify-between text-sm pt-1.5 border-t border-slate-200"><span className="font-bold text-slate-800">Net</span><span className="tabular-nums font-bold text-emerald-700">₹{net.toFixed(2)}</span></div>
+                        {needsApproval && (
+                            <div className="flex items-start gap-1.5 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">
+                                <span>⚠</span>
+                                <span>Discount {discountPercent.toFixed(1)}% exceeds the {cap}% cap for this charge — it will need approval before the bill can be finalized.</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="p-4 border-t border-slate-200 bg-slate-50 flex gap-3 mt-auto">
+                    <Button variant="outline" className="flex-1 rounded-xl" onClick={() => onOpenChange(false)} disabled={submitting}>Cancel</Button>
+                    <Button onClick={submit} disabled={submitting || !canSubmit} className="flex-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-500/20">
                         {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Adding…</> : <><Plus className="h-4 w-4 mr-2" />Add Charge</>}
                     </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+                </div>
+            </SheetContent>
+        </Sheet>
     );
 };
 

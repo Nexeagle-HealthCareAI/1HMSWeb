@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Search, Loader2, X, CheckCircle2 } from 'lucide-react';
+import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Search, Loader2, X, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RegisterAppointmentRequest, generatePatientId, appointmentApi, type ConsultTimelineResponse } from '../services/appointmentApi';
 import { useAppointmentBooking } from '../hooks/useAppointmentBooking';
@@ -177,6 +177,23 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const nextFeeApplies = timeline ? timeline.nextVisit.feeApplies : true;
   const consultFee = (timeline && timeline.nextVisit.fee > 0) ? timeline.nextVisit.fee : consultCtx.fee;
   const showConsult = consultCtx.autoConsult && consultFee > 0 && isSameDay && nextFeeApplies;
+
+  // Same-day duplicate guard: the timeline history is this patient's visits to THIS doctor
+  // (cancelled already excluded by the server). If one falls on the selected appointment date,
+  // it's a duplicate booking — we warn but still allow staff to proceed.
+  const [showDupConfirm, setShowDupConfirm] = useState(false);
+  const localDayKey = (iso: string) => {
+    const d = new Date(iso);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const sameDayDuplicate = useMemo(() => {
+    if (!timeline?.history?.length || !selectedSlot?.date) return null;
+    return timeline.history.find(
+      h => h.apptDate
+        && localDayKey(h.apptDate) === selectedSlot.date
+        && (h.statusCode ?? '').toUpperCase() !== 'CANCELLED'
+    ) ?? null;
+  }, [timeline, selectedSlot?.date]);
 
   useEffect(() => {
     if (!doctor?.id || !isSameDay) { setConsultCtx({ autoConsult: false, fee: 0 }); return; }
@@ -364,7 +381,16 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     if (!validateForm()) {
       return;
     }
+    // Warn (but don't block) when this patient already has a non-cancelled appointment
+    // with this doctor on the same day.
+    if (sameDayDuplicate) {
+      setShowDupConfirm(true);
+      return;
+    }
+    await performBooking();
+  };
 
+  const performBooking = async () => {
     setIsSubmitting(true);
     try {
       // Generate patient ID automatically before sending request
@@ -1123,6 +1149,56 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 </Button>
               )}
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Same-day duplicate appointment warning (warn, but allow) */}
+      <Dialog open={showDupConfirm} onOpenChange={setShowDupConfirm}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+              <div className="p-1.5 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              {t('patientForm.duplicate.title', { defaultValue: 'Duplicate appointment?' })}
+            </DialogTitle>
+            <DialogDescription className="pt-1">
+              {t('patientForm.duplicate.message', {
+                name: formData.name,
+                doctor: doctor.name,
+                defaultValue: '{{name}} already has an appointment with {{doctor}} on this day.',
+              })}
+            </DialogDescription>
+          </DialogHeader>
+
+          {sameDayDuplicate && (
+            <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50/60 dark:bg-amber-900/10 px-3 py-2.5 text-sm flex items-center gap-2.5">
+              <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+              <span className="font-medium text-amber-900 dark:text-amber-200">
+                {dateFormatter.format(new Date(sameDayDuplicate.apptDate))}
+                {' · '}
+                {new Date(sameDayDuplicate.apptDate).toLocaleTimeString(i18n.language, { hour: 'numeric', minute: '2-digit' })}
+              </span>
+              {sameDayDuplicate.statusCode && (
+                <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-semibold uppercase">
+                  {sameDayDuplicate.statusCode}
+                </span>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-2">
+            <Button type="button" variant="outline" onClick={() => setShowDupConfirm(false)}>
+              {t('patientForm.duplicate.cancel', { defaultValue: 'Go back' })}
+            </Button>
+            <Button
+              type="button"
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+              onClick={() => { setShowDupConfirm(false); performBooking(); }}
+            >
+              {t('patientForm.duplicate.proceed', { defaultValue: 'Book anyway' })}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Search, Plus, Receipt, ArrowLeft, IndianRupee, Loader2, RefreshCw,
-    AlertCircle, X, Wallet, TrendingDown, Trash2, Printer, Lock, FileText, CreditCard,
+    AlertCircle, X, Wallet, TrendingDown, Trash2, Printer, Lock, Unlock, CreditCard, Percent,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,9 +11,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
     Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import {
     AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
     AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -35,8 +37,20 @@ import { VISIT_TYPES } from '../utils/constants';
 import { useAuthStore } from '@/store/authStore';
 import { useHospitalApi } from '@/hooks/useApi';
 import { openPrintHtml, downloadHtmlAsPdf } from '@/utils/printUtils';
-import { getOpdDocHtml, buildPrintSettingsFromHospital, type OpdDocKind } from '../utils/opdDocuments';
+import { getOpdDocHtml, buildPrintSettingsFromHospital, splitChargePeriod, type OpdDocKind } from '../utils/opdDocuments';
 import { FileSpreadsheet, Download } from 'lucide-react';
+
+// Render a backend timestamp in IST. Naive (offset-less) timestamps are treated as UTC,
+// since the backend stores UTC — so they convert correctly to Asia/Kolkata.
+const formatIst = (iso?: string | null): string => {
+    if (!iso) return '';
+    const hasTz = /[zZ]|[+-]\d{2}:?\d{2}$/.test(iso);
+    const d = new Date(hasTz ? iso : `${iso}Z`);
+    if (isNaN(d.getTime())) return '';
+    const date = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short' });
+    const time = d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false });
+    return `${date} ${time}`;
+};
 
 // ─── Local view models ──────────────────────────────────────────────────────
 
@@ -63,6 +77,12 @@ export const BillingPage: React.FC = () => {
     const { data: hospitalData } = useHospitalApi.getHospitalById(hospitalId ?? '');
     const [invoicing, setInvoicing] = useState(false);
     const [docBusy, setDocBusy] = useState(false);
+    const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false);
+    const [reopenOpen, setReopenOpen] = useState(false);
+    const [reopenReason, setReopenReason] = useState('');
+    const [discountInput, setDiscountInput] = useState('');
+    const [discountMode, setDiscountMode] = useState<'amount' | 'percent'>('amount');
+    const [showDiscount, setShowDiscount] = useState(false);
 
     // Patient panel
     const [patientSearch, setPatientSearch] = useState('');
@@ -217,27 +237,112 @@ export const BillingPage: React.FC = () => {
         }
     };
 
-    // Create the draft invoice for this encounter's posted charges (and finalize, best-effort)
-    // so the visit has a numbered invoice before collecting payment.
-    const handleGenerateInvoice = async () => {
+    // Create or refresh the DRAFT invoice for this encounter's posted charges — WITHOUT
+    // finalizing. Used both to first generate the invoice and to fold newly added charges
+    // (e.g. a lab added after the consult was paid) into the existing draft so they become
+    // collectable. CreateDraftInvoice reuses the draft and links any unlinked charges.
+    const handleSaveDraft = async () => {
         if (!selectedPatient || !selectedEncounterId || invoicing) return;
         setInvoicing(true);
         try {
-            const inv = await ipdBillingService.createDraftInvoice({ patientId: selectedPatient.patientId, encounterId: selectedEncounterId });
-            if (inv?.success === false) throw new Error(inv?.message ?? 'Could not create invoice');
-            try { await ipdBillingService.finalize('finalize', { patientId: selectedPatient.patientId, encounterId: selectedEncounterId }); } catch { /* draft still accepts payment */ }
-            toast({ title: 'Invoice generated', description: inv?.data?.invoiceNo ? `Invoice ${inv.data.invoiceNo}` : undefined });
+            const inv = await ipdBillingService.createDraftInvoice({ patientId: selectedPatient.patientId, encounterId: selectedEncounterId, invoiceDiscountAmount: overallDiscount > 0 ? overallDiscount : undefined });
+            if (inv?.success === false) throw new Error(inv?.message ?? 'Could not save invoice');
+            toast({
+                title: inv?.data?.wasReused ? 'Invoice updated' : 'Invoice generated',
+                description: inv?.data?.invoiceNo ? `Invoice ${inv.data.invoiceNo}` : undefined,
+            });
             loadEvents();
         } catch (e: any) {
-            toast({ title: 'Could not generate invoice', description: e?.message ?? '', variant: 'destructive' });
+            toast({ title: 'Could not save invoice', description: e?.message ?? '', variant: 'destructive' });
         } finally {
             setInvoicing(false);
         }
     };
 
+    // Finalize (lock) the invoice. We re-link any posted charges first so nothing is left off
+    // the bill, then finalize. After this no charges/payments can be added until reopened.
+    const handleFinalize = async () => {
+        if (!selectedPatient || !selectedEncounterId || invoicing) return;
+        setInvoicing(true);
+        try {
+            const inv = await ipdBillingService.createDraftInvoice({ patientId: selectedPatient.patientId, encounterId: selectedEncounterId, invoiceDiscountAmount: overallDiscount > 0 ? overallDiscount : undefined });
+            if (inv?.success === false) throw new Error(inv?.message ?? 'Could not prepare invoice');
+            const res = await ipdBillingService.finalize('finalize', { patientId: selectedPatient.patientId, encounterId: selectedEncounterId });
+            if (res?.success === false) throw new Error(res?.message ?? 'Could not finalize');
+            toast({ title: 'Invoice finalized', description: inv?.data?.invoiceNo ? `Invoice ${inv.data.invoiceNo} is now locked.` : 'Invoice is now locked.' });
+            loadEvents();
+        } catch (e: any) {
+            toast({ title: 'Could not finalize', description: e?.message ?? '', variant: 'destructive' });
+        } finally {
+            setInvoicing(false);
+        }
+    };
+
+    // Reopen a finalized invoice back to DRAFT (audit reason required) so it can be edited again.
+    const handleReopen = async () => {
+        if (!selectedPatient || !selectedEncounterId || !reopenReason.trim() || invoicing) return;
+        setInvoicing(true);
+        try {
+            const res = await ipdBillingService.finalize('reopen', { patientId: selectedPatient.patientId, encounterId: selectedEncounterId, reason: reopenReason.trim() });
+            if (res?.success === false) throw new Error(res?.message ?? 'Could not reopen');
+            toast({ title: 'Invoice reopened', description: 'You can edit charges and payments again.' });
+            setReopenOpen(false);
+            setReopenReason('');
+            loadEvents();
+        } catch (e: any) {
+            toast({ title: 'Could not reopen', description: e?.message ?? '', variant: 'destructive' });
+        } finally {
+            setInvoicing(false);
+        }
+    };
+
+    // Apply / change the overall (invoice-level) discount. Re-runs the draft builder with the
+    // discount amount so the invoice net (and the due) update. Passing 0 clears it.
+    const handleApplyDiscount = async (explicitAmount?: number) => {
+        if (!selectedPatient || !selectedEncounterId || invoicing) return;
+        let amount: number;
+        if (explicitAmount !== undefined) {
+            amount = explicitAmount;
+        } else {
+            const raw = parseFloat(discountInput || '0');
+            if (isNaN(raw) || raw < 0) { toast({ title: 'Enter a valid discount', variant: 'destructive' }); return; }
+            amount = discountMode === 'percent' ? (totals.debit * Math.min(100, raw)) / 100 : raw;
+        }
+        if (amount > totals.debit) { toast({ title: 'Discount exceeds the bill total', variant: 'destructive' }); return; }
+        const rounded = Math.round(amount * 100) / 100;
+        setInvoicing(true);
+        try {
+            const res = await ipdBillingService.createDraftInvoice({ patientId: selectedPatient.patientId, encounterId: selectedEncounterId, invoiceDiscountAmount: rounded });
+            if (res?.success === false) throw new Error(res?.message ?? 'Could not apply discount');
+            toast({ title: rounded > 0 ? 'Discount applied' : 'Discount cleared', description: rounded > 0 ? `₹${rounded.toLocaleString('en-IN', { minimumFractionDigits: 2 })} off the invoice.` : undefined });
+            setDiscountInput('');
+            setShowDiscount(false);
+            loadEvents();
+        } catch (e: any) {
+            toast({ title: 'Could not apply discount', description: e?.message ?? '', variant: 'destructive' });
+        } finally {
+            setInvoicing(false);
+        }
+    };
+
+    // After a charge is added, automatically fold it into the (draft) invoice so the user never
+    // has to click "Update Invoice". Best-effort: the charge is already posted either way.
+    const handleChargeSaved = async () => {
+        if (selectedPatient && selectedEncounterId) {
+            try {
+                await ipdBillingService.createDraftInvoice({
+                    patientId: selectedPatient.patientId,
+                    encounterId: selectedEncounterId,
+                    invoiceDiscountAmount: overallDiscount > 0 ? overallDiscount : undefined,
+                });
+            } catch { /* non-blocking — the charge is posted; ledger will still reflect it */ }
+        }
+        loadEvents();
+    };
+
     // Render the bill (invoice / receipt / bill-cum-receipt) from the loaded ledger data
     // using the shared A4 templates — print to a window or download as PDF.
-    const handleDoc = async (kind: OpdDocKind, mode: 'print' | 'download') => {
+    const handleDoc = async (kind: OpdDocKind, mode: 'print' | 'download', paymentId?: string) => {
         if (!selectedPatient || !eventsData || docBusy) return;
         setDocBusy(true);
         try {
@@ -249,9 +354,10 @@ export const BillingPage: React.FC = () => {
                 mobile: selectedPatient.mobile,
                 doctorName: selectedEncounter?.doctorName,
             };
-            const html = getOpdDocHtml(kind, eventsData, settings, ctx);
+            const html = getOpdDocHtml(kind, eventsData, settings, ctx, paymentId ? { paymentId } : undefined);
+            const fileSuffix = paymentId ? `${kind}-${paymentId.slice(0, 8)}` : `${kind}-${selectedPatient.patientId}`;
             if (mode === 'print') openPrintHtml(html);
-            else await downloadHtmlAsPdf(html, `${kind}-${selectedPatient.patientId}.pdf`);
+            else await downloadHtmlAsPdf(html, `${fileSuffix}.pdf`);
         } catch (e: any) {
             toast({ title: 'Could not generate document', description: e?.message ?? '', variant: 'destructive' });
         } finally {
@@ -274,6 +380,30 @@ export const BillingPage: React.FC = () => {
 
     const isFinalized = (eventsData?.currentInvoice?.statusCode ?? '').toUpperCase() === 'FINALIZED';
 
+    // Posted charges on the encounter that aren't yet folded into the current invoice
+    // (e.g. a lab added after the consult invoice was created). Drives the "Update Invoice" action.
+    const hasUninvoicedCharges = (eventsData?.charges ?? []).some(
+        c => !c.isInvoiced && (c.statusCode ?? '').toUpperCase() === 'POSTED'
+    );
+
+    // Invoice-level (overall) discount = the invoice's total discount minus the per-line discounts
+    // of the charges already linked to it. Deriving it this way (rather than charge-total − invoice
+    // net) avoids counting a freshly-added, not-yet-invoiced charge as a "discount".
+    const linkedLineDiscount = (eventsData?.charges ?? [])
+        .filter(c => c.isInvoiced)
+        .reduce((s, c) => s + (Number(c.discountAmount) || 0), 0);
+    const overallDiscount = Math.max(0, (eventsData?.currentInvoice?.discountAmount ?? 0) - linkedLineDiscount);
+    // Payable = all posted charges (net of line discounts) minus the overall discount.
+    const netPayable = totals.debit - overallDiscount;
+    const due = netPayable - totals.credit;
+
+    // Unified ledger: charges + payments interleaved in chronological order (oldest first).
+    const ledgerRows = useMemo(() => {
+        const charges = (eventsData?.charges ?? []).map(c => ({ kind: 'charge' as const, ts: c.createdDateTime, c }));
+        const payments = (eventsData?.payments ?? []).map(p => ({ kind: 'payment' as const, ts: p.createdDateTime, p }));
+        return [...charges, ...payments].sort((a, b) => (a.ts ?? '').localeCompare(b.ts ?? ''));
+    }, [eventsData]);
+
     // ─── Render ─────
     return (
         <div className="flex flex-col h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-50 to-slate-100/60 px-2 sm:px-4 pb-4 pt-1 gap-4 text-sm text-slate-800">
@@ -288,7 +418,7 @@ export const BillingPage: React.FC = () => {
                     </div>
                     <div className="min-w-0">
                         <h1 className="text-base sm:text-lg font-bold tracking-wide text-slate-900 uppercase">Billing Ledger</h1>
-                        <p className="text-[10px] text-slate-500 font-mono">Encounter: {selectedEncounterId ?? '—'}</p>
+                        <p className="text-[10px] text-slate-500">Charges, payments &amp; receipts</p>
                     </div>
 
                     {selectedPatient && (
@@ -310,39 +440,48 @@ export const BillingPage: React.FC = () => {
                                 </Button>
                             </div>
 
-                            {totals.balance !== 0 && (
+                            {due !== 0 && (
                                 <div className={cn(
                                     'flex items-center gap-2 px-3 py-1.5 rounded-lg border ml-2',
-                                    totals.balance < 0 ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-rose-50 border-rose-300 text-rose-700'
+                                    due < 0 ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-rose-50 border-rose-300 text-rose-700'
                                 )}>
-                                    {totals.balance < 0 ? <Wallet className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                                    {due < 0 ? <Wallet className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
                                     <div className="flex flex-col">
-                                        <span className="text-[9px] font-bold tracking-wider uppercase">{totals.balance < 0 ? 'Credit' : 'Due'}</span>
-                                        <span className="text-sm font-bold font-mono">₹ {Math.abs(totals.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                        <span className="text-[9px] font-bold tracking-wider uppercase">{due < 0 ? 'Credit' : 'Due'}</span>
+                                        <span className="text-sm font-bold tabular-nums">₹ {Math.abs(due).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                 </div>
                             )}
                         </div>
                     )}
                 </div>
+                {eventsData?.currentInvoice?.isReopened && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 shrink-0 max-w-[260px]" title={eventsData.currentInvoice.reopenedReason || 'No reason recorded'}>
+                        <Unlock className="h-4 w-4 shrink-0" />
+                        <div className="min-w-0 flex flex-col leading-tight">
+                            <span className="text-[9px] font-bold uppercase tracking-wider">Invoice reopened</span>
+                            {eventsData.currentInvoice.reopenedReason && <span className="text-[11px] truncate">{eventsData.currentInvoice.reopenedReason}</span>}
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {/* Main 3-column layout */}
-            <div className="grid grid-cols-12 gap-4 flex-1 overflow-hidden">
+            {/* Main 3-column layout (lg uses a 24-track grid for finer column balance) */}
+            <div className="grid grid-cols-12 lg:grid-cols-[repeat(24,minmax(0,1fr))] gap-4 flex-1 overflow-hidden">
 
-                {/* Left: patient search */}
-                <Card className="col-span-12 md:col-span-3 lg:col-span-2 border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-indigo-500/5 bg-white flex flex-col overflow-hidden">
+                {/* Left: patient search + visits */}
+                <Card className="col-span-12 md:col-span-3 lg:col-span-3 border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-indigo-500/5 bg-white flex flex-col overflow-hidden">
                     <CardHeader className="pb-2 border-b border-slate-200 bg-slate-50">
-                        <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-wider">Patient</CardTitle>
+                        <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-wider">Patient &amp; Visits</CardTitle>
                     </CardHeader>
-                    <CardContent className="p-3 flex-1 flex flex-col min-h-0">
-                        <div className="relative mb-2">
+                    <CardContent className="p-3 flex-1 flex flex-col min-h-0 gap-3">
+                        <div className="relative">
                             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                             <Input value={patientSearch} onChange={(e) => setPatientSearch(e.target.value)} placeholder="PTID / name / mobile" className="h-9 pl-8 text-xs" autoFocus />
                         </div>
 
                         {patientSearch.length > 0 && (
-                            <div className="border border-slate-200 rounded-md flex-1 overflow-auto bg-white text-xs">
+                            <div className="border border-slate-200 rounded-md max-h-72 overflow-auto bg-white text-xs">
                                 {isSearching && (
                                     <div className="p-3 flex items-center gap-2 text-cyan-700"><Loader2 className="h-3 w-3 animate-spin" /> Searching…</div>
                                 )}
@@ -367,67 +506,91 @@ export const BillingPage: React.FC = () => {
                             </div>
                         )}
 
+                        {/* Visits for the selected patient */}
                         {patientSearch.length === 0 && selectedPatient && (
-                            <div className="text-[11px] text-slate-500 px-1 leading-relaxed">
-                                Showing ledger for <span className="font-semibold text-slate-700">{selectedPatient.name}</span>. Search again to switch patient.
+                            <div className="flex-1 flex flex-col min-h-0">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Visits</span>
+                                    <Button variant="outline" size="sm" className="h-6 w-6 p-0" onClick={() => loadEncounters(selectedPatient.patientId)} disabled={encountersLoading} title="Refresh visits">
+                                        <RefreshCw className={cn('h-3 w-3', encountersLoading && 'animate-spin')} />
+                                    </Button>
+                                </div>
+                                <div className="flex-1 overflow-auto -mx-1 px-1 space-y-2">
+                                    {encountersLoading ? (
+                                        <div className="space-y-2">{[0, 1].map(i => <Skeleton key={i} className="h-12 w-full" />)}</div>
+                                    ) : encountersError ? (
+                                        <div className="p-3 text-center text-rose-600 text-xs flex items-center justify-center gap-2"><AlertCircle className="h-4 w-4" /> {encountersError}</div>
+                                    ) : encounters.length === 0 ? (
+                                        <div className="p-4 text-center text-[11px] text-slate-400">No visits yet — use “Create New Invoice” below to start.</div>
+                                    ) : (
+                                        encounters.map(enc => {
+                                            const active = enc.encounterId === selectedEncounterId;
+                                            return (
+                                                <button
+                                                    key={enc.encounterId}
+                                                    type="button"
+                                                    onClick={() => setSelectedEncounterId(enc.encounterId)}
+                                                    className={cn(
+                                                        'w-full px-3 py-2 rounded-xl border text-xs text-left transition-all',
+                                                        active ? 'border-transparent bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30' : 'border-slate-200 bg-white hover:border-indigo-300 hover:shadow-sm',
+                                                        enc.isCancelled && 'opacity-60'
+                                                    )}
+                                                >
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        <span className="font-mono font-bold text-[10px] truncate max-w-full">{enc.invoiceNo ?? enc.encounterId.slice(0, 8)}</span>
+                                                        <Badge variant="outline" className={cn('text-[9px] h-4 px-1', active && 'bg-white/20 text-white border-white/30')}>{enc.status}</Badge>
+                                                        {enc.isCancelled && <Badge variant="outline" className="text-[9px] h-4 px-1 bg-rose-50 text-rose-700 border-rose-200">VOID</Badge>}
+                                                    </div>
+                                                    <p className={cn('text-[10px] mt-0.5 truncate', active ? 'text-indigo-100' : 'text-slate-500')}>
+                                                        {format(parseISO(enc.invoiceDate), 'dd MMM yyyy')}
+                                                        {enc.doctorName ? ` · ${enc.doctorName}` : ''}
+                                                    </p>
+                                                </button>
+                                            );
+                                        })
+                                    )}
+                                </div>
                             </div>
                         )}
                     </CardContent>
                 </Card>
 
-                {/* Middle: encounters + ledger */}
-                <Card className="col-span-12 md:col-span-9 lg:col-span-7 border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-indigo-500/5 bg-white flex flex-col overflow-hidden">
+                {/* Middle: ledger */}
+                <Card className="col-span-12 md:col-span-9 lg:col-[span_16/span_16] border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-indigo-500/5 bg-white flex flex-col overflow-hidden">
                     <CardHeader className="pb-2 border-b border-slate-200 bg-slate-50 flex flex-row items-center justify-between gap-2">
-                        <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-wider">Visits</CardTitle>
-                        <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => selectedPatient && loadEncounters(selectedPatient.patientId)} disabled={!selectedPatient || encountersLoading}>
-                                <RefreshCw className={cn('h-3 w-3 mr-1', encountersLoading && 'animate-spin')} /> Refresh
+                        <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-wider">Ledger</CardTitle>
+                        {/* Primary CTA: start a new billable visit (= a new invoice). Centered in the
+                            ledger header, distinct dark premium style. Shown once a patient is selected. */}
+                        {selectedPatient && (
+                            <Button
+                                onClick={() => setShowNewVisit(true)}
+                                className="h-7 px-4 shrink-0 whitespace-nowrap rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 hover:from-slate-800 hover:via-slate-700 hover:to-slate-800 ring-1 ring-white/10 shadow-md shadow-black/30 transition-all active:scale-[0.98]"
+                            >
+                                <Plus className="h-3.5 w-3.5 mr-0.5" />Create New Invoice
                             </Button>
-                            <Button size="sm" className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700" onClick={() => setShowNewVisit(true)} disabled={!selectedPatient}>
-                                <Plus className="h-3 w-3 mr-1" /> New Visit
-                            </Button>
-                        </div>
-                    </CardHeader>
-
-                    <div className="border-b border-slate-200 bg-white">
-                        {!selectedPatient ? (
-                            <div className="p-6 text-center text-xs text-slate-400">Select a patient to view their visits.</div>
-                        ) : encountersLoading ? (
-                            <div className="p-3 space-y-2">{[0, 1].map(i => <Skeleton key={i} className="h-10 w-full" />)}</div>
-                        ) : encountersError ? (
-                            <div className="p-4 text-center text-rose-600 text-xs flex items-center justify-center gap-2"><AlertCircle className="h-4 w-4" /> {encountersError}</div>
-                        ) : encounters.length === 0 ? (
-                            <div className="p-6 text-center text-xs text-slate-400">No visits yet for this patient. Click "New Visit" to start.</div>
-                        ) : (
-                            <div className="flex overflow-x-auto p-2 gap-2">
-                                {encounters.map(enc => {
-                                    const active = enc.encounterId === selectedEncounterId;
-                                    return (
-                                        <button
-                                            key={enc.encounterId}
-                                            type="button"
-                                            onClick={() => setSelectedEncounterId(enc.encounterId)}
-                                            className={cn(
-                                                'shrink-0 px-3 py-2 rounded-xl border text-xs text-left transition-all min-w-[160px]',
-                                                active ? 'border-transparent bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30' : 'border-slate-200 bg-white hover:border-indigo-300 hover:-translate-y-0.5 hover:shadow-sm',
-                                                enc.isCancelled && 'opacity-60'
-                                            )}
-                                        >
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="font-mono font-bold text-[10px]">{enc.invoiceNo ?? enc.encounterId.slice(0, 8)}</span>
-                                                <Badge variant="outline" className={cn('text-[9px] h-4 px-1', active && 'bg-white/20 text-white border-white/30')}>{enc.status}</Badge>
-                                                {enc.isCancelled && <Badge variant="outline" className="text-[9px] h-4 px-1 bg-rose-50 text-rose-700 border-rose-200">VOID</Badge>}
-                                            </div>
-                                            <p className={cn('text-[10px] mt-0.5', active ? 'text-indigo-100' : 'text-slate-500')}>
-                                                {format(parseISO(enc.invoiceDate), 'dd MMM yyyy')}
-                                                {enc.doctorName ? ` · ${enc.doctorName}` : ''}
-                                            </p>
-                                        </button>
-                                    );
-                                })}
-                            </div>
                         )}
-                    </div>
+                        {eventsData?.currentInvoice ? (
+                            <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Invoice</span>
+                                <span className="text-[11px] font-bold text-slate-700 tabular-nums whitespace-nowrap shrink-0" title={eventsData.currentInvoice.invoiceNo ?? undefined}>{eventsData.currentInvoice.invoiceNo ?? '—'}</span>
+                                <Badge
+                                    variant="outline"
+                                    className={cn(
+                                        'text-[9px] h-5 px-2 font-bold uppercase tracking-wider shrink-0',
+                                        isFinalized
+                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                                            : (eventsData.currentInvoice.statusCode ?? '').toUpperCase() === 'CANCELLED'
+                                                ? 'bg-rose-50 text-rose-700 border-rose-300'
+                                                : 'bg-amber-50 text-amber-700 border-amber-300'
+                                    )}
+                                >
+                                    {eventsData.currentInvoice.statusCode ?? '—'}
+                                </Badge>
+                            </div>
+                        ) : selectedEncounterId ? (
+                            <span className="text-[10px] text-slate-400">No invoice yet</span>
+                        ) : null}
+                    </CardHeader>
 
                     {/* Ledger */}
                     <CardContent className="p-0 flex-1 overflow-auto">
@@ -449,59 +612,112 @@ export const BillingPage: React.FC = () => {
                                         <tr className="border-b border-slate-200">
                                             <th className="text-left px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Date</th>
                                             <th className="text-left px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Particular</th>
+                                            <th className="text-left px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Period</th>
                                             <th className="text-left px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Category</th>
                                             <th className="text-right px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Qty × Rate</th>
+                                            <th className="text-right px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Disc</th>
                                             <th className="text-right px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Debit</th>
                                             <th className="text-right px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Credit</th>
                                             <th className="w-px" />
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {(eventsData?.charges ?? []).map((c: BillingChargeRow) => (
-                                            <tr key={c.chargeEventId} className="border-b border-slate-100 border-l-2 border-l-transparent hover:border-l-indigo-300 hover:bg-slate-50 transition-colors">
-                                                <td className="px-3 py-2 whitespace-nowrap text-slate-600">{format(parseISO(c.createdDateTime), 'dd MMM HH:mm')}</td>
-                                                <td className="px-3 py-2"><div className="font-semibold text-slate-800 truncate max-w-[260px]">{c.displayName ?? '—'}</div></td>
-                                                <td className="px-3 py-2 text-[10px] font-mono uppercase text-slate-500">{c.categoryCode ?? '—'}</td>
-                                                <td className="px-3 py-2 text-right font-mono">{c.qty} × ₹{Number(c.rate).toFixed(2)}</td>
-                                                <td className="px-3 py-2 text-right font-mono font-semibold text-slate-800">₹{Number(c.netAmount).toFixed(2)}</td>
+                                        {ledgerRows.map((row) => row.kind === 'charge' ? (
+                                            <tr key={`c-${row.c.chargeEventId}`} className="border-b border-slate-100 border-l-2 border-l-transparent hover:border-l-indigo-300 hover:bg-slate-50 transition-colors">
+                                                <td className="px-3 py-2 whitespace-nowrap text-slate-600">{formatIst(row.c.createdDateTime)}</td>
+                                                <td className="px-3 py-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="h-6 w-6 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center shrink-0"><IndianRupee className="h-3.5 w-3.5" /></span>
+                                                        <span className="font-semibold text-slate-800 truncate max-w-[200px]">{splitChargePeriod(row.c.displayName, row.c.categoryCode).name || '—'}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-3 py-2 text-[11px] text-slate-600 whitespace-nowrap">{splitChargePeriod(row.c.displayName, row.c.categoryCode).period || <span className="text-slate-300">—</span>}</td>
+                                                <td className="px-3 py-2 text-[10px] font-mono uppercase text-slate-500">{row.c.categoryCode ?? '—'}</td>
+                                                <td className="px-3 py-2 text-right tabular-nums">{row.c.qty} × ₹{Number(row.c.rate).toFixed(2)}</td>
+                                                <td className="px-3 py-2 text-right tabular-nums text-rose-600">{Number(row.c.discountAmount) > 0 ? `− ₹${Number(row.c.discountAmount).toFixed(2)}` : <span className="text-slate-300">—</span>}</td>
+                                                <td className="px-3 py-2 text-right tabular-nums font-semibold text-slate-800">₹{Number(row.c.netAmount).toFixed(2)}</td>
                                                 <td className="px-3 py-2 text-right text-slate-300">—</td>
                                                 <td className="px-2 py-2 text-right">
                                                     {!isFinalized && (
-                                                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-slate-400 hover:text-rose-600" onClick={() => setVoidConfirm({ kind: 'charge', id: c.chargeEventId, label: c.displayName ?? 'Charge' })}>
-                                                            <Trash2 className="h-3 w-3" />
+                                                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" onClick={() => setVoidConfirm({ kind: 'charge', id: row.c.chargeEventId, label: row.c.displayName ?? 'Charge' })}>
+                                                            <Trash2 className="h-3.5 w-3.5" />
                                                         </Button>
                                                     )}
                                                 </td>
                                             </tr>
-                                        ))}
-                                        {(eventsData?.payments ?? []).map((p: BillingPaymentRow) => (
-                                            <tr key={p.paymentId} className="border-b border-slate-100 border-l-2 border-l-emerald-300 hover:bg-emerald-50/40 bg-emerald-50/20 transition-colors">
-                                                <td className="px-3 py-2 whitespace-nowrap text-slate-600">{format(parseISO(p.createdDateTime), 'dd MMM HH:mm')}</td>
+                                        ) : (
+                                            <tr key={`p-${row.p.paymentId}`} className="border-b border-slate-100 border-l-2 border-l-emerald-300 hover:bg-emerald-50/40 bg-emerald-50/20 transition-colors">
+                                                <td className="px-3 py-2 whitespace-nowrap text-slate-600">{formatIst(row.p.createdDateTime)}</td>
                                                 <td className="px-3 py-2">
-                                                    <div className="font-semibold text-emerald-700">{p.paymentType ?? 'PAYMENT'} · {p.paymentMode ?? '—'}</div>
-                                                    <div className="text-[10px] text-slate-500">{p.receiptNo ? `Receipt ${p.receiptNo}` : ''}{p.paymentDescription ? ` · ${p.paymentDescription}` : ''}</div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="h-6 w-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0"><Wallet className="h-3.5 w-3.5" /></span>
+                                                        <div className="min-w-0">
+                                                            <div className="font-semibold text-emerald-700">{row.p.paymentType ?? 'PAYMENT'} · {row.p.paymentMode ?? '—'}</div>
+                                                            <div className="text-[10px] text-slate-500 truncate max-w-[220px]">{row.p.receiptNo ? `Receipt ${row.p.receiptNo}` : ''}{row.p.paymentDescription ? ` · ${row.p.paymentDescription}` : ''}</div>
+                                                        </div>
+                                                    </div>
                                                 </td>
-                                                <td className="px-3 py-2 text-[10px] font-mono uppercase text-slate-500">PAYMENT</td>
-                                                <td className="px-3 py-2 text-right text-slate-300 font-mono">—</td>
                                                 <td className="px-3 py-2 text-right text-slate-300">—</td>
-                                                <td className="px-3 py-2 text-right font-mono font-semibold text-emerald-700">₹{Number(p.amount).toFixed(2)}</td>
-                                                <td className="px-2 py-2 text-right">
-                                                    {!isFinalized && (
-                                                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-slate-400 hover:text-rose-600" onClick={() => setVoidConfirm({ kind: 'payment', id: p.paymentId, label: p.paymentType ?? 'Payment' })}>
-                                                            <Trash2 className="h-3 w-3" />
+                                                <td className="px-3 py-2 text-[10px] font-mono uppercase text-slate-500">PAYMENT</td>
+                                                <td className="px-3 py-2 text-right text-slate-300 tabular-nums">—</td>
+                                                <td className="px-3 py-2 text-right text-slate-300">—</td>
+                                                <td className="px-3 py-2 text-right text-slate-300">—</td>
+                                                <td className="px-3 py-2 text-right tabular-nums font-semibold text-emerald-700">₹{Number(row.p.amount).toFixed(2)}</td>
+                                                <td className="px-2 py-2 text-right whitespace-nowrap">
+                                                    <div className="inline-flex items-center gap-0.5">
+                                                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" disabled={docBusy} title="Print this payment's receipt" onClick={() => handleDoc('receipt', 'print', row.p.paymentId)}>
+                                                            <Printer className="h-3.5 w-3.5" />
                                                         </Button>
-                                                    )}
+                                                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" disabled={docBusy} title="Download this payment's receipt (PDF)" onClick={() => handleDoc('receipt', 'download', row.p.paymentId)}>
+                                                            <Download className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                        {!isFinalized && (
+                                                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" onClick={() => setVoidConfirm({ kind: 'payment', id: row.p.paymentId, label: row.p.paymentType ?? 'Payment' })}>
+                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
                                         {(eventsData?.charges?.length ?? 0) === 0 && (eventsData?.payments?.length ?? 0) === 0 && (
                                             <tr>
-                                                <td colSpan={7} className="px-3 py-12 text-center text-xs text-slate-400">
-                                                    No entries on this visit yet. Use the right panel to add a charge or payment.
+                                                <td colSpan={9} className="px-3 py-16 text-center">
+                                                    <div className="flex flex-col items-center gap-2 text-slate-400">
+                                                        <div className="h-12 w-12 rounded-2xl bg-slate-50 ring-1 ring-slate-200 flex items-center justify-center">
+                                                            <Receipt className="h-6 w-6 text-slate-300" />
+                                                        </div>
+                                                        <p className="text-sm font-semibold text-slate-500">No entries yet</p>
+                                                        <p className="text-xs">Add a charge or record a payment from the right panel.</p>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         )}
                                     </tbody>
+                                    {((eventsData?.charges?.length ?? 0) > 0 || (eventsData?.payments?.length ?? 0) > 0) && (
+                                        <tfoot className="sticky bottom-0 bg-white/90 backdrop-blur">
+                                            <tr className="border-t-2 border-slate-200 text-[11px]">
+                                                <td colSpan={6} className="px-3 py-2 text-right font-bold uppercase tracking-widest text-slate-400">Totals</td>
+                                                <td className="px-3 py-2 text-right tabular-nums font-bold text-slate-800">₹{totals.debit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                                <td className="px-3 py-2 text-right tabular-nums font-bold text-emerald-700">₹{totals.credit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                                <td />
+                                            </tr>
+                                            {overallDiscount > 0 && (
+                                                <tr className="text-[11px]">
+                                                    <td colSpan={6} className="px-3 py-1 text-right font-bold uppercase tracking-widest text-rose-500">Invoice Discount</td>
+                                                    <td colSpan={2} className="px-3 py-1 text-right tabular-nums font-bold text-rose-600">− ₹{overallDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                                    <td />
+                                                </tr>
+                                            )}
+                                            <tr>
+                                                <td colSpan={6} className="px-3 pb-2 text-right font-bold uppercase tracking-widest text-slate-500">{overallDiscount > 0 ? 'Balance (after discount)' : 'Balance'}</td>
+                                                <td colSpan={2} className={cn('px-3 pb-2 text-right tabular-nums font-black text-sm', due > 0 ? 'text-rose-700' : due < 0 ? 'text-emerald-700' : 'text-slate-700')}>
+                                                    ₹{Math.abs(due).toLocaleString('en-IN', { minimumFractionDigits: 2 })} {due < 0 ? 'CR' : due > 0 ? 'DR' : ''}
+                                                </td>
+                                                <td />
+                                            </tr>
+                                        </tfoot>
+                                    )}
                                 </table>
                             </>
                         )}
@@ -509,20 +725,29 @@ export const BillingPage: React.FC = () => {
                 </Card>
 
                 {/* Right: actions */}
-                <Card className="col-span-12 lg:col-span-3 border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-indigo-500/5 bg-white flex flex-col overflow-hidden">
-                    <CardHeader className="pb-2 border-b border-slate-200 bg-slate-50">
-                        <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-wider">Actions</CardTitle>
+                <Card className="col-span-12 lg:col-span-5 border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-indigo-500/5 bg-white flex flex-col overflow-hidden">
+                    <CardHeader className="pb-2 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-indigo-50/50">
+                        <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
+                            <span className="h-6 w-6 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center shadow-sm shadow-indigo-500/30"><IndianRupee className="h-3.5 w-3.5" /></span>
+                            Actions
+                        </CardTitle>
                     </CardHeader>
                     <CardContent className="p-4 flex-1 overflow-auto space-y-3">
                         {/* Totals summary */}
                         <div className="relative overflow-hidden rounded-2xl border border-indigo-100 p-4 bg-gradient-to-br from-indigo-50 to-violet-50 ring-1 ring-black/5">
                             <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full bg-white/40 blur-2xl pointer-events-none" />
-                            <div className="relative flex justify-between text-xs"><span className="text-slate-500">Gross Charged</span><span className="font-mono font-semibold tabular-nums">₹{totals.debit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
-                            <div className="relative flex justify-between text-xs mt-1.5"><span className="text-slate-500">Received</span><span className="font-mono font-semibold text-emerald-700 tabular-nums">₹{totals.credit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                            <div className="relative flex justify-between text-xs"><span className="text-slate-500">Gross Charged</span><span className="font-semibold tabular-nums">₹{totals.debit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                            {overallDiscount > 0 && (
+                                <>
+                                    <div className="relative flex justify-between text-xs mt-1.5"><span className="text-slate-500">Invoice Discount</span><span className="font-semibold text-rose-600 tabular-nums">− ₹{overallDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                                    <div className="relative flex justify-between text-xs mt-1.5"><span className="text-slate-500">Net Payable</span><span className="font-semibold tabular-nums">₹{netPayable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                                </>
+                            )}
+                            <div className="relative flex justify-between text-xs mt-1.5"><span className="text-slate-500">Received</span><span className="font-semibold text-emerald-700 tabular-nums">₹{totals.credit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
                             <div className="relative flex justify-between items-baseline text-sm pt-2.5 mt-2.5 border-t border-indigo-200/60">
                                 <span className="font-bold text-slate-700">Balance</span>
-                                <span className={cn('font-mono font-black text-lg tabular-nums', totals.balance > 0 ? 'text-rose-700' : totals.balance < 0 ? 'text-emerald-700' : 'text-slate-700')}>
-                                    ₹{Math.abs(totals.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })} {totals.balance < 0 ? 'CR' : totals.balance > 0 ? 'DR' : ''}
+                                <span className={cn('font-black text-lg tabular-nums', due > 0 ? 'text-rose-700' : due < 0 ? 'text-emerald-700' : 'text-slate-700')}>
+                                    ₹{Math.abs(due).toLocaleString('en-IN', { minimumFractionDigits: 2 })} {due < 0 ? 'CR' : due > 0 ? 'DR' : ''}
                                 </span>
                             </div>
                             {isFinalized && (
@@ -540,10 +765,34 @@ export const BillingPage: React.FC = () => {
                             <Button onClick={() => setShowAddPayment(true)} disabled={!selectedEncounterId || isFinalized} className="h-10 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-md shadow-emerald-500/20 transition-all active:scale-[0.98]">
                                 <CreditCard className="h-4 w-4 mr-1" /> Record Payment
                             </Button>
-                            {/* Generate the invoice when the visit has charges but no invoice yet. */}
+                            {/* Overall (invoice-level) discount — opens a premium drawer. */}
+                            {selectedEncounterId && eventsData?.currentInvoice && !isFinalized && (
+                                <Button onClick={() => { setDiscountInput(''); setDiscountMode('amount'); setShowDiscount(true); }} variant="outline" className="h-10 rounded-xl border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-800 dark:text-rose-300">
+                                    <Percent className="h-4 w-4 mr-1" /> {overallDiscount > 0 ? 'Edit Discount' : 'Add Discount'}
+                                </Button>
+                            )}
+                            {/* Generate the draft invoice when the visit has charges but no invoice yet. */}
                             {selectedEncounterId && !eventsData?.currentInvoice && (
-                                <Button onClick={handleGenerateInvoice} disabled={isFinalized || invoicing || (eventsData?.charges?.length ?? 0) === 0} variant="outline" className="h-10 rounded-xl border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300">
+                                <Button onClick={handleSaveDraft} disabled={invoicing || (eventsData?.charges?.length ?? 0) === 0} variant="outline" className="h-10 rounded-xl border-indigo-200 text-indigo-700 hover:bg-indigo-50 hover:text-indigo-700 dark:border-indigo-800 dark:text-indigo-300">
                                     {invoicing ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Generating…</> : <><FileSpreadsheet className="h-4 w-4 mr-1" /> Generate Invoice</>}
+                                </Button>
+                            )}
+                            {/* Fold newly added charges into the existing (draft) invoice so they can be collected. */}
+                            {selectedEncounterId && eventsData?.currentInvoice && !isFinalized && hasUninvoicedCharges && (
+                                <Button onClick={handleSaveDraft} disabled={invoicing} variant="outline" className="h-10 rounded-xl border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-700 dark:border-amber-800 dark:text-amber-300">
+                                    {invoicing ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Updating…</> : <><FileSpreadsheet className="h-4 w-4 mr-1" /> Update Invoice</>}
+                                </Button>
+                            )}
+                            {/* Finalize (lock) the invoice — single billing surface, no separate page. */}
+                            {selectedEncounterId && eventsData?.currentInvoice && !isFinalized && (
+                                <Button onClick={() => setShowFinalizeConfirm(true)} disabled={invoicing} variant="outline" className="h-10 rounded-xl border-emerald-300 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-700 dark:border-emerald-800 dark:text-emerald-300">
+                                    <Lock className="h-4 w-4 mr-1" /> Finalize Invoice
+                                </Button>
+                            )}
+                            {/* Reopen a finalized invoice (audit reason required). */}
+                            {selectedEncounterId && isFinalized && (
+                                <Button onClick={() => setReopenOpen(true)} disabled={invoicing} variant="outline" className="h-10 rounded-xl border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-700 dark:border-amber-800 dark:text-amber-300">
+                                    <Unlock className="h-4 w-4 mr-1" /> Reopen Invoice
                                 </Button>
                             )}
 
@@ -551,23 +800,18 @@ export const BillingPage: React.FC = () => {
                             {eventsData?.currentInvoice && (
                                 <div className="rounded-xl border border-slate-200 p-2.5 space-y-1.5">
                                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-0.5">Documents</p>
-                                    {([['invoice', 'Invoice'], ['receipt', 'Receipt'], ['billcum', 'Bill + Receipt']] as const)
+                                    {([['invoice', 'Invoice'], ['receipt', 'Receipt'], ['statement', 'Statement'], ['billcum', 'Bill + Receipt']] as const)
                                         .filter(([kind]) => kind === 'invoice' || (eventsData?.payments?.length ?? 0) > 0)
                                         .map(([kind, label]) => (
-                                            <div key={kind} className="flex items-center justify-between gap-2 text-xs">
-                                                <span className="font-medium text-slate-600">{label}</span>
-                                                <div className="flex gap-1.5">
-                                                    <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={docBusy} onClick={() => handleDoc(kind, 'print')}><Printer className="h-3 w-3 mr-1" /> Print</Button>
-                                                    <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={docBusy} onClick={() => handleDoc(kind, 'download')}><Download className="h-3 w-3 mr-1" /> PDF</Button>
+                                            <div key={kind} className="flex items-center justify-between gap-1.5 text-xs">
+                                                <span className="font-medium text-slate-600 truncate">{label}</span>
+                                                <div className="flex gap-1 shrink-0">
+                                                    <Button size="sm" variant="ghost" title={`Print ${label}`} className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" disabled={docBusy} onClick={() => handleDoc(kind, 'print')}><Printer className="h-3.5 w-3.5" /></Button>
+                                                    <Button size="sm" variant="ghost" title={`Download ${label} (PDF)`} className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" disabled={docBusy} onClick={() => handleDoc(kind, 'download')}><Download className="h-3.5 w-3.5" /></Button>
                                                 </div>
                                             </div>
                                         ))}
                                 </div>
-                            )}
-                            {selectedEncounterId && (
-                                <Button onClick={() => navigate(`/billing/encounter/${selectedEncounterId}`)} variant="outline" className="h-10 rounded-xl">
-                                    <FileText className="h-4 w-4 mr-1" /> Open Encounter View
-                                </Button>
                             )}
                         </div>
 
@@ -588,7 +832,7 @@ export const BillingPage: React.FC = () => {
                     onOpenChange={setShowAddCharge}
                     patientId={selectedPatient.patientId}
                     encounterId={selectedEncounterId}
-                    onSaved={loadEvents}
+                    onSaved={handleChargeSaved}
                 />
             )}
             {selectedPatient && selectedEncounterId && (
@@ -597,10 +841,59 @@ export const BillingPage: React.FC = () => {
                     onOpenChange={setShowAddPayment}
                     patientId={selectedPatient.patientId}
                     encounterId={selectedEncounterId}
-                    suggestedAmount={Math.max(0, totals.balance)}
+                    suggestedAmount={Math.max(0, due)}
                     onSaved={loadEvents}
                 />
             )}
+
+            {/* Overall discount drawer */}
+            <Sheet open={showDiscount} onOpenChange={setShowDiscount}>
+                <SheetContent side="right" className="w-full sm:max-w-md p-0 gap-0 flex flex-col bg-white dark:bg-slate-950">
+                    <div className="px-6 py-5 bg-gradient-to-r from-rose-500 to-pink-600">
+                        <div className="flex items-center gap-3">
+                            <div className="h-11 w-11 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0">
+                                <Percent className="h-5 w-5 text-white" />
+                            </div>
+                            <div>
+                                <SheetTitle className="text-white text-lg font-bold">Overall Discount</SheetTitle>
+                                <p className="text-rose-50/90 text-xs mt-0.5">Applied to the whole invoice</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1.5">
+                            <div className="flex justify-between text-xs"><span className="text-slate-500">Gross Charged</span><span className="tabular-nums font-semibold">₹{totals.debit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                            {overallDiscount > 0 && (
+                                <div className="flex justify-between text-xs"><span className="text-slate-500">Current Discount</span><span className="tabular-nums font-semibold text-rose-600">− ₹{overallDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                            )}
+                            <div className="flex justify-between text-sm pt-1.5 border-t border-slate-200"><span className="font-bold text-slate-800">Net Payable</span><span className="tabular-nums font-bold text-emerald-700">₹{netPayable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                        </div>
+
+                        <div>
+                            <Label className="text-xs font-semibold text-slate-700">New discount</Label>
+                            <div className="flex items-center gap-2 mt-1">
+                                <div className="inline-flex rounded-xl border border-slate-200 overflow-hidden shrink-0">
+                                    <button type="button" onClick={() => setDiscountMode('amount')} className={cn('px-3 py-2 text-sm font-bold transition-colors', discountMode === 'amount' ? 'bg-rose-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50')}>₹</button>
+                                    <button type="button" onClick={() => setDiscountMode('percent')} className={cn('px-3 py-2 text-sm font-bold transition-colors', discountMode === 'percent' ? 'bg-rose-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50')}>%</button>
+                                </div>
+                                <Input type="number" min={0} value={discountInput} onChange={(e) => setDiscountInput(e.target.value)} placeholder={discountMode === 'amount' ? 'Amount in ₹' : 'Percent of bill'} className="h-11 rounded-xl flex-1 text-lg tabular-nums" autoFocus />
+                            </div>
+                            <p className="text-[11px] text-slate-400 mt-1.5">Enter 0 to clear the discount. Cannot exceed the gross total.</p>
+                        </div>
+                    </div>
+
+                    <div className="p-4 border-t border-slate-200 bg-slate-50 flex gap-3 mt-auto">
+                        {overallDiscount > 0 && (
+                            <Button variant="outline" className="rounded-xl text-rose-600 border-rose-200 hover:bg-rose-50" disabled={invoicing} onClick={() => handleApplyDiscount(0)}>Clear</Button>
+                        )}
+                        <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setShowDiscount(false)} disabled={invoicing}>Cancel</Button>
+                        <Button className="flex-1 rounded-xl bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-500/20" disabled={invoicing} onClick={() => handleApplyDiscount()}>
+                            {invoicing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Applying…</> : <><Percent className="h-4 w-4 mr-2" />Apply Discount</>}
+                        </Button>
+                    </div>
+                </SheetContent>
+            </Sheet>
 
             {/* New visit dialog */}
             <Dialog open={showNewVisit} onOpenChange={setShowNewVisit}>
@@ -630,19 +923,112 @@ export const BillingPage: React.FC = () => {
                 </DialogContent>
             </Dialog>
 
-            {/* Void confirm */}
+            {/* Void confirm — premium */}
             <AlertDialog open={!!voidConfirm} onOpenChange={(o) => { if (!o) setVoidConfirm(null); }}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Delete this entry?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Remove <span className="font-semibold">{voidConfirm?.label}</span> from this visit. This cannot be undone.
+                <AlertDialogContent className="p-0 gap-0 overflow-hidden rounded-2xl sm:rounded-2xl max-w-md border-0 shadow-2xl">
+                    <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-rose-500 to-rose-600">
+                        <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0">
+                            <Trash2 className="h-5 w-5 text-white" />
+                        </div>
+                        <AlertDialogTitle className="text-white text-base font-bold">Delete this entry?</AlertDialogTitle>
+                    </div>
+                    <div className="px-5 py-4">
+                        <AlertDialogDescription className="text-sm text-slate-600">
+                            Remove <span className="font-semibold text-slate-800">{voidConfirm?.label}</span> from this visit. This action cannot be undone.
                         </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel disabled={voidBusy}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleVoid} disabled={voidBusy} className="bg-rose-600 hover:bg-rose-700">
-                            {voidBusy ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Removing…</> : 'Delete'}
+                    </div>
+                    <AlertDialogFooter className="px-5 pb-5 pt-0">
+                        <AlertDialogCancel disabled={voidBusy} className="rounded-xl">Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleVoid} disabled={voidBusy} className="rounded-xl bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-500/20">
+                            {voidBusy ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Removing…</> : <><Trash2 className="h-4 w-4 mr-1.5" />Delete</>}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Finalize confirm — premium. Finalizing locks the invoice. */}
+            <AlertDialog open={showFinalizeConfirm} onOpenChange={(o) => { if (!o) setShowFinalizeConfirm(false); }}>
+                <AlertDialogContent className="p-0 gap-0 overflow-hidden rounded-2xl sm:rounded-2xl max-w-md border-0 shadow-2xl">
+                    <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-amber-500 to-orange-600">
+                        <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0">
+                            <Lock className="h-5 w-5 text-white" />
+                        </div>
+                        <div className="min-w-0">
+                            <AlertDialogTitle className="text-white text-base font-bold leading-tight">Finalize invoice</AlertDialogTitle>
+                            <p className="text-[11px] text-amber-50/90 mt-0.5">This locks the bill</p>
+                        </div>
+                    </div>
+                    <div className="px-5 py-4">
+                        <AlertDialogDescription asChild>
+                            <div className="space-y-2 text-sm text-slate-600">
+                                <p>
+                                    Finalizing this invoice <span className="font-semibold text-slate-800">locks it</span>.
+                                    Once locked you can no longer:
+                                </p>
+                                <ul className="list-disc pl-5 space-y-0.5">
+                                    <li>add charges (e.g. lab tests, procedures), or</li>
+                                    <li>record or edit payments against it.</li>
+                                </ul>
+                                {hasUninvoicedCharges ? (
+                                    <p className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-amber-800 font-medium">
+                                        Some charges aren’t on the bill yet — they’ll be folded in automatically when you
+                                        finalize. Make sure every charge (e.g. a pending lab) has been added first.
+                                    </p>
+                                ) : (
+                                    <p className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 text-slate-600">
+                                        If a charge is still pending (e.g. a lab), add it before finalizing. You can reopen
+                                        later, but it needs a reason for audit.
+                                    </p>
+                                )}
+                            </div>
+                        </AlertDialogDescription>
+                    </div>
+                    <AlertDialogFooter className="px-5 pb-5 pt-0">
+                        <AlertDialogCancel disabled={invoicing} className="rounded-xl">Not yet</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => { setShowFinalizeConfirm(false); handleFinalize(); }}
+                            disabled={invoicing}
+                            className="rounded-xl bg-amber-600 hover:bg-amber-700 shadow-md shadow-amber-500/20"
+                        >
+                            {invoicing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Finalizing…</> : <><Lock className="h-4 w-4 mr-1.5" />Finalize &amp; lock</>}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Reopen confirm — premium. Back to DRAFT, audit reason required. */}
+            <AlertDialog open={reopenOpen} onOpenChange={(o) => { if (!o) { setReopenOpen(false); setReopenReason(''); } }}>
+                <AlertDialogContent className="p-0 gap-0 overflow-hidden rounded-2xl sm:rounded-2xl max-w-md border-0 shadow-2xl">
+                    <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-indigo-500 to-violet-600">
+                        <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0">
+                            <Unlock className="h-5 w-5 text-white" />
+                        </div>
+                        <AlertDialogTitle className="text-white text-base font-bold">Reopen finalized invoice?</AlertDialogTitle>
+                    </div>
+                    <div className="px-5 py-4 space-y-3">
+                        <AlertDialogDescription className="text-sm text-slate-600">
+                            Reopening converts invoice <span className="font-semibold text-slate-800">{eventsData?.currentInvoice?.invoiceNo ?? ''}</span> back to DRAFT and reverts
+                            its charges from INVOICED to POSTED so you can edit again. A reason is required for audit.
+                        </AlertDialogDescription>
+                        <div>
+                            <Label className="text-xs font-semibold text-slate-700">Reason for reopening <span className="text-rose-500">*</span></Label>
+                            <Textarea
+                                placeholder="e.g. Added lab charge after finalizing…"
+                                value={reopenReason}
+                                onChange={(e) => setReopenReason(e.target.value)}
+                                rows={3}
+                                className="text-sm mt-1.5 rounded-xl"
+                            />
+                        </div>
+                    </div>
+                    <AlertDialogFooter className="px-5 pb-5 pt-0">
+                        <AlertDialogCancel disabled={invoicing} className="rounded-xl">Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => { e.preventDefault(); handleReopen(); }}
+                            disabled={!reopenReason.trim() || invoicing}
+                            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-500/20"
+                        >
+                            {invoicing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Reopening…</> : <><Unlock className="h-4 w-4 mr-1.5" /> Reopen</>}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

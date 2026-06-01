@@ -120,6 +120,8 @@ export interface AddChargeEventRequest {
         hsnSacCode?: string;
         gstRate?: number;
         taxInclusive?: boolean;
+        // Per-charge incentive (referrer/doctor accrual) — for manual charges with no master.
+        incentiveAmount?: number;
     }>;
 }
 
@@ -304,6 +306,7 @@ export interface CurrentInvoiceInfo {
     placeOfSupplyStateCode?: string;
 
     isReopened?: boolean;
+    reopenedReason?: string;
 }
 
 export interface GetEncounterEventsResponse {
@@ -348,8 +351,10 @@ export const ipdBillingService = {
         ipdApiClient.patch(IPD_API_ENDPOINTS.CHARGE.UPDATE_MASTER_STATUS(chargeId, hospitalIdOrThrow(hospitalId)), { isActive }),
 
     // Charge Events
+    // Creates a billing encounter for a registered patient without requiring an appointment
+    // (manual billing, e.g. IPD). The OPD consult flow still uses charge/create-event.
     createEncounter: (req: CreateEncounterRequest): Promise<CreateEncounterResponse> =>
-        ipdApiClient.post(IPD_API_ENDPOINTS.CHARGE.CREATE_EVENT, {
+        ipdApiClient.post(IPD_API_ENDPOINTS.CHARGE.CREATE_ENCOUNTER, {
             ...req,
             hospitalId: hospitalIdOrThrow(req.hospitalId),
         }),

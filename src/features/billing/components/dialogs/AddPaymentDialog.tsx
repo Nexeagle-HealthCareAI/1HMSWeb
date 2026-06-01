@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
 import { ipdBillingService, type AddPaymentRequest, type PaymentMode, type PaymentType } from '../../services/ipdBillingService';
 import { PAYMENT_MODES } from '../../utils/constants';
@@ -67,20 +67,38 @@ export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpen
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-md">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2.5">
-                        <span className="h-9 w-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/30"><CreditCard className="h-4 w-4" /></span>
-                        Record Payment
-                    </DialogTitle>
-                </DialogHeader>
-                <div className="space-y-3">
+        <Sheet open={open} onOpenChange={onOpenChange}>
+            <SheetContent side="right" className="w-full sm:max-w-md p-0 gap-0 flex flex-col bg-white dark:bg-slate-950">
+                {/* Premium gradient header */}
+                <div className="px-6 py-5 bg-gradient-to-r from-emerald-500 to-teal-600">
+                    <div className="flex items-center gap-3">
+                        <div className="h-11 w-11 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0">
+                            <CreditCard className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                            <SheetTitle className="text-white text-lg font-bold">Record Payment</SheetTitle>
+                            <p className="text-emerald-50/90 text-xs mt-0.5">Collect against this visit</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                    {suggestedAmount > 0 && (
+                        <button
+                            type="button"
+                            onClick={() => setAmount(Math.max(0, suggestedAmount))}
+                            className="w-full flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-3 text-left hover:bg-emerald-50 transition-colors"
+                        >
+                            <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">Balance Due · tap to fill</span>
+                            <span className="text-base font-bold text-emerald-700 tabular-nums">₹{suggestedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                        </button>
+                    )}
+
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <Label className="text-xs font-semibold text-slate-700">Type</Label>
                             <Select value={paymentType} onValueChange={(v) => setPaymentType(v as PaymentType)}>
-                                <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                                <SelectTrigger className="h-10 mt-1 rounded-xl"><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="PAYMENT">Payment</SelectItem>
                                     <SelectItem value="ADVANCE">Advance / Deposit</SelectItem>
@@ -91,36 +109,43 @@ export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpen
                         <div>
                             <Label className="text-xs font-semibold text-slate-700">Mode</Label>
                             <Select value={paymentMode} onValueChange={(v) => setPaymentMode(v as PaymentMode)}>
-                                <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                                <SelectTrigger className="h-10 mt-1 rounded-xl"><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                     {PAYMENT_MODES.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>
                     </div>
+
                     <div>
                         <Label className="text-xs font-semibold text-slate-700">Amount</Label>
-                        <Input type="number" min={0} step="0.01" value={amount} onChange={(e) => setAmount(parseFloat(e.target.value || '0'))} className="h-9 mt-1 font-mono text-lg font-semibold" />
+                        <div className="relative mt-1">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold">₹</span>
+                            <Input type="number" min={0} step="0.01" value={amount} onChange={(e) => setAmount(parseFloat(e.target.value || '0'))} className="h-12 pl-8 rounded-xl tabular-nums text-xl font-bold" />
+                        </div>
                     </div>
+
                     {paymentMode !== 'CASH' && (
                         <div>
                             <Label className="text-xs font-semibold text-slate-700">Transaction / Ref #</Label>
-                            <Input value={transactionId} onChange={(e) => setTransactionId(e.target.value)} className="h-9 mt-1 font-mono" />
+                            <Input value={transactionId} onChange={(e) => setTransactionId(e.target.value)} className="h-10 mt-1 rounded-xl font-mono" />
                         </div>
                     )}
+
                     <div>
                         <Label className="text-xs font-semibold text-slate-700">Notes</Label>
-                        <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="text-sm mt-1" placeholder="Optional" />
+                        <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="text-sm mt-1 rounded-xl" placeholder="Optional" />
                     </div>
                 </div>
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>Cancel</Button>
-                    <Button onClick={submit} disabled={submitting} className="bg-emerald-600 hover:bg-emerald-700">
+
+                <div className="p-4 border-t border-slate-200 bg-slate-50 flex gap-3 mt-auto">
+                    <Button variant="outline" className="flex-1 rounded-xl" onClick={() => onOpenChange(false)} disabled={submitting}>Cancel</Button>
+                    <Button onClick={submit} disabled={submitting} className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-500/20">
                         {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Recording…</> : <><CreditCard className="h-4 w-4 mr-2" />Record</>}
                     </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+                </div>
+            </SheetContent>
+        </Sheet>
     );
 };
 

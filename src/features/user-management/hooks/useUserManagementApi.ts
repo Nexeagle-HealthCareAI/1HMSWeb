@@ -101,6 +101,11 @@ export const useUserManagementApi = () => {
       });
       // Invalidate and refetch all users
       queryClient.invalidateQueries({ queryKey: ['user-management', 'all-users'] });
+      // A deactivated user may be a doctor — drop the cached doctor lists so the
+      // appointment booking screen (and any picker) no longer shows them.
+      queryClient.invalidateQueries({ queryKey: ['doctorsByDepartment'] });
+      queryClient.invalidateQueries({ queryKey: ['doctorSlots'] });
+      queryClient.invalidateQueries({ queryKey: ['bookedSlots'] });
     },
     onError: (error) => {
       toast({

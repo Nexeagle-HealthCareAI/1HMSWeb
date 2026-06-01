@@ -2,91 +2,89 @@ import { ReceiptPrintData, PrintSettings } from '../types/print';
 import { format } from 'date-fns';
 
 export const buildReceiptA4 = (data: ReceiptPrintData, settings: PrintSettings): string => {
+    const inr = (n: number) => `₹ ${(Number.isFinite(n) ? n : 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     return `
     <!DOCTYPE html>
     <html>
     <head>
+        <meta charset="utf-8" />
         <title>Receipt - ${data.receiptNo}</title>
         <style>
-            @page { size: A4; margin: 10mm; }
-            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 10pt; line-height: 1.4; color: #333; }
-            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
-            .hA { font-size: 22pt; font-weight: bold; color: #2c3e50; margin: 0; }
-            .hSub { font-size: 10pt; color: #7f8c8d; margin: 5px 0 0; }
-            .box { border: 1px solid #ddd; padding: 30px; border-radius: 8px; max-width: 600px; margin: 0 auto; background: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-            
-            .title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px dashed #ddd; padding-bottom: 15px; }
-            .title { font-size: 18pt; font-weight: bold; color: #2ecc71; text-transform: uppercase; }
-            
-            .row { display: flex; margin-bottom: 12px; }
-            .label { width: 140px; font-weight: 600; color: #7f8c8d; }
-            .value { flex: 1; font-weight: 500; color: #2c3e50; border-bottom: 1px dotted #eee; padding-bottom: 2px;}
-
-            .amount-box { background: #f0fdf4; padding: 15px; border-radius: 6px; text-align: center; margin: 30px 0; border: 1px dashed #2ecc71; }
-            .amount-val { font-size: 24pt; font-weight: bold; color: #2ecc71; }
-            
-            .footer { margin-top: 50px; text-align: center; font-size: 8pt; color: #95a5a6; }
+            @page { size: A4; margin: 0; }
+            * { box-sizing: border-box; }
+            body { font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; margin: 0; padding: 14mm; font-size: 10.5pt; }
+            .accent { color: #047857; }
+            .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #047857; padding-bottom: 14px; }
+            .h-name { font-size: 20pt; font-weight: 800; color: #0f172a; letter-spacing: -.3px; margin: 0; }
+            .h-sub { font-size: 8.5pt; color: #64748b; margin: 3px 0 0; line-height: 1.5; }
+            .badge { display: inline-block; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; border-radius: 999px; padding: 4px 14px; font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+            .meta { text-align: right; font-size: 9pt; color: #475569; }
+            .meta b { color: #0f172a; }
+            .grid { display: flex; gap: 24px; margin-top: 22px; }
+            .grid .col { flex: 1; }
+            .label { font-size: 7.5pt; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; font-weight: 700; margin-bottom: 3px; }
+            .val { font-size: 10.5pt; color: #0f172a; font-weight: 600; }
+            .amount-box { margin: 26px 0; background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 1px solid #6ee7b7; border-radius: 14px; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; }
+            .amount-box .ttl { font-size: 9pt; color: #047857; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+            .amount-box .amt { font-size: 26pt; font-weight: 800; color: #047857; }
+            .rows { width: 100%; border-collapse: collapse; margin-top: 6px; }
+            .rows td { padding: 8px 0; border-bottom: 1px dashed #e2e8f0; font-size: 9.5pt; }
+            .rows td.k { color: #64748b; width: 42%; }
+            .rows td.v { color: #0f172a; font-weight: 600; text-align: right; }
+            .balwrap { margin-top: 22px; border-top: 1px solid #e2e8f0; padding-top: 12px; display: flex; justify-content: space-between; font-size: 9.5pt; }
+            .due { color: #b91c1c; font-weight: 800; }
+            .sign { margin-top: 48px; display: flex; justify-content: flex-end; }
+            .sign .line { border-top: 1px solid #94a3b8; width: 200px; text-align: center; padding-top: 6px; font-size: 8.5pt; color: #64748b; }
+            .foot { margin-top: 30px; text-align: center; font-size: 8pt; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 10px; }
         </style>
     </head>
     <body>
-        <div class="header">
-            <h1 class="hA">${settings.hospitalName}</h1>
-            <p class="hSub">${settings.address} | ${settings.phone}</p>
-            <p class="hSub">
-            ${settings.gstin ? `<span style="margin-right:15px;">GSTIN: ${settings.gstin}</span>` : ''}
-            ${settings.pan ? `<span style="margin-right:15px;">PAN: ${settings.pan}</span>` : ''}
-            ${settings.nabhNumber ? `<span style="margin-right:15px;">NABH/NABL No.: ${settings.nabhNumber}</span>` : ''}
-            </p>
+        <div class="head">
+            <div>
+                <h1 class="h-name">${settings.hospitalName}</h1>
+                <p class="h-sub">
+                    ${settings.address}${settings.phone ? ` &nbsp;·&nbsp; ${settings.phone}` : ''}<br/>
+                    ${settings.gstin ? `GSTIN: ${settings.gstin}` : ''}${settings.pan ? ` &nbsp;·&nbsp; PAN: ${settings.pan}` : ''}${settings.nabhNumber ? ` &nbsp;·&nbsp; NABH: ${settings.nabhNumber}` : ''}
+                </p>
+            </div>
+            <div class="meta">
+                <div class="badge">Payment Receipt</div>
+                <div style="margin-top:10px;">Receipt&nbsp; <b>${data.receiptNo}</b></div>
+                <div>${format(new Date(data.date), 'dd MMM yyyy, hh:mm a')}</div>
+            </div>
         </div>
 
-        <div class="box">
-            <div class="title-row">
-                <div class="title">Payment Receipt</div>
-                <div style="text-align:right;">
-                    <div style="font-size:10pt; font-weight:bold;">${data.receiptNo}</div>
-                    <div style="font-size:9pt; color:#777;">${format(new Date(data.date), 'dd MMM yyyy, hh:mm a')}</div>
-                </div>
-            </div>
-
-            <div class="row">
+        <div class="grid">
+            <div class="col">
                 <div class="label">Received From</div>
-                <div class="value"><strong>${data.patientName}</strong> (${data.patientId})</div>
+                <div class="val">${data.patientName}</div>
+                <div style="font-size:8.5pt; color:#64748b; margin-top:2px;">ID: ${data.patientId}</div>
             </div>
-             <div class="row">
+            <div class="col" style="text-align:right;">
                 <div class="label">Against Invoice</div>
-                <div class="value">${data.invoiceNo}</div>
-            </div>
-            
-            <div class="amount-box">
-                <div style="font-size:10pt; color:#27ae60; margin-bottom:5px;">AMOUNT RECEIVED</div>
-                <div class="amount-val">₹ ${data.amount.toLocaleString()}.00</div>
-            </div>
-
-            <div class="row">
-                <div class="label">Payment Mode</div>
-                <div class="value">${data.mode} ${data.transactionId ? `(Ref: ${data.transactionId})` : ''}</div>
-            </div>
-             <div class="row">
-                <div class="label">Received By</div>
-                <div class="value">${data.receivedBy}</div>
-            </div>
-            ${data.remarks ? `
-             <div class="row">
-                <div class="label">Remarks</div>
-                <div class="value">${data.remarks}</div>
-            </div>` : ''}
-
-            <div style="margin-top:30px; font-size:9pt; color:#777; border-top:1px solid #eee; padding-top:10px;">
-                <div style="display:flex; justify-content:space-between;">
-                    <span>Previous Invoice Balance: ₹ ${data.invoiceBalanceBefore.toFixed(2)}</span>
-                    <span style="font-weight:bold;">Remaining Due: ₹ ${data.invoiceBalanceAfter.toFixed(2)}</span>
-                </div>
+                <div class="val">${data.invoiceNo}</div>
             </div>
         </div>
 
-        <div class="footer">
-            ${settings.footerText || 'Thank you.'}
+        <div class="amount-box">
+            <span class="ttl">Amount Received</span>
+            <span class="amt">${inr(data.amount)}</span>
         </div>
+
+        <table class="rows">
+            <tr><td class="k">Payment Mode</td><td class="v">${data.mode}${data.transactionId ? ` &nbsp;(Ref: ${data.transactionId})` : ''}</td></tr>
+            ${data.receivedBy ? `<tr><td class="k">Received By</td><td class="v">${data.receivedBy}</td></tr>` : ''}
+            ${data.remarks ? `<tr><td class="k">Remarks</td><td class="v">${data.remarks}</td></tr>` : ''}
+        </table>
+
+        <div class="balwrap">
+            <span style="color:#64748b;">Invoice balance before: <b style="color:#0f172a;">${inr(data.invoiceBalanceBefore)}</b></span>
+            <span>Remaining due: <span class="due">${inr(data.invoiceBalanceAfter)}</span></span>
+        </div>
+
+        <div class="sign"><div class="line">Authorised Signatory</div></div>
+
+        <div class="foot">${settings.footerText || 'This is a computer-generated receipt and does not require a physical signature.'}</div>
     </body>
     </html>
     `;

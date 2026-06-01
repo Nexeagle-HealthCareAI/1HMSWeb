@@ -393,6 +393,8 @@ export const AppointmentDashboard = () => {
         });
       }
       handleAddBillModalChange(false);
+      // Refresh the appointment list so the row's paid status / Bill button update instantly.
+      if (refetch) refetch();
     } catch (e: any) {
       toast({ title: t('appointmentDashboard.addBill.toast.failTitle'), description: e?.message ?? '', variant: 'destructive' });
     } finally {

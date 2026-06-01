@@ -183,6 +183,7 @@ export const IPD_API_ENDPOINTS = {
       `charge/master/status?chargeId=${encodeURIComponent(chargeId)}&hospitalId=${encodeURIComponent(hospitalId)}`,
     DELETE_MASTER: 'charge/master',
     CREATE_EVENT: 'charge/create-event',
+    CREATE_ENCOUNTER: 'charge/encounter',
     ADD_EVENT: 'charge/add-event',
     CANCEL_EVENT: 'charge/cancel-event',
   },

@@ -99,6 +99,7 @@ export const EncounterBillingPage: React.FC = () => {
     const [addPaymentOpen, setAddPaymentOpen] = useState(false);
     const [generatingInvoice, setGeneratingInvoice] = useState(false);
     const [finalizing, setFinalizing] = useState(false);
+    const [finalizeOpen, setFinalizeOpen] = useState(false);
     const [reopenOpen, setReopenOpen] = useState(false);
     const [reopenReason, setReopenReason] = useState('');
     const [printing, setPrinting] = useState(false);
@@ -233,12 +234,13 @@ export const EncounterBillingPage: React.FC = () => {
                 <Card className="max-w-md">
                     <CardContent className="p-6 text-center space-y-2">
                         <AlertCircle className="h-10 w-10 text-rose-400 mx-auto" />
-                        <p className="font-semibold text-slate-700">Missing encounter context</p>
+                        <p className="font-semibold text-slate-700">Open this from the billing ledger</p>
                         <p className="text-xs text-slate-500">
-                            Open this page from an admission ({'patientId='} and encounterId required).
+                            This page needs a patient and visit. Pick a patient and visit in the Billing Ledger,
+                            then use “Open Encounter View”.
                         </p>
-                        <Button variant="outline" onClick={() => navigate(-1)} className="mt-3">
-                            <ArrowLeft className="h-4 w-4 mr-1" /> Go back
+                        <Button onClick={() => navigate('/billing/ledger')} className="mt-3 bg-indigo-600 hover:bg-indigo-700">
+                            <ArrowLeft className="h-4 w-4 mr-1" /> Go to Billing Ledger
                         </Button>
                     </CardContent>
                 </Card>
@@ -393,12 +395,18 @@ export const EncounterBillingPage: React.FC = () => {
                                 size="sm"
                                 variant="outline"
                                 className="gap-1.5 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-                                onClick={handleFinalize}
+                                onClick={() => setFinalizeOpen(true)}
                                 disabled={finalizing}
                             >
                                 {finalizing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
                                 Finalize
                             </Button>
+                        )}
+
+                        {canFinalize && postedUnbilledCount > 0 && (
+                            <span className="text-[11px] text-amber-600 font-medium self-center">
+                                {postedUnbilledCount} new charge{postedUnbilledCount === 1 ? '' : 's'} not yet on the bill — add them before finalizing.
+                            </span>
                         )}
 
                         {canReopen && (
@@ -701,6 +709,50 @@ export const EncounterBillingPage: React.FC = () => {
                 netBalance={netBalance}
                 onPaid={() => load(true)}
             />
+
+            {/* Finalize confirm — finalizing locks the bill. */}
+            <AlertDialog open={finalizeOpen} onOpenChange={(o) => { if (!o) setFinalizeOpen(false); }}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2 text-amber-700">
+                            <Lock className="h-5 w-5" /> Finalize bill — this locks it
+                        </AlertDialogTitle>
+                        <AlertDialogDescription asChild>
+                            <div className="space-y-2">
+                                <p>
+                                    Finalizing invoice <span className="font-semibold">{invoice?.invoiceNo ?? ''}</span>{' '}
+                                    <span className="font-semibold">locks it</span>. Once locked you can no longer:
+                                </p>
+                                <ul className="list-disc pl-5 space-y-0.5 text-sm">
+                                    <li>add charges (e.g. lab tests, procedures), or</li>
+                                    <li>record or edit payments against it.</li>
+                                </ul>
+                                {postedUnbilledCount > 0 ? (
+                                    <p className="text-amber-700 font-medium">
+                                        {postedUnbilledCount} charge{postedUnbilledCount === 1 ? '' : 's'} {postedUnbilledCount === 1 ? 'is' : 'are'} not on the bill yet.
+                                        Use “Update Draft” to add {postedUnbilledCount === 1 ? 'it' : 'them'} before finalizing, or they’ll be left out.
+                                    </p>
+                                ) : (
+                                    <p className="text-slate-600">
+                                        If a charge is still pending (e.g. a lab), add it before finalizing. You can “Reopen” later, but it needs a reason and audit.
+                                    </p>
+                                )}
+                            </div>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={finalizing}>Not yet</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => { e.preventDefault(); setFinalizeOpen(false); handleFinalize(); }}
+                            disabled={finalizing}
+                            className="bg-amber-600 hover:bg-amber-700"
+                        >
+                            {finalizing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Lock className="h-4 w-4 mr-1" />}
+                            Finalize & lock
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             {/* Reopen confirm */}
             <AlertDialog open={reopenOpen} onOpenChange={setReopenOpen}>

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -29,6 +30,11 @@ export const RevenueTab: React.FC = () => {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'ALL' | 'OPEN' | 'FINAL' | 'CANCELLED'>('ALL');
+    const [visitFilter, setVisitFilter] = useState<string>('ALL');
+    const [dateMode, setDateMode] = useState<'all' | 'day' | 'range'>('all');
+    const [dayDate, setDayDate] = useState<string>('');
+    const [rangeStart, setRangeStart] = useState<string>('');
+    const [rangeEnd, setRangeEnd] = useState<string>('');
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 8;
 
@@ -92,19 +98,41 @@ export const RevenueTab: React.FC = () => {
         return { billed, collected, due };
     }, [billingData]);
 
+    // Distinct visit types present in the data (for the Visit Type filter).
+    const visitTypes = useMemo(() => {
+        const set = new Set<string>();
+        billingData.forEach(r => { if (r.type) set.add(String(r.type)); });
+        return Array.from(set).sort();
+    }, [billingData]);
+
+    // Local calendar-day key (YYYY-MM-DD) for a row's date, for day/range comparison.
+    const dayKey = (iso: string) => {
+        const d = new Date(iso);
+        return Number.isNaN(d.getTime()) ? '' : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
     const filteredRows = useMemo(() => {
         return billingData.filter(row => {
             const matchesSearch =
                 row.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 row.patientIdDisplay.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesStatus = statusFilter === 'ALL' || row.status === statusFilter;
-            return matchesSearch && matchesStatus;
+            const matchesVisit = visitFilter === 'ALL' || String(row.type) === visitFilter;
+            let matchesDate = true;
+            if (dateMode === 'day' && dayDate) {
+                matchesDate = dayKey(row.date) === dayDate;
+            } else if (dateMode === 'range' && (rangeStart || rangeEnd)) {
+                const k = dayKey(row.date);
+                if (rangeStart && k < rangeStart) matchesDate = false;
+                if (rangeEnd && k > rangeEnd) matchesDate = false;
+            }
+            return matchesSearch && matchesStatus && matchesVisit && matchesDate;
         }).sort((a, b) => {
             if (a.status === 'OPEN' && b.status !== 'OPEN') return -1;
             if (a.status !== 'OPEN' && b.status === 'OPEN') return 1;
             return new Date(b.date).getTime() - new Date(a.date).getTime();
         });
-    }, [billingData, searchTerm, statusFilter]);
+    }, [billingData, searchTerm, statusFilter, visitFilter, dateMode, dayDate, rangeStart, rangeEnd]);
 
     const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
     const paginatedRows = useMemo(() => {
@@ -129,7 +157,7 @@ export const RevenueTab: React.FC = () => {
             </div>
 
             <Card className="border-0 ring-1 ring-black/5 rounded-2xl flex flex-col flex-1 overflow-hidden bg-white shadow-lg shadow-indigo-500/5">
-                <div className="p-3 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/60">
+                <div className="p-3 border-b border-slate-100 flex flex-wrap items-center gap-2 sm:gap-3 bg-slate-50/60">
                     <div className="flex items-center p-1 bg-white rounded-xl border border-slate-200 shadow-sm">
                         {FILTERS.map(({ key, label, active }) => (
                             <button
@@ -144,8 +172,40 @@ export const RevenueTab: React.FC = () => {
                             </button>
                         ))}
                     </div>
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                        <div className="relative w-full sm:w-64">
+
+                    {/* Visit type */}
+                    <Select value={visitFilter} onValueChange={(v) => { setVisitFilter(v); setCurrentPage(1); }}>
+                        <SelectTrigger className="h-9 w-[130px] rounded-xl bg-white text-xs"><SelectValue placeholder="Visit type" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="ALL">All visits</SelectItem>
+                            {visitTypes.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+
+                    {/* Date filter: All / Single day / Range */}
+                    <Select value={dateMode} onValueChange={(v) => { setDateMode(v as any); setCurrentPage(1); }}>
+                        <SelectTrigger className="h-9 w-[120px] rounded-xl bg-white text-xs">
+                            <div className="flex items-center gap-1.5 min-w-0"><Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" /><SelectValue /></div>
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All dates</SelectItem>
+                            <SelectItem value="day">Single day</SelectItem>
+                            <SelectItem value="range">Date range</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    {dateMode === 'day' && (
+                        <Input type="date" value={dayDate} onChange={(e) => { setDayDate(e.target.value); setCurrentPage(1); }} className="h-9 w-[150px] rounded-xl bg-white text-xs" />
+                    )}
+                    {dateMode === 'range' && (
+                        <div className="flex items-center gap-1.5">
+                            <Input type="date" value={rangeStart} onChange={(e) => { setRangeStart(e.target.value); setCurrentPage(1); }} className="h-9 w-[140px] rounded-xl bg-white text-xs" />
+                            <span className="text-xs text-slate-400">to</span>
+                            <Input type="date" value={rangeEnd} onChange={(e) => { setRangeEnd(e.target.value); setCurrentPage(1); }} className="h-9 w-[140px] rounded-xl bg-white text-xs" />
+                        </div>
+                    )}
+
+                    <div className="flex items-center gap-2 ml-auto">
+                        <div className="relative w-full sm:w-52">
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
                             <Input placeholder="Search by PTID or Name..." className="pl-9 bg-white text-sm rounded-xl" value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }} />
                         </div>
