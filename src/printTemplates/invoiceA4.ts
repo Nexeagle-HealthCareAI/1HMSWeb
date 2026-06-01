@@ -126,6 +126,27 @@ export const buildInvoiceA4 = (data: InvoicePrintData, settings: PrintSettings):
             </table>
         </div>
 
+        ${data.dayWise && data.dayWise.length > 0 ? `
+        <div style="margin-top:22px; position:relative; z-index:1;">
+            <div style="font-size:8pt; text-transform:uppercase; letter-spacing:1px; color:#94a3b8; font-weight:700; margin-bottom:6px;">Day-wise Breakup</div>
+            <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                    <tr>
+                        <th style="text-align:left; background:#f1f5f9; color:#475569; font-size:7.5pt; text-transform:uppercase; letter-spacing:.5px; padding:6px 10px;">Day</th>
+                        <th style="text-align:left; background:#f1f5f9; color:#475569; font-size:7.5pt; text-transform:uppercase; letter-spacing:.5px; padding:6px 10px;">Period</th>
+                        <th style="text-align:right; background:#f1f5f9; color:#475569; font-size:7.5pt; text-transform:uppercase; letter-spacing:.5px; padding:6px 10px;">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.dayWise.map(d => `<tr>
+                        <td style="padding:5px 10px; border-bottom:1px solid #eef2f7; font-size:9pt; font-weight:600; color:#0f172a;">Day ${d.dayNumber}</td>
+                        <td style="padding:5px 10px; border-bottom:1px solid #eef2f7; font-size:8.5pt; color:#64748b;">${d.label}</td>
+                        <td style="padding:5px 10px; border-bottom:1px solid #eef2f7; font-size:9pt; text-align:right; font-weight:700; color:#0f172a;">${inr(d.netAmount)}</td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>
+        </div>` : ''}
+
         <div class="foot">
             <div class="terms">
                 ${settings.footerText || 'Thank you for choosing us. This is a computer-generated tax invoice.'}

@@ -39,6 +39,42 @@ export interface InvoicePrintData {
     grandTotal: number;
     amountPaid: number;
     balanceDue: number;
+    dayWise?: InvoiceDayWiseRow[];
+}
+
+export interface InterimBillLine {
+    srNo: number;
+    description: string;
+    serviceDate: string;
+    qty: number;
+    rate: number;
+    discount: number;
+    total: number;
+}
+
+export interface InterimBillPrintData {
+    interimBillNo: string;
+    dayNumber: number;
+    fromLabel: string;
+    toLabel: string;
+    date: string;
+    patientName: string;
+    patientId: string;
+    ageGender: string;
+    mobile: string;
+    admissionNo?: string;
+    lines: InterimBillLine[];
+    dayNet: number;
+    cumulativeNet: number;
+    advanceReceived: number;
+    balanceDue: number;
+}
+
+// Optional day-wise summary appended to the final invoice for admitted patients.
+export interface InvoiceDayWiseRow {
+    dayNumber: number;
+    label: string;     // e.g. "01 Jun 14:30 → 02 Jun 14:30"
+    netAmount: number;
 }
 
 export interface ReceiptPrintData {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-    Loader2, RefreshCw, Lock, Unlock, AlertCircle, CalendarDays, IndianRupee, CheckCircle2,
+    Loader2, RefreshCw, Lock, Unlock, AlertCircle, CalendarDays, IndianRupee, CheckCircle2, Printer,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,9 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
 import { ipdBillingService, type AdmissionDayBillsData, type AdmissionDayView } from '../services/ipdBillingService';
+import { buildInterimBillA4 } from '@/printTemplates/interimBillA4';
+import { openPrintHtml } from '@/utils/printUtils';
+import type { PrintSettings } from '@/types/print';
 
 const inr = (n: number) => `₹${(Number.isFinite(n) ? n : 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -30,9 +33,13 @@ export interface AdmissionDayBillsPanelProps {
     hospitalId?: string;
     /** Notified after a successful close/reopen so the parent can refresh the ledger. */
     onChanged?: () => void;
+    /** Patient + print settings enable per-day "Print" of the interim bill. */
+    patient?: { name: string; patientId: string; ageGender?: string; mobile?: string };
+    printSettings?: PrintSettings;
+    admissionNo?: string;
 }
 
-export const AdmissionDayBillsPanel: React.FC<AdmissionDayBillsPanelProps> = ({ admissionId, hospitalId, onChanged }) => {
+export const AdmissionDayBillsPanel: React.FC<AdmissionDayBillsPanelProps> = ({ admissionId, hospitalId, onChanged, patient, printSettings, admissionNo }) => {
     const { toast } = useToast();
     const { hospitalId: authHospitalId } = useAuthStore();
     const hid = hospitalId ?? authHospitalId ?? undefined;
@@ -98,6 +105,36 @@ export const AdmissionDayBillsPanel: React.FC<AdmissionDayBillsPanelProps> = ({ 
         } finally {
             setBusy(false);
         }
+    };
+
+    const handlePrintDay = (day: AdmissionDayView) => {
+        if (!printSettings || !patient || !data) return;
+        const html = buildInterimBillA4({
+            interimBillNo: day.interimBillNo ?? '—',
+            dayNumber: day.dayNumber,
+            fromLabel: fmtWindow(day.fromUtc),
+            toLabel: fmtWindow(day.toUtc),
+            date: new Date().toISOString(),
+            patientName: patient.name,
+            patientId: patient.patientId,
+            ageGender: patient.ageGender ?? '',
+            mobile: patient.mobile ?? '',
+            admissionNo,
+            lines: day.lines.map((l, i) => ({
+                srNo: i + 1,
+                description: l.displayName || l.categoryCode || 'Charge',
+                serviceDate: fmtWindow(l.serviceDate),
+                qty: l.qty,
+                rate: l.unitPrice,
+                discount: l.discountAmount,
+                total: l.netAmount,
+            })),
+            dayNet: day.netAmount,
+            cumulativeNet: day.cumulativeNetAmount,
+            advanceReceived: data.totalReceived,
+            balanceDue: day.cumulativeNetAmount - data.totalReceived,
+        }, printSettings);
+        openPrintHtml(html);
     };
 
     return (
@@ -192,11 +229,18 @@ export const AdmissionDayBillsPanel: React.FC<AdmissionDayBillsPanelProps> = ({ 
                                         <div className="px-3 py-2 text-[10px] text-slate-400 italic">No charges in this day yet.</div>
                                     )}
 
-                                    {day.isClosed && day.dayNumber === lastClosedDayNo && (
-                                        <div className="px-3 py-1.5 border-t border-slate-100 flex justify-end">
-                                            <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px] text-amber-700 hover:bg-amber-50" onClick={() => { setReopenTarget(day); setReopenReason(''); }} disabled={busy}>
-                                                <Unlock className="h-3 w-3 mr-1" /> Reopen
-                                            </Button>
+                                    {day.isClosed && (
+                                        <div className="px-3 py-1.5 border-t border-slate-100 flex justify-end gap-1">
+                                            {printSettings && patient && (
+                                                <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px] text-indigo-700 hover:bg-indigo-50" onClick={() => handlePrintDay(day)}>
+                                                    <Printer className="h-3 w-3 mr-1" /> Print
+                                                </Button>
+                                            )}
+                                            {day.dayNumber === lastClosedDayNo && (
+                                                <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px] text-amber-700 hover:bg-amber-50" onClick={() => { setReopenTarget(day); setReopenReason(''); }} disabled={busy}>
+                                                    <Unlock className="h-3 w-3 mr-1" /> Reopen
+                                                </Button>
+                                            )}
                                         </div>
                                     )}
                                 </div>

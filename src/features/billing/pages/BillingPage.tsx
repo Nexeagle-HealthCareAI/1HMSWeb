@@ -361,7 +361,29 @@ export const BillingPage: React.FC = () => {
                 mobile: selectedPatient.mobile,
                 doctorName: selectedEncounter?.doctorName,
             };
-            const html = getOpdDocHtml(kind, eventsData, settings, ctx, paymentId ? { paymentId } : undefined);
+            // For a final invoice of an admitted patient, append a day-wise breakup (best-effort).
+            let dayWise: { dayNumber: number; label: string; netAmount: number }[] | undefined;
+            if (kind === 'invoice' && selectedEncounterId) {
+                try {
+                    let adm = admission;
+                    if (!adm) {
+                        const ar = await ipdBillingService.getAdmissionByEncounter(selectedEncounterId);
+                        adm = ar?.data ?? null;
+                    }
+                    if (adm) {
+                        const db = await ipdBillingService.getAdmissionDayBills(adm.admissionId);
+                        const days = db?.data?.days ?? [];
+                        if (days.length > 0) {
+                            dayWise = days.map(d => ({
+                                dayNumber: d.dayNumber,
+                                label: `${formatIst(d.fromUtc)} → ${formatIst(d.toUtc)}`,
+                                netAmount: d.netAmount,
+                            }));
+                        }
+                    }
+                } catch { /* best-effort — invoice still prints without the breakup */ }
+            }
+            const html = getOpdDocHtml(kind, eventsData, settings, ctx, { paymentId, dayWise });
             const fileSuffix = paymentId ? `${kind}-${paymentId.slice(0, 8)}` : `${kind}-${selectedPatient.patientId}`;
             if (mode === 'print') openPrintHtml(html);
             else await downloadHtmlAsPdf(html, `${fileSuffix}.pdf`);
@@ -906,7 +928,18 @@ export const BillingPage: React.FC = () => {
                         {admissionLoading ? (
                             <div className="flex items-center justify-center gap-2 text-sm text-slate-400 py-10"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>
                         ) : admission ? (
-                            <AdmissionDayBillsPanel admissionId={admission.admissionId} onChanged={loadEvents} />
+                            <AdmissionDayBillsPanel
+                                admissionId={admission.admissionId}
+                                admissionNo={admission.admissionNo}
+                                onChanged={loadEvents}
+                                printSettings={buildPrintSettingsFromHospital(hospitalData)}
+                                patient={selectedPatient ? {
+                                    name: selectedPatient.name,
+                                    patientId: selectedPatient.patientId,
+                                    ageGender: [selectedPatient.age, selectedPatient.sex].filter(Boolean).join(' / '),
+                                    mobile: selectedPatient.mobile,
+                                } : undefined}
+                            />
                         ) : (
                             <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center space-y-3 mt-6">
                                 <div className="h-12 w-12 rounded-2xl bg-indigo-50 ring-1 ring-indigo-100 flex items-center justify-center mx-auto">

@@ -2,7 +2,7 @@ import { GetEncounterEventsResponse } from '../services/ipdBillingService';
 import { HospitalData } from '@/features/hospital/services/hospitalApi';
 import {
     InvoicePrintData, ReceiptPrintData, BillCumReceiptPrintData, PrintSettings, PrintItem,
-    PaymentStatementPrintData, PaymentStatementLine,
+    PaymentStatementPrintData, PaymentStatementLine, InvoiceDayWiseRow,
 } from '@/types/print';
 import { buildInvoiceA4 } from '@/printTemplates/invoiceA4';
 import { buildReceiptA4 } from '@/printTemplates/receiptA4';
@@ -182,9 +182,9 @@ export const getOpdDocHtml = (
     data: EventsData,
     settings: PrintSettings,
     ctx: OpdDocContext,
-    opts?: { paymentId?: string },
+    opts?: { paymentId?: string; dayWise?: InvoiceDayWiseRow[] },
 ): string => {
-    if (kind === 'invoice') return buildInvoiceA4(mapEventsToInvoiceData(data, ctx), settings);
+    if (kind === 'invoice') return buildInvoiceA4({ ...mapEventsToInvoiceData(data, ctx), dayWise: opts?.dayWise }, settings);
     if (kind === 'statement') return buildPaymentStatementA4(mapEventsToStatementData(data, ctx), settings);
     const receipt = opts?.paymentId
         ? mapPaymentToReceiptData(data, ctx, opts.paymentId)
