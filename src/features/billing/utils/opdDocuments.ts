@@ -191,7 +191,7 @@ export const getOpdDocHtml = (
         : mapEventsToReceiptData(data, ctx);
     if (kind === 'receipt') return buildReceiptA4(receipt, settings);
     const billcum: BillCumReceiptPrintData = {
-        invoice: mapEventsToInvoiceData(data, ctx),
+        invoice: { ...mapEventsToInvoiceData(data, ctx), dayWise: opts?.dayWise },
         receipt,
     };
     return buildBillCumReceiptA4(billcum, settings);

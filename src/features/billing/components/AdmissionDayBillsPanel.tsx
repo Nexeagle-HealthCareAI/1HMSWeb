@@ -28,18 +28,19 @@ const fmtWindow = (iso: string): string => {
     return d.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
 };
 
+const errMsg = (e: unknown): string => (e instanceof Error ? e.message : '');
+
 export interface AdmissionDayBillsPanelProps {
-    admissionId: string;
+    encounterId: string;
     hospitalId?: string;
     /** Notified after a successful close/reopen so the parent can refresh the ledger. */
     onChanged?: () => void;
     /** Patient + print settings enable per-day "Print" of the interim bill. */
     patient?: { name: string; patientId: string; ageGender?: string; mobile?: string };
     printSettings?: PrintSettings;
-    admissionNo?: string;
 }
 
-export const AdmissionDayBillsPanel: React.FC<AdmissionDayBillsPanelProps> = ({ admissionId, hospitalId, onChanged, patient, printSettings, admissionNo }) => {
+export const AdmissionDayBillsPanel: React.FC<AdmissionDayBillsPanelProps> = ({ encounterId, hospitalId, onChanged, patient, printSettings }) => {
     const { toast } = useToast();
     const { hospitalId: authHospitalId } = useAuthStore();
     const hid = hospitalId ?? authHospitalId ?? undefined;
@@ -52,19 +53,19 @@ export const AdmissionDayBillsPanel: React.FC<AdmissionDayBillsPanelProps> = ({ 
     const [reopenReason, setReopenReason] = useState('');
 
     const load = useCallback(async () => {
-        if (!admissionId) { setData(null); return; }
+        if (!encounterId) { setData(null); return; }
         setLoading(true);
         setError(null);
         try {
-            const res = await ipdBillingService.getAdmissionDayBills(admissionId, hid);
+            const res = await ipdBillingService.getVisitDayBills(encounterId, hid);
             if (res?.success === false) throw new Error(res.message ?? 'Could not load day bills');
             setData(res.data ?? null);
-        } catch (e: any) {
-            setError(e?.message ?? 'Failed to load day bills');
+        } catch (e) {
+            setError(errMsg(e) || 'Failed to load day bills');
         } finally {
             setLoading(false);
         }
-    }, [admissionId, hid]);
+    }, [encounterId, hid]);
 
     useEffect(() => { load(); }, [load]);
 
@@ -74,16 +75,16 @@ export const AdmissionDayBillsPanel: React.FC<AdmissionDayBillsPanelProps> = ({ 
     const lastClosedDayNo = data?.days.filter(d => d.isClosed).reduce((m, d) => Math.max(m, d.dayNumber), 0) ?? 0;
 
     const handleClose = async () => {
-        if (!admissionId || busy) return;
+        if (!encounterId || busy) return;
         setBusy(true);
         try {
-            const res = await ipdBillingService.closeAdmissionDay(admissionId, hid);
+            const res = await ipdBillingService.closeVisitDay(encounterId, hid);
             if (res?.success === false) throw new Error(res.message ?? 'Could not close day');
             toast({ title: 'Day closed', description: res.interimBillNo ? `Interim bill ${res.interimBillNo}` : undefined });
             await load();
             onChanged?.();
-        } catch (e: any) {
-            toast({ variant: 'destructive', title: 'Could not close day', description: e?.message ?? '' });
+        } catch (e) {
+            toast({ variant: 'destructive', title: 'Could not close day', description: errMsg(e) });
         } finally {
             setBusy(false);
         }
@@ -93,15 +94,15 @@ export const AdmissionDayBillsPanel: React.FC<AdmissionDayBillsPanelProps> = ({ 
         if (!reopenTarget?.admissionDayBillId || !reopenReason.trim() || busy) return;
         setBusy(true);
         try {
-            const res = await ipdBillingService.reopenAdmissionDay(reopenTarget.admissionDayBillId, reopenReason.trim(), hid);
+            const res = await ipdBillingService.reopenVisitDay(reopenTarget.admissionDayBillId, reopenReason.trim(), hid);
             if (res?.success === false) throw new Error(res.message ?? 'Could not reopen');
             toast({ title: 'Interim bill reopened' });
             setReopenTarget(null);
             setReopenReason('');
             await load();
             onChanged?.();
-        } catch (e: any) {
-            toast({ variant: 'destructive', title: 'Could not reopen', description: e?.message ?? '' });
+        } catch (e) {
+            toast({ variant: 'destructive', title: 'Could not reopen', description: errMsg(e) });
         } finally {
             setBusy(false);
         }
@@ -119,7 +120,6 @@ export const AdmissionDayBillsPanel: React.FC<AdmissionDayBillsPanelProps> = ({ 
             patientId: patient.patientId,
             ageGender: patient.ageGender ?? '',
             mobile: patient.mobile ?? '',
-            admissionNo,
             lines: day.lines.map((l, i) => ({
                 srNo: i + 1,
                 description: l.displayName || l.categoryCode || 'Charge',

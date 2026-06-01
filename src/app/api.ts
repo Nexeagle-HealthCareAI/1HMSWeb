@@ -201,11 +201,11 @@ export const IPD_API_ENDPOINTS = {
     FINALIZE: (type: string) => `billing/finalize?type=${encodeURIComponent(type)}`,
     PRINT: (patientId: string, hospitalId: string, encounterId: string) =>
       `billing/print?patientId=${encodeURIComponent(patientId)}&hospitalId=${encodeURIComponent(hospitalId)}&encounterId=${encodeURIComponent(encounterId)}`,
-    // Admission day-wise interim billing
-    ADMISSION_DAY_BILLS: (hospitalId: string, admissionId: string) =>
-      `billing/admission-day-bills?hospitalId=${encodeURIComponent(hospitalId)}&admissionId=${encodeURIComponent(admissionId)}`,
-    CLOSE_ADMISSION_DAY: 'billing/admission-day/close',
-    REOPEN_ADMISSION_DAY: 'billing/admission-day/reopen',
+    // Visit day-wise interim billing (opt-in, anchored to the visit; no admission)
+    VISIT_DAY_BILLS: (hospitalId: string, encounterId: string) =>
+      `billing/visit-day-bills?hospitalId=${encodeURIComponent(hospitalId)}&encounterId=${encodeURIComponent(encounterId)}`,
+    CLOSE_VISIT_DAY: 'billing/visit-day/close',
+    REOPEN_VISIT_DAY: 'billing/visit-day/reopen',
   },
   ADMISSION: {
     GET_BY_ENCOUNTER: (hospitalId: string, encounterId: string) =>

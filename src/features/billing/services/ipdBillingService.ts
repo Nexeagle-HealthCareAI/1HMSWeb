@@ -503,18 +503,18 @@ export const ipdBillingService = {
             hospitalId: hospitalIdOrThrow(req.hospitalId),
         }),
 
-    // Admission day-wise interim billing
-    getAdmissionDayBills: (admissionId: string, hospitalId?: string): Promise<GetAdmissionDayBillsResponse> =>
-        ipdApiClient.get(IPD_API_ENDPOINTS.BILLING.ADMISSION_DAY_BILLS(hospitalIdOrThrow(hospitalId), admissionId)),
+    // Visit day-wise interim billing (opt-in, anchored to the visit; no admission)
+    getVisitDayBills: (encounterId: string, hospitalId?: string): Promise<GetAdmissionDayBillsResponse> =>
+        ipdApiClient.get(IPD_API_ENDPOINTS.BILLING.VISIT_DAY_BILLS(hospitalIdOrThrow(hospitalId), encounterId)),
 
-    closeAdmissionDay: (admissionId: string, hospitalId?: string): Promise<CloseAdmissionDayResponse> =>
-        ipdApiClient.post(IPD_API_ENDPOINTS.BILLING.CLOSE_ADMISSION_DAY, {
+    closeVisitDay: (encounterId: string, hospitalId?: string): Promise<CloseAdmissionDayResponse> =>
+        ipdApiClient.post(IPD_API_ENDPOINTS.BILLING.CLOSE_VISIT_DAY, {
             hospitalId: hospitalIdOrThrow(hospitalId),
-            admissionId,
+            encounterId,
         }),
 
-    reopenAdmissionDay: (admissionDayBillId: string, reason: string, hospitalId?: string): Promise<ReopenAdmissionDayResponse> =>
-        ipdApiClient.post(IPD_API_ENDPOINTS.BILLING.REOPEN_ADMISSION_DAY, {
+    reopenVisitDay: (admissionDayBillId: string, reason: string, hospitalId?: string): Promise<ReopenAdmissionDayResponse> =>
+        ipdApiClient.post(IPD_API_ENDPOINTS.BILLING.REOPEN_VISIT_DAY, {
             hospitalId: hospitalIdOrThrow(hospitalId),
             admissionDayBillId,
             reason,

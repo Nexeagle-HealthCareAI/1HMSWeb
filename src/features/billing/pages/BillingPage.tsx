@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Search, Plus, Receipt, ArrowLeft, IndianRupee, Loader2, RefreshCw,
-    AlertCircle, X, Wallet, TrendingDown, Trash2, Printer, Lock, Unlock, CreditCard, Percent, CalendarDays, BedDouble, Check,
+    AlertCircle, X, Wallet, TrendingDown, Trash2, Printer, Lock, Unlock, CreditCard, Percent, CalendarDays, Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +28,7 @@ import { debounce } from 'lodash';
 import { patientService } from '../services/patientService';
 import {
     ipdBillingService,
-    type BillingChargeRow, type BillingPaymentRow, type GetEncounterEventsResponse, type AdmissionInfo,
+    type BillingChargeRow, type BillingPaymentRow, type GetEncounterEventsResponse,
 } from '../services/ipdBillingService';
 import { AdmissionDayBillsPanel } from '../components/AdmissionDayBillsPanel';
 import type { Patient } from '../types';
@@ -63,6 +63,9 @@ type Encounter = {
     status: string;
     isCancelled: boolean;
     cancelReason?: string;
+    totalBilled?: number;
+    balance?: number;
+    paymentStatus?: string;   // PAID / PART / UNPAID
 };
 
 
@@ -111,11 +114,8 @@ export const BillingPage: React.FC = () => {
     const [voidConfirm, setVoidConfirm] = useState<{ kind: 'charge' | 'payment'; id: string; label: string } | null>(null);
     const [voidBusy, setVoidBusy] = useState(false);
 
-    // IPD day-wise interim billing (admission-anchored)
+    // Visit day-wise interim billing (opt-in, anchored to the visit; no admission)
     const [showDayWise, setShowDayWise] = useState(false);
-    const [admission, setAdmission] = useState<AdmissionInfo | null>(null);
-    const [admissionLoading, setAdmissionLoading] = useState(false);
-    const [admitting, setAdmitting] = useState(false);
     const [showMoreDocs, setShowMoreDocs] = useState(false);
     // "Paid in full" prompt: offer to lock & print after a payment clears the balance.
     const [showPaidPrompt, setShowPaidPrompt] = useState(false);
@@ -162,6 +162,9 @@ export const BillingPage: React.FC = () => {
                 status: e.status ?? 'OPEN',
                 isCancelled: !!e.isCancelled,
                 cancelReason: e.cancelReason ?? undefined,
+                totalBilled: typeof e.totalBilled === 'number' ? e.totalBilled : undefined,
+                balance: typeof e.balance === 'number' ? e.balance : undefined,
+                paymentStatus: e.paymentStatus ?? undefined,
             })).sort((a: Encounter, b: Encounter) => b.invoiceDate.localeCompare(a.invoiceDate));
             setEncounters(list);
             if (!selectedEncounterId && list.length > 0) setSelectedEncounterId(list[0].encounterId);
@@ -346,23 +349,19 @@ export const BillingPage: React.FC = () => {
             };
             // For a final invoice of an admitted patient, append a day-wise breakup (best-effort).
             let dayWise: { dayNumber: number; label: string; netAmount: number }[] | undefined;
-            if (kind === 'invoice' && selectedEncounterId) {
+            if ((kind === 'invoice' || kind === 'billcum') && selectedEncounterId) {
                 try {
-                    let adm = admission;
-                    if (!adm) {
-                        const ar = await ipdBillingService.getAdmissionByEncounter(selectedEncounterId);
-                        adm = ar?.data ?? null;
-                    }
-                    if (adm) {
-                        const db = await ipdBillingService.getAdmissionDayBills(adm.admissionId);
-                        const days = db?.data?.days ?? [];
-                        if (days.length > 0) {
-                            dayWise = days.map(d => ({
-                                dayNumber: d.dayNumber,
-                                label: `${formatIst(d.fromUtc)} → ${formatIst(d.toUtc)}`,
-                                netAmount: d.netAmount,
-                            }));
-                        }
+                    const db = await ipdBillingService.getVisitDayBills(selectedEncounterId);
+                    const days = db?.data?.days ?? [];
+                    // Only attach a day-wise breakup when day-wise is actually in use (multiple days
+                    // or at least one closed interim bill) — a plain single-day bill needs none.
+                    const usesDayWise = days.length > 1 || days.some(d => d.isClosed);
+                    if (usesDayWise) {
+                        dayWise = days.map(d => ({
+                            dayNumber: d.dayNumber,
+                            label: `${formatIst(d.fromUtc)} → ${formatIst(d.toUtc)}`,
+                            netAmount: d.netAmount,
+                        }));
                     }
                 } catch { /* best-effort — invoice still prints without the breakup */ }
             }
@@ -374,32 +373,6 @@ export const BillingPage: React.FC = () => {
             toast({ title: 'Could not generate document', description: e?.message ?? '', variant: 'destructive' });
         } finally {
             setDocBusy(false);
-        }
-    };
-
-    // Load the admission (if any) linked to the selected billing encounter — anchors day-wise billing.
-    const loadAdmission = useCallback(async () => {
-        if (!selectedEncounterId) { setAdmission(null); return; }
-        setAdmissionLoading(true);
-        try {
-            const res = await ipdBillingService.getAdmissionByEncounter(selectedEncounterId);
-            setAdmission(res?.data ?? null);
-        } catch { setAdmission(null); }
-        finally { setAdmissionLoading(false); }
-    }, [selectedEncounterId]);
-
-    const handleAdmit = async () => {
-        if (!selectedPatient || !selectedEncounterId || admitting) return;
-        setAdmitting(true);
-        try {
-            const res = await ipdBillingService.admitPatient({ patientId: selectedPatient.patientId, encounterId: selectedEncounterId });
-            if (res?.success === false) throw new Error(res.message ?? 'Could not start IPD stay');
-            toast({ title: 'IPD stay started', description: res.admissionNo ? `Admission ${res.admissionNo}` : undefined });
-            await loadAdmission();
-        } catch (e: any) {
-            toast({ variant: 'destructive', title: 'Could not start IPD stay', description: e?.message ?? '' });
-        } finally {
-            setAdmitting(false);
         }
     };
 
@@ -617,6 +590,9 @@ export const BillingPage: React.FC = () => {
                                     ) : (
                                         encounters.map(enc => {
                                             const active = enc.encounterId === selectedEncounterId;
+                                            const chipCls = enc.paymentStatus === 'PAID' ? 'bg-emerald-100 text-emerald-700'
+                                                : enc.paymentStatus === 'PART' ? 'bg-amber-100 text-amber-700'
+                                                : 'bg-slate-100 text-slate-500';
                                             return (
                                                 <button
                                                     key={enc.encounterId}
@@ -637,6 +613,16 @@ export const BillingPage: React.FC = () => {
                                                         {format(parseISO(enc.invoiceDate), 'dd MMM yyyy')}
                                                         {enc.doctorName ? ` · ${enc.doctorName}` : ''}
                                                     </p>
+                                                    {(enc.totalBilled ?? 0) > 0 && (
+                                                        <div className="flex items-center justify-between gap-1 mt-1">
+                                                            <span className={cn('text-[10px] tabular-nums', active ? 'text-indigo-100' : 'text-slate-600')}>
+                                                                ₹{(enc.totalBilled ?? 0).toLocaleString('en-IN')}{(enc.balance ?? 0) > 0 ? ` · Due ₹${(enc.balance ?? 0).toLocaleString('en-IN')}` : ''}
+                                                            </span>
+                                                            {enc.paymentStatus && (
+                                                                <span className={cn('text-[8px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0', active ? 'bg-white/20 text-white' : chipCls)}>{enc.paymentStatus}</span>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </button>
                                             );
                                         })
@@ -863,8 +849,8 @@ export const BillingPage: React.FC = () => {
                             </Button>
                             {/* IPD day-wise interim billing — opens a drawer; admits the visit if needed. */}
                             {selectedEncounterId && (
-                                <Button onClick={() => { setShowDayWise(true); loadAdmission(); }} variant="outline" className="h-10 rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50">
-                                    <CalendarDays className="h-4 w-4 mr-1" /> IPD Day-wise Bills
+                                <Button onClick={() => setShowDayWise(true)} variant="outline" className="h-10 rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50">
+                                    <CalendarDays className="h-4 w-4 mr-1" /> Day-wise billing
                                 </Button>
                             )}
                             {/* Overall (invoice-level) discount — opens a premium drawer. */}
@@ -960,19 +946,16 @@ export const BillingPage: React.FC = () => {
                                 <CalendarDays className="h-5 w-5 text-white" />
                             </div>
                             <div>
-                                <SheetTitle className="text-white text-lg font-bold">IPD Day-wise Billing</SheetTitle>
-                                <p className="text-slate-200/90 text-xs mt-0.5">Interim bills per admission day (24h cycles)</p>
+                                <SheetTitle className="text-white text-lg font-bold">Day-wise Billing</SheetTitle>
+                                <p className="text-slate-200/90 text-xs mt-0.5">Interim bills per day (24h cycles from the first charge)</p>
                             </div>
                         </div>
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-4">
-                        {admissionLoading ? (
-                            <div className="flex items-center justify-center gap-2 text-sm text-slate-400 py-10"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>
-                        ) : admission ? (
+                        {selectedEncounterId ? (
                             <AdmissionDayBillsPanel
-                                admissionId={admission.admissionId}
-                                admissionNo={admission.admissionNo}
+                                encounterId={selectedEncounterId}
                                 onChanged={loadEvents}
                                 printSettings={buildPrintSettingsFromHospital(hospitalData)}
                                 patient={selectedPatient ? {
@@ -983,16 +966,7 @@ export const BillingPage: React.FC = () => {
                                 } : undefined}
                             />
                         ) : (
-                            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center space-y-3 mt-6">
-                                <div className="h-12 w-12 rounded-2xl bg-indigo-50 ring-1 ring-indigo-100 flex items-center justify-center mx-auto">
-                                    <BedDouble className="h-6 w-6 text-indigo-500" />
-                                </div>
-                                <p className="text-sm font-semibold text-slate-700">This visit isn't admitted yet</p>
-                                <p className="text-xs text-slate-500">Start an IPD stay to enable day-wise interim billing. Day 1 begins at admit time and bills accrue in 24-hour cycles.</p>
-                                <Button onClick={handleAdmit} disabled={admitting} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-                                    {admitting ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Starting…</> : <><BedDouble className="h-4 w-4 mr-1" /> Start IPD stay</>}
-                                </Button>
-                            </div>
+                            <div className="p-6 text-center text-xs text-slate-400 mt-6">Select a visit to manage its day-wise bills.</div>
                         )}
                     </div>
                 </SheetContent>
