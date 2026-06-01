@@ -45,6 +45,7 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
     const [manualCategory, setManualCategory] = useState('OTHER');
     const [manualGstRate, setManualGstRate] = useState('');
     const [manualIncentive, setManualIncentive] = useState('');
+    const [showAdvanced, setShowAdvanced] = useState(false);
 
     // Shared line inputs
     const [qty, setQty] = useState(1);
@@ -235,33 +236,37 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
                             <Plus className="h-5 w-5 text-white" />
                         </div>
                         <div>
-                            <SheetTitle className="text-white text-lg font-bold">Add Charge</SheetTitle>
-                            <p className="text-indigo-50/90 text-xs mt-0.5">Catalog item, bed by date range, or a custom charge</p>
+                            <SheetTitle className="text-white text-lg font-bold">Add Item</SheetTitle>
+                            <p className="text-indigo-50/90 text-xs mt-0.5">Pick from the catalog, a bed by date range, or type a custom item</p>
                         </div>
                     </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                    {/* Source toggle */}
-                    <div className="inline-flex rounded-xl border border-slate-200 overflow-hidden text-xs">
-                        <button type="button" onClick={() => switchSource('catalog')} className={tabClass(source === 'catalog')}>Catalog</button>
-                        <button type="button" onClick={() => switchSource('bed')} className={tabClass(source === 'bed')}>Bed / Room</button>
-                        <button type="button" onClick={() => switchSource('manual')} className={tabClass(source === 'manual')}>Manual</button>
+                    {/* Catalog-first: catalog & bed are the real modes; a custom item is the rare fallback. */}
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="inline-flex rounded-xl border border-slate-200 overflow-hidden text-xs">
+                            <button type="button" onClick={() => switchSource('catalog')} className={tabClass(source === 'catalog')}>Catalog</button>
+                            <button type="button" onClick={() => switchSource('bed')} className={tabClass(source === 'bed')}>Bed / Room</button>
+                        </div>
+                        <button type="button" onClick={() => switchSource('manual')} className={cn('text-[11px] font-medium underline underline-offset-2 shrink-0', source === 'manual' ? 'text-indigo-700' : 'text-slate-400 hover:text-slate-600')}>
+                            {source === 'manual' ? '✎ Custom item' : '+ Custom item'}
+                        </button>
                     </div>
 
                     {source === 'catalog' && (
                         <>
                             <div className="space-y-2">
-                                <Label className="text-xs font-semibold text-slate-700">Charge catalog</Label>
+                                <Label className="text-xs font-semibold text-slate-700">Search the catalog</Label>
                                 <div className="relative">
                                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                                    <Input value={chargeMasterFilter} onChange={(e) => setChargeMasterFilter(e.target.value)} placeholder="Search charges…" className="h-9 pl-8 text-sm rounded-xl" />
+                                    <Input value={chargeMasterFilter} onChange={(e) => setChargeMasterFilter(e.target.value)} placeholder="Type a service name, code or category…" className="h-9 pl-8 text-sm rounded-xl" autoFocus />
                                 </div>
                                 <div className="border border-slate-200 rounded-xl max-h-[220px] overflow-auto bg-white">
                                     {loadingMasters ? (
                                         <div className="p-3 space-y-2">{[0, 1, 2].map(i => <Skeleton key={i} className="h-9 w-full" />)}</div>
                                     ) : filteredMasters.length === 0 ? (
-                                        <div className="p-4 text-center text-xs text-slate-500">No charges found. Switch to <button type="button" onClick={() => switchSource('manual')} className="text-indigo-600 underline font-semibold">Manual</button>.</div>
+                                        <div className="p-4 text-center text-xs text-slate-500">Nothing matches. <button type="button" onClick={() => switchSource('manual')} className="text-indigo-600 underline font-semibold">Add it as a custom item</button>.</div>
                                     ) : (
                                         filteredMasters.map(m => (
                                             <button key={m.chargeId} type="button" onClick={() => pickMaster(m)}
@@ -345,26 +350,35 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
                                 <Label className="text-xs font-semibold text-slate-700">Charge name <span className="text-rose-500">*</span></Label>
                                 <Input value={manualName} onChange={(e) => setManualName(e.target.value)} placeholder="e.g. Dressing, X-Ray, Ambulance…" className="h-10 mt-1 rounded-xl" autoFocus />
                             </div>
-                            <div>
-                                <Label className="text-xs font-semibold text-slate-700">Category</Label>
-                                <Select value={manualCategory} onValueChange={setManualCategory}>
-                                    <SelectTrigger className="h-10 mt-1 rounded-xl"><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        {MANUAL_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                    <Label className="text-xs font-semibold text-slate-700">GST Rate (%)</Label>
-                                    <Input type="number" min={0} max={28} step="0.01" value={manualGstRate} onChange={(e) => setManualGstRate(e.target.value)} placeholder="0 (no tax)" className="h-10 mt-1 rounded-xl" />
-                                </div>
-                                <div>
-                                    <Label className="text-xs font-semibold text-slate-700">Incentive (₹)</Label>
-                                    <Input type="number" min={0} step="0.01" value={manualIncentive} onChange={(e) => setManualIncentive(e.target.value)} placeholder="0" className="h-10 mt-1 rounded-xl" />
-                                </div>
-                            </div>
-                            <p className="text-[10px] text-slate-400">Optional. GST falls back to the hospital policy default when left blank; incentive accrues to the visit's referrer.</p>
+                            {/* Just name + amount by default — category/GST/incentive are optional and
+                                default sensibly on the backend, so they hide behind "Advanced". */}
+                            <button type="button" onClick={() => setShowAdvanced(v => !v)} className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700 self-start">
+                                {showAdvanced ? '− Hide advanced' : '+ Advanced (category, GST, incentive)'}
+                            </button>
+                            {showAdvanced && (
+                                <>
+                                    <div>
+                                        <Label className="text-xs font-semibold text-slate-700">Category</Label>
+                                        <Select value={manualCategory} onValueChange={setManualCategory}>
+                                            <SelectTrigger className="h-10 mt-1 rounded-xl"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                {MANUAL_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <Label className="text-xs font-semibold text-slate-700">GST Rate (%)</Label>
+                                            <Input type="number" min={0} max={28} step="0.01" value={manualGstRate} onChange={(e) => setManualGstRate(e.target.value)} placeholder="0 (no tax)" className="h-10 mt-1 rounded-xl" />
+                                        </div>
+                                        <div>
+                                            <Label className="text-xs font-semibold text-slate-700">Incentive (₹)</Label>
+                                            <Input type="number" min={0} step="0.01" value={manualIncentive} onChange={(e) => setManualIncentive(e.target.value)} placeholder="0" className="h-10 mt-1 rounded-xl" />
+                                        </div>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400">Optional. GST falls back to the hospital policy default when left blank; incentive accrues to the visit's referrer.</p>
+                                </>
+                            )}
                         </>
                     )}
 
@@ -407,7 +421,7 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
                 <div className="p-4 border-t border-slate-200 bg-slate-50 flex gap-3 mt-auto">
                     <Button variant="outline" className="flex-1 rounded-xl" onClick={() => onOpenChange(false)} disabled={submitting}>Cancel</Button>
                     <Button onClick={submit} disabled={submitting || !canSubmit} className="flex-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-500/20">
-                        {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Adding…</> : <><Plus className="h-4 w-4 mr-2" />Add Charge</>}
+                        {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Adding…</> : <><Plus className="h-4 w-4 mr-2" />Add Item</>}
                     </Button>
                 </div>
             </SheetContent>

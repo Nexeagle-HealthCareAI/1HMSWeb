@@ -1,8 +1,8 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Search, Plus, Receipt, ArrowLeft, IndianRupee, Loader2, RefreshCw,
-    AlertCircle, X, Wallet, TrendingDown, Trash2, Printer, Lock, Unlock, CreditCard, Percent, CalendarDays, BedDouble,
+    AlertCircle, X, Wallet, TrendingDown, Trash2, Printer, Lock, Unlock, CreditCard, Percent, CalendarDays, BedDouble, Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,7 +39,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useHospitalApi } from '@/hooks/useApi';
 import { openPrintHtml, downloadHtmlAsPdf } from '@/utils/printUtils';
 import { getOpdDocHtml, buildPrintSettingsFromHospital, splitChargePeriod, type OpdDocKind } from '../utils/opdDocuments';
-import { FileSpreadsheet, Download } from 'lucide-react';
+import { Download } from 'lucide-react';
 
 // Render a backend timestamp in IST. Naive (offset-less) timestamps are treated as UTC,
 // since the backend stores UTC — so they convert correctly to Asia/Kolkata.
@@ -116,6 +116,11 @@ export const BillingPage: React.FC = () => {
     const [admission, setAdmission] = useState<AdmissionInfo | null>(null);
     const [admissionLoading, setAdmissionLoading] = useState(false);
     const [admitting, setAdmitting] = useState(false);
+    const [showMoreDocs, setShowMoreDocs] = useState(false);
+    // "Paid in full" prompt: offer to lock & print after a payment clears the balance.
+    const [showPaidPrompt, setShowPaidPrompt] = useState(false);
+    const justPaidRef = useRef(false);
+    const autoPrintBillRef = useRef(false);
 
     // ─── Patient search ─────
     const debouncedSearch = useMemo(
@@ -241,28 +246,6 @@ export const BillingPage: React.FC = () => {
             toast({ title: 'Could not delete', description: e?.message ?? '', variant: 'destructive' });
         } finally {
             setVoidBusy(false);
-        }
-    };
-
-    // Create or refresh the DRAFT invoice for this encounter's posted charges — WITHOUT
-    // finalizing. Used both to first generate the invoice and to fold newly added charges
-    // (e.g. a lab added after the consult was paid) into the existing draft so they become
-    // collectable. CreateDraftInvoice reuses the draft and links any unlinked charges.
-    const handleSaveDraft = async () => {
-        if (!selectedPatient || !selectedEncounterId || invoicing) return;
-        setInvoicing(true);
-        try {
-            const inv = await ipdBillingService.createDraftInvoice({ patientId: selectedPatient.patientId, encounterId: selectedEncounterId, invoiceDiscountAmount: overallDiscount > 0 ? overallDiscount : undefined });
-            if (inv?.success === false) throw new Error(inv?.message ?? 'Could not save invoice');
-            toast({
-                title: inv?.data?.wasReused ? 'Invoice updated' : 'Invoice generated',
-                description: inv?.data?.invoiceNo ? `Invoice ${inv.data.invoiceNo}` : undefined,
-            });
-            loadEvents();
-        } catch (e: any) {
-            toast({ title: 'Could not save invoice', description: e?.message ?? '', variant: 'destructive' });
-        } finally {
-            setInvoicing(false);
         }
     };
 
@@ -452,6 +435,30 @@ export const BillingPage: React.FC = () => {
     const netPayable = totals.debit - overallDiscount;
     const due = netPayable - totals.credit;
 
+    // After a payment refreshes the ledger, if it cleared the balance, offer to lock & print.
+    const handlePaymentSaved = useCallback(() => {
+        justPaidRef.current = true;
+        loadEvents();
+    }, [loadEvents]);
+
+    useEffect(() => {
+        if (!justPaidRef.current) return;
+        justPaidRef.current = false;
+        if (!isFinalized && (eventsData?.charges?.length ?? 0) > 0 && due <= 0) {
+            setShowPaidPrompt(true);
+        }
+    }, [eventsData, isFinalized, due]);
+
+    // Deferred print: once the bill is locked AND the refreshed (finalized) data is in, print it.
+    // This avoids printing stale "draft" data right after finalizing.
+    useEffect(() => {
+        if (autoPrintBillRef.current && isFinalized && eventsData) {
+            autoPrintBillRef.current = false;
+            handleDoc((eventsData?.payments?.length ?? 0) > 0 ? 'billcum' : 'invoice', 'print');
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isFinalized, eventsData]);
+
     // Unified ledger: charges + payments interleaved in chronological order (oldest first).
     const ledgerRows = useMemo(() => {
         const charges = (eventsData?.charges ?? []).map(c => ({ kind: 'charge' as const, ts: c.createdDateTime, c }));
@@ -519,6 +526,36 @@ export const BillingPage: React.FC = () => {
                         </div>
                     </div>
                 )}
+            </div>
+
+            {/* Guided 3-step rail — orients a first-time user: Patient → Add items → Pay & print.
+                Steps are derived from live state; the current step is highlighted, done steps ticked. */}
+            <div className="flex items-center gap-1 sm:gap-3 px-1 shrink-0">
+                {[
+                    { n: 1, label: 'Patient', done: !!selectedPatient },
+                    { n: 2, label: 'Add items', done: (eventsData?.charges?.length ?? 0) > 0 },
+                    { n: 3, label: 'Pay & print', done: (eventsData?.charges?.length ?? 0) > 0 && due <= 0 },
+                ].map((s, i, arr) => {
+                    const currentStep = !selectedPatient ? 1 : (eventsData?.charges?.length ?? 0) === 0 ? 2 : 3;
+                    const isCurrent = currentStep === s.n;
+                    return (
+                        <React.Fragment key={s.n}>
+                            <div className="flex items-center gap-2">
+                                <span className={cn(
+                                    'h-6 w-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 transition-colors',
+                                    s.done ? 'bg-emerald-500 text-white' : isCurrent ? 'bg-indigo-600 text-white ring-4 ring-indigo-100' : 'bg-slate-200 text-slate-500'
+                                )}>
+                                    {s.done ? <Check className="h-3.5 w-3.5" /> : s.n}
+                                </span>
+                                <span className={cn(
+                                    'text-xs font-semibold hidden sm:inline',
+                                    isCurrent ? 'text-indigo-700' : s.done ? 'text-emerald-700' : 'text-slate-400'
+                                )}>{s.label}</span>
+                            </div>
+                            {i < arr.length - 1 && <div className={cn('h-px flex-1 min-w-[12px]', s.done ? 'bg-emerald-300' : 'bg-slate-200')} />}
+                        </React.Fragment>
+                    );
+                })}
             </div>
 
             {/* Main 3-column layout (lg uses a 24-track grid for finer column balance) */}
@@ -662,7 +699,7 @@ export const BillingPage: React.FC = () => {
                             </div>
                         ) : (
                             <>
-                                <table className="w-full text-xs">
+                                <table className="w-full text-xs [&_thead_th]:border-r [&_thead_th]:border-slate-200 [&_tbody_td]:border-r [&_tbody_td]:border-slate-100 [&_thead_th:last-child]:border-r-0 [&_tbody_td:last-child]:border-r-0">
                                     <thead className="bg-slate-50/80 backdrop-blur sticky top-0 z-10">
                                         <tr className="border-b border-slate-200">
                                             <th className="text-left px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Date</th>
@@ -809,7 +846,7 @@ export const BillingPage: React.FC = () => {
                             </div>
                             {isFinalized && (
                                 <div className="mt-3 flex items-center gap-1.5 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
-                                    <Lock className="h-3 w-3" /> Invoice {eventsData?.currentInvoice?.invoiceNo ?? ''} finalized — entries locked.
+                                    <Lock className="h-3 w-3" /> Invoice {eventsData?.currentInvoice?.invoiceNo ?? ''} finalized — charges locked.{due > 0 ? ' Payments can still be collected until settled.' : ' Fully settled.'}
                                 </div>
                             )}
                         </div>
@@ -817,10 +854,12 @@ export const BillingPage: React.FC = () => {
                         {/* Action buttons */}
                         <div className="grid grid-cols-1 gap-2">
                             <Button onClick={() => setShowAddCharge(true)} disabled={!selectedEncounterId || isFinalized} className="h-10 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 shadow-md shadow-indigo-500/20 transition-all active:scale-[0.98]">
-                                <Plus className="h-4 w-4 mr-1" /> Add Charge
+                                <Plus className="h-4 w-4 mr-1" /> Add Item
                             </Button>
-                            <Button onClick={() => setShowAddPayment(true)} disabled={!selectedEncounterId || isFinalized} className="h-10 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-md shadow-emerald-500/20 transition-all active:scale-[0.98]">
-                                <CreditCard className="h-4 w-4 mr-1" /> Record Payment
+                            {/* Payments are decoupled from finalize: a finalized invoice can still be
+                                collected against until the balance is settled (charges stay locked). */}
+                            <Button onClick={() => setShowAddPayment(true)} disabled={!selectedEncounterId || (isFinalized && due <= 0)} className="h-10 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-md shadow-emerald-500/20 transition-all active:scale-[0.98]">
+                                <CreditCard className="h-4 w-4 mr-1" /> Take Payment
                             </Button>
                             {/* IPD day-wise interim billing — opens a drawer; admits the visit if needed. */}
                             {selectedEncounterId && (
@@ -834,47 +873,50 @@ export const BillingPage: React.FC = () => {
                                     <Percent className="h-4 w-4 mr-1" /> {overallDiscount > 0 ? 'Edit Discount' : 'Add Discount'}
                                 </Button>
                             )}
-                            {/* Generate the draft invoice when the visit has charges but no invoice yet. */}
-                            {selectedEncounterId && !eventsData?.currentInvoice && (
-                                <Button onClick={handleSaveDraft} disabled={invoicing || (eventsData?.charges?.length ?? 0) === 0} variant="outline" className="h-10 rounded-xl border-indigo-200 text-indigo-700 hover:bg-indigo-50 hover:text-indigo-700 dark:border-indigo-800 dark:text-indigo-300">
-                                    {invoicing ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Generating…</> : <><FileSpreadsheet className="h-4 w-4 mr-1" /> Generate Invoice</>}
-                                </Button>
-                            )}
-                            {/* Fold newly added charges into the existing (draft) invoice so they can be collected. */}
-                            {selectedEncounterId && eventsData?.currentInvoice && !isFinalized && hasUninvoicedCharges && (
-                                <Button onClick={handleSaveDraft} disabled={invoicing} variant="outline" className="h-10 rounded-xl border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-700 dark:border-amber-800 dark:text-amber-300">
-                                    {invoicing ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Updating…</> : <><FileSpreadsheet className="h-4 w-4 mr-1" /> Update Invoice</>}
-                                </Button>
-                            )}
-                            {/* Finalize (lock) the invoice — single billing surface, no separate page. */}
+                            {/* The bill builds automatically as items are added or a payment is taken —
+                                no manual "generate / update invoice" step. Locking is the only bill action. */}
                             {selectedEncounterId && eventsData?.currentInvoice && !isFinalized && (
                                 <Button onClick={() => setShowFinalizeConfirm(true)} disabled={invoicing} variant="outline" className="h-10 rounded-xl border-emerald-300 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-700 dark:border-emerald-800 dark:text-emerald-300">
-                                    <Lock className="h-4 w-4 mr-1" /> Finalize Invoice
+                                    <Lock className="h-4 w-4 mr-1" /> Lock Bill
                                 </Button>
                             )}
-                            {/* Reopen a finalized invoice (audit reason required). */}
+                            {/* Unlock a finalized bill (audit reason required). */}
                             {selectedEncounterId && isFinalized && (
                                 <Button onClick={() => setReopenOpen(true)} disabled={invoicing} variant="outline" className="h-10 rounded-xl border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-700 dark:border-amber-800 dark:text-amber-300">
-                                    <Unlock className="h-4 w-4 mr-1" /> Reopen Invoice
+                                    <Unlock className="h-4 w-4 mr-1" /> Unlock Bill
                                 </Button>
                             )}
 
-                            {/* Documents — printable / downloadable once an invoice exists. */}
+                            {/* One obvious action: print the bill (bill-cum-receipt once anything is paid,
+                                otherwise the invoice). Other document types tuck away under "More". */}
                             {eventsData?.currentInvoice && (
-                                <div className="rounded-xl border border-slate-200 p-2.5 space-y-1.5">
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-0.5">Documents</p>
-                                    {([['invoice', 'Invoice'], ['receipt', 'Receipt'], ['statement', 'Statement'], ['billcum', 'Bill + Receipt']] as const)
-                                        .filter(([kind]) => kind === 'invoice' || (eventsData?.payments?.length ?? 0) > 0)
-                                        .map(([kind, label]) => (
-                                            <div key={kind} className="flex items-center justify-between gap-1.5 text-xs">
-                                                <span className="font-medium text-slate-600 truncate">{label}</span>
-                                                <div className="flex gap-1 shrink-0">
-                                                    <Button size="sm" variant="ghost" title={`Print ${label}`} className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" disabled={docBusy} onClick={() => handleDoc(kind, 'print')}><Printer className="h-3.5 w-3.5" /></Button>
-                                                    <Button size="sm" variant="ghost" title={`Download ${label} (PDF)`} className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" disabled={docBusy} onClick={() => handleDoc(kind, 'download')}><Download className="h-3.5 w-3.5" /></Button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                </div>
+                                <>
+                                    <Button
+                                        onClick={() => handleDoc((eventsData?.payments?.length ?? 0) > 0 ? 'billcum' : 'invoice', 'print')}
+                                        disabled={docBusy}
+                                        className="h-10 rounded-xl bg-slate-900 hover:bg-slate-800 text-white shadow-md shadow-black/20"
+                                    >
+                                        {docBusy ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Printer className="h-4 w-4 mr-1" />} Print Bill
+                                    </Button>
+                                    <button type="button" onClick={() => setShowMoreDocs(v => !v)} className="text-[11px] text-slate-400 hover:text-slate-600 underline underline-offset-2 self-center">
+                                        {showMoreDocs ? 'Hide other documents' : 'More documents'}
+                                    </button>
+                                    {showMoreDocs && (
+                                        <div className="rounded-xl border border-slate-200 p-2.5 space-y-1.5">
+                                            {([['invoice', 'Invoice'], ['receipt', 'Receipt'], ['statement', 'Statement'], ['billcum', 'Bill + Receipt']] as const)
+                                                .filter(([kind]) => kind === 'invoice' || (eventsData?.payments?.length ?? 0) > 0)
+                                                .map(([kind, label]) => (
+                                                    <div key={kind} className="flex items-center justify-between gap-1.5 text-xs">
+                                                        <span className="font-medium text-slate-600 truncate">{label}</span>
+                                                        <div className="flex gap-1 shrink-0">
+                                                            <Button size="sm" variant="ghost" title={`Print ${label}`} className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" disabled={docBusy} onClick={() => handleDoc(kind, 'print')}><Printer className="h-3.5 w-3.5" /></Button>
+                                                            <Button size="sm" variant="ghost" title={`Download ${label} (PDF)`} className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" disabled={docBusy} onClick={() => handleDoc(kind, 'download')}><Download className="h-3.5 w-3.5" /></Button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
 
@@ -905,7 +947,7 @@ export const BillingPage: React.FC = () => {
                     patientId={selectedPatient.patientId}
                     encounterId={selectedEncounterId}
                     suggestedAmount={Math.max(0, due)}
-                    onSaved={loadEvents}
+                    onSaved={handlePaymentSaved}
                 />
             )}
 
@@ -1057,6 +1099,36 @@ export const BillingPage: React.FC = () => {
             </AlertDialog>
 
             {/* Finalize confirm — premium. Finalizing locks the invoice. */}
+            {/* Paid-in-full prompt — offer to lock & print (no surprise auto-lock). */}
+            <AlertDialog open={showPaidPrompt} onOpenChange={(o) => { if (!o) setShowPaidPrompt(false); }}>
+                <AlertDialogContent className="p-0 gap-0 overflow-hidden rounded-2xl max-w-md border-0 shadow-2xl">
+                    <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-emerald-500 to-teal-600">
+                        <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0">
+                            <Check className="h-5 w-5 text-white" />
+                        </div>
+                        <div className="min-w-0">
+                            <AlertDialogTitle className="text-white text-base font-bold leading-tight">Paid in full</AlertDialogTitle>
+                            <p className="text-[11px] text-emerald-50/90 mt-0.5">Balance settled</p>
+                        </div>
+                    </div>
+                    <div className="px-5 py-4">
+                        <AlertDialogDescription className="text-sm text-slate-600">
+                            This bill is fully paid. Lock it and print the bill &amp; receipt for the patient? You can still reopen later (a reason is required).
+                        </AlertDialogDescription>
+                    </div>
+                    <AlertDialogFooter className="px-5 pb-5 pt-0">
+                        <AlertDialogCancel disabled={invoicing} className="rounded-xl">Not now</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => { setShowPaidPrompt(false); autoPrintBillRef.current = true; handleFinalize(); }}
+                            disabled={invoicing}
+                            className="rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-500/20"
+                        >
+                            {invoicing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Locking…</> : <><Lock className="h-4 w-4 mr-1.5" />Lock &amp; print</>}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             <AlertDialog open={showFinalizeConfirm} onOpenChange={(o) => { if (!o) setShowFinalizeConfirm(false); }}>
                 <AlertDialogContent className="p-0 gap-0 overflow-hidden rounded-2xl sm:rounded-2xl max-w-md border-0 shadow-2xl">
                     <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-amber-500 to-orange-600">
@@ -1064,21 +1136,23 @@ export const BillingPage: React.FC = () => {
                             <Lock className="h-5 w-5 text-white" />
                         </div>
                         <div className="min-w-0">
-                            <AlertDialogTitle className="text-white text-base font-bold leading-tight">Finalize invoice</AlertDialogTitle>
-                            <p className="text-[11px] text-amber-50/90 mt-0.5">This locks the bill</p>
+                            <AlertDialogTitle className="text-white text-base font-bold leading-tight">Lock this bill</AlertDialogTitle>
+                            <p className="text-[11px] text-amber-50/90 mt-0.5">Freezes the charges</p>
                         </div>
                     </div>
                     <div className="px-5 py-4">
                         <AlertDialogDescription asChild>
                             <div className="space-y-2 text-sm text-slate-600">
                                 <p>
-                                    Finalizing this invoice <span className="font-semibold text-slate-800">locks it</span>.
-                                    Once locked you can no longer:
+                                    Finalizing this invoice <span className="font-semibold text-slate-800">locks its charges</span> —
+                                    you can no longer add or edit charges (e.g. lab tests, procedures).
                                 </p>
-                                <ul className="list-disc pl-5 space-y-0.5">
-                                    <li>add charges (e.g. lab tests, procedures), or</li>
-                                    <li>record or edit payments against it.</li>
-                                </ul>
+                                <p>Payments can still be recorded against it until the balance is settled.</p>
+                                {due > 0 && (
+                                    <p className="rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-rose-700 font-medium">
+                                        ₹{Math.abs(due).toLocaleString('en-IN', { minimumFractionDigits: 2 })} is still due — you can finalize now and collect the balance afterwards.
+                                    </p>
+                                )}
                                 {hasUninvoicedCharges ? (
                                     <p className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-amber-800 font-medium">
                                         Some charges aren’t on the bill yet — they’ll be folded in automatically when you
@@ -1100,7 +1174,7 @@ export const BillingPage: React.FC = () => {
                             disabled={invoicing}
                             className="rounded-xl bg-amber-600 hover:bg-amber-700 shadow-md shadow-amber-500/20"
                         >
-                            {invoicing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Finalizing…</> : <><Lock className="h-4 w-4 mr-1.5" />Finalize &amp; lock</>}
+                            {invoicing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Locking…</> : <><Lock className="h-4 w-4 mr-1.5" />Lock bill</>}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
