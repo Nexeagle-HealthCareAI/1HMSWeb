@@ -123,8 +123,6 @@ export const buildInvoiceA4 = (data: InvoicePrintData, settings: PrintSettings):
                 ${data.discountTotal > 0 ? `<tr><td class="k">Discount</td><td class="v" style="color:#b91c1c;">- ${inr(data.discountTotal)}</td></tr>` : ''}
                 ${data.taxTotal > 0 ? `<tr><td class="k">GST</td><td class="v">${inr(data.taxTotal)}</td></tr>` : ''}
                 <tr class="grand"><td>Grand Total</td><td style="text-align:right;">${inr(data.grandTotal)}</td></tr>
-                <tr class="paid"><td class="k">Amount Paid</td><td class="v">${inr(data.amountPaid)}</td></tr>
-                <tr class="due"><td class="k">Balance Due</td><td class="v">${inr(data.balanceDue)}</td></tr>
             </table>
         </div>
 

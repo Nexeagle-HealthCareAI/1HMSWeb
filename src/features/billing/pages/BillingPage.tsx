@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Search, Plus, Receipt, ArrowLeft, IndianRupee, Loader2, RefreshCw,
-    AlertCircle, X, Wallet, TrendingDown, Trash2, Printer, Lock, Unlock, CreditCard, Percent,
+    AlertCircle, X, Wallet, TrendingDown, Trash2, Printer, Lock, Unlock, CreditCard, Percent, CalendarDays, BedDouble,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,8 +28,9 @@ import { debounce } from 'lodash';
 import { patientService } from '../services/patientService';
 import {
     ipdBillingService,
-    type BillingChargeRow, type BillingPaymentRow, type GetEncounterEventsResponse,
+    type BillingChargeRow, type BillingPaymentRow, type GetEncounterEventsResponse, type AdmissionInfo,
 } from '../services/ipdBillingService';
+import { AdmissionDayBillsPanel } from '../components/AdmissionDayBillsPanel';
 import type { Patient } from '../types';
 import { AddChargeDialog } from '../components/dialogs/AddChargeDialog';
 import { AddPaymentDialog } from '../components/dialogs/AddPaymentDialog';
@@ -109,6 +110,12 @@ export const BillingPage: React.FC = () => {
     const [creatingVisit, setCreatingVisit] = useState(false);
     const [voidConfirm, setVoidConfirm] = useState<{ kind: 'charge' | 'payment'; id: string; label: string } | null>(null);
     const [voidBusy, setVoidBusy] = useState(false);
+
+    // IPD day-wise interim billing (admission-anchored)
+    const [showDayWise, setShowDayWise] = useState(false);
+    const [admission, setAdmission] = useState<AdmissionInfo | null>(null);
+    const [admissionLoading, setAdmissionLoading] = useState(false);
+    const [admitting, setAdmitting] = useState(false);
 
     // ─── Patient search ─────
     const debouncedSearch = useMemo(
@@ -365,6 +372,32 @@ export const BillingPage: React.FC = () => {
         }
     };
 
+    // Load the admission (if any) linked to the selected billing encounter — anchors day-wise billing.
+    const loadAdmission = useCallback(async () => {
+        if (!selectedEncounterId) { setAdmission(null); return; }
+        setAdmissionLoading(true);
+        try {
+            const res = await ipdBillingService.getAdmissionByEncounter(selectedEncounterId);
+            setAdmission(res?.data ?? null);
+        } catch { setAdmission(null); }
+        finally { setAdmissionLoading(false); }
+    }, [selectedEncounterId]);
+
+    const handleAdmit = async () => {
+        if (!selectedPatient || !selectedEncounterId || admitting) return;
+        setAdmitting(true);
+        try {
+            const res = await ipdBillingService.admitPatient({ patientId: selectedPatient.patientId, encounterId: selectedEncounterId });
+            if (res?.success === false) throw new Error(res.message ?? 'Could not start IPD stay');
+            toast({ title: 'IPD stay started', description: res.admissionNo ? `Admission ${res.admissionNo}` : undefined });
+            await loadAdmission();
+        } catch (e: any) {
+            toast({ variant: 'destructive', title: 'Could not start IPD stay', description: e?.message ?? '' });
+        } finally {
+            setAdmitting(false);
+        }
+    };
+
     // ─── Derived totals ─────
     const totals = useMemo(() => {
         const debit = eventsData?.totalBilledAmount ?? 0;
@@ -564,19 +597,19 @@ export const BillingPage: React.FC = () => {
                         {selectedPatient && (
                             <Button
                                 onClick={() => setShowNewVisit(true)}
-                                className="h-7 px-4 shrink-0 whitespace-nowrap rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 hover:from-slate-800 hover:via-slate-700 hover:to-slate-800 ring-1 ring-white/10 shadow-md shadow-black/30 transition-all active:scale-[0.98]"
+                                className="h-9 px-6 min-w-[220px] shrink-0 whitespace-nowrap rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 hover:from-slate-800 hover:via-slate-700 hover:to-slate-800 ring-1 ring-white/10 shadow-md shadow-black/30 transition-all active:scale-[0.98]"
                             >
-                                <Plus className="h-3.5 w-3.5 mr-0.5" />Create New Invoice
+                                <Plus className="h-4 w-4 mr-0.5" />Create New Invoice
                             </Button>
                         )}
                         {eventsData?.currentInvoice ? (
                             <div className="flex items-center gap-2 min-w-0">
-                                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Invoice</span>
-                                <span className="text-[11px] font-bold text-slate-700 tabular-nums whitespace-nowrap shrink-0" title={eventsData.currentInvoice.invoiceNo ?? undefined}>{eventsData.currentInvoice.invoiceNo ?? '—'}</span>
+                                <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Invoice</span>
+                                <span className="text-sm font-bold text-slate-700 tabular-nums whitespace-nowrap shrink-0" title={eventsData.currentInvoice.invoiceNo ?? undefined}>{eventsData.currentInvoice.invoiceNo ?? '—'}</span>
                                 <Badge
                                     variant="outline"
                                     className={cn(
-                                        'text-[9px] h-5 px-2 font-bold uppercase tracking-wider shrink-0',
+                                        'text-[11px] h-6 px-2.5 font-bold uppercase tracking-wider shrink-0',
                                         isFinalized
                                             ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
                                             : (eventsData.currentInvoice.statusCode ?? '').toUpperCase() === 'CANCELLED'
@@ -612,7 +645,6 @@ export const BillingPage: React.FC = () => {
                                         <tr className="border-b border-slate-200">
                                             <th className="text-left px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Date</th>
                                             <th className="text-left px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Particular</th>
-                                            <th className="text-left px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Period</th>
                                             <th className="text-left px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Category</th>
                                             <th className="text-right px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Qty × Rate</th>
                                             <th className="text-right px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Disc</th>
@@ -628,10 +660,14 @@ export const BillingPage: React.FC = () => {
                                                 <td className="px-3 py-2">
                                                     <div className="flex items-center gap-2">
                                                         <span className="h-6 w-6 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center shrink-0"><IndianRupee className="h-3.5 w-3.5" /></span>
-                                                        <span className="font-semibold text-slate-800 truncate max-w-[200px]">{splitChargePeriod(row.c.displayName, row.c.categoryCode).name || '—'}</span>
+                                                        <div className="min-w-0">
+                                                            <div className="font-semibold text-slate-800 truncate max-w-[260px]">{splitChargePeriod(row.c.displayName, row.c.categoryCode).name || '—'}</div>
+                                                            {splitChargePeriod(row.c.displayName, row.c.categoryCode).period && (
+                                                                <div className="text-[10px] text-slate-500 whitespace-nowrap">📅 {splitChargePeriod(row.c.displayName, row.c.categoryCode).period}</div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-3 py-2 text-[11px] text-slate-600 whitespace-nowrap">{splitChargePeriod(row.c.displayName, row.c.categoryCode).period || <span className="text-slate-300">—</span>}</td>
                                                 <td className="px-3 py-2 text-[10px] font-mono uppercase text-slate-500">{row.c.categoryCode ?? '—'}</td>
                                                 <td className="px-3 py-2 text-right tabular-nums">{row.c.qty} × ₹{Number(row.c.rate).toFixed(2)}</td>
                                                 <td className="px-3 py-2 text-right tabular-nums text-rose-600">{Number(row.c.discountAmount) > 0 ? `− ₹${Number(row.c.discountAmount).toFixed(2)}` : <span className="text-slate-300">—</span>}</td>
@@ -657,7 +693,6 @@ export const BillingPage: React.FC = () => {
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-3 py-2 text-right text-slate-300">—</td>
                                                 <td className="px-3 py-2 text-[10px] font-mono uppercase text-slate-500">PAYMENT</td>
                                                 <td className="px-3 py-2 text-right text-slate-300 tabular-nums">—</td>
                                                 <td className="px-3 py-2 text-right text-slate-300">—</td>
@@ -682,7 +717,7 @@ export const BillingPage: React.FC = () => {
                                         ))}
                                         {(eventsData?.charges?.length ?? 0) === 0 && (eventsData?.payments?.length ?? 0) === 0 && (
                                             <tr>
-                                                <td colSpan={9} className="px-3 py-16 text-center">
+                                                <td colSpan={8} className="px-3 py-16 text-center">
                                                     <div className="flex flex-col items-center gap-2 text-slate-400">
                                                         <div className="h-12 w-12 rounded-2xl bg-slate-50 ring-1 ring-slate-200 flex items-center justify-center">
                                                             <Receipt className="h-6 w-6 text-slate-300" />
@@ -697,20 +732,20 @@ export const BillingPage: React.FC = () => {
                                     {((eventsData?.charges?.length ?? 0) > 0 || (eventsData?.payments?.length ?? 0) > 0) && (
                                         <tfoot className="sticky bottom-0 bg-white/90 backdrop-blur">
                                             <tr className="border-t-2 border-slate-200 text-[11px]">
-                                                <td colSpan={6} className="px-3 py-2 text-right font-bold uppercase tracking-widest text-slate-400">Totals</td>
+                                                <td colSpan={5} className="px-3 py-2 text-right font-bold uppercase tracking-widest text-slate-400">Totals</td>
                                                 <td className="px-3 py-2 text-right tabular-nums font-bold text-slate-800">₹{totals.debit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                                                 <td className="px-3 py-2 text-right tabular-nums font-bold text-emerald-700">₹{totals.credit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                                                 <td />
                                             </tr>
                                             {overallDiscount > 0 && (
                                                 <tr className="text-[11px]">
-                                                    <td colSpan={6} className="px-3 py-1 text-right font-bold uppercase tracking-widest text-rose-500">Invoice Discount</td>
+                                                    <td colSpan={5} className="px-3 py-1 text-right font-bold uppercase tracking-widest text-rose-500">Invoice Discount</td>
                                                     <td colSpan={2} className="px-3 py-1 text-right tabular-nums font-bold text-rose-600">− ₹{overallDiscount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                                                     <td />
                                                 </tr>
                                             )}
                                             <tr>
-                                                <td colSpan={6} className="px-3 pb-2 text-right font-bold uppercase tracking-widest text-slate-500">{overallDiscount > 0 ? 'Balance (after discount)' : 'Balance'}</td>
+                                                <td colSpan={5} className="px-3 pb-2 text-right font-bold uppercase tracking-widest text-slate-500">{overallDiscount > 0 ? 'Balance (after discount)' : 'Balance'}</td>
                                                 <td colSpan={2} className={cn('px-3 pb-2 text-right tabular-nums font-black text-sm', due > 0 ? 'text-rose-700' : due < 0 ? 'text-emerald-700' : 'text-slate-700')}>
                                                     ₹{Math.abs(due).toLocaleString('en-IN', { minimumFractionDigits: 2 })} {due < 0 ? 'CR' : due > 0 ? 'DR' : ''}
                                                 </td>
@@ -765,6 +800,12 @@ export const BillingPage: React.FC = () => {
                             <Button onClick={() => setShowAddPayment(true)} disabled={!selectedEncounterId || isFinalized} className="h-10 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-md shadow-emerald-500/20 transition-all active:scale-[0.98]">
                                 <CreditCard className="h-4 w-4 mr-1" /> Record Payment
                             </Button>
+                            {/* IPD day-wise interim billing — opens a drawer; admits the visit if needed. */}
+                            {selectedEncounterId && (
+                                <Button onClick={() => { setShowDayWise(true); loadAdmission(); }} variant="outline" className="h-10 rounded-xl border-slate-300 text-slate-700 hover:bg-slate-50">
+                                    <CalendarDays className="h-4 w-4 mr-1" /> IPD Day-wise Bills
+                                </Button>
+                            )}
                             {/* Overall (invoice-level) discount — opens a premium drawer. */}
                             {selectedEncounterId && eventsData?.currentInvoice && !isFinalized && (
                                 <Button onClick={() => { setDiscountInput(''); setDiscountMode('amount'); setShowDiscount(true); }} variant="outline" className="h-10 rounded-xl border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-800 dark:text-rose-300">
@@ -845,6 +886,42 @@ export const BillingPage: React.FC = () => {
                     onSaved={loadEvents}
                 />
             )}
+
+            {/* IPD day-wise interim billing drawer */}
+            <Sheet open={showDayWise} onOpenChange={setShowDayWise}>
+                <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col bg-slate-50">
+                    <div className="px-6 py-5 bg-gradient-to-r from-slate-900 to-slate-700">
+                        <div className="flex items-center gap-3">
+                            <div className="h-11 w-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center shrink-0">
+                                <CalendarDays className="h-5 w-5 text-white" />
+                            </div>
+                            <div>
+                                <SheetTitle className="text-white text-lg font-bold">IPD Day-wise Billing</SheetTitle>
+                                <p className="text-slate-200/90 text-xs mt-0.5">Interim bills per admission day (24h cycles)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-4">
+                        {admissionLoading ? (
+                            <div className="flex items-center justify-center gap-2 text-sm text-slate-400 py-10"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>
+                        ) : admission ? (
+                            <AdmissionDayBillsPanel admissionId={admission.admissionId} onChanged={loadEvents} />
+                        ) : (
+                            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center space-y-3 mt-6">
+                                <div className="h-12 w-12 rounded-2xl bg-indigo-50 ring-1 ring-indigo-100 flex items-center justify-center mx-auto">
+                                    <BedDouble className="h-6 w-6 text-indigo-500" />
+                                </div>
+                                <p className="text-sm font-semibold text-slate-700">This visit isn't admitted yet</p>
+                                <p className="text-xs text-slate-500">Start an IPD stay to enable day-wise interim billing. Day 1 begins at admit time and bills accrue in 24-hour cycles.</p>
+                                <Button onClick={handleAdmit} disabled={admitting} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                                    {admitting ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Starting…</> : <><BedDouble className="h-4 w-4 mr-1" /> Start IPD stay</>}
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                </SheetContent>
+            </Sheet>
 
             {/* Overall discount drawer */}
             <Sheet open={showDiscount} onOpenChange={setShowDiscount}>

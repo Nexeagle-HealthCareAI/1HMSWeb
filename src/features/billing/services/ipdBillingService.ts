@@ -324,6 +324,92 @@ export interface GetEncounterEventsResponse {
 
 // ─── Service ─────────────────────────────────────────────────────────────────
 
+// ─── Admission day-wise interim billing ──────────────────────────────────────
+export interface AdmissionDayLine {
+    chargeEventId: string;
+    categoryCode?: string | null;
+    displayName?: string | null;
+    serviceDate: string;
+    qty: number;
+    unitPrice: number;
+    grossAmount: number;
+    discountAmount: number;
+    taxAmount: number;
+    netAmount: number;
+}
+export interface AdmissionDayView {
+    dayNumber: number;
+    fromUtc: string;
+    toUtc: string;
+    isClosed: boolean;
+    isCurrent: boolean;
+    admissionDayBillId?: string | null;
+    interimBillNo?: string | null;
+    netAmount: number;
+    cumulativeNetAmount: number;
+    lines: AdmissionDayLine[];
+}
+export interface AdmissionDayBillsData {
+    admissionId: string;
+    encounterId: string;
+    patientId?: string | null;
+    admittedAt: string;
+    totalDays: number;
+    totalCharged: number;
+    totalReceived: number;
+    balance: number;
+    days: AdmissionDayView[];
+}
+export interface GetAdmissionDayBillsResponse {
+    success?: boolean;
+    message?: string;
+    data?: AdmissionDayBillsData;
+}
+export interface CloseAdmissionDayResponse {
+    success?: boolean;
+    message?: string;
+    admissionDayBillId?: string;
+    dayNumber?: number;
+    interimBillNo?: string;
+    netAmount?: number;
+    balanceDue?: number;
+}
+export interface ReopenAdmissionDayResponse {
+    success?: boolean;
+    message?: string;
+}
+export interface AdmissionInfo {
+    admissionId: string;
+    admissionNo: string;
+    patientId?: string | null;
+    encounterId: string;
+    admittedAt: string;
+    dischargedAt?: string | null;
+    statusCode: string;
+    admissionReason?: string | null;
+}
+export interface GetAdmissionByEncounterResponse {
+    success?: boolean;
+    message?: string;
+    data?: AdmissionInfo | null;
+}
+export interface AdmitPatientRequest {
+    patientId: string;
+    encounterId: string;
+    admittedAt?: string;
+    admissionReason?: string;
+    primaryDoctorId?: string;
+    hospitalId?: string;
+}
+export interface AdmitPatientResponse {
+    success?: boolean;
+    message?: string;
+    admissionId?: string;
+    admissionNo?: string;
+    admittedAt?: string;
+    wasExisting?: boolean;
+}
+
 export const ipdBillingService = {
     // Charge Master
     listChargeMasters: (opts: { page?: number; pageSize?: number; hospitalId?: string } = {}): Promise<GetChargeMastersResponse> =>
@@ -413,6 +499,33 @@ export const ipdBillingService = {
 
     updatePolicy: (req: any) =>
         ipdApiClient.put(IPD_API_ENDPOINTS.BILLING.UPDATE_POLICY, {
+            ...req,
+            hospitalId: hospitalIdOrThrow(req.hospitalId),
+        }),
+
+    // Admission day-wise interim billing
+    getAdmissionDayBills: (admissionId: string, hospitalId?: string): Promise<GetAdmissionDayBillsResponse> =>
+        ipdApiClient.get(IPD_API_ENDPOINTS.BILLING.ADMISSION_DAY_BILLS(hospitalIdOrThrow(hospitalId), admissionId)),
+
+    closeAdmissionDay: (admissionId: string, hospitalId?: string): Promise<CloseAdmissionDayResponse> =>
+        ipdApiClient.post(IPD_API_ENDPOINTS.BILLING.CLOSE_ADMISSION_DAY, {
+            hospitalId: hospitalIdOrThrow(hospitalId),
+            admissionId,
+        }),
+
+    reopenAdmissionDay: (admissionDayBillId: string, reason: string, hospitalId?: string): Promise<ReopenAdmissionDayResponse> =>
+        ipdApiClient.post(IPD_API_ENDPOINTS.BILLING.REOPEN_ADMISSION_DAY, {
+            hospitalId: hospitalIdOrThrow(hospitalId),
+            admissionDayBillId,
+            reason,
+        }),
+
+    // Admission lifecycle (minimal — anchors day-wise billing)
+    getAdmissionByEncounter: (encounterId: string, hospitalId?: string): Promise<GetAdmissionByEncounterResponse> =>
+        ipdApiClient.get(IPD_API_ENDPOINTS.ADMISSION.GET_BY_ENCOUNTER(hospitalIdOrThrow(hospitalId), encounterId)),
+
+    admitPatient: (req: AdmitPatientRequest): Promise<AdmitPatientResponse> =>
+        ipdApiClient.post(IPD_API_ENDPOINTS.ADMISSION.ADMIT, {
             ...req,
             hospitalId: hospitalIdOrThrow(req.hospitalId),
         }),
