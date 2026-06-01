@@ -19,6 +19,29 @@ import { useToast } from '@/hooks/use-toast';
 
 
 
+// Validation for a charge-master row. Mandatory: name, rate (>= 0), qty (>= 1).
+// Visit type / category / charge type always carry a default, so they can't be blank.
+const fieldErrors = (it: { displayName?: string; defaultRate?: string | number; defaultQty?: string | number; defaultDiscountPercent?: string | number } | null) => {
+    const e: { displayName?: string; defaultRate?: string; defaultQty?: string; defaultDiscountPercent?: string } = {};
+    if (!it) return e;
+    if (!String(it.displayName ?? '').trim()) e.displayName = 'Display name is required';
+
+    const r = it.defaultRate;
+    const rate = Number(r);
+    if (r === '' || r === null || r === undefined || isNaN(rate) || rate < 0) e.defaultRate = 'Enter a valid rate (0 or more)';
+
+    const q = it.defaultQty;
+    const qty = Number(q);
+    if (q === '' || q === null || q === undefined || isNaN(qty) || qty < 1) e.defaultQty = 'Quantity must be at least 1';
+
+    const d = it.defaultDiscountPercent;
+    if (d !== '' && d !== null && d !== undefined) {
+        const disc = Number(d);
+        if (isNaN(disc) || disc < 0 || disc > 100) e.defaultDiscountPercent = 'Discount must be between 0 and 100';
+    }
+    return e;
+};
+
 const ChargeCatalog: React.FC = () => {
     const [items, setItems] = useState<ChargeItem[]>([]);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -78,10 +101,12 @@ const ChargeCatalog: React.FC = () => {
 
     const handleSave = async () => {
         if (tempItem) {
-            if (!tempItem.displayName || tempItem.displayName.trim() === '') {
+            const errs = fieldErrors(tempItem);
+            const firstErr = errs.displayName || errs.defaultRate || errs.defaultQty || errs.defaultDiscountPercent;
+            if (firstErr) {
                 toast({
                     title: "Validation Error",
-                    description: "Display name is required",
+                    description: firstErr,
                     variant: "destructive",
                 });
                 return;
@@ -305,6 +330,9 @@ const ChargeCatalog: React.FC = () => {
         }
     };
 
+    const errors = fieldErrors(tempItem);
+    const isValid = Object.keys(errors).length === 0;
+
     return (
         <div className="flex flex-col flex-1 min-h-0 space-y-4">
             {/* Search and Filters */}
@@ -521,7 +549,7 @@ const ChargeCatalog: React.FC = () => {
                                                     step="0.01"
                                                     value={tempItem?.defaultRate}
                                                     onChange={(e) => updateTempItem('defaultRate', e.target.value)}
-                                                    className="text-right h-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                    className={`text-right h-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${errors.defaultRate ? 'border-red-500' : ''}`}
                                                 />
                                             ) : (
                                                 `₹${item.defaultRate}`
@@ -548,7 +576,7 @@ const ChargeCatalog: React.FC = () => {
                                                     type="number"
                                                     value={tempItem?.defaultQty}
                                                     onChange={(e) => updateTempItem('defaultQty', e.target.value)}
-                                                    className="text-right h-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                    className={`text-right h-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${errors.defaultQty ? 'border-red-500' : ''}`}
                                                 />
                                             ) : (
                                                 item.defaultQty
@@ -561,7 +589,7 @@ const ChargeCatalog: React.FC = () => {
                                                         <>
                                                             <Tooltip>
                                                                 <TooltipTrigger asChild>
-                                                                    <Button variant="ghost" size="sm" onClick={handleSave} className="text-green-600 hover:text-green-700 hover:bg-green-50">
+                                                                    <Button variant="ghost" size="sm" onClick={handleSave} disabled={!isValid || isSaving} className="text-green-600 hover:text-green-700 hover:bg-green-50 disabled:opacity-40 disabled:cursor-not-allowed">
                                                                         <Save className="h-4 w-4" />
                                                                     </Button>
                                                                 </TooltipTrigger>
@@ -750,11 +778,12 @@ const ChargeCatalog: React.FC = () => {
                                     type="number"
                                     step="0.01"
                                     min="0"
-                                    value={tempItem?.defaultRate || ''}
+                                    value={tempItem?.defaultRate ?? ''}
                                     onChange={(e) => updateTempItem('defaultRate', e.target.value)}
                                     placeholder="0.00"
-                                    className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    className={`[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${errors.defaultRate ? 'border-red-500' : ''}`}
                                 />
+                                {errors.defaultRate && <p className="text-xs text-red-500">{errors.defaultRate}</p>}
                             </div>
 
                             <div className="space-y-2">
@@ -764,12 +793,13 @@ const ChargeCatalog: React.FC = () => {
                                 <Input
                                     id="defaultQty"
                                     type="number"
-                                    min="0"
-                                    value={tempItem?.defaultQty || ''}
+                                    min="1"
+                                    value={tempItem?.defaultQty ?? ''}
                                     onChange={(e) => updateTempItem('defaultQty', e.target.value)}
                                     placeholder="1"
-                                    className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    className={`[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${errors.defaultQty ? 'border-red-500' : ''}`}
                                 />
+                                {errors.defaultQty && <p className="text-xs text-red-500">{errors.defaultQty}</p>}
                             </div>
 
                             <div className="space-y-2">
@@ -782,11 +812,12 @@ const ChargeCatalog: React.FC = () => {
                                     step="0.01"
                                     min="0"
                                     max="100"
-                                    value={tempItem?.defaultDiscountPercent || ''}
+                                    value={tempItem?.defaultDiscountPercent ?? ''}
                                     onChange={(e) => updateTempItem('defaultDiscountPercent', e.target.value)}
                                     placeholder="0"
-                                    className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    className={`[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${errors.defaultDiscountPercent ? 'border-red-500' : ''}`}
                                 />
+                                {errors.defaultDiscountPercent && <p className="text-xs text-red-500">{errors.defaultDiscountPercent}</p>}
                             </div>
                         </div>
                     </div>
@@ -802,7 +833,7 @@ const ChargeCatalog: React.FC = () => {
                         </Button>
                         <Button
                             onClick={handleSave}
-                            disabled={!tempItem?.displayName?.trim() || isSaving}
+                            disabled={!isValid || isSaving}
                             className="bg-indigo-600 hover:bg-indigo-700"
                         >
                             <Save className="h-4 w-4 mr-2" />

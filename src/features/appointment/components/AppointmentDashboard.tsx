@@ -1505,6 +1505,11 @@ export const AppointmentDashboard = () => {
                                     {appointment.patientFullName.split('-').slice(1).join('-').trim()}
                                   </div>
                                 )}
+                                {appointment.referrerName && (
+                                  <div className="text-[10px] text-indigo-500 dark:text-indigo-300 truncate leading-tight font-medium">
+                                    {(appointment.referrerRelation || 'C/O')} {appointment.referrerName}
+                                  </div>
+                                )}
                                 <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
                                   <Phone className="h-2.5 w-2.5 text-indigo-400" />
                                   <span className="truncate">{appointment.patientMobile}</span>
@@ -1583,23 +1588,17 @@ export const AppointmentDashboard = () => {
                               <span className="scale-[0.85] origin-left inline-block">{getStatusBadge(appointment.finalStatusCode, appointment)}</span>
                             </TableCell>
 
-                            {/* Lab reports */}
+                            {/* Lab reports — available for every appointment, regardless of status. */}
                             <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                              {['LAB_REQUIRED', 'AWAITING_RECONSULT', 'COMPLETED'].includes(
-                                String(appointment.finalStatusCode || '').toUpperCase()
-                              ) ? (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleOpenLabAttachments(appointment)}
-                                  className="h-8 w-8 p-0 text-blue-600 hover:bg-gradient-to-br hover:from-blue-500 hover:to-indigo-500 hover:text-white dark:hover:from-blue-600 dark:hover:text-white rounded-full transition-all shadow-sm hover:shadow-blue-500/30"
-                                  title={t('appointmentDashboard.actionButtons.addLabReport', { defaultValue: 'Add lab report' })}
-                                >
-                                  <Upload className="h-4 w-4" />
-                                </Button>
-                              ) : (
-                                <span className="text-[11px] text-slate-300 dark:text-slate-600 font-bold">—</span>
-                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleOpenLabAttachments(appointment)}
+                                className="h-8 w-8 p-0 text-blue-600 hover:bg-gradient-to-br hover:from-blue-500 hover:to-indigo-500 hover:text-white dark:hover:from-blue-600 dark:hover:text-white rounded-full transition-all shadow-sm hover:shadow-blue-500/30"
+                                title={t('appointmentDashboard.actionButtons.addLabReport', { defaultValue: 'Add lab report' })}
+                              >
+                                <Upload className="h-4 w-4" />
+                              </Button>
                             </TableCell>
 
                             {/* Case */}

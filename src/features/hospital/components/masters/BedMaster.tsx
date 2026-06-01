@@ -82,6 +82,23 @@ const WARD_TYPE_DEFAULTS: Record<string, { code: string; name: string; room: str
     OTHER:        { code: 'W-OTH',  name: 'Other',             room: 'R-OTH',  bedPrefix: 'OTH' },
 };
 
+// Bed form validation. Mandatory: ward code, bed code, ward/room daily rate (> 0).
+// Optional numeric fields (override / incentive / capacity) and the bulk count are range-checked.
+type BedErrors = { wardCode?: string; bedCode?: string; wardRoomDailyRate?: string; bedDailyRateOverride?: string; incentiveAmount?: string; capacityInRoom?: string; bedCount?: string };
+const validateBed = (rec: Partial<BedRecord> | null, count?: number): BedErrors => {
+    const e: BedErrors = {};
+    if (!rec) return e;
+    if (!String(rec.wardCode ?? '').trim()) e.wardCode = 'Ward code is required';
+    if (!String(rec.bedCode ?? '').trim()) e.bedCode = 'Bed code is required';
+    const rate = Number(rec.wardRoomDailyRate);
+    if (rec.wardRoomDailyRate == null || isNaN(rate) || rate <= 0) e.wardRoomDailyRate = 'Daily rate must be greater than 0';
+    if (rec.bedDailyRateOverride != null && (isNaN(Number(rec.bedDailyRateOverride)) || Number(rec.bedDailyRateOverride) < 0)) e.bedDailyRateOverride = 'Override must be 0 or more';
+    if (rec.incentiveAmount != null && (isNaN(Number(rec.incentiveAmount)) || Number(rec.incentiveAmount) < 0)) e.incentiveAmount = 'Incentive must be 0 or more';
+    if (rec.capacityInRoom != null && (isNaN(Number(rec.capacityInRoom)) || Number(rec.capacityInRoom) < 1)) e.capacityInRoom = 'Capacity must be at least 1';
+    if (count != null && (isNaN(count) || count < 1 || count > 200)) e.bedCount = 'Number of beds must be 1–200';
+    return e;
+};
+
 export const BedMaster = () => {
     // --- State ---
     const [beds, setBeds] = useState<BedRecord[]>([]);
@@ -200,8 +217,10 @@ export const BedMaster = () => {
     };
 
     const handleSaveDrawer = async (addNext = false) => {
-        if (!editingRecord?.wardCode || !editingRecord?.bedCode) {
-            toast({ title: 'Validation Error', description: 'Ward Code and Bed Code are required.', variant: 'destructive' });
+        const errs = validateBed(editingRecord, !editingRecord?.id ? bedCount : undefined);
+        const firstErr = errs.wardCode || errs.bedCode || errs.wardRoomDailyRate || errs.bedDailyRateOverride || errs.incentiveAmount || errs.capacityInRoom || errs.bedCount;
+        if (firstErr) {
+            toast({ title: 'Validation Error', description: firstErr, variant: 'destructive' });
             return;
         }
 
@@ -383,6 +402,10 @@ export const BedMaster = () => {
             setBusyId(null);
         }
     };
+
+    // Live validation for the drawer (gates the Save buttons + drives inline field errors).
+    const bedFormErrors = validateBed(editingRecord, !editingRecord?.id ? bedCount : undefined);
+    const isBedValid = Object.keys(bedFormErrors).length === 0;
 
     // --- Render ---
     return (
@@ -594,16 +617,25 @@ export const BedMaster = () => {
                             transition={{ type: "spring", damping: 25, stiffness: 200 }}
                             className="fixed inset-y-0 right-0 w-full md:w-[500px] bg-white dark:bg-slate-950 border-l border-gray-200 dark:border-gray-800 shadow-2xl z-[60] flex flex-col"
                         >
-                            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-900/50">
-                                <div>
-                                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                                        {editingRecord?.id ? 'Edit Bed' : 'Add New Bed'}
-                                    </h2>
-                                    {editingRecord?.id && (
-                                        <p className="text-sm text-muted-foreground font-mono mt-0.5">{editingRecord.bedCode}</p>
-                                    )}
+                            <div className="flex items-center justify-between p-5 bg-gradient-to-r from-indigo-600 to-violet-600">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="h-11 w-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center shrink-0">
+                                        <Bed className="h-5 w-5 text-white" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h2 className="text-lg font-bold text-white leading-tight">
+                                            {editingRecord?.id ? 'Edit Bed' : 'Add New Bed'}
+                                        </h2>
+                                        <p className="text-[11px] text-indigo-100/90 font-mono mt-0.5 truncate">
+                                            {editingRecord?.id
+                                                ? editingRecord.bedCode
+                                                : (bedCount > 1
+                                                    ? `${bedCount} beds · ${((editingRecord?.bedCode ?? '').replace(/[-_\s]?\d+$/, '') || 'BED')}-NN`
+                                                    : `${editingRecord?.bedCode ?? ''} · auto-coded`)}
+                                        </p>
+                                    </div>
                                 </div>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setIsDrawerOpen(false)}>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-white hover:bg-white/15" onClick={() => setIsDrawerOpen(false)}>
                                     <X className="h-5 w-5" />
                                 </Button>
                             </div>
@@ -615,14 +647,6 @@ export const BedMaster = () => {
                                         <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Ward / Room Details
                                     </h3>
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div className="grid gap-2">
-                                            <Label>Ward Code <span className="text-red-500">*</span></Label>
-                                            <Input className="font-mono uppercase" placeholder="e.g. W-GEN-01" value={editingRecord?.wardCode || ''} onChange={e => setEditingRecord(p => ({ ...p!, wardCode: e.target.value.toUpperCase() }))} />
-                                        </div>
-                                        <div className="grid gap-2">
-                                            <Label>Ward Name</Label>
-                                            <Input placeholder="General Ward" value={editingRecord?.wardName || ''} onChange={e => setEditingRecord(p => ({ ...p!, wardName: e.target.value }))} />
-                                        </div>
                                         <div className="grid gap-2">
                                             <Label>Ward Type</Label>
                                             <Select value={editingRecord?.wardType} onValueChange={v => setEditingRecord(p => {
@@ -658,10 +682,6 @@ export const BedMaster = () => {
                                             </Select>
                                         </div>
                                         <div className="grid gap-2">
-                                            <Label>Room Code <span className="text-xs text-muted-foreground font-normal">(Opt)</span></Label>
-                                            <Input className="font-mono uppercase" placeholder="e.g. R-101" value={editingRecord?.roomCode || ''} onChange={e => setEditingRecord(p => ({ ...p!, roomCode: e.target.value }))} />
-                                        </div>
-                                        <div className="grid gap-2">
                                             <Label>Capacity in Room <span className="text-xs text-muted-foreground font-normal">(Opt)</span></Label>
                                             <Input
                                                 type="number"
@@ -679,15 +699,6 @@ export const BedMaster = () => {
                                         <div className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Bed Specifics
                                     </h3>
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div className="grid gap-2 col-span-2 sm:col-span-1">
-                                            <Label>Bed Code <span className="text-red-500">*</span></Label>
-                                            <Input className="font-mono uppercase" placeholder="e.g. B-01" value={editingRecord?.bedCode || ''} onChange={e => setEditingRecord(p => ({ ...p!, bedCode: e.target.value.toUpperCase() }))} />
-                                            {!editingRecord?.id && bedCount > 1 && (
-                                                <p className="text-[10px] text-indigo-600 dark:text-indigo-400">
-                                                    Used as the prefix — codes auto-generate as {((editingRecord?.bedCode ?? '').replace(/[-_\s]?\d+$/, '') || 'BED')}-NN.
-                                                </p>
-                                            )}
-                                        </div>
                                         {!editingRecord?.id && (
                                             <div className="grid gap-2 col-span-2 sm:col-span-1">
                                                 <Label>Number of beds</Label>
@@ -713,24 +724,12 @@ export const BedMaster = () => {
                                             </Select>
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="grid gap-2">
-                                            <Label>Status</Label>
-                                            <Select value={editingRecord?.statusCode} onValueChange={v => setEditingRecord(p => ({ ...p!, statusCode: v as any }))}>
-                                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="AVAILABLE">Available</SelectItem>
-                                                    <SelectItem value="OCCUPIED">Occupied <span className="text-xs text-muted-foreground ml-2">(Manual Override)</span></SelectItem>
-                                                    <SelectItem value="CLEANING">Cleaning</SelectItem>
-                                                    <SelectItem value="RESERVED">Reserved</SelectItem>
-                                                    <SelectItem value="BLOCKED">Blocked (Maintenance)</SelectItem>
-                                                </SelectContent>
-                                            </Select>
+                                    <div className="flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-800 px-4 py-3 bg-gray-50/50 dark:bg-slate-900/40">
+                                        <div>
+                                            <Label htmlFor="bedActive" className="cursor-pointer font-semibold">Active</Label>
+                                            <p className="text-[11px] text-muted-foreground mt-0.5">Inactive beds are hidden from the live list.</p>
                                         </div>
-                                        <div className="flex items-center gap-2 mt-6">
-                                            <Switch id="bedActive" checked={editingRecord?.isActive} onCheckedChange={v => setEditingRecord(p => ({ ...p!, isActive: v }))} className="data-[state=checked]:bg-green-500" />
-                                            <Label htmlFor="bedActive" className="cursor-pointer">Is Active</Label>
-                                        </div>
+                                        <Switch id="bedActive" checked={editingRecord?.isActive} onCheckedChange={v => setEditingRecord(p => ({ ...p!, isActive: v }))} className="data-[state=checked]:bg-green-500" />
                                     </div>
                                 </section>
 
@@ -742,25 +741,38 @@ export const BedMaster = () => {
                                         <div className="p-4 bg-gray-50 dark:bg-slate-900/50 border border-gray-100 dark:border-gray-800 rounded-lg space-y-4">
                                             <div className="grid gap-2">
                                                 <Label>Ward/Room Daily Rate (₹) <span className="text-red-500">*</span></Label>
-                                                <Input type="number" className="font-mono bg-white dark:bg-slate-950" value={editingRecord?.wardRoomDailyRate || ''} onChange={e => setEditingRecord(p => ({ ...p!, wardRoomDailyRate: Number(e.target.value) }))} />
-                                                <p className="text-[10px] text-muted-foreground">Standard rate inherited from ward/room configuration.</p>
+                                                <div className="relative">
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none">₹</span>
+                                                    <Input type="number" min="0" className={`font-mono pl-7 bg-white dark:bg-slate-950 ${bedFormErrors.wardRoomDailyRate ? 'border-red-500' : ''}`} value={editingRecord?.wardRoomDailyRate || ''} onChange={e => setEditingRecord(p => ({ ...p!, wardRoomDailyRate: Number(e.target.value) }))} />
+                                                </div>
+                                                {bedFormErrors.wardRoomDailyRate
+                                                    ? <p className="text-[10px] text-red-500">{bedFormErrors.wardRoomDailyRate}</p>
+                                                    : <p className="text-[10px] text-muted-foreground">Standard rate inherited from ward/room configuration.</p>}
                                             </div>
 
                                             <div className="border-t border-gray-200 dark:border-gray-800 pt-4 grid gap-2">
                                                 <Label>Bed Override Amount (₹) <span className="text-xs text-muted-foreground font-normal">(Optional)</span></Label>
-                                                <Input type="number" className="font-mono bg-white dark:bg-slate-950" placeholder="Leaves blank if same"
-                                                    value={editingRecord?.bedDailyRateOverride || ''}
-                                                    onChange={e => setEditingRecord(p => ({ ...p!, bedDailyRateOverride: e.target.value ? Number(e.target.value) : null }))}
-                                                />
+                                                <div className="relative">
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none">₹</span>
+                                                    <Input type="number" className="font-mono pl-7 bg-white dark:bg-slate-950" placeholder="Leave blank if same"
+                                                        value={editingRecord?.bedDailyRateOverride || ''}
+                                                        onChange={e => setEditingRecord(p => ({ ...p!, bedDailyRateOverride: e.target.value ? Number(e.target.value) : null }))}
+                                                    />
+                                                </div>
+                                                {bedFormErrors.bedDailyRateOverride && <p className="text-[10px] text-red-500">{bedFormErrors.bedDailyRateOverride}</p>}
                                                 <p className="text-[10px] text-amber-600 dark:text-amber-500 font-medium">Use only if this specific bed costs differently than others in the same room.</p>
                                             </div>
 
                                             <div className="border-t border-gray-200 dark:border-gray-800 pt-4 grid gap-2">
                                                 <Label>Incentive (₹) <span className="text-xs text-muted-foreground font-normal">(Optional)</span></Label>
-                                                <Input type="number" min="0" className="font-mono bg-white dark:bg-slate-950" placeholder="0"
-                                                    value={editingRecord?.incentiveAmount ?? ''}
-                                                    onChange={e => setEditingRecord(p => ({ ...p!, incentiveAmount: e.target.value ? Number(e.target.value) : null }))}
-                                                />
+                                                <div className="relative">
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none">₹</span>
+                                                    <Input type="number" min="0" className="font-mono pl-7 bg-white dark:bg-slate-950" placeholder="0"
+                                                        value={editingRecord?.incentiveAmount ?? ''}
+                                                        onChange={e => setEditingRecord(p => ({ ...p!, incentiveAmount: e.target.value ? Number(e.target.value) : null }))}
+                                                    />
+                                                </div>
+                                                {bedFormErrors.incentiveAmount && <p className="text-[10px] text-red-500">{bedFormErrors.incentiveAmount}</p>}
                                                 <p className="text-[10px] text-muted-foreground">Default per day · editable at billing · blank/0 = none.</p>
                                             </div>
                                         </div>
@@ -772,10 +784,10 @@ export const BedMaster = () => {
                             <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-950 flex justify-end gap-2">
                                 <Button variant="ghost" onClick={() => setIsDrawerOpen(false)}>Cancel</Button>
                                 {bedCount <= 1 && (
-                                    <Button variant="outline" disabled={isSaving || isSuccess} onClick={() => handleSaveDrawer(true)} className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-400">Save & Add Next in Ward</Button>
+                                    <Button variant="outline" disabled={isSaving || isSuccess || !isBedValid} onClick={() => handleSaveDrawer(true)} className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-400 disabled:opacity-50">Save &amp; Add Next in Ward</Button>
                                 )}
                                 <motion.button
-                                    disabled={isSaving || isSuccess}
+                                    disabled={isSaving || isSuccess || !isBedValid}
                                     onClick={() => handleSaveDrawer(false)}
                                     className={`flex items-center justify-center gap-2 rounded-md font-medium text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 min-w-[100px] h-10 px-4 ${isSuccess
                                         ? 'bg-green-500 text-white shadow-lg shadow-green-500/30'

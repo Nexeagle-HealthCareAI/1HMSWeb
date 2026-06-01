@@ -38,6 +38,7 @@ export const BillingPolicyConfig = () => {
 
     type SequenceType = 'INV' | 'RCPT';
     const [selectedSequence, setSelectedSequence] = useState<SequenceType>('INV');
+    const [showSeqAdvanced, setShowSeqAdvanced] = useState(false);
     const [sequenceConfigs, setSequenceConfigs] = useState<Record<SequenceType, { prefix: string, yearFormat: string, separator: string, currentValue: string, padLength: string, isActive: boolean }>>({
         INV: { prefix: 'INV', yearFormat: 'YYYY', separator: '-', currentValue: '1', padLength: '6', isActive: true },
         RCPT: { prefix: 'RCPT', yearFormat: 'YYYY', separator: '-', currentValue: '1', padLength: '6', isActive: true }
@@ -100,10 +101,35 @@ export const BillingPolicyConfig = () => {
         }));
     };
 
+    // Restore the selected series to clean defaults (keeps the running Current Value so numbering
+    // continues uninterrupted). Persisted on Save — the quick fix for a junk-formatted series.
+    const resetSequence = () => {
+        setSequenceConfigs(prev => ({
+            ...prev,
+            [selectedSequence]: {
+                ...prev[selectedSequence],
+                prefix: selectedSequence === 'INV' ? 'INV' : 'RCPT',
+                yearFormat: 'YYYY',
+                separator: '-',
+                padLength: '6',
+            }
+        }));
+    };
+
     // The pad-length field is free-text (HTML max= doesn't block typing), so an
     // out-of-range value like 999999999 would make padStart throw "Invalid string
     // length". Clamp to the input's intended 1..10 range wherever the value is used.
     const safePadLength = (raw: string) => Math.min(Math.max(parseInt(raw || '6', 10) || 6, 1), 10);
+
+    // Build the human-readable next-number for a series (used in the auto-numbering summary).
+    const previewFor = (cfg: typeof sequenceConfigs['INV']) => {
+        const now = new Date();
+        const yearPart = cfg.yearFormat === 'YYYY' ? `${now.getFullYear()}`
+            : cfg.yearFormat === 'YY' ? `${now.getFullYear()}`.slice(-2)
+            : cfg.yearFormat === 'YYYYMM' ? `${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}`
+            : '';
+        return `${cfg.prefix}${cfg.separator}${yearPart}${cfg.yearFormat !== 'OFF' ? cfg.separator : ''}${cfg.currentValue.padStart(safePadLength(cfg.padLength), '0')}`;
+    };
 
     const handleSave = async () => {
         setIsSaving(true);
@@ -331,11 +357,31 @@ export const BillingPolicyConfig = () => {
                             </div>
                             <div className="flex-1">
                                 <CardTitle className="text-lg">Document Sequencing</CardTitle>
-                                <CardDescription>Configure numbering formats for bills and receipts</CardDescription>
+                                <CardDescription>Invoice &amp; receipt numbers are set automatically — customize only if you need a specific format.</CardDescription>
                             </div>
                         </div>
                     </CardHeader>
-                    <CardContent className="pt-6">
+                    <CardContent className="pt-6 space-y-4">
+                        {/* Numbers auto-default per hospital — the controls below are optional/advanced. */}
+                        <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 dark:border-emerald-900/40 dark:bg-emerald-900/10 p-4">
+                            <div className="flex items-start gap-3">
+                                <CheckCircle2 className="h-5 w-5 text-emerald-600 mt-0.5 shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Numbers are assigned automatically</p>
+                                    <p className="text-xs text-muted-foreground mt-0.5">Every hospital gets clean, sequential invoice &amp; receipt numbers out of the box — no setup needed.</p>
+                                    <div className="flex flex-wrap gap-2 mt-3">
+                                        <span className="text-[11px] font-mono font-bold px-2.5 py-1 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300">Invoice: {previewFor(sequenceConfigs.INV)}</span>
+                                        <span className="text-[11px] font-mono font-bold px-2.5 py-1 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300">Receipt: {previewFor(sequenceConfigs.RCPT)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" onClick={() => setShowSeqAdvanced(v => !v)} className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 underline underline-offset-2">
+                            {showSeqAdvanced ? '− Hide advanced numbering' : '+ Customize numbering (advanced)'}
+                        </button>
+
+                        {showSeqAdvanced && (
                         <div className="flex flex-col md:flex-row gap-6">
                             {/* Sequence Selector */}
                             <div className="w-full md:w-1/4 space-y-4 border-r border-gray-100 dark:border-gray-800 pr-6">
@@ -361,6 +407,12 @@ export const BillingPolicyConfig = () => {
 
                             {/* Configuration Fields */}
                             <div className="w-full md:w-3/4">
+                                <div className="flex items-center justify-between mb-4">
+                                    <span className="text-xs font-semibold text-muted-foreground">{selectedSequence === 'INV' ? 'Invoice' : 'Receipt'} number format</span>
+                                    <button type="button" onClick={resetSequence} className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 inline-flex items-center gap-1">
+                                        <RefreshCw className="h-3 w-3" /> Reset to default
+                                    </button>
+                                </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                                     <div className="space-y-2">
                                         <Label>Prefix</Label>
@@ -430,6 +482,7 @@ export const BillingPolicyConfig = () => {
                                 </div>
                             </div>
                         </div>
+                        )}
                     </CardContent>
                 </Card>
             </motion.div>

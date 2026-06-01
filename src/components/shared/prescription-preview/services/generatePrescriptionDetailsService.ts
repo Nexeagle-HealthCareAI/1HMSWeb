@@ -56,6 +56,8 @@ export interface PrescriptionPatientDetail {
   country?: string;
   pincode?: string;
   insuranceId?: string;
+  referrerName?: string | null;
+  referrerRelation?: string | null;
 }
 
 export interface PrescriptionPatientData {

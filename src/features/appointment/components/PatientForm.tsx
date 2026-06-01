@@ -45,8 +45,15 @@ type PatientFormState = {
   age: string;
   gender: string;
   address: string;
+  block: string;
   city: string;
   pincode: string;
+  bloodGroup: string;
+  alternateMobile: string;
+  email: string;
+  emergencyContactName: string;
+  emergencyContactRelation: string;
+  emergencyContactPhone: string;
   reason: string;
   isPaid: boolean;
   paymentMode: string;
@@ -54,6 +61,9 @@ type PatientFormState = {
   insuranceId: string;
   insuranceType: string;
 };
+
+const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-', 'Unknown'];
+const EMERGENCY_RELATIONS = ['Spouse', 'Parent', 'Child', 'Sibling', 'Relative', 'Friend', 'Guardian', 'Other'];
 
 const PHONE_REGEX = /^\d{10}$/;
 const RELATION_OPTIONS = ['C/O', 'S/O', 'D/O', 'W/O', 'H/O', 'G/O', 'F/O', 'M/O'];
@@ -67,8 +77,15 @@ const createInitialFormState = (): PatientFormState => ({
   age: '',
   gender: '',
   address: '',
+  block: '',
   city: '',
   pincode: '',
+  bloodGroup: '',
+  alternateMobile: '',
+  email: '',
+  emergencyContactName: '',
+  emergencyContactRelation: '',
+  emergencyContactPhone: '',
   reason: '',
   isPaid: false,
   paymentMode: '',
@@ -312,8 +329,15 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       age: patient.age.toString(),
       gender: patient.sex,
       address: patient.address || '',
+      block: '',
       city: patient.city || '',
       pincode: patient.pincode || '',
+      bloodGroup: '',
+      alternateMobile: '',
+      email: '',
+      emergencyContactName: '',
+      emergencyContactRelation: '',
+      emergencyContactPhone: '',
       reason: t('patientForm.reason.followUp'),
       isPaid: false,
       paymentMode: '',
@@ -421,7 +445,14 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           pincode: formData.pincode,
           insuranceId: formData.hasInsurance ? formData.insuranceId : '',
           paymentMode: formData.paymentMode,
-          patientId: generatedPatientId
+          patientId: generatedPatientId,
+          bloodGroup: formData.bloodGroup || undefined,
+          block: formData.block || undefined,
+          alternateMobile: formData.alternateMobile || undefined,
+          email: formData.email || undefined,
+          emergencyContactName: formData.emergencyContactName || undefined,
+          emergencyContactRelation: formData.emergencyContactRelation || undefined,
+          emergencyContactPhone: formData.emergencyContactPhone || undefined,
         },
         doctorId: doctor.id,
         apptDate: new Date(selectedSlot.date + 'T' + selectedSlot.time).toISOString(),
@@ -793,6 +824,27 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     </div>
                   </div>
                 </div>
+
+                {/* Additional details (optional) */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-5 mt-3 md:mt-5">
+                  <div>
+                    <Label className="text-sm md:text-base font-medium">Blood Group</Label>
+                    <Select value={formData.bloodGroup} onValueChange={(v) => setFormData(prev => ({ ...prev, bloodGroup: v }))}>
+                      <SelectTrigger className="h-10 text-sm md:text-base mt-1.5"><SelectValue placeholder="Select blood group" /></SelectTrigger>
+                      <SelectContent>
+                        {BLOOD_GROUPS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="altMobile" className="text-sm md:text-base font-medium">Alternate Mobile</Label>
+                    <Input id="altMobile" value={formData.alternateMobile} onChange={(e) => setFormData(prev => ({ ...prev, alternateMobile: e.target.value.replace(/\D/g, '').slice(0, 10) }))} placeholder="Optional" className="h-10 text-sm md:text-base mt-1.5" />
+                  </div>
+                  <div>
+                    <Label htmlFor="email" className="text-sm md:text-base font-medium">Email</Label>
+                    <Input id="email" type="email" value={formData.email} onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))} placeholder="Optional" className="h-10 text-sm md:text-base mt-1.5" />
+                  </div>
+                </div>
               </Card>
 
               {/* Address, Insurance & Payment - Combined */}
@@ -818,6 +870,19 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                       {errors.address && (
                         <p className="text-red-500 text-xs md:text-sm mt-1">{t(errors.address)}</p>
                       )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="block" className="text-sm md:text-base font-medium">
+                        Block / Locality <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
+                      </Label>
+                      <Input
+                        id="block"
+                        value={formData.block}
+                        onChange={(e) => setFormData(prev => ({ ...prev, block: e.target.value }))}
+                        placeholder="Block, street or landmark"
+                        className="h-10 text-sm md:text-base mt-1.5"
+                      />
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 md:gap-4">
@@ -857,6 +922,35 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                   </div>
                 </Card>
 
+
+                {/* Emergency Contact (optional) */}
+                <Card className="p-4 md:p-6 shadow-sm">
+                  <h3 className="font-bold text-base md:text-lg text-foreground mb-3 md:mb-4 flex items-center gap-2">
+                    <Phone className="h-4 w-4 md:h-5 md:w-5 text-rose-500" />
+                    Emergency Contact <span className="text-xs font-normal text-muted-foreground">(Optional)</span>
+                  </h3>
+                  <div className="space-y-3 md:space-y-4">
+                    <div>
+                      <Label htmlFor="ecName" className="text-sm md:text-base font-medium">Contact Name</Label>
+                      <Input id="ecName" value={formData.emergencyContactName} onChange={(e) => setFormData(prev => ({ ...prev, emergencyContactName: e.target.value }))} placeholder="e.g. spouse / parent name" className="h-10 text-sm md:text-base mt-1.5" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 md:gap-4">
+                      <div>
+                        <Label className="text-sm md:text-base font-medium">Relation</Label>
+                        <Select value={formData.emergencyContactRelation} onValueChange={(v) => setFormData(prev => ({ ...prev, emergencyContactRelation: v }))}>
+                          <SelectTrigger className="h-10 text-sm md:text-base mt-1.5"><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent>
+                            {EMERGENCY_RELATIONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="ecPhone" className="text-sm md:text-base font-medium">Phone</Label>
+                        <Input id="ecPhone" value={formData.emergencyContactPhone} onChange={(e) => setFormData(prev => ({ ...prev, emergencyContactPhone: e.target.value.replace(/\D/g, '').slice(0, 10) }))} placeholder="Optional" className="h-10 text-sm md:text-base mt-1.5" />
+                      </div>
+                    </div>
+                  </div>
+                </Card>
 
                 {/* Consultation & Payment — shown when there is consult history or a fee to collect */}
                 {(timeline || showConsult) && (

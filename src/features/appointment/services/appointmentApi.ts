@@ -194,6 +194,13 @@ export interface RegisterAppointmentRequest {
     insuranceId: string;
     paymentMode: string;
     patientId: string;
+    bloodGroup?: string;
+    block?: string;
+    alternateMobile?: string;
+    email?: string;
+    emergencyContactName?: string;
+    emergencyContactRelation?: string;
+    emergencyContactPhone?: string;
   };
   doctorId: string;
   apptDate: string;
@@ -265,6 +272,8 @@ export interface AppointmentDetail {
   paymentMode: string;
   lastStatusAt: string;
   appointmentType: string | null;
+  referrerName?: string | null;
+  referrerRelation?: string | null;
   createdAt: string;
   token: {
     tokenId: string;

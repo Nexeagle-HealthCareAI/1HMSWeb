@@ -167,8 +167,12 @@ export const BillingPage: React.FC = () => {
                 paymentStatus: e.paymentStatus ?? undefined,
             })).sort((a: Encounter, b: Encounter) => b.invoiceDate.localeCompare(a.invoiceDate));
             setEncounters(list);
-            if (!selectedEncounterId && list.length > 0) setSelectedEncounterId(list[0].encounterId);
-            else if (list.length === 0) setSelectedEncounterId(null);
+            if (!selectedEncounterId && list.length > 0) {
+                // Land on the CURRENT bill by default: the most recent still-open (not finalized,
+                // not cancelled) visit; otherwise just the most recent one.
+                const current = list.find(e => !e.isCancelled && (e.status ?? '').toUpperCase() !== 'FINALIZED') ?? list[0];
+                setSelectedEncounterId(current.encounterId);
+            } else if (list.length === 0) setSelectedEncounterId(null);
         } catch (e: any) {
             setEncountersError(e?.message ?? 'Failed to load visits');
         } finally {
@@ -331,6 +335,8 @@ export const BillingPage: React.FC = () => {
             } catch { /* non-blocking — the charge is posted; ledger will still reflect it */ }
         }
         loadEvents();
+        // Keep the Visits panel's per-visit amount/status in sync after a charge.
+        if (selectedPatient) loadEncounters(selectedPatient.patientId);
     };
 
     // Render the bill (invoice / receipt / bill-cum-receipt) from the loaded ledger data
@@ -412,7 +418,8 @@ export const BillingPage: React.FC = () => {
     const handlePaymentSaved = useCallback(() => {
         justPaidRef.current = true;
         loadEvents();
-    }, [loadEvents]);
+        if (selectedPatient) loadEncounters(selectedPatient.patientId);
+    }, [loadEvents, loadEncounters, selectedPatient]);
 
     useEffect(() => {
         if (!justPaidRef.current) return;

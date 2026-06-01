@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Search, Filter, Plus, Upload, Download, MoreVertical,
+    Search, Filter, Plus, Download, MoreVertical,
     Copy, Pencil, Trash2, CheckCircle2, AlertCircle, X, Zap, Loader2, RefreshCw
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -15,6 +15,11 @@ import { toast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ipdBillingService, type ChargeMaster as BackendChargeMaster, type UpsertChargeMasterRequest } from '@/features/billing/services/ipdBillingService';
+
+// Short code prefix per category — used to auto-generate a default Charge Code (e.g. LAB-001).
+const CATEGORY_CODE_PREFIX: Record<string, string> = {
+    CONSULT: 'CON', LAB: 'LAB', RAD: 'RAD', PROCEDURE: 'PRO', SERVICE: 'SVC', CONSUMABLE: 'CSM', OTHER: 'GEN',
+};
 
 // --- Types ---
 
@@ -136,12 +141,24 @@ export const ChargeMaster = () => {
         }
     };
 
+    // Next free Charge Code for a category, e.g. LAB-001, LAB-002… (scans existing codes).
+    const nextChargeCode = (categoryCode: string): string => {
+        const prefix = CATEGORY_CODE_PREFIX[categoryCode] ?? 'GEN';
+        const re = new RegExp(`^${prefix}-(\\d+)$`, 'i');
+        let max = 0;
+        for (const c of charges) {
+            const m = (c.chargeCode ?? '').match(re);
+            if (m) max = Math.max(max, parseInt(m[1], 10));
+        }
+        return `${prefix}-${String(max + 1).padStart(3, '0')}`;
+    };
+
     const handleOpenDrawer = (record: ChargeRecord | null = null) => {
         if (record) {
             setEditingRecord({ ...record });
         } else {
             setEditingRecord({
-                chargeCode: '', displayName: '', appliesTo: 'OPD', categoryCode: 'CONSULT',
+                chargeCode: nextChargeCode('CONSULT'), displayName: '', appliesTo: 'OPD', categoryCode: 'CONSULT',
                 defaultRate: 0, defaultQty: 1, maxDiscountPercent: 0, incentiveAmount: 0, isActive: true, sortOrder: (charges.length + 1) * 10
             });
         }
@@ -220,7 +237,7 @@ export const ChargeMaster = () => {
             setIsSuccess(false);
             if (addAnother) {
                 setEditingRecord({
-                    chargeCode: '', displayName: '', appliesTo: savedRecord.appliesTo, categoryCode: savedRecord.categoryCode,
+                    chargeCode: nextChargeCode(savedRecord.categoryCode), displayName: '', appliesTo: savedRecord.appliesTo, categoryCode: savedRecord.categoryCode,
                     defaultRate: 0, defaultQty: 1, maxDiscountPercent: 0, incentiveAmount: 0, isActive: true, sortOrder: savedRecord.sortOrder + 10
                 });
             } else {
@@ -294,9 +311,6 @@ export const ChargeMaster = () => {
                     <Button variant="outline" size="sm" onClick={() => loadCharges(true)} disabled={refreshing || loading} className="gap-1.5 bg-white dark:bg-slate-900 shadow-sm text-gray-700 dark:text-gray-300">
                         <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
                     </Button>
-                    <Button variant="outline" className="hidden lg:flex gap-2 bg-white dark:bg-slate-900 shadow-sm text-gray-700 dark:text-gray-300">
-                        <Upload className="h-4 w-4" /> Import
-                    </Button>
                     <Button onClick={() => handleOpenDrawer(null)} className="flex-1 sm:flex-none gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20">
                         <Plus className="h-4 w-4" /> New Charge
                     </Button>
@@ -310,7 +324,6 @@ export const ChargeMaster = () => {
                     <table className="w-full text-sm text-left">
                         <thead className="text-xs uppercase bg-gray-50/80 dark:bg-slate-800/80 text-gray-500 dark:text-gray-400 font-semibold sticky top-0 z-10 backdrop-blur-md">
                             <tr>
-                                <th className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">Code</th>
                                 <th className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">Display Name</th>
                                 <th className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">Module</th>
                                 <th className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">Category</th>
@@ -323,14 +336,14 @@ export const ChargeMaster = () => {
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                             {loading && Array.from({ length: 4 }).map((_, i) => (
                                 <tr key={`sk-${i}`}>
-                                    <td colSpan={8} className="px-4 py-3">
+                                    <td colSpan={7} className="px-4 py-3">
                                         <Skeleton className="h-9 w-full" />
                                     </td>
                                 </tr>
                             ))}
                             {!loading && loadError && (
                                 <tr>
-                                    <td colSpan={8} className="px-4 py-12 text-center">
+                                    <td colSpan={7} className="px-4 py-12 text-center">
                                         <div className="flex flex-col items-center gap-2 text-rose-600">
                                             <AlertCircle className="h-8 w-8" />
                                             <p className="font-semibold">{loadError}</p>
@@ -349,7 +362,6 @@ export const ChargeMaster = () => {
                                     key={charge.id}
                                     className="hover:bg-blue-50/30 dark:hover:bg-slate-800/50 transition-colors group"
                                 >
-                                    <td className="px-4 py-3 font-mono text-xs font-semibold text-gray-700 dark:text-gray-300">{charge.chargeCode}</td>
                                     <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
                                         <div className="flex items-center gap-2">
                                             {charge.displayName}
@@ -397,7 +409,7 @@ export const ChargeMaster = () => {
                             ))}
                             {!loading && !loadError && filteredCharges.length === 0 && (
                                 <tr>
-                                    <td colSpan={8} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+                                    <td colSpan={7} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
                                         <div className="flex flex-col items-center gap-2">
                                             <Search className="h-8 w-8 text-gray-300 dark:text-gray-600 mb-2" />
                                             <p className="font-medium text-base">{charges.length === 0 ? 'No charges configured yet' : 'No charges match your filters'}</p>
@@ -433,9 +445,6 @@ export const ChargeMaster = () => {
                                     <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                                         {editingRecord?.id ? 'Edit Charge' : 'New Charge'}
                                     </h2>
-                                    {editingRecord?.id && (
-                                        <p className="text-sm text-muted-foreground font-mono mt-0.5">{editingRecord.chargeCode}</p>
-                                    )}
                                 </div>
                                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setIsDrawerOpen(false)}>
                                     <X className="h-5 w-5" />
@@ -450,16 +459,6 @@ export const ChargeMaster = () => {
                                         <div className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Basic Details
                                     </h3>
                                     <div className="space-y-3">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="code">Charge Code <span className="text-red-500">*</span></Label>
-                                            <Input
-                                                id="code"
-                                                className="font-mono uppercase transition-shadow focus-visible:ring-blue-500"
-                                                placeholder="e.g. LAB_CBC"
-                                                value={editingRecord?.chargeCode || ''}
-                                                onChange={e => setEditingRecord(p => ({ ...p!, chargeCode: e.target.value.toUpperCase().replace(/\s+/g, '_') }))}
-                                            />
-                                        </div>
                                         <div className="grid gap-2">
                                             <Label htmlFor="name">Display Name <span className="text-red-500">*</span></Label>
                                             <Input
@@ -494,7 +493,17 @@ export const ChargeMaster = () => {
                                         </div>
                                         <div className="grid gap-2">
                                             <Label>Category</Label>
-                                            <Select value={editingRecord?.categoryCode} onValueChange={v => setEditingRecord(p => ({ ...p!, categoryCode: v as any }))}>
+                                            <Select value={editingRecord?.categoryCode} onValueChange={v => setEditingRecord(p => {
+                                                if (!p) return p;
+                                                const next = { ...p, categoryCode: v as any };
+                                                // For NEW items, keep the Charge Code in sync with the category while it's blank or still an auto code.
+                                                if (!p.id) {
+                                                    const oldPrefix = CATEGORY_CODE_PREFIX[p.categoryCode as string];
+                                                    const looksAuto = oldPrefix ? new RegExp(`^${oldPrefix}-\\d+$`, 'i').test(p.chargeCode ?? '') : false;
+                                                    if (!p.chargeCode || looksAuto) next.chargeCode = nextChargeCode(v);
+                                                }
+                                                return next;
+                                            })}>
                                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="CONSULT">Consultation</SelectItem>
@@ -585,15 +594,6 @@ export const ChargeMaster = () => {
                                             checked={editingRecord?.isActive}
                                             onCheckedChange={v => setEditingRecord(p => ({ ...p!, isActive: v }))}
                                             className="data-[state=checked]:bg-green-500"
-                                        />
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <Label>Sort Order</Label>
-                                        <Input
-                                            type="number"
-                                            className="font-mono max-w-[150px]"
-                                            value={editingRecord?.sortOrder || ''}
-                                            onChange={e => setEditingRecord(p => ({ ...p!, sortOrder: Number(e.target.value) }))}
                                         />
                                     </div>
                                 </section>

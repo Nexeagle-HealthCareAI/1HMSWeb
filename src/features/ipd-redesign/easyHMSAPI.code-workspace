@@ -4,9 +4,6 @@
 			"path": "../../../../easyHMSAPI"
 		},
 		{
-			"path": "../../../../easyHMSAPIIPD"
-		},
-		{
 			"path": "../../../../easyHMSDatabase"
 		},
 		{
@@ -14,6 +11,12 @@
 		},
 		{
 			"path": "../../.."
+		},
+		{
+			"path": "../../../../1Lab"
+		},
+		{
+			"path": "../../../../1Pharma"
 		}
 	]
 }
