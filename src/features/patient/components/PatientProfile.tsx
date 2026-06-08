@@ -478,7 +478,7 @@ export const PatientProfile: React.FC<PatientProfileProps> = ({ patientId, onClo
                             variant="outline"
                             onClick={() => setFullScreenPrescription(prescription)}
                             title="View in full screen"
-                            className="hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors"
+                            className="hover:bg-brand-50 hover:border-brand-300 hover:text-brand-700 transition-colors"
                           >
                             <Maximize2 className="h-3 w-3 mr-1" />
                             <span className="text-xs">Full Screen</span>
@@ -510,13 +510,13 @@ export const PatientProfile: React.FC<PatientProfileProps> = ({ patientId, onClo
                         <div>
                           <Label className="text-sm font-medium mb-2">Vitals</Label>
                           <div className="grid grid-cols-7 gap-1 text-xs min-w-0">
-                            <div className="flex flex-col items-center p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded border min-w-0">
-                              <span className="font-medium text-blue-700 dark:text-blue-300 text-xs">BP</span>
+                            <div className="flex flex-col items-center p-1.5 bg-brand-50 dark:bg-brand-900/20 rounded border min-w-0">
+                              <span className="font-medium text-brand-700 dark:text-brand-300 text-xs">BP</span>
                               <input
                                 type="text"
                                 value={prescription.vitals.bp}
                                 onChange={(e) => handleVitalsChange(prescription.id, 'bp', e.target.value)}
-                                className="w-full text-center bg-transparent border-none text-blue-900 dark:text-blue-100 focus:outline-none focus:ring-1 focus:ring-blue-300 text-xs"
+                                className="w-full text-center bg-transparent border-none text-brand-900 dark:text-brand-100 focus:outline-none focus:ring-1 focus:ring-brand-300 text-xs"
                                 placeholder="--/--"
                               />
                             </div>
@@ -550,13 +550,13 @@ export const PatientProfile: React.FC<PatientProfileProps> = ({ patientId, onClo
                                 placeholder="--kg"
                               />
                             </div>
-                            <div className="flex flex-col items-center p-1.5 bg-indigo-50 dark:bg-indigo-900/20 rounded border min-w-0">
-                              <span className="font-medium text-indigo-700 dark:text-indigo-300 text-xs">Height</span>
+                            <div className="flex flex-col items-center p-1.5 bg-brand-50 dark:bg-brand-900/20 rounded border min-w-0">
+                              <span className="font-medium text-brand-700 dark:text-brand-300 text-xs">Height</span>
                               <input
                                 type="text"
                                 value={prescription.vitals.height}
                                 onChange={(e) => handleVitalsChange(prescription.id, 'height', e.target.value)}
-                                className="w-full text-center bg-transparent border-none text-indigo-900 dark:text-indigo-100 focus:outline-none focus:ring-1 focus:ring-indigo-300 text-xs"
+                                className="w-full text-center bg-transparent border-none text-brand-900 dark:text-brand-100 focus:outline-none focus:ring-1 focus:ring-brand-300 text-xs"
                                 placeholder="--cm"
                               />
                             </div>
@@ -915,7 +915,7 @@ export const PatientProfile: React.FC<PatientProfileProps> = ({ patientId, onClo
                   </div>
 
                                      {/* Visit Details */}
-                   <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6">
+                   <div className="bg-brand-50 dark:bg-brand-900/20 rounded-lg p-6">
                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Visit Details</h3>
                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                        <div>

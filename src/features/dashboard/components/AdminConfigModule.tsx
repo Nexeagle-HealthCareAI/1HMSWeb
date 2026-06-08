@@ -75,7 +75,7 @@ export const AdminConfigModule = () => {
                     "h-16 flex items-center border-b border-dashed border-gray-200 dark:border-gray-800",
                     isSidebarCollapsed ? "justify-center px-0" : "px-6"
                 )}>
-                    <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                    <div className="flex items-center gap-2 text-brand-600 dark:text-brand-400">
                         <Settings2 className="h-6 w-6" />
                         {!isSidebarCollapsed && (
                             <span className="font-bold text-lg tracking-tight">Configuration</span>
@@ -92,7 +92,7 @@ export const AdminConfigModule = () => {
                             className={cn(
                                 "flex items-center w-full p-3 rounded-xl transition-all duration-200 group relative",
                                 activeTab === item.id
-                                    ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 shadow-sm font-medium"
+                                    ? "bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300 shadow-sm font-medium"
                                     : "text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-gray-200 hover:shadow-sm",
                                 isSidebarCollapsed ? "justify-center" : "gap-3"
                             )}
@@ -100,7 +100,7 @@ export const AdminConfigModule = () => {
                         >
                             <item.icon className={cn(
                                 "h-5 w-5 flex-shrink-0 transition-colors",
-                                activeTab === item.id ? "text-blue-600 dark:text-blue-400" : "text-gray-400 group-hover:text-blue-500"
+                                activeTab === item.id ? "text-brand-600 dark:text-brand-400" : "text-gray-400 group-hover:text-brand-500"
                             )} />
 
                             {!isSidebarCollapsed && (
@@ -111,7 +111,7 @@ export const AdminConfigModule = () => {
                             )}
 
                             {activeTab === item.id && !isSidebarCollapsed && (
-                                <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                                <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-brand-500"></div>
                             )}
                         </button>
                     ))}

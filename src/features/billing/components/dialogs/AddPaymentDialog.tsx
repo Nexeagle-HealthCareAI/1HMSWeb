@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
+import { isReachable } from '@/offline';
 import { ipdBillingService, type AddPaymentRequest, type PaymentMode, type PaymentType } from '../../services/ipdBillingService';
 import { PAYMENT_MODES } from '../../utils/constants';
 
@@ -41,6 +42,7 @@ export const AddPaymentDialog: React.FC<AddPaymentDialogProps> = ({ open, onOpen
     const submit = async () => {
         if (submitting) return;
         if (amount <= 0) { toast({ title: 'Amount must be > 0', variant: 'destructive' }); return; }
+        if (!isReachable()) { toast({ title: 'Needs connection', description: 'Recording a payment requires an internet connection.', variant: 'destructive' }); return; }
         setSubmitting(true);
         try {
             const req: AddPaymentRequest = {

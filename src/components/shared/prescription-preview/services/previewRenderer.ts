@@ -149,17 +149,36 @@ export interface TemplateBoundLayoutConfig {
   overflowStrategy: 'reuse-template' | 'blank';
 }
 
+export interface PrintFieldConfig {
+  key: string;
+  label?: string;
+  showInPrint?: boolean;
+}
+
 export interface TemplateBoundPreviewOptions {
   templateFile: File;
   layout: TemplateBoundLayoutConfig;
   typography: TypographySettings;
   payload: GeneratePrescriptionDetailsPayload;
+  // Doctor's personalized field layout — controls which sections print and their labels.
+  printFields?: PrintFieldConfig[];
 }
 
-export const buildTemplateBoundPreview = async ({ templateFile, layout, typography, payload }: TemplateBoundPreviewOptions) => {
+export const buildTemplateBoundPreview = async ({ templateFile, layout, typography, payload, printFields }: TemplateBoundPreviewOptions) => {
   const templateBytes = await templateFile.arrayBuffer();
   const templateDoc = await PDFDocument.load(templateBytes);
   const outputDoc = await PDFDocument.create();
+
+  // Personalized print visibility / labels. Default: show the section, use the default label.
+  const printFieldByKey = new Map((printFields ?? []).map(f => [f.key, f]));
+  const shouldPrint = (key: string) => {
+    const f = printFieldByKey.get(key);
+    return f ? f.showInPrint !== false : true;
+  };
+  const printLabel = (key: string, fallback: string) => {
+    const f = printFieldByKey.get(key);
+    return f && f.label && f.label.trim() ? f.label.trim() : fallback;
+  };
 
   // Helper: Date Formatter
   const getFormattedDate = (d: string | Date) => {
@@ -566,50 +585,50 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
     return totalH;
   };
 
-  if (payload.chiefComplaint || payload.history || payload.comorbidity || payload.examination) {
-    await ensureRoom(lineHeight * 3);
-    cursorY -= 10; // Add some spacing before Clinical Summary
-    const h1 = await renderTabularItem('Chief Complaint', payload.chiefComplaint, leftPad, contentWidth);
-    if (h1 > 0) cursorY -= (h1 + 6);
-
-    // ... (Repeat for others, renderTabularItem handles toUpper)
-    const hHist = await renderTabularItem('History', payload.history, leftPad, contentWidth);
-    if (hHist) cursorY -= (hHist + 6);
-
-    const hCom = await renderTabularItem('Comorbidity', payload.comorbidity, leftPad, contentWidth);
-    if (hCom) cursorY -= (hCom + 6);
-
-    const hExam = await renderTabularItem('Examination', payload.examination, leftPad, contentWidth);
-    if (hExam) cursorY -= (hExam + 6);
-  }
-
-  // Orders
+  // --- Section drawers (executed below in the doctor's personalized order) ---
   const investigations = payload.orders?.investigations || [];
   const procedures = payload.orders?.procedures || [];
 
-  if (investigations.length > 0) {
-    const hInv = await renderTabularItem('Investigations', investigations.join(', '), leftPad, contentWidth, false);
-    if (hInv) cursorY -= (hInv + 6);
-  }
-
-  // Diagnosis
-  if (payload.diagnosis) {
+  const drawChiefComplaint = async () => {
+    const h = await renderTabularItem(printLabel('chiefComplaint', 'Chief Complaint'), payload.chiefComplaint, leftPad, contentWidth);
+    if (h > 0) cursorY -= (h + 6);
+  };
+  const drawHistory = async () => {
+    const h = await renderTabularItem(printLabel('history', 'History'), payload.history, leftPad, contentWidth);
+    if (h) cursorY -= (h + 6);
+  };
+  const drawComorbidity = async () => {
+    const h = await renderTabularItem(printLabel('comorbidity', 'Comorbidity'), payload.comorbidity, leftPad, contentWidth);
+    if (h) cursorY -= (h + 6);
+  };
+  const drawExamination = async () => {
+    const h = await renderTabularItem(printLabel('examination', 'Examination'), payload.examination, leftPad, contentWidth);
+    if (h) cursorY -= (h + 6);
+  };
+  const drawOrders = async () => {
+    if (investigations.length > 0) {
+      const hInv = await renderTabularItem('Investigations', investigations.join(', '), leftPad, contentWidth, false);
+      if (hInv) cursorY -= (hInv + 6);
+    }
+    if (procedures.length > 0) {
+      const hProc = await renderTabularItem('Procedures & Treatment Plan', procedures.join(', '), leftPad, contentWidth, false);
+      if (hProc) cursorY -= (hProc + 6);
+    }
+  };
+  const drawDiagnosis = async () => {
+    if (!payload.diagnosis) return;
     await ensureRoom(lineHeight * 3);
-    const hDiag = await renderTabularItem('Diagnosis', payload.diagnosis, leftPad, contentWidth, false);
+    const hDiag = await renderTabularItem(printLabel('diagnosis', 'Diagnosis'), payload.diagnosis, leftPad, contentWidth, false);
     if (hDiag) cursorY -= (hDiag + 6);
     cursorY -= 4;
-  }
-
-  if (procedures.length > 0) {
-    const hProc = await renderTabularItem('Procedures & Treatment Plan', procedures.join(', '), leftPad, contentWidth, false);
-    if (hProc) cursorY -= (hProc + 6);
-  }
+  };
 
   // Advice
-  const adviceItems = (payload.nonPharmacologicalAdvice || []).filter(item =>
-    (item.advice && item.advice.trim()) || (item.notes && item.notes.trim())
-  );
-  if (adviceItems.length > 0) {
+  const drawAdvice = async () => {
+    const adviceItems = (payload.nonPharmacologicalAdvice || []).filter(item =>
+      (item.advice && item.advice.trim()) || (item.notes && item.notes.trim())
+    );
+    if (adviceItems.length === 0) return;
     await ensureRoom(lineHeight * 6);
     page.drawText('ADVICE / INSTRUCTIONS', { x: leftPad, y: cursorY, size: sizeBase, font: boldFont, color: COLORS.Primary });
     cursorY -= lineHeight;
@@ -665,15 +684,15 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
       cursorY -= 2;
     }
     cursorY -= (lineHeight - 2);
-  }
+  };
 
   // Medications
-  const sortedMedications = (payload.medications || [])
-    .map((m, idx) => ({ ...m, _originalIdx: idx }))
-    .sort((a, b) => (a.displayOrder ?? a._originalIdx) - (b.displayOrder ?? b._originalIdx));
-
-  if (sortedMedications.length > 0) {
-    await drawSectionHeader('Medications', 'Rx');
+  const drawMedications = async () => {
+    const sortedMedications = (payload.medications || [])
+      .map((m, idx) => ({ ...m, _originalIdx: idx }))
+      .sort((a, b) => (a.displayOrder ?? a._originalIdx) - (b.displayOrder ?? b._originalIdx));
+    if (sortedMedications.length === 0) return;
+    await drawSectionHeader(printLabel('medications', 'Medications'), 'Rx');
 
     const cols = [
       { header: 'DRUG / BRAND', width: 0.30, align: 'left' },
@@ -746,10 +765,11 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
       });
       cursorY -= rowHeight;
     }
-  }
+  };
 
-  // Certificates & Follow Up (Omit specific logic details if not critical for uppercase check, but ensuring wrapText usage)
-  if (payload.certificates && payload.certificates.content) {
+  // Certificates
+  const drawCertificates = async () => {
+    if (!(payload.certificates && payload.certificates.content)) return;
     // ... logic uses wrapText which works
     // But placeholders replacement?
     // getFormattedDate output is mostly digits, keep generic.
@@ -766,11 +786,12 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
         cursorY -= lineHeight;
       }
     }
-  }
+  };
 
   // Follow Up & Instructions
   const followUp = payload.followUp;
-  if (followUp && followUp.followUpOn) {
+  const drawFollowUp = async () => {
+    if (!(followUp && followUp.followUpOn)) return;
 
 
     // Extract reason and instructions handling both flat and nested structures
@@ -887,8 +908,51 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
 
     // Ensure cursor ends below box
     cursorY = boxY - 10; // Space after box
-  }
+  };
 
+  // --- Execute section drawers in the doctor's personalized order (printFields is already ordered;
+  //     keys not configured fall back to the default clinical order). Hidden sections are skipped. ---
+  const drawerByKey: Record<string, () => Promise<void>> = {
+    chiefComplaint: drawChiefComplaint,
+    history: drawHistory,
+    comorbidity: drawComorbidity,
+    examination: drawExamination,
+    diagnosis: drawDiagnosis,
+    orders: drawOrders,
+    nonPharmacologicalAdvice: drawAdvice,
+    medications: drawMedications,
+    certificates: drawCertificates,
+    followUp: drawFollowUp,
+  };
+  const DEFAULT_PRINT_ORDER = ['chiefComplaint', 'history', 'comorbidity', 'examination', 'diagnosis', 'orders', 'medications', 'nonPharmacologicalAdvice', 'certificates', 'followUp'];
+  // The doctor's custom field VALUES (key → label/value) for this prescription.
+  const customByKey = new Map((payload.customFields ?? []).map(c => [c.key, c]));
+  // Ordered keys: prefer the doctor's layout order (built-ins + customs); else the default built-in order.
+  const orderedKeys = (printFields && printFields.length) ? printFields.map(f => f.key) : DEFAULT_PRINT_ORDER;
+
+  let firstSectionDrawn = false;
+  const ensureFirstSpacing = async () => {
+    if (!firstSectionDrawn) {
+      await ensureRoom(lineHeight * 3);
+      cursorY -= 10; // spacing before the first clinical section
+      firstSectionDrawn = true;
+    }
+  };
+
+  for (const key of orderedKeys) {
+    if (!shouldPrint(key)) continue;
+    if (drawerByKey[key]) {
+      await ensureFirstSpacing();
+      await drawerByKey[key]();
+    } else if (customByKey.has(key)) {
+      const cf = customByKey.get(key)!;
+      const value = (cf.value || '').trim();
+      if (!value) continue;
+      await ensureFirstSpacing();
+      const h = await renderTabularItem(printLabel(key, cf.label || 'Field'), value, leftPad, contentWidth);
+      if (h) cursorY -= (h + 6);
+    }
+  }
 
   const outputBytes = await outputDoc.save();
   const byteArray = Uint8Array.from(outputBytes);

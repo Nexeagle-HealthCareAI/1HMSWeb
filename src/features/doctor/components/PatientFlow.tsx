@@ -171,7 +171,7 @@ export const PatientFlow = () => {
       case 'ready-consultation':
         return <Badge className="bg-green-100 text-green-800 border-green-300 text-xs">{badgeLabel}</Badge>;
       case 'under-consultation':
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-300 text-xs">{badgeLabel}</Badge>;
+        return <Badge className="bg-brand-100 text-brand-800 border-brand-300 text-xs">{badgeLabel}</Badge>;
       case 'lab-test-required':
         return <Badge className="bg-purple-100 text-purple-800 border-purple-300 text-xs">{badgeLabel}</Badge>;
       case 'awaiting-reconsultation':
@@ -235,7 +235,7 @@ export const PatientFlow = () => {
                       <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
                       <span className="text-sm font-medium text-green-700">{t('patientFlow.current.live')}</span>
                     </div>
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                    <Badge variant="outline" className="bg-brand-50 text-brand-700 border-brand-200">
                       {kpis.totalToday} {t('patientFlow.current.totalToday')}
                     </Badge>
                   </div>
@@ -278,8 +278,8 @@ export const PatientFlow = () => {
                     onClick={() => setSelectedStatus('all')}
                     className={`group relative p-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${
                       selectedStatus === 'all'
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-lg'
-                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                        ? 'bg-brand-600 text-white border-brand-600 shadow-lg'
+                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-brand-300 dark:hover:border-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20'
                     }`}
                   >
                     <div className="text-center">
@@ -288,7 +288,7 @@ export const PatientFlow = () => {
                       <div className="text-xs opacity-75 mt-1">{t('patientFlow.current.tiles.all.subtitle')}</div>
                     </div>
                     {selectedStatus === 'all' && (
-                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-600 rounded-full"></div>
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-brand-600 rounded-full"></div>
                     )}
                   </button>
 
@@ -334,8 +334,8 @@ export const PatientFlow = () => {
                     onClick={() => setSelectedStatus('under-consultation')}
                     className={`group relative p-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${
                       selectedStatus === 'under-consultation'
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-lg'
-                        : 'bg-white dark:bg-gray-800 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                        ? 'bg-brand-600 text-white border-brand-600 shadow-lg'
+                        : 'bg-white dark:bg-gray-800 text-brand-700 dark:text-brand-400 border-brand-200 dark:border-brand-800 hover:border-brand-300 dark:hover:border-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20'
                     }`}
                   >
                     <div className="text-center">
@@ -345,7 +345,7 @@ export const PatientFlow = () => {
                       <div className="text-xs opacity-75 mt-1">{t('patientFlow.current.tiles.consulting.subtitle')}</div>
                     </div>
                     {selectedStatus === 'under-consultation' && (
-                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-600 rounded-full"></div>
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-brand-600 rounded-full"></div>
                     )}
                   </button>
 
@@ -430,10 +430,10 @@ export const PatientFlow = () => {
                             <TableCell className="text-xs font-medium">
                               #{patient.tokenNo}
                             </TableCell>
-                            <TableCell className="text-xs font-mono text-blue-600">
+                            <TableCell className="text-xs font-mono text-brand-600">
                               <button
                                 onClick={() => handlePatientIdClick(patient.patientId)}
-                                className="hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                                className="hover:text-brand-800 hover:underline cursor-pointer transition-colors"
                                 title={t('patientFlow.table.patientIdTitle')}
                               >
                                 {patient.patientId}
@@ -567,8 +567,8 @@ export const PatientFlow = () => {
                       </div>
                     </div>
                     {(dateRange.startDate || dateRange.endDate) && (
-                      <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                        <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
+                      <div className="mt-3 p-3 bg-brand-50 dark:bg-brand-950/20 border border-brand-200 dark:border-brand-800 rounded-lg">
+                        <div className="flex items-center gap-2 text-sm text-brand-700 dark:text-brand-300">
                           <Calendar className="h-4 w-4" />
                           <span>
                             {dateRange.startDate && dateRange.endDate 
@@ -608,10 +608,10 @@ export const PatientFlow = () => {
                             <TableCell className="text-xs font-medium">
                               #{patient.tokenNo}
                             </TableCell>
-                            <TableCell className="text-xs font-mono text-blue-600">
+                            <TableCell className="text-xs font-mono text-brand-600">
                               <button
                                 onClick={() => handlePatientIdClick(patient.patientId)}
-                                className="hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                                className="hover:text-brand-800 hover:underline cursor-pointer transition-colors"
                                 title={t('patientFlow.table.patientIdTitle')}
                               >
                                 {patient.patientId}
@@ -679,9 +679,9 @@ export const PatientFlow = () => {
                     <p className="text-gray-600 dark:text-gray-400">{t('patientFlow.future.subtitle')}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                      <CalendarDays className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-700 dark:text-blue-300">{t('patientFlow.future.chip')}</span>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800 rounded-lg">
+                      <CalendarDays className="h-4 w-4 text-brand-600" />
+                      <span className="text-sm font-medium text-brand-700 dark:text-brand-300">{t('patientFlow.future.chip')}</span>
                     </div>
                     <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                       {futureStats.readyFuture} {t('patientFlow.future.badge')}
@@ -746,8 +746,8 @@ export const PatientFlow = () => {
                       </div>
                     </div>
                     {(dateRange.startDate || dateRange.endDate) && (
-                      <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                        <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
+                      <div className="mt-3 p-3 bg-brand-50 dark:bg-brand-950/20 border border-brand-200 dark:border-brand-800 rounded-lg">
+                        <div className="flex items-center gap-2 text-sm text-brand-700 dark:text-brand-300">
                           <Calendar className="h-4 w-4" />
                           <span>
                             {dateRange.startDate && dateRange.endDate 
@@ -787,10 +787,10 @@ export const PatientFlow = () => {
                             <TableCell className="text-xs font-medium">
                               #{patient.tokenNo}
                             </TableCell>
-                            <TableCell className="text-xs font-mono text-blue-600">
+                            <TableCell className="text-xs font-mono text-brand-600">
                               <button
                                 onClick={() => handlePatientIdClick(patient.patientId)}
-                                className="hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                                className="hover:text-brand-800 hover:underline cursor-pointer transition-colors"
                                 title={t('patientFlow.table.patientIdTitle')}
                               >
                                 {patient.patientId}

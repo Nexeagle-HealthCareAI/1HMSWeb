@@ -25,7 +25,7 @@ const STATUS_TONE: Record<IncentiveStatus, string> = {
 
 const MODULE_TONE: Record<ServiceModule, string> = {
     OPD: 'bg-sky-50 text-sky-700 border-sky-200',
-    IPD: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    IPD: 'bg-brand-50 text-brand-700 border-brand-200',
     LAB: 'bg-violet-50 text-violet-700 border-violet-200',
     RAD: 'bg-teal-50 text-teal-700 border-teal-200',
     PHARMACY: 'bg-slate-100 text-slate-600 border-slate-200',
@@ -123,7 +123,7 @@ export const IncentivesScreen: React.FC<Props> = ({ onBack }) => {
                                 <button key={b.beneficiaryId} onClick={() => setSelectedId(b.beneficiaryId)} className={cn('w-full text-left px-3 py-2.5 hover:bg-fuchsia-50/40', selectedId === b.beneficiaryId && 'bg-fuchsia-50 border-l-2 border-l-fuchsia-500')}>
                                     <div className="flex items-center justify-between">
                                         <p className="font-semibold text-slate-900 text-sm truncate">{b.name}</p>
-                                        <Badge variant="outline" className="text-[9px] font-bold bg-slate-50">{b.defaultRatePercent}%</Badge>
+                                        <Badge variant="outline" className="text-[11px] font-bold bg-slate-50">{b.defaultRatePercent}%</Badge>
                                     </div>
                                     <div className="flex items-center justify-between mt-0.5">
                                         <span className="text-[10px] text-slate-500">{b.type}</span>

@@ -54,7 +54,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admissionId, onBack, onDisch
             <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div className="flex items-start gap-3">
                     <Button variant="ghost" size="icon" onClick={onBack} className="mt-0.5"><ArrowLeft className="h-5 w-5" /></Button>
-                    <div className="h-12 w-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-black text-lg shrink-0">
+                    <div className="h-12 w-12 rounded-2xl bg-brand-600 flex items-center justify-center text-white font-black text-lg shrink-0">
                         {v.patient.name.charAt(0)}
                     </div>
                     <div>
@@ -74,7 +74,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admissionId, onBack, onDisch
                 </div>
                 <div className="flex items-center gap-2">
                     <div className={cn('rounded-lg border px-3 py-1.5 text-right', v.balance > 0 ? 'bg-rose-50 border-rose-200' : 'bg-emerald-50 border-emerald-200')}>
-                        <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">Balance</p>
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Balance</p>
                         <p className={cn('text-sm font-black font-mono', v.balance > 0 ? 'text-rose-700' : 'text-emerald-700')}>₹{Math.abs(v.balance).toLocaleString('en-IN')}{v.balance < 0 ? ' CR' : ''}</p>
                     </div>
                     {!discharging && (
@@ -137,7 +137,7 @@ const OverviewTab: React.FC<{ admissionId: string }> = ({ admissionId }) => {
                         <div className="grid grid-cols-2 gap-3">
                             <Stat icon={<Thermometer className="h-4 w-4 text-rose-500" />} label="Temp" value={`${latest.temperatureF}°F`} />
                             <Stat icon={<Heart className="h-4 w-4 text-rose-500" />} label="Pulse" value={`${latest.pulse}`} />
-                            <Stat icon={<Activity className="h-4 w-4 text-indigo-500" />} label="BP" value={`${latest.systolic}/${latest.diastolic}`} />
+                            <Stat icon={<Activity className="h-4 w-4 text-brand-500" />} label="BP" value={`${latest.systolic}/${latest.diastolic}`} />
                             <Stat icon={<Wind className="h-4 w-4 text-sky-500" />} label="SpO₂" value={`${latest.spo2}%`} />
                         </div>
                     ) : <p className="text-xs text-slate-400">No vitals recorded.</p>}
@@ -177,7 +177,7 @@ const VitalsTab: React.FC<{ admissionId: string }> = ({ admissionId }) => {
     return (
         <div className="space-y-3">
             <div className="flex justify-end">
-                <Button size="sm" onClick={() => setOpen(true)} className="h-8 bg-indigo-600 hover:bg-indigo-700"><Plus className="h-3.5 w-3.5 mr-1" /> Record vitals</Button>
+                <Button size="sm" onClick={() => setOpen(true)} className="h-8 bg-brand-600 hover:bg-brand-700"><Plus className="h-3.5 w-3.5 mr-1" /> Record vitals</Button>
             </div>
             <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
                 <table className="w-full text-sm">
@@ -224,7 +224,7 @@ const VitalsTab: React.FC<{ admissionId: string }> = ({ admissionId }) => {
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                        <Button onClick={submit} className="bg-indigo-600 hover:bg-indigo-700">Save</Button>
+                        <Button onClick={submit} className="bg-brand-600 hover:bg-brand-700">Save</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -262,7 +262,7 @@ const MarTab: React.FC<{ admissionId: string }> = ({ admissionId }) => {
                         <tr key={m.id} className="border-t border-slate-100">
                             <td className="px-3 py-2">
                                 <span className="font-semibold text-slate-900">{m.drugName}</span>
-                                {m.highAlert && <Badge variant="outline" className="ml-2 text-[9px] font-bold bg-rose-50 text-rose-700 border-rose-200">HIGH-ALERT</Badge>}
+                                {m.highAlert && <Badge variant="outline" className="ml-2 text-[11px] font-bold bg-rose-50 text-rose-700 border-rose-200">HIGH-ALERT</Badge>}
                             </td>
                             <td className="px-3 py-2 text-xs text-slate-700">{m.dose} · {m.route}</td>
                             <td className="px-3 py-2 text-xs whitespace-nowrap">{format(parseISO(m.scheduledAt), 'd MMM HH:mm')}</td>
@@ -302,7 +302,7 @@ const NotesTab: React.FC<{ admissionId: string }> = ({ admissionId }) => {
     return (
         <div className="space-y-3">
             <div className="flex justify-end">
-                <Button size="sm" onClick={() => setOpen(true)} className="h-8 bg-indigo-600 hover:bg-indigo-700"><Plus className="h-3.5 w-3.5 mr-1" /> Add SOAP note</Button>
+                <Button size="sm" onClick={() => setOpen(true)} className="h-8 bg-brand-600 hover:bg-brand-700"><Plus className="h-3.5 w-3.5 mr-1" /> Add SOAP note</Button>
             </div>
             <div className="space-y-3">
                 {[...notes].reverse().map(n => (
@@ -335,7 +335,7 @@ const NotesTab: React.FC<{ admissionId: string }> = ({ admissionId }) => {
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                        <Button onClick={submit} className="bg-indigo-600 hover:bg-indigo-700">Save note</Button>
+                        <Button onClick={submit} className="bg-brand-600 hover:bg-brand-700">Save note</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -376,7 +376,7 @@ const BillingTab: React.FC<{ admissionId: string; locked: boolean }> = ({ admiss
                                     <span className="text-slate-800">{l.description}</span>
                                     {l.qty && l.rate ? <span className="text-[11px] text-slate-400 ml-1">({l.qty} × ₹{l.rate})</span> : null}
                                     {l.mode ? <span className="text-[11px] text-slate-400 ml-1">· {l.mode}</span> : null}
-                                    {l.auto ? <Badge variant="outline" className="ml-1.5 text-[9px] font-bold bg-amber-50 text-amber-700 border-amber-200">AUTO</Badge> : null}
+                                    {l.auto ? <Badge variant="outline" className="ml-1.5 text-[11px] font-bold bg-amber-50 text-amber-700 border-amber-200">AUTO</Badge> : null}
                                 </td>
                                 <td className="px-3 py-2 text-[10px] font-mono uppercase text-slate-500">{l.category}</td>
                                 <td className="px-3 py-2 text-right font-mono">{l.kind === 'CHARGE' ? `₹${l.amount.toLocaleString('en-IN')}` : '—'}</td>
@@ -399,7 +399,7 @@ const BillingTab: React.FC<{ admissionId: string; locked: boolean }> = ({ admiss
                     </div>
                 </Card>
                 <div className="grid grid-cols-1 gap-2">
-                    <Button onClick={() => setChargeOpen(true)} disabled={locked} className="bg-indigo-600 hover:bg-indigo-700"><Plus className="h-4 w-4 mr-1" /> Add charge</Button>
+                    <Button onClick={() => setChargeOpen(true)} disabled={locked} className="bg-brand-600 hover:bg-brand-700"><Plus className="h-4 w-4 mr-1" /> Add charge</Button>
                     <Button onClick={() => setPayOpen(true)} className="bg-emerald-600 hover:bg-emerald-700"><IndianRupee className="h-4 w-4 mr-1" /> Record payment</Button>
                 </div>
                 {locked && <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">Discharge initiated — charges are locked. Payments still allowed.</p>}
@@ -423,7 +423,7 @@ const BillingTab: React.FC<{ admissionId: string; locked: boolean }> = ({ admiss
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setChargeOpen(false)}>Cancel</Button>
-                        <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={() => {
+                        <Button className="bg-brand-600 hover:bg-brand-700" onClick={() => {
                             if (!charge.description.trim() || !charge.rate) { toast({ title: 'Description and rate required', variant: 'destructive' }); return; }
                             addCharge(admissionId, { description: charge.description.trim(), category: charge.category, qty: parseInt(charge.qty || '1', 10), rate: parseFloat(charge.rate) });
                             toast({ title: 'Charge added' });
@@ -480,7 +480,7 @@ const Stat: React.FC<{ icon: React.ReactNode; label: string; value: string }> = 
     </div>
 );
 const SoapLine: React.FC<{ letter: string; text: string }> = ({ letter, text }) => (
-    <div className="flex gap-2"><span className="h-5 w-5 shrink-0 rounded bg-indigo-100 text-indigo-700 text-[10px] font-black flex items-center justify-center">{letter}</span><p className="text-slate-700">{text || <span className="text-slate-300">—</span>}</p></div>
+    <div className="flex gap-2"><span className="h-5 w-5 shrink-0 rounded bg-brand-100 text-brand-700 text-[10px] font-black flex items-center justify-center">{letter}</span><p className="text-slate-700">{text || <span className="text-slate-300">—</span>}</p></div>
 );
 const Row: React.FC<{ label: string; value: string; valueClass?: string }> = ({ label, value, valueClass }) => (
     <div className="flex items-center justify-between"><span className="text-slate-500">{label}</span><span className={cn('font-mono font-semibold', valueClass)}>{value}</span></div>

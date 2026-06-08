@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
@@ -18,12 +18,17 @@ import { KpiStat } from '../KpiStat';
 import { LoadingState, EmptyState, ErrorState } from '../StatePanel';
 import { inr } from '../../utils/money';
 
-const CATEGORIES = ['SALARIES', 'PHARMACY_PURCHASE', 'UTILITIES', 'EQUIPMENT', 'MAINTENANCE', 'CONSUMABLES', 'RENT', 'OTHER'];
-const CAT_LABEL = (c: string) => c.replace(/_/g, ' ').replace(/\b\w/g, m => m.toUpperCase());
+// Common hospital expense buckets. FOOD covers canteen / tea / refreshments / meals;
+// PHARMACY_PURCHASE = medicine stock; EQUIPMENT, CONSUMABLES, etc.; OTHER for anything else.
+const CATEGORIES = ['FOOD', 'PHARMACY_PURCHASE', 'EQUIPMENT', 'CONSUMABLES', 'SALARIES', 'UTILITIES', 'MAINTENANCE', 'RENT', 'OTHER'];
+const CAT_LABEL = (c: string) => c === 'PHARMACY_PURCHASE' ? 'Medicine / Pharmacy'
+    : c === 'FOOD' ? 'Food & Refreshments'
+        : c.replace(/_/g, ' ').replace(/\b\w/g, m => m.toUpperCase());
 const MODES = ['CASH', 'UPI', 'BANK', 'CARD'];
 
 const CATEGORY_TONE: Record<string, string> = {
-    SALARIES: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    FOOD: 'bg-orange-50 text-orange-700 border-orange-200',
+    SALARIES: 'bg-brand-50 text-brand-700 border-brand-200',
     PHARMACY_PURCHASE: 'bg-violet-50 text-violet-700 border-violet-200',
     UTILITIES: 'bg-amber-50 text-amber-700 border-amber-200',
     EQUIPMENT: 'bg-cyan-50 text-cyan-700 border-cyan-200',
@@ -152,7 +157,7 @@ export const ExpenseTab: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <KpiStat label="Total Expenses" amount={summary.total} format={inr} icon={<TrendingDown className="h-5 w-5 text-rose-600" />} tone="from-rose-50 to-orange-100/50 text-rose-900" />
                 <KpiStat label="Pending Payment" amount={summary.pending} format={inr} icon={<Wallet className="h-5 w-5 text-amber-600" />} tone="from-amber-50 to-yellow-100/50 text-amber-900" />
-                <KpiStat label="Categories" value={String(summary.categories)} icon={<Building2 className="h-5 w-5 text-indigo-600" />} tone="from-indigo-50 to-violet-100/50 text-indigo-900" />
+                <KpiStat label="Categories" value={String(summary.categories)} icon={<Building2 className="h-5 w-5 text-brand-600" />} tone="from-brand-50 to-violet-100/50 text-brand-900" />
             </div>
 
             <Card className="border-0 ring-1 ring-black/5 rounded-2xl flex flex-col flex-1 overflow-hidden bg-white shadow-lg shadow-rose-500/5">
@@ -205,7 +210,7 @@ export const ExpenseTab: React.FC = () => {
                                         <TableCell className="text-right font-mono font-bold text-slate-800 tabular-nums">{inr(e.amount)}</TableCell>
                                         <TableCell className="text-right whitespace-nowrap pr-2">
                                             <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-indigo-600" onClick={() => openEdit(e)}><Pencil className="h-3.5 w-3.5" /></Button>
+                                                <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-brand-600" onClick={() => openEdit(e)}><Pencil className="h-3.5 w-3.5" /></Button>
                                                 <Button size="icon" variant="ghost" className="h-7 w-7 text-slate-400 hover:text-rose-600" onClick={() => setDeleteId(e.expenseId)}><Trash2 className="h-3.5 w-3.5" /></Button>
                                             </div>
                                         </TableCell>
@@ -217,12 +222,16 @@ export const ExpenseTab: React.FC = () => {
                 </div>
             </Card>
 
-            {/* Add / edit dialog */}
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent className="max-w-lg">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2"><TrendingDown className="h-5 w-5 text-rose-600" /> {form.expenseId ? 'Edit Expense' : 'Add Expense'}</DialogTitle>
-                    </DialogHeader>
+            {/* Add / edit — side drawer */}
+            <Sheet open={dialogOpen} onOpenChange={setDialogOpen}>
+                <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col bg-white dark:bg-slate-950">
+                    <div className="px-6 py-5 bg-gradient-to-r from-rose-600 to-orange-500">
+                        <SheetTitle className="text-white text-lg font-bold flex items-center gap-2">
+                            <TrendingDown className="h-5 w-5" /> {form.expenseId ? 'Edit Expense' : 'Add Expense'}
+                        </SheetTitle>
+                        <p className="text-rose-50/90 text-xs mt-0.5">Food &amp; refreshments, equipment, medicine and other bills</p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <Label className="text-xs font-semibold">Date</Label>
@@ -269,14 +278,15 @@ export const ExpenseTab: React.FC = () => {
                             <Textarea value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} rows={2} className="text-sm mt-1" placeholder="Optional notes" />
                         </div>
                     </div>
-                    <DialogFooter>
+                    </div>
+                    <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
                         <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Cancel</Button>
                         <Button onClick={save} disabled={saving} className="bg-rose-600 hover:bg-rose-700">
                             {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving…</> : (form.expenseId ? 'Update' : 'Add')}
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </div>
+                </SheetContent>
+            </Sheet>
 
             {/* Delete confirm */}
             <AlertDialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>

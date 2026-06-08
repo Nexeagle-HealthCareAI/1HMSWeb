@@ -81,15 +81,15 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
       {/* Left Section - Doctor Info and Navigation */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4">
         {/* Doctor Name Display */}
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-100/50 dark:border-blue-800/50">
-          <div className="p-1.5 bg-blue-100 dark:bg-blue-800 rounded-md">
-            <User className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-brand-50 to-brand-50 dark:from-brand-900/20 dark:to-brand-900/20 rounded-lg border border-brand-100/50 dark:border-brand-800/50">
+          <div className="p-1.5 bg-brand-100 dark:bg-brand-800 rounded-md">
+            <User className="h-3 w-3 text-brand-600 dark:text-brand-400" />
           </div>
           <div className="flex flex-col">
-            <span className="text-xs font-semibold text-blue-900 dark:text-blue-100">
+            <span className="text-xs font-semibold text-brand-900 dark:text-brand-100">
               {t('doctorCalendar.doctorPrefix', { name: doctorDisplayName })}
             </span>
-            <span className="text-xs text-blue-600 dark:text-blue-300">{t('doctorCalendar.calendarView')}</span>
+            <span className="text-xs text-brand-600 dark:text-brand-300">{t('doctorCalendar.calendarView')}</span>
           </div>
         </div>
 
@@ -99,7 +99,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             variant="outline"
             size="sm"
             onClick={handlePrevious}
-            className="h-8 w-8 p-0 border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200"
+            className="h-8 w-8 p-0 border-gray-300 dark:border-gray-600 hover:border-brand-400 dark:hover:border-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all duration-200"
           >
             <ChevronLeft className="h-4 w-4 text-gray-600 dark:text-gray-400" />
           </Button>
@@ -111,7 +111,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
                   variant="ghost"
                   size="sm"
                   className={cn(
-                    "h-auto p-2 text-sm font-semibold text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200",
+                    "h-auto p-2 text-sm font-semibold text-gray-800 dark:text-gray-200 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-lg transition-all duration-200",
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
@@ -128,7 +128,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
               </PopoverContent>
             </Popover>
             <span
-              className="text-xs text-gray-500 dark:text-gray-400 font-medium cursor-pointer hover:text-blue-600"
+              className="text-xs text-gray-500 dark:text-gray-400 font-medium cursor-pointer hover:text-brand-600"
               onClick={handleToday}
             >
               {t('doctorCalendar.clickForToday')}
@@ -139,7 +139,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             variant="outline"
             size="sm"
             onClick={handleNext}
-            className="h-8 w-8 p-0 border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200"
+            className="h-8 w-8 p-0 border-gray-300 dark:border-gray-600 hover:border-brand-400 dark:hover:border-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all duration-200"
           >
             <ChevronRight className="h-4 w-4 text-gray-600 dark:text-gray-400" />
           </Button>
@@ -152,8 +152,8 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             size="sm"
             onClick={() => onViewChange('dayGridMonth')}
             className={`h-7 px-3 text-xs font-medium rounded-md transition-all duration-200 ${view === 'dayGridMonth'
-                ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700'
-                : 'text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                ? 'bg-brand-600 text-white shadow-md hover:bg-brand-700'
+                : 'text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20'
               }`}
           >
             {t('doctorCalendar.views.month')}
@@ -163,8 +163,8 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             size="sm"
             onClick={() => onViewChange('timeGridWeek')}
             className={`h-7 px-3 text-xs font-medium rounded-md transition-all duration-200 ${view === 'timeGridWeek'
-                ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700'
-                : 'text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                ? 'bg-brand-600 text-white shadow-md hover:bg-brand-700'
+                : 'text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20'
               }`}
           >
             {t('doctorCalendar.views.week')}
@@ -174,8 +174,8 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             size="sm"
             onClick={() => onViewChange('timeGridDay')}
             className={`h-7 px-3 text-xs font-medium rounded-md transition-all duration-200 ${view === 'timeGridDay'
-                ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700'
-                : 'text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                ? 'bg-brand-600 text-white shadow-md hover:bg-brand-700'
+                : 'text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20'
               }`}
           >
             {t('doctorCalendar.views.day')}

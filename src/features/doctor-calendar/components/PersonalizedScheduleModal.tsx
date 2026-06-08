@@ -523,9 +523,9 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
       case 'Annual Leave': return 'text-red-600';
       case 'Sick Leave': return 'text-orange-600';
       case 'Personal': return 'text-purple-600';
-      case 'Conference': return 'text-blue-600';
+      case 'Conference': return 'text-brand-600';
       case 'Training': return 'text-green-600';
-      case 'Meeting': return 'text-indigo-600';
+      case 'Meeting': return 'text-brand-600';
       case 'Emergency': return 'text-pink-600';
       case 'Other': return 'text-gray-600';
       default: return 'text-gray-600';
@@ -616,7 +616,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                     <button
                       type="button"
                       className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-300 ${scheduleType === 'schedule'
-                        ? 'bg-white text-blue-600 shadow-md scale-[1.02]'
+                        ? 'bg-white text-brand-600 shadow-md scale-[1.02]'
                         : 'text-gray-500 hover:text-gray-700'
                         }`}
                       onClick={() => setScheduleType('schedule')}
@@ -642,18 +642,18 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                   {scheduleType === 'schedule' ? (
                     <div className="space-y-6">
                       {/* Recurring Dates - NOW FIRST */}
-                      <div className="rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200/70 p-4 shadow-sm">
+                      <div className="rounded-2xl bg-gradient-to-br from-brand-50 to-brand-50 border-2 border-brand-200/70 p-4 shadow-sm">
                         <div className="flex items-center gap-2 mb-3">
-                          <div className="p-1.5 rounded-lg bg-blue-500 text-white">
+                          <div className="p-1.5 rounded-lg bg-brand-500 text-white">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
                           </div>
-                          <span className="text-sm font-black uppercase tracking-wider text-blue-700">Schedule Date Range</span>
+                          <span className="text-sm font-black uppercase tracking-wider text-brand-700">Schedule Date Range</span>
                         </div>
                         <div className="flex items-center gap-3">
                           <div className="flex-1 space-y-1">
-                            <Label className="text-[10px] font-bold uppercase tracking-wide text-blue-500">From</Label>
+                            <Label className="text-[10px] font-bold uppercase tracking-wide text-brand-500">From</Label>
                             <Input
                               type="date"
                               value={startDate}
@@ -665,27 +665,27 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                                   setRecurringEndDate(newStart);
                                 }
                               }}
-                              className="rounded-xl border-blue-200 bg-white font-semibold text-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400 h-10"
+                              className="rounded-xl border-brand-200 bg-white font-semibold text-sm focus:ring-2 focus:ring-brand-400 focus:border-brand-400 h-10"
                             />
                           </div>
                           <div className="flex items-end pb-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                             </svg>
                           </div>
                           <div className="flex-1 space-y-1">
-                            <Label className="text-[10px] font-bold uppercase tracking-wide text-indigo-500">To</Label>
+                            <Label className="text-[10px] font-bold uppercase tracking-wide text-brand-500">To</Label>
                             <Input
                               type="date"
                               value={recurringEndDate}
                               min={startDate || getMinDate()}
                               onChange={(e) => setRecurringEndDate(e.target.value)}
-                              className="rounded-xl border-indigo-200 bg-white font-semibold text-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 h-10"
+                              className="rounded-xl border-brand-200 bg-white font-semibold text-sm focus:ring-2 focus:ring-brand-400 focus:border-brand-400 h-10"
                             />
                           </div>
                         </div>
                         {startDate && recurringEndDate && (
-                          <p className="mt-2 text-xs text-blue-600 font-semibold text-center bg-blue-100/60 rounded-lg py-1">
+                          <p className="mt-2 text-xs text-brand-600 font-semibold text-center bg-brand-100/60 rounded-lg py-1">
                             📅 {startDate} → {recurringEndDate}
                           </p>
                         )}
@@ -698,12 +698,12 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                             key={shift}
                             layout
                             initial={false}
-                            className={`p-1 rounded-2xl border-2 transition-all cursor-pointer overflow-hidden ${selectedShifts.has(shift as ShiftName) ? 'border-blue-500 bg-blue-50/50 shadow-blue-100/50 shadow-xl' : 'border-gray-100 bg-white hover:border-blue-200'}`}
+                            className={`p-1 rounded-2xl border-2 transition-all cursor-pointer overflow-hidden ${selectedShifts.has(shift as ShiftName) ? 'border-brand-500 bg-brand-50/50 shadow-brand-100/50 shadow-xl' : 'border-gray-100 bg-white hover:border-brand-200'}`}
                             onClick={() => handleShiftToggle(shift as ShiftName)}
                           >
                             <div className="p-4 flex items-center justify-between">
                               <div className="flex items-center gap-3">
-                                <div className={`p-2 rounded-xl ${selectedShifts.has(shift as ShiftName) ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                <div className={`p-2 rounded-xl ${selectedShifts.has(shift as ShiftName) ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
                                   {shift === 'Morning' ? <Sunrise size={20} /> : shift === 'Afternoon' ? <Sun size={20} /> : <Sunset size={20} />}
                                 </div>
                                 <div>
@@ -715,7 +715,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                               </div>
                               {selectedShifts.has(shift as ShiftName) && (
                                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                                  <CheckCircle className="text-blue-500" size={24} />
+                                  <CheckCircle className="text-brand-500" size={24} />
                                 </motion.div>
                               )}
                             </div>
@@ -727,38 +727,38 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                                   animate={{ height: 'auto', opacity: 1 }}
                                   exit={{ height: 0, opacity: 0 }}
                                   transition={{ duration: 0.3, ease: 'easeOut' }}
-                                  className="bg-white/60 backdrop-blur-sm border-t border-blue-100 p-4"
+                                  className="bg-white/60 backdrop-blur-sm border-t border-brand-100 p-4"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-1">
-                                      <Label className="text-[10px] font-black uppercase text-blue-400 tracking-tighter">Start Time</Label>
+                                      <Label className="text-[10px] font-black uppercase text-brand-400 tracking-tighter">Start Time</Label>
                                       <Input
                                         type="time"
                                         value={shiftConfigs[shift as ShiftName].startTime}
                                         onChange={(e) => handleShiftConfigChange(shift as ShiftName, 'startTime', e.target.value)}
-                                        className="h-9 rounded-lg border-blue-100 focus:ring-blue-500 transition-all font-mono"
+                                        className="h-9 rounded-lg border-brand-100 focus:ring-brand-500 transition-all font-mono"
                                       />
                                     </div>
                                     <div className="space-y-1">
-                                      <Label className="text-[10px] font-black uppercase text-blue-400 tracking-tighter">End Time</Label>
+                                      <Label className="text-[10px] font-black uppercase text-brand-400 tracking-tighter">End Time</Label>
                                       <Input
                                         type="time"
                                         value={shiftConfigs[shift as ShiftName].endTime}
                                         onChange={(e) => handleShiftConfigChange(shift as ShiftName, 'endTime', e.target.value)}
-                                        className="h-9 rounded-lg border-blue-100 focus:ring-blue-500 transition-all font-mono"
+                                        className="h-9 rounded-lg border-brand-100 focus:ring-brand-500 transition-all font-mono"
                                       />
                                     </div>
                                     <div className="col-span-2 space-y-1">
-                                      <Label className="text-[10px] font-black uppercase text-blue-400 tracking-tighter">Slot Duration (Min)</Label>
+                                      <Label className="text-[10px] font-black uppercase text-brand-400 tracking-tighter">Slot Duration (Min)</Label>
                                       <div className="relative">
-                                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-300" />
+                                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-300" />
                                         <Input
                                           type="number"
                                           min="1"
                                           value={shiftConfigs[shift as ShiftName].slotDuration}
                                           onChange={(e) => handleShiftConfigChange(shift as ShiftName, 'slotDuration', e.target.value)}
-                                          className="h-9 pl-9 rounded-lg border-blue-100 focus:ring-blue-500 transition-all font-bold"
+                                          className="h-9 pl-9 rounded-lg border-brand-100 focus:ring-brand-500 transition-all font-bold"
                                         />
                                       </div>
                                     </div>
@@ -906,7 +906,7 @@ export const PersonalizedScheduleModal: React.FC<PersonalizedScheduleModalProps>
                 <Button
                   type="submit"
                   disabled={isLoading || (scheduleType === 'schedule' ? !isScheduleFormValid() : !isBlockFormValid())}
-                  className={`rounded-xl px-10 font-black tracking-wide transition-all shadow-lg active:scale-95 ${scheduleType === 'schedule' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:shadow-blue-200' : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:shadow-emerald-200'} text-white border-0`}
+                  className={`rounded-xl px-10 font-black tracking-wide transition-all shadow-lg active:scale-95 ${scheduleType === 'schedule' ? 'bg-gradient-to-r from-brand-600 to-brand-600 hover:shadow-brand-200' : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:shadow-emerald-200'} text-white border-0`}
                 >
                   {isLoading ? (
                     <div className="flex items-center gap-2">

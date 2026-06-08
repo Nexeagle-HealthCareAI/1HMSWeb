@@ -23,7 +23,7 @@ export const UserTypeSelection: React.FC<UserTypeSelectionProps> = ({
       description: 'Manage patients, appointments, prescriptions, billing & admin functions',
       icon: UserCheck,
       benefits: ['Patient Management', 'E-Prescriptions', 'Appointment Booking', 'Billing & Reports', 'Admin Dashboard'],
-      color: 'from-blue-500 to-cyan-500'
+      color: 'from-brand-500 to-cyan-500'
     },
     {
       id: 'Admin Only',
@@ -60,8 +60,8 @@ export const UserTypeSelection: React.FC<UserTypeSelectionProps> = ({
           >
             <Card className={`border-2 transition-all duration-300 ${
               selectedType === type.id
-                ? 'border-blue-500 bg-blue-50 shadow-lg'
-                : 'border-transparent hover:border-blue-300 hover:shadow-lg'
+                ? 'border-brand-500 bg-brand-50 shadow-lg'
+                : 'border-transparent hover:border-brand-300 hover:shadow-lg'
             }`}>
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
@@ -70,11 +70,11 @@ export const UserTypeSelection: React.FC<UserTypeSelectionProps> = ({
                   </div>
                   <div className="flex-1">
                     <h3 className={`font-bold text-lg transition-colors ${
-                      selectedType === type.id ? 'text-blue-600' : 'text-gray-900 group-hover:text-blue-600'
+                      selectedType === type.id ? 'text-brand-600' : 'text-gray-900 group-hover:text-brand-600'
                     }`}>
                       {type.title}
                     </h3>
-                    <p className="text-sm text-blue-600 font-medium mb-2">{type.subtitle}</p>
+                    <p className="text-sm text-brand-600 font-medium mb-2">{type.subtitle}</p>
                     <p className="text-sm text-gray-600 mb-3">{type.description}</p>
                     <div className="flex flex-wrap gap-1">
                       {type.benefits.slice(0, 3).map((benefit, idx) => (
@@ -83,7 +83,7 @@ export const UserTypeSelection: React.FC<UserTypeSelectionProps> = ({
                         </span>
                       ))}
                       {type.benefits.length > 3 && (
-                        <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
+                        <span className="text-xs px-2 py-1 bg-brand-100 text-brand-700 rounded-full font-medium">
                           +{type.benefits.length - 3} more
                         </span>
                       )}
@@ -99,8 +99,8 @@ export const UserTypeSelection: React.FC<UserTypeSelectionProps> = ({
       {/* Loading indicator when processing */}
       {isLoading && (
         <div className="text-center py-4">
-          <div className="flex items-center justify-center gap-3 text-blue-600">
-            <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <div className="flex items-center justify-center gap-3 text-brand-600">
+            <div className="w-5 h-5 border-2 border-brand-600 border-t-transparent rounded-full animate-spin"></div>
             <span className="font-medium">Processing your selection...</span>
           </div>
         </div>

@@ -52,7 +52,7 @@ export const PrescriptionConfig: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-r from-blue-50/50 to-indigo-50/50 dark:from-blue-900/10 dark:to-indigo-900/10">
+            <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-r from-brand-50/50 to-brand-50/50 dark:from-brand-900/10 dark:to-brand-900/10">
                 <CardContent className="p-4">
                     <div className="flex flex-col md:flex-row items-end gap-4">
                         <div className="flex-1 w-full space-y-1.5">

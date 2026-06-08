@@ -9,6 +9,7 @@ import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { isReachable } from '@/offline';
 import { cn } from '@/lib/utils';
 import {
     IndianRupee, Banknote, CreditCard, Smartphone, Building2, Wallet,
@@ -30,8 +31,8 @@ interface AddPaymentModalProps {
 const PAYMENT_MODES: { value: PaymentMode; label: string; icon: React.ReactNode }[] = [
     { value: 'CASH',      label: 'Cash',       icon: <Banknote className="h-3.5 w-3.5 text-emerald-600" /> },
     { value: 'UPI',       label: 'UPI',        icon: <Smartphone className="h-3.5 w-3.5 text-purple-600" /> },
-    { value: 'CARD',      label: 'Card',       icon: <CreditCard className="h-3.5 w-3.5 text-blue-600" /> },
-    { value: 'BANK',      label: 'Bank',       icon: <Building2 className="h-3.5 w-3.5 text-indigo-600" /> },
+    { value: 'CARD',      label: 'Card',       icon: <CreditCard className="h-3.5 w-3.5 text-brand-600" /> },
+    { value: 'BANK',      label: 'Bank',       icon: <Building2 className="h-3.5 w-3.5 text-brand-600" /> },
     { value: 'INSURANCE', label: 'Insurance',  icon: <Wallet className="h-3.5 w-3.5 text-amber-600" /> },
 ];
 
@@ -63,6 +64,7 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
 
     const handleSubmit = async () => {
         if (!canSubmit) return;
+        if (!isReachable()) { toast({ title: 'Needs connection', description: 'Recording a payment requires an internet connection.', variant: 'destructive' }); return; }
         setSubmitting(true);
         try {
             const res = await ipdBillingService.addPayment({
@@ -135,8 +137,8 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
                                     className={cn(
                                         'h-9 rounded-md border text-xs font-semibold transition-all',
                                         paymentType === t
-                                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                                            : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:text-blue-700'
+                                            ? 'bg-brand-600 text-white border-brand-600 shadow-sm'
+                                            : 'bg-white text-slate-600 border-slate-200 hover:border-brand-300 hover:text-brand-700'
                                     )}
                                 >
                                     {t === 'PAYMENT' ? 'Payment' : t === 'ADVANCE' ? 'Advance' : 'Refund'}
@@ -221,7 +223,7 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
                     <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
                         <X className="h-4 w-4 mr-1" /> Cancel
                     </Button>
-                    <Button onClick={handleSubmit} disabled={!canSubmit} className="bg-blue-600 hover:bg-blue-700">
+                    <Button onClick={handleSubmit} disabled={!canSubmit} className="bg-brand-600 hover:bg-brand-700">
                         {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Recording…</> : 'Record Payment'}
                     </Button>
                 </DialogFooter>

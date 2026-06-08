@@ -183,19 +183,19 @@ export const BookingSuccess: React.FC<BookingSuccessProps> = ({
           </div>
 
           {/* Appointment Details */}
-          <Card className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800 mb-3">
+          <Card className="p-3 bg-gradient-to-br from-brand-50 to-brand-50 dark:from-brand-900/20 dark:to-brand-900/20 border-brand-200 dark:border-brand-800 mb-3">
             <div className="space-y-2">
               <div className="flex items-center justify-center gap-2 mb-2">
-                <span className="text-xs font-medium text-blue-600 dark:text-blue-400">{t('bookingSuccess.idLabel')}</span>
-                <div className="flex items-center gap-1 bg-white dark:bg-gray-800 rounded px-2 py-1 border border-blue-200 dark:border-blue-700">
-                  <span className="font-mono font-bold text-xs text-blue-700 dark:text-blue-300">{appointmentId}</span>
+                <span className="text-xs font-medium text-brand-600 dark:text-brand-400">{t('bookingSuccess.idLabel')}</span>
+                <div className="flex items-center gap-1 bg-white dark:bg-gray-800 rounded px-2 py-1 border border-brand-200 dark:border-brand-700">
+                  <span className="font-mono font-bold text-xs text-brand-700 dark:text-brand-300">{appointmentId}</span>
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-5 w-5 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                    className="h-5 w-5 p-0 hover:bg-brand-100 dark:hover:bg-brand-900/30"
                     onClick={copyAppointmentId}
                   >
-                    <Copy className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                    <Copy className="h-3 w-3 text-brand-600 dark:text-brand-400" />
                   </Button>
                 </div>
               </div>
@@ -209,8 +209,8 @@ export const BookingSuccess: React.FC<BookingSuccessProps> = ({
               )}
               <div className="grid grid-cols-1 gap-2 text-left">
                 <div className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                  <div className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded">
-                    <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <div className="p-1 bg-brand-100 dark:bg-brand-900/30 rounded">
+                    <User className="h-4 w-4 text-brand-600 dark:text-brand-400" />
                   </div>
                   <div>
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('bookingSuccess.doctorLabel')}</p>

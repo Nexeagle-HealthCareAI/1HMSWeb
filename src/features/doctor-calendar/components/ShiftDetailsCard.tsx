@@ -234,7 +234,7 @@ export const ShiftDetailsCard: React.FC<ShiftDetailsCardProps> = ({
     <Card className="h-fit bg-white dark:bg-gray-800 shadow-md border border-gray-200 dark:border-gray-700 lg:max-w-xs">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
-          <Info className="h-4 w-4 text-blue-600" />
+          <Info className="h-4 w-4 text-brand-600" />
           {t('doctorCalendar.shiftDetails.shiftOverview')}
         </CardTitle>
       </CardHeader>

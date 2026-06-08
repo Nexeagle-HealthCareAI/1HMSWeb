@@ -31,7 +31,7 @@ export const BookingQuickGuide: React.FC<BookingQuickGuideProps> = ({
     const guideSections = [
         {
             title: t('bookingGuide.sections.selection.title', 'Find Your Doctor'),
-            icon: <Stethoscope className="h-5 w-5 text-blue-500" />,
+            icon: <Stethoscope className="h-5 w-5 text-brand-500" />,
             content: t('bookingGuide.sections.selection.content', 'Choose a Department first, then select a Doctor from the available list. You can see their specialization and availability instantly.')
         },
         {
@@ -54,13 +54,13 @@ export const BookingQuickGuide: React.FC<BookingQuickGuideProps> = ({
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col p-0 gap-0 border-none bg-white dark:bg-gray-900 shadow-2xl">
-                <div className="p-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+                <div className="p-6 bg-gradient-to-r from-brand-600 to-brand-600 text-white">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-2xl font-bold text-white">
                             <HelpCircle className="h-6 w-6" />
                             {t('bookingGuide.title', 'Booking Guide')}
                         </DialogTitle>
-                        <DialogDescription className="text-blue-100 text-base mt-2">
+                        <DialogDescription className="text-brand-100 text-base mt-2">
                             {t('bookingGuide.subtitle', 'Simple steps to book a new appointment.')}
                         </DialogDescription>
                     </DialogHeader>

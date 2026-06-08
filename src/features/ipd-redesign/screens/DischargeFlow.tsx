@@ -68,7 +68,7 @@ export const DischargeFlow: React.FC<Props> = ({ admissionId, onClose, onDischar
                 <div className="flex items-center gap-2 text-[11px] font-bold">
                     {(['summary', 'bill', 'confirm'] as Step[]).map((s, i) => (
                         <React.Fragment key={s}>
-                            <span className={cn('px-2 py-1 rounded uppercase tracking-wider', step === s ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500')}>
+                            <span className={cn('px-2 py-1 rounded uppercase tracking-wider', step === s ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-500')}>
                                 {i + 1}. {s === 'summary' ? 'Summary' : s === 'bill' ? 'Final Bill' : 'Confirm'}
                             </span>
                             {i < 2 && <ChevronRight className="h-3 w-3 text-slate-300" />}
@@ -100,7 +100,7 @@ export const DischargeFlow: React.FC<Props> = ({ admissionId, onClose, onDischar
                             <Textarea rows={3} value={advice} onChange={e => setAdvice(e.target.value)} className="text-sm mt-1" placeholder="Medications, rest, diet, warning signs to return…" />
                         </div>
                         <div className="flex justify-end">
-                            <Button onClick={() => setStep('bill')} className="bg-indigo-600 hover:bg-indigo-700">Next: Final bill <ChevronRight className="h-4 w-4 ml-1" /></Button>
+                            <Button onClick={() => setStep('bill')} className="bg-brand-600 hover:bg-brand-700">Next: Final bill <ChevronRight className="h-4 w-4 ml-1" /></Button>
                         </div>
                     </div>
                 )}
@@ -130,7 +130,7 @@ export const DischargeFlow: React.FC<Props> = ({ admissionId, onClose, onDischar
                         )}
                         <div className="flex justify-between">
                             <Button variant="outline" onClick={() => setStep('summary')}><ChevronLeft className="h-4 w-4 mr-1" /> Back</Button>
-                            <Button onClick={() => setStep('confirm')} className="bg-indigo-600 hover:bg-indigo-700">Next: Confirm <ChevronRight className="h-4 w-4 ml-1" /></Button>
+                            <Button onClick={() => setStep('confirm')} className="bg-brand-600 hover:bg-brand-700">Next: Confirm <ChevronRight className="h-4 w-4 ml-1" /></Button>
                         </div>
                     </div>
                 )}

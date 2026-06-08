@@ -13,6 +13,18 @@ export interface User {
   doctorId?: string;
 }
 
+// A hospital the user belongs to (for the multi-hospital switcher).
+export interface HospitalSummary {
+  hospitalId: string;
+  name: string;
+  city?: string | null;
+  isPrimary?: boolean;
+  employeeId?: string | null;
+  chainId?: string | null;
+  chainName?: string | null;
+  isChainOwner?: boolean;
+}
+
 export interface AuthState {
   // State
   user: User | null;
@@ -24,6 +36,7 @@ export interface AuthState {
   userRole: string | null;
   permissions: string[];
   hospitalId: string | null;
+  hospitals: HospitalSummary[];
   employeeId: string | null;
   doctorId: string | null;
   hospitalAccessRestricted: boolean;
@@ -49,6 +62,9 @@ export interface AuthActions {
   getPermissions: () => string[];
   setHospitalId: (hospitalId: string) => void;
   getHospitalId: () => string | null;
+  setHospitals: (hospitals: HospitalSummary[]) => void;
+  getHospitals: () => HospitalSummary[];
+  switchHospital: (hospitalId: string) => void;
   setEmployeeId: (employeeId: string) => void;
   getEmployeeId: () => string | null;
   setDoctorId: (doctorId: string) => void;
@@ -78,6 +94,7 @@ const initialState: AuthState = {
   userRole: null,
   permissions: [],
   hospitalId: null,
+  hospitals: [],
   employeeId: null,
   doctorId: null,
   hospitalAccessRestricted: false,
@@ -196,6 +213,21 @@ export const useAuthStore = create<AuthStore>()(
           return get().hospitalId;
         },
 
+        setHospitals: (hospitals: HospitalSummary[]) => {
+          set({ hospitals: hospitals ?? [] });
+        },
+
+        getHospitals: () => {
+          return get().hospitals ?? [];
+        },
+
+        // Switch the active hospital (multi-hospital chains). Updates the employeeId to match and
+        // leaves hospitalId as the single source of truth used everywhere for data scoping.
+        switchHospital: (hospitalId: string) => {
+          const match = (get().hospitals ?? []).find(h => h.hospitalId === hospitalId);
+          set({ hospitalId, employeeId: match?.employeeId ?? get().employeeId });
+        },
+
         setEmployeeId: (employeeId: string) => {
           set({ employeeId });
         },
@@ -251,12 +283,14 @@ export const useAuthStore = create<AuthStore>()(
         },
 
         logout: () => {
-          
+          // Wipe all device-side PHI: encrypted Query cache, encryption key, conflict log and any
+          // queued writes (their bodies contain PHI). Dynamic import avoids a module cycle.
+          void import('@/offline').then(m => m.wipeAll()).catch(() => { /* best-effort */ });
           // Clear localStorage
           localStorage.removeItem('auth-storage');
           // Reset to initial state
           set(initialState);
-          
+
         },
       }),
       {
@@ -267,6 +301,7 @@ export const useAuthStore = create<AuthStore>()(
           userId: state.userId,
           userRole: state.userRole,
           hospitalId: state.hospitalId,
+          hospitals: state.hospitals,
           employeeId: state.employeeId,
           doctorId: state.doctorId,
           isAuthenticated: state.isAuthenticated,

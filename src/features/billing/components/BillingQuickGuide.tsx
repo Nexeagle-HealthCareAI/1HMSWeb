@@ -28,12 +28,12 @@ export const BillingQuickGuide: React.FC<BillingQuickGuideProps> = ({
     const guideSections = [
         {
             title: 'Add New Items',
-            icon: <Plus className="h-5 w-5 text-indigo-500" />,
+            icon: <Plus className="h-5 w-5 text-brand-500" />,
             content: 'Click the "Add Item" button to create a new charge. "Display Name" is mandatory. You can set default rates and discounts (0-100%).'
         },
         {
             title: 'Edit & Manage',
-            icon: <Edit className="h-5 w-5 text-blue-500" />,
+            icon: <Edit className="h-5 w-5 text-brand-500" />,
             content: 'Click the pencil icon to edit items inline. Changes are saved instantly when you click the Save icon. Use the "X" button to cancel changes.'
         },
         {
@@ -51,13 +51,13 @@ export const BillingQuickGuide: React.FC<BillingQuickGuideProps> = ({
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col p-0 gap-0 border-none bg-white dark:bg-gray-900 shadow-2xl">
-                <div className="p-6 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+                <div className="p-6 bg-gradient-to-r from-brand-600 to-purple-600 text-white">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-2xl font-bold text-white">
                             <HelpCircle className="h-6 w-6" />
                             Billing Configuration Guide
                         </DialogTitle>
-                        <DialogDescription className="text-indigo-100 text-base mt-2">
+                        <DialogDescription className="text-brand-100 text-base mt-2">
                             Manage your hospital's service rates and charge catalog efficiently.
                         </DialogDescription>
                     </DialogHeader>
@@ -87,15 +87,15 @@ export const BillingQuickGuide: React.FC<BillingQuickGuideProps> = ({
                         ))}
                     </div>
 
-                    <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl flex gap-4 items-start">
-                        <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-full flex-shrink-0 text-blue-600 dark:text-blue-300">
+                    <div className="mt-8 p-4 bg-brand-50 dark:bg-brand-900/20 border border-brand-100 dark:border-brand-800 rounded-xl flex gap-4 items-start">
+                        <div className="p-2 bg-brand-100 dark:bg-brand-800 rounded-full flex-shrink-0 text-brand-600 dark:text-brand-300">
                             <AlertCircle className="h-5 w-5" />
                         </div>
                         <div>
-                            <h4 className="font-semibold text-blue-900 dark:text-blue-300 mb-1">
+                            <h4 className="font-semibold text-brand-900 dark:text-brand-300 mb-1">
                                 Pro Tip
                             </h4>
-                            <p className="text-sm text-blue-800 dark:text-blue-400">
+                            <p className="text-sm text-brand-800 dark:text-brand-400">
                                 Rates and Discounst support decimal values (e.g. 50.50). Ensure your "Discount Upto" value does not exceed 100%.
                             </p>
                         </div>

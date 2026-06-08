@@ -45,7 +45,7 @@ export const CalendarEventContent: React.FC<CalendarEventContentProps> = ({ even
                 <div className="flex flex-col gap-0.5">
                     <div className="flex items-center gap-1 justify-between">
                         {badge && (
-                            <span className="text-[9px] uppercase tracking-wider font-bold bg-white/20 px-1 rounded-sm text-white/90">
+                            <span className="text-[11px] uppercase tracking-wider font-bold bg-white/20 px-1 rounded-sm text-white/90">
                                 {badge}
                             </span>
                         )}

@@ -5,6 +5,8 @@ import {
     ChevronLeft, ChevronRight, RefreshCw, Wallet, TrendingDown, TrendingUp, CheckCircle2,
 } from 'lucide-react';
 import { ipdBillingService } from '../../services/ipdBillingService';
+import { offlineCachedRead } from '@/offline';
+import { visitTypeLabel } from '../../utils/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -66,7 +68,7 @@ export const RevenueTab: React.FC = () => {
         if (silent) setRefreshing(true); else setLoading(true);
         setError(null);
         try {
-            const res: any = await ipdBillingService.dashboard();
+            const res: any = await offlineCachedRead(['billing', 'dashboard'], () => ipdBillingService.dashboard());
             if (res && res.success === false) throw new Error(res.message ?? 'Could not load revenue');
             const rows: Visit[] = [];
             for (const patient of (res?.data ?? [])) {
@@ -209,7 +211,7 @@ export const RevenueTab: React.FC = () => {
     const FILTERS = [
         { key: 'ALL', label: 'All', active: 'bg-slate-900 text-white shadow-sm' },
         { key: 'OPEN', label: 'Open', active: 'bg-emerald-600 text-white shadow-sm' },
-        { key: 'FINAL', label: 'Finalized', active: 'bg-indigo-600 text-white shadow-sm' },
+        { key: 'FINAL', label: 'Finalized', active: 'bg-brand-600 text-white shadow-sm' },
         { key: 'CANCELLED', label: 'Cancelled', active: 'bg-rose-600 text-white shadow-sm' },
     ] as const;
 
@@ -219,19 +221,19 @@ export const RevenueTab: React.FC = () => {
             <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between px-0.5">
                     <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Overview</span>
-                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full shadow-sm">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-700 bg-brand-50 border border-brand-100 px-2.5 py-1 rounded-full shadow-sm">
                         <Calendar className="h-3 w-3" /> {scopeLabel}
                     </span>
                 </div>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    <KpiStat label="Billed" amount={kpis.billed} format={inr} hint={`${kpis.bills} ${kpis.bills === 1 ? 'bill' : 'bills'}`} icon={<IndianRupee className="h-5 w-5 text-indigo-600" />} tone="from-indigo-50 to-indigo-100/50 text-indigo-900" />
+                    <KpiStat label="Billed" amount={kpis.billed} format={inr} hint={`${kpis.bills} ${kpis.bills === 1 ? 'bill' : 'bills'}`} icon={<IndianRupee className="h-5 w-5 text-brand-600" />} tone="from-brand-50 to-brand-100/50 text-brand-900" />
                     <KpiStat label="Collected" amount={kpis.collected} format={inr} hint={`${kpis.rate}% collected`} icon={<Wallet className="h-5 w-5 text-emerald-600" />} tone="from-emerald-50 to-teal-100/50 text-emerald-900" />
                     <KpiStat label="Outstanding" amount={kpis.due} format={inr} hint={`${kpis.unpaid} unpaid ${kpis.unpaid === 1 ? 'bill' : 'bills'}`} icon={<TrendingDown className="h-5 w-5 text-rose-600" />} tone="from-rose-50 to-orange-100/50 text-rose-900" />
                     <KpiStat label="Collection Rate" value={`${kpis.rate}%`} hint={`${inr(kpis.collected)} of ${inr(kpis.billed)}`} icon={<TrendingUp className="h-5 w-5 text-violet-600" />} tone="from-violet-50 to-fuchsia-100/50 text-violet-900" />
                 </div>
             </div>
 
-            <Card className="border-0 ring-1 ring-black/5 rounded-2xl flex flex-col flex-1 overflow-hidden bg-white shadow-lg shadow-indigo-500/5">
+            <Card className="border-0 ring-1 ring-black/5 rounded-2xl flex flex-col flex-1 overflow-hidden bg-white shadow-lg shadow-brand-500/5">
                 <div className="p-3 border-b border-slate-100 flex flex-wrap items-center gap-2 sm:gap-3 bg-slate-50/60">
                     <div className="flex items-center p-1 bg-white rounded-xl border border-slate-200 shadow-sm">
                         {FILTERS.map(({ key, label, active }) => (
@@ -253,7 +255,7 @@ export const RevenueTab: React.FC = () => {
                         <SelectTrigger className="h-9 w-[130px] rounded-xl bg-white text-xs"><SelectValue placeholder="Visit type" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="ALL">All visits</SelectItem>
-                            {visitTypes.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                            {visitTypes.map(v => <SelectItem key={v} value={v}>{visitTypeLabel(v)}</SelectItem>)}
                         </SelectContent>
                     </Select>
 
@@ -287,7 +289,7 @@ export const RevenueTab: React.FC = () => {
                         <Button size="sm" variant="outline" className="h-9 gap-1.5 text-xs rounded-xl" onClick={() => loadDashboard(true)} disabled={refreshing || loading}>
                             <RefreshCw className={cn('h-3.5 w-3.5', refreshing && 'animate-spin')} /> Refresh
                         </Button>
-                        <Button size="sm" className="h-9 gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white text-xs shadow-md shadow-indigo-500/20" onClick={() => navigate('/billing/ledger')}>
+                        <Button size="sm" className="h-9 gap-1.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-600 hover:from-brand-500 hover:to-brand-500 text-white text-xs shadow-md shadow-brand-500/20" onClick={() => navigate('/billing/ledger')}>
                             <Plus className="h-3.5 w-3.5" /> New Bill
                         </Button>
                     </div>
@@ -320,10 +322,10 @@ export const RevenueTab: React.FC = () => {
                             </TableHeader>
                             <TableBody>
                                 {paginatedPatients.map((g) => (
-                                    <TableRow key={groupKey(g)} className="group border-b border-slate-100 cursor-pointer transition-colors hover:bg-indigo-50/50 bg-white" onClick={() => openPatientLedger(g)}>
+                                    <TableRow key={groupKey(g)} className="group border-b border-slate-100 cursor-pointer transition-colors hover:bg-brand-50/50 bg-white" onClick={() => openPatientLedger(g)}>
                                         <TableCell>
                                             <div className="flex items-center gap-3">
-                                                <div className="h-9 w-9 rounded-full bg-gradient-to-br from-indigo-100 to-violet-100 border border-indigo-200 flex items-center justify-center text-xs font-bold text-indigo-700">{g.patientName.charAt(0)}</div>
+                                                <div className="h-9 w-9 rounded-full bg-gradient-to-br from-brand-100 to-violet-100 border border-brand-200 flex items-center justify-center text-xs font-bold text-brand-700">{g.patientName.charAt(0)}</div>
                                                 <div className="flex flex-col">
                                                     <span className="font-bold text-slate-900">{g.patientName}</span>
                                                     <span className="text-[10px] tracking-widest text-slate-500 font-mono">{g.patientIdDisplay}</span>
@@ -332,7 +334,7 @@ export const RevenueTab: React.FC = () => {
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-2">
-                                                {g.current && <span className="text-[11px] font-semibold text-indigo-600 uppercase bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">{g.current.type}</span>}
+                                                {g.current && <span className="text-[11px] font-semibold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-md border border-brand-100">{visitTypeLabel(g.current.type)}</span>}
                                                 <span className="text-[11px] text-slate-500">{g.current ? format(new Date(g.current.date), 'dd MMM') : '—'}</span>
                                                 {g.visits.length > 1 && <span className="text-[10px] text-slate-400">· {g.visits.length} visits</span>}
                                             </div>
@@ -360,7 +362,7 @@ export const RevenueTab: React.FC = () => {
                                             )}
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <Button variant="outline" size="sm" className="h-7 px-2.5 text-xs font-semibold rounded-lg border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100/60 uppercase transition-all group-hover:translate-x-0.5" onClick={(e) => { e.stopPropagation(); openPatientLedger(g); }}>
+                                            <Button variant="outline" size="sm" className="h-7 px-2.5 text-xs font-semibold rounded-lg border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100/60 uppercase transition-all group-hover:translate-x-0.5" onClick={(e) => { e.stopPropagation(); openPatientLedger(g); }}>
                                                 Ledger <ArrowRight className="h-3 w-3 ml-1" />
                                             </Button>
                                         </TableCell>

@@ -168,7 +168,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
                   onClick={() => handleLanguageChange(language.code)}
                   className={cn(
                     "w-full px-3",
-                    i18n.language === language.code && "bg-blue-50 dark:bg-blue-900/20"
+                    i18n.language === language.code && "bg-brand-50 dark:bg-brand-900/20"
                   )}
                 >
                   {renderEnhancedLanguageOption(language)}
@@ -181,7 +181,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
                 <span>{t('languageSelector.changesApplyImmediately')}</span>
               </div>
               {isRTL() && (
-                <div className="flex items-center gap-2 text-xs text-blue-600 mt-1">
+                <div className="flex items-center gap-2 text-xs text-brand-600 mt-1">
                   <span>🔄</span>
                   <span>{t('languageSelector.rtlLayoutActive')}</span>
                 </div>
@@ -242,12 +242,12 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
                 onClick={() => handleLanguageChange(language.code)}
                 className={cn(
                   "w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between",
-                  i18n.language === language.code && "bg-blue-50 dark:bg-blue-900/20"
+                  i18n.language === language.code && "bg-brand-50 dark:bg-brand-900/20"
                 )}
               >
                 {renderLanguageOption(language, true)}
                 {i18n.language === language.code && (
-                  <Check className="h-4 w-4 text-blue-600" />
+                  <Check className="h-4 w-4 text-brand-600" />
                 )}
               </button>
             ))}
@@ -281,12 +281,12 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
               onClick={() => handleLanguageChange(language.code)}
               className={cn(
                 "w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between",
-                i18n.language === language.code && "bg-blue-50 dark:bg-blue-900/20"
+                i18n.language === language.code && "bg-brand-50 dark:bg-brand-900/20"
               )}
             >
               {renderLanguageOption(language, true)}
               {i18n.language === language.code && (
-                <Check className="h-4 w-4 text-blue-600" />
+                <Check className="h-4 w-4 text-brand-600" />
               )}
             </button>
           ))}

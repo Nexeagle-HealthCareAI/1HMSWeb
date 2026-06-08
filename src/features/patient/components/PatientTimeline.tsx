@@ -81,7 +81,7 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'VITALS_REQUIRED': return 'bg-amber-100 text-amber-800 border-amber-200 ring-amber-500';
-      case 'LAB_REQUIRED': return 'bg-blue-100 text-blue-800 border-blue-200 ring-blue-500';
+      case 'LAB_REQUIRED': return 'bg-brand-100 text-brand-800 border-brand-200 ring-brand-500';
       case 'COMPLETED': return 'bg-green-100 text-green-800 border-green-200 ring-green-500';
       case 'DRAFT': return 'bg-gray-100 text-gray-800 border-gray-200 ring-gray-500';
       default: return 'bg-gray-100 text-gray-600 border-gray-200 ring-gray-400';
@@ -132,7 +132,7 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
                   <div className="text-[10px] font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                     {getStatusLabel(item.status)}
                   </div>
-                  <div className="text-[9px] text-gray-400 font-medium">{timeStr}</div>
+                  <div className="text-[11px] text-gray-400 font-medium">{timeStr}</div>
                 </div>
               </div>
               {/* Connector Line */}
@@ -190,7 +190,7 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
                         </div>
                         <div className="shrink-0">
                           {event.followUp && event.followUp.followUpOn && (
-                            <div className="flex items-center gap-1.5 text-blue-700 bg-blue-50 px-2 py-1 rounded text-xs font-medium border border-blue-100">
+                            <div className="flex items-center gap-1.5 text-brand-700 bg-brand-50 px-2 py-1 rounded text-xs font-medium border border-brand-100">
                               <AlertCircle className="w-3 h-3" />
                               <span>Follow-up: {formatDate(event.followUp.followUpOn)}</span>
                             </div>
@@ -219,9 +219,14 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
                         <div className="flex flex-col md:flex-row md:items-center gap-2 flex-1 overflow-hidden">
                           <CardTitle className="text-lg font-bold flex items-center gap-2 shrink-0">
                             <span>Visit / Consultation</span>
+                            {event.doctorName && (
+                              <span className="text-xs font-semibold text-brand-700 bg-brand-50 border border-brand-100 rounded px-2 py-0.5">
+                                Dr. {event.doctorName}
+                              </span>
+                            )}
                             {event.status && (
                               <Badge className={`text-xs px-2 py-0.5 ${event.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800 hover:bg-green-200 border-green-200' :
-                                event.status.toLowerCase() === 'in progress' ? 'bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-200' :
+                                event.status.toLowerCase() === 'in progress' ? 'bg-brand-100 text-brand-800 hover:bg-brand-200 border-brand-200' :
                                   event.status.toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800 hover:bg-red-200 border-red-200' :
                                     'bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-200'
                                 }`}>
@@ -270,14 +275,14 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
                         </div>
 
                         {/* Examination */}
-                        <div className="p-3 bg-blue-50/30 dark:bg-blue-900/10 rounded-lg border border-blue-100 dark:border-blue-800/30 shadow-sm flex flex-col gap-2">
+                        <div className="p-3 bg-brand-50/30 dark:bg-brand-900/10 rounded-lg border border-brand-100 dark:border-brand-800/30 shadow-sm flex flex-col gap-2">
                           <div className="flex items-center gap-2">
-                            <Activity className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                            <span className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Examination</span>
+                            <Activity className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
+                            <span className="text-xs font-bold text-brand-700 dark:text-brand-300 uppercase tracking-wide">Examination</span>
                           </div>
                           <div className="flex flex-wrap gap-1.5">
                             {event.examination ? event.examination.split(';').map((item, i) => (
-                              item.trim() && <Badge key={i} variant="outline" className="font-normal text-xs bg-blue-50 text-blue-700 border-blue-200">{item.trim()}</Badge>
+                              item.trim() && <Badge key={i} variant="outline" className="font-normal text-xs bg-brand-50 text-brand-700 border-brand-200">{item.trim()}</Badge>
                             )) : <span className="text-sm text-gray-400 italic">No findings</span>}
                           </div>
                         </div>
@@ -294,6 +299,24 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
                             )) : <span className="text-sm text-gray-400 italic">Pending</span>}
                           </div>
                         </div>
+
+                        {/* Doctor's custom fields */}
+                        {event.customFields && event.customFields.some(f => (f.value || '').trim()) && (
+                          <div className="sm:col-span-2 p-3 bg-violet-50/30 dark:bg-violet-900/10 rounded-lg border border-violet-100 dark:border-violet-800/30 shadow-sm flex flex-col gap-2">
+                            <div className="flex items-center gap-2">
+                              <FileText className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
+                              <span className="text-xs font-bold text-violet-700 dark:text-violet-300 uppercase tracking-wide">Additional fields</span>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {event.customFields.filter(f => (f.value || '').trim()).map((f, i) => (
+                                <div key={f.key || i}>
+                                  <div className="text-[11px] font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300">{f.label || 'Field'}</div>
+                                  <div className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{f.value}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Row 3: Medicine Table */}
@@ -375,10 +398,10 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
                                 </h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                   {event.nonPharmacologicalAdvice.map((advice, i) => (
-                                    <div key={i} className="flex items-start gap-3 p-3 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-lg border border-indigo-100 dark:border-indigo-800/50">
+                                    <div key={i} className="flex items-start gap-3 p-3 bg-brand-50/50 dark:bg-brand-900/10 rounded-lg border border-brand-100 dark:border-brand-800/50">
                                       <div className="min-w-0">
-                                        <p className="text-sm font-medium text-indigo-900 dark:text-indigo-100 break-words">{advice.advice}</p>
-                                        {advice.duration && <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5">Duration: {advice.duration}</p>}
+                                        <p className="text-sm font-medium text-brand-900 dark:text-brand-100 break-words">{advice.advice}</p>
+                                        {advice.duration && <p className="text-xs text-brand-600 dark:text-brand-400 mt-0.5">Duration: {advice.duration}</p>}
                                         {advice.notes && <p className="text-xs text-muted-foreground mt-0.5 italic">{advice.notes}</p>}
                                       </div>
                                     </div>
@@ -409,7 +432,7 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
                                     </h4>
                                     <div className="flex flex-wrap gap-2">
                                       {event.orders.procedures.map((proc, i) => (
-                                        <Badge key={i} variant="outline" className="font-medium px-3 py-1 bg-blue-50/50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800">{proc}</Badge>
+                                        <Badge key={i} variant="outline" className="font-medium px-3 py-1 bg-brand-50/50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300 border-brand-200 dark:border-brand-800">{proc}</Badge>
                                       ))}
                                     </div>
                                   </div>
@@ -438,13 +461,13 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
                           {/* Certs Only (Follow-up moved to header) */}
                           <div className="flex flex-col sm:flex-row gap-4">
                             {event.certificates && event.certificates.type && (
-                              <div className="flex-1 flex items-start gap-3 p-3 bg-blue-50/50 dark:bg-blue-900/10 rounded-lg border border-blue-100 dark:border-blue-800/50">
-                                <div className="p-1.5 bg-blue-100 dark:bg-blue-900/40 rounded text-blue-600">
+                              <div className="flex-1 flex items-start gap-3 p-3 bg-brand-50/50 dark:bg-brand-900/10 rounded-lg border border-brand-100 dark:border-brand-800/50">
+                                <div className="p-1.5 bg-brand-100 dark:bg-brand-900/40 rounded text-brand-600">
                                   <FileCheck className="w-4 h-4" />
                                 </div>
                                 <div className="text-sm">
-                                  <p className="font-semibold text-blue-900 dark:text-blue-100 mb-0.5">{event.certificates.type} Certificate</p>
-                                  <p className="text-xs text-blue-600 dark:text-blue-400">Valid: {formatDate(event.certificates.fromDate)} - {formatDate(event.certificates.toDate)}</p>
+                                  <p className="font-semibold text-brand-900 dark:text-brand-100 mb-0.5">{event.certificates.type} Certificate</p>
+                                  <p className="text-xs text-brand-600 dark:text-brand-400">Valid: {formatDate(event.certificates.fromDate)} - {formatDate(event.certificates.toDate)}</p>
                                 </div>
                               </div>
                             )}
@@ -462,9 +485,9 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
                             {/* Attachment Grid */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                               {event.attachments.map((att, idx) => (
-                                <div key={idx} className="group relative flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border hover:border-blue-300 dark:hover:border-blue-700 transition-colors shadow-sm">
+                                <div key={idx} className="group relative flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border hover:border-brand-300 dark:hover:border-brand-700 transition-colors shadow-sm">
                                   <div className="flex items-center gap-3 overflow-hidden">
-                                    <div className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded">
+                                    <div className="p-2 bg-brand-50 dark:bg-brand-900/20 text-brand-600 rounded">
                                       <File className="w-4 h-4" />
                                     </div>
                                     <div className="min-w-0">
@@ -476,7 +499,7 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="h-8 w-8 text-gray-400 hover:text-blue-600"
+                                      className="h-8 w-8 text-gray-400 hover:text-brand-600"
                                       onClick={() => handleViewAttachment(att.storageUrl)}
                                       title="Preview"
                                     >
@@ -485,7 +508,7 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="h-8 w-8 text-gray-400 hover:text-blue-600"
+                                      className="h-8 w-8 text-gray-400 hover:text-brand-600"
                                       onClick={() => window.open(att.storageUrl, '_blank')} // Fallback download/view
                                       title="Open New Tab"
                                     >

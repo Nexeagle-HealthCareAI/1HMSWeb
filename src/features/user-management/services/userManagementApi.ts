@@ -11,62 +11,61 @@ export interface RolesResponse {
   allRoles: Role[];
 }
 
-export interface InviteUserRequest {
+export interface QuickAddUserRequest {
+  fullName: string;
+  mobileNumber: string;
+  email?: string;
+  password: string;
+  role: string;
   hospitalId: string;
-  roleId: string;
-  name: string;
-  mobile: string;
-  email: string;
-  invitedByUserId: string;
+  employeeId?: string;
+  // Doctor-only (required when role is Doctor/AdminDoctor)
+  licenseNumber?: string;
+  qualification?: string[];
+  experienceYears?: number;
+  medicalCouncil?: string;
+  department?: string;
+  specializations?: string[];
+  consultFee?: number;
 }
 
-export interface InviteUserResponse {
+export interface QuickAddUserResponse {
+  success?: boolean;
+  message?: string;
+  userId?: string;
+}
+
+export interface ShareCredentialsRequest {
+  hospitalId: string;
+  fullName: string;
+  mobileNumber: string;
+  email?: string;
+  password: string;
+  roleName?: string;
+  viaWhatsApp: boolean;
+  viaEmail: boolean;
+}
+
+export interface ShareCredentialsResponse {
   success: boolean;
-  invitationId: string;
-  registrationUrl: string;
+  whatsAppSent?: boolean | null;
+  emailSent?: boolean | null;
   message: string;
 }
 
-export interface ManageInvitationRequest {
-  invitationId: string;
-  scope: 'resend' | 'revoke';
-  performedByUserId: string;
-}
-
-export interface ManageInvitationResponse {
-  success: boolean;
-  invitationId: string;
-  newRegistrationUrl: string;
-  status: string;
-  expiresAt: string;
-  message: string;
-}
-
-export interface InvitedUser {
-  invitationId: string;
+export interface ResetCredentialsRequest {
   hospitalId: string;
-  roleId: string;
-  roleName: string;
-  recipientName: string;
-  recipientMobile: string;
-  recipientEmail: string;
-  status: string;
-  expiresAt: string;
-  acceptedAt: string | null;
-  revokedAt: string | null;
-  createdAt: string;
-}
-
-export interface OnboardedUser {
   userId: string;
-  name: string;
-  email: string;
-  mobile: string;
-  roleName: string;
-  status: 'active' | 'inactive';
-  onboardedAt: string;
-  invitationId: string;
-  lastLogin: string;
+}
+
+export interface ResetCredentialsResponse {
+  success: boolean;
+  message: string;
+  tempPassword?: string;
+  fullName?: string;
+  mobileNumber?: string;
+  email?: string;
+  roleName?: string;
 }
 
 export interface AllUsersResponse {
@@ -100,22 +99,6 @@ export interface DeactivateUserResponse {
   hospitalId: string;
 }
 
-export interface UpdateInvitedUserRequest {
-  actionType?: string;
-  invitationId: string;
-  userId: string;
-}
-
-export interface UpdateInvitedUserResponse {
-  success: boolean;
-  message: string;
-  invitationId: string;
-  hospitalId: string;
-  userId: string;
-  createdHospitalUserLink: boolean;
-  invitationStatus: string;
-}
-
 // User Management API service
 export const userManagementApi = {
   // Get all roles from the system
@@ -123,39 +106,19 @@ export const userManagementApi = {
     return apiClient.get(API_ENDPOINTS.USER.PERMISSIONS);
   },
 
-  // Invite a new user
-  inviteUser: (data: InviteUserRequest): Promise<InviteUserResponse> => {
-    return apiClient.post(API_ENDPOINTS.USER_MANAGEMENT.INVITE_USER, data);
+  // Quick-add a team member directly (no invitation link / OTP).
+  quickAddUser: (data: QuickAddUserRequest): Promise<QuickAddUserResponse> => {
+    return apiClient.post(API_ENDPOINTS.USER_MANAGEMENT.QUICK_ADD_USER, data);
   },
 
-  // Get invited users with scope filtering
-  getInvitedUsers: (hospitalId: string, scope: 'Pending' | 'Accepted' | 'Revoked' | 'ALL' = 'ALL'): Promise<{ success: boolean; message: string; invitations: InvitedUser[] }> => {
-    // Convert scope to API expected values
-    let apiScope: string;
-    switch (scope) {
-      case 'Revoked':
-        apiScope = 'revoke';
-        break;
-      case 'ALL':
-        apiScope = 'all';
-        break;
-      default:
-        apiScope = scope.toLowerCase();
-    }
-    const url = `${API_ENDPOINTS.USER_MANAGEMENT.GET_INVITED_USERS}?hospitalId=${hospitalId}&scope=${apiScope}`;
-    return apiClient.get(url);
+  // Send a newly added member their login details via email and/or WhatsApp.
+  shareCredentials: (data: ShareCredentialsRequest): Promise<ShareCredentialsResponse> => {
+    return apiClient.post(API_ENDPOINTS.USER_MANAGEMENT.SHARE_CREDENTIALS, data);
   },
 
-  // Manage invitation (resend or revoke)
-  manageInvitation: (data: ManageInvitationRequest): Promise<ManageInvitationResponse> => {
-    const url = `${API_ENDPOINTS.USER_MANAGEMENT.MANAGE_INVITATION}?invitationId=${data.invitationId}&scope=${data.scope}&performedByUserId=${data.performedByUserId}`;
-    return apiClient.post(url);
-  },
-
-  // Get onboarded users
-  getOnboardedUsers: (): Promise<OnboardedUser[]> => {
-    // TODO: Replace with actual API call when endpoint is ready
-    return apiClient.get(API_ENDPOINTS.USER_MANAGEMENT.GET_ONBOARDED_USERS);
+  // Reset an existing member's password to a fresh temporary one (returned once) for re-sharing.
+  resetCredentials: (data: ResetCredentialsRequest): Promise<ResetCredentialsResponse> => {
+    return apiClient.post(API_ENDPOINTS.USER_MANAGEMENT.RESET_CREDENTIALS, data);
   },
 
   // Get all users associated with a hospital
@@ -167,9 +130,4 @@ export const userManagementApi = {
   deactivateUser: (data: DeactivateUserRequest): Promise<DeactivateUserResponse> => {
     return apiClient.patch(API_ENDPOINTS.USER_MANAGEMENT.DEACTIVATE_USER, data);
   },
-
-  // Update invited user after OTP verification
-  updateInvitedUser: (data: UpdateInvitedUserRequest): Promise<UpdateInvitedUserResponse> => {
-    return apiClient.post(API_ENDPOINTS.USER_MANAGEMENT.UPDATE_INVITED_USER, data);
-  }
 };

@@ -94,7 +94,7 @@ const getShiftGradient = (shiftName: string): string => {
   const gradients: { [key: string]: string } = {
     'Morning': 'from-teal-400 to-cyan-500',
     'Afternoon': 'from-amber-400 to-orange-400',
-    'Evening': 'from-blue-400 to-indigo-500',
+    'Evening': 'from-brand-400 to-brand-500',
     'Night': 'from-gray-500 to-gray-600',
     'default': 'from-gray-400 to-gray-500'
   };
@@ -403,7 +403,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
           </p>
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors"
           >
             {t('appointmentBooking.tryAgain')}
           </button>
@@ -417,7 +417,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600 mx-auto mb-4"></div>
           <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">{t('appointmentBooking.loadingHospitalInfo')}</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             {t('appointmentBooking.loadingHospitalMessage')}
@@ -567,7 +567,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600 mx-auto mb-4"></div>
           <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
             {hospitalUserLoading
               ? t('appointmentBooking.loadingHospitalInfo')
@@ -598,7 +598,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
           </p>
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors"
           >
             {t('appointmentBooking.tryAgain')}
           </button>
@@ -618,7 +618,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
           </p>
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors"
           >
             {t('appointmentBooking.tryAgain')}
           </button>
@@ -689,10 +689,10 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
             {/* Department Section */}
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-5 h-5 rounded-md bg-blue-500/20 flex items-center justify-center">
+                <div className="w-5 h-5 rounded-md bg-brand-500/20 flex items-center justify-center">
                   <span className="text-[10px]">🏢</span>
                 </div>
-                <span className="text-xs font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">{t('appointmentBooking.departmentSelection')}</span>
+                <span className="text-xs font-black uppercase tracking-widest text-brand-600 dark:text-brand-400">{t('appointmentBooking.departmentSelection')}</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {departments.slice(0, 4).map((dept, i) => (
@@ -702,8 +702,8 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                     whileTap={{ scale: 0.95 }}
                     whileHover={{ scale: 1.02 }}
                     className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border text-center transition-all text-xs font-semibold ${selectedDepartment === dept.id
-                      ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-transparent shadow-lg shadow-blue-500/30'
-                      : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300'}`}
+                      ? 'bg-gradient-to-br from-brand-500 to-brand-600 text-white border-transparent shadow-lg shadow-brand-500/30'
+                      : 'bg-white border-gray-200 hover:border-brand-300 hover:bg-brand-50 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300'}`}
                   >
                     <dept.icon className="h-5 w-5" />
                     <span className="leading-tight">{dept.name}</span>
@@ -734,10 +734,10 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
             {/* Doctor Section */}
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-5 h-5 rounded-md bg-indigo-500/20 flex items-center justify-center">
+                <div className="w-5 h-5 rounded-md bg-brand-500/20 flex items-center justify-center">
                   <span className="text-[10px]">👨‍⚕️</span>
                 </div>
-                <span className="text-xs font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">{t('appointmentBooking.availableDoctors')}</span>
+                <span className="text-xs font-black uppercase tracking-widest text-brand-600 dark:text-brand-400">{t('appointmentBooking.availableDoctors')}</span>
               </div>
               <div className="space-y-2">
                 {doctorsLoading ? (
@@ -762,27 +762,27 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                         });
                       }}
                       className={`w-full p-3 rounded-xl border text-left transition-all text-xs relative overflow-hidden ${selectedDoctor?.id === doctor.doctorId
-                        ? 'border-indigo-200 bg-indigo-50 dark:border-indigo-500/50 dark:bg-gradient-to-r dark:from-indigo-500/20 dark:to-blue-500/10 shadow-sm'
-                        : 'border-gray-200 bg-white dark:border-white/10 dark:bg-white/5 hover:border-indigo-300 dark:hover:border-indigo-400/30 hover:bg-indigo-50/30 dark:hover:bg-white/10'}`}
+                        ? 'border-brand-200 bg-brand-50 dark:border-brand-500/50 dark:bg-gradient-to-r dark:from-brand-500/20 dark:to-brand-500/10 shadow-sm'
+                        : 'border-gray-200 bg-white dark:border-white/10 dark:bg-white/5 hover:border-brand-300 dark:hover:border-brand-400/30 hover:bg-brand-50/30 dark:hover:bg-white/10'}`}
                     >
                       {selectedDoctor?.id === doctor.doctorId && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-blue-500/5 pointer-events-none" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-brand-500/10 to-brand-500/5 pointer-events-none" />
                       )}
                       <div className="flex items-center gap-2 relative z-10">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${selectedDoctor?.id === doctor.doctorId ? 'bg-indigo-100 dark:bg-indigo-500/30' : 'bg-gray-100 dark:bg-white/10'}`}>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${selectedDoctor?.id === doctor.doctorId ? 'bg-brand-100 dark:bg-brand-500/30' : 'bg-gray-100 dark:bg-white/10'}`}>
                           👨‍⚕️
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className={`font-bold leading-tight truncate ${selectedDoctor?.id === doctor.doctorId ? 'text-indigo-700 dark:text-white' : 'text-gray-800 dark:text-gray-200'}`}>{doctor.doctorName}</div>
+                          <div className={`font-bold leading-tight truncate ${selectedDoctor?.id === doctor.doctorId ? 'text-brand-700 dark:text-white' : 'text-gray-800 dark:text-gray-200'}`}>{doctor.doctorName}</div>
                           <div className="text-gray-400 text-[10px] truncate">{doctor.specializations?.join(', ') || t('appointmentBooking.generalSpecialization')}</div>
                           {isDoctorOnTimeOff(doctor.doctorId) && (
-                            <span className="inline-block mt-0.5 text-[9px] font-bold uppercase tracking-wide text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-full border border-red-500/20">
+                            <span className="inline-block mt-0.5 text-[11px] font-bold uppercase tracking-wide text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-full border border-red-500/20">
                               🚫 On Leave
                             </span>
                           )}
                         </div>
                         {selectedDoctor?.id === doctor.doctorId && (
-                          <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center flex-shrink-0">
+                          <div className="w-5 h-5 rounded-full bg-brand-500 flex items-center justify-center flex-shrink-0">
                             <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                             </svg>
@@ -806,7 +806,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                 {[
                   { color: 'bg-emerald-400', label: t('appointmentBooking.availableLegend') },
                   { color: 'bg-red-400', label: t('appointmentBooking.bookedLegend') },
-                  { color: 'bg-blue-400', label: t('appointmentBooking.selectedLegend') },
+                  { color: 'bg-brand-400', label: t('appointmentBooking.selectedLegend') },
                 ].map(({ color, label }) => (
                   <div key={label} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
                     <div className={`w-2.5 h-2.5 rounded-full ${color} shadow-sm`} />
@@ -823,7 +823,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
               onClick={() => setShowBookingQuickGuide(true)}
               className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all text-xs font-medium"
             >
-              <HelpCircle className="h-4 w-4 text-blue-400" />
+              <HelpCircle className="h-4 w-4 text-brand-400" />
               {t('bookingGuide.button', 'Booking Help')}
             </button>
           </div>
@@ -839,7 +839,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                 <div className="hidden lg:flex items-center justify-between mb-1">
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     {t('appointmentBooking.selectedLabel')}{' '}
-                    <span className="font-bold text-blue-600 dark:text-blue-300">{selectedDoctor.name}</span>
+                    <span className="font-bold text-brand-600 dark:text-brand-300">{selectedDoctor.name}</span>
                     {selectedDoctor.specialization && <span className="text-gray-400"> • {selectedDoctor.specialization}</span>}
                   </p>
                   <motion.div
@@ -880,7 +880,7 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                         whileTap={{ scale: 0.93 }}
                         onClick={() => handleDateSelect(date)}
                         className={`flex flex-col items-center px-3 py-2.5 rounded-xl border text-center min-w-[64px] flex-shrink-0 transition-all text-xs font-semibold ${isSelected
-                          ? 'bg-gradient-to-br from-cyan-500 to-blue-600 text-white border-transparent shadow-lg shadow-cyan-500/30 scale-105'
+                          ? 'bg-gradient-to-br from-cyan-500 to-brand-600 text-white border-transparent shadow-lg shadow-cyan-500/30 scale-105'
                           : 'bg-card border-border hover:border-cyan-400/50 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-cyan-50 dark:hover:bg-white/5'}`}
                       >
                         <div className="font-black text-[11px] uppercase tracking-wide">
@@ -990,10 +990,10 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                 {showTimeSlotsLoading ? (
                   <div className="text-center py-10">
                     <div className="relative w-12 h-12 mx-auto mb-3">
-                      <div className="absolute inset-0 rounded-full border-2 border-blue-500/20" />
-                      <div className="absolute inset-0 rounded-full border-2 border-t-blue-500 animate-spin" />
+                      <div className="absolute inset-0 rounded-full border-2 border-brand-500/20" />
+                      <div className="absolute inset-0 rounded-full border-2 border-t-brand-500 animate-spin" />
                     </div>
-                    <p className="text-sm font-semibold text-blue-300">{t('appointmentBooking.loadingSlots')}</p>
+                    <p className="text-sm font-semibold text-brand-300">{t('appointmentBooking.loadingSlots')}</p>
                     <p className="text-xs text-gray-500 mt-1">{t('appointmentBooking.loadingSlotsMessage')}</p>
                   </div>
                 ) : timeSlots.length === 0 && doctorSlotsResponse?.isTimeOff ? (
@@ -1027,11 +1027,11 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
                               className={`p-2 rounded-xl border text-center transition-all text-[11px] min-h-[52px] flex flex-col items-center justify-center font-bold shadow-sm ${slot.isBooked
                                 ? 'bg-red-50 border-red-200 cursor-not-allowed opacity-60 text-red-400 dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-400'
                                 : selectedSlot?.id === slot.id
-                                  ? 'bg-gradient-to-br from-blue-500 to-indigo-600 border-blue-400/50 text-white shadow-xl shadow-blue-500/30 scale-110'
+                                  ? 'bg-gradient-to-br from-brand-500 to-brand-600 border-brand-400/50 text-white shadow-xl shadow-brand-500/30 scale-110'
                                   : 'bg-emerald-50 border-emerald-300 hover:border-emerald-400 hover:bg-emerald-100 text-emerald-700 hover:scale-105 dark:bg-emerald-500/10 dark:border-emerald-500/30 dark:hover:bg-emerald-500/20 dark:text-emerald-300'}`}
                             >
                               <div className="font-black leading-tight">{slot.time}</div>
-                              <div className="text-[9px] mt-0.5 opacity-80">
+                              <div className="text-[11px] mt-0.5 opacity-80">
                                 {slot.isBooked ? '✗' : selectedSlot?.id === slot.id ? '✓' : '○'}
                               </div>
                             </motion.button>
@@ -1054,8 +1054,8 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
 
                     {/* Booked Slots Status */}
                     {bookedSlotsLoading && (
-                      <div className="mt-3 flex items-center gap-2 text-xs text-blue-300 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                        <div className="w-3 h-3 rounded-full border border-t-blue-400 animate-spin" />
+                      <div className="mt-3 flex items-center gap-2 text-xs text-brand-300 p-2 rounded-lg bg-brand-500/10 border border-brand-500/20">
+                        <div className="w-3 h-3 rounded-full border border-t-brand-400 animate-spin" />
                         {t('appointmentBooking.loadingBookedSlots')}
                       </div>
                     )}

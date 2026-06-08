@@ -53,8 +53,8 @@ export const OverrideActionDialog: React.FC<OverrideActionDialogProps> = ({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <Calendar className="h-4 w-4 text-blue-600" />
+            <div className="w-8 h-8 bg-brand-100 rounded-full flex items-center justify-center">
+              <Calendar className="h-4 w-4 text-brand-600" />
             </div>
             {t('doctorCalendar.overrideActionDialog.title')}
           </DialogTitle>
@@ -65,11 +65,11 @@ export const OverrideActionDialog: React.FC<OverrideActionDialogProps> = ({
             {t('doctorCalendar.overrideActionDialog.description')}
           </p>
           
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm mb-4">
-            <div className="font-medium text-blue-800 mb-1">
+          <div className="bg-brand-50 border border-brand-200 rounded-lg p-3 text-sm mb-4">
+            <div className="font-medium text-brand-800 mb-1">
               {t('doctorCalendar.overrideActionDialog.detailsTitle')}
             </div>
-            <div className="text-blue-700 space-y-1">
+            <div className="text-brand-700 space-y-1">
               <div>
                 • {t('doctorCalendar.overrideActionDialog.labels.shift')}: {overrideData.shiftName}
               </div>

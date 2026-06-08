@@ -66,7 +66,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600"></div>
             </div>
         );
     }
@@ -77,7 +77,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm">
                     <div>
                         <h2 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-                            <TrendingUp className="h-8 w-8 text-blue-600" />
+                            <TrendingUp className="h-8 w-8 text-brand-600" />
                             {t('analytics.title')}
                         </h2>
                         <p className="text-gray-500 dark:text-gray-400 mt-1">{t('analytics.description')}</p>
@@ -120,7 +120,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm">
                 <div>
                     <h2 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-                        <TrendingUp className="h-8 w-8 text-blue-600" />
+                        <TrendingUp className="h-8 w-8 text-brand-600" />
                         {t('analytics.title')}
                     </h2>
                     <p className="text-gray-500 dark:text-gray-400 mt-1">{t('analytics.description')}</p>
@@ -180,7 +180,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
                                     <UserPlus className="h-3 w-3" />
                                     {t('analytics.kpis.newPatients')}: {activeKPIs.newPatients.count}
                                 </div>
-                                <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-2.5 py-1 rounded-full border border-blue-100 dark:border-blue-800">
+                                <div className="flex items-center gap-1.5 text-xs font-semibold text-brand-600 bg-brand-50 dark:bg-brand-900/30 px-2.5 py-1 rounded-full border border-brand-100 dark:border-brand-800">
                                     <Clock className="h-3 w-3" />
                                     {t('analytics.kpis.returningPatients')}: {activeKPIs.returningPatients.count}
                                 </div>
@@ -201,7 +201,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
                                     style={{ width: `${(activeKPIs.newPatients.count / ((activeKPIs.newPatients.count + activeKPIs.returningPatients.count) || 1)) * 100}%` }}
                                 />
                                 <div
-                                    className="h-full bg-blue-500"
+                                    className="h-full bg-brand-500"
                                     style={{ width: `${(activeKPIs.returningPatients.count / ((activeKPIs.newPatients.count + activeKPIs.returningPatients.count) || 1)) * 100}%` }}
                                 />
                             </div>
@@ -285,7 +285,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
                                 </div>
                                 <div className="h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
                                     <div
-                                        className="h-full bg-blue-600"
+                                        className="h-full bg-brand-600"
                                         style={{ width: `${Math.round(((activeKPIs.visits.count) / (Math.max(activeKPIs.visits.count + activeKPIs.noShow.count + activeKPIs.cancelled.count, 1))) * 100)}%` }}
                                     />
                                 </div>
@@ -298,7 +298,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
                 <Card className="lg:col-span-1 shadow-lg border-0 bg-white dark:bg-slate-900 rounded-3xl overflow-hidden">
                     <CardHeader className="border-b border-gray-50 dark:border-slate-800 bg-gray-50/30 dark:bg-slate-900/30">
                         <CardTitle className="text-lg font-bold flex items-center gap-2">
-                            <Scale className="h-5 w-5 text-indigo-500" />
+                            <Scale className="h-5 w-5 text-brand-500" />
                             {t('analytics.vitals.bmiDistribution')}
                         </CardTitle>
                     </CardHeader>
@@ -385,7 +385,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
                 <Card className="shadow-lg border-0 bg-white dark:bg-slate-900 rounded-3xl overflow-hidden">
                     <CardHeader className="border-b border-gray-50 dark:border-slate-800 bg-gray-50/30 dark:bg-slate-900/30">
                         <CardTitle className="text-lg font-bold flex items-center gap-2">
-                            <Activity className="h-5 w-5 text-blue-500" />
+                            <Activity className="h-5 w-5 text-brand-500" />
                             {t('analytics.vitals.weightDistribution')}
                         </CardTitle>
                     </CardHeader>
@@ -436,7 +436,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
                 {/* Top Diagnosis */}
                 <StatsTable
                     title={t('analytics.medicalStats.topDiagnosis')}
-                    icon={<Activity className="h-5 w-5 text-blue-500" />}
+                    icon={<Activity className="h-5 w-5 text-brand-500" />}
                     data={analyticsData.medicalStats.Top5Diagnosis}
                     accentColor="blue"
                     t={t}
@@ -454,7 +454,7 @@ export const DoctorAnalyticsPage: React.FC = () => {
                 {/* Top Examinations */}
                 <StatsTable
                     title={t('analytics.medicalStats.topExaminations')}
-                    icon={<Clock className="h-5 w-5 text-indigo-500" />}
+                    icon={<Clock className="h-5 w-5 text-brand-500" />}
                     data={analyticsData.medicalStats.Top5Examination}
                     accentColor="indigo"
                     className="md:col-span-2 xl:col-span-1"
@@ -482,8 +482,8 @@ interface KpiCardProps {
 const KpiCard: React.FC<KpiCardProps> = ({ title, value, percentageChange, icon: Icon, color, period, footerText, overallValue }) => {
     // Quick mapping for background/text based on color name
     const colorMap: Record<string, { bg: string, text: string, iconBg: string }> = {
-        'blue': { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600', iconBg: 'bg-blue-50 dark:bg-blue-900/30' },
-        'indigo': { bg: 'bg-indigo-50 dark:bg-indigo-900/20', text: 'text-indigo-600', iconBg: 'bg-indigo-50 dark:bg-indigo-900/30' },
+        'blue': { bg: 'bg-brand-50 dark:bg-brand-900/20', text: 'text-brand-600', iconBg: 'bg-brand-50 dark:bg-brand-900/30' },
+        'indigo': { bg: 'bg-brand-50 dark:bg-brand-900/20', text: 'text-brand-600', iconBg: 'bg-brand-50 dark:bg-brand-900/30' },
         'emerald': { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-600', iconBg: 'bg-emerald-50 dark:bg-emerald-900/30' },
         'violet': { bg: 'bg-violet-50 dark:bg-violet-900/20', text: 'text-violet-600', iconBg: 'bg-violet-50 dark:bg-violet-900/30' },
         'rose': { bg: 'bg-rose-50 dark:bg-rose-900/20', text: 'text-rose-600', iconBg: 'bg-rose-50 dark:bg-rose-900/30' },

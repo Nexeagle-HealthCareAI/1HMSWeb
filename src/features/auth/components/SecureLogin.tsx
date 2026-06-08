@@ -18,6 +18,7 @@ import { PasswordResetSuccessModal } from '@/components/modals';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Building2, AlertCircle, ArrowRight, X } from 'lucide-react';
 import { HospitalBrandingModal } from '@/features/hospital/components/HospitalBrandingModal';
+import { hospitalApi } from '@/features/hospital/services/hospitalApi';
 import { API_ENDPOINTS } from '@/app/api';
 import { axiosInstance } from '@/services/axiosClient';
 
@@ -225,6 +226,16 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
         }
 
         authStore.setHospitalId(hospitalId);
+        // Populate the full hospital list for the switcher (multi-hospital chains). Non-blocking.
+        try {
+          const mine = await hospitalApi.getMyHospitals();
+          if (mine.length) {
+            authStore.setHospitals(mine);
+            // Prefer the primary as the active hospital when available.
+            const primary = mine.find(h => h.isPrimary) ?? mine[0];
+            if (primary?.hospitalId) authStore.setHospitalId(primary.hospitalId);
+          }
+        } catch { /* non-blocking — single-hospital flow still works */ }
         if (employeeId) {
           authStore.setEmployeeId(employeeId);
         }
@@ -870,7 +881,7 @@ export const SecureLogin: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister 
   // Main Login Screen
   return (
     <LoginLayout
-      title="NexEagle easyHMS"
+      title="NexEagle 1HMS"
       subtitle="Healthcare Management System"
       isLoading={loginMutation.isPending}
       loadingMessage="Signing you in..."

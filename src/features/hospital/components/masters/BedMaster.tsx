@@ -62,7 +62,7 @@ const STATUS_COLORS = {
     AVAILABLE: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
     OCCUPIED: 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300 border-rose-200 dark:border-rose-800',
     CLEANING: 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border-amber-200 dark:border-amber-800',
-    RESERVED: 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+    RESERVED: 'bg-brand-100 text-brand-800 dark:bg-brand-500/20 dark:text-brand-300 border-brand-200 dark:border-brand-800',
     BLOCKED: 'bg-slate-100 text-slate-800 dark:bg-slate-500/20 dark:text-slate-300 border-slate-200 dark:border-slate-800'
 };
 
@@ -451,7 +451,7 @@ export const BedMaster = () => {
                     <Button variant="outline" size="sm" onClick={() => loadBeds(true)} disabled={refreshing || loading} className="gap-1.5">
                         <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
                     </Button>
-                    <Button onClick={() => handleOpenDrawer(null)} className="flex-1 sm:flex-none gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20">
+                    <Button onClick={() => handleOpenDrawer(null)} className="flex-1 sm:flex-none gap-2 bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20">
                         <Plus className="h-4 w-4" /> Add Bed
                     </Button>
                 </div>
@@ -467,7 +467,7 @@ export const BedMaster = () => {
                     <div className="p-2 space-y-1">
                         <button
                             onClick={() => setSelectedWardNode('ALL')}
-                            className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${selectedWardNode === 'ALL' ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800'}`}
+                            className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${selectedWardNode === 'ALL' ? 'bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800'}`}
                         >
                             All Facilities ({beds.length} Beds)
                         </button>
@@ -481,7 +481,7 @@ export const BedMaster = () => {
                                 <button
                                     key={wCode}
                                     onClick={() => setSelectedWardNode(wCode)}
-                                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors group flex justify-between items-center ${isSelected ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
+                                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors group flex justify-between items-center ${isSelected ? 'bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
                                 >
                                     <div className="truncate pr-2">
                                         <div className="font-semibold truncate">{stat.name}</div>
@@ -568,7 +568,7 @@ export const BedMaster = () => {
 
                                     {/* Action Hover Bar */}
                                     <div className="absolute top-2.5 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur pb-1 rounded shadow-sm border border-gray-100 dark:border-gray-800">
-                                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-800" onClick={() => handleOpenDrawer(bed)}>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm text-gray-500 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-slate-800" onClick={() => handleOpenDrawer(bed)}>
                                             <Edit2 className="h-3.5 w-3.5" />
                                         </Button>
                                         {bed.statusCode !== 'AVAILABLE' && (
@@ -617,7 +617,7 @@ export const BedMaster = () => {
                             transition={{ type: "spring", damping: 25, stiffness: 200 }}
                             className="fixed inset-y-0 right-0 w-full md:w-[500px] bg-white dark:bg-slate-950 border-l border-gray-200 dark:border-gray-800 shadow-2xl z-[60] flex flex-col"
                         >
-                            <div className="flex items-center justify-between p-5 bg-gradient-to-r from-indigo-600 to-violet-600">
+                            <div className="flex items-center justify-between p-5 bg-gradient-to-r from-brand-600 to-violet-600">
                                 <div className="flex items-center gap-3 min-w-0">
                                     <div className="h-11 w-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center shrink-0">
                                         <Bed className="h-5 w-5 text-white" />
@@ -626,7 +626,7 @@ export const BedMaster = () => {
                                         <h2 className="text-lg font-bold text-white leading-tight">
                                             {editingRecord?.id ? 'Edit Bed' : 'Add New Bed'}
                                         </h2>
-                                        <p className="text-[11px] text-indigo-100/90 font-mono mt-0.5 truncate">
+                                        <p className="text-[11px] text-brand-100/90 font-mono mt-0.5 truncate">
                                             {editingRecord?.id
                                                 ? editingRecord.bedCode
                                                 : (bedCount > 1
@@ -644,7 +644,7 @@ export const BedMaster = () => {
 
                                 <section className="space-y-4">
                                     <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Ward / Room Details
+                                        <div className="w-1.5 h-1.5 rounded-full bg-brand-500" /> Ward / Room Details
                                     </h3>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="grid gap-2">
@@ -696,7 +696,7 @@ export const BedMaster = () => {
 
                                 <section className="space-y-4">
                                     <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Bed Specifics
+                                        <div className="w-1.5 h-1.5 rounded-full bg-brand-500" /> Bed Specifics
                                     </h3>
                                     <div className="grid grid-cols-2 gap-4">
                                         {!editingRecord?.id && (
@@ -784,14 +784,14 @@ export const BedMaster = () => {
                             <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-950 flex justify-end gap-2">
                                 <Button variant="ghost" onClick={() => setIsDrawerOpen(false)}>Cancel</Button>
                                 {bedCount <= 1 && (
-                                    <Button variant="outline" disabled={isSaving || isSuccess || !isBedValid} onClick={() => handleSaveDrawer(true)} className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-400 disabled:opacity-50">Save &amp; Add Next in Ward</Button>
+                                    <Button variant="outline" disabled={isSaving || isSuccess || !isBedValid} onClick={() => handleSaveDrawer(true)} className="border-brand-200 text-brand-700 hover:bg-brand-50 dark:border-brand-800 dark:text-brand-400 disabled:opacity-50">Save &amp; Add Next in Ward</Button>
                                 )}
                                 <motion.button
                                     disabled={isSaving || isSuccess || !isBedValid}
                                     onClick={() => handleSaveDrawer(false)}
                                     className={`flex items-center justify-center gap-2 rounded-md font-medium text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 min-w-[100px] h-10 px-4 ${isSuccess
                                         ? 'bg-green-500 text-white shadow-lg shadow-green-500/30'
-                                        : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20'
+                                        : 'bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20'
                                         }`}
                                     animate={isSuccess ? { scale: [1, 1.05, 1], transition: { duration: 0.3 } } : {}}
                                     whileTap={{ scale: 0.95 }}

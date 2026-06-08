@@ -220,7 +220,7 @@ export const LookupMultiSelect: React.FC<LookupMultiSelectProps> = ({
     <div
       className={cn(
         'rounded-lg px-3 py-2 cursor-pointer border',
-        isActive ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-gray-50'
+        isActive ? 'border-brand-500 bg-brand-50' : 'border-transparent hover:bg-gray-50'
       )}
     >
       <div className="flex items-center justify-between gap-2">

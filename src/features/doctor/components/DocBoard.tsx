@@ -468,7 +468,7 @@ export const ClinicalDashboard: React.FC = () => {
       case 'READY':
         return <Badge className="bg-green-50 text-green-700 border-green-200 text-xs px-1.5 py-0.5 font-medium">{t('docBoard.statusBadge.ready')}</Badge>;
       case 'UNDER_CONSULT':
-        return <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-xs px-1.5 py-0.5 font-medium">{t('docBoard.statusBadge.consulting')}</Badge>;
+        return <Badge className="bg-brand-50 text-brand-700 border-brand-200 text-xs px-1.5 py-0.5 font-medium">{t('docBoard.statusBadge.consulting')}</Badge>;
       case 'LAB_REQUIRED':
         return <Badge className="bg-orange-50 text-orange-700 border-orange-200 text-xs px-1.5 py-0.5 font-medium">{t('docBoard.statusBadge.labRequired')}</Badge>;
       case 'AWAITING_RECONSULT':
@@ -631,8 +631,8 @@ export const ClinicalDashboard: React.FC = () => {
         label: t('docBoard.tabs.current.label'),
         subLabel: t('docBoard.tabs.current.subLabel'),
         Icon: Activity,
-        accent: 'from-blue-500 via-indigo-500 to-purple-500',
-        iconColor: 'text-blue-500 dark:text-blue-300',
+        accent: 'from-brand-500 via-brand-500 to-purple-500',
+        iconColor: 'text-brand-500 dark:text-brand-300',
         count: appointmentTabCounts.current
       },
       {
@@ -936,7 +936,7 @@ export const ClinicalDashboard: React.FC = () => {
       >
         {/* Header - Matches AdminDashboard */}
         <div ref={headerRef} className="px-3 sm:px-4 lg:px-6 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-gradient-to-br from-white via-blue-50/60 to-indigo-50 dark:from-slate-900 dark:via-slate-900/80 dark:to-slate-900 border-b border-white/70 dark:border-slate-800 rounded-2xl shadow-lg shadow-blue-100/30 dark:shadow-black/30 px-3 py-3 sm:px-6 sm:py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-gradient-to-br from-white via-brand-50/60 to-brand-50 dark:from-slate-900 dark:via-slate-900/80 dark:to-slate-900 border-b border-white/70 dark:border-slate-800 rounded-2xl shadow-lg shadow-brand-100/30 dark:shadow-black/30 px-3 py-3 sm:px-6 sm:py-4">
 
             {/* Left: Title and Profile Stats */}
             <div className="flex flex-col gap-1 min-w-0">
@@ -950,10 +950,10 @@ export const ClinicalDashboard: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => navigate('/profile?tab=professional')}
-                      className="flex items-center gap-2 px-3 py-1 text-xs rounded-full bg-white/50 dark:bg-slate-800/50 border border-blue-100 dark:border-slate-700 hover:bg-blue-50 transition-colors"
+                      className="flex items-center gap-2 px-3 py-1 text-xs rounded-full bg-white/50 dark:bg-slate-800/50 border border-brand-100 dark:border-slate-700 hover:bg-brand-50 transition-colors"
                       title={t('docBoard.header.viewProfessionalProfile')}
                     >
-                      <span className="font-semibold text-blue-700 dark:text-blue-300">
+                      <span className="font-semibold text-brand-700 dark:text-brand-300">
                         {clampedProfileCompletion}%
                       </span>
                       <span className="text-gray-500 dark:text-gray-400">Complete</span>
@@ -988,13 +988,13 @@ export const ClinicalDashboard: React.FC = () => {
                     tabIndex={locked ? -1 : 0}
                     title={locked ? (doctorProfileMessage || t('docBoard.nav.lockedMessage')) : description}
                     className={`group flex-1 lg:flex-none min-w-[96px] flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-2.5 py-1.5 border transition-all duration-300 text-[12px] ${isActive
-                      ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white border-transparent shadow-xl shadow-blue-500/30'
+                      ? 'bg-gradient-to-br from-brand-600 to-brand-600 text-white border-transparent shadow-xl shadow-brand-500/30'
                       : 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800/70'
                       } ${locked ? 'opacity-40 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
                   >
                     <div className="flex items-center gap-1.5 text-[12px] font-semibold">
                       <span className={`p-1 rounded-lg ${isActive ? 'bg-white/20' : 'bg-gray-100 dark:bg-slate-800'}`}>
-                        <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-blue-500 dark:text-blue-400'}`} />
+                        <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-brand-500 dark:text-brand-400'}`} />
                       </span>
                       <span className="hidden sm:inline">{label}</span>
                       <span className="sm:hidden">{shortLabel}</span>
@@ -1020,9 +1020,9 @@ export const ClinicalDashboard: React.FC = () => {
               <div className="bg-white/80 dark:bg-slate-900/80 border border-gray-200/70 dark:border-slate-800 rounded-2xl p-4 sm:p-8 text-center shadow-lg">
                 <div className="flex flex-col items-center gap-4 sm:gap-6">
                   <div className="relative">
-                    <div className="w-8 h-8 sm:w-12 sm:h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                    <div className="w-8 h-8 sm:w-12 sm:h-12 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin"></div>
                     <div
-                      className="absolute inset-0 w-8 h-8 sm:w-12 sm:h-12 border-4 border-transparent border-t-blue-400 rounded-full animate-spin"
+                      className="absolute inset-0 w-8 h-8 sm:w-12 sm:h-12 border-4 border-transparent border-t-brand-400 rounded-full animate-spin"
                       style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}
                     ></div>
                   </div>
@@ -1083,17 +1083,17 @@ export const ClinicalDashboard: React.FC = () => {
 
             {/* Profile Restriction Message - Enhanced */}
             {!isDataLoading && !shouldShowError && doctorProfileRestricted && (
-              <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-2xl p-6 sm:p-8 shadow-xl mb-6 relative overflow-hidden">
+              <div className="bg-gradient-to-br from-brand-50 via-brand-50 to-purple-50 dark:from-brand-900/20 dark:via-brand-900/20 dark:to-purple-900/20 border-2 border-brand-200 dark:border-brand-800 rounded-2xl p-6 sm:p-8 shadow-xl mb-6 relative overflow-hidden">
                 {/* Decorative background elements */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-200/20 dark:bg-blue-800/20 rounded-full blur-3xl -mr-16 -mt-16"></div>
-                <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-200/20 dark:bg-indigo-800/20 rounded-full blur-2xl -ml-12 -mb-12"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-brand-200/20 dark:bg-brand-800/20 rounded-full blur-3xl -mr-16 -mt-16"></div>
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-brand-200/20 dark:bg-brand-800/20 rounded-full blur-2xl -ml-12 -mb-12"></div>
 
                 <div className="relative z-10">
                   <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
                     {/* Icon Section */}
                     <div className="flex-shrink-0 mx-auto lg:mx-0">
                       <div className="relative">
-                        <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-500 to-indigo-600 dark:from-blue-600 dark:to-indigo-700 rounded-2xl flex items-center justify-center shadow-lg transform rotate-3 hover:rotate-6 transition-transform duration-300">
+                        <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-brand-500 to-brand-600 dark:from-brand-600 dark:to-brand-700 rounded-2xl flex items-center justify-center shadow-lg transform rotate-3 hover:rotate-6 transition-transform duration-300">
                           <UserCheck className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
                         </div>
                         <div className="absolute -top-2 -right-2 w-8 h-8 bg-yellow-400 dark:bg-yellow-500 rounded-full flex items-center justify-center shadow-md animate-pulse">
@@ -1106,35 +1106,35 @@ export const ClinicalDashboard: React.FC = () => {
                     <div className="flex-1 text-center lg:text-left">
                       <div className="space-y-3 sm:space-y-4">
                         <div>
-                          <h3 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
+                          <h3 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-brand-600 to-brand-600 dark:from-brand-400 dark:to-brand-400 bg-clip-text text-transparent">
                             {t('docBoard.restriction.title')}
                           </h3>
-                          <p className="text-blue-700 dark:text-blue-300 text-sm sm:text-base mt-2 font-medium">
+                          <p className="text-brand-700 dark:text-brand-300 text-sm sm:text-base mt-2 font-medium">
                             {doctorProfileMessage || t('docBoard.restriction.subtitle')}
                           </p>
                         </div>
 
                         {/* Required Information List */}
-                        <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-4 sm:p-5 border border-blue-100 dark:border-blue-900/50">
+                        <div className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl p-4 sm:p-5 border border-brand-100 dark:border-brand-900/50">
                           <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            <FileText className="h-4 w-4 text-brand-600 dark:text-brand-400" />
                             {t('docBoard.restriction.requiredInfoTitle')}
                           </p>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left">
                             <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-                              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+                              <div className="w-1.5 h-1.5 rounded-full bg-brand-500 mt-2 flex-shrink-0"></div>
                               <span>{t('docBoard.restriction.requiredItems.license')}</span>
                             </div>
                             <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-                              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+                              <div className="w-1.5 h-1.5 rounded-full bg-brand-500 mt-2 flex-shrink-0"></div>
                               <span>{t('docBoard.restriction.requiredItems.department')}</span>
                             </div>
                             <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-                              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+                              <div className="w-1.5 h-1.5 rounded-full bg-brand-500 mt-2 flex-shrink-0"></div>
                               <span>{t('docBoard.restriction.requiredItems.qualifications')}</span>
                             </div>
                             <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-                              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+                              <div className="w-1.5 h-1.5 rounded-full bg-brand-500 mt-2 flex-shrink-0"></div>
                               <span>{t('docBoard.restriction.requiredItems.experience')}</span>
                             </div>
                           </div>
@@ -1164,7 +1164,7 @@ export const ClinicalDashboard: React.FC = () => {
                         variant="default"
                         size="lg"
                         onClick={() => navigate('/profile?tab=professional')}
-                        className="w-full lg:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-6 py-6 sm:py-7 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 rounded-xl"
+                        className="w-full lg:w-auto bg-gradient-to-r from-brand-600 to-brand-600 hover:from-brand-700 hover:to-brand-700 text-white font-semibold px-6 py-6 sm:py-7 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 rounded-xl"
                       >
                         <div className="flex items-center gap-2">
                           <Settings className="h-5 w-5" />
@@ -1206,7 +1206,7 @@ export const ClinicalDashboard: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setIsSidebarCollapsed((prev) => !prev)}
-                        className="hidden lg:inline-flex items-center justify-center rounded-xl bg-gray-50 dark:bg-gray-800 p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-300 transition-all hover:shadow-md"
+                        className="hidden lg:inline-flex items-center justify-center rounded-xl bg-gray-50 dark:bg-gray-800 p-2 text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-300 transition-all hover:shadow-md"
                         aria-label={isSidebarCollapsed ? t('docBoard.tabs.expandSidebar') : t('docBoard.tabs.collapseSidebar')}
                       >
                         {isSidebarCollapsed ? (
@@ -1233,7 +1233,7 @@ export const ClinicalDashboard: React.FC = () => {
                                     value={value}
                                     disabled={isDoctorExperienceLocked}
                                     className={`relative flex flex-col items-center justify-center w-full gap-1 h-auto py-2 rounded-xl transition-all duration-300 ${isActive
-                                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                                      ? 'bg-brand-600 text-white shadow-lg shadow-brand-500/30'
                                       : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400'
                                       } ${isDoctorExperienceLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                   >
@@ -1260,7 +1260,7 @@ export const ClinicalDashboard: React.FC = () => {
                                 : 'hover:bg-gray-100/50 dark:hover:bg-gray-800/50'
                                 } ${isDoctorExperienceLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                              <div className={`p-2 rounded-lg transition-colors ${isActive ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
+                              <div className={`p-2 rounded-lg transition-colors ${isActive ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
                                 <Icon className="h-5 w-5" />
                               </div>
 
@@ -1274,7 +1274,7 @@ export const ClinicalDashboard: React.FC = () => {
                               </div>
 
                               {isActive && (
-                                <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-lg bg-blue-600`}></div>
+                                <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-lg bg-brand-600`}></div>
                               )}
                             </TabsTrigger>
                           );
@@ -1299,14 +1299,14 @@ export const ClinicalDashboard: React.FC = () => {
                     {/* KPI Section for Current Appointments */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {/* Total Appointments */}
-                      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-100/80 via-white to-white dark:from-indigo-950/60 dark:to-gray-900 p-4 rounded-2xl border border-indigo-100/50 dark:border-indigo-800/50 shadow-sm hover:shadow-md transition-all duration-300 group">
+                      <div className="relative overflow-hidden bg-gradient-to-br from-brand-100/80 via-white to-white dark:from-brand-950/60 dark:to-gray-900 p-4 rounded-2xl border border-brand-100/50 dark:border-brand-800/50 shadow-sm hover:shadow-md transition-all duration-300 group">
                         <div className="flex items-center gap-3 mb-2">
-                          <div className="p-2 bg-indigo-100/80 dark:bg-indigo-900/50 rounded-lg text-indigo-600 dark:text-indigo-400">
+                          <div className="p-2 bg-brand-100/80 dark:bg-brand-900/50 rounded-lg text-brand-600 dark:text-brand-400">
                             <Calendar className="h-5 w-5" />
                           </div>
-                          <span className="text-xs font-bold uppercase tracking-wider text-indigo-900/60 dark:text-indigo-200/60">Total Today</span>
+                          <span className="text-xs font-bold uppercase tracking-wider text-brand-900/60 dark:text-brand-200/60">Total Today</span>
                         </div>
-                        <div className="text-3xl font-bold text-indigo-900 dark:text-white">{currentAppointmentCounts.all}</div>
+                        <div className="text-3xl font-bold text-brand-900 dark:text-white">{currentAppointmentCounts.all}</div>
                       </div>
 
                       {/* Not Entered (Vitals Required) */}
@@ -1397,8 +1397,8 @@ export const ClinicalDashboard: React.FC = () => {
                             size="sm"
                             onClick={() => handleStatusClick('UNDER_CONSULT')}
                             className={`text-xs h-7 sm:h-8 px-2 sm:px-3 font-semibold transition-all duration-300 transform hover:scale-105 ${selectedStatus === 'UNDER_CONSULT'
-                              ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg'
-                              : 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/20'
+                              ? 'bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-lg'
+                              : 'bg-brand-50 text-brand-700 border-brand-300 hover:bg-brand-100 dark:hover:bg-brand-900/20'
                               }`}
                           >
                             <div className="flex items-center gap-1 sm:gap-1.5">
@@ -1491,12 +1491,12 @@ export const ClinicalDashboard: React.FC = () => {
                     <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-3 sm:mb-4">
                       <div className="flex-1">
                         <div className="relative group">
-                          <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3 sm:h-4 sm:w-4 group-focus-within:text-blue-500 transition-colors duration-200" />
+                          <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3 sm:h-4 sm:w-4 group-focus-within:text-brand-500 transition-colors duration-200" />
                           <Input
                             placeholder={t('docBoard.search.currentPlaceholder')}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-8 sm:pl-10 h-8 sm:h-10 text-xs sm:text-sm border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 rounded-lg shadow-sm hover:shadow-md"
+                            className="pl-8 sm:pl-10 h-8 sm:h-10 text-xs sm:text-sm border-gray-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition-all duration-200 rounded-lg shadow-sm hover:shadow-md"
                           />
                           {searchTerm && (
                             <button
@@ -1522,7 +1522,7 @@ export const ClinicalDashboard: React.FC = () => {
                               <div className="space-y-1 min-w-0">
                                 <button
                                   onClick={() => handlePatientIdClick(appointment)}
-                                  className="text-sm font-semibold text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-200 inline-flex items-center gap-1 transition-colors"
+                                  className="text-sm font-semibold text-brand-600 dark:text-brand-300 hover:text-brand-800 dark:hover:text-brand-200 inline-flex items-center gap-1 transition-colors"
                                 >
                                   {appointment.patientId}
                                   <ExternalLink className="h-3 w-3" />
@@ -1544,11 +1544,11 @@ export const ClinicalDashboard: React.FC = () => {
                             </div>
 
                             <div className="mt-3 flex flex-wrap items-center gap-2">
-                              <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-100 px-3 py-1 text-xs font-semibold">
+                              <div className="inline-flex items-center gap-2 rounded-full bg-brand-50 text-brand-700 dark:bg-brand-900/50 dark:text-brand-100 px-3 py-1 text-xs font-semibold">
                                 <span className="text-[11px] uppercase tracking-wide">{t('docBoard.table.tokenLabel')}</span>
                                 <span>#{appointment.tokenDetails?.tokenNumber || t('docBoard.table.notAvailable')}</span>
                               </div>
-                              <Badge variant="outline" className="text-[11px] bg-blue-50 text-blue-700 border-blue-200">
+                              <Badge variant="outline" className="text-[11px] bg-brand-50 text-brand-700 border-brand-200">
                                 {(!appointment.appointmentType || appointment.appointmentType === 'New')
                                   ? t('docBoard.table.newCase', { defaultValue: 'New Case' })
                                   : appointment.appointmentType}
@@ -1561,7 +1561,7 @@ export const ClinicalDashboard: React.FC = () => {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleOpenLabAttachments(appointment)}
-                                  className="h-8 px-3 text-xs font-semibold text-blue-600 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                                  className="h-8 px-3 text-xs font-semibold text-brand-600 border-brand-200 hover:bg-brand-50 dark:hover:bg-brand-900/30"
                                 >
                                   <Upload className="h-3 w-3 mr-1" />
                                   {t('docBoard.table.addLabReport', { defaultValue: 'Lab report' })}
@@ -1572,7 +1572,7 @@ export const ClinicalDashboard: React.FC = () => {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleAddBillClick(appointment)}
-                                className="h-8 px-3 text-xs font-semibold text-indigo-600 border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
+                                className="h-8 px-3 text-xs font-semibold text-brand-600 border-brand-200 hover:bg-brand-50 dark:hover:bg-brand-900/30"
                               >
                                 <FileText className="h-3 w-3 mr-1" />
                                 {t('docBoard.table.addBill', { defaultValue: 'Add Bill' })}
@@ -1606,7 +1606,7 @@ export const ClinicalDashboard: React.FC = () => {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="h-8 px-3 text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                                className="h-8 px-3 text-xs font-semibold bg-brand-50 text-brand-700 border-brand-200 hover:bg-brand-100"
                                 disabled={!hospitalId || !doctorId}
                                 onClick={() => openPrescriptionPreview(appointment)}
                               >
@@ -1668,12 +1668,12 @@ export const ClinicalDashboard: React.FC = () => {
                                 currentAppointments.map((appointment) => (
                                   <TableRow
                                     key={appointment.appointmentId}
-                                    className="group border-b border-gray-100 dark:border-gray-800 hover:bg-blue-50/40 dark:hover:bg-blue-900/10 transition-all duration-200"
+                                    className="group border-b border-gray-100 dark:border-gray-800 hover:bg-brand-50/40 dark:hover:bg-brand-900/10 transition-all duration-200"
                                   >
                                     <TableCell className="py-4 pl-6 align-middle font-medium">
                                       <button
                                         onClick={() => handlePatientIdClick(appointment)}
-                                        className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 inline-flex items-center gap-1.5 transition-colors group-hover:underline decoration-blue-300 underline-offset-4"
+                                        className="text-sm font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 inline-flex items-center gap-1.5 transition-colors group-hover:underline decoration-brand-300 underline-offset-4"
                                       >
                                         {appointment.patientId}
                                         <ExternalLink className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />
@@ -1724,7 +1724,7 @@ export const ClinicalDashboard: React.FC = () => {
                                                 variant="ghost"
                                                 size="icon"
                                                 onClick={() => handleOpenLabAttachments(appointment)}
-                                                className="h-8 w-8 rounded-full text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                                className="h-8 w-8 rounded-full text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20"
                                               >
                                                 <FlaskConical className="h-4 w-4" />
                                               </Button>
@@ -1784,7 +1784,7 @@ export const ClinicalDashboard: React.FC = () => {
                                       <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-8 w-8 rounded-full text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:text-gray-400 dark:hover:text-blue-400 dark:hover:bg-blue-900/20"
+                                        className="h-8 w-8 rounded-full text-gray-500 hover:text-brand-600 hover:bg-brand-50 dark:text-gray-400 dark:hover:text-brand-400 dark:hover:bg-brand-900/20"
                                         disabled={!hospitalId || !doctorId}
                                         onClick={() => openPrescriptionPreview(appointment)}
                                       >
@@ -1839,14 +1839,14 @@ export const ClinicalDashboard: React.FC = () => {
                       {/* KPI Section for Past History */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {/* Total Appointments */}
-                        <div className="relative overflow-hidden bg-gradient-to-br from-indigo-100/80 via-white to-white dark:from-indigo-950/60 dark:to-gray-900 p-4 rounded-2xl border border-indigo-100/50 dark:border-indigo-800/50 shadow-sm hover:shadow-md transition-all duration-300 group">
+                        <div className="relative overflow-hidden bg-gradient-to-br from-brand-100/80 via-white to-white dark:from-brand-950/60 dark:to-gray-900 p-4 rounded-2xl border border-brand-100/50 dark:border-brand-800/50 shadow-sm hover:shadow-md transition-all duration-300 group">
                           <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-indigo-100/80 dark:bg-indigo-900/50 rounded-lg text-indigo-600 dark:text-indigo-400">
+                            <div className="p-2 bg-brand-100/80 dark:bg-brand-900/50 rounded-lg text-brand-600 dark:text-brand-400">
                               <Calendar className="h-5 w-5" />
                             </div>
-                            <span className="text-xs font-bold uppercase tracking-wider text-indigo-900/60 dark:text-indigo-200/60">Total</span>
+                            <span className="text-xs font-bold uppercase tracking-wider text-brand-900/60 dark:text-brand-200/60">Total</span>
                           </div>
-                          <div className="text-3xl font-bold text-indigo-900 dark:text-white">{pastAppointmentsSummary.total}</div>
+                          <div className="text-3xl font-bold text-brand-900 dark:text-white">{pastAppointmentsSummary.total}</div>
                         </div>
 
                         {/* No Show (Vitals Required) */}
@@ -1872,14 +1872,14 @@ export const ClinicalDashboard: React.FC = () => {
                         </div>
 
                         {/* Ready (Stats) */}
-                        <div className="relative overflow-hidden bg-gradient-to-br from-blue-100/80 via-white to-white dark:from-blue-950/60 dark:to-gray-900 p-4 rounded-2xl border border-blue-100/50 dark:border-blue-800/50 shadow-sm hover:shadow-md transition-all duration-300 group">
+                        <div className="relative overflow-hidden bg-gradient-to-br from-brand-100/80 via-white to-white dark:from-brand-950/60 dark:to-gray-900 p-4 rounded-2xl border border-brand-100/50 dark:border-brand-800/50 shadow-sm hover:shadow-md transition-all duration-300 group">
                           <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-blue-100/80 dark:bg-blue-900/50 rounded-lg text-blue-600 dark:text-blue-400">
+                            <div className="p-2 bg-brand-100/80 dark:bg-brand-900/50 rounded-lg text-brand-600 dark:text-brand-400">
                               <Activity className="h-5 w-5" />
                             </div>
-                            <span className="text-xs font-bold uppercase tracking-wider text-blue-900/60 dark:text-blue-200/60">Ready Status</span>
+                            <span className="text-xs font-bold uppercase tracking-wider text-brand-900/60 dark:text-brand-200/60">Ready Status</span>
                           </div>
-                          <div className="text-3xl font-bold text-blue-900 dark:text-white">{pastAppointmentsSummary.ready}</div>
+                          <div className="text-3xl font-bold text-brand-900 dark:text-white">{pastAppointmentsSummary.ready}</div>
                         </div>
                       </div>
 
@@ -1939,7 +1939,7 @@ export const ClinicalDashboard: React.FC = () => {
                                 <div className="space-y-1 min-w-0">
                                   <button
                                     onClick={() => handlePatientIdClick(appointment)}
-                                    className="text-sm font-semibold text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-200 inline-flex items-center gap-1 transition-colors"
+                                    className="text-sm font-semibold text-brand-600 dark:text-brand-300 hover:text-brand-800 dark:hover:text-brand-200 inline-flex items-center gap-1 transition-colors"
                                   >
                                     {appointment.patientId}
                                     <ExternalLink className="h-3 w-3" />
@@ -1969,7 +1969,7 @@ export const ClinicalDashboard: React.FC = () => {
                                 <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">
                                   #{appointment.tokenDetails?.tokenNumber || 'N/A'}
                                 </Badge>
-                                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 font-medium">
+                                <Badge variant="outline" className="text-xs bg-brand-50 text-brand-700 border-brand-200 font-medium">
                                   {appointment.appointmentType || t('docBoard.table.newCase')}
                                 </Badge>
                               </div>
@@ -1978,7 +1978,7 @@ export const ClinicalDashboard: React.FC = () => {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="h-8 px-3 text-xs font-semibold text-gray-600 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                  className="h-8 px-3 text-xs font-semibold text-gray-600 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20"
                                   disabled={!hospitalId || !doctorId}
                                   onClick={() => openPrescriptionPreview(appointment)}
                                 >
@@ -2047,7 +2047,7 @@ export const ClinicalDashboard: React.FC = () => {
                                     <TableCell className="font-medium py-4 pl-6">
                                       <button
                                         onClick={() => handlePatientIdClick(appointment)}
-                                        className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 inline-flex items-center gap-1.5 font-semibold transition-colors"
+                                        className="text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 inline-flex items-center gap-1.5 font-semibold transition-colors"
                                       >
                                         {appointment.patientId}
                                         <ExternalLink className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />
@@ -2083,7 +2083,7 @@ export const ClinicalDashboard: React.FC = () => {
                                     </TableCell>
                                     <TableCell className="py-4">{getStatusBadge(appointment.finalStatusCode)}</TableCell>
                                     <TableCell className="py-4">
-                                      <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 font-medium">
+                                      <Badge variant="outline" className="text-xs bg-brand-50 text-brand-700 border-brand-200 font-medium">
                                         {appointment.appointmentType || t('docBoard.table.newCase')}
                                       </Badge>
                                     </TableCell>
@@ -2091,7 +2091,7 @@ export const ClinicalDashboard: React.FC = () => {
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-8 px-3 text-xs text-gray-600 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                        className="h-8 px-3 text-xs text-gray-600 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20"
                                         disabled={!hospitalId || !doctorId}
                                         onClick={() => openPrescriptionPreview(appointment)}
                                       >
@@ -2160,14 +2160,14 @@ export const ClinicalDashboard: React.FC = () => {
                       {/* KPI Section for Future Appointments */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {/* Total Appointments */}
-                        <div className="relative overflow-hidden bg-gradient-to-br from-indigo-100/80 via-white to-white dark:from-indigo-950/60 dark:to-gray-900 p-4 rounded-2xl border border-indigo-100/50 dark:border-indigo-800/50 shadow-sm hover:shadow-md transition-all duration-300 group">
+                        <div className="relative overflow-hidden bg-gradient-to-br from-brand-100/80 via-white to-white dark:from-brand-950/60 dark:to-gray-900 p-4 rounded-2xl border border-brand-100/50 dark:border-brand-800/50 shadow-sm hover:shadow-md transition-all duration-300 group">
                           <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-indigo-100/80 dark:bg-indigo-900/50 rounded-lg text-indigo-600 dark:text-indigo-400">
+                            <div className="p-2 bg-brand-100/80 dark:bg-brand-900/50 rounded-lg text-brand-600 dark:text-brand-400">
                               <Calendar className="h-5 w-5" />
                             </div>
-                            <span className="text-xs font-bold uppercase tracking-wider text-indigo-900/60 dark:text-indigo-200/60">Total Upcoming</span>
+                            <span className="text-xs font-bold uppercase tracking-wider text-brand-900/60 dark:text-brand-200/60">Total Upcoming</span>
                           </div>
-                          <div className="text-3xl font-bold text-indigo-900 dark:text-white">{futureAppointmentsSummary.total}</div>
+                          <div className="text-3xl font-bold text-brand-900 dark:text-white">{futureAppointmentsSummary.total}</div>
                         </div>
                       </div>
 
@@ -2289,7 +2289,7 @@ export const ClinicalDashboard: React.FC = () => {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="h-8 px-3 text-xs font-semibold text-gray-600 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                  className="h-8 px-3 text-xs font-semibold text-gray-600 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20"
                                   disabled={!hospitalId || !doctorId}
                                   onClick={() => openPrescriptionPreview(appointment)}
                                 >
@@ -2422,7 +2422,7 @@ export const ClinicalDashboard: React.FC = () => {
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-8 px-3 text-xs text-gray-600 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 mx-auto"
+                                        className="h-8 px-3 text-xs text-gray-600 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 mx-auto"
                                         disabled={!hospitalId || !doctorId}
                                         onClick={() => openPrescriptionPreview(appointment)}
                                       >
@@ -2510,7 +2510,7 @@ export const ClinicalDashboard: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setIsSettingsNavCollapsed((prev) => !prev)}
-                        className="inline-flex items-center justify-center rounded-full border border-gray-200 dark:border-gray-800 p-2 text-gray-500 dark:text-gray-300 hover:text-blue-600 hover:border-blue-200 dark:hover:text-blue-300 transition-colors"
+                        className="inline-flex items-center justify-center rounded-full border border-gray-200 dark:border-gray-800 p-2 text-gray-500 dark:text-gray-300 hover:text-brand-600 hover:border-brand-200 dark:hover:text-brand-300 transition-colors"
                         aria-pressed={isSettingsNavCollapsed}
                         aria-expanded={!isSettingsNavCollapsed}
                         aria-label={isSettingsNavCollapsed ? t('docBoard.tabs.expandSidebar') : t('docBoard.tabs.collapseSidebar')}
@@ -2575,7 +2575,7 @@ export const ClinicalDashboard: React.FC = () => {
                               <TabsTrigger
                                 value="layout"
                                 onClick={handleLayoutTabClick}
-                                className={`relative flex items-center justify-center w-full h-10 rounded-xl transition-all duration-300 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-blue-50 dark:hover:bg-blue-900/20`}
+                                className={`relative flex items-center justify-center w-full h-10 rounded-xl transition-all duration-300 data-[state=active]:bg-brand-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-brand-50 dark:hover:bg-brand-900/20`}
                               >
                                 <LayoutDashboard className="h-5 w-5" />
                               </TabsTrigger>
@@ -2586,7 +2586,7 @@ export const ClinicalDashboard: React.FC = () => {
                           <TabsTrigger
                             value="layout"
                             onClick={handleLayoutTabClick}
-                            className="flex-shrink-0 w-auto md:w-full flex items-center justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 overflow-hidden"
+                            className="flex-shrink-0 w-auto md:w-full flex items-center justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-brand-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 hover:bg-brand-50 dark:hover:bg-brand-900/20 overflow-hidden"
                           >
                             <LayoutDashboard className="h-4 w-4 flex-shrink-0" />
                             <span className="font-medium truncate block w-full text-left">{isMobile ? 'Layout' : t('docBoard.settings.layoutLab')}</span>
@@ -2682,7 +2682,7 @@ export const ClinicalDashboard: React.FC = () => {
             <Button variant="outline" onClick={() => handleAddBillModalChange(false)}>
               {t('common.close', { defaultValue: 'Close' })}
             </Button>
-            <Button onClick={() => handleAddBillModalChange(false)} className="bg-indigo-600 text-white hover:bg-indigo-700">
+            <Button onClick={() => handleAddBillModalChange(false)} className="bg-brand-600 text-white hover:bg-brand-700">
               {t('common.continue', { defaultValue: 'Proceed' })}
             </Button>
           </DialogFooter>

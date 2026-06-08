@@ -226,7 +226,7 @@ export const PatientSimulator: React.FC = () => {
 
             {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/50 dark:bg-black/50 backdrop-blur-sm">
-                    <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                    <Loader2 className="w-8 h-8 animate-spin text-brand-600" />
                 </div>
             )}
 
@@ -234,8 +234,8 @@ export const PatientSimulator: React.FC = () => {
             <div className="absolute bottom-4 left-4 right-4 z-20 flex flex-col gap-3">
                 {/* Chat Bubble */}
                 {chatResponse && (
-                    <Card className="p-3 bg-white/90 backdrop-blur-md border-l-4 border-l-blue-500 shadow-lg animate-in fade-in slide-in-from-bottom-2">
-                        <span className="text-xs font-bold text-blue-600 uppercase block mb-1">{chatResponse.label}</span>
+                    <Card className="p-3 bg-white/90 backdrop-blur-md border-l-4 border-l-brand-500 shadow-lg animate-in fade-in slide-in-from-bottom-2">
+                        <span className="text-xs font-bold text-brand-600 uppercase block mb-1">{chatResponse.label}</span>
                         <p className="text-sm text-gray-700">{chatResponse.text}</p>
                     </Card>
                 )}
@@ -247,14 +247,14 @@ export const PatientSimulator: React.FC = () => {
                         value={userInput}
                         onChange={(e) => setUserInput(e.target.value)}
                         placeholder="Ask or describe style..."
-                        className="bg-white/50 border-gray-200 focus:ring-blue-500 h-9"
+                        className="bg-white/50 border-gray-200 focus:ring-brand-500 h-9"
                         onKeyDown={(e) => e.key === 'Enter' && handleChat()}
                     />
                 </div>
                 <div className="flex gap-2">
                     <Button
                         size="sm"
-                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white gap-2"
+                        className="flex-1 bg-brand-600 hover:bg-brand-700 text-white gap-2"
                         onClick={handleChat}
                         disabled={isChatLoading || isStyleLoading}
                     >

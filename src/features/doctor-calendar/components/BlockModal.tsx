@@ -87,7 +87,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
       case 'Annual Leave': return 'text-red-600';
       case 'Sick Leave': return 'text-orange-600';
       case 'Personal': return 'text-purple-600';
-      case 'Meeting': return 'text-blue-600';
+      case 'Meeting': return 'text-brand-600';
       case 'Conference': return 'text-teal-600';
       case 'Training': return 'text-green-600';
       case 'Emergency': return 'text-pink-600';
@@ -181,8 +181,8 @@ export const BlockModal: React.FC<BlockModalProps> = ({
           </div>
 
           {formData.startDateTime && formData.endDateTime && (
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="text-sm text-blue-800">
+            <div className="p-3 bg-brand-50 border border-brand-200 rounded-lg">
+              <div className="text-sm text-brand-800">
                 <div className="font-medium">{t('blockModal.fields.durationLabel')}</div>
                 <div>
                   {format(new Date(formData.startDateTime), 'MMM dd, yyyy HH:mm')} - {format(new Date(formData.endDateTime), 'MMM dd, yyyy HH:mm')}

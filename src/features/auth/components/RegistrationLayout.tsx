@@ -28,9 +28,9 @@ export const RegistrationLayout: React.FC<RegistrationLayoutProps> = ({
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex overflow-hidden">
+    <div className="h-screen bg-gradient-to-br from-slate-50 via-white to-brand-50 flex overflow-hidden">
       {/* Left Side - Promotional Content (2/3 width) */}
-      <div className="hidden lg:flex lg:w-2/3 bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 p-8 items-center justify-center relative">
+      <div className="hidden lg:flex lg:w-2/3 bg-gradient-to-br from-brand-600 via-purple-600 to-brand-700 p-8 items-center justify-center relative">
         {/* Background pattern */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute inset-0" style={{
@@ -48,7 +48,7 @@ export const RegistrationLayout: React.FC<RegistrationLayoutProps> = ({
                 alt="NexEagle Logo" 
                 className="h-20 w-20 object-contain"               
               />
-              <div className="hidden items-center justify-center w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-400 rounded-lg">
+              <div className="hidden items-center justify-center w-8 h-8 bg-gradient-to-br from-brand-400 to-purple-400 rounded-lg">
                 <Shield className="h-5 w-5 text-white" />
               </div>
             </div>
@@ -127,7 +127,7 @@ export const RegistrationLayout: React.FC<RegistrationLayoutProps> = ({
                 </div>
               </div>
               
-              <CardTitle className="text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              <CardTitle className="text-lg font-bold bg-gradient-to-r from-brand-600 to-brand-600 bg-clip-text text-transparent">
                 {currentStep === 1 && "Choose Your Role"}
                 {currentStep === 2 && "Quick Verification"}
                 {currentStep === 3 && "Account Setup"}

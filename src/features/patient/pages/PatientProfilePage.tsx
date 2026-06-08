@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -56,72 +56,6 @@ interface PatientData {
   currentMedications: string[];
 }
 
-interface Prescription {
-  id: string;
-  date: Date;
-  doctor: string;
-  visitType: string;
-  chiefComplaint: string;
-  patientHistory: string;
-  comorbidity: string;
-  advice: string;
-  investigation: string;
-  observation: string;
-  medications: {
-    name: string;
-    composition: string;
-    dosage: string;
-    frequency: string;
-    duration: string;
-  }[];
-  instructions: string;
-}
-
-interface LabTestResult {
-  id: string;
-  appointmentId: string;
-  testName: string;
-  testDate: Date;
-  orderedBy: string;
-  status: 'ordered' | 'collected' | 'completed' | 'cancelled';
-  results: {
-    parameter: string;
-    value: string;
-    unit: string;
-    normalRange: string;
-    status: 'normal' | 'high' | 'low' | 'critical';
-    notes?: string;
-  }[];
-  notes?: string;
-  attachments?: string[];
-}
-
-interface Appointment {
-  id: string;
-  date: Date;
-  time: string;
-  doctor: string;
-  status: 'scheduled' | 'completed' | 'cancelled' | 'no-show';
-  type: string;
-  notes?: string;
-  prescription?: Prescription;
-}
-
-
-
-interface VitalSigns {
-  date: string;
-  systolic: number;
-  diastolic: number;
-  heartRate: number;
-  temperature: number;
-  oxygenSaturation: number;
-  respiratoryRate: number;
-  weight: number;
-}
-
-
-
 export const PatientProfilePage: React.FC = () => {
   const { patientId: routePatientId } = useParams<{ patientId: string }>();
   const [searchParams] = useSearchParams();
@@ -149,10 +83,6 @@ export const PatientProfilePage: React.FC = () => {
   const patientId = routePatientId || queryPatientId;
 
   const [patient, setPatient] = useState<PatientData | null>(null);
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
-  const [labTests, setLabTests] = useState<LabTestResult[]>([]);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [vitalSigns, setVitalSigns] = useState<VitalSigns[]>([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
@@ -210,12 +140,14 @@ export const PatientProfilePage: React.FC = () => {
         age: patientProfile.ageYears,
         gender: patientProfile.sex,
         phone: patientProfile.mobile,
-        email: '',
+        email: patientProfile.email || '',
         address: `${patientProfile.addressLine1}, ${patientProfile.city}, ${patientProfile.state || ''}, ${patientProfile.country} - ${patientProfile.pincode}`,
-        bloodGroup: '',
-        emergencyContact: '',
+        bloodGroup: patientProfile.bloodGroup || '',
+        emergencyContact: patientProfile.emergencyContactPhone || '',
         medicalHistory: [],
-        allergies: [],
+        allergies: patientProfile.allergies
+          ? patientProfile.allergies.split(',').map(s => s.trim()).filter(Boolean)
+          : [],
         currentMedications: []
       });
     }
@@ -251,31 +183,20 @@ export const PatientProfilePage: React.FC = () => {
     fetchActiveAppointment();
   }, [patientId, appointmentId]);
 
-  // Handle automatic new prescription creation when navigating to prescriptions tab
-  useEffect(() => {
-    if (activeTab === 'prescriptions') {
-      // Only create a new prescription if there are no existing prescriptions
-      if (prescriptions.length === 0) {
-        const newPrescription: Prescription = {
-          id: `RX${Date.now()}`,
-          date: new Date(),
-          doctor: 'Current Doctor', // Will be replaced with actual doctor name
-          visitType: 'New Consultation',
-          chiefComplaint: '',
-          patientHistory: '',
-          comorbidity: '',
-          advice: '',
-          investigation: '',
-          observation: '',
-          medications: [],
-          instructions: ''
-        };
-
-        // Add the new prescription
-        setPrescriptions([newPrescription]);
-      }
-    }
-  }, [activeTab, prescriptions.length]);
+  // Report attachments from the patient's past visits (flattened from the timeline) — feeds the
+  // Lab Tests tab so it shows the full report history, not just the current appointment.
+  const historyAttachments = useMemo(
+    () => timelineEvents.flatMap(e => (e.attachments || []).map(a => ({
+      attachmentId: a.attachmentId,
+      fileName: a.fileName,
+      storageUrl: a.storageUrl,
+      reportType: a.reportType,
+      uploadedBy: a.uploadedBy,
+      uploadedAt: a.uploadedAt,
+      notes: a.notes,
+    }))),
+    [timelineEvents]
+  );
 
   const navigationItems = [
     { id: 'overview', label: 'Overview', icon: User },
@@ -340,22 +261,34 @@ export const PatientProfilePage: React.FC = () => {
     }
   };
 
-  // Calculate risk level for patient header
+  // Risk level — derived from real data: age, recorded allergies, distinct chronic conditions
+  // (comorbidities + diagnoses across visits), and polypharmacy at the latest visit.
   const getRiskLevel = () => {
     if (!patient) return { level: 'Low', color: 'text-green-600', bg: 'bg-green-50', icon: CheckCircle };
 
     let riskScore = 0;
 
-    // Check age risk
     if (patient.age > 65) riskScore += 1;
     if (patient.age > 80) riskScore += 1;
+    if (patient.allergies.length >= 1) riskScore += 1;
 
-    // Check medical history
-    if (patient.medicalHistory && patient.medicalHistory.length > 2) riskScore += 1;
-    if (patient.allergies && patient.allergies.length > 1) riskScore += 1;
+    // Distinct chronic conditions seen across the patient's visits.
+    const conditions = new Set<string>();
+    timelineEvents.forEach(e => {
+      [e.comorbidity, e.diagnosis].forEach(field => {
+        (field || '')
+          .split(/[;,]/)
+          .map(s => s.trim().toLowerCase())
+          .filter(Boolean)
+          .forEach(c => conditions.add(c));
+      });
+    });
+    if (conditions.size >= 2) riskScore += 1;
+    if (conditions.size >= 4) riskScore += 1;
 
-    // Check current medications
-    if (patient.currentMedications && patient.currentMedications.length > 3) riskScore += 1;
+    // Polypharmacy at the most recent visit (timeline is newest-first).
+    const recentMeds = timelineEvents[0]?.medications?.length ?? 0;
+    if (recentMeds > 3) riskScore += 1;
 
     if (riskScore >= 4) return { level: 'High', color: 'text-red-600', bg: 'bg-red-50', icon: AlertTriangle };
     if (riskScore >= 2) return { level: 'Medium', color: 'text-yellow-600', bg: 'bg-yellow-50', icon: AlertCircle };
@@ -420,8 +353,8 @@ export const PatientProfilePage: React.FC = () => {
             </div>
             <div className="space-y-3">
               <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
-                <div className={`${sidebarCollapsed ? 'w-8 h-8' : 'w-10 h-10'} bg-blue-100 rounded-full flex items-center justify-center border border-blue-200`}>
-                  <User className={`${sidebarCollapsed ? 'h-4 w-4' : 'h-5 w-5'} text-blue-600`} />
+                <div className={`${sidebarCollapsed ? 'w-8 h-8' : 'w-10 h-10'} bg-brand-100 rounded-full flex items-center justify-center border border-brand-200`}>
+                  <User className={`${sidebarCollapsed ? 'h-4 w-4' : 'h-5 w-5'} text-brand-600`} />
                 </div>
                 {!sidebarCollapsed && (
                   <div>
@@ -481,7 +414,7 @@ export const PatientProfilePage: React.FC = () => {
                       <div className="relative flex-shrink-0">
                         <Avatar className="h-12 w-12 border-2 border-white shadow-md">
                           <AvatarImage src="/api/placeholder/80/80" />
-                          <AvatarFallback className="text-sm font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                          <AvatarFallback className="text-sm font-bold bg-gradient-to-br from-brand-500 to-purple-600 text-white">
                             {patient.name.split(' ').map(n => n[0]).join('')}
                           </AvatarFallback>
                         </Avatar>
@@ -501,7 +434,7 @@ export const PatientProfilePage: React.FC = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => setShowPatientProfileModal(true)}
-                            className="h-6 w-6 p-0 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+                            className="h-6 w-6 p-0 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400 transition-colors"
                             title="Edit Profile"
                           >
                             <Edit className="h-3.5 w-3.5" />
@@ -512,7 +445,7 @@ export const PatientProfilePage: React.FC = () => {
                         <div className="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-300">
                           <span className="flex items-center gap-1">
                             <span className="font-medium text-gray-800 dark:text-gray-200">ID:</span>
-                            <span className="text-blue-600 dark:text-blue-300 font-mono">{patient.id}</span>
+                            <span className="text-brand-600 dark:text-brand-300 font-mono">{patient.id}</span>
                           </span>
                           <span className="flex items-center gap-1">
                             <span className="font-medium text-gray-800 dark:text-gray-200">Age:</span>
@@ -540,7 +473,7 @@ export const PatientProfilePage: React.FC = () => {
                             <activeTabMeta.icon className="h-5 w-5 text-primary" />
                             <span>{activeTabMeta.label}</span>
                             {activeTab === 'prescriptions' && (
-                              <div className="flex items-center gap-1.5 text-xs font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 px-3 py-1.5 rounded-full shadow-md ml-2">
+                              <div className="flex items-center gap-1.5 text-xs font-semibold text-white bg-gradient-to-r from-brand-500 to-brand-600 px-3 py-1.5 rounded-full shadow-md ml-2">
                                 <Cloud className="h-3.5 w-3.5 text-white" />
                                 <span>Auto-save enabled</span>
                               </div>
@@ -569,6 +502,14 @@ export const PatientProfilePage: React.FC = () => {
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Allergy banner — always visible so a doctor sees it before prescribing */}
+            {patient && patient.allergies.length > 0 && (
+              <div className="mx-6 mt-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-600 dark:text-red-400" />
+                <span><span className="font-bold">Allergies:</span> {patient.allergies.join(', ')}</span>
               </div>
             )}
 
@@ -620,7 +561,12 @@ export const PatientProfilePage: React.FC = () => {
             {/* Lab Tests Tab */}
             {activeTab === 'lab-tests' && (
               <div className="h-full">
-                <PatientLabTests labTests={labTests} appointments={appointments} />
+                <PatientLabTests
+                  historyAttachments={historyAttachments}
+                  patientId={patientId || undefined}
+                  appointmentId={appointmentId || activeAppointmentId || undefined}
+                  patientName={patient?.name}
+                />
               </div>
             )}
           </div>

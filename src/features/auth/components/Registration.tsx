@@ -7,6 +7,7 @@ import { ValidationUtils } from '@/utils/validation';
 import { useHospitalUser } from '@/features/appointment/hooks/useHospitalUser';
 import { API_ENDPOINTS } from '@/app/api';
 import { axiosInstance } from '@/services/axiosClient';
+import { hospitalApi } from '@/features/hospital/services/hospitalApi';
 import { useQueryClient } from '@tanstack/react-query';
 // Align registration with login: if hospital mapping exists, also try to load doctor profile
 import {
@@ -104,6 +105,15 @@ export const Registration: React.FC<RegistrationProps> = ({ onRegister, onSwitch
         if (employeeId) {
           authStore.setEmployeeId(employeeId);
         }
+        // Populate the full hospital list for the switcher (multi-hospital chains). Non-blocking.
+        try {
+          const mine = await hospitalApi.getMyHospitals();
+          if (mine.length) {
+            authStore.setHospitals(mine);
+            const primary = mine.find(h => h.isPrimary) ?? mine[0];
+            if (primary?.hospitalId) authStore.setHospitalId(primary.hospitalId);
+          }
+        } catch { /* non-blocking — single-hospital flow still works */ }
 
         authStore.setHospitalAccessRestriction(false, null);
         return 'found';

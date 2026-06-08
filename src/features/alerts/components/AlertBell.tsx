@@ -118,7 +118,7 @@ export const AlertBell: React.FC = () => {
         ? 'bg-rose-600 text-white'
         : counts.warning > 0
             ? 'bg-amber-500 text-white'
-            : 'bg-indigo-600 text-white';
+            : 'bg-brand-600 text-white';
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -139,7 +139,7 @@ export const AlertBell: React.FC = () => {
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
                     <div>
                         <p className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                            <Bell className="h-4 w-4 text-indigo-600" />
+                            <Bell className="h-4 w-4 text-brand-600" />
                             Alerts
                             {counts.total > 0 && <Badge variant="outline" className="text-[10px] font-bold">{counts.total} active</Badge>}
                         </p>

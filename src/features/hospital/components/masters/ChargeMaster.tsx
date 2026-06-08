@@ -311,7 +311,7 @@ export const ChargeMaster = () => {
                     <Button variant="outline" size="sm" onClick={() => loadCharges(true)} disabled={refreshing || loading} className="gap-1.5 bg-white dark:bg-slate-900 shadow-sm text-gray-700 dark:text-gray-300">
                         <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
                     </Button>
-                    <Button onClick={() => handleOpenDrawer(null)} className="flex-1 sm:flex-none gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20">
+                    <Button onClick={() => handleOpenDrawer(null)} className="flex-1 sm:flex-none gap-2 bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20">
                         <Plus className="h-4 w-4" /> New Charge
                     </Button>
                 </div>
@@ -360,7 +360,7 @@ export const ChargeMaster = () => {
                                     initial={{ opacity: 0, y: -10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     key={charge.id}
-                                    className="hover:bg-blue-50/30 dark:hover:bg-slate-800/50 transition-colors group"
+                                    className="hover:bg-brand-50/30 dark:hover:bg-slate-800/50 transition-colors group"
                                 >
                                     <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
                                         <div className="flex items-center gap-2">
@@ -397,7 +397,7 @@ export const ChargeMaster = () => {
                                     </td>
                                     <td className="px-4 py-3 text-right">
                                         <div className="flex items-center justify-end gap-1 transition-opacity">
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800" onClick={() => handleOpenDrawer(charge)}>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-slate-800" onClick={() => handleOpenDrawer(charge)}>
                                                 <Pencil className="h-4 w-4" />
                                             </Button>
                                             <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" onClick={() => handleDeleteCharge(charge.id)} title="Delete">
@@ -456,14 +456,14 @@ export const ChargeMaster = () => {
 
                                 <section className="space-y-4">
                                     <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Basic Details
+                                        <div className="w-1.5 h-1.5 rounded-full bg-brand-500" /> Basic Details
                                     </h3>
                                     <div className="space-y-3">
                                         <div className="grid gap-2">
                                             <Label htmlFor="name">Display Name <span className="text-red-500">*</span></Label>
                                             <Input
                                                 id="name"
-                                                className="transition-shadow focus-visible:ring-blue-500"
+                                                className="transition-shadow focus-visible:ring-brand-500"
                                                 placeholder="e.g. Complete Blood Count"
                                                 value={editingRecord?.displayName || ''}
                                                 onChange={e => setEditingRecord(p => ({ ...p!, displayName: e.target.value }))}
@@ -620,7 +620,7 @@ export const ChargeMaster = () => {
                                         variant="outline"
                                         disabled={isSaving}
                                         onClick={() => handleSaveDrawer(true)}
-                                        className="flex-1 sm:flex-none border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-900/30"
+                                        className="flex-1 sm:flex-none border-brand-200 text-brand-700 hover:bg-brand-50 dark:border-brand-800 dark:text-brand-300 dark:hover:bg-brand-900/30"
                                     >
                                         Save & Add Next
                                     </Button>
@@ -629,7 +629,7 @@ export const ChargeMaster = () => {
                                         onClick={() => handleSaveDrawer(false)}
                                         className={`flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-md font-medium text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 min-w-[100px] h-10 ${isSuccess
                                             ? 'bg-green-500 text-white shadow-lg shadow-green-500/30'
-                                            : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20'
+                                            : 'bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20'
                                             }`}
                                         animate={isSuccess ? { scale: [1, 1.05, 1], transition: { duration: 0.3 } } : {}}
                                         whileTap={{ scale: 0.95 }}

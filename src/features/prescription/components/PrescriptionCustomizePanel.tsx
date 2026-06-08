@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { usePrescriptionFieldConfig } from '@/features/prescription/hooks/usePrescriptionFieldConfig';
+import { PrescriptionFieldLayoutEditor } from '@/features/prescription/components/PrescriptionFieldLayoutEditor';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/hooks/use-toast';
 import { personalizedDataApi, PersonalizedLookupType } from '@/features/prescription/services/personalizedDataApi';
@@ -201,10 +202,10 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
 
   const personalizedDataCategories = [
     { id: 'chiefComplaint', label: 'Chief Complaint', icon: AlertCircleIcon, color: 'text-red-600' },
-    { id: 'history', label: 'History', icon: BookOpen, color: 'text-blue-600' },
+    { id: 'history', label: 'History', icon: BookOpen, color: 'text-brand-600' },
     { id: 'comorbidity', label: 'Comorbidity', icon: Heart, color: 'text-pink-600' },
     { id: 'examination', label: 'Examination', icon: Stethoscope, color: 'text-purple-600' },
-    { id: 'diagnosis', label: 'Diagnosis', icon: Microscope, color: 'text-indigo-600' },
+    { id: 'diagnosis', label: 'Diagnosis', icon: Microscope, color: 'text-brand-600' },
     { id: 'investigations', label: 'Investigations', icon: TestTube, color: 'text-cyan-600' },
     { id: 'procedures', label: 'Procedures', icon: Syringe, color: 'text-orange-600' },
     { id: 'medications', label: 'Medications', icon: Pill, color: 'text-green-600' },
@@ -894,79 +895,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
       {/* Direct Content - No Internal Navigation */}
       <div className={`flex-1 flex flex-col h-full w-full gap-3 sm:gap-4 ${showCloseButton ? 'max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4' : 'p-2 sm:p-4'}`}>
         {customizeTab === 'fields' ? (
-          <div className="h-full flex flex-col">
-            {/* Enhanced Fields Header - Mobile Responsive */}
-            <div className="flex-shrink-0 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-xl">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-600 rounded-full animate-pulse"></div>
-                  <Stethoscope className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-                  <div>
-                    <h3 className="text-base sm:text-lg font-semibold text-blue-900 dark:text-blue-200">Prescription Fields</h3>
-                    <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 hidden sm:block">• Green = Active • Click ON/OFF to toggle</p>
-                    {isLoadingPreferences && (
-                      <p className="text-xs text-blue-600">Loading preferences...</p>
-                    )}
-                    {preferencesError && (
-                      <p className="text-xs text-red-600">Failed to load preferences. Using defaults.</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:ml-auto items-start sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
-                  <div className="text-xs sm:text-sm text-blue-800 dark:text-blue-200 bg-white/70 dark:bg-blue-900/30 rounded-md px-2.5 py-1 border border-blue-200/70 dark:border-blue-800/60">
-                    <span className="font-semibold">{fields.filter(f => f.enabled).length}</span> of <span className="font-semibold">{fields.length}</span> fields enabled
-                  </div>
-                  <Button
-                    onClick={saveFieldConfiguration}
-                    disabled={isSaving}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 sm:px-5 py-2 text-xs sm:text-sm transition-colors w-full sm:w-auto disabled:opacity-50"
-                  >
-                    <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                    {isSaving ? 'Saving...' : 'Save Changes'}
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Compact Field Grid - Mobile Responsive */}
-            <div className="flex-1 p-2 sm:p-3 overflow-visible">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                {fields.map((field) => (
-                  <div
-                    key={field.id}
-                    className={`flex items-center justify-between p-3 sm:p-3 rounded-lg border transition-all duration-200 ${field.enabled
-                      ? 'border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-900/30'
-                      : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'
-                      }`}
-                  >
-                    <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                      <div className={`p-2 sm:p-1.5 rounded-md flex-shrink-0 ${field.enabled ? 'bg-green-100 text-green-700 dark:bg-green-900/60 dark:text-green-200' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-200'
-                        }`}>
-                        {renderFieldIcon(field.id)}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate block">{field.label}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-                      <button
-                        onClick={() => updateFieldConfig(field.id, !field.enabled)}
-                        className={`px-4 py-2 sm:px-3 sm:py-1.5 rounded-md text-sm font-medium transition-colors ${field.enabled
-                          ? 'bg-green-500 text-white shadow-sm'
-                          : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-100'
-                          }`}
-                      >
-                        {field.enabled ? 'ON' : 'OFF'}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          </div>
+          <PrescriptionFieldLayoutEditor overrideDoctorId={overrideDoctorId} />
         ) : (
           <div className="h-full flex flex-col">
             {/* Sidebar Layout - Mobile Responsive */}
@@ -975,8 +904,8 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
               <div className="w-full sm:w-64 flex-shrink-0 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col overflow-hidden">
                 <div className="p-4 sm:p-5 flex-shrink-0 border-b border-gray-100 dark:border-gray-800/60 bg-gray-50/50 dark:bg-gray-900/50">
                   <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <BookOpen className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <div className="p-1.5 bg-brand-50 dark:bg-brand-900/20 rounded-lg">
+                      <BookOpen className="h-4 w-4 text-brand-600 dark:text-brand-400" />
                     </div>
                     <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 tracking-tight">Medical Categories</h4>
                   </div>
@@ -992,15 +921,15 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                           key={category.id}
                           onClick={() => setSelectedPersonalizedCategory(category.id)}
                           className={`group flex-shrink-0 sm:w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative overflow-hidden ${isSelected
-                            ? 'bg-blue-50/80 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
+                            ? 'bg-brand-50/80 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300'
                             : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-200'
                             }`}
                         >
                           {isSelected && (
-                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-3/5 bg-blue-500 rounded-r-full" />
+                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-3/5 bg-brand-500 rounded-r-full" />
                           )}
                           <div className={`p-1.5 rounded-md flex-shrink-0 transition-colors ${isSelected 
-                            ? 'bg-blue-100/50 dark:bg-blue-400/20 text-blue-600 dark:text-blue-400' 
+                            ? 'bg-brand-100/50 dark:bg-brand-400/20 text-brand-600 dark:text-brand-400' 
                             : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 group-hover:bg-gray-200 dark:group-hover:bg-gray-700'
                           }`}>
                             <IconComponent className="h-4 w-4" />
@@ -1426,7 +1355,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
             </div>
             <Button
               onClick={() => console.log('Save configuration')}
-              className="px-4 text-xs bg-blue-600 hover:bg-blue-700"
+              className="px-4 text-xs bg-brand-600 hover:bg-brand-700"
               size="sm"
             >
               <Save className="h-3 w-3 mr-1" />
@@ -1543,7 +1472,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
               <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                    {editingItem ? <Edit3 className="h-5 w-5 text-blue-600" /> : <Plus className="h-5 w-5 text-green-600" />}
+                    {editingItem ? <Edit3 className="h-5 w-5 text-brand-600" /> : <Plus className="h-5 w-5 text-green-600" />}
                     {editingItem ? 'Edit' : 'Add'} {personalizedDataCategories.find(cat => cat.id === selectedPersonalizedCategory)?.label}
                   </h3>
                   <Button
@@ -1684,7 +1613,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                             value={newItemName}
                             onChange={(e) => setNewItemName(e.target.value)}
                             placeholder={getNamePlaceholder(selectedPersonalizedCategory)}
-                            className="bg-gray-50 dark:bg-gray-900 h-10 border-gray-300 dark:border-gray-700 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                            className="bg-gray-50 dark:bg-gray-900 h-10 border-gray-300 dark:border-gray-700 shadow-sm focus:ring-brand-500 focus:border-brand-500"
                             autoFocus
                           />
                         </div>
@@ -1743,7 +1672,7 @@ export const PrescriptionCustomizePanel: React.FC<PrescriptionCustomizePanelProp
                     (!isMedicationCategory && !newItemName.trim()) ||
                     (isMedicationCategory && !newItemGenericName.trim() && !newItemBrandName.trim() && !newItemMedicineName.trim())
                   }
-                  className="bg-blue-600 hover:bg-blue-700 h-10 px-6 shadow-md"
+                  className="bg-brand-600 hover:bg-brand-700 h-10 px-6 shadow-md"
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
                   {isAddingItem

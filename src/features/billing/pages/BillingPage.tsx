@@ -31,10 +31,11 @@ import {
     type BillingChargeRow, type BillingPaymentRow, type GetEncounterEventsResponse,
 } from '../services/ipdBillingService';
 import { AdmissionDayBillsPanel } from '../components/AdmissionDayBillsPanel';
+import { offlineCachedRead, isReachable } from '@/offline';
 import type { Patient } from '../types';
 import { AddChargeDialog } from '../components/dialogs/AddChargeDialog';
 import { AddPaymentDialog } from '../components/dialogs/AddPaymentDialog';
-import { VISIT_TYPES } from '../utils/constants';
+import { VISIT_TYPES, visitTypeLabel } from '../utils/constants';
 import { useAuthStore } from '@/store/authStore';
 import { useHospitalApi } from '@/hooks/useApi';
 import { openPrintHtml, downloadHtmlAsPdf } from '@/utils/printUtils';
@@ -152,7 +153,10 @@ export const BillingPage: React.FC = () => {
         setEncountersLoading(true);
         setEncountersError(null);
         try {
-            const res: any = await ipdBillingService.getPatientEvents(patientIdValue);
+            const res: any = await offlineCachedRead(
+                ['billing', 'patientEvents', patientIdValue],
+                () => ipdBillingService.getPatientEvents(patientIdValue),
+            );
             if (res?.success === false) throw new Error(res.message ?? 'Could not load visits');
             const list: Encounter[] = (res?.data?.encounters ?? []).map((e: any) => ({
                 encounterId: e.encounterId,
@@ -189,7 +193,10 @@ export const BillingPage: React.FC = () => {
         setEventsLoading(true);
         setEventsError(null);
         try {
-            const res = await ipdBillingService.getEncounterEvents(selectedEncounterId, selectedPatient.patientId);
+            const res = await offlineCachedRead(
+                ['billing', 'encounterEvents', selectedEncounterId, selectedPatient.patientId],
+                () => ipdBillingService.getEncounterEvents(selectedEncounterId, selectedPatient.patientId),
+            );
             if (!res?.success) throw new Error(res?.message ?? 'Could not load events');
             setEventsData(res.data ?? null);
         } catch (e: any) {
@@ -220,6 +227,7 @@ export const BillingPage: React.FC = () => {
 
     const handleCreateVisit = async () => {
         if (!selectedPatient || creatingVisit) return;
+        if (!isReachable()) { toast({ title: 'Needs connection', description: 'Opening a new visit requires an internet connection.', variant: 'destructive' }); return; }
         setCreatingVisit(true);
         try {
             const res = await ipdBillingService.createEncounter({
@@ -228,7 +236,7 @@ export const BillingPage: React.FC = () => {
             });
             if (!res?.success || !res.data?.encounterId) throw new Error(res?.message ?? 'Could not create visit');
             const newId = res.data.encounterId;
-            toast({ title: 'Visit created', description: `${newVisitType} visit ready for billing` });
+            toast({ title: 'Visit created', description: `${visitTypeLabel(newVisitType)} visit ready for billing` });
             await loadEncounters(selectedPatient.patientId);
             setSelectedEncounterId(newId);
             setShowNewVisit(false);
@@ -260,6 +268,7 @@ export const BillingPage: React.FC = () => {
     // the bill, then finalize. After this no charges/payments can be added until reopened.
     const handleFinalize = async () => {
         if (!selectedPatient || !selectedEncounterId || invoicing) return;
+        if (!isReachable()) { toast({ title: 'Needs connection', description: 'Finalizing an invoice requires an internet connection.', variant: 'destructive' }); return; }
         setInvoicing(true);
         try {
             const inv = await ipdBillingService.createDraftInvoice({ patientId: selectedPatient.patientId, encounterId: selectedEncounterId, invoiceDiscountAmount: overallDiscount > 0 ? overallDiscount : undefined });
@@ -278,6 +287,7 @@ export const BillingPage: React.FC = () => {
     // Reopen a finalized invoice back to DRAFT (audit reason required) so it can be edited again.
     const handleReopen = async () => {
         if (!selectedPatient || !selectedEncounterId || !reopenReason.trim() || invoicing) return;
+        if (!isReachable()) { toast({ title: 'Needs connection', description: 'Reopening an invoice requires an internet connection.', variant: 'destructive' }); return; }
         setInvoicing(true);
         try {
             const res = await ipdBillingService.finalize('reopen', { patientId: selectedPatient.patientId, encounterId: selectedEncounterId, reason: reopenReason.trim() });
@@ -306,6 +316,7 @@ export const BillingPage: React.FC = () => {
             amount = discountMode === 'percent' ? (totals.debit * Math.min(100, raw)) / 100 : raw;
         }
         if (amount > totals.debit) { toast({ title: 'Discount exceeds the bill total', variant: 'destructive' }); return; }
+        if (!isReachable()) { toast({ title: 'Needs connection', description: 'Updating the invoice requires an internet connection.', variant: 'destructive' }); return; }
         const rounded = Math.round(amount * 100) / 100;
         setInvoicing(true);
         try {
@@ -320,6 +331,42 @@ export const BillingPage: React.FC = () => {
         } finally {
             setInvoicing(false);
         }
+    };
+
+    // Optimistic UI: drop the new charge into the ledger instantly so the user sees it the moment
+    // they hit save, before the round-trip. loadEvents() later reconciles with the server; the
+    // returned rollback undoes the row if the write fails.
+    const applyOptimisticCharges = (
+        rows: Array<{ displayName: string; qty: number; rate: number; discountPercent: number; categoryCode: string }>,
+    ): (() => void) => {
+        const now = new Date().toISOString();
+        const provisional = rows.map((r, i) => {
+            const gross = (r.qty || 0) * (r.rate || 0);
+            const discountAmount = Math.round(gross * ((r.discountPercent || 0) / 100) * 100) / 100;
+            return {
+                chargeEventId: `optimistic-${now}-${i}`,
+                createdDateTime: now,
+                displayName: r.displayName,
+                categoryCode: r.categoryCode,
+                qty: r.qty,
+                rate: r.rate,
+                discountAmount,
+                netAmount: Math.round((gross - discountAmount) * 100) / 100,
+                _optimistic: true,
+            };
+        });
+        const addedNet = provisional.reduce((s, c) => s + c.netAmount, 0);
+        setEventsData(prev => prev ? ({
+            ...prev,
+            charges: [...provisional, ...(prev.charges ?? [])],
+            totalBilledAmount: (prev.totalBilledAmount ?? 0) + addedNet,
+        } as typeof prev) : prev);
+        const ids = new Set(provisional.map(p => p.chargeEventId));
+        return () => setEventsData(prev => prev ? ({
+            ...prev,
+            charges: (prev.charges ?? []).filter((c: any) => !ids.has(c.chargeEventId)),
+            totalBilledAmount: (prev.totalBilledAmount ?? 0) - addedNet,
+        } as typeof prev) : prev);
     };
 
     // After a charge is added, automatically fold it into the (draft) invoice so the user never
@@ -450,12 +497,12 @@ export const BillingPage: React.FC = () => {
     return (
         <div className="flex flex-col h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-50 to-slate-100/60 px-2 sm:px-4 pb-4 pt-1 gap-4 text-sm text-slate-800">
             {/* Top bar */}
-            <div className="flex items-center justify-between gap-4 bg-white/80 backdrop-blur-xl p-3 sm:p-4 rounded-2xl border border-white/40 ring-1 ring-black/5 shadow-lg shadow-indigo-500/5">
+            <div className="flex items-center justify-between gap-4 bg-white/80 backdrop-blur-xl p-3 sm:p-4 rounded-2xl border border-white/40 ring-1 ring-black/5 shadow-lg shadow-brand-500/5">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                     <Button variant="ghost" size="icon" className="rounded-xl hover:bg-slate-100" onClick={() => navigate('/billing')}>
                         <ArrowLeft className="h-5 w-5 text-slate-500" />
                     </Button>
-                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md shadow-indigo-500/30">
+                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-brand-500 to-violet-600 flex items-center justify-center shadow-md shadow-brand-500/30">
                         <IndianRupee className="h-5 w-5 text-white" />
                     </div>
                     <div className="min-w-0">
@@ -473,7 +520,7 @@ export const BillingPage: React.FC = () => {
                                 <div className="flex flex-col min-w-0">
                                     <div className="flex items-center gap-2">
                                         <h3 className="font-bold text-slate-800 truncate">{selectedPatient.name}</h3>
-                                        <Badge variant="outline" className="text-[9px] h-5 px-1.5 shrink-0">{selectedPatient.age}Y / {selectedPatient.sex}</Badge>
+                                        <Badge variant="outline" className="text-[11px] h-5 px-1.5 shrink-0">{selectedPatient.age}Y / {selectedPatient.sex}</Badge>
                                     </div>
                                     <span className="text-[10px] text-cyan-700 font-mono">{selectedPatient.patientId}</span>
                                 </div>
@@ -489,7 +536,7 @@ export const BillingPage: React.FC = () => {
                                 )}>
                                     {due < 0 ? <Wallet className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
                                     <div className="flex flex-col">
-                                        <span className="text-[9px] font-bold tracking-wider uppercase">{due < 0 ? 'Credit' : 'Due'}</span>
+                                        <span className="text-[11px] font-bold tracking-wider uppercase">{due < 0 ? 'Credit' : 'Due'}</span>
                                         <span className="text-sm font-bold tabular-nums">₹ {Math.abs(due).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                 </div>
@@ -501,7 +548,7 @@ export const BillingPage: React.FC = () => {
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 shrink-0 max-w-[260px]" title={eventsData.currentInvoice.reopenedReason || 'No reason recorded'}>
                         <Unlock className="h-4 w-4 shrink-0" />
                         <div className="min-w-0 flex flex-col leading-tight">
-                            <span className="text-[9px] font-bold uppercase tracking-wider">Invoice reopened</span>
+                            <span className="text-[11px] font-bold uppercase tracking-wider">Invoice reopened</span>
                             {eventsData.currentInvoice.reopenedReason && <span className="text-[11px] truncate">{eventsData.currentInvoice.reopenedReason}</span>}
                         </div>
                     </div>
@@ -523,13 +570,13 @@ export const BillingPage: React.FC = () => {
                             <div className="flex items-center gap-2">
                                 <span className={cn(
                                     'h-6 w-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 transition-colors',
-                                    s.done ? 'bg-emerald-500 text-white' : isCurrent ? 'bg-indigo-600 text-white ring-4 ring-indigo-100' : 'bg-slate-200 text-slate-500'
+                                    s.done ? 'bg-emerald-500 text-white' : isCurrent ? 'bg-brand-600 text-white ring-4 ring-brand-100' : 'bg-slate-200 text-slate-500'
                                 )}>
                                     {s.done ? <Check className="h-3.5 w-3.5" /> : s.n}
                                 </span>
                                 <span className={cn(
                                     'text-xs font-semibold hidden sm:inline',
-                                    isCurrent ? 'text-indigo-700' : s.done ? 'text-emerald-700' : 'text-slate-400'
+                                    isCurrent ? 'text-brand-700' : s.done ? 'text-emerald-700' : 'text-slate-400'
                                 )}>{s.label}</span>
                             </div>
                             {i < arr.length - 1 && <div className={cn('h-px flex-1 min-w-[12px]', s.done ? 'bg-emerald-300' : 'bg-slate-200')} />}
@@ -542,7 +589,7 @@ export const BillingPage: React.FC = () => {
             <div className="grid grid-cols-12 lg:grid-cols-[repeat(24,minmax(0,1fr))] gap-4 flex-1 overflow-hidden">
 
                 {/* Left: patient search + visits */}
-                <Card className="col-span-12 md:col-span-3 lg:col-span-3 border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-indigo-500/5 bg-white flex flex-col overflow-hidden">
+                <Card className="col-span-12 md:col-span-3 lg:col-span-3 border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-brand-500/5 bg-white flex flex-col overflow-hidden">
                     <CardHeader className="pb-2 border-b border-slate-200 bg-slate-50">
                         <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-wider">Patient &amp; Visits</CardTitle>
                     </CardHeader>
@@ -607,26 +654,26 @@ export const BillingPage: React.FC = () => {
                                                     onClick={() => setSelectedEncounterId(enc.encounterId)}
                                                     className={cn(
                                                         'w-full px-3 py-2 rounded-xl border text-xs text-left transition-all',
-                                                        active ? 'border-transparent bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/30' : 'border-slate-200 bg-white hover:border-indigo-300 hover:shadow-sm',
+                                                        active ? 'border-transparent bg-gradient-to-br from-brand-600 to-violet-600 text-white shadow-md shadow-brand-500/30' : 'border-slate-200 bg-white hover:border-brand-300 hover:shadow-sm',
                                                         enc.isCancelled && 'opacity-60'
                                                     )}
                                                 >
                                                     <div className="flex items-center gap-1.5 flex-wrap">
                                                         <span className="font-mono font-bold text-[10px] truncate max-w-full">{enc.invoiceNo ?? enc.encounterId.slice(0, 8)}</span>
-                                                        <Badge variant="outline" className={cn('text-[9px] h-4 px-1', active && 'bg-white/20 text-white border-white/30')}>{enc.status}</Badge>
-                                                        {enc.isCancelled && <Badge variant="outline" className="text-[9px] h-4 px-1 bg-rose-50 text-rose-700 border-rose-200">VOID</Badge>}
+                                                        <Badge variant="outline" className={cn('text-[11px] h-4 px-1', active && 'bg-white/20 text-white border-white/30')}>{enc.status}</Badge>
+                                                        {enc.isCancelled && <Badge variant="outline" className="text-[11px] h-4 px-1 bg-rose-50 text-rose-700 border-rose-200">VOID</Badge>}
                                                     </div>
-                                                    <p className={cn('text-[10px] mt-0.5 truncate', active ? 'text-indigo-100' : 'text-slate-500')}>
+                                                    <p className={cn('text-[10px] mt-0.5 truncate', active ? 'text-brand-100' : 'text-slate-500')}>
                                                         {format(parseISO(enc.invoiceDate), 'dd MMM yyyy')}
                                                         {enc.doctorName ? ` · ${enc.doctorName}` : ''}
                                                     </p>
                                                     {(enc.totalBilled ?? 0) > 0 && (
                                                         <div className="flex items-center justify-between gap-1 mt-1">
-                                                            <span className={cn('text-[10px] tabular-nums', active ? 'text-indigo-100' : 'text-slate-600')}>
+                                                            <span className={cn('text-[10px] tabular-nums', active ? 'text-brand-100' : 'text-slate-600')}>
                                                                 ₹{(enc.totalBilled ?? 0).toLocaleString('en-IN')}{(enc.balance ?? 0) > 0 ? ` · Due ₹${(enc.balance ?? 0).toLocaleString('en-IN')}` : ''}
                                                             </span>
                                                             {enc.paymentStatus && (
-                                                                <span className={cn('text-[8px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0', active ? 'bg-white/20 text-white' : chipCls)}>{enc.paymentStatus}</span>
+                                                                <span className={cn('text-[11px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0', active ? 'bg-white/20 text-white' : chipCls)}>{enc.paymentStatus}</span>
                                                             )}
                                                         </div>
                                                     )}
@@ -641,7 +688,7 @@ export const BillingPage: React.FC = () => {
                 </Card>
 
                 {/* Middle: ledger */}
-                <Card className="col-span-12 md:col-span-9 lg:col-[span_16/span_16] border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-indigo-500/5 bg-white flex flex-col overflow-hidden">
+                <Card className="col-span-12 md:col-span-9 lg:col-[span_16/span_16] border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-brand-500/5 bg-white flex flex-col overflow-hidden">
                     <CardHeader className="pb-2 border-b border-slate-200 bg-slate-50 flex flex-row items-center justify-between gap-2">
                         <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-wider">Ledger</CardTitle>
                         {/* Primary CTA: start a new billable visit (= a new invoice). Centered in the
@@ -699,7 +746,7 @@ export const BillingPage: React.FC = () => {
                                             <th className="text-left px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Particular</th>
                                             <th className="text-left px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Category</th>
                                             <th className="text-right px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Qty × Rate</th>
-                                            <th className="text-right px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Disc</th>
+                                            <th className="text-right px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Discount</th>
                                             <th className="text-right px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Debit</th>
                                             <th className="text-right px-3 py-2.5 font-bold text-[11px] text-slate-500 uppercase tracking-widest">Credit</th>
                                             <th className="w-px" />
@@ -707,11 +754,11 @@ export const BillingPage: React.FC = () => {
                                     </thead>
                                     <tbody>
                                         {ledgerRows.map((row) => row.kind === 'charge' ? (
-                                            <tr key={`c-${row.c.chargeEventId}`} className="border-b border-slate-100 border-l-2 border-l-transparent hover:border-l-indigo-300 hover:bg-slate-50 transition-colors">
+                                            <tr key={`c-${row.c.chargeEventId}`} className="border-b border-slate-100 border-l-2 border-l-transparent hover:border-l-brand-300 hover:bg-slate-50 transition-colors">
                                                 <td className="px-3 py-2 whitespace-nowrap text-slate-600">{formatIst(row.c.createdDateTime)}</td>
                                                 <td className="px-3 py-2">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="h-6 w-6 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center shrink-0"><IndianRupee className="h-3.5 w-3.5" /></span>
+                                                        <span className="h-6 w-6 rounded-lg bg-brand-50 text-brand-500 flex items-center justify-center shrink-0"><IndianRupee className="h-3.5 w-3.5" /></span>
                                                         <div className="min-w-0">
                                                             <div className="font-semibold text-slate-800 truncate max-w-[260px]">{splitChargePeriod(row.c.displayName, row.c.categoryCode).name || '—'}</div>
                                                             {splitChargePeriod(row.c.displayName, row.c.categoryCode).period && (
@@ -752,10 +799,10 @@ export const BillingPage: React.FC = () => {
                                                 <td className="px-3 py-2 text-right tabular-nums font-semibold text-emerald-700">₹{Number(row.p.amount).toFixed(2)}</td>
                                                 <td className="px-2 py-2 text-right whitespace-nowrap">
                                                     <div className="inline-flex items-center gap-0.5">
-                                                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" disabled={docBusy} title="Print this payment's receipt" onClick={() => handleDoc('receipt', 'print', row.p.paymentId)}>
+                                                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors" disabled={docBusy} title="Print this payment's receipt" onClick={() => handleDoc('receipt', 'print', row.p.paymentId)}>
                                                             <Printer className="h-3.5 w-3.5" />
                                                         </Button>
-                                                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" disabled={docBusy} title="Download this payment's receipt (PDF)" onClick={() => handleDoc('receipt', 'download', row.p.paymentId)}>
+                                                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors" disabled={docBusy} title="Download this payment's receipt (PDF)" onClick={() => handleDoc('receipt', 'download', row.p.paymentId)}>
                                                             <Download className="h-3.5 w-3.5" />
                                                         </Button>
                                                         {!isFinalized && (
@@ -812,16 +859,16 @@ export const BillingPage: React.FC = () => {
                 </Card>
 
                 {/* Right: actions */}
-                <Card className="col-span-12 lg:col-span-5 border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-indigo-500/5 bg-white flex flex-col overflow-hidden">
-                    <CardHeader className="pb-2 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-indigo-50/50">
+                <Card className="col-span-12 lg:col-span-5 border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-brand-500/5 bg-white flex flex-col overflow-hidden">
+                    <CardHeader className="pb-2 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-brand-50/50">
                         <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
-                            <span className="h-6 w-6 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center shadow-sm shadow-indigo-500/30"><IndianRupee className="h-3.5 w-3.5" /></span>
+                            <span className="h-6 w-6 rounded-lg bg-gradient-to-br from-brand-500 to-violet-600 text-white flex items-center justify-center shadow-sm shadow-brand-500/30"><IndianRupee className="h-3.5 w-3.5" /></span>
                             Actions
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-4 flex-1 overflow-auto space-y-3">
                         {/* Totals summary */}
-                        <div className="relative overflow-hidden rounded-2xl border border-indigo-100 p-4 bg-gradient-to-br from-indigo-50 to-violet-50 ring-1 ring-black/5">
+                        <div className="relative overflow-hidden rounded-2xl border border-brand-100 p-4 bg-gradient-to-br from-brand-50 to-violet-50 ring-1 ring-black/5">
                             <div className="absolute -top-8 -right-8 h-24 w-24 rounded-full bg-white/40 blur-2xl pointer-events-none" />
                             <div className="relative flex justify-between text-xs"><span className="text-slate-500">Gross Charged</span><span className="font-semibold tabular-nums">₹{totals.debit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
                             {overallDiscount > 0 && (
@@ -831,7 +878,7 @@ export const BillingPage: React.FC = () => {
                                 </>
                             )}
                             <div className="relative flex justify-between text-xs mt-1.5"><span className="text-slate-500">Received</span><span className="font-semibold text-emerald-700 tabular-nums">₹{totals.credit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
-                            <div className="relative flex justify-between items-baseline text-sm pt-2.5 mt-2.5 border-t border-indigo-200/60">
+                            <div className="relative flex justify-between items-baseline text-sm pt-2.5 mt-2.5 border-t border-brand-200/60">
                                 <span className="font-bold text-slate-700">Balance</span>
                                 <span className={cn('font-black text-lg tabular-nums', due > 0 ? 'text-rose-700' : due < 0 ? 'text-emerald-700' : 'text-slate-700')}>
                                     ₹{Math.abs(due).toLocaleString('en-IN', { minimumFractionDigits: 2 })} {due < 0 ? 'CR' : due > 0 ? 'DR' : ''}
@@ -846,7 +893,7 @@ export const BillingPage: React.FC = () => {
 
                         {/* Action buttons */}
                         <div className="grid grid-cols-1 gap-2">
-                            <Button onClick={() => setShowAddCharge(true)} disabled={!selectedEncounterId || isFinalized} className="h-10 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 shadow-md shadow-indigo-500/20 transition-all active:scale-[0.98]">
+                            <Button onClick={() => setShowAddCharge(true)} disabled={!selectedEncounterId || isFinalized} className="h-10 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-500 hover:to-violet-500 shadow-md shadow-brand-500/20 transition-all active:scale-[0.98]">
                                 <Plus className="h-4 w-4 mr-1" /> Add Item
                             </Button>
                             {/* Payments are decoupled from finalize: a finalized invoice can still be
@@ -902,8 +949,8 @@ export const BillingPage: React.FC = () => {
                                                     <div key={kind} className="flex items-center justify-between gap-1.5 text-xs">
                                                         <span className="font-medium text-slate-600 truncate">{label}</span>
                                                         <div className="flex gap-1 shrink-0">
-                                                            <Button size="sm" variant="ghost" title={`Print ${label}`} className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" disabled={docBusy} onClick={() => handleDoc(kind, 'print')}><Printer className="h-3.5 w-3.5" /></Button>
-                                                            <Button size="sm" variant="ghost" title={`Download ${label} (PDF)`} className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" disabled={docBusy} onClick={() => handleDoc(kind, 'download')}><Download className="h-3.5 w-3.5" /></Button>
+                                                            <Button size="sm" variant="ghost" title={`Print ${label}`} className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50" disabled={docBusy} onClick={() => handleDoc(kind, 'print')}><Printer className="h-3.5 w-3.5" /></Button>
+                                                            <Button size="sm" variant="ghost" title={`Download ${label} (PDF)`} className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50" disabled={docBusy} onClick={() => handleDoc(kind, 'download')}><Download className="h-3.5 w-3.5" /></Button>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -931,6 +978,7 @@ export const BillingPage: React.FC = () => {
                     patientId={selectedPatient.patientId}
                     encounterId={selectedEncounterId}
                     onSaved={handleChargeSaved}
+                    onOptimistic={applyOptimisticCharges}
                 />
             )}
             {selectedPatient && selectedEncounterId && (
@@ -1033,7 +1081,7 @@ export const BillingPage: React.FC = () => {
                 <DialogContent className="max-w-sm">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2.5">
-                            <span className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/30"><Plus className="h-4 w-4" /></span>
+                            <span className="h-9 w-9 rounded-xl bg-gradient-to-br from-brand-500 to-violet-600 text-white flex items-center justify-center shadow-md shadow-brand-500/30"><Plus className="h-4 w-4" /></span>
                             New Visit
                         </DialogTitle>
                         <DialogDescription>Start a new billing encounter for {selectedPatient?.name}.</DialogDescription>
@@ -1049,7 +1097,7 @@ export const BillingPage: React.FC = () => {
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowNewVisit(false)} disabled={creatingVisit}>Cancel</Button>
-                        <Button onClick={handleCreateVisit} disabled={creatingVisit} className="bg-indigo-600 hover:bg-indigo-700">
+                        <Button onClick={handleCreateVisit} disabled={creatingVisit} className="bg-brand-600 hover:bg-brand-700">
                             {creatingVisit ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Creating…</> : 'Create Visit'}
                         </Button>
                     </DialogFooter>
@@ -1164,7 +1212,7 @@ export const BillingPage: React.FC = () => {
             {/* Reopen confirm — premium. Back to DRAFT, audit reason required. */}
             <AlertDialog open={reopenOpen} onOpenChange={(o) => { if (!o) { setReopenOpen(false); setReopenReason(''); } }}>
                 <AlertDialogContent className="p-0 gap-0 overflow-hidden rounded-2xl sm:rounded-2xl max-w-md border-0 shadow-2xl">
-                    <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-indigo-500 to-violet-600">
+                    <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-brand-500 to-violet-600">
                         <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0">
                             <Unlock className="h-5 w-5 text-white" />
                         </div>
@@ -1191,7 +1239,7 @@ export const BillingPage: React.FC = () => {
                         <AlertDialogAction
                             onClick={(e) => { e.preventDefault(); handleReopen(); }}
                             disabled={!reopenReason.trim() || invoicing}
-                            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-500/20"
+                            className="rounded-xl bg-brand-600 hover:bg-brand-700 shadow-md shadow-brand-500/20"
                         >
                             {invoicing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Reopening…</> : <><Unlock className="h-4 w-4 mr-1.5" /> Reopen</>}
                         </AlertDialogAction>

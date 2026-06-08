@@ -120,7 +120,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
 
   const getBMICategory = (bmi: string) => {
     const bmiValue = parseFloat(bmi);
-    if (bmiValue < 18.5) return { category: t('vitalsForm.bmi.category.underweight'), color: 'text-blue-500' };
+    if (bmiValue < 18.5) return { category: t('vitalsForm.bmi.category.underweight'), color: 'text-brand-500' };
     if (bmiValue < 25) return { category: t('vitalsForm.bmi.category.normal'), color: 'text-green-500' };
     if (bmiValue < 30) return { category: t('vitalsForm.bmi.category.overweight'), color: 'text-orange-500' };
     return { category: t('vitalsForm.bmi.category.obesity'), color: 'text-red-500' };
@@ -201,10 +201,10 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
         className="fixed inset-y-0 right-0 w-full sm:w-[500px] md:w-[600px] bg-white dark:bg-gray-900 shadow-2xl z-50 flex flex-col overflow-hidden border-l border-gray-200 dark:border-gray-800"
       >
-        <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-800 bg-blue-50/50 dark:bg-blue-900/10 shrink-0">
+        <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-800 bg-brand-50/50 dark:bg-brand-900/10 shrink-0">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-healthcare-primary dark:text-blue-400 flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-healthcare-primary dark:text-brand-400 flex items-center gap-2">
                 <Activity className="h-5 w-5" />
                 {t('vitalsForm.title', { patientName })}
               </h3>
@@ -343,7 +343,7 @@ export const VitalsForm: React.FC<VitalsFormProps> = ({
             {/* Physical Measurements */}
             <Card className="p-3">
               <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                <Scale className="h-4 w-4 text-blue-500" />
+                <Scale className="h-4 w-4 text-brand-500" />
                 {t('vitalsForm.sections.physical')}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">

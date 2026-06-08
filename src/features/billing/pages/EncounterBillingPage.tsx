@@ -24,6 +24,7 @@ import {
     ipdBillingService, type GetEncounterEventsResponse, type BillingChargeRow,
     type BillingPaymentRow, type InvoiceStatus,
 } from '../services/ipdBillingService';
+import { offlineCachedRead, isReachable } from '@/offline';
 import { AddChargesModal } from '../components/AddChargesModal';
 import { AddPaymentModal } from '../components/AddPaymentModal';
 import { DiscountApprovalsCard } from '../components/DiscountApprovalsCard';
@@ -36,7 +37,7 @@ const inr = (n: number | undefined | null) =>
 const CHARGE_STATUS_STYLE: Record<string, string> = {
     DRAFT:    'bg-slate-100 text-slate-600 border-slate-200',
     POSTED:   'bg-emerald-50 text-emerald-700 border-emerald-200',
-    INVOICED: 'bg-blue-50 text-blue-700 border-blue-200',
+    INVOICED: 'bg-brand-50 text-brand-700 border-brand-200',
     VOID:     'bg-rose-50 text-rose-700 border-rose-200',
 };
 
@@ -60,7 +61,7 @@ const KpiTile: React.FC<{
         emerald: 'bg-emerald-50 border-emerald-200',
         amber:   'bg-amber-50 border-amber-200',
         rose:    'bg-rose-50 border-rose-200',
-        blue:    'bg-blue-50 border-blue-200',
+        blue:    'bg-brand-50 border-brand-200',
     } as const;
     return (
         <Card className={cn('border', tones[tone])}>
@@ -113,7 +114,10 @@ export const EncounterBillingPage: React.FC = () => {
         if (silent) setRefreshing(true); else setLoading(true);
         setError(null);
         try {
-            const res = await ipdBillingService.getEncounterEvents(encounterId, patientId);
+            const res = await offlineCachedRead(
+                ['billing', 'encounterEvents', encounterId, patientId],
+                () => ipdBillingService.getEncounterEvents(encounterId, patientId),
+            );
             if (!res.success) throw new Error(res.message ?? 'Failed to load billing');
             setData(res.data ?? null);
         } catch (e: any) {
@@ -141,6 +145,7 @@ export const EncounterBillingPage: React.FC = () => {
 
     const handleGenerateInvoice = async () => {
         if (!encounterId || !patientId) return;
+        if (!isReachable()) { toast({ title: 'Needs connection', description: 'Generating an invoice requires an internet connection.', variant: 'destructive' }); return; }
         setGeneratingInvoice(true);
         try {
             const res = await ipdBillingService.createDraftInvoice({ encounterId, patientId });
@@ -159,6 +164,7 @@ export const EncounterBillingPage: React.FC = () => {
 
     const handleFinalize = async () => {
         if (!encounterId || !patientId) return;
+        if (!isReachable()) { toast({ title: 'Needs connection', description: 'Finalizing a bill requires an internet connection.', variant: 'destructive' }); return; }
         setFinalizing(true);
         try {
             const res = await ipdBillingService.finalize('finalize', { encounterId, patientId });
@@ -174,6 +180,7 @@ export const EncounterBillingPage: React.FC = () => {
 
     const handleReopen = async () => {
         if (!encounterId || !patientId || !reopenReason.trim()) return;
+        if (!isReachable()) { toast({ title: 'Needs connection', description: 'Reopening a bill requires an internet connection.', variant: 'destructive' }); return; }
         setFinalizing(true);
         try {
             const res = await ipdBillingService.finalize('reopen', { encounterId, patientId, reason: reopenReason.trim() });
@@ -239,7 +246,7 @@ export const EncounterBillingPage: React.FC = () => {
                             This page needs a patient and visit. Pick a patient and visit in the Billing Ledger,
                             then use “Open Encounter View”.
                         </p>
-                        <Button onClick={() => navigate('/billing/ledger')} className="mt-3 bg-indigo-600 hover:bg-indigo-700">
+                        <Button onClick={() => navigate('/billing/ledger')} className="mt-3 bg-brand-600 hover:bg-brand-700">
                             <ArrowLeft className="h-4 w-4 mr-1" /> Go to Billing Ledger
                         </Button>
                     </CardContent>
@@ -270,7 +277,7 @@ export const EncounterBillingPage: React.FC = () => {
                                 {patientId}
                             </Badge>
                             {admissionNo && (
-                                <Badge variant="outline" className="text-[10px] bg-indigo-50 text-indigo-700 border-indigo-200">
+                                <Badge variant="outline" className="text-[10px] bg-brand-50 text-brand-700 border-brand-200">
                                     {admissionNo}
                                 </Badge>
                             )}
@@ -365,7 +372,7 @@ export const EncounterBillingPage: React.FC = () => {
                     <CardContent className="p-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-wrap">
                         <Button
                             size="sm"
-                            className="bg-blue-600 hover:bg-blue-700 gap-1.5"
+                            className="bg-brand-600 hover:bg-brand-700 gap-1.5"
                             onClick={() => setAddChargesOpen(true)}
                             disabled={isFinalized}
                         >
@@ -425,7 +432,7 @@ export const EncounterBillingPage: React.FC = () => {
                         <Button
                             size="sm"
                             variant="outline"
-                            className="gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50"
+                            className="gap-1.5 border-brand-300 text-brand-700 hover:bg-brand-50"
                             onClick={() => setAddPaymentOpen(true)}
                             disabled={!invoice}
                             title={invoice ? '' : 'Generate the bill first to record a payment'}
@@ -440,7 +447,7 @@ export const EncounterBillingPage: React.FC = () => {
                     <CardHeader className="pb-2 border-b border-slate-100">
                         <div className="flex items-center justify-between">
                             <CardTitle className="text-sm font-bold flex items-center gap-2">
-                                <Receipt className="h-4 w-4 text-blue-600" /> Charges
+                                <Receipt className="h-4 w-4 text-brand-600" /> Charges
                             </CardTitle>
                             {!loading && (
                                 <span className="text-xs text-slate-500">{charges.length} total · {postedUnbilledCount} unbilled</span>
@@ -536,7 +543,7 @@ export const EncounterBillingPage: React.FC = () => {
                         <CardHeader className="pb-2 border-b border-slate-100">
                             <div className="flex items-center justify-between">
                                 <CardTitle className="text-sm font-bold flex items-center gap-2">
-                                    <FileText className="h-4 w-4 text-indigo-600" /> Invoice {invoice.invoiceNo}
+                                    <FileText className="h-4 w-4 text-brand-600" /> Invoice {invoice.invoiceNo}
                                 </CardTitle>
                                 <Badge variant="outline" className={cn('text-[10px]', INVOICE_STATUS_STYLE[invoice.statusCode ?? ''] ?? 'bg-slate-50')}>
                                     {invoice.statusCode}
@@ -562,7 +569,7 @@ export const EncounterBillingPage: React.FC = () => {
                                 </div>
                                 <div>
                                     <p className="text-[10px] uppercase font-bold text-slate-400">Net</p>
-                                    <p className="text-base font-extrabold text-blue-700 mt-0.5">{inr(invoice.netAmount)}</p>
+                                    <p className="text-base font-extrabold text-brand-700 mt-0.5">{inr(invoice.netAmount)}</p>
                                 </div>
                                 {(invoice.taxAmount ?? 0) > 0 && (
                                     <div className="col-span-2 sm:col-span-4 grid grid-cols-2 sm:grid-cols-5 gap-3 pt-3 border-t border-slate-100">
@@ -590,7 +597,7 @@ export const EncounterBillingPage: React.FC = () => {
                                         )}
                                         <div>
                                             <p className="text-[10px] uppercase font-bold text-slate-400">Total Tax</p>
-                                            <p className="text-sm font-bold text-indigo-700 mt-0.5">{inr(invoice.taxAmount)}</p>
+                                            <p className="text-sm font-bold text-brand-700 mt-0.5">{inr(invoice.taxAmount)}</p>
                                         </div>
                                     </div>
                                 )}

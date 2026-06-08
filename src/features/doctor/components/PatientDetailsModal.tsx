@@ -84,7 +84,7 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
     const statusMap: Record<Patient['status'], { labelKey: string; className: string }> = {
       'vitals-required': { labelKey: 'vitalsRequired', className: 'bg-red-100 text-red-800 border-red-300' },
       'ready-consultation': { labelKey: 'readyConsultation', className: 'bg-green-100 text-green-800 border-green-300' },
-      'under-consultation': { labelKey: 'underConsultation', className: 'bg-blue-100 text-blue-800 border-blue-300' },
+      'under-consultation': { labelKey: 'underConsultation', className: 'bg-brand-100 text-brand-800 border-brand-300' },
       'lab-test-required': { labelKey: 'labTestRequired', className: 'bg-purple-100 text-purple-800 border-purple-300' },
       'awaiting-reconsultation': { labelKey: 'awaitingReconsultation', className: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
       completed: { labelKey: 'completed', className: 'bg-green-100 text-green-800 border-green-300' },
@@ -137,7 +137,7 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label className="text-sm font-medium text-gray-600">{t('patientDetailsModal.labels.patientId')}</Label>
-                <p className="font-mono text-blue-600">{patient.patientId}</p>
+                <p className="font-mono text-brand-600">{patient.patientId}</p>
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-600">{t('patientDetailsModal.labels.name')}</Label>
@@ -332,7 +332,7 @@ export const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                       onClick={() => handleStatusChange('under-consultation')}
                       disabled={patient.status === 'under-consultation'}
                     >
-                      <Stethoscope className="h-6 w-6 text-blue-600" />
+                      <Stethoscope className="h-6 w-6 text-brand-600" />
                       <span>{t('patientDetailsModal.actions.startConsultation')}</span>
                     </Button>
                     <Button

@@ -62,15 +62,15 @@ export const PatientAnalytics: React.FC<PatientAnalyticsProps> = ({ timelineEven
             {/* 2. Key Metrics Row (Care Recency & Utilization) */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {/* Last Seen Card */}
-                <Card className="shadow-md border-0 bg-gradient-to-br from-blue-50 to-indigo-50 hover:shadow-lg transition-shadow">
+                <Card className="shadow-md border-0 bg-gradient-to-br from-brand-50 to-brand-50 hover:shadow-lg transition-shadow">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                        <CardTitle className="text-sm font-semibold text-blue-900">Last Seen</CardTitle>
-                        <div className="p-2 bg-blue-500 rounded-lg">
+                        <CardTitle className="text-sm font-semibold text-brand-900">Last Seen</CardTitle>
+                        <div className="p-2 bg-brand-500 rounded-lg">
                             <Clock className="h-4 w-4 text-white" />
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl sm:text-3xl font-bold text-blue-900 mb-1">
+                        <div className="text-2xl sm:text-3xl font-bold text-brand-900 mb-1">
                             {(() => {
                                 if (metrics.careRecency.lastSeenDays === null) return 'Never';
                                 const lastVisitDate = new Date();
@@ -78,7 +78,7 @@ export const PatientAnalytics: React.FC<PatientAnalyticsProps> = ({ timelineEven
                                 return lastVisitDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ /g, ' ');
                             })()}
                         </div>
-                        <p className="text-xs font-medium text-blue-700">Last visit date</p>
+                        <p className="text-xs font-medium text-brand-700">Last visit date</p>
                     </CardContent>
                 </Card>
 
@@ -145,17 +145,17 @@ export const PatientAnalytics: React.FC<PatientAnalyticsProps> = ({ timelineEven
 
                 {/* Chart 0: Visit Frequency */}
                 {(charts.visitFrequency.weekly.length > 0 || charts.visitFrequency.monthly.length > 0 || charts.visitFrequency.yearly.length > 0) && (
-                    <Card className="shadow-md border-0 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 hover:shadow-lg transition-shadow">
+                    <Card className="shadow-md border-0 bg-gradient-to-br from-brand-50 via-purple-50 to-pink-50 hover:shadow-lg transition-shadow">
                         <CardHeader className="pb-3">
                             <div className="flex items-center justify-between mb-3">
-                                <CardTitle className="text-base font-bold flex items-center gap-2 text-indigo-900">
-                                    <div className="p-2 bg-indigo-500 rounded-lg">
+                                <CardTitle className="text-base font-bold flex items-center gap-2 text-brand-900">
+                                    <div className="p-2 bg-brand-500 rounded-lg">
                                         <Calendar className="h-4 w-4 text-white" />
                                     </div>
                                     Visit Frequency
                                 </CardTitle>
                             </div>
-                            <div className="flex gap-2 bg-white/60 backdrop-blur-sm p-1.5 rounded-xl border border-indigo-100 shadow-sm">
+                            <div className="flex gap-2 bg-white/60 backdrop-blur-sm p-1.5 rounded-xl border border-brand-100 shadow-sm">
                                 {(['weekly', 'monthly', 'yearly'] as const).map((period) => (
                                     <button
                                         key={period}
@@ -167,8 +167,8 @@ export const PatientAnalytics: React.FC<PatientAnalyticsProps> = ({ timelineEven
                                             }
                                         }}
                                         className={`flex-1 px-3 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${period === 'monthly'
-                                            ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md transform scale-105'
-                                            : 'text-indigo-700 hover:bg-white/80 hover:text-indigo-900'
+                                            ? 'bg-gradient-to-r from-brand-500 to-purple-500 text-white shadow-md transform scale-105'
+                                            : 'text-brand-700 hover:bg-white/80 hover:text-brand-900'
                                             }`}
                                         id={`period-${period}`}
                                     >
@@ -457,15 +457,15 @@ export const PatientAnalytics: React.FC<PatientAnalyticsProps> = ({ timelineEven
                 )}
 
                 {charts.ordersBreakdown.length > 0 ? (
-                    <Card className="shadow-md border-0 bg-gradient-to-br from-blue-50 to-sky-50 hover:shadow-lg transition-shadow">
+                    <Card className="shadow-md border-0 bg-gradient-to-br from-brand-50 to-sky-50 hover:shadow-lg transition-shadow">
                         <CardHeader>
-                            <CardTitle className="text-base font-bold flex items-center gap-2 text-blue-900">
-                                <div className="p-2 bg-blue-500 rounded-lg">
+                            <CardTitle className="text-base font-bold flex items-center gap-2 text-brand-900">
+                                <div className="p-2 bg-brand-500 rounded-lg">
                                     <TestTube className="h-4 w-4 text-white" />
                                 </div>
                                 Top 5 Orders & Investigations
                             </CardTitle>
-                            <CardDescription className="text-blue-700">Most frequently ordered tests and procedures</CardDescription>
+                            <CardDescription className="text-brand-700">Most frequently ordered tests and procedures</CardDescription>
                         </CardHeader>
                         <CardContent className="bg-white/40 backdrop-blur-sm rounded-lg mx-4 mb-4 p-3">
                             <div className="h-[280px] w-full">
@@ -509,7 +509,7 @@ export const PatientAnalytics: React.FC<PatientAnalyticsProps> = ({ timelineEven
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between p-3 border rounded-lg bg-gray-50/50">
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-blue-100 text-blue-600 rounded-full">
+                                        <div className="p-2 bg-brand-100 text-brand-600 rounded-full">
                                             <TestTube className="h-4 w-4" />
                                         </div>
                                         <div>

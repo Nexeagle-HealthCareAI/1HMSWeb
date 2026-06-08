@@ -177,10 +177,10 @@ export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="fixed inset-y-0 right-0 w-full sm:w-[500px] md:w-[600px] bg-white dark:bg-gray-900 shadow-2xl z-50 flex flex-col overflow-hidden border-l border-gray-200 dark:border-gray-800"
           >
-            <div className={`p-4 sm:p-6 border-b border-gray-200 dark:border-gray-800 shrink-0 ${showSuccess ? 'bg-green-50/50 dark:bg-green-900/10' : 'bg-blue-50/50 dark:bg-blue-900/10'}`}>
+            <div className={`p-4 sm:p-6 border-b border-gray-200 dark:border-gray-800 shrink-0 ${showSuccess ? 'bg-green-50/50 dark:bg-green-900/10' : 'bg-brand-50/50 dark:bg-brand-900/10'}`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className={`text-lg font-semibold flex items-center gap-2 ${showSuccess ? 'text-green-600 dark:text-green-400' : 'text-healthcare-primary dark:text-blue-400'}`}>
+                  <h3 className={`text-lg font-semibold flex items-center gap-2 ${showSuccess ? 'text-green-600 dark:text-green-400' : 'text-healthcare-primary dark:text-brand-400'}`}>
                     {showSuccess ? (
                       <>
                         <Check className="h-5 w-5" /> Success
@@ -237,8 +237,8 @@ export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({
                     <div className="space-y-4">
 
                       {/* Current Appointment Summary */}
-                      <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800">
-                        <p className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 uppercase mb-1">Current Appointment</p>
+                      <div className="bg-brand-50 dark:bg-brand-900/20 p-3 rounded-lg border border-brand-100 dark:border-brand-800">
+                        <p className="text-[10px] font-semibold text-brand-700 dark:text-brand-300 uppercase mb-1">Current Appointment</p>
                         <div className="space-y-1 text-xs">
                           {!hideDoctorName && (
                             <div className="flex justify-between">
@@ -347,8 +347,8 @@ export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({
                               row: "flex w-full mt-1",
                               cell: "h-8 w-8 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
                               day: cn(
-                                "h-8 w-8 p-0 font-normal aria-selected:opacity-100 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-colors text-xs",
-                                "aria-selected:bg-blue-600 aria-selected:text-white aria-selected:hover:bg-blue-700 aria-selected:hover:text-white"
+                                "h-8 w-8 p-0 font-normal aria-selected:opacity-100 hover:bg-brand-50 hover:text-brand-600 rounded-md transition-colors text-xs",
+                                "aria-selected:bg-brand-600 aria-selected:text-white aria-selected:hover:bg-brand-700 aria-selected:hover:text-white"
                               ),
                               day_today: "bg-gray-100 text-gray-900 font-semibold",
                             }}
@@ -370,7 +370,7 @@ export const RescheduleDialog: React.FC<RescheduleDialogProps> = ({
                   <Button
                     onClick={handleConfirm}
                     disabled={!selectedDate || !selectedDoctorId || isSubmitting}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    className="bg-brand-600 hover:bg-brand-700 text-white"
                   >
                     {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Confirm Reschedule

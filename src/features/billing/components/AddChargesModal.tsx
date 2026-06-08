@@ -15,6 +15,8 @@ import { Plus, Trash2, IndianRupee, Search, Loader2, X } from 'lucide-react';
 import {
     ipdBillingService, type ChargeMaster, type AppliesTo,
 } from '../services/ipdBillingService';
+import { offlineMutation } from '@/offline';
+import { useAuthStore } from '@/store/authStore';
 
 interface AddChargesModalProps {
     open: boolean;
@@ -119,24 +121,36 @@ export const AddChargesModal: React.FC<AddChargesModalProps> = ({
         if (!canSubmit) return;
         setSubmitting(true);
         try {
-            const res = await ipdBillingService.addChargeEvents({
-                encounterId,
-                patientId,
-                charges: validLines.map(l => ({
-                    displayName: l.displayName,
-                    qty: l.qty,
-                    rate: l.rate,
-                    discountPercent: l.discountPercent || 0,
-                    categoryCode: l.categoryCode || 'OTHER',
-                })),
+            const charges = validLines.map(l => ({
+                displayName: l.displayName,
+                qty: l.qty,
+                rate: l.rate,
+                discountPercent: l.discountPercent || 0,
+                categoryCode: l.categoryCode || 'OTHER',
+            }));
+            const hospitalId = useAuthStore.getState().getHospitalId() ?? undefined;
+            // Safe to queue offline (appends to an existing encounter); payments/finalize stay online.
+            const { queued, data: res } = await offlineMutation<any>({
+                entity: 'billing',
+                opType: 'create',
+                client: 'ipd',
+                method: 'post',
+                url: 'charge/add-event',
+                data: { encounterId, patientId, charges, hospitalId },
+                label: `${charges.length} charge(s)`,
+                hospitalId,
+                run: () => ipdBillingService.addChargeEvents({ encounterId, patientId, charges }),
+                synthetic: () => ({ success: true, message: 'Queued offline' }),
             });
-            if (!res.success) {
-                throw new Error(res.message ?? 'Could not post charges');
+            if (queued) {
+                toast({ title: 'Saved offline', description: `${charges.length} charge(s) will be added when you're back online.` });
+            } else {
+                if (!res.success) throw new Error(res.message ?? 'Could not post charges');
+                toast({
+                    title: `${res.data?.chargeCount ?? validLines.length} charge(s) added`,
+                    description: `Net ₹${(res.data?.totalNet ?? totalNet).toLocaleString('en-IN')} posted.`,
+                });
             }
-            toast({
-                title: `${res.data?.chargeCount ?? validLines.length} charge(s) added`,
-                description: `Net ₹${(res.data?.totalNet ?? totalNet).toLocaleString('en-IN')} posted.`,
-            });
             onCharged();
             onOpenChange(false);
         } catch (err: any) {
@@ -192,11 +206,11 @@ export const AddChargesModal: React.FC<AddChargesModalProps> = ({
                                     key={c.chargeId}
                                     type="button"
                                     onClick={() => pickFromCatalog(c, lines[lines.length - 1].key)}
-                                    className="w-full text-left rounded-lg p-2.5 hover:bg-blue-50 border border-transparent hover:border-blue-200 transition-colors group"
+                                    className="w-full text-left rounded-lg p-2.5 hover:bg-brand-50 border border-transparent hover:border-brand-200 transition-colors group"
                                 >
                                     <div className="flex items-start justify-between gap-2">
                                         <div className="min-w-0 flex-1">
-                                            <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-blue-700">{c.displayName}</p>
+                                            <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-brand-700">{c.displayName}</p>
                                             <div className="flex items-center gap-1.5 mt-1">
                                                 <Badge variant="outline" className="text-[10px] bg-slate-50 text-slate-600 border-slate-200">
                                                     {c.categoryCode}
@@ -286,7 +300,7 @@ export const AddChargesModal: React.FC<AddChargesModalProps> = ({
                                             </div>
                                             <div>
                                                 <Label className="text-[10px] text-slate-500">Net</Label>
-                                                <div className="h-8 px-2 rounded-md border border-blue-100 bg-blue-50 flex items-center text-xs font-bold text-blue-700">
+                                                <div className="h-8 px-2 rounded-md border border-brand-100 bg-brand-50 flex items-center text-xs font-bold text-brand-700">
                                                     ₹{net.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                                                 </div>
                                             </div>
@@ -306,7 +320,7 @@ export const AddChargesModal: React.FC<AddChargesModalProps> = ({
                             </div>
                             <div className="flex justify-between text-sm pt-1 border-t border-slate-200">
                                 <span className="font-bold text-slate-700">Net total</span>
-                                <span className="font-extrabold text-blue-700">₹{totalNet.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+                                <span className="font-extrabold text-brand-700">₹{totalNet.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
                             </div>
                         </div>
                     </div>
@@ -316,7 +330,7 @@ export const AddChargesModal: React.FC<AddChargesModalProps> = ({
                     <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
                         <X className="h-4 w-4 mr-1" /> Cancel
                     </Button>
-                    <Button onClick={handleSubmit} disabled={!canSubmit} className="bg-blue-600 hover:bg-blue-700">
+                    <Button onClick={handleSubmit} disabled={!canSubmit} className="bg-brand-600 hover:bg-brand-700">
                         {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Posting…</> : `Post ${validLines.length} Charge${validLines.length !== 1 ? 's' : ''}`}
                     </Button>
                 </DialogFooter>

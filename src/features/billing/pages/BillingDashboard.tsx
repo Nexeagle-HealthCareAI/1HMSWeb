@@ -19,8 +19,8 @@ const TAB_TRIGGER = cn(
     'group flex-1 min-w-[110px] sm:min-w-[150px] h-auto flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 whitespace-normal',
     'rounded-xl px-2.5 py-1.5 border border-transparent transition-all duration-300',
     'text-gray-600 hover:bg-white hover:text-gray-900 hover:-translate-y-0.5',
-    'data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600',
-    'data-[state=active]:text-white data-[state=active]:border-transparent data-[state=active]:shadow-xl data-[state=active]:shadow-blue-500/30',
+    'data-[state=active]:bg-gradient-to-br data-[state=active]:from-brand-600 data-[state=active]:to-brand-600',
+    'data-[state=active]:text-white data-[state=active]:border-transparent data-[state=active]:shadow-xl data-[state=active]:shadow-brand-500/30',
 );
 
 const fadeIn = {
@@ -36,9 +36,9 @@ export const BillingDashboard: React.FC = () => {
         <div className="flex flex-col h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-50 to-slate-100/60 px-4 sm:px-6 pt-2 pb-4 gap-4 overflow-hidden">
             <Tabs value={tab} onValueChange={setTab} className="flex flex-col flex-1 min-h-0">
                 {/* Header + tab navigation in one row (matches the Admin / Appointment board) */}
-                <div className="flex flex-col xl:flex-row items-center justify-between gap-3 rounded-2xl border border-white/40 bg-white/80 backdrop-blur-xl px-3 py-3 sm:px-4 shadow-lg shadow-indigo-500/5 ring-1 ring-black/5">
+                <div className="flex flex-col xl:flex-row items-center justify-between gap-3 rounded-2xl border border-white/40 bg-white/80 backdrop-blur-xl px-3 py-3 sm:px-4 shadow-lg shadow-brand-500/5 ring-1 ring-black/5">
                     <div className="flex items-center gap-3 w-full xl:w-auto shrink-0">
-                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-indigo-500/30">
+                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-brand-500 to-violet-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-brand-500/30">
                             <IndianRupee className="h-5 w-5" />
                         </div>
                         <div className="min-w-0">
@@ -52,7 +52,7 @@ export const BillingDashboard: React.FC = () => {
                             <TabsTrigger key={t.id} value={t.id} className={TAB_TRIGGER} title={t.description}>
                                 <div className="flex items-center justify-center sm:justify-start gap-1.5 font-semibold w-full">
                                     <span className="p-1 rounded-lg bg-gray-100 group-data-[state=active]:bg-white/20">
-                                        <t.icon className="h-3.5 w-3.5 shrink-0 text-blue-500 group-data-[state=active]:text-white" />
+                                        <t.icon className="h-3.5 w-3.5 shrink-0 text-brand-500 group-data-[state=active]:text-white" />
                                     </span>
                                     <span className="hidden sm:inline text-[12px] line-clamp-1">{t.label}</span>
                                 </div>

@@ -148,7 +148,7 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
     const pagedAttachments = displayList.slice(start, end);
 
     return (
-      <div className="rounded-lg border border-blue-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 space-y-3 shadow-sm">
+      <div className="rounded-lg border border-brand-100 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 space-y-3 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
           <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">Uploaded files</div>
           <div className="text-[11px] text-gray-500 dark:text-gray-400">Page {page} of {totalPages} • Total: {displayList.length}</div>
@@ -198,7 +198,7 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
                     {href ? (
                       <div
                         onClick={() => handleView(href)}
-                        className="block font-semibold text-[13px] text-blue-700 dark:text-blue-400 hover:underline cursor-pointer"
+                        className="block font-semibold text-[13px] text-brand-700 dark:text-brand-400 hover:underline cursor-pointer"
                         title={attName}
                       >
                         {attName}
@@ -215,7 +215,7 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                      className="h-8 w-8 text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400"
                       onClick={() => handleView(href)}
                       aria-label="View attachment"
                       title="View"
@@ -288,7 +288,7 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
                       {href ? (
                         <div
                           onClick={() => handleView(href)}
-                          className="font-semibold text-[12px] text-blue-700 dark:text-blue-400 hover:underline cursor-pointer"
+                          className="font-semibold text-[12px] text-brand-700 dark:text-brand-400 hover:underline cursor-pointer"
                           title={attName}
                         >
                           {attName}
@@ -308,7 +308,7 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                          className="h-7 w-7 text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400"
                           onClick={() => handleView(href)}
                           aria-label="View attachment"
                           title="View"
@@ -637,7 +637,7 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
                     <select
                       value={selectedType}
                       onChange={(e) => setSelectedType(e.target.value)}
-                      className="h-10 text-sm border border-gray-300 dark:border-gray-700 rounded-md px-3 bg-white dark:bg-gray-950 focus:border-blue-400 focus:ring-1 focus:ring-blue-100 dark:focus:ring-blue-900 dark:text-gray-100"
+                      className="h-10 text-sm border border-gray-300 dark:border-gray-700 rounded-md px-3 bg-white dark:bg-gray-950 focus:border-brand-400 focus:ring-1 focus:ring-brand-100 dark:focus:ring-brand-900 dark:text-gray-100"
                     >
                       {reportTypes.map(type => (
                         <option key={type} value={type}>{type}</option>
@@ -647,7 +647,7 @@ const AttachmentsSection: React.FC<AttachmentsSectionProps> = ({ attachments, on
 
                   <div className="space-y-2">
                     <Label className="text-xs text-gray-600 dark:text-gray-300">Upload file</Label>
-                    <label className="border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-500 rounded-md p-4 flex flex-col items-center gap-2 text-sm text-gray-600 dark:text-gray-200 cursor-pointer transition-colors bg-gray-50 dark:bg-gray-800">
+                    <label className="border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-brand-300 dark:hover:border-brand-500 rounded-md p-4 flex flex-col items-center gap-2 text-sm text-gray-600 dark:text-gray-200 cursor-pointer transition-colors bg-gray-50 dark:bg-gray-800">
                       <input
                         type="file"
                         accept="application/pdf,image/*"

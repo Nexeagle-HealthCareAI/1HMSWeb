@@ -127,7 +127,7 @@ export const TokenPrintModal: React.FC<TokenPrintModalProps> = ({
                             <div className="text-[10px] mt-3 font-semibold text-center w-full">
                                 Please wait for your turn.
                             </div>
-                            <div className="text-[8px] mt-1 text-center w-full">
+                            <div className="text-[11px] mt-1 text-center w-full">
                                 {format(new Date(), 'dd/MM/yyyy HH:mm')}
                             </div>
                         </div>

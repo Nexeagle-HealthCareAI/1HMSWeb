@@ -255,7 +255,7 @@ export const BillingPolicyConfig = () => {
                         disabled={isSaving || showSuccess}
                         className={`relative z-10 transition-all duration-300 shadow-lg ${showSuccess
                             ? 'bg-gradient-to-r from-green-500 to-emerald-600 border-none text-white scale-105 shadow-green-500/40'
-                            : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 border-none text-white hover:scale-[1.02] shadow-blue-500/30 group-hover:shadow-blue-500/50'
+                            : 'bg-gradient-to-r from-brand-600 to-brand-600 hover:from-brand-700 hover:to-brand-700 border-none text-white hover:scale-[1.02] shadow-brand-500/30 group-hover:shadow-brand-500/50'
                             }`}
                     >
                         {isSaving ? (
@@ -293,8 +293,8 @@ export const BillingPolicyConfig = () => {
                     <Card className="border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden group hover:shadow-md transition-shadow duration-300">
                         <CardHeader className="bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-800">
                             <div className="flex items-center gap-2">
-                                <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg group-hover:bg-indigo-200 dark:group-hover:bg-indigo-800/50 transition-colors">
-                                    <LinkIcon className="h-5 w-5 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
+                                <div className="p-2 bg-brand-100 dark:bg-brand-900/50 rounded-lg group-hover:bg-brand-200 dark:group-hover:bg-brand-800/50 transition-colors">
+                                    <LinkIcon className="h-5 w-5 text-brand-600 dark:text-brand-400 group-hover:scale-110 transition-transform" />
                                 </div>
                                 <div>
                                     <CardTitle className="text-lg">Auto-Billing Rules</CardTitle>
@@ -329,7 +329,7 @@ export const BillingPolicyConfig = () => {
                                                 role="radio"
                                                 aria-checked={isAuto}
                                                 onClick={() => handleChange(rule.key, rule.onValue)}
-                                                className={`flex-1 h-8 px-3 rounded-md text-xs font-bold transition-all ${isAuto ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                                                className={`flex-1 h-8 px-3 rounded-md text-xs font-bold transition-all ${isAuto ? 'bg-brand-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
                                             >
                                                 Auto
                                             </button>
@@ -377,7 +377,7 @@ export const BillingPolicyConfig = () => {
                             </div>
                         </div>
 
-                        <button type="button" onClick={() => setShowSeqAdvanced(v => !v)} className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 underline underline-offset-2">
+                        <button type="button" onClick={() => setShowSeqAdvanced(v => !v)} className="text-xs font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 underline underline-offset-2">
                             {showSeqAdvanced ? '− Hide advanced numbering' : '+ Customize numbering (advanced)'}
                         </button>
 
@@ -409,7 +409,7 @@ export const BillingPolicyConfig = () => {
                             <div className="w-full md:w-3/4">
                                 <div className="flex items-center justify-between mb-4">
                                     <span className="text-xs font-semibold text-muted-foreground">{selectedSequence === 'INV' ? 'Invoice' : 'Receipt'} number format</span>
-                                    <button type="button" onClick={resetSequence} className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 inline-flex items-center gap-1">
+                                    <button type="button" onClick={resetSequence} className="text-[11px] font-semibold text-brand-600 hover:text-brand-700 inline-flex items-center gap-1">
                                         <RefreshCw className="h-3 w-3" /> Reset to default
                                     </button>
                                 </div>

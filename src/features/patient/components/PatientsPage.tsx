@@ -25,9 +25,11 @@ import {
   MapPin,
   Calendar,
   History,
-  Share2
+  Share2,
+  GitMerge
 } from 'lucide-react';
 import { ReferrersPanel } from './ReferrersPanel';
+import { PatientMergeDialog } from './PatientMergeDialog';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -74,6 +76,7 @@ export const PatientsPage: React.FC = () => {
 
   const navigate = useNavigate();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('today');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDoctor, setSelectedDoctor] = useState<string>('all');
@@ -612,7 +615,7 @@ export const PatientsPage: React.FC = () => {
 
   const getStepColor = (step: StatusTransitionStep) => {
     if (step.isCompleted) return 'text-emerald-500 bg-emerald-50 border-emerald-200';
-    if (step.isCurrent) return 'text-blue-600 bg-blue-50 border-blue-200 ring-2 ring-blue-100';
+    if (step.isCurrent) return 'text-brand-600 bg-brand-50 border-brand-200 ring-2 ring-brand-100';
     return 'text-gray-400 bg-gray-50 border-gray-200';
   };
 
@@ -748,7 +751,7 @@ export const PatientsPage: React.FC = () => {
           "h-16 flex items-center border-b border-dashed border-gray-200 dark:border-gray-800",
           isSidebarCollapsed ? "justify-center px-0" : "px-6"
         )}>
-          <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+          <div className="flex items-center gap-2 text-brand-600 dark:text-brand-400">
             <LayoutDashboard className="h-6 w-6" />
             {!isSidebarCollapsed && (
               <span className="font-bold text-lg tracking-tight">Workspace</span>
@@ -774,7 +777,7 @@ export const PatientsPage: React.FC = () => {
                 className={cn(
                   "flex items-center w-full p-3 rounded-xl transition-all duration-200 group relative",
                   isActive
-                    ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 shadow-sm"
+                    ? "bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300 shadow-sm"
                     : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-gray-200",
                   isSidebarCollapsed ? "justify-center" : "gap-3"
                 )}
@@ -782,7 +785,7 @@ export const PatientsPage: React.FC = () => {
               >
                 <item.icon className={cn(
                   "h-5 w-5 flex-shrink-0 transition-colors",
-                  isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300"
+                  isActive ? "text-brand-600 dark:text-brand-400" : "text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300"
                 )} />
 
                 {!isSidebarCollapsed && (
@@ -790,7 +793,7 @@ export const PatientsPage: React.FC = () => {
                 )}
 
                 {isActive && !isSidebarCollapsed && (
-                  <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                  <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-brand-500"></div>
                 )}
               </button>
             );
@@ -825,7 +828,7 @@ export const PatientsPage: React.FC = () => {
             {/* Admin Stats Grid - Compact */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
               <Card
-                className="bg-gradient-to-br from-blue-500 to-blue-600 border-none text-white shadow-md cursor-pointer hover:shadow-lg transition-all active:scale-95"
+                className="bg-gradient-to-br from-brand-500 to-brand-600 border-none text-white shadow-md cursor-pointer hover:shadow-lg transition-all active:scale-95"
                 onClick={() => {
                   setSelectedDoctor('all');
                   setSearchQuery('');
@@ -833,7 +836,7 @@ export const PatientsPage: React.FC = () => {
               >
                 <CardContent className="p-3 flex items-center justify-between">
                   <div>
-                    <p className="text-blue-100 text-xs font-medium mb-0.5">Total Patients</p>
+                    <p className="text-brand-100 text-xs font-medium mb-0.5">Total Patients</p>
                     <h3 className="text-xl font-bold">{dashboardStats.totalPatients}</h3>
                   </div>
                   <div className="bg-white/20 p-1.5 rounded-lg">
@@ -861,28 +864,28 @@ export const PatientsPage: React.FC = () => {
                   className={cn(
                     "relative overflow-hidden p-3 rounded-xl border shadow-sm transition-all duration-300 group backdrop-blur-sm cursor-pointer hover:shadow-md",
                     selectedDoctor === doctorName
-                      ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 ring-2 ring-blue-100 dark:ring-blue-900"
-                      : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-800"
+                      ? "bg-brand-50 dark:bg-brand-900/20 border-brand-200 dark:border-brand-800 ring-2 ring-brand-100 dark:ring-brand-900"
+                      : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-brand-200 dark:hover:border-brand-800"
                   )}
                 >
                   <div className="flex items-center gap-2 mb-1.5 relative z-10">
                     <div className={cn(
                       "p-1.5 rounded-lg transition-colors",
                       selectedDoctor === doctorName
-                        ? "bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-100"
-                        : "bg-indigo-100/50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
+                        ? "bg-brand-100 text-brand-700 dark:bg-brand-800 dark:text-brand-100"
+                        : "bg-brand-100/50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400"
                     )}>
                       <Stethoscope className="h-3.5 w-3.5" />
                     </div>
                     <span className={cn(
                       "text-xs font-medium truncate max-w-[80px]",
-                      selectedDoctor === doctorName ? "text-blue-900 dark:text-blue-100" : "text-gray-500 dark:text-gray-400"
+                      selectedDoctor === doctorName ? "text-brand-900 dark:text-brand-100" : "text-gray-500 dark:text-gray-400"
                     )} title={doctorName}>{doctorName}</span>
                   </div>
                   <div className="relative z-10 ml-0.5">
                     <div className={cn(
                       "text-xl font-bold mb-1",
-                      selectedDoctor === doctorName ? "text-blue-700 dark:text-blue-300" : "text-gray-900 dark:text-gray-100"
+                      selectedDoctor === doctorName ? "text-brand-700 dark:text-brand-300" : "text-gray-900 dark:text-gray-100"
                     )}>{stats.total}</div>
                     <div className="flex flex-wrap gap-1">
                       {stats.completed > 0 && (
@@ -928,7 +931,7 @@ export const PatientsPage: React.FC = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="Search patient, ID or phone..."
-                  className="pl-9 bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700 focus-visible:ring-blue-500"
+                  className="pl-9 bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700 focus-visible:ring-brand-500"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -958,7 +961,7 @@ export const PatientsPage: React.FC = () => {
                         <SelectItem key={docName} value={docName}>
                           <span className="flex items-center justify-between gap-2 w-full min-w-[140px]">
                             <span className="truncate max-w-[120px]" title={docName}>{docName}</span>
-                            <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-blue-50 text-blue-600 border border-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800">
+                            <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-brand-50 text-brand-600 border border-brand-100 dark:bg-brand-900/20 dark:text-brand-300 dark:border-brand-800">
                               {stats.total}
                             </Badge>
                           </span>
@@ -989,7 +992,7 @@ export const PatientsPage: React.FC = () => {
                         "capitalize text-[10px] px-1.5 py-0.5 h-auto",
                         appointment.currentStatus === 'COMPLETED' ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
                           appointment.currentStatus === 'CANCELLED' ? "bg-red-50 text-red-700 border-red-200" :
-                            "bg-blue-50 text-blue-700 border-blue-200"
+                            "bg-brand-50 text-brand-700 border-brand-200"
                       )}>
                         {appointment.currentStatus.replace(/_/g, ' ').toLowerCase()}
                       </Badge>
@@ -1014,7 +1017,7 @@ export const PatientsPage: React.FC = () => {
                           className={cn(
                             "h-1.5 w-8 rounded-full flex-shrink-0 transition-colors",
                             step.isCompleted ? "bg-emerald-500" :
-                              step.isCurrent ? "bg-blue-600 animate-pulse" :
+                              step.isCurrent ? "bg-brand-600 animate-pulse" :
                                 "bg-gray-200 dark:bg-gray-700"
                           )}
                           title={step.label}
@@ -1090,7 +1093,7 @@ export const PatientsPage: React.FC = () => {
                               <span className="font-medium text-gray-900 dark:text-gray-100">{appointment.patientName}</span>
                               <button
                                 onClick={() => handlePatientClick(appointment.patientId)}
-                                className="text-xs text-gray-500 flex items-center gap-1 hover:text-blue-600 hover:underline transition-colors focus:outline-none"
+                                className="text-xs text-gray-500 flex items-center gap-1 hover:text-brand-600 hover:underline transition-colors focus:outline-none"
                               >
                                 <Users className="h-3 w-3" />
                                 {appointment.patientId}
@@ -1105,8 +1108,8 @@ export const PatientsPage: React.FC = () => {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                                <Stethoscope className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                              <div className="h-8 w-8 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center">
+                                <Stethoscope className="h-4 w-4 text-brand-600 dark:text-brand-400" />
                               </div>
                               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{appointment.doctorName}</span>
                             </div>
@@ -1116,7 +1119,7 @@ export const PatientsPage: React.FC = () => {
                               "capitalize",
                               appointment.currentStatus === 'COMPLETED' ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
                                 appointment.currentStatus === 'CANCELLED' ? "bg-red-50 text-red-700 border-red-200" :
-                                  "bg-blue-50 text-blue-700 border-blue-200"
+                                  "bg-brand-50 text-brand-700 border-brand-200"
                             )}>
                               {appointment.currentStatus.replace(/_/g, ' ').toLowerCase()}
                             </Badge>
@@ -1132,7 +1135,7 @@ export const PatientsPage: React.FC = () => {
                                     className={cn(
                                       "flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-medium border transition-colors",
                                       step.isCompleted ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                                        step.isCurrent ? "bg-blue-50 text-blue-700 border-blue-200" :
+                                        step.isCurrent ? "bg-brand-50 text-brand-700 border-brand-200" :
                                           "bg-gray-50 text-gray-400 border-gray-100"
                                     )}
                                   >
@@ -1140,7 +1143,7 @@ export const PatientsPage: React.FC = () => {
                                       className={cn(
                                         "h-1.5 w-1.5 rounded-full",
                                         step.isCompleted ? "bg-emerald-500" :
-                                          step.isCurrent ? "bg-blue-600 animate-pulse" :
+                                          step.isCurrent ? "bg-brand-600 animate-pulse" :
                                             "bg-gray-300"
                                       )}
                                     />
@@ -1238,10 +1241,10 @@ export const PatientsPage: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-              <Card className="bg-gradient-to-br from-blue-500 to-blue-600 border-none text-white shadow-lg shadow-blue-500/20">
+              <Card className="bg-gradient-to-br from-brand-500 to-brand-600 border-none text-white shadow-lg shadow-brand-500/20">
                 <CardContent className="p-4 flex items-center justify-between">
                   <div>
-                    <p className="text-blue-100 text-sm font-medium mb-1">Total Appointments</p>
+                    <p className="text-brand-100 text-sm font-medium mb-1">Total Appointments</p>
                     <h3 className="text-3xl font-bold">{upcomingAppointments.length}</h3>
                   </div>
                   <div className="bg-white/20 p-3 rounded-xl">
@@ -1295,8 +1298,8 @@ export const PatientsPage: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                              <Stethoscope className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            <div className="h-8 w-8 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center">
+                              <Stethoscope className="h-4 w-4 text-brand-600 dark:text-brand-400" />
                             </div>
                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{appointment.doctorName}</span>
                           </div>
@@ -1306,7 +1309,7 @@ export const PatientsPage: React.FC = () => {
                             "capitalize",
                             appointment.currentStatus === 'COMPLETED' ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
                               appointment.currentStatus === 'CANCELLED' ? "bg-red-50 text-red-700 border-red-200" :
-                                "bg-blue-50 text-blue-700 border-blue-200"
+                                "bg-brand-50 text-brand-700 border-brand-200"
                           )}>
                             {appointment.currentStatus.replace(/_/g, ' ').toLowerCase()}
                           </Badge>
@@ -1353,7 +1356,7 @@ export const PatientsPage: React.FC = () => {
                       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                       <Input
                         placeholder="Search past appointments..."
-                        className="pl-9 h-8 w-[200px] bg-gray-50 border-gray-200 dark:bg-gray-900 dark:border-gray-700 focus-visible:ring-indigo-500"
+                        className="pl-9 h-8 w-[200px] bg-gray-50 border-gray-200 dark:bg-gray-900 dark:border-gray-700 focus-visible:ring-brand-500"
                         value={pastSearchQuery}
                         onChange={(e) => {
                           setPastSearchQuery(e.target.value);
@@ -1386,7 +1389,7 @@ export const PatientsPage: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
                 <Card
-                  className="bg-gradient-to-br from-indigo-500 to-indigo-600 border-none text-white shadow-lg shadow-indigo-500/20 cursor-pointer hover:shadow-xl transition-all active:scale-95"
+                  className="bg-gradient-to-br from-brand-500 to-brand-600 border-none text-white shadow-lg shadow-brand-500/20 cursor-pointer hover:shadow-xl transition-all active:scale-95"
                   onClick={() => {
                     setSelectedPastDoctor('all');
                     setPastSearchQuery('');
@@ -1394,7 +1397,7 @@ export const PatientsPage: React.FC = () => {
                 >
                   <CardContent className="p-4 flex items-center justify-between">
                     <div>
-                      <p className="text-indigo-100 text-sm font-medium mb-1">Total Past Visits</p>
+                      <p className="text-brand-100 text-sm font-medium mb-1">Total Past Visits</p>
                       <h3 className="text-3xl font-bold">{pastAppointments.length}</h3>
                     </div>
                     <div className="bg-white/20 p-3 rounded-xl">
@@ -1411,28 +1414,28 @@ export const PatientsPage: React.FC = () => {
                     className={cn(
                       "relative overflow-hidden p-3 rounded-xl border shadow-sm transition-all duration-300 group backdrop-blur-sm cursor-pointer hover:shadow-md",
                       selectedPastDoctor === doctorName
-                        ? "bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 ring-2 ring-indigo-100 dark:ring-indigo-900"
-                        : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-indigo-200 dark:hover:border-indigo-800"
+                        ? "bg-brand-50 dark:bg-brand-900/20 border-brand-200 dark:border-brand-800 ring-2 ring-brand-100 dark:ring-brand-900"
+                        : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-brand-200 dark:hover:border-brand-800"
                     )}
                   >
                     <div className="flex items-center gap-2 mb-1.5 relative z-10">
                       <div className={cn(
                         "p-1.5 rounded-lg transition-colors",
                         selectedPastDoctor === doctorName
-                          ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-800 dark:text-indigo-100"
-                          : "bg-indigo-100/50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
+                          ? "bg-brand-100 text-brand-700 dark:bg-brand-800 dark:text-brand-100"
+                          : "bg-brand-100/50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400"
                       )}>
                         <Stethoscope className="h-3.5 w-3.5" />
                       </div>
                       <span className={cn(
                         "text-xs font-medium truncate max-w-[80px]",
-                        selectedPastDoctor === doctorName ? "text-indigo-900 dark:text-indigo-100" : "text-gray-500 dark:text-gray-400"
+                        selectedPastDoctor === doctorName ? "text-brand-900 dark:text-brand-100" : "text-gray-500 dark:text-gray-400"
                       )} title={doctorName}>{doctorName}</span>
                     </div>
                     <div className="relative z-10 ml-0.5">
                       <div className={cn(
                         "text-xl font-bold mb-1",
-                        selectedPastDoctor === doctorName ? "text-indigo-700 dark:text-indigo-300" : "text-gray-900 dark:text-gray-100"
+                        selectedPastDoctor === doctorName ? "text-brand-700 dark:text-brand-300" : "text-gray-900 dark:text-gray-100"
                       )}>{stats.total}</div>
                       <div className="flex flex-wrap gap-1">
                         {stats.completed > 0 && (
@@ -1509,8 +1512,8 @@ export const PatientsPage: React.FC = () => {
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                                  <Stethoscope className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                                <div className="h-8 w-8 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center">
+                                  <Stethoscope className="h-4 w-4 text-brand-600 dark:text-brand-400" />
                                 </div>
                                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{appointment.doctorName}</span>
                               </div>
@@ -1535,7 +1538,7 @@ export const PatientsPage: React.FC = () => {
                               <>
                                 <Search className="h-8 w-8 mb-2 opacity-20" />
                                 <p>No past appointments found matching "{pastSearchQuery}".</p>
-                                <Button variant="link" onClick={() => setPastSearchQuery('')} className="mt-2 text-indigo-600 h-auto p-0">Clear Search</Button>
+                                <Button variant="link" onClick={() => setPastSearchQuery('')} className="mt-2 text-brand-600 h-auto p-0">Clear Search</Button>
                               </>
                             ) : (
                               <>
@@ -1605,21 +1608,26 @@ export const PatientsPage: React.FC = () => {
                   <h1 className="text-xl font-bold text-gray-900 dark:text-white">Patient 360</h1>
                   <p className="text-gray-500 dark:text-gray-400 text-sm">Comprehensive view of all registered patients.</p>
                 </div>
-                <div className="relative w-72">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                  <Input
-                    placeholder="Search name, ID or phone..."
-                    className="pl-8 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-blue-500"
-                    value={patient360SearchQuery}
-                    onChange={(e) => setPatient360SearchQuery(e.target.value)}
-                  />
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" onClick={() => setMergeOpen(true)} className="h-10 gap-2 border-brand-200 text-brand-700 hover:bg-brand-50">
+                    <GitMerge className="h-4 w-4" /> Merge duplicates
+                  </Button>
+                  <div className="relative w-72">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                    <Input
+                      placeholder="Search name, ID or phone..."
+                      className="pl-8 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-brand-500"
+                      value={patient360SearchQuery}
+                      onChange={(e) => setPatient360SearchQuery(e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
 
               <div className="flex gap-4 overflow-x-auto pb-4 shrink-0 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-700">
                 {/* Total Patients - Premium Gradient */}
                 <Card
-                  className="bg-gradient-to-br from-blue-500 to-indigo-600 border-none text-white shadow-lg shadow-blue-500/20 flex-shrink-0 min-w-[140px] relative overflow-hidden group cursor-pointer hover:shadow-xl transition-all"
+                  className="bg-gradient-to-br from-brand-500 to-brand-600 border-none text-white shadow-lg shadow-brand-500/20 flex-shrink-0 min-w-[140px] relative overflow-hidden group cursor-pointer hover:shadow-xl transition-all"
                   onClick={() => {
                     setPatient360SearchQuery('');
                     setSelectedGender('all');
@@ -1630,7 +1638,7 @@ export const PatientsPage: React.FC = () => {
                     <Users className="h-16 w-16 -rotate-12" />
                   </div>
                   <CardContent className="p-4 relative z-10">
-                    <p className="text-blue-100 text-xs font-semibold uppercase tracking-wider mb-1">Total Patients</p>
+                    <p className="text-brand-100 text-xs font-semibold uppercase tracking-wider mb-1">Total Patients</p>
                     <div className="flex items-center gap-3">
                       <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
                         <Users className="h-5 w-5 text-white" />
@@ -1644,7 +1652,7 @@ export const PatientsPage: React.FC = () => {
                 <Card
                   className={cn(
                     "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all cursor-pointer flex-shrink-0 min-w-[130px] group",
-                    selectedGender === 'male' && "ring-2 ring-blue-500 border-transparent bg-blue-50/50 dark:bg-blue-900/10"
+                    selectedGender === 'male' && "ring-2 ring-brand-500 border-transparent bg-brand-50/50 dark:bg-brand-900/10"
                   )}
                   onClick={() => {
                     if (selectedGender === 'male') {
@@ -1658,7 +1666,7 @@ export const PatientsPage: React.FC = () => {
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Male</span>
-                      <div className={cn("p-1.5 rounded-md transition-colors", selectedGender === 'male' ? "bg-blue-200 text-blue-700" : "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400")}>
+                      <div className={cn("p-1.5 rounded-md transition-colors", selectedGender === 'male' ? "bg-brand-200 text-brand-700" : "bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400")}>
                         <Users className="h-4 w-4" />
                       </div>
                     </div>
@@ -1731,8 +1739,8 @@ export const PatientsPage: React.FC = () => {
                   <Card
                     key={idx}
                     className={cn(
-                      "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-800 transition-all flex-shrink-0 min-w-[180px] group cursor-pointer",
-                      selectedDoctor360 === doctor.doctorName && "ring-2 ring-indigo-500 border-transparent bg-indigo-50/50 dark:bg-indigo-900/10"
+                      "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-brand-200 dark:hover:border-brand-800 transition-all flex-shrink-0 min-w-[180px] group cursor-pointer",
+                      selectedDoctor360 === doctor.doctorName && "ring-2 ring-brand-500 border-transparent bg-brand-50/50 dark:bg-brand-900/10"
                     )}
                     onClick={() => {
                       if (selectedDoctor360 === doctor.doctorName) {
@@ -1746,12 +1754,12 @@ export const PatientsPage: React.FC = () => {
                     <CardContent className="p-3">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex gap-2 items-center overflow-hidden">
-                          <div className="bg-indigo-50 dark:bg-indigo-900/20 p-2 rounded-full shrink-0">
-                            <Stethoscope className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                          <div className="bg-brand-50 dark:bg-brand-900/20 p-2 rounded-full shrink-0">
+                            <Stethoscope className="h-4 w-4 text-brand-600 dark:text-brand-400" />
                           </div>
                           <div className="flex flex-col min-w-0">
                             <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">Doctor</span>
-                            <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate w-full group-hover:text-indigo-600 transition-colors" title={doctor.doctorName}>{doctor.doctorName}</h4>
+                            <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate w-full group-hover:text-brand-600 transition-colors" title={doctor.doctorName}>{doctor.doctorName}</h4>
                           </div>
                         </div>
                         <span className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold px-2 py-0.5 rounded-full min-w-[2rem] text-center">
@@ -1761,8 +1769,8 @@ export const PatientsPage: React.FC = () => {
 
                       <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
                         {doctor.malePatientCount > 0 && (
-                          <div className="flex items-center gap-1 text-[10px] font-medium text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
-                            <span className="uppercase text-blue-400">M</span> {doctor.malePatientCount}
+                          <div className="flex items-center gap-1 text-[10px] font-medium text-brand-700 bg-brand-50 px-1.5 py-0.5 rounded border border-brand-100">
+                            <span className="uppercase text-brand-400">M</span> {doctor.malePatientCount}
                           </div>
                         )}
                         {doctor.femalePatientCount > 0 && (
@@ -1807,7 +1815,7 @@ export const PatientsPage: React.FC = () => {
                                   <span className="font-semibold text-gray-900 dark:text-gray-100">{patient.Name}</span>
                                   <button
                                     onClick={() => handlePatientClick(patient.PatientId)}
-                                    className="text-xs text-blue-600 flex items-center gap-1 hover:underline w-fit"
+                                    className="text-xs text-brand-600 flex items-center gap-1 hover:underline w-fit"
                                   >
                                     <Users className="h-3 w-3" />
                                     {patient.PatientId}
@@ -1879,7 +1887,7 @@ export const PatientsPage: React.FC = () => {
                                   <span className="font-medium text-gray-900 dark:text-gray-100">{patient.Name}</span>
                                   <button
                                     onClick={() => handlePatientClick(patient.PatientId)}
-                                    className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1 cursor-pointer hover:underline transition-colors w-fit"
+                                    className="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-800 dark:hover:text-brand-300 flex items-center gap-1 cursor-pointer hover:underline transition-colors w-fit"
                                   >
                                     <Users className="h-3 w-3" />
                                     {patient.PatientId}
@@ -2008,7 +2016,7 @@ export const PatientsPage: React.FC = () => {
                   <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm">
                     <CardHeader className="p-3 pb-2">
                       <CardTitle className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                        <Activity className="h-3.5 w-3.5 text-blue-500" />
+                        <Activity className="h-3.5 w-3.5 text-brand-500" />
                         Age Distribution <span className="text-gray-400 font-normal ml-auto text-[10px]">({selectedGender === 'all' ? 'All' : selectedGender === 'male' ? 'M' : 'F'})</span>
                       </CardTitle>
                     </CardHeader>
@@ -2044,7 +2052,7 @@ export const PatientsPage: React.FC = () => {
                                   return (
                                     <div className="bg-gray-900 text-white text-[10px] rounded py-1 px-2 shadow-xl border border-gray-800">
                                       <p className="font-semibold">{label}</p>
-                                      <p className="text-blue-200">Count: {payload[0].value}</p>
+                                      <p className="text-brand-200">Count: {payload[0].value}</p>
                                     </div>
                                   );
                                 }
@@ -2078,6 +2086,8 @@ export const PatientsPage: React.FC = () => {
         }
 
       </main >
+
+      <PatientMergeDialog open={mergeOpen} onOpenChange={setMergeOpen} />
     </div >
   );
 };

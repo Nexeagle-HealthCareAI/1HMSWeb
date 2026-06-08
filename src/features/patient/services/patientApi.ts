@@ -1,4 +1,69 @@
 import { apiClient, ApiResponse, PaginatedResponse } from '@/services/axiosClient';
+import { useAuthStore } from '@/store/authStore';
+
+const hospitalIdOrThrow = (override?: string) => {
+  const id = override ?? useAuthStore.getState().getHospitalId();
+  if (!id) throw new Error('Hospital ID is not available on the current user session.');
+  return id;
+};
+
+// ─── Duplicate detection & merge ───────────────────────────────────────────────
+export type DuplicateConfidence = 'NEAR_CERTAIN' | 'PROBABLE' | 'POSSIBLE';
+
+export interface DuplicateMatch {
+  patientId: string;
+  fullName?: string | null;
+  mobile?: string | null;
+  ageYears?: number | null;
+  sex?: string | null;
+  city?: string | null;
+  similarity: number;
+  confidence: DuplicateConfidence;
+  matchedOn: string[];
+}
+
+export interface CheckDuplicatesPayload {
+  fullName?: string;
+  mobile?: string;
+  dateOfBirth?: string | null;
+  aadhaarNumber?: string;
+  excludePatientId?: string;
+}
+
+export interface PatientRecordCounts {
+  success?: boolean;
+  message?: string;
+  patientId?: string;
+  fullName?: string | null;
+  mobile?: string | null;
+  isMerged?: boolean;
+  mergedIntoPatientId?: string | null;
+  admissions: number;
+  appointments: number;
+  invoices: number;
+  payments: number;
+  prescriptions: number;
+  encounters: number;
+  alerts: number;
+  total: number;
+}
+
+export interface MergePatientsResult {
+  success?: boolean;
+  message?: string;
+  canonicalPatientId?: string;
+  movedCounts?: Record<string, number>;
+  totalMoved?: number;
+}
+
+export interface MergeSearchItem {
+  patientId: string;
+  fullName?: string | null;
+  mobile?: string | null;
+  sex?: string | null;
+  age?: number | null;
+  city?: string | null;
+}
 
 // Types
 export interface Patient {
@@ -297,5 +362,40 @@ export const patientApi = {
     unpaid_bills: number;
   }>> => {
     return apiClient.get(`/patients/${id}/dashboard`);
+  },
+
+  // Advisory fuzzy duplicate detection before creating a new UHID.
+  checkDuplicates: (payload: CheckDuplicatesPayload, hospitalId?: string): Promise<DuplicateMatch[]> => {
+    return apiClient
+      .post<{ success?: boolean; matches?: DuplicateMatch[] }>('/patient/check-duplicates', {
+        ...payload,
+        hospitalId: hospitalIdOrThrow(hospitalId),
+      })
+      .then(r => r.matches ?? [])
+      .catch(() => []);
+  },
+
+  // Linked-record counts for the merge preview.
+  getRecordCounts: (patientId: string, hospitalId?: string): Promise<PatientRecordCounts> => {
+    const hid = hospitalIdOrThrow(hospitalId);
+    return apiClient.get(`/patient/record-counts?hospitalId=${encodeURIComponent(hid)}&patientId=${encodeURIComponent(patientId)}`);
+  },
+
+  // Free-text patient search (UHID / name / mobile / Aadhaar / ABHA) for the merge picker.
+  searchByText: (searchText: string, hospitalId?: string): Promise<MergeSearchItem[]> => {
+    const hid = hospitalIdOrThrow(hospitalId);
+    return apiClient
+      .get<{ items?: MergeSearchItem[] }>(`/patient/search?searchText=${encodeURIComponent(searchText)}&hospitalId=${encodeURIComponent(hid)}`)
+      .then(r => r.items ?? [])
+      .catch(() => []);
+  },
+
+  // Admin: merge a duplicate UHID into a canonical one (repoints all linked records).
+  mergePatients: (canonicalPatientId: string, duplicatePatientId: string, hospitalId?: string): Promise<MergePatientsResult> => {
+    return apiClient.post('/patient/merge', {
+      hospitalId: hospitalIdOrThrow(hospitalId),
+      canonicalPatientId,
+      duplicatePatientId,
+    });
   },
 };

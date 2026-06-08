@@ -72,7 +72,7 @@ export const Patient360Analysis: React.FC<Patient360AnalysisProps> = ({ patientI
                                             size="sm"
                                             variant="ghost"
                                             onClick={() => setIsProfileModalOpen(true)}
-                                            className="h-6 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-gray-800 ml-auto sm:ml-0"
+                                            className="h-6 px-2 text-brand-600 hover:text-brand-700 hover:bg-brand-50 dark:hover:bg-gray-800 ml-auto sm:ml-0"
                                         >
                                             <Edit3 className="h-3 w-3 mr-1" />
                                             <span className="text-xs">Edit Details</span>
@@ -121,7 +121,7 @@ export const Patient360Analysis: React.FC<Patient360AnalysisProps> = ({ patientI
                     {/* Right: 360 Analysis Title */}
                     <div className="flex-shrink-0 border-l border-gray-200 dark:border-gray-700 pl-4 md:pl-6 pt-2 md:pt-0 border-t md:border-t-0 md:border-l w-full md:w-auto mt-2 md:mt-0 flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center">
                         <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                            <BarChart2 className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
+                            <BarChart2 className="h-5 w-5 md:h-6 md:w-6 text-brand-600" />
                             360 Analysis
                         </h1>
                         <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-0 md:mt-1">
@@ -133,7 +133,7 @@ export const Patient360Analysis: React.FC<Patient360AnalysisProps> = ({ patientI
 
             {isLoading ? (
                 <div className="flex items-center justify-center h-64">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
                 </div>
             ) : analysis ? (
                 <div className="space-y-4 md:space-y-6 px-3 md:px-4 pb-6 animate-in fade-in duration-500">
@@ -161,7 +161,7 @@ export const Patient360Analysis: React.FC<Patient360AnalysisProps> = ({ patientI
                             title="Total Visits"
                             value={analysis.totalVisit}
                             icon={Activity}
-                            gradient="bg-gradient-to-br from-blue-500 to-indigo-600"
+                            gradient="bg-gradient-to-br from-brand-500 to-brand-600"
                         />
                         <StatCard
                             title="Visit Frequency"
@@ -182,7 +182,7 @@ export const Patient360Analysis: React.FC<Patient360AnalysisProps> = ({ patientI
                             icon={analysis.followUpsDue ? AlertCircle : CheckCircle}
                             gradient={analysis.followUpsDue
                                 ? "bg-gradient-to-br from-amber-500 to-orange-600"
-                                : "bg-gradient-to-br from-cyan-500 to-blue-600"}
+                                : "bg-gradient-to-br from-cyan-500 to-brand-600"}
                         />
                     </div>
 
@@ -218,26 +218,26 @@ export const Patient360Analysis: React.FC<Patient360AnalysisProps> = ({ patientI
                         {/* Doctor Consultation Breakdown */}
                         {analysis.doctorConsulted && Object.keys(analysis.doctorConsulted).length > 0 && (
                             <Card className="bg-white dark:bg-gray-900 border-none shadow-md overflow-hidden md:col-span-2">
-                                <div className="h-1 bg-gradient-to-r from-blue-500 to-violet-500" />
+                                <div className="h-1 bg-gradient-to-r from-brand-500 to-violet-500" />
                                 <CardContent className="p-6">
                                     <div className="flex items-center justify-between mb-4">
                                         <h3 className="font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
-                                            <Stethoscope className="w-4 h-4 text-blue-500" />
+                                            <Stethoscope className="w-4 h-4 text-brand-500" />
                                             Doctor Consultations
                                         </h3>
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                                         {Object.entries(analysis.doctorConsulted).map(([doctorName, count]) => (
-                                            <div key={doctorName} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors border border-gray-100 dark:border-gray-800">
+                                            <div key={doctorName} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 hover:bg-brand-50 dark:hover:bg-gray-800 transition-colors border border-gray-100 dark:border-gray-800">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white font-bold text-xs shadow-sm">
+                                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-400 to-brand-500 flex items-center justify-center text-white font-bold text-xs shadow-sm">
                                                         {doctorName.charAt(0)}
                                                     </div>
                                                     <span className="font-medium text-sm text-gray-700 dark:text-gray-300 truncate max-w-[120px]" title={doctorName}>
                                                         {doctorName}
                                                     </span>
                                                 </div>
-                                                <Badge variant="secondary" className="bg-white dark:bg-gray-900 text-blue-700 dark:text-blue-400 shadow-sm border border-gray-100 dark:border-gray-700">
+                                                <Badge variant="secondary" className="bg-white dark:bg-gray-900 text-brand-700 dark:text-brand-400 shadow-sm border border-gray-100 dark:border-gray-700">
                                                     {count}
                                                 </Badge>
                                             </div>

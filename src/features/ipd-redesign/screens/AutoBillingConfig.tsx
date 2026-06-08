@@ -83,13 +83,13 @@ export const AutoBillingConfig: React.FC<Props> = ({ open, onOpenChange }) => {
                     <div className="rounded-xl border border-slate-200 p-4">
                         <div className="flex items-start justify-between gap-3">
                             <div className="flex items-start gap-2">
-                                <BedDouble className="h-5 w-5 text-indigo-600 mt-0.5" />
+                                <BedDouble className="h-5 w-5 text-brand-600 mt-0.5" />
                                 <div>
                                     <p className="font-bold text-sm text-slate-900">Daily bed charge (nightly)</p>
                                     <p className="text-xs text-slate-500 mt-0.5">Post one bed charge per active admission each night. Source: room tariff (falls back to ward rate). Idempotent — never double-posts for the same day.</p>
                                 </div>
                             </div>
-                            <Switch checked={autoBed} onCheckedChange={setAutoBed} className="data-[state=checked]:bg-indigo-600" />
+                            <Switch checked={autoBed} onCheckedChange={setAutoBed} className="data-[state=checked]:bg-brand-600" />
                         </div>
                     </div>
 
@@ -98,7 +98,7 @@ export const AutoBillingConfig: React.FC<Props> = ({ open, onOpenChange }) => {
                         <Info className="h-4 w-4 text-sky-600 mt-0.5 shrink-0" />
                         <p className="text-[11px] text-sky-800">
                             In the real system these map to the Billing Policy "integration triggers" (<code>opdConsultTrigger</code>, <code>ipdBedChargeMode</code>).
-                            Auto-posted charges are tagged <Badge variant="outline" className="text-[9px] font-bold bg-white">AUTO</Badge> in the ledger so staff can tell them apart from manual entries.
+                            Auto-posted charges are tagged <Badge variant="outline" className="text-[11px] font-bold bg-white">AUTO</Badge> in the ledger so staff can tell them apart from manual entries.
                         </p>
                     </div>
                 </div>

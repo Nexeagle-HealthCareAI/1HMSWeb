@@ -15,15 +15,6 @@ export interface RegisterRequest {
   roles: string;
 }
 
-export interface OnboardingRegisterRequest {
-  fullName: string;
-  userRole: string;
-  mobileNumber: string;
-  email?: string;
-  password: string;
-  onboardingToken: string;
-}
-
 export interface AuthResponse {
   success: boolean;
   message: string;
@@ -98,20 +89,6 @@ export interface UserPermissionsResponse {
   permissionKeys: string[];
 }
 
-export interface ValidateTokenRequest {
-  token: string;
-}
-
-export interface ValidateTokenResponse {
-  success: boolean;
-  message: string;
-  name: string | null;
-  roleName: string | null;
-  email: string | null;
-  mobile: string;
-  invitationId?: string;
-}
-
 // Auth API service
 export const authApi = {
   // Login
@@ -123,11 +100,6 @@ export const authApi = {
   register: (data: RegisterRequest): Promise<AuthResponse> => {
     return apiClient.post(API_ENDPOINTS.AUTH.SIGN_UP, data);
   },
-
-  // Onboarding Register
-  onboardingRegister: (data: OnboardingRegisterRequest): Promise<AuthResponse> => {
-    return apiClient.post(API_ENDPOINTS.AUTH.ONBOARDING_REGISTER, data);
-  }, 
 
   // Send OTP
   sendOTP: (data: SendOTPRequest): Promise<SendOTPResponse> => {
@@ -152,11 +124,6 @@ export const authApi = {
   getUserPermissions: (data: UserPermissionsRequest): Promise<UserPermissionsResponse> => {
     return apiClient.get(`${API_ENDPOINTS.USER.PERMISSIONS}?userId=${data.userId}`);
   },
-
-  // Validate onboarding token
-  validateToken: (data: ValidateTokenRequest): Promise<ValidateTokenResponse> => {
-    return apiClient.get(`${API_ENDPOINTS.USER_MANAGEMENT.VALIDATE_TOKEN}?token=${encodeURIComponent(data.token)}`);
-  }
 };
 
 // Utility function to fetch and store user permissions

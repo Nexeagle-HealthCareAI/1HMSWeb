@@ -294,7 +294,7 @@ export const ThemeSettings: React.FC<ThemeSettingsProps> = ({ className = '' }) 
               <div 
                 className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
                   (settings.colorBlindness || 'none') === 'none' 
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                    ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' 
                     : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
                 onClick={() => updateSettings({ colorBlindness: 'none' })}
@@ -308,7 +308,7 @@ export const ThemeSettings: React.FC<ThemeSettingsProps> = ({ className = '' }) 
                     <div className="text-xs text-gray-500">Standard color vision</div>
                   </div>
                   {(settings.colorBlindness || 'none') === 'none' && (
-                    <CheckCircle className="h-4 w-4 text-blue-600" />
+                    <CheckCircle className="h-4 w-4 text-brand-600" />
                   )}
                 </div>
               </div>
@@ -360,13 +360,13 @@ export const ThemeSettings: React.FC<ThemeSettingsProps> = ({ className = '' }) 
               <div 
                 className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
                   (settings.colorBlindness || 'none') === 'tritanopia' 
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                    ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' 
                     : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
                 onClick={() => updateSettings({ colorBlindness: 'tritanopia' })}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center">
                     <span className="text-white text-xs font-bold">T</span>
                   </div>
                   <div className="flex-1">
@@ -374,7 +374,7 @@ export const ThemeSettings: React.FC<ThemeSettingsProps> = ({ className = '' }) 
                     <div className="text-xs text-gray-500">Blue-Blind (Blue-Yellow)</div>
                   </div>
                   {(settings.colorBlindness || 'none') === 'tritanopia' && (
-                    <CheckCircle className="h-4 w-4 text-blue-600" />
+                    <CheckCircle className="h-4 w-4 text-brand-600" />
                   )}
                 </div>
               </div>
@@ -396,7 +396,7 @@ export const ThemeSettings: React.FC<ThemeSettingsProps> = ({ className = '' }) 
                   <span className="text-xs text-gray-500">Green</span>
                 </div>
                 <div className="text-center">
-                  <div className="w-6 h-6 rounded bg-blue-500 mx-auto mb-1"></div>
+                  <div className="w-6 h-6 rounded bg-brand-500 mx-auto mb-1"></div>
                   <span className="text-xs text-gray-500">Blue</span>
                 </div>
                 <div className="text-center">

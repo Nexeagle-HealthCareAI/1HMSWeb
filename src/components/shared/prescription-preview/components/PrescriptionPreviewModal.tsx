@@ -103,15 +103,15 @@ const PreviewModalBody = ({
 
           {/* Actions Panel - Right Section */}
           <div className="hidden lg:flex flex-col min-w-[220px] overflow-hidden rounded-lg border shadow-sm">
-            <div className="flex-shrink-0 bg-gradient-to-b from-blue-50 to-blue-100 px-6 pt-7 pb-4 flex flex-col items-center text-center border-b border-blue-200">
-              <div className="text-lg font-semibold text-blue-900 mb-1">{t('prescriptionPreview.actions.title')}</div>
-              <div className="text-xs text-blue-700 mb-2">{t('prescriptionPreview.actions.description')}</div>
-              <div className="text-[11px] text-blue-500">{t('prescriptionPreview.actions.tip')}</div>
+            <div className="flex-shrink-0 bg-gradient-to-b from-brand-50 to-brand-100 px-6 pt-7 pb-4 flex flex-col items-center text-center border-b border-brand-200">
+              <div className="text-lg font-semibold text-brand-900 mb-1">{t('prescriptionPreview.actions.title')}</div>
+              <div className="text-xs text-brand-700 mb-2">{t('prescriptionPreview.actions.description')}</div>
+              <div className="text-[11px] text-brand-500">{t('prescriptionPreview.actions.tip')}</div>
             </div>
             <div className="flex-1 flex flex-col items-center justify-center gap-5 bg-white px-6 py-8">
               <Button
                 variant="default"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md transition-all hover:shadow-lg"
+                className="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-md transition-all hover:shadow-lg"
                 disabled={!previewUrl}
                 onClick={() => {
                   if (previewUrl) {
@@ -128,7 +128,7 @@ const PreviewModalBody = ({
               </Button>
               <Button
                 variant="outline"
-                className="w-full border-blue-400 text-blue-700 hover:bg-blue-50 font-semibold transition-all dark:border-blue-300 dark:text-blue-200 dark:hover:bg-blue-900/40"
+                className="w-full border-brand-400 text-brand-700 hover:bg-brand-50 font-semibold transition-all dark:border-brand-300 dark:text-brand-200 dark:hover:bg-brand-900/40"
                 disabled={!previewUrl}
                 onClick={() => {
                   if (navigator.share && previewUrl) {
@@ -151,7 +151,7 @@ const PreviewModalBody = ({
               </Button>
               <Button
                 variant="outline"
-                className="w-full border-blue-400 text-blue-700 hover:bg-blue-50 font-semibold transition-all dark:border-blue-300 dark:text-blue-200 dark:hover:bg-blue-900/40"
+                className="w-full border-brand-400 text-brand-700 hover:bg-brand-50 font-semibold transition-all dark:border-brand-300 dark:text-brand-200 dark:hover:bg-brand-900/40"
                 disabled={!previewUrl}
                 onClick={e => {
                   e.stopPropagation();

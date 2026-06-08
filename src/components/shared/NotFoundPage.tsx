@@ -15,13 +15,13 @@ const NotFoundPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-50 via-white to-brand-50">
       <div className="max-w-2xl mx-auto text-center space-y-8 p-8">
         {/* 404 Icon with Animation */}
         <div className="relative">
-          <div className="text-9xl font-bold text-blue-100 animate-pulse" aria-hidden="true">{t('notFound.code')}</div>
+          <div className="text-9xl font-bold text-brand-100 animate-pulse" aria-hidden="true">{t('notFound.code')}</div>
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-6xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <div className="text-6xl font-bold bg-gradient-to-r from-brand-600 to-brand-600 bg-clip-text text-transparent">
               {t('notFound.code')}
             </div>
           </div>
@@ -42,8 +42,8 @@ const NotFoundPage = () => {
 
         {/* Search Icon */}
         <div className="flex justify-center">
-          <div className="p-4 bg-blue-100 rounded-full" aria-hidden="true">
-            <Search className="h-8 w-8 text-blue-600" />
+          <div className="p-4 bg-brand-100 rounded-full" aria-hidden="true">
+            <Search className="h-8 w-8 text-brand-600" />
           </div>
         </div>
 
@@ -52,7 +52,7 @@ const NotFoundPage = () => {
           {!isAuthenticated ? (
             <Button 
               onClick={handleGoToLogin}
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+              className="bg-gradient-to-r from-brand-600 to-brand-600 hover:from-brand-700 hover:to-brand-700 text-white font-semibold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
             >
               <LogIn className="mr-2 h-5 w-5" />
               {t('notFound.goToLogin')}
@@ -76,11 +76,11 @@ const NotFoundPage = () => {
         </div>
 
         {/* Additional Help */}
-        <div className="bg-blue-50 rounded-2xl p-6 border border-blue-200">
-          <h3 className="text-lg font-semibold text-blue-900 mb-2">
+        <div className="bg-brand-50 rounded-2xl p-6 border border-brand-200">
+          <h3 className="text-lg font-semibold text-brand-900 mb-2">
             {t('notFound.helpTitle')}
           </h3>
-          <p className="text-sm text-blue-700 mb-4">
+          <p className="text-sm text-brand-700 mb-4">
             {t('notFound.helpText')}
           </p>
           <div className="flex flex-col sm:flex-row gap-2 justify-center text-sm">
@@ -90,15 +90,15 @@ const NotFoundPage = () => {
 
         {/* Quick Links */}
         <div className="flex flex-wrap justify-center gap-4 text-sm">
-          <Link to="/" className="text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+          <Link to="/" className="text-brand-600 hover:text-brand-800 hover:underline transition-colors">
             {t('notFound.links.home')}
           </Link>
           <span className="text-gray-400">•</span>
-          <Link to="/help" className="text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+          <Link to="/help" className="text-brand-600 hover:text-brand-800 hover:underline transition-colors">
             {t('notFound.links.helpCenter')}
           </Link>
           <span className="text-gray-400">•</span>
-          <Link to="/contact" className="text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+          <Link to="/contact" className="text-brand-600 hover:text-brand-800 hover:underline transition-colors">
             {t('notFound.links.contactUs')}
           </Link>
         </div>

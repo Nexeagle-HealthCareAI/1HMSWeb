@@ -2,10 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { User, Phone, Calendar, Clock, MapPin, DollarSign, CreditCard, Search, Loader2, X, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { RegisterAppointmentRequest, generatePatientId, appointmentApi, type ConsultTimelineResponse } from '../services/appointmentApi';
 import { useAppointmentBooking } from '../hooks/useAppointmentBooking';
 import { usePatientSearch } from '../hooks/usePatientSearch';
 import { PatientSearchItem } from '../services/appointmentApi';
+import { patientApi, type DuplicateMatch, type DuplicateConfidence } from '@/features/patient/services/patientApi';
+import { isReachable } from '@/offline';
 import { useReferrers, useCreateReferrer } from '../hooks/useReferrers';
 import { useAuthStore } from '@/store/authStore';
 import { getOpdConsultContext, postOpdConsult } from '@/features/billing/services/consultCharge';
@@ -48,6 +51,7 @@ type PatientFormState = {
   block: string;
   city: string;
   pincode: string;
+  country: string;
   bloodGroup: string;
   alternateMobile: string;
   email: string;
@@ -68,6 +72,12 @@ const EMERGENCY_RELATIONS = ['Spouse', 'Parent', 'Child', 'Sibling', 'Relative',
 const PHONE_REGEX = /^\d{10}$/;
 const RELATION_OPTIONS = ['C/O', 'S/O', 'D/O', 'W/O', 'H/O', 'G/O', 'F/O', 'M/O'];
 
+const DUP_TONE: Record<DuplicateConfidence, { chip: string; label: string }> = {
+  NEAR_CERTAIN: { chip: 'bg-rose-100 text-rose-700 border-rose-200', label: 'Near-certain' },
+  PROBABLE: { chip: 'bg-amber-100 text-amber-700 border-amber-200', label: 'Probable' },
+  POSSIBLE: { chip: 'bg-sky-100 text-sky-700 border-sky-200', label: 'Possible' },
+};
+
 const createInitialFormState = (): PatientFormState => ({
   patientId: '',
   name: '',
@@ -80,6 +90,7 @@ const createInitialFormState = (): PatientFormState => ({
   block: '',
   city: '',
   pincode: '',
+  country: 'India',
   bloodGroup: '',
   alternateMobile: '',
   email: '',
@@ -123,17 +134,8 @@ const collectValidationErrors = (data: PatientFormState) => {
     newErrors.gender = 'patientForm.errors.genderRequired';
   }
 
-  if (!data.address.trim()) {
-    newErrors.address = 'patientForm.errors.addressRequired';
-  }
-
-  if (!data.city.trim()) {
-    newErrors.city = 'patientForm.errors.cityRequired';
-  }
-
-  if (!data.pincode.trim()) {
-    newErrors.pincode = 'patientForm.errors.pincodeRequired';
-  } else if (!/^\d{6}$/.test(data.pincode)) {
+  // Address fields are optional. Only validate the pincode FORMAT when one is actually entered.
+  if (data.pincode.trim() && !/^\d{6}$/.test(data.pincode)) {
     newErrors.pincode = 'patientForm.errors.pincodeInvalid';
   }
 
@@ -175,6 +177,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Fuzzy duplicate detection (only while entering a brand-new patient).
+  const [dupMatches, setDupMatches] = useState<DuplicateMatch[]>([]);
+  const [dupDismissed, setDupDismissed] = useState(false);
   const { bookAppointment, isLoading: isBookingLoading, error: bookingError, clearError } = useAppointmentBooking();
   const { searchPatients, isLoading: isSearchLoading, error: searchError, clearError: clearSearchError } = usePatientSearch();
   const { getUserId } = useAuthStore();
@@ -256,6 +261,13 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const pendingValidationErrors = useMemo(() => collectValidationErrors(formData), [formData]);
   const isFormReady = Object.keys(pendingValidationErrors).length === 0;
 
+  // Mandatory-field highlight: amber while still empty (shows what's left to fill),
+  // red when invalid after a submit attempt, else the normal/auto-filled style.
+  const reqClass = (val: string, hasError: boolean) =>
+    hasError ? 'border-red-500'
+      : !val.trim() ? 'border-amber-400 bg-amber-50/50 dark:bg-amber-900/10'
+        : (formData.patientId ? 'bg-brand-50' : '');
+
   const dateFormatter = useMemo(() => new Intl.DateTimeFormat(i18n.language, {
     day: '2-digit',
     month: 'short',
@@ -332,6 +344,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       block: '',
       city: patient.city || '',
       pincode: patient.pincode || '',
+      country: 'India',
       bloodGroup: '',
       alternateMobile: '',
       email: '',
@@ -348,6 +361,37 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     setShowSearchResults(false);
     setSearchQuery('');
     setSelectedIndex(0);
+  };
+
+  // Debounced fuzzy duplicate probe for a brand-new patient (skip once one is selected).
+  useEffect(() => {
+    if (formData.patientId) { setDupMatches([]); return; }
+    const name = formData.name.trim();
+    const phoneDigits = formData.phone.replace(/\D/g, '');
+    if (name.length < 3) { setDupMatches([]); return; }
+    let active = true;
+    const tid = setTimeout(async () => {
+      const matches = await patientApi.checkDuplicates({
+        fullName: name,
+        mobile: phoneDigits.length >= 10 ? phoneDigits : undefined,
+      }, hospitalId);
+      if (active) { setDupMatches(matches); setDupDismissed(false); }
+    }, 450);
+    return () => { active = false; clearTimeout(tid); };
+  }, [formData.patientId, formData.name, formData.phone, hospitalId]);
+
+  const useExistingDuplicate = (m: DuplicateMatch) => {
+    handlePatientSelect({
+      patientId: m.patientId,
+      fullName: m.fullName ?? '',
+      mobile: m.mobile ?? '',
+      age: m.ageYears ?? 0,
+      sex: m.sex ?? '',
+      address: '',
+      city: m.city ?? '',
+      pincode: '',
+    } as unknown as PatientSearchItem);
+    setDupMatches([]);
   };
 
   // Keyboard navigation for search results
@@ -443,6 +487,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           addressLine1: formData.address,
           city: formData.city,
           pincode: formData.pincode,
+          country: formData.country || 'India',
           insuranceId: formData.hasInsurance ? formData.insuranceId : '',
           paymentMode: formData.paymentMode,
           patientId: generatedPatientId,
@@ -485,7 +530,14 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
       // Same-day OPD with policy AUTO: auto-create the encounter + consult charge, and
       // record the payment if marked paid. Non-blocking — the appointment is already booked.
-      if (showConsult) {
+      // Offline: skip — the backend auto-creates the consult charge when the queued booking
+      // replays; the payment must be collected once back online (never queue money offline).
+      if (showConsult && !isReachable()) {
+        toast({
+          title: 'Saved offline',
+          description: "The consultation fee will be added automatically once you're back online. You can collect payment then.",
+        });
+      } else if (showConsult) {
         try {
           const r = await postOpdConsult(finalPatientId, {
             markPaid: formData.isPaid,
@@ -543,7 +595,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
         <DialogHeader className="border-b pb-1 mb-1">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mr-8 md:mr-16">
             <div>
-              <DialogTitle className="text-2xl md:text-3xl font-extrabold text-blue-900 dark:text-blue-400 tracking-tight">
+              <DialogTitle className="text-2xl md:text-3xl font-extrabold text-brand-900 dark:text-brand-400 tracking-tight">
                 {t('patientForm.title')}
               </DialogTitle>
               <DialogDescription className="text-sm md:text-base text-gray-600 dark:text-gray-300 mt-0">
@@ -552,37 +604,37 @@ export const PatientForm: React.FC<PatientFormProps> = ({
             </div>
             {/* Appointment Details Row in Header */}
             <div className="w-full md:w-auto overflow-x-auto pb-1 -mx-3 px-3 md:mx-0 md:px-0 md:overflow-visible no-scrollbar">
-              <div className="flex flex-nowrap items-center gap-x-3 text-xs md:text-lg bg-blue-100 dark:bg-blue-900/30 px-3 py-1.5 md:px-4 rounded-xl border-2 border-blue-200 dark:border-blue-700 shadow-sm whitespace-nowrap min-w-max">
+              <div className="flex flex-nowrap items-center gap-x-3 text-xs md:text-lg bg-brand-100 dark:bg-brand-900/30 px-3 py-1.5 md:px-4 rounded-xl border-2 border-brand-200 dark:border-brand-700 shadow-sm whitespace-nowrap min-w-max">
                 <div className="flex items-center gap-1.5 md:gap-2">
-                  <User className="h-3.5 w-3.5 md:h-5 md:w-5 text-blue-700 dark:text-blue-400" />
-                  <span className="font-bold text-blue-900 dark:text-blue-100">{doctor.name}</span>
+                  <User className="h-3.5 w-3.5 md:h-5 md:w-5 text-brand-700 dark:text-brand-400" />
+                  <span className="font-bold text-brand-900 dark:text-brand-100">{doctor.name}</span>
                 </div>
-                <div className="h-4 md:h-6 w-px bg-blue-300 dark:bg-blue-600" />
+                <div className="h-4 md:h-6 w-px bg-brand-300 dark:bg-brand-600" />
                 <div className="flex items-center gap-1.5 md:gap-2">
-                  <Calendar className="h-3.5 w-3.5 md:h-5 md:w-5 text-blue-700 dark:text-blue-400" />
-                  <span className="font-bold text-blue-900 dark:text-blue-100">{dateFormatter.format(new Date(selectedSlot.date))}</span>
+                  <Calendar className="h-3.5 w-3.5 md:h-5 md:w-5 text-brand-700 dark:text-brand-400" />
+                  <span className="font-bold text-brand-900 dark:text-brand-100">{dateFormatter.format(new Date(selectedSlot.date))}</span>
                 </div>
-                <div className="h-4 md:h-6 w-px bg-blue-300 dark:bg-blue-600" />
+                <div className="h-4 md:h-6 w-px bg-brand-300 dark:bg-brand-600" />
                 <div className="flex items-center gap-1.5 md:gap-2">
-                  <Clock className="h-3.5 w-3.5 md:h-5 md:w-5 text-blue-700 dark:text-blue-400" />
-                  <span className="font-bold text-blue-900 dark:text-blue-100">{formatTime(selectedSlot.time)}</span>
+                  <Clock className="h-3.5 w-3.5 md:h-5 md:w-5 text-brand-700 dark:text-brand-400" />
+                  <span className="font-bold text-brand-900 dark:text-brand-100">{formatTime(selectedSlot.time)}</span>
                 </div>
-                <div className="h-4 md:h-6 w-px bg-blue-300 dark:bg-blue-600" />
+                <div className="h-4 md:h-6 w-px bg-brand-300 dark:bg-brand-600" />
                 <div className="flex items-center gap-1.5 md:gap-2">
                   <span className="text-sm md:text-lg">⏱️</span>
-                  <span className="font-bold text-blue-900 dark:text-blue-100">{t('patientForm.appointmentDetails.duration', { minutes: selectedSlot.slotDurationInMinutes || 10 })}</span>
+                  <span className="font-bold text-brand-900 dark:text-brand-100">{t('patientForm.appointmentDetails.duration', { minutes: selectedSlot.slotDurationInMinutes || 10 })}</span>
                 </div>
               </div>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-2 md:gap-4 pb-8">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-2 md:gap-3 pb-3">
           {/* Patient Search - Enhanced */}
           <div className="xl:col-span-1">
-            <Card className="p-3 md:p-6 bg-gradient-subtle dark:bg-gray-800 border-healthcare-primary/20 dark:border-blue-400/20 h-fit mb-0">
+            <Card className="p-3 md:p-6 bg-gradient-subtle dark:bg-gray-800 border-healthcare-primary/20 dark:border-brand-400/20 h-fit mb-0">
               <h4 className="font-bold text-base md:text-lg text-foreground dark:text-white mb-2 md:mb-4 flex items-center gap-2">
-                <Search className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
+                <Search className="h-4 w-4 md:h-5 md:w-5 text-brand-600" />
                 {t('patientForm.search.title')}
               </h4>
               <div className="space-y-3 md:space-y-4">
@@ -638,13 +690,46 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           {/* Main Form - 3 columns */}
           <div className="xl:col-span-3">
             <form id="patient-form" onSubmit={handleSubmit} className="space-y-2 md:space-y-4">
+              {/* Duplicate-patient warning (new patient only) */}
+              {!formData.patientId && dupMatches.length > 0 && !dupDismissed && (
+                <div className={`rounded-xl border shadow-sm overflow-hidden ${dupMatches.some(m => m.confidence === 'NEAR_CERTAIN') ? 'border-rose-300 bg-rose-50/70' : 'border-amber-300 bg-amber-50/60'}`}>
+                  <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-black/5">
+                    <AlertTriangle className={`h-4 w-4 shrink-0 ${dupMatches.some(m => m.confidence === 'NEAR_CERTAIN') ? 'text-rose-600' : 'text-amber-600'}`} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-foreground">Possible existing patient</p>
+                      <p className="text-[11px] text-muted-foreground">{dupMatches.length} match{dupMatches.length > 1 ? 'es' : ''} — select to avoid a duplicate UHID.</p>
+                    </div>
+                    <button type="button" onClick={() => setDupDismissed(true)} className="text-[11px] text-muted-foreground hover:text-foreground shrink-0">Dismiss</button>
+                  </div>
+                  <div className="p-2.5 space-y-1.5">
+                    {dupMatches.map(m => (
+                      <div key={m.patientId} className="rounded-lg border border-input bg-background p-2 flex items-center gap-2.5">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-sm truncate">{m.fullName || '—'}</p>
+                            <Badge variant="outline" className={`text-[11px] font-bold border ${DUP_TONE[m.confidence].chip}`}>{DUP_TONE[m.confidence].label}</Badge>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground font-mono truncate">
+                            {m.patientId}{m.ageYears != null ? ` · ${m.ageYears}${m.sex ?? ''}` : m.sex ? ` · ${m.sex}` : ''}{m.mobile ? ` · ${m.mobile}` : ''} · {Math.round(m.similarity * 100)}% name
+                          </p>
+                        </div>
+                        <Button type="button" size="sm" onClick={() => useExistingDuplicate(m)} className="h-8 text-xs shrink-0">Use this</Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {/* Personal & Contact Information - Single Row */}
-              <Card className="p-4 md:p-6 dark:bg-gray-800 shadow-sm mt-0">
-                <div className="mb-2 md:mb-4">
+              <Card className="p-3 md:p-4 dark:bg-gray-800 shadow-sm mt-0">
+                <div className="mb-2 md:mb-4 flex items-center justify-between gap-2">
                   <h3 className="font-bold text-base md:text-lg text-foreground dark:text-white flex items-center gap-2">
                     <User className="h-4 w-4 md:h-5 md:w-5 text-healthcare-primary" />
                     {t('patientForm.personal.title')}
                   </h3>
+                  <span className="flex items-center gap-1.5 text-[10px] md:text-xs text-amber-600 dark:text-amber-400 font-medium shrink-0">
+                    <span className="h-3 w-4 rounded-sm bg-amber-50 border border-amber-300" />
+                    Required fields
+                  </span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-3 md:gap-5">
                   <div className="xl:col-span-3">
@@ -656,7 +741,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                       value={formData.name}
                       onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                       placeholder={t('patientForm.personal.namePlaceholder')}
-                      className={`h-10 text-sm md:text-base mt-1.5 ${errors.name ? "border-red-500" : ""} ${formData.patientId ? "bg-indigo-50" : ""}`}
+                      className={`h-10 text-sm md:text-base mt-1.5 ${reqClass(formData.name, !!errors.name)}`}
                     />
                     {errors.name && (
                       <p className="text-red-500 text-xs md:text-sm mt-1">{t(errors.name)}</p>
@@ -685,7 +770,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                       </Select>
 
                       {selectedReferrer ? (
-                        <div className="flex-1 h-10 mt-1.5 rounded-l-none rounded-r-md border border-l-0 border-input bg-indigo-50 dark:bg-indigo-900/20 px-3 flex items-center justify-between">
+                        <div className="flex-1 h-10 mt-1.5 rounded-l-none rounded-r-md border border-l-0 border-input bg-brand-50 dark:bg-brand-900/20 px-3 flex items-center justify-between">
                           <span className="text-sm truncate">
                             {selectedReferrer.referrerName}
                             {selectedReferrer.defaultRatePercent > 0 && (
@@ -733,7 +818,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                               <button
                                 type="button"
                                 onClick={() => { setCreatingReferrer(true); setNewReferrer(prev => ({ ...prev, name: referrerSearch.trim() })); setReferrerSearch(''); }}
-                                className="w-full text-left px-3 py-2 text-sm text-indigo-600 hover:bg-accent font-medium"
+                                className="w-full text-left px-3 py-2 text-sm text-brand-600 hover:bg-accent font-medium"
                               >
                                 + Add new referrer{referrerSearch.trim() ? ` "${referrerSearch.trim()}"` : ''}
                               </button>
@@ -744,7 +829,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     </div>
 
                     {creatingReferrer && (
-                      <div className="mt-2 grid grid-cols-2 gap-2 rounded-md border border-indigo-200 bg-indigo-50/40 dark:bg-indigo-900/10 p-2">
+                      <div className="mt-2 grid grid-cols-2 gap-2 rounded-md border border-brand-200 bg-brand-50/40 dark:bg-brand-900/10 p-2">
                         <Input
                           value={newReferrer.phone}
                           onChange={(e) => setNewReferrer(prev => ({ ...prev, phone: e.target.value }))}
@@ -777,7 +862,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                       value={formData.phone}
                       onChange={handlePhoneChange}
                       placeholder={t('patientForm.personal.phonePlaceholder')}
-                      className={`h-10 text-sm md:text-base mt-1.5 ${errors.phone ? "border-red-500" : ""} ${formData.patientId ? "bg-indigo-50" : ""}`}
+                      className={`h-10 text-sm md:text-base mt-1.5 ${reqClass(formData.phone, !!errors.phone)}`}
                     />
                     {errors.phone && (
                       <p className="text-red-500 text-xs md:text-sm mt-1">{t(errors.phone)}</p>
@@ -797,7 +882,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                         placeholder={t('patientForm.personal.agePlaceholder')}
                         min="1"
                         max="120"
-                        className={`h-10 text-sm md:text-base mt-1.5 ${errors.age ? "border-red-500" : ""} ${formData.patientId ? "bg-indigo-50" : ""}`}
+                        className={`h-10 text-sm md:text-base mt-1.5 ${reqClass(formData.age, !!errors.age)}`}
                       />
                       {errors.age && (
                         <p className="text-red-500 text-xs md:text-sm mt-1">{t(errors.age)}</p>
@@ -809,7 +894,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                         {t('patientForm.personal.gender')} <span className="text-red-500">*</span>
                       </Label>
                       <Select value={formData.gender} onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
-                        <SelectTrigger className={`h-10 text-sm md:text-base mt-1.5 ${errors.gender ? "border-red-500" : ""} ${formData.patientId ? "bg-indigo-50" : ""}`}>
+                        <SelectTrigger className={`h-10 text-sm md:text-base mt-1.5 ${reqClass(formData.gender, !!errors.gender)}`}>
                           <SelectValue placeholder={t('patientForm.personal.genderPlaceholder')} />
                         </SelectTrigger>
                         <SelectContent>
@@ -826,7 +911,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 </div>
 
                 {/* Additional details (optional) */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-5 mt-3 md:mt-5">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mt-3">
                   <div>
                     <Label className="text-sm md:text-base font-medium">Blood Group</Label>
                     <Select value={formData.bloodGroup} onValueChange={(v) => setFormData(prev => ({ ...prev, bloodGroup: v }))}>
@@ -848,9 +933,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({
               </Card>
 
               {/* Address, Insurance & Payment - Combined */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
                 {/* Address Information */}
-                <Card className="p-4 md:p-6 shadow-sm">
+                <Card className="p-3 md:p-4 shadow-sm">
                   <h3 className="font-bold text-base md:text-lg text-foreground mb-3 md:mb-4 flex items-center gap-2">
                     <MapPin className="h-4 w-4 md:h-5 md:w-5 text-healthcare-primary" />
                     {t('patientForm.address.title')}
@@ -858,14 +943,14 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                   <div className="space-y-3 md:space-y-4">
                     <div>
                       <Label htmlFor="address" className="text-sm md:text-base font-medium">
-                        {t('patientForm.address.address')} <span className="text-red-500">*</span>
+                        {t('patientForm.address.address')}
                       </Label>
                       <Input
                         id="address"
                         value={formData.address}
                         onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
                         placeholder={t('patientForm.address.addressPlaceholder')}
-                        className={`h-10 text-sm md:text-base mt-1.5 ${errors.address ? "border-red-500" : ""} ${formData.patientId ? "bg-indigo-50" : ""}`}
+                        className={`h-10 text-sm md:text-base mt-1.5 ${errors.address ? "border-red-500" : ""} ${formData.patientId ? "bg-brand-50" : ""}`}
                       />
                       {errors.address && (
                         <p className="text-red-500 text-xs md:text-sm mt-1">{t(errors.address)}</p>
@@ -888,14 +973,14 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     <div className="grid grid-cols-2 gap-3 md:gap-4">
                       <div>
                         <Label htmlFor="city" className="text-sm md:text-base font-medium">
-                          {t('patientForm.address.city')} <span className="text-red-500">*</span>
+                          {t('patientForm.address.city')}
                         </Label>
                         <Input
                           id="city"
                           value={formData.city}
                           onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
                           placeholder={t('patientForm.address.cityPlaceholder')}
-                          className={`h-10 text-sm md:text-base mt-1.5 ${errors.city ? "border-red-500" : ""} ${formData.patientId ? "bg-indigo-50" : ""}`}
+                          className={`h-10 text-sm md:text-base mt-1.5 ${errors.city ? "border-red-500" : ""} ${formData.patientId ? "bg-brand-50" : ""}`}
                         />
                         {errors.city && (
                           <p className="text-red-500 text-xs md:text-sm mt-1">{t(errors.city)}</p>
@@ -904,7 +989,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
                       <div>
                         <Label htmlFor="pincode" className="text-sm md:text-base font-medium">
-                          {t('patientForm.address.pincode')} <span className="text-red-500">*</span>
+                          {t('patientForm.address.pincode')}
                         </Label>
                         <Input
                           id="pincode"
@@ -912,19 +997,30 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                           onChange={(e) => setFormData(prev => ({ ...prev, pincode: e.target.value }))}
                           placeholder={t('patientForm.address.pincodePlaceholder')}
                           maxLength={6}
-                          className={`h-10 text-sm md:text-base mt-1.5 ${errors.pincode ? "border-red-500" : ""} ${formData.patientId ? "bg-indigo-50" : ""}`}
+                          className={`h-10 text-sm md:text-base mt-1.5 ${errors.pincode ? "border-red-500" : ""} ${formData.patientId ? "bg-brand-50" : ""}`}
                         />
                         {errors.pincode && (
                           <p className="text-red-500 text-xs md:text-sm mt-1">{t(errors.pincode)}</p>
                         )}
                       </div>
                     </div>
+
+                    <div>
+                      <Label htmlFor="country" className="text-sm md:text-base font-medium">Country</Label>
+                      <Input
+                        id="country"
+                        value={formData.country}
+                        onChange={(e) => setFormData(prev => ({ ...prev, country: e.target.value }))}
+                        placeholder="India"
+                        className="h-10 text-sm md:text-base mt-1.5"
+                      />
+                    </div>
                   </div>
                 </Card>
 
 
                 {/* Emergency Contact (optional) */}
-                <Card className="p-4 md:p-6 shadow-sm">
+                <Card className="p-3 md:p-4 shadow-sm">
                   <h3 className="font-bold text-base md:text-lg text-foreground mb-3 md:mb-4 flex items-center gap-2">
                     <Phone className="h-4 w-4 md:h-5 md:w-5 text-rose-500" />
                     Emergency Contact <span className="text-xs font-normal text-muted-foreground">(Optional)</span>
@@ -954,7 +1050,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
                 {/* Consultation & Payment — shown when there is consult history or a fee to collect */}
                 {(timeline || showConsult) && (
-                <Card className="p-4 md:p-6 shadow-sm">
+                <Card className="p-3 md:p-4 shadow-sm">
                   <h3 className="font-bold text-base md:text-lg text-foreground mb-3 md:mb-4 flex items-center gap-2">
                     <CreditCard className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
                     {t('patientForm.payment.title', { defaultValue: 'Consultation & Payment' })}
@@ -963,8 +1059,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     {/* Consultation timeline (existing patient) */}
                     {timeline && (
                       <div className="border-t pt-3 md:pt-4">
-                        <div className="rounded-lg border border-blue-100 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-900/10 p-3 space-y-2">
-                          <div className="flex items-center gap-2 font-semibold text-blue-800 dark:text-blue-300 text-sm">
+                        <div className="rounded-lg border border-brand-100 dark:border-brand-900/40 bg-brand-50/50 dark:bg-brand-900/10 p-3 space-y-2">
+                          <div className="flex items-center gap-2 font-semibold text-brand-800 dark:text-brand-300 text-sm">
                             <Clock className="h-4 w-4" /> {t('patientForm.timeline.title', { defaultValue: 'Consultation history' })}
                           </div>
                           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs md:text-sm">
@@ -983,7 +1079,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                                 <span className="text-muted-foreground">{t('patientForm.timeline.validUpto', { defaultValue: 'Free until' })}</span>
                                 <span className="text-right font-medium">
                                   {fmtTimelineDate(timeline.validUptoDate)}
-                                  <span className="block text-[11px] font-normal text-blue-600 dark:text-blue-400">{daysLeftText(timeline.validUptoDate)}</span>
+                                  <span className="block text-[11px] font-normal text-brand-600 dark:text-brand-400">{daysLeftText(timeline.validUptoDate)}</span>
                                 </span>
                               </>
                             )}
@@ -1047,7 +1143,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
             </form>
 
-            <div className="flex justify-end gap-3 md:gap-4 mt-6 pb-8">
+            <div className="flex justify-end gap-3 md:gap-4 mt-3 pb-2">
               <Button
                 type="button"
                 variant="outline"
@@ -1060,7 +1156,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 type="submit"
                 form="patient-form"
                 disabled={isSubmitting || isBookingLoading || !isFormReady}
-                className="flex-1 md:flex-none md:min-w-[320px] h-10 md:h-11 md:text-base bg-healthcare-primary hover:bg-healthcare-primary/90 gap-2 shadow-lg shadow-blue-500/20"
+                className="flex-1 md:flex-none md:min-w-[320px] h-10 md:h-11 md:text-base bg-healthcare-primary hover:bg-healthcare-primary/90 gap-2 shadow-lg shadow-brand-500/20"
               >
                 {(isSubmitting || isBookingLoading) && <Loader2 className="h-4 w-4 animate-spin" />}
                 {isSubmitting || isBookingLoading ? t('patientForm.actions.submitting') : t('patientForm.actions.submit')}
@@ -1076,12 +1172,12 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           <DialogHeader className="border-b pb-4">
             <div className="flex items-center justify-between">
               <DialogTitle className="flex items-center gap-3 text-2xl">
-                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                  <Search className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                <div className="p-2 bg-brand-100 dark:bg-brand-900/30 rounded-lg">
+                  <Search className="h-6 w-6 text-brand-600 dark:text-brand-400" />
                 </div>
                 <span>{t('patientForm.searchResults.title')}</span>
                 {searchResults.length > 0 && (
-                  <span className="ml-2 px-3 py-1 bg-blue-600 text-white text-sm font-semibold rounded-full">
+                  <span className="ml-2 px-3 py-1 bg-brand-600 text-white text-sm font-semibold rounded-full">
                     {searchResults.length}
                   </span>
                 )}
@@ -1100,15 +1196,15 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 <Card
                   key={patient.patientId}
                   className={`p-5 cursor-pointer transition-all duration-200 border-2 relative ${index === selectedIndex
-                    ? 'border-blue-500 shadow-xl scale-[1.02] ring-4 ring-blue-200 dark:ring-blue-800'
-                    : 'hover:border-blue-400 hover:shadow-lg hover:scale-[1.01]'
+                    ? 'border-brand-500 shadow-xl scale-[1.02] ring-4 ring-brand-200 dark:ring-brand-800'
+                    : 'hover:border-brand-400 hover:shadow-lg hover:scale-[1.01]'
                     }`}
                   onClick={() => handlePatientSelect(patient)}
                   onMouseEnter={() => setSelectedIndex(index)}
                 >
                   {/* Patient Number Badge */}
                   <div className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all ${index === selectedIndex
-                    ? 'bg-blue-600 text-white scale-110'
+                    ? 'bg-brand-600 text-white scale-110'
                     : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                     }`}>
                     {index + 1}
@@ -1116,7 +1212,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
                   {/* Patient Header */}
                   <div className="flex items-start gap-4 mb-4">
-                    <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-md flex-shrink-0">
+                    <div className="w-14 h-14 bg-gradient-to-br from-brand-500 to-brand-600 rounded-full flex items-center justify-center shadow-md flex-shrink-0">
                       <User className="h-7 w-7 text-white" />
                     </div>
                     <div className="flex-1">
@@ -1237,7 +1333,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     setShowSearchResults(false);
                     setSearchQuery('');
                   }}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-brand-600 hover:bg-brand-700"
                 >
                   Create New Patient
                 </Button>

@@ -194,6 +194,7 @@ export interface RegisterAppointmentRequest {
     insuranceId: string;
     paymentMode: string;
     patientId: string;
+    country?: string;
     bloodGroup?: string;
     block?: string;
     alternateMobile?: string;

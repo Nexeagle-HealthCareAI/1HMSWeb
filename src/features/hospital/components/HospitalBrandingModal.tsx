@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useHospitalApi } from '@/hooks/useApi';
+import { hospitalApi } from '../services/hospitalApi';
 import { useAuthStore } from '@/store/authStore';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -333,7 +334,9 @@ export const HospitalBrandingModal: React.FC<HospitalBrandingModalProps> = ({
         // Store hospital ID in auth store
         const authStore = useAuthStore.getState();
         authStore.setHospitalId(response.hospitalId);
-        
+        // Keep the multi-hospital switcher list in sync with the newly created hospital. Non-blocking.
+        hospitalApi.getMyHospitals().then(mine => { if (mine.length) authStore.setHospitals(mine); }).catch(() => { /* non-blocking */ });
+
         // Invalidate queries
         queryClient.invalidateQueries({ queryKey: ['hospital', response.hospitalId] });
         queryClient.invalidateQueries({ queryKey: ['hospitalUserByUserId'] });

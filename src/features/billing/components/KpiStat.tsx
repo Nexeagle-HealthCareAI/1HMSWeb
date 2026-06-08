@@ -32,7 +32,7 @@ const useCountUp = (target: number | undefined, enabled: boolean) => {
 export interface KpiStatProps {
     label: string;
     icon: React.ReactNode;
-    /** Gradient + text tone classes, e.g. "from-indigo-50 to-indigo-100/60 text-indigo-900". */
+    /** Gradient + text tone classes, e.g. "from-brand-50 to-brand-100/60 text-brand-900". */
     tone: string;
     /** Pre-formatted display value (used when `amount`/`format` are not provided). */
     value?: string;
@@ -57,7 +57,7 @@ export const KpiStat: React.FC<KpiStatProps> = ({ label, icon, tone, value, amou
             transition={{ duration: 0.35, ease: 'easeOut' }}
         >
             <Card className={cn(
-                'relative overflow-hidden border-0 ring-1 ring-black/5 p-4 flex items-center gap-3.5 rounded-2xl bg-gradient-to-br shadow-lg shadow-indigo-500/5',
+                'relative overflow-hidden border-0 ring-1 ring-black/5 p-4 flex items-center gap-3.5 rounded-2xl bg-gradient-to-br shadow-lg shadow-brand-500/5',
                 tone,
                 className,
             )}>

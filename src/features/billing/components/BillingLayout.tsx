@@ -52,7 +52,7 @@ export const BillingLayout: React.FC = () => {
             <div className="w-full lg:w-80 flex flex-col gap-6 overflow-y-auto pr-2">
                 <div>
                     <h2 className="text-2xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
-                        <Layout className="h-6 w-6 text-indigo-600" />
+                        <Layout className="h-6 w-6 text-brand-600" />
                         Invoice Layout
                     </h2>
                     <p className="text-sm text-gray-500 mt-1">Customize your invoice appearance.</p>
@@ -84,13 +84,13 @@ export const BillingLayout: React.FC = () => {
                                     </div>
                                 </div>
                             ) : (
-                                <label className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-indigo-200 bg-indigo-50/50 p-6 text-center cursor-pointer hover:bg-indigo-50 transition-colors">
-                                    <div className="p-2 bg-indigo-100 rounded-full">
-                                        <Upload className="h-5 w-5 text-indigo-600" />
+                                <label className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-brand-200 bg-brand-50/50 p-6 text-center cursor-pointer hover:bg-brand-50 transition-colors">
+                                    <div className="p-2 bg-brand-100 rounded-full">
+                                        <Upload className="h-5 w-5 text-brand-600" />
                                     </div>
                                     <div className="space-y-1">
-                                        <p className="text-sm font-medium text-indigo-900">Upload Design PDF/Image</p>
-                                        <p className="text-xs text-indigo-600/80">Use your hospital letterhead</p>
+                                        <p className="text-sm font-medium text-brand-900">Upload Design PDF/Image</p>
+                                        <p className="text-xs text-brand-600/80">Use your hospital letterhead</p>
                                     </div>
                                     <Input
                                         type="file"
@@ -255,7 +255,7 @@ export const BillingLayout: React.FC = () => {
                 </Tabs>
 
                 <div className="mt-auto pt-4 border-t flex flex-col gap-2">
-                    <Button className="w-full bg-indigo-600 hover:bg-indigo-700">
+                    <Button className="w-full bg-brand-600 hover:bg-brand-700">
                         <Save className="h-4 w-4 mr-2" /> Save Layout
                     </Button>
                 </div>

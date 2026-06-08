@@ -15,7 +15,6 @@ export const ROUTES = {
   FORGOT_PASSWORD: '/forgot-password',
 
   USER_TYPE_SELECTION: '/user-type-selection',
-  USER_ONBOARDING: '/user-onboarding',
   LOCKED_ACCOUNT: '/locked-account',
 
   // Protected routes
@@ -59,12 +58,6 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   {
     path: ROUTES.USER_TYPE_SELECTION,
     component: 'UserTypeSelectionPage',
-    allowedRoles: [],
-    requiresAuth: false,
-  },
-  {
-    path: ROUTES.USER_ONBOARDING,
-    component: 'UserOnboardingRegistration',
     allowedRoles: [],
     requiresAuth: false,
   },

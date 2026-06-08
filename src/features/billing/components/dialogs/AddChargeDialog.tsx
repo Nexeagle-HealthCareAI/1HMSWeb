@@ -9,6 +9,8 @@ import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { ipdBillingService, type ChargeMaster, type AddChargeEventRequest } from '../../services/ipdBillingService';
+import { offlineMutation, isReachable } from '@/offline';
+import { useAuthStore } from '@/store/authStore';
 import { bedService, type BedMasterItem } from '@/features/hospital/services/bedService';
 
 export interface AddChargeDialogProps {
@@ -17,12 +19,14 @@ export interface AddChargeDialogProps {
     patientId: string;
     encounterId: string;
     onSaved: () => void;
+    // Optional optimistic hook: shows the charge in the ledger instantly; returns a rollback fn.
+    onOptimistic?: (rows: Array<{ displayName: string; qty: number; rate: number; discountPercent: number; categoryCode: string }>) => () => void;
 }
 
 type Source = 'catalog' | 'bed' | 'manual';
 const MANUAL_CATEGORIES = ['OTHER', 'PROCEDURE', 'LAB', 'RADIOLOGY', 'PHARMACY', 'CONSUMABLE', 'CONSULT'];
 
-export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenChange, patientId, encounterId, onSaved }) => {
+export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenChange, patientId, encounterId, onSaved, onOptimistic }) => {
     const { toast } = useToast();
     const [source, setSource] = useState<Source>('catalog');
 
@@ -212,9 +216,36 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
             } else {
                 charge = { chargeId: selectedMaster!.chargeId, displayName: selectedMaster!.displayName ?? '', qty, rate, discountPercent, categoryCode: selectedMaster!.categoryCode ?? 'OTHER' };
             }
-            const res = await ipdBillingService.addChargeEvents({ patientId, encounterId, charges: [charge] });
-            if (!res?.success) throw new Error(res?.message ?? 'Could not add charge');
-            toast({ title: 'Charge added', description: charge.displayName });
+            const hospitalId = useAuthStore.getState().getHospitalId() ?? undefined;
+            // Optimistic UI (online): show the charge in the ledger immediately; roll back on failure.
+            const rollback = isReachable()
+                ? onOptimistic?.([{ displayName: charge.displayName, qty, rate, discountPercent, categoryCode: charge.categoryCode }])
+                : undefined;
+            // Add-charge is safe to queue offline (it targets an existing, already-synced encounter
+            // and the backend appends). Payments/finalize stay online-only.
+            try {
+                const { queued, data: res } = await offlineMutation<any>({
+                    entity: 'billing',
+                    opType: 'create',
+                    client: 'ipd',
+                    method: 'post',
+                    url: 'charge/add-event',
+                    data: { patientId, encounterId, charges: [charge], hospitalId },
+                    label: `Charge · ${charge.displayName}`,
+                    hospitalId,
+                    run: () => ipdBillingService.addChargeEvents({ patientId, encounterId, charges: [charge] }),
+                    synthetic: () => ({ success: true, message: 'Queued offline' }),
+                });
+                if (queued) {
+                    toast({ title: 'Saved offline', description: `${charge.displayName} will be added when you're back online.` });
+                } else {
+                    if (!res?.success) throw new Error(res?.message ?? 'Could not add charge');
+                    toast({ title: 'Charge added', description: charge.displayName });
+                }
+            } catch (mutErr) {
+                rollback?.();
+                throw mutErr;
+            }
             onSaved();
             onOpenChange(false);
         } catch (e: any) {
@@ -224,20 +255,20 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
         }
     };
 
-    const tabClass = (active: boolean) => cn('px-3 py-1.5 font-semibold transition-colors', active ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50');
+    const tabClass = (active: boolean) => cn('px-3 py-1.5 font-semibold transition-colors', active ? 'bg-brand-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50');
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent side="right" className="w-full sm:max-w-md p-0 gap-0 flex flex-col bg-white dark:bg-slate-950">
                 {/* Premium gradient header */}
-                <div className="px-6 py-5 bg-gradient-to-r from-indigo-500 to-violet-600">
+                <div className="px-6 py-5 bg-gradient-to-r from-brand-500 to-violet-600">
                     <div className="flex items-center gap-3">
                         <div className="h-11 w-11 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0">
                             <Plus className="h-5 w-5 text-white" />
                         </div>
                         <div>
                             <SheetTitle className="text-white text-lg font-bold">Add Item</SheetTitle>
-                            <p className="text-indigo-50/90 text-xs mt-0.5">Pick from the catalog, a bed by date range, or type a custom item</p>
+                            <p className="text-brand-50/90 text-xs mt-0.5">Pick from the catalog, a bed by date range, or type a custom item</p>
                         </div>
                     </div>
                 </div>
@@ -249,7 +280,7 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
                             <button type="button" onClick={() => switchSource('catalog')} className={tabClass(source === 'catalog')}>Catalog</button>
                             <button type="button" onClick={() => switchSource('bed')} className={tabClass(source === 'bed')}>Bed / Room</button>
                         </div>
-                        <button type="button" onClick={() => switchSource('manual')} className={cn('text-[11px] font-medium underline underline-offset-2 shrink-0', source === 'manual' ? 'text-indigo-700' : 'text-slate-400 hover:text-slate-600')}>
+                        <button type="button" onClick={() => switchSource('manual')} className={cn('text-[11px] font-medium underline underline-offset-2 shrink-0', source === 'manual' ? 'text-brand-700' : 'text-slate-400 hover:text-slate-600')}>
                             {source === 'manual' ? '✎ Custom item' : '+ Custom item'}
                         </button>
                     </div>
@@ -266,11 +297,11 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
                                     {loadingMasters ? (
                                         <div className="p-3 space-y-2">{[0, 1, 2].map(i => <Skeleton key={i} className="h-9 w-full" />)}</div>
                                     ) : filteredMasters.length === 0 ? (
-                                        <div className="p-4 text-center text-xs text-slate-500">Nothing matches. <button type="button" onClick={() => switchSource('manual')} className="text-indigo-600 underline font-semibold">Add it as a custom item</button>.</div>
+                                        <div className="p-4 text-center text-xs text-slate-500">Nothing matches. <button type="button" onClick={() => switchSource('manual')} className="text-brand-600 underline font-semibold">Add it as a custom item</button>.</div>
                                     ) : (
                                         filteredMasters.map(m => (
                                             <button key={m.chargeId} type="button" onClick={() => pickMaster(m)}
-                                                className={cn('w-full text-left px-3 py-2 border-b border-slate-100 hover:bg-indigo-50/40 text-xs transition-colors', selectedMaster?.chargeId === m.chargeId && 'bg-indigo-50 border-l-2 border-l-indigo-500')}>
+                                                className={cn('w-full text-left px-3 py-2 border-b border-slate-100 hover:bg-brand-50/40 text-xs transition-colors', selectedMaster?.chargeId === m.chargeId && 'bg-brand-50 border-l-2 border-l-brand-500')}>
                                                 <div className="flex items-center justify-between gap-2">
                                                     <div className="min-w-0 flex-1">
                                                         <p className="font-semibold text-slate-900 truncate">{m.displayName}</p>
@@ -295,7 +326,7 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
                     {source === 'bed' && (
                         <>
                             <div className="space-y-2">
-                                <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5"><BedDouble className="h-3.5 w-3.5 text-indigo-500" /> Bed / Room</Label>
+                                <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5"><BedDouble className="h-3.5 w-3.5 text-brand-500" /> Bed / Room</Label>
                                 <div className="relative">
                                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                                     <Input value={bedFilter} onChange={(e) => setBedFilter(e.target.value)} placeholder="Search ward / room / bed…" className="h-9 pl-8 text-sm rounded-xl" />
@@ -308,7 +339,7 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
                                     ) : (
                                         filteredBeds.map(b => (
                                             <button key={b.bedId} type="button" onClick={() => pickBed(b)}
-                                                className={cn('w-full text-left px-3 py-2 border-b border-slate-100 hover:bg-indigo-50/40 text-xs transition-colors', selectedBed?.bedId === b.bedId && 'bg-indigo-50 border-l-2 border-l-indigo-500')}>
+                                                className={cn('w-full text-left px-3 py-2 border-b border-slate-100 hover:bg-brand-50/40 text-xs transition-colors', selectedBed?.bedId === b.bedId && 'bg-brand-50 border-l-2 border-l-brand-500')}>
                                                 <div className="flex items-center justify-between gap-2">
                                                     <div className="min-w-0 flex-1">
                                                         <p className="font-semibold text-slate-900 truncate">{[b.wardType || b.wardName, b.bedName || b.bedCode].filter(Boolean).join(' · ') || 'Bed'}</p>
@@ -334,7 +365,7 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
                             </div>
 
                             {bedFrom && bedTo && (
-                                <div className={cn('flex items-center gap-2 rounded-xl px-3 py-2 text-xs', bedDays > 0 ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-rose-50 text-rose-700 border border-rose-200')}>
+                                <div className={cn('flex items-center gap-2 rounded-xl px-3 py-2 text-xs', bedDays > 0 ? 'bg-brand-50 text-brand-700 border border-brand-200' : 'bg-rose-50 text-rose-700 border border-rose-200')}>
                                     <CalendarDays className="h-4 w-4" />
                                     {bedDays > 0
                                         ? <span><b>{bedDays}</b> day{bedDays === 1 ? '' : 's'} × ₹{rate.toLocaleString('en-IN')}/day (inclusive of both dates)</span>
@@ -352,7 +383,7 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
                             </div>
                             {/* Just name + amount by default — category/GST/incentive are optional and
                                 default sensibly on the backend, so they hide behind "Advanced". */}
-                            <button type="button" onClick={() => setShowAdvanced(v => !v)} className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700 self-start">
+                            <button type="button" onClick={() => setShowAdvanced(v => !v)} className="text-[11px] font-medium text-brand-600 hover:text-brand-700 self-start">
                                 {showAdvanced ? '− Hide advanced' : '+ Advanced (category, GST, incentive)'}
                             </button>
                             {showAdvanced && (
@@ -394,10 +425,10 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
                         </div>
                         <div>
                             <div className="flex items-center justify-between">
-                                <Label className="text-xs font-semibold text-slate-700">Disc</Label>
+                                <Label className="text-xs font-semibold text-slate-700">Discount</Label>
                                 <div className="inline-flex rounded-md border border-slate-200 overflow-hidden">
-                                    <button type="button" onClick={() => setDiscountKind('percent')} className={cn('px-1.5 text-[10px] font-bold leading-5', discountKind === 'percent' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500')}>%</button>
-                                    <button type="button" onClick={() => setDiscountKind('amount')} className={cn('px-1.5 text-[10px] font-bold leading-5', discountKind === 'amount' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500')}>₹</button>
+                                    <button type="button" onClick={() => setDiscountKind('percent')} className={cn('px-1.5 text-[10px] font-bold leading-5', discountKind === 'percent' ? 'bg-brand-600 text-white' : 'bg-white text-slate-500')}>%</button>
+                                    <button type="button" onClick={() => setDiscountKind('amount')} className={cn('px-1.5 text-[10px] font-bold leading-5', discountKind === 'amount' ? 'bg-brand-600 text-white' : 'bg-white text-slate-500')}>₹</button>
                                 </div>
                             </div>
                             <Input type="number" min={0} step="0.01" value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} placeholder={discountKind === 'percent' ? '0%' : '₹0'} className="h-10 mt-1 rounded-xl" />
@@ -420,7 +451,7 @@ export const AddChargeDialog: React.FC<AddChargeDialogProps> = ({ open, onOpenCh
 
                 <div className="p-4 border-t border-slate-200 bg-slate-50 flex gap-3 mt-auto">
                     <Button variant="outline" className="flex-1 rounded-xl" onClick={() => onOpenChange(false)} disabled={submitting}>Cancel</Button>
-                    <Button onClick={submit} disabled={submitting || !canSubmit} className="flex-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-500/20">
+                    <Button onClick={submit} disabled={submitting || !canSubmit} className="flex-1 rounded-xl bg-brand-600 hover:bg-brand-700 shadow-md shadow-brand-500/20">
                         {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Adding…</> : <><Plus className="h-4 w-4 mr-2" />Add Item</>}
                     </Button>
                 </div>

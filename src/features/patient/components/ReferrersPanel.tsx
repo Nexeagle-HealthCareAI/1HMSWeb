@@ -17,7 +17,7 @@ import { useReferrers, useUpdateReferrer } from '@/features/appointment/hooks/us
 import type { Referrer } from '@/features/appointment/services/referrerApi';
 
 const TYPE_TONE: Record<string, string> = {
-    REFERRER: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    REFERRER: 'bg-brand-50 text-brand-700 border-brand-200',
     DOCTOR: 'bg-cyan-50 text-cyan-700 border-cyan-200',
     STAFF: 'bg-teal-50 text-teal-700 border-teal-200',
     AGENT: 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200',
@@ -130,14 +130,14 @@ export const ReferrersPanel: React.FC = () => {
                     <div className="h-11 w-11 rounded-xl bg-white/70 flex items-center justify-center"><Users className="h-5 w-5 text-fuchsia-600" /></div>
                     <div><p className="text-[10px] font-bold uppercase tracking-widest opacity-70">Total Referrers</p><p className="text-2xl font-black tabular-nums">{isLoading ? '…' : referrers.length}</p></div>
                 </Card>
-                <Card className="relative overflow-hidden border-0 ring-1 ring-black/5 p-4 flex items-center gap-3.5 rounded-2xl bg-gradient-to-br from-indigo-50 to-blue-100/50 text-indigo-900 shadow-lg shadow-indigo-500/5">
-                    <div className="h-11 w-11 rounded-xl bg-white/70 flex items-center justify-center"><Share2 className="h-5 w-5 text-indigo-600" /></div>
+                <Card className="relative overflow-hidden border-0 ring-1 ring-black/5 p-4 flex items-center gap-3.5 rounded-2xl bg-gradient-to-br from-brand-50 to-brand-100/50 text-brand-900 shadow-lg shadow-brand-500/5">
+                    <div className="h-11 w-11 rounded-xl bg-white/70 flex items-center justify-center"><Share2 className="h-5 w-5 text-brand-600" /></div>
                     <div><p className="text-[10px] font-bold uppercase tracking-widest opacity-70">Patients Referred (Total)</p><p className="text-2xl font-black tabular-nums">{isLoading ? '…' : totalPatients}</p></div>
                 </Card>
             </div>
 
             {/* Table */}
-            <Card className="border-0 ring-1 ring-black/5 rounded-2xl overflow-hidden bg-white shadow-lg shadow-indigo-500/5">
+            <Card className="border-0 ring-1 ring-black/5 rounded-2xl overflow-hidden bg-white shadow-lg shadow-brand-500/5">
                 {isLoading ? (
                     <div className="p-4 space-y-2">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-xl" />)}</div>
                 ) : isError ? (
@@ -184,7 +184,7 @@ export const ReferrersPanel: React.FC = () => {
                                     <TableCell className="text-right">
                                         <span className={cn(
                                             'inline-flex items-center justify-center min-w-[2.25rem] px-2 py-0.5 rounded-full text-sm font-black tabular-nums',
-                                            (r.referredPatientCount ?? 0) > 0 ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-slate-400',
+                                            (r.referredPatientCount ?? 0) > 0 ? 'bg-brand-50 text-brand-700 border border-brand-200' : 'text-slate-400',
                                         )}>
                                             {r.referredPatientCount ?? 0}
                                         </span>

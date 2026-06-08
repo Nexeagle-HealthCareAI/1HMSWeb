@@ -100,7 +100,7 @@ const TokenDetailsPage: React.FC = () => {
                 <div className="text-[10px] mt-3 font-semibold text-center w-full border-t-2 border-black pt-2">
                     Please wait for your turn.
                 </div>
-                <div className="text-[8px] mt-1 text-center w-full mb-4">
+                <div className="text-[11px] mt-1 text-center w-full mb-4">
                     {format(new Date(), 'dd/MM/yyyy HH:mm')}
                 </div>
             </div>

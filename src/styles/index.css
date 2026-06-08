@@ -261,7 +261,7 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 220 9% 46%;
 
-    --primary: 200 98% 39%; /* Softer blue, less harsh */
+    --primary: 243 75% 59%; /* Brand indigo */
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 14% 96%; /* Matching background */
@@ -278,12 +278,12 @@ All colors MUST be HSL.
 
     --border: 220 13% 91%; /* Softer borders */
     --input: 220 13% 91%;
-    --ring: 200 98% 39%;
+    --ring: 243 75% 59%;
 
     --radius: 0.75rem;
 
     /* Eye-friendly healthcare specific colors */
-    --healthcare-primary: 200 98% 39%; /* Softer blue */
+    --healthcare-primary: 243 75% 59%; /* Brand indigo */
     --healthcare-secondary: 142 76% 36%; /* Softer green */
     --healthcare-success: 142 76% 36%; /* Softer success */
     --healthcare-warning: 38 95% 45%; /* Softer warning */
@@ -291,8 +291,8 @@ All colors MUST be HSL.
     --healthcare-info: 200 98% 39%; /* Softer info */
     
     /* Eye-friendly gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(200 98% 39%), hsl(142 76% 36%));
-    --gradient-secondary: linear-gradient(135deg, hsl(142 76% 36%), hsl(200 98% 39%));
+    --gradient-primary: linear-gradient(135deg, hsl(243 75% 59%), hsl(142 76% 36%));
+    --gradient-secondary: linear-gradient(135deg, hsl(142 76% 36%), hsl(243 75% 59%));
     --gradient-subtle: linear-gradient(180deg, hsl(220 14% 96%), hsl(220 10% 94%));
     
     /* Eye-friendly slot states */
@@ -347,7 +347,7 @@ All colors MUST be HSL.
     --popover: 220 13% 18%;
     --popover-foreground: 220 9% 90%;
 
-    --primary: 200 98% 39%; /* Softer blue */
+    --primary: 243 75% 59%; /* Brand indigo */
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 13% 22%; /* Slightly lighter than background */
@@ -364,10 +364,10 @@ All colors MUST be HSL.
 
     --border: 220 13% 25%; /* Softer borders */
     --input: 220 13% 25%;
-    --ring: 200 98% 39%;
+    --ring: 243 75% 59%;
 
     /* Eye-friendly healthcare specific colors for dark mode */
-    --healthcare-primary: 200 98% 39%; /* Softer blue */
+    --healthcare-primary: 243 75% 59%; /* Brand indigo */
     --healthcare-secondary: 142 76% 36%; /* Softer green */
     --healthcare-success: 142 76% 36%; /* Softer success */
     --healthcare-warning: 38 95% 45%; /* Softer warning */
@@ -375,8 +375,8 @@ All colors MUST be HSL.
     --healthcare-info: 200 98% 39%; /* Softer info */
     
     /* Eye-friendly gradients for dark mode */
-    --gradient-primary: linear-gradient(135deg, hsl(200 98% 39%), hsl(142 76% 36%));
-    --gradient-secondary: linear-gradient(135deg, hsl(142 76% 36%), hsl(200 98% 39%));
+    --gradient-primary: linear-gradient(135deg, hsl(243 75% 59%), hsl(142 76% 36%));
+    --gradient-secondary: linear-gradient(135deg, hsl(142 76% 36%), hsl(243 75% 59%));
     --gradient-subtle: linear-gradient(180deg, hsl(220 13% 18%), hsl(220 13% 22%));
     
     /* Eye-friendly slot states for dark mode */
@@ -396,12 +396,12 @@ All colors MUST be HSL.
 
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 197 100% 45%;
+    --sidebar-primary: 243 75% 59%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 3.7% 15.9%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 197 100% 45%;
+    --sidebar-ring: 243 75% 59%;
   }
 }
 
@@ -411,7 +411,10 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 }
 

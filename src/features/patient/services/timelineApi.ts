@@ -92,6 +92,8 @@ export interface TimelineEventData {
     apptID: string;
     appDate: string;
     status: string;
+    doctorId?: string;
+    doctorName?: string;
     statusJsonHistory: TimelineStatusHistory[];
     vitalsJson: TimelineVitals;
     chiefComplaint: string;
@@ -107,6 +109,7 @@ export interface TimelineEventData {
     followUp: TimelineFollowUp;
     immunizations: TimelineImmunization[];
     attachments: TimelineAttachment[];
+    customFields?: { key: string; label?: string; value?: string }[];
 }
 
 export interface PatientTimelineRecord {

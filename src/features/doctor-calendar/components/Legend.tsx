@@ -8,9 +8,9 @@ export const Legend: React.FC = () => {
   return (
     <div className="flex flex-wrap items-center gap-6 p-4 bg-gradient-to-r from-gray-50/80 to-slate-50/80 border border-gray-200/60 rounded-xl shadow-sm">
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200/50">
-          <div className="w-4 h-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md shadow-sm"></div>
-          <span className="text-sm font-semibold text-blue-800">
+        <div className="flex items-center gap-2 px-3 py-2 bg-brand-50 rounded-lg border border-brand-200/50">
+          <div className="w-4 h-4 bg-gradient-to-br from-brand-500 to-brand-600 rounded-md shadow-sm"></div>
+          <span className="text-sm font-semibold text-brand-800">
             {t('doctorCalendar.legend.defaultShifts')}
           </span>
         </div>

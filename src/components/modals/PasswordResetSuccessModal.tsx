@@ -58,7 +58,7 @@ export const PasswordResetSuccessModal: React.FC<PasswordResetSuccessModalProps>
           <Button
             onClick={onLogin}
             variant="ghost"
-            className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-medium"
+            className="w-full text-brand-600 hover:text-brand-700 hover:bg-brand-50 font-medium"
           >
             {t('passwordResetSuccess.actions.goToLogin')}
           </Button>

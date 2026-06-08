@@ -17,12 +17,14 @@ import {
   Mail,
   Phone,
   Shield,
-  Key
+  Key,
+  KeyRound
 } from 'lucide-react';
 import { useUserManagementApi } from '../hooks/useUserManagementApi';
 import { AllUsersResponse } from '../services/userManagementApi';
 import { useAuthStore } from '@/store/authStore';
 import { DeactivateUserDialog } from './DeactivateUserDialog';
+import { ShareLoginDialog, ShareLoginTarget } from './ShareLoginDialog';
 import { cn } from '@/lib/utils';
 
 export const OnboardedUsers: React.FC = () => {
@@ -51,6 +53,10 @@ export const OnboardedUsers: React.FC = () => {
   // View user details state
   const [viewUser, setViewUser] = useState<AllUsersResponse['users'][number] | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+
+  // Share-login (reset + re-share credentials) state
+  const [shareTarget, setShareTarget] = useState<ShareLoginTarget | null>(null);
+  const [showShareDialog, setShowShareDialog] = useState(false);
 
   const getPrimaryRoleName = (user: AllUsersResponse['users'][number]) =>
     user.roles?.[0]?.roleName || t('userManagement.onboardedUsers.unknownRole');
@@ -86,7 +92,7 @@ export const OnboardedUsers: React.FC = () => {
       case 'admindoctor':
         return 'bg-purple-100 text-purple-800';
       case 'doctor':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-brand-100 text-brand-800';
       case 'nurse':
         return 'bg-green-100 text-green-800';
       case 'receptionist':
@@ -234,7 +240,7 @@ export const OnboardedUsers: React.FC = () => {
                 )}
                 {/* Inactive Tag */}
                 {!isUserActive(user) && (
-                  <div className="absolute top-0 right-0 px-3 py-1 bg-slate-800 text-slate-100 text-[9px] font-mono font-bold tracking-widest uppercase rounded-bl-lg shadow-sm z-10 transition-colors group-hover:bg-red-900 group-hover:text-red-50">
+                  <div className="absolute top-0 right-0 px-3 py-1 bg-slate-800 text-slate-100 text-[11px] font-mono font-bold tracking-widest uppercase rounded-bl-lg shadow-sm z-10 transition-colors group-hover:bg-red-900 group-hover:text-red-50">
                     INACTIVE / OFFLINE
                   </div>
                 )}
@@ -280,7 +286,7 @@ export const OnboardedUsers: React.FC = () => {
                         : "bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800"
                     )}>
                       <div className="space-y-1.5">
-                        <span className="text-[9px] font-mono tracking-widest text-slate-400 uppercase flex items-center gap-1">
+                        <span className="text-[11px] font-mono tracking-widest text-slate-400 uppercase flex items-center gap-1">
                           <Phone className="h-2.5 w-2.5" />
                           {t('userManagement.onboardedUsers.labels.phone')}
                         </span>
@@ -292,7 +298,7 @@ export const OnboardedUsers: React.FC = () => {
                         </div>
                       </div>
                       <div className="space-y-1.5 border-l border-slate-200 dark:border-slate-700 pl-3">
-                        <span className="text-[9px] font-mono tracking-widest text-slate-400 uppercase flex items-center gap-1">
+                        <span className="text-[11px] font-mono tracking-widest text-slate-400 uppercase flex items-center gap-1">
                           <Shield className="h-2.5 w-2.5" />
                           {t('userManagement.onboardedUsers.labels.id')}
                         </span>
@@ -311,7 +317,7 @@ export const OnboardedUsers: React.FC = () => {
                         <Badge
                           variant="secondary"
                           className={cn(
-                            "text-[9px] font-mono font-bold tracking-widest uppercase px-2 py-0.5 border shadow-sm transition-colors",
+                            "text-[11px] font-mono font-bold tracking-widest uppercase px-2 py-0.5 border shadow-sm transition-colors",
                             isUserActive(user)
                               ? getRoleColor(getPrimaryRoleName(user))
                               : "bg-slate-200 text-slate-500 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
@@ -321,7 +327,7 @@ export const OnboardedUsers: React.FC = () => {
                         </Badge>
 
                         {user.isPrimary && (
-                          <Badge variant="outline" className="text-[9px] font-mono font-bold tracking-widest uppercase bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800 px-2 py-0.5 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                          <Badge variant="outline" className="text-[11px] font-mono font-bold tracking-widest uppercase bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800 px-2 py-0.5 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
                             {t('userManagement.onboardedUsers.badges.primary', 'PRIMARY')}
                           </Badge>
                         )}
@@ -344,6 +350,29 @@ export const OnboardedUsers: React.FC = () => {
                           title={t('userManagement.onboardedUsers.actions.viewTooltip')}
                         >
                           <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setShareTarget({
+                              userId: user.userId,
+                              fullName: user.fullName,
+                              email: user.email,
+                              mobileNumber: user.mobileNumber,
+                            });
+                            setShowShareDialog(true);
+                          }}
+                          className={cn(
+                            "h-8 w-8 p-0 rounded-lg transition-all duration-300 shadow-sm",
+                            isUserActive(user)
+                              ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-200 dark:hover:bg-amber-900/20'
+                              : 'opacity-50 cursor-not-allowed bg-slate-50 dark:bg-slate-900 text-slate-400 border-slate-200 dark:border-slate-800'
+                          )}
+                          title={isUserActive(user) ? t('userManagement.onboardedUsers.actions.shareLogin') : t('userManagement.onboardedUsers.actions.shareLoginInactive')}
+                          disabled={!isUserActive(user)}
+                        >
+                          <KeyRound className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="outline"
@@ -382,6 +411,16 @@ export const OnboardedUsers: React.FC = () => {
         )}
       </div>
 
+      {/* Share Login (reset + re-share credentials) Dialog */}
+      <ShareLoginDialog
+        open={showShareDialog}
+        onOpenChange={(open) => {
+          setShowShareDialog(open);
+          if (!open) setShareTarget(null);
+        }}
+        target={shareTarget}
+      />
+
       {/* Deactivate User Dialog */}
       <DeactivateUserDialog
         isOpen={showDeactivateDialog}
@@ -406,7 +445,7 @@ export const OnboardedUsers: React.FC = () => {
           <div className="p-6 pb-4 border-b border-gray-100 dark:border-gray-800">
             <SheetHeader>
               <SheetTitle className="text-lg flex items-center gap-2 text-left">
-                <Eye className="h-5 w-5 text-indigo-500" />
+                <Eye className="h-5 w-5 text-brand-500" />
                 {t('userManagement.onboardedUsers.view.title')}
               </SheetTitle>
               <SheetDescription className="text-left">

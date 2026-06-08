@@ -1,13 +1,14 @@
 import { PDFDocument } from 'pdf-lib';
 import { TypographySettings } from '@/features/prescription/hooks/usePrescriptionDesigner';
 import { fetchTemplateAsFile } from '../utils/templateFile';
-import { buildTemplateBoundPreview, TemplateBoundLayoutConfig } from './previewRenderer';
+import { buildTemplateBoundPreview, TemplateBoundLayoutConfig, type PrintFieldConfig } from './previewRenderer';
 import {
   generatePrescriptionDetailsService,
   type GeneratePrescriptionDetailsRequest,
   type GeneratePrescriptionDetailsPayload
 } from './generatePrescriptionDetailsService';
 import { mapTemplateToPreviewConfig } from '../utils/prescriptionDetailsMapper';
+import { prescriptionFieldLayoutApi, mergeFieldsWithDefaults } from '@/features/prescription/services/prescriptionFieldLayoutApi';
 
 export interface PrescriptionPreviewPayload {
   layout: TemplateBoundLayoutConfig;
@@ -16,6 +17,7 @@ export interface PrescriptionPreviewPayload {
   templateFile?: File | null;
   templateUrl?: string | null;
   templateBackgroundDataUrl?: string | null;
+  printFields?: PrintFieldConfig[];
 }
 
 export interface BuildPreviewResult {
@@ -35,6 +37,19 @@ export const buildPreviewFromRequest = async (request: GeneratePrescriptionDetai
   // We assume response.data IS the GeneratePrescriptionDetailsPayload structure
   const payload = response.data;
 
+  // The doctor's personalized field layout drives which sections print and their labels.
+  let printFields: PrintFieldConfig[] | undefined;
+  try {
+    const layoutResp = await prescriptionFieldLayoutApi.getFieldLayout(request.doctorId);
+    printFields = mergeFieldsWithDefaults(layoutResp.fields).map(f => ({
+      key: f.key,
+      label: f.label,
+      showInPrint: f.showInPrint,
+    }));
+  } catch {
+    printFields = undefined; // fall back to default (show all, default labels)
+  }
+
   const blob = await buildPreviewBlob({
     layout: templateConfig.layout,
     typography: templateConfig.typography,
@@ -44,6 +59,7 @@ export const buildPreviewFromRequest = async (request: GeneratePrescriptionDetai
       validUptoDate: response.validUptoDate
     },
     templateUrl: templateConfig.templateUrl,
+    printFields,
   });
 
   return {
@@ -79,6 +95,7 @@ export const buildPreviewBlob = async (request: PrescriptionPreviewPayload): Pro
       layout: request.layout,
       typography: request.typography,
       payload: request.payload,
+      printFields: request.printFields,
     });
   }
   throw new Error('Template file could not be loaded.');

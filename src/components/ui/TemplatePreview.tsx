@@ -522,11 +522,11 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
 
   return (
     <Card className="w-full shadow-lg border-0 bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-800/50">
-      <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-b border-blue-100 dark:border-blue-800/30">
+      <CardHeader className="bg-gradient-to-r from-brand-50 to-brand-50 dark:from-brand-950/20 dark:to-brand-950/20 border-b border-brand-100 dark:border-brand-800/30">
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="flex items-center gap-3 text-2xl font-bold text-gray-900 dark:text-white">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">P</span>
               </div>
               Prescription Template Preview
@@ -545,7 +545,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                variant="outline"
                size="sm"
                onClick={() => setShowTemplates(!showTemplates)}
-               className="flex items-center gap-2 border-indigo-200 hover:border-indigo-300 hover:bg-indigo-50 dark:border-indigo-700 dark:hover:border-indigo-600 dark:hover:bg-indigo-900/20"
+               className="flex items-center gap-2 border-brand-200 hover:border-brand-300 hover:bg-brand-50 dark:border-brand-700 dark:hover:border-brand-600 dark:hover:bg-brand-900/20"
              >
                <FileText className="h-4 w-4" />
                Templates
@@ -554,7 +554,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                variant="outline"
                size="sm"
                onClick={() => setShowSettings(!showSettings)}
-               className="flex items-center gap-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-700 dark:hover:border-blue-600 dark:hover:bg-blue-900/20"
+               className="flex items-center gap-2 border-brand-200 hover:border-brand-300 hover:bg-brand-50 dark:border-brand-700 dark:hover:border-brand-600 dark:hover:bg-brand-900/20"
              >
                <Palette className="h-4 w-4" />
                Customize
@@ -618,16 +618,16 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
 
         {/* Template Management Panel */}
         {showTemplates && (
-          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 border border-indigo-200 dark:border-indigo-700 rounded-xl p-4">
+          <div className="bg-gradient-to-r from-brand-50 to-purple-50 dark:from-brand-950/20 dark:to-purple-950/20 border border-brand-200 dark:border-brand-700 rounded-xl p-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-indigo-900 dark:text-indigo-100">Template Management</h3>
+              <h3 className="font-semibold text-brand-900 dark:text-brand-100">Template Management</h3>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={saveCurrentTemplate}
                   disabled={isLoading}
-                  className="border-indigo-200 hover:border-indigo-300 hover:bg-indigo-50 dark:border-indigo-700 dark:hover:border-indigo-600 dark:hover:bg-indigo-900/20"
+                  className="border-brand-200 hover:border-brand-300 hover:bg-brand-50 dark:border-brand-700 dark:hover:border-brand-600 dark:hover:bg-brand-900/20"
                 >
                   <Save className="h-4 w-4" />
                   {isLoading ? 'Saving...' : 'Save Current'}
@@ -645,12 +645,12 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
             
             {/* Template Presets */}
             <div className="mb-6">
-              <h4 className="font-medium text-indigo-800 dark:text-indigo-200 mb-3">📋 Professional Templates</h4>
+              <h4 className="font-medium text-brand-800 dark:text-brand-200 mb-3">📋 Professional Templates</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {templatePresets.map((preset, index) => (
-                  <div key={index} className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-indigo-200 dark:border-indigo-600 hover:border-indigo-300 dark:hover:border-indigo-500 transition-colors">
+                  <div key={index} className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-brand-200 dark:border-brand-600 hover:border-brand-300 dark:hover:border-brand-500 transition-colors">
                     <div className="flex items-center justify-between mb-2">
-                      <h5 className="font-medium text-indigo-900 dark:text-indigo-100">
+                      <h5 className="font-medium text-brand-900 dark:text-brand-100">
                         {preset.header.hospitalName}
                       </h5>
                       <Button
@@ -658,13 +658,13 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                         size="sm"
                         onClick={() => applyTemplatePreset(preset)}
                         data-preset={preset.header.hospitalName}
-                        className="h-7 px-2 text-xs border-indigo-200 hover:border-indigo-300 hover:bg-indigo-50 dark:border-indigo-700 dark:hover:border-indigo-600 dark:hover:bg-indigo-900/20"
+                        className="h-7 px-2 text-xs border-brand-200 hover:border-brand-300 hover:bg-brand-50 dark:border-brand-700 dark:hover:border-brand-600 dark:hover:bg-brand-900/20"
                       >
                         <Copy className="h-3 w-3 mr-1" />
                         Apply
                       </Button>
                     </div>
-                    <p className="text-xs text-indigo-700 dark:text-indigo-300">
+                    <p className="text-xs text-brand-700 dark:text-brand-300">
                       {preset.sections.vitals ? '📊 Vitals' : ''} {preset.sections.diagnosis ? '🔍 Diagnosis' : ''} {preset.sections.medicines ? '💊 Medicines' : ''}
                     </p>
                   </div>
@@ -675,11 +675,11 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
             {/* Saved Templates */}
             {savedTemplates.length > 0 && (
               <div>
-                <h4 className="font-medium text-indigo-800 dark:text-indigo-200 mb-3">💾 Saved Templates</h4>
+                <h4 className="font-medium text-brand-800 dark:text-brand-200 mb-3">💾 Saved Templates</h4>
                 <div className="space-y-2">
                   {savedTemplates.map((savedTemplate, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-indigo-200 dark:border-indigo-600">
-                      <span className="text-sm text-indigo-900 dark:text-indigo-100">
+                    <div key={index} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-brand-200 dark:border-brand-600">
+                      <span className="text-sm text-brand-900 dark:text-brand-100">
                         Template {index + 1}
                       </span>
                       <div className="flex gap-2">
@@ -712,15 +712,15 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
 
         {/* Settings Panel */}
         {showSettings && (
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4">
+          <div className="bg-gradient-to-r from-brand-50 to-brand-50 dark:from-brand-950/20 dark:to-brand-950/20 border border-brand-200 dark:border-brand-700 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-blue-900 dark:text-blue-100">Template Customization</h3>
+              <h3 className="font-semibold text-brand-900 dark:text-brand-100">Template Customization</h3>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={resetPositions}
-                  className="border-blue-200 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-700 dark:hover:border-blue-600 dark:hover:bg-blue-900/20"
+                  className="border-brand-200 hover:border-brand-300 hover:bg-brand-50 dark:border-brand-700 dark:hover:border-brand-600 dark:hover:bg-brand-900/20"
                 >
                   <RotateCcw className="h-4 w-4" />
                   Reset
@@ -736,19 +736,19 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                 </Button>
               </div>
             </div>
-            <p className="text-sm text-blue-800 dark:text-blue-200">
+            <p className="text-sm text-brand-800 dark:text-brand-200">
               🎨 Customize colors, fonts, and layout to match your hospital's branding
             </p>
             
             {/* Grid Settings */}
-            <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-700">
+            <div className="mt-4 pt-4 border-t border-brand-200 dark:border-brand-700">
               <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 text-sm text-blue-800 dark:text-blue-200">
+                <label className="flex items-center gap-2 text-sm text-brand-800 dark:text-brand-200">
                   <input
                     type="checkbox"
                     checked={snapToGrid}
                     onChange={(e) => setSnapToGrid(e.target.checked)}
-                    className="rounded border-blue-300 dark:border-blue-600"
+                    className="rounded border-brand-300 dark:border-brand-600"
                   />
                   Snap to Grid ({gridSize}px)
                 </label>
@@ -779,21 +779,21 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
 
         {/* Header Section */}
         {(template.header.hospitalName || template.header.showLogo || template.header.contactInfo || template.header.customText) && (
-          <div className="relative min-h-[280px] border-2 border-dashed border-blue-300 dark:border-blue-600 p-6 rounded-xl bg-gradient-to-br from-blue-50/50 to-indigo-50/30 dark:from-blue-950/20 dark:to-indigo-950/10 overflow-hidden shadow-inner">
+          <div className="relative min-h-[280px] border-2 border-dashed border-brand-300 dark:border-brand-600 p-6 rounded-xl bg-gradient-to-br from-brand-50/50 to-brand-50/30 dark:from-brand-950/20 dark:to-brand-950/10 overflow-hidden shadow-inner">
             {/* Grid Overlay */}
             {showDraggable && snapToGrid && (
               <div className="absolute inset-0 pointer-events-none">
                 {Array.from({ length: Math.ceil(280 / gridSize) }).map((_, i) => (
-                  <div key={`h-${i}`} className="absolute w-full border-t border-blue-200/30 dark:border-blue-700/30" style={{ top: i * gridSize }} />
+                  <div key={`h-${i}`} className="absolute w-full border-t border-brand-200/30 dark:border-brand-700/30" style={{ top: i * gridSize }} />
                 ))}
                 {Array.from({ length: Math.ceil(800 / gridSize) }).map((_, i) => (
-                  <div key={`v-${i}`} className="absolute h-full border-l border-blue-200/30 dark:border-blue-700/30" style={{ left: i * gridSize }} />
+                  <div key={`v-${i}`} className="absolute h-full border-l border-brand-200/30 dark:border-brand-700/30" style={{ left: i * gridSize }} />
                 ))}
               </div>
             )}
             
             <div className="absolute top-3 left-3 z-10">
-              <Badge variant="outline" className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-600 font-medium">
+              <Badge variant="outline" className="text-xs bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 border-brand-300 dark:border-brand-600 font-medium">
                 🏥 Header Section
               </Badge>
             </div>
@@ -815,7 +815,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                     ref={logoRef}
                     src={template.header.logoUrl}
                     alt="Logo"
-                    className="absolute w-24 h-24 object-contain border-2 border-blue-200 dark:border-blue-700 rounded-xl shadow-lg cursor-move bg-white dark:bg-gray-800 p-2 hover:shadow-xl transition-all duration-200"
+                    className="absolute w-24 h-24 object-contain border-2 border-brand-200 dark:border-brand-700 rounded-xl shadow-lg cursor-move bg-white dark:bg-gray-800 p-2 hover:shadow-xl transition-all duration-200"
                     style={{ zIndex: 5 }}
                   />
                 </Draggable>
@@ -823,7 +823,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                 <img
                   src={template.header.logoUrl}
                   alt="Logo"
-                  className="absolute top-10 left-5 w-24 h-24 object-contain border-2 border-blue-200 dark:border-blue-700 rounded-xl shadow-lg bg-white dark:bg-gray-800 p-2"
+                  className="absolute top-10 left-5 w-24 h-24 object-contain border-2 border-brand-200 dark:border-brand-700 rounded-xl shadow-lg bg-white dark:bg-gray-800 p-2"
                 />
               )
             )}
@@ -838,7 +838,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                 >
                   <div
                     ref={hospitalNameRef}
-                    className="absolute p-3 cursor-move font-bold text-gray-900 dark:text-white rounded-xl border-2 border-blue-300 dark:border-blue-600 bg-gradient-to-r from-white to-blue-50 dark:from-gray-800 dark:to-blue-900/20 shadow-lg hover:shadow-xl transition-all duration-200"
+                    className="absolute p-3 cursor-move font-bold text-gray-900 dark:text-white rounded-xl border-2 border-brand-300 dark:border-brand-600 bg-gradient-to-r from-white to-brand-50 dark:from-gray-800 dark:to-brand-900/20 shadow-lg hover:shadow-xl transition-all duration-200"
                     style={{...applyStyles(template.header.styles?.hospitalName), zIndex: 4}}
                   >
                     {template.header.hospitalName}
@@ -846,7 +846,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                 </Draggable>
               ) : (
                 <div
-                  className="absolute p-3 font-bold text-gray-900 dark:text-white bg-gradient-to-r from-white to-blue-50 dark:from-gray-800 dark:to-blue-900/20 border-2 border-blue-300 dark:border-blue-600 rounded-xl shadow-lg"
+                  className="absolute p-3 font-bold text-gray-900 dark:text-white bg-gradient-to-r from-white to-brand-50 dark:from-gray-800 dark:to-brand-900/20 border-2 border-brand-300 dark:border-brand-600 rounded-xl shadow-lg"
                   style={{
                     ...applyStyles(template.header.styles?.hospitalName),
                     left: template.header.showLogo ? '140px' : '30px',
@@ -866,7 +866,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                   onStop={(e, data) => setElementPositions(prev => ({ ...prev, contactInfo: { x: data.x, y: data.y } }))}
                 >
                   <div
-                    className="absolute p-3 cursor-move text-sm text-gray-900 dark:text-white rounded-xl border-2 border-blue-300 dark:border-blue-600 max-w-xs bg-gradient-to-r from-white to-blue-50 dark:from-gray-800 dark:to-blue-900/20 shadow-lg hover:shadow-xl transition-all duration-200"
+                    className="absolute p-3 cursor-move text-sm text-gray-900 dark:text-white rounded-xl border-2 border-brand-300 dark:border-brand-600 max-w-xs bg-gradient-to-r from-white to-brand-50 dark:from-gray-800 dark:to-brand-900/20 shadow-lg hover:shadow-xl transition-all duration-200"
                     style={{...applyStyles(template.header.styles?.contactInfo), zIndex: 3}}
                   >
                     {template.header.contactDetails.split('\n').map((line, idx) => (
@@ -876,7 +876,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                 </Draggable>
               ) : (
                 <div
-                  className="absolute p-3 text-sm text-gray-900 dark:text-white max-w-xs bg-gradient-to-r from-white to-blue-50 dark:from-gray-800 dark:to-blue-900/20 border-2 border-blue-300 dark:border-blue-600 rounded-xl shadow-lg"
+                  className="absolute p-3 text-sm text-gray-900 dark:text-white max-w-xs bg-gradient-to-r from-white to-brand-50 dark:from-gray-800 dark:to-brand-900/20 border-2 border-brand-300 dark:border-brand-600 rounded-xl shadow-lg"
                   style={{
                     ...applyStyles(template.header.styles?.contactInfo),
                     left: '30px',
@@ -898,7 +898,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                   onStop={(e, data) => setElementPositions(prev => ({ ...prev, customText: { x: data.x, y: data.y } }))}
                 >
                   <div
-                    className="absolute p-3 cursor-move italic text-sm text-gray-900 dark:text-white rounded-xl border-2 border-blue-300 dark:border-blue-600 bg-gradient-to-r from-white to-blue-50 dark:from-gray-800 dark:to-blue-900/20 shadow-lg hover:shadow-xl transition-all duration-200"
+                    className="absolute p-3 cursor-move italic text-sm text-gray-900 dark:text-white rounded-xl border-2 border-brand-300 dark:border-brand-600 bg-gradient-to-r from-white to-brand-50 dark:from-gray-800 dark:to-brand-900/20 shadow-lg hover:shadow-xl transition-all duration-200"
                     style={{...applyStyles(template.header.styles?.customText), zIndex: 2}}
                   >
                     {template.header.customText}
@@ -906,7 +906,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                 </Draggable>
               ) : (
                 <div
-                  className="absolute p-3 italic text-sm text-gray-900 dark:text-white bg-gradient-to-r from-white to-blue-50 dark:from-gray-800 dark:to-blue-900/20 border-2 border-blue-300 dark:border-blue-600 rounded-xl shadow-lg"
+                  className="absolute p-3 italic text-sm text-gray-900 dark:text-white bg-gradient-to-r from-white to-brand-50 dark:from-gray-800 dark:to-brand-900/20 border-2 border-brand-300 dark:border-brand-600 rounded-xl shadow-lg"
                   style={{
                     ...applyStyles(template.header.styles?.customText),
                     left: '30px',
@@ -960,14 +960,14 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
               )
             ) : userRole === 'admin' && (
               <div 
-                className="absolute p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-2 border-dashed border-blue-400 dark:border-blue-600 rounded-xl max-w-sm shadow-lg"
+                className="absolute p-4 bg-gradient-to-r from-brand-50 to-brand-50 dark:from-brand-900/20 dark:to-brand-900/20 border-2 border-dashed border-brand-400 dark:border-brand-600 rounded-xl max-w-sm shadow-lg"
                 style={{ left: '30px', top: '220px' }}
               >
-                <div className="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-2 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <div className="text-sm font-semibold text-brand-800 dark:text-brand-200 mb-2 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-brand-500 rounded-full"></div>
                   Doctor Information Placeholder
                 </div>
-                <div className="text-sm text-blue-700 dark:text-blue-300 italic">
+                <div className="text-sm text-brand-700 dark:text-brand-300 italic">
                   Doctor details will be inserted here automatically when used
                 </div>
               </div>
@@ -984,12 +984,12 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
           </div>
           
           <div className="space-y-4">
-            <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
-              <h4 className="font-semibold text-base text-blue-900 dark:text-blue-100 mb-2 flex items-center gap-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+            <div className="p-4 bg-gradient-to-r from-brand-50 to-brand-50 dark:from-brand-900/20 dark:to-brand-900/20 rounded-lg border border-brand-200 dark:border-brand-700">
+              <h4 className="font-semibold text-base text-brand-900 dark:text-brand-100 mb-2 flex items-center gap-2">
+                <div className="w-2 h-2 bg-brand-500 rounded-full"></div>
                 Patient Information
               </h4>
-              <p className="text-sm text-blue-800 dark:text-blue-200">
+              <p className="text-sm text-brand-800 dark:text-brand-200">
                 <strong>Name:</strong> _________________ | <strong>Age:</strong> _____ | <strong>Date:</strong> {new Date().toLocaleDateString()}
               </p>
             </div>
@@ -1054,12 +1054,12 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
             )}
 
             {template.sections.nextAppointment && (
-              <div className="p-4 bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 rounded-lg border border-indigo-200 dark:border-indigo-700">
-                <h4 className="font-semibold text-base text-indigo-900 dark:text-indigo-100 mb-2 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+              <div className="p-4 bg-gradient-to-r from-brand-50 to-brand-50 dark:from-brand-900/20 dark:to-brand-900/20 rounded-lg border border-brand-200 dark:border-brand-700">
+                <h4 className="font-semibold text-base text-brand-900 dark:text-brand-100 mb-2 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-brand-500 rounded-full"></div>
                   Next Appointment
                 </h4>
-                <p className="text-sm text-indigo-800 dark:text-indigo-200">
+                <p className="text-sm text-brand-800 dark:text-brand-200">
                   <strong>Follow-up:</strong> ________________
                 </p>
               </div>
@@ -1069,9 +1069,9 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
 
         {/* Footer Section */}
         {(template.footer.customNotes || template.footer.signature || template.footer.qrCode) && (
-          <div className="relative min-h-[220px] border-2 border-dashed border-blue-300 dark:border-blue-600 p-6 rounded-xl bg-gradient-to-br from-blue-50/50 to-indigo-50/30 dark:from-blue-950/20 dark:to-indigo-950/10 overflow-hidden shadow-inner">
+          <div className="relative min-h-[220px] border-2 border-dashed border-brand-300 dark:border-brand-600 p-6 rounded-xl bg-gradient-to-br from-brand-50/50 to-brand-50/30 dark:from-brand-950/20 dark:to-brand-950/10 overflow-hidden shadow-inner">
             <div className="absolute top-3 left-3 z-10">
-              <Badge variant="outline" className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-600 font-medium">
+              <Badge variant="outline" className="text-xs bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 border-brand-300 dark:border-brand-600 font-medium">
                 📝 Footer Section
               </Badge>
             </div>
@@ -1084,7 +1084,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                   onStop={(e, data) => setElementPositions(prev => ({ ...prev, customNotes: { x: data.x, y: data.y } }))}
                 >
                   <div
-                    className="absolute p-3 cursor-move text-sm text-gray-900 dark:text-white rounded-xl border-2 border-blue-300 dark:border-blue-600 max-w-md bg-gradient-to-r from-white to-blue-50 dark:from-gray-800 dark:to-blue-900/20 shadow-lg hover:shadow-xl transition-all duration-200"
+                    className="absolute p-3 cursor-move text-sm text-gray-900 dark:text-white rounded-xl border-2 border-brand-300 dark:border-brand-600 max-w-md bg-gradient-to-r from-white to-brand-50 dark:from-gray-800 dark:to-brand-900/20 shadow-lg hover:shadow-xl transition-all duration-200"
                     style={{...applyStyles(template.footer.styles?.customNotes), zIndex: 3}}
                   >
                     {template.footer.customNotes}
@@ -1092,7 +1092,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                 </Draggable>
               ) : (
                 <div
-                  className="absolute p-3 text-sm text-gray-900 dark:text-white max-w-md bg-gradient-to-r from-white to-blue-50 dark:from-gray-800 dark:to-blue-900/20 border-2 border-blue-300 dark:border-blue-600 rounded-xl shadow-lg"
+                  className="absolute p-3 text-sm text-gray-900 dark:text-white max-w-md bg-gradient-to-r from-white to-brand-50 dark:from-gray-800 dark:to-brand-900/20 border-2 border-brand-300 dark:border-brand-600 rounded-xl shadow-lg"
                   style={{
                     ...applyStyles(template.footer.styles?.customNotes),
                     left: '30px',
@@ -1111,8 +1111,8 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                   defaultPosition={{ x: 350, y: 120 }}
                   onStop={(e, data) => setElementPositions(prev => ({ ...prev, signature: { x: data.x, y: data.y } }))}
                 >
-                  <div className="absolute cursor-move text-right rounded-xl border-2 border-blue-300 dark:border-blue-600 p-4 bg-gradient-to-r from-white to-blue-50 dark:from-gray-800 dark:to-blue-900/20 shadow-lg hover:shadow-xl transition-all duration-200">
-                    <div className="border-t-2 border-blue-400 dark:border-blue-400 w-36 mx-auto mb-3"></div>
+                  <div className="absolute cursor-move text-right rounded-xl border-2 border-brand-300 dark:border-brand-600 p-4 bg-gradient-to-r from-white to-brand-50 dark:from-gray-800 dark:to-brand-900/20 shadow-lg hover:shadow-xl transition-all duration-200">
+                    <div className="border-t-2 border-brand-400 dark:border-brand-400 w-36 mx-auto mb-3"></div>
                     {userRole === 'doctor' && doctorSettings ? (
                       <>
                         <div className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Dr. {doctorSettings.doctorName || 'Doctor Name'}</div>
@@ -1133,10 +1133,10 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                 </Draggable>
               ) : (
                 <div 
-                  className="absolute text-right p-4 bg-gradient-to-r from-white to-blue-50 dark:from-gray-800 dark:to-blue-900/20 border-2 border-blue-300 dark:border-blue-600 rounded-xl shadow-lg"
+                  className="absolute text-right p-4 bg-gradient-to-r from-white to-brand-50 dark:from-gray-800 dark:to-brand-900/20 border-2 border-brand-300 dark:border-brand-600 rounded-xl shadow-lg"
                   style={{ right: '30px', bottom: '70px' }}
                 >
-                  <div className="border-t-2 border-blue-400 dark:border-blue-400 w-36 mx-auto mb-3"></div>
+                  <div className="border-t-2 border-brand-400 dark:border-brand-400 w-36 mx-auto mb-3"></div>
                   {userRole === 'doctor' && doctorSettings ? (
                     <>
                       <div className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Dr. {doctorSettings.doctorName || 'Doctor Name'}</div>
@@ -1164,13 +1164,13 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
                   defaultPosition={{ x: 420, y: 40 }}
                   onStop={(e, data) => setElementPositions(prev => ({ ...prev, qrCode: { x: data.x, y: data.y } }))}
                 >
-                  <div className="absolute w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-xl flex items-center justify-center text-xs font-bold text-gray-600 dark:text-white cursor-move shadow-lg border-2 border-blue-300 dark:border-blue-600 hover:shadow-xl transition-all duration-200">
+                  <div className="absolute w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-xl flex items-center justify-center text-xs font-bold text-gray-600 dark:text-white cursor-move shadow-lg border-2 border-brand-300 dark:border-brand-600 hover:shadow-xl transition-all duration-200">
                     QR Code
                   </div>
                 </Draggable>
               ) : (
                 <div 
-                  className="absolute w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-xl flex items-center justify-center text-xs font-bold text-gray-600 dark:text-white shadow-lg border-2 border-blue-300 dark:border-blue-600"
+                  className="absolute w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-xl flex items-center justify-center text-xs font-bold text-gray-600 dark:text-white shadow-lg border-2 border-brand-300 dark:border-brand-600"
                   style={{ right: '30px', top: '40px' }}
                 >
                   QR Code

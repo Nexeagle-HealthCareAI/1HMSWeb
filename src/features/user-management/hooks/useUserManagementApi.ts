@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { userManagementApi, RolesResponse, InviteUserRequest, InviteUserResponse, InvitedUser, OnboardedUser, ManageInvitationRequest, ManageInvitationResponse, AllUsersResponse, DeactivateUserRequest, DeactivateUserResponse, UpdateInvitedUserRequest, UpdateInvitedUserResponse } from '../services/userManagementApi';
+import { userManagementApi, RolesResponse, AllUsersResponse, DeactivateUserRequest, DeactivateUserResponse, QuickAddUserRequest, QuickAddUserResponse, ShareCredentialsRequest, ShareCredentialsResponse, ResetCredentialsRequest, ResetCredentialsResponse } from '../services/userManagementApi';
 import { useToast } from '@/hooks/use-toast';
 
 // Hook for user management API calls
@@ -17,27 +17,6 @@ export const useUserManagementApi = () => {
     });
   };
 
-  // Get invited users with scope filtering
-  const getInvitedUsers = (hospitalId: string, scope: 'Pending' | 'Accepted' | 'Revoked' | 'ALL' = 'ALL') => {
-    return useQuery<{ success: boolean; message: string; invitations: InvitedUser[] }>({
-      queryKey: ['user-management', 'invited-users', hospitalId, scope],
-      queryFn: () => userManagementApi.getInvitedUsers(hospitalId, scope),
-      staleTime: 2 * 60 * 1000, // 2 minutes
-      gcTime: 5 * 60 * 1000, // 5 minutes
-      enabled: !!hospitalId, // Only run query if hospitalId is available
-    });
-  };
-
-  // Get onboarded users
-  const getOnboardedUsers = () => {
-    return useQuery<OnboardedUser[]>({
-      queryKey: ['user-management', 'onboarded-users'],
-      queryFn: userManagementApi.getOnboardedUsers,
-      staleTime: 2 * 60 * 1000, // 2 minutes
-      gcTime: 5 * 60 * 1000, // 5 minutes
-    });
-  };
-
   // Get all users associated with a hospital
   const getAllUsers = (hospitalId: string) => {
     return useQuery<AllUsersResponse>({
@@ -49,46 +28,30 @@ export const useUserManagementApi = () => {
     });
   };
 
-  // Invite a new user
-  const inviteUser = useMutation<InviteUserResponse, Error, InviteUserRequest>({
-    mutationFn: userManagementApi.inviteUser,
+  // Quick-add a team member directly (no invitation link)
+  const quickAddUser = useMutation<QuickAddUserResponse, Error, QuickAddUserRequest>({
+    mutationFn: userManagementApi.quickAddUser,
     onSuccess: (data) => {
       if (data.success) {
-        toast({
-          title: "Invitation Sent Successfully!",
-          description: data.message || "The user has been invited. They will receive an email with registration instructions.",
-        });
-        queryClient.invalidateQueries({ queryKey: ['user-management', 'invited-users'] });
+        toast({ title: 'Team member added', description: data.message || 'They can log in with their mobile number and password.' });
+        queryClient.invalidateQueries({ queryKey: ['user-management'] });
+      } else {
+        toast({ title: 'Could not add the member', description: data.message || 'Please try again.', variant: 'destructive' });
       }
     },
     onError: (error) => {
-      toast({
-        title: "Failed to Send Invitation",
-        description: error.message || "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: 'Could not add the member', description: error.message || 'Something went wrong. Please try again.', variant: 'destructive' });
     },
   });
 
-  // Manage invitation (resend or revoke)
-  const manageInvitation = useMutation<ManageInvitationResponse, Error, ManageInvitationRequest>({
-    mutationFn: userManagementApi.manageInvitation,
-    onSuccess: (data, variables) => {
-      const action = variables.scope === 'resend' ? 'resent' : 'revoked';
-      toast({
-        title: `Invitation ${action.charAt(0).toUpperCase() + action.slice(1)} Successfully!`,
-        description: data.message || `The invitation has been ${action}.`,
-      });
-      // Invalidate and refetch invited users
-      queryClient.invalidateQueries({ queryKey: ['user-management', 'invited-users'] });
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to Manage Invitation",
-        description: error.message || "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
-    },
+  // Send a new member their login details (the form reports the per-channel result itself)
+  const shareCredentials = useMutation<ShareCredentialsResponse, Error, ShareCredentialsRequest>({
+    mutationFn: userManagementApi.shareCredentials,
+  });
+
+  // Reset an existing member's password to a temp one for re-sharing (dialog reports the result)
+  const resetCredentials = useMutation<ResetCredentialsResponse, Error, ResetCredentialsRequest>({
+    mutationFn: userManagementApi.resetCredentials,
   });
 
   // Deactivate a user
@@ -116,34 +79,12 @@ export const useUserManagementApi = () => {
     },
   });
 
-  // Update invited user after OTP verification
-  const updateInvitedUser = useMutation<UpdateInvitedUserResponse, Error, UpdateInvitedUserRequest>({
-    mutationFn: userManagementApi.updateInvitedUser,
-    onSuccess: (data) => {
-      toast({
-        title: "User Updated Successfully!",
-        description: data.message || "User invitation status has been updated successfully.",
-      });
-      // Invalidate and refetch invited users
-      queryClient.invalidateQueries({ queryKey: ['user-management', 'invited-users'] });
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to Update User",
-        description: error.message || "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
   return {
     getAllRoles,
-    getInvitedUsers,
-    getOnboardedUsers,
     getAllUsers,
-    inviteUser,
-    manageInvitation,
+    quickAddUser,
+    shareCredentials,
+    resetCredentials,
     deactivateUser,
-    updateInvitedUser,
   };
 };

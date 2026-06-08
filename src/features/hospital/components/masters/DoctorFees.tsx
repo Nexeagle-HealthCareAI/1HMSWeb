@@ -14,7 +14,7 @@ import { doctorFeeService, type DoctorFeeRow } from '@/features/hospital/service
 type RowState = DoctorFeeRow & { dirty?: boolean; saving?: boolean };
 
 const Stat: React.FC<{ label: string; value: React.ReactNode; icon: React.ReactNode; tone: string }> = ({ label, value, icon, tone }) => (
-    <Card className={cn('relative overflow-hidden border-0 ring-1 ring-black/5 p-3.5 flex items-center gap-3 rounded-2xl bg-gradient-to-br shadow-lg shadow-blue-500/5', tone)}>
+    <Card className={cn('relative overflow-hidden border-0 ring-1 ring-black/5 p-3.5 flex items-center gap-3 rounded-2xl bg-gradient-to-br shadow-lg shadow-brand-500/5', tone)}>
         <div className="absolute -top-6 -right-6 h-20 w-20 rounded-full bg-white/30 blur-2xl pointer-events-none" />
         <div className="relative h-10 w-10 rounded-xl bg-white/70 backdrop-blur flex items-center justify-center shrink-0">{icon}</div>
         <div className="relative min-w-0">
@@ -96,9 +96,9 @@ export const DoctorFees: React.FC = () => {
     return (
         <div className="space-y-5 max-w-5xl mx-auto">
             {/* Premium header */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 rounded-2xl border border-white/40 bg-white/80 backdrop-blur-xl px-4 py-3 shadow-lg shadow-blue-500/5 ring-1 ring-black/5">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 rounded-2xl border border-white/40 bg-white/80 backdrop-blur-xl px-4 py-3 shadow-lg shadow-brand-500/5 ring-1 ring-black/5">
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-500/30">
+                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-brand-500/30">
                         <Stethoscope className="h-5 w-5" />
                     </div>
                     <div>
@@ -131,12 +131,12 @@ export const DoctorFees: React.FC = () => {
 
             {/* KPI row */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <Stat label="Doctors" value={loading ? '…' : stats.total} icon={<Users className="h-5 w-5 text-blue-600" />} tone="from-blue-50 to-indigo-100/50 text-blue-900" />
+                <Stat label="Doctors" value={loading ? '…' : stats.total} icon={<Users className="h-5 w-5 text-brand-600" />} tone="from-brand-50 to-brand-100/50 text-brand-900" />
                 <Stat label="OPD Fee Set" value={loading ? '…' : stats.opd} icon={<IndianRupee className="h-5 w-5 text-emerald-600" />} tone="from-emerald-50 to-teal-100/50 text-emerald-900" />
                 <Stat label="IPD Fee Set" value={loading ? '…' : stats.ipd} icon={<BedDouble className="h-5 w-5 text-violet-600" />} tone="from-violet-50 to-fuchsia-100/50 text-violet-900" />
             </div>
 
-            <Card className="border-0 ring-1 ring-black/5 rounded-2xl bg-white overflow-hidden shadow-lg shadow-blue-500/5">
+            <Card className="border-0 ring-1 ring-black/5 rounded-2xl bg-white overflow-hidden shadow-lg shadow-brand-500/5">
                 <Table>
                     <TableHeader className="bg-slate-50/80 backdrop-blur border-b border-slate-200 sticky top-0 z-10">
                         <TableRow className="border-none hover:bg-transparent">
@@ -166,10 +166,10 @@ export const DoctorFees: React.FC = () => {
                                 </div>
                             </TableCell></TableRow>
                         ) : filtered.map(r => (
-                            <TableRow key={r.doctorId} className={cn('border-b border-slate-50 transition-colors hover:bg-blue-50/40', r.dirty && 'bg-amber-50/40')}>
+                            <TableRow key={r.doctorId} className={cn('border-b border-slate-50 transition-colors hover:bg-brand-50/40', r.dirty && 'bg-amber-50/40')}>
                                 <TableCell>
                                     <div className="flex items-center gap-3">
-                                        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 border border-blue-200 flex items-center justify-center text-xs font-bold text-blue-700">{(r.doctorName ?? '?').charAt(0).toUpperCase()}</div>
+                                        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-brand-100 to-brand-100 border border-brand-200 flex items-center justify-center text-xs font-bold text-brand-700">{(r.doctorName ?? '?').charAt(0).toUpperCase()}</div>
                                         <span className="font-semibold text-slate-800">{r.doctorName || '—'}</span>
                                     </div>
                                 </TableCell>

@@ -257,37 +257,37 @@ export const AdminDashboard = () => {
           onPointerDownOutside={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}
         >
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg p-4 sm:p-5 md:p-6">
+          <div className="bg-gradient-to-r from-brand-50 to-brand-50 dark:from-brand-950/20 dark:to-brand-950/20 rounded-lg p-4 sm:p-5 md:p-6">
             {/* Header Section - Stack on mobile */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
               <div className="flex items-center gap-3 sm:gap-4 flex-1">
-                <div className="p-2 sm:p-3 bg-blue-600 rounded-full flex-shrink-0">
+                <div className="p-2 sm:p-3 bg-brand-600 rounded-full flex-shrink-0">
                   <Building2 className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-white" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-lg sm:text-xl font-bold text-blue-900 dark:text-blue-100">
+                  <h2 className="text-lg sm:text-xl font-bold text-brand-900 dark:text-brand-100">
                     {t('admin.hospitalRegistrationProgress')}
                   </h2>
-                  <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 mt-0.5">
+                  <p className="text-xs sm:text-sm text-brand-700 dark:text-brand-300 mt-0.5">
                     {t('admin.completeHospitalDetails')}
                   </p>
                 </div>
               </div>
               <div className="text-center sm:text-right flex-shrink-0">
-                <div className="text-3xl sm:text-4xl font-bold text-blue-600 mb-0.5">{hospitalScore}%</div>
-                <div className="text-xs sm:text-sm text-blue-500 uppercase tracking-wide">{t('admin.complete')}</div>
+                <div className="text-3xl sm:text-4xl font-bold text-brand-600 mb-0.5">{hospitalScore}%</div>
+                <div className="text-xs sm:text-sm text-brand-500 uppercase tracking-wide">{t('admin.complete')}</div>
               </div>
             </div>
 
             {/* Progress Bar Section */}
             <div className="mb-4">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-200">{t('admin.progress')}</span>
-                <span className="text-xs sm:text-sm text-blue-600">{hospitalScore}/100%</span>
+                <span className="text-xs sm:text-sm font-medium text-brand-800 dark:text-brand-200">{t('admin.progress')}</span>
+                <span className="text-xs sm:text-sm text-brand-600">{hospitalScore}/100%</span>
               </div>
-              <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-3 sm:h-4 overflow-hidden">
+              <div className="w-full bg-brand-200 dark:bg-brand-800 rounded-full h-3 sm:h-4 overflow-hidden">
                 <div
-                  className="bg-gradient-to-r from-blue-600 to-blue-500 h-3 sm:h-4 rounded-full transition-all duration-500 ease-out relative"
+                  className="bg-gradient-to-r from-brand-600 to-brand-500 h-3 sm:h-4 rounded-full transition-all duration-500 ease-out relative"
                   style={{ width: `${hospitalScore}%` }}
                 >
                   <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
@@ -321,7 +321,7 @@ export const AdminDashboard = () => {
                   setBannerDismissed(true);
                   setCurrentView('system-config-hospital');
                 }}
-                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 sm:px-6 py-2 text-sm sm:text-base"
+                className="w-full sm:w-auto bg-brand-600 hover:bg-brand-700 text-white font-medium px-4 sm:px-6 py-2 text-sm sm:text-base"
               >
                 <span className="hidden sm:inline">
                   {!accessUnlocked ? t('admin.completeHospitalInfo') : t('admin.updateHospitalDetails')}
@@ -409,7 +409,7 @@ export const AdminDashboard = () => {
 
       {/* Enhanced Top Navigation with Hospital ID and Modernized Nav Tabs - Mobile Optimized */}
       <section className={`mb-4 z-40 ${(currentView === 'system-config' || currentView === 'system-config-hospital') ? 'mx-2 sm:mx-4 lg:mx-6' : ''}`}>
-        <div className="flex flex-col xl:flex-row items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-white/20 dark:border-slate-800 rounded-2xl shadow-lg shadow-blue-100/10 dark:shadow-black/20 px-3 py-3 sm:px-6 sm:py-4 ring-1 ring-black/5 dark:ring-white/5">
+        <div className="flex flex-col xl:flex-row items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-white/20 dark:border-slate-800 rounded-2xl shadow-lg shadow-brand-100/10 dark:shadow-black/20 px-3 py-3 sm:px-6 sm:py-4 ring-1 ring-black/5 dark:ring-white/5">
           {/* Left: Title, badges, hospital ID */}
           <div className="flex flex-col gap-1 min-w-0 shrink-0 w-full xl:w-auto">
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
@@ -485,13 +485,13 @@ export const AdminDashboard = () => {
                   tabIndex={isLocked ? -1 : 0}
                   title={isLocked ? t('admin.adminFeaturesLocked') : module.description}
                   className={`group flex-1 flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-2.5 py-1.5 border transition-all duration-300 min-w-[80px] sm:min-w-[120px] ${isActive
-                    ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white border-transparent shadow-xl shadow-blue-500/30'
+                    ? 'bg-gradient-to-br from-brand-600 to-brand-600 text-white border-transparent shadow-xl shadow-brand-500/30'
                     : 'bg-transparent border-transparent text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-slate-800/70 hover:text-gray-900 dark:hover:text-gray-200'
                     } ${isLocked ? 'opacity-40 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}
                 >
                   <div className="flex items-center justify-center sm:justify-start gap-1.5 font-semibold w-full">
                     <span className={`p-1 rounded-lg ${isActive ? 'bg-white/20' : 'bg-gray-100 dark:bg-slate-800'}`}>
-                      <module.icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-white' : 'text-blue-500 dark:text-blue-400'}`} />
+                      <module.icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-white' : 'text-brand-500 dark:text-brand-400'}`} />
                     </span>
                     <span className="hidden sm:inline text-[12px] line-clamp-1">{module.name}</span>
                   </div>
@@ -510,11 +510,11 @@ export const AdminDashboard = () => {
         <div className="space-y-6 animate-in fade-in duration-500">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {/* Total Visits Card - Detailed Breakdown */}
-            <Card className="bg-gradient-to-br from-indigo-500 to-purple-600 border-none text-white shadow-lg">
+            <Card className="bg-gradient-to-br from-brand-500 to-purple-600 border-none text-white shadow-lg">
               <CardContent className="p-4 sm:p-5">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <p className="text-indigo-100 text-sm font-medium mb-1">{t('admin.totalVisits') || 'Total Visits'}</p>
+                    <p className="text-brand-100 text-sm font-medium mb-1">{t('admin.totalVisits') || 'Total Visits'}</p>
                     <h3 className="text-3xl sm:text-4xl font-bold">{analyticsData?.kpis?.totalVisits?.overall?.toLocaleString() || '...'}</h3>
                   </div>
                   <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
@@ -523,31 +523,31 @@ export const AdminDashboard = () => {
                 </div>
 
                 {/* 2x3 Grid for Breakdown */}
-                <div className="grid grid-cols-2 gap-x-4 gap-y-3 pt-2 text-xs sm:text-sm border-t border-indigo-400/30">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-3 pt-2 text-xs sm:text-sm border-t border-brand-400/30">
                   <div className="flex flex-col">
-                    <span className="text-indigo-200 text-[10px] uppercase tracking-wide">Today</span>
+                    <span className="text-brand-200 text-[10px] uppercase tracking-wide">Today</span>
                     <span className="font-semibold text-lg">{analyticsData?.kpis?.totalVisits?.byBucket?.today?.toLocaleString() || 0}</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-indigo-200 text-[10px] uppercase tracking-wide">Yesterday</span>
+                    <span className="text-brand-200 text-[10px] uppercase tracking-wide">Yesterday</span>
                     <span className="font-semibold text-lg">{analyticsData?.kpis?.totalVisits?.byBucket?.yesterday?.toLocaleString() || 0}</span>
                   </div>
 
                   <div className="flex flex-col">
-                    <span className="text-indigo-200 text-[10px] uppercase tracking-wide">Last 7 Days</span>
+                    <span className="text-brand-200 text-[10px] uppercase tracking-wide">Last 7 Days</span>
                     <span className="font-semibold text-lg">{analyticsData?.kpis?.totalVisits?.byBucket?.last7Days?.toLocaleString() || 0}</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-indigo-200 text-[10px] uppercase tracking-wide">This Month</span>
+                    <span className="text-brand-200 text-[10px] uppercase tracking-wide">This Month</span>
                     <span className="font-semibold text-lg">{analyticsData?.kpis?.totalVisits?.byBucket?.thisMonth?.toLocaleString() || 0}</span>
                   </div>
 
                   <div className="flex flex-col">
-                    <span className="text-indigo-200 text-[10px] uppercase tracking-wide">This Year</span>
+                    <span className="text-brand-200 text-[10px] uppercase tracking-wide">This Year</span>
                     <span className="font-semibold text-lg">{analyticsData?.kpis?.totalVisits?.byBucket?.thisYear?.toLocaleString() || 0}</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-indigo-200 text-[10px] uppercase tracking-wide">Prev Year</span>
+                    <span className="text-brand-200 text-[10px] uppercase tracking-wide">Prev Year</span>
                     <span className="font-semibold text-lg">{analyticsData?.kpis?.totalVisits?.byBucket?.prevYear?.toLocaleString() || 0}</span>
                   </div>
                 </div>
@@ -555,64 +555,64 @@ export const AdminDashboard = () => {
             </Card>
 
             {/* Unique Patients Card - Detailed Breakdown */}
-            <Card className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 border-indigo-100 dark:border-indigo-900/50 shadow-sm relative overflow-hidden">
+            <Card className="bg-gradient-to-br from-brand-50 to-purple-50 dark:from-brand-950/30 dark:to-purple-950/30 border-brand-100 dark:border-brand-900/50 shadow-sm relative overflow-hidden">
               {/* Decorative background element */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-200/20 dark:bg-indigo-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-brand-200/20 dark:bg-brand-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
 
               <CardContent className="p-4 sm:p-5 relative z-10">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <p className="text-indigo-900/70 dark:text-indigo-200/70 text-sm font-medium mb-1">Unique Patients</p>
-                    <h3 className="text-3xl sm:text-4xl font-bold text-indigo-900 dark:text-indigo-50">{analyticsData?.kpis?.uniquePatients?.overall?.toLocaleString() || '...'}</h3>
+                    <p className="text-brand-900/70 dark:text-brand-200/70 text-sm font-medium mb-1">Unique Patients</p>
+                    <h3 className="text-3xl sm:text-4xl font-bold text-brand-900 dark:text-brand-50">{analyticsData?.kpis?.uniquePatients?.overall?.toLocaleString() || '...'}</h3>
                   </div>
-                  <div className="p-2.5 bg-white dark:bg-indigo-800/50 rounded-xl shadow-sm border border-indigo-100 dark:border-indigo-700/50">
-                    <Users className="h-6 w-6 text-indigo-600 dark:text-indigo-300" />
+                  <div className="p-2.5 bg-white dark:bg-brand-800/50 rounded-xl shadow-sm border border-brand-100 dark:border-brand-700/50">
+                    <Users className="h-6 w-6 text-brand-600 dark:text-brand-300" />
                   </div>
                 </div>
 
                 {/* 2x3 Grid for Breakdown */}
                 <div className="grid grid-cols-2 gap-2 pt-2 text-xs sm:text-sm">
-                  <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-indigo-50/50 dark:border-indigo-800/30">
-                    <span className="text-indigo-400 dark:text-indigo-300 text-[10px] uppercase tracking-wide font-bold">Today</span>
-                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis?.uniquePatients?.byBucket?.today?.toLocaleString() || 0}</span>
+                  <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-brand-50/50 dark:border-brand-800/30">
+                    <span className="text-brand-400 dark:text-brand-300 text-[10px] uppercase tracking-wide font-bold">Today</span>
+                    <span className="font-bold text-brand-700 dark:text-brand-100 text-lg">{analyticsData?.kpis?.uniquePatients?.byBucket?.today?.toLocaleString() || 0}</span>
                   </div>
-                  <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-indigo-50/50 dark:border-indigo-800/30">
-                    <span className="text-indigo-400 dark:text-indigo-300 text-[10px] uppercase tracking-wide font-bold">Yesterday</span>
-                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis?.uniquePatients?.byBucket?.yesterday?.toLocaleString() || 0}</span>
-                  </div>
-
-                  <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-indigo-50/50 dark:border-indigo-800/30">
-                    <span className="text-indigo-400 dark:text-indigo-300 text-[10px] uppercase tracking-wide font-bold">Last 7 Days</span>
-                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis?.uniquePatients?.byBucket?.last7Days?.toLocaleString() || 0}</span>
-                  </div>
-                  <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-indigo-50/50 dark:border-indigo-800/30">
-                    <span className="text-indigo-400 dark:text-indigo-300 text-[10px] uppercase tracking-wide font-bold">This Month</span>
-                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis?.uniquePatients?.byBucket?.thisMonth?.toLocaleString() || 0}</span>
+                  <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-brand-50/50 dark:border-brand-800/30">
+                    <span className="text-brand-400 dark:text-brand-300 text-[10px] uppercase tracking-wide font-bold">Yesterday</span>
+                    <span className="font-bold text-brand-700 dark:text-brand-100 text-lg">{analyticsData?.kpis?.uniquePatients?.byBucket?.yesterday?.toLocaleString() || 0}</span>
                   </div>
 
-                  <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-indigo-50/50 dark:border-indigo-800/30">
-                    <span className="text-indigo-400 dark:text-indigo-300 text-[10px] uppercase tracking-wide font-bold">This Year</span>
-                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis?.uniquePatients?.byBucket?.thisYear?.toLocaleString() || 0}</span>
+                  <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-brand-50/50 dark:border-brand-800/30">
+                    <span className="text-brand-400 dark:text-brand-300 text-[10px] uppercase tracking-wide font-bold">Last 7 Days</span>
+                    <span className="font-bold text-brand-700 dark:text-brand-100 text-lg">{analyticsData?.kpis?.uniquePatients?.byBucket?.last7Days?.toLocaleString() || 0}</span>
                   </div>
-                  <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-indigo-50/50 dark:border-indigo-800/30">
-                    <span className="text-indigo-400 dark:text-indigo-300 text-[10px] uppercase tracking-wide font-bold">Prev Year</span>
-                    <span className="font-bold text-indigo-700 dark:text-indigo-100 text-lg">{analyticsData?.kpis?.uniquePatients?.byBucket?.prevYear?.toLocaleString() || 0}</span>
+                  <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-brand-50/50 dark:border-brand-800/30">
+                    <span className="text-brand-400 dark:text-brand-300 text-[10px] uppercase tracking-wide font-bold">This Month</span>
+                    <span className="font-bold text-brand-700 dark:text-brand-100 text-lg">{analyticsData?.kpis?.uniquePatients?.byBucket?.thisMonth?.toLocaleString() || 0}</span>
+                  </div>
+
+                  <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-brand-50/50 dark:border-brand-800/30">
+                    <span className="text-brand-400 dark:text-brand-300 text-[10px] uppercase tracking-wide font-bold">This Year</span>
+                    <span className="font-bold text-brand-700 dark:text-brand-100 text-lg">{analyticsData?.kpis?.uniquePatients?.byBucket?.thisYear?.toLocaleString() || 0}</span>
+                  </div>
+                  <div className="flex flex-col p-2.5 bg-white/60 dark:bg-black/20 rounded-lg border border-brand-50/50 dark:border-brand-800/30">
+                    <span className="text-brand-400 dark:text-brand-300 text-[10px] uppercase tracking-wide font-bold">Prev Year</span>
+                    <span className="font-bold text-brand-700 dark:text-brand-100 text-lg">{analyticsData?.kpis?.uniquePatients?.byBucket?.prevYear?.toLocaleString() || 0}</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* New vs Returning Card - Improved Visual */}
-            <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 border-blue-100 dark:border-blue-900/50 shadow-sm relative overflow-hidden">
+            <Card className="bg-gradient-to-br from-brand-50 to-cyan-50 dark:from-brand-950/30 dark:to-cyan-950/30 border-brand-100 dark:border-brand-900/50 shadow-sm relative overflow-hidden">
               {/* Decorative background element */}
-              <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-200/20 dark:bg-blue-500/10 rounded-full blur-2xl -ml-10 -mb-10 pointer-events-none"></div>
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-brand-200/20 dark:bg-brand-500/10 rounded-full blur-2xl -ml-10 -mb-10 pointer-events-none"></div>
 
               <CardContent className="p-5 relative z-10">
                 <div className="flex flex-col h-full justify-between">
                   <div className="flex justify-between items-center mb-4">
-                    <p className="text-blue-900/70 dark:text-blue-200/70 text-sm font-medium">New vs Returning</p>
-                    <div className="p-1.5 bg-white/80 dark:bg-blue-900/30 rounded-lg">
-                      <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <p className="text-brand-900/70 dark:text-brand-200/70 text-sm font-medium">New vs Returning</p>
+                    <div className="p-1.5 bg-white/80 dark:bg-brand-900/30 rounded-lg">
+                      <Users className="h-4 w-4 text-brand-600 dark:text-brand-400" />
                     </div>
                   </div>
 
@@ -620,12 +620,12 @@ export const AdminDashboard = () => {
                   <div className="flex justify-between items-end mb-4 px-2">
                     {/* New Patients - Left Aligned */}
                     <div className="flex flex-col items-start">
-                      <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                      <span className="text-3xl font-bold text-brand-600 dark:text-brand-400">
                         {analyticsData?.kpis?.newVsReturningPatients?.new?.percent ?? '..'}%
                       </span>
                       <div className="flex items-center gap-1.5 mt-1">
-                        <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm ring-2 ring-white dark:ring-blue-950"></div>
-                        <span className="text-xs font-semibold text-blue-800 dark:text-blue-200">
+                        <div className="w-2.5 h-2.5 rounded-full bg-brand-500 shadow-sm ring-2 ring-white dark:ring-brand-950"></div>
+                        <span className="text-xs font-semibold text-brand-800 dark:text-brand-200">
                           New <span className="opacity-70 font-normal">({analyticsData?.kpis?.newVsReturningPatients?.new?.count || 0})</span>
                         </span>
                       </div>
@@ -640,15 +640,15 @@ export const AdminDashboard = () => {
                         <span className="text-xs font-semibold text-cyan-800 dark:text-cyan-200">
                           Returning <span className="opacity-70 font-normal">({analyticsData?.kpis?.newVsReturningPatients?.returning?.count || 0})</span>
                         </span>
-                        <div className="w-2.5 h-2.5 rounded-full bg-cyan-500 shadow-sm ring-2 ring-white dark:ring-blue-950"></div>
+                        <div className="w-2.5 h-2.5 rounded-full bg-cyan-500 shadow-sm ring-2 ring-white dark:ring-brand-950"></div>
                       </div>
                     </div>
                   </div>
 
                   {/* Segmented Progress Bar */}
-                  <div className="w-full h-4 bg-white/50 dark:bg-black/20 rounded-full overflow-hidden flex shadow-inner p-0.5 backdrop-blur-sm border border-blue-100 dark:border-blue-800/30">
+                  <div className="w-full h-4 bg-white/50 dark:bg-black/20 rounded-full overflow-hidden flex shadow-inner p-0.5 backdrop-blur-sm border border-brand-100 dark:border-brand-800/30">
                     <div
-                      className="bg-gradient-to-r from-blue-500 to-blue-400 h-full rounded-l-full transition-all duration-1000 ease-out relative group"
+                      className="bg-gradient-to-r from-brand-500 to-brand-400 h-full rounded-l-full transition-all duration-1000 ease-out relative group"
                       style={{ width: `${analyticsData?.kpis?.newVsReturningPatients?.new?.percent || 0}%` }}
                       title={`New: ${analyticsData?.kpis?.newVsReturningPatients?.new?.percent || 0}%`}
                     ></div>
@@ -674,7 +674,7 @@ export const AdminDashboard = () => {
                     {analyticsData?.genderWise?.map((g, i) => (
                       <div key={i} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${g.gender === 'Male' ? 'bg-blue-500' : 'bg-pink-500'}`}></div>
+                          <div className={`w-2 h-2 rounded-full ${g.gender === 'Male' ? 'bg-brand-500' : 'bg-pink-500'}`}></div>
                           <span className="text-sm font-medium text-emerald-900 dark:text-emerald-100">{g.gender}</span>
                         </div>
                         <div className="text-right">
@@ -697,7 +697,7 @@ export const AdminDashboard = () => {
               <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0 pb-2">
                 <div>
                   <CardTitle className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-indigo-500" />
+                    <BarChart3 className="h-5 w-5 text-brand-500" />
                     {t('admin.ageDistribution') || 'Age Distribution'}
                     <span className="text-sm font-normal text-muted-foreground ml-2">
                       ({ageDistributionFilter === 'overall' ? 'Overall' : ageDistributionFilter})
@@ -712,7 +712,7 @@ export const AdminDashboard = () => {
                       key={filter}
                       onClick={() => setAgeDistributionFilter(filter)}
                       className={`px-3 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap ${ageDistributionFilter === filter
-                        ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-300 shadow-sm'
+                        ? 'bg-white dark:bg-gray-700 text-brand-600 dark:text-brand-300 shadow-sm'
                         : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                         }`}
                     >
@@ -758,10 +758,10 @@ export const AdminDashboard = () => {
 
                           // Color based on filter
                           const barColorClass = ageDistributionFilter === 'Male'
-                            ? 'bg-blue-500 dark:bg-blue-600'
+                            ? 'bg-brand-500 dark:bg-brand-600'
                             : ageDistributionFilter === 'Female'
                               ? 'bg-pink-500 dark:bg-pink-600'
-                              : 'bg-indigo-500 dark:bg-indigo-600';
+                              : 'bg-brand-500 dark:bg-brand-600';
 
                           return (
                             <div key={idx} className="flex flex-col items-center gap-1 flex-1 group min-w-[30px] h-full justify-end">
@@ -872,7 +872,7 @@ export const AdminDashboard = () => {
             <Card className="xl:col-span-1 shadow-sm border-gray-200 dark:border-gray-800 flex flex-col">
               <CardHeader className="pb-2 bg-gray-50/50 dark:bg-gray-800/10 shrink-0">
                 <CardTitle className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-indigo-600" />
+                  <Building2 className="h-5 w-5 text-brand-600" />
                   City Distribution
                 </CardTitle>
               </CardHeader>
@@ -887,10 +887,10 @@ export const AdminDashboard = () => {
                       const maxCount = Math.max(...cityEntries.map(([, c]) => c)) || 1;
 
                       return cityEntries.map(([city, count], index) => (
-                        <div key={city} className="relative p-3 rounded-lg bg-white/50 dark:bg-gray-800/40 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-colors border border-gray-100 dark:border-gray-800 group">
+                        <div key={city} className="relative p-3 rounded-lg bg-white/50 dark:bg-gray-800/40 hover:bg-brand-50/50 dark:hover:bg-brand-900/10 transition-colors border border-gray-100 dark:border-gray-800 group">
                           {/* Progress bar background */}
-                          <div className="absolute bottom-0 left-0 h-1 bg-indigo-100 dark:bg-gray-700 w-full rounded-b-lg overflow-hidden opacity-50">
-                            <div className="h-full bg-indigo-500 rounded-lg" style={{ width: `${(count / maxCount) * 100}%` }}></div>
+                          <div className="absolute bottom-0 left-0 h-1 bg-brand-100 dark:bg-gray-700 w-full rounded-b-lg overflow-hidden opacity-50">
+                            <div className="h-full bg-brand-500 rounded-lg" style={{ width: `${(count / maxCount) * 100}%` }}></div>
                           </div>
 
                           <div className="flex items-center justify-between relative z-10 mb-1">
@@ -898,14 +898,14 @@ export const AdminDashboard = () => {
                               <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold shadow-sm ${index === 0 ? 'bg-amber-100 text-amber-700 ring-2 ring-amber-50' :
                                 index === 1 ? 'bg-gray-200 text-gray-600' :
                                   index === 2 ? 'bg-orange-100 text-orange-700' :
-                                    'bg-indigo-50 text-indigo-600'
+                                    'bg-brand-50 text-brand-600'
                                 }`}>
                                 {index + 1}
                               </div>
                               <span className="font-semibold text-gray-700 dark:text-gray-200 capitalize">{city}</span>
                             </div>
                             <div className="flex flex-col items-end">
-                              <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                              <span className="font-bold text-brand-600 dark:text-brand-400">
                                 {count.toLocaleString()}
                               </span>
                               <span className="text-[10px] text-gray-400 uppercase tracking-wide">Patients</span>
@@ -952,7 +952,7 @@ export const AdminDashboard = () => {
               <CardHeader className="flex flex-row items-center justify-between pb-4 bg-gray-50/50 dark:bg-gray-800/10">
                 <div>
                   <CardTitle className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                    <Stethoscope className="h-5 w-5 text-blue-600" />
+                    <Stethoscope className="h-5 w-5 text-brand-600" />
                     Doctor Performance Analytics
                   </CardTitle>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Detailed breakdown of patient visits and trends per doctor</p>
@@ -982,7 +982,7 @@ export const AdminDashboard = () => {
                             <div className="flex items-center gap-3">
                               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${idx === 0 ? 'bg-amber-100 text-amber-700' :
                                 idx === 1 ? 'bg-gray-200 text-gray-600' :
-                                  idx === 2 ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-600'
+                                  idx === 2 ? 'bg-orange-100 text-orange-700' : 'bg-brand-100 text-brand-600'
                                 }`}>
                                 {doc.doctorName.split(' ').map(n => n[0]).join('').slice(0, 2)}
                               </div>
@@ -1000,30 +1000,30 @@ export const AdminDashboard = () => {
                           </td>
                           <td className="px-6 py-4 max-w-[220px] whitespace-nowrap">
                             <div className="flex items-center justify-center gap-2 text-xs">
-                              <div className="flex flex-col items-center bg-blue-50 dark:bg-blue-900/10 px-1.5 py-0.5 rounded border border-blue-100 dark:border-blue-900/20">
-                                <span className="font-bold text-blue-700 dark:text-blue-300">{doc.newPatients.day}</span>
-                                <span className="text-[8px] text-blue-400 uppercase">Day</span>
+                              <div className="flex flex-col items-center bg-brand-50 dark:bg-brand-900/10 px-1.5 py-0.5 rounded border border-brand-100 dark:border-brand-900/20">
+                                <span className="font-bold text-brand-700 dark:text-brand-300">{doc.newPatients.day}</span>
+                                <span className="text-[11px] text-brand-400 uppercase">Day</span>
                               </div>
                               <div className="h-4 w-px bg-gray-200"></div>
                               <div className="flex flex-col items-center">
                                 <span className="font-medium text-gray-700 dark:text-gray-300">{doc.newPatients.week}</span>
-                                <span className="text-[8px] text-gray-400 uppercase">Wk</span>
+                                <span className="text-[11px] text-gray-400 uppercase">Wk</span>
                               </div>
                               <div className="h-4 w-px bg-gray-200"></div>
                               <div className="flex flex-col items-center">
                                 <span className="font-medium text-gray-700 dark:text-gray-300">{doc.newPatients.month}</span>
-                                <span className="text-[8px] text-gray-400 uppercase">Mo</span>
+                                <span className="text-[11px] text-gray-400 uppercase">Mo</span>
                               </div>
                               <div className="h-4 w-px bg-gray-200"></div>
                               <div className="flex flex-col items-center">
                                 <span className="font-medium text-gray-700 dark:text-gray-300">{doc.newPatients.year}</span>
-                                <span className="text-[8px] text-gray-400 uppercase">Yr</span>
+                                <span className="text-[11px] text-gray-400 uppercase">Yr</span>
                               </div>
                             </div>
                           </td>
                           <td className="px-6 py-4 text-center whitespace-nowrap">
                             <div className="flex flex-col items-center">
-                              <span className="font-medium text-indigo-600 dark:text-indigo-400">{doc.returningPatients.toLocaleString()}</span>
+                              <span className="font-medium text-brand-600 dark:text-brand-400">{doc.returningPatients.toLocaleString()}</span>
                               <span className="text-[10px] text-gray-400">{(doc.returningPatients / doc.overallVisits * 100).toFixed(0)}% rate</span>
                             </div>
                           </td>
@@ -1037,7 +1037,7 @@ export const AdminDashboard = () => {
                             <div className="flex items-center justify-end gap-2">
                               <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{doc.sharePercent}%</span>
                               <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-blue-600" style={{ width: `${doc.sharePercent}%` }}></div>
+                                <div className="h-full bg-brand-600" style={{ width: `${doc.sharePercent}%` }}></div>
                               </div>
                             </div>
                           </td>
@@ -1051,7 +1051,7 @@ export const AdminDashboard = () => {
               </CardContent>
               <div className="bg-gray-50 dark:bg-gray-800/30 px-6 py-3 border-t border-gray-100 dark:border-gray-800 flex justify-between items-center text-xs text-gray-500">
                 <span>Showing top 5 doctors by volume</span>
-                <span className="hover:text-blue-600 cursor-pointer transition-colors">View All Doctors &rarr;</span>
+                <span className="hover:text-brand-600 cursor-pointer transition-colors">View All Doctors &rarr;</span>
               </div>
             </Card>
 
@@ -1092,8 +1092,8 @@ export const AdminDashboard = () => {
                         <div className="flex items-center gap-2 mt-2">
                           <div className="flex-1 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                             <div className={`h-full rounded-full ${idx === 0 ? 'bg-purple-500' :
-                              idx === 1 ? 'bg-blue-500' :
-                                idx === 2 ? 'bg-indigo-500' :
+                              idx === 1 ? 'bg-brand-500' :
+                                idx === 2 ? 'bg-brand-500' :
                                   idx === 3 ? 'bg-pink-500' : 'bg-gray-400'
                               }`} style={{ width: `${spec.sharePercent}%` }}></div>
                           </div>

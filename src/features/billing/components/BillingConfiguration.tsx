@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { visitTypeLabel } from '../utils/constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -310,15 +311,15 @@ const ChargeCatalog: React.FC = () => {
     const SortIcon = ({ column }: { column: keyof ChargeItem }) => {
         if (sortConfig?.key !== column) return <div className="ml-2 h-4 w-4" />; // Maintain spacing but hide arrow
         return sortConfig.direction === 'asc' ?
-            <ArrowUpDown className="ml-2 h-4 w-4 text-indigo-600" /> :
-            <ArrowUpDown className="ml-2 h-4 w-4 text-indigo-600 rotate-180" />;
+            <ArrowUpDown className="ml-2 h-4 w-4 text-brand-600" /> :
+            <ArrowUpDown className="ml-2 h-4 w-4 text-brand-600 rotate-180" />;
     };
 
     const getBadgeVariant = (type: ChargeItem['category']) => {
         switch (type) {
-            case 'Consultation': return 'bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200';
+            case 'Consultation': return 'bg-brand-100 text-brand-700 hover:bg-brand-200 border-brand-200';
             case 'Laboratory': return 'bg-purple-100 text-purple-700 hover:bg-purple-200 border-purple-200';
-            case 'Radiology': return 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border-indigo-200';
+            case 'Radiology': return 'bg-brand-100 text-brand-700 hover:bg-brand-200 border-brand-200';
             case 'Procedures': return 'bg-teal-100 text-teal-700 hover:bg-teal-200 border-teal-200';
             case 'Admission':
             case 'Bed Charges': return 'bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-200';
@@ -342,7 +343,7 @@ const ChargeCatalog: React.FC = () => {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                         <Input
                             placeholder="Search by item name..."
-                            className="pl-10 h-11 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                            className="pl-10 h-11 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 shadow-sm"
                             value={searchQuery}
                             onChange={handleSearchChange}
                         />
@@ -364,7 +365,7 @@ const ChargeCatalog: React.FC = () => {
                             </SelectContent>
                         </Select>
                         {filterVisitType !== 'ALL' && (
-                            <span className="absolute -top-2 -right-2 w-5 h-5 bg-indigo-600 text-white text-xs flex items-center justify-center rounded-full font-semibold">
+                            <span className="absolute -top-2 -right-2 w-5 h-5 bg-brand-600 text-white text-xs flex items-center justify-center rounded-full font-semibold">
                                 1
                             </span>
                         )}
@@ -386,7 +387,7 @@ const ChargeCatalog: React.FC = () => {
                             </SelectContent>
                         </Select>
                         {filterCategory !== 'ALL' && (
-                            <span className="absolute -top-2 -right-2 w-5 h-5 bg-indigo-600 text-white text-xs flex items-center justify-center rounded-full font-semibold">
+                            <span className="absolute -top-2 -right-2 w-5 h-5 bg-brand-600 text-white text-xs flex items-center justify-center rounded-full font-semibold">
                                 1
                             </span>
                         )}
@@ -406,12 +407,12 @@ const ChargeCatalog: React.FC = () => {
                             </SelectContent>
                         </Select>
                         {filterChargeType !== 'ALL' && (
-                            <span className="absolute -top-2 -right-2 w-5 h-5 bg-indigo-600 text-white text-xs flex items-center justify-center rounded-full font-semibold">
+                            <span className="absolute -top-2 -right-2 w-5 h-5 bg-brand-600 text-white text-xs flex items-center justify-center rounded-full font-semibold">
                                 1
                             </span>
                         )}
                     </div>
-                    <Button onClick={handleAddNew} className="bg-indigo-600 hover:bg-indigo-700 shadow-md transition-all hover:shadow-lg h-11 px-6">
+                    <Button onClick={handleAddNew} className="bg-brand-600 hover:bg-brand-700 shadow-md transition-all hover:shadow-lg h-11 px-6">
                         <Plus className="h-5 w-5 mr-2" /> Add Item
                     </Button>
                 </div>
@@ -480,7 +481,7 @@ const ChargeCatalog: React.FC = () => {
                             ) : currentItems.map((item, index) => {
                                 const isEditing = editingId === item.chargeItemId;
                                 return (
-                                    <TableRow key={item.chargeItemId} className={`transition-all group ${isEditing ? 'bg-indigo-50/50 dark:bg-indigo-950/30 border-l-4 border-indigo-600' :
+                                    <TableRow key={item.chargeItemId} className={`transition-all group ${isEditing ? 'bg-brand-50/50 dark:bg-brand-950/30 border-l-4 border-brand-600' :
                                         index % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50/50 dark:bg-gray-800/30'
                                         } hover:bg-gray-100 dark:hover:bg-gray-800`}>
                                         <TableCell className="py-3 px-4 font-medium">
@@ -507,13 +508,13 @@ const ChargeCatalog: React.FC = () => {
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         {['OPD', 'LAB', 'PHARMACY', 'IPD', 'ER', 'OTHER'].map(t => (
-                                                            <SelectItem key={t} value={t}>{t}</SelectItem>
+                                                            <SelectItem key={t} value={t}>{visitTypeLabel(t)}</SelectItem>
                                                         ))}
                                                     </SelectContent>
                                                 </Select>
                                             ) : (
-                                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                                    {item.visitType}
+                                                <Badge variant="outline" className="bg-brand-50 text-brand-700 border-brand-200">
+                                                    {visitTypeLabel(item.visitType)}
                                                 </Badge>
                                             )}
                                         </TableCell>
@@ -673,8 +674,8 @@ const ChargeCatalog: React.FC = () => {
                 <DialogContent className="max-w-2xl">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-2xl">
-                            <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
-                                <Plus className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+                            <div className="p-2 bg-brand-100 dark:bg-brand-900/30 rounded-lg">
+                                <Plus className="h-6 w-6 text-brand-600 dark:text-brand-400" />
                             </div>
                             <span>Add New Charge Item</span>
                         </DialogTitle>
@@ -737,7 +738,7 @@ const ChargeCatalog: React.FC = () => {
                                     </SelectTrigger>
                                     <SelectContent>
                                         {['OPD', 'LAB', 'PHARMACY', 'IPD', 'ER', 'OTHER'].map(t => (
-                                            <SelectItem key={t} value={t}>{t}</SelectItem>
+                                            <SelectItem key={t} value={t}>{visitTypeLabel(t)}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
@@ -834,7 +835,7 @@ const ChargeCatalog: React.FC = () => {
                         <Button
                             onClick={handleSave}
                             disabled={!isValid || isSaving}
-                            className="bg-indigo-600 hover:bg-indigo-700"
+                            className="bg-brand-600 hover:bg-brand-700"
                         >
                             <Save className="h-4 w-4 mr-2" />
                             {isSaving ? 'Saving...' : 'Save Item'}
@@ -877,7 +878,7 @@ export const BillingConfiguration: React.FC = () => {
             <div className="flex items-center justify-between shrink-0">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <FileText className="h-6 w-6 text-indigo-600" />
+                        <FileText className="h-6 w-6 text-brand-600" />
                         Charge Master
                     </h2>
                     <p className="text-gray-500 dark:text-gray-400 mt-1">
@@ -888,7 +889,7 @@ export const BillingConfiguration: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => setQuickGuideOpen(true)}
-                    className="gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+                    className="gap-2 text-brand-600 border-brand-200 hover:bg-brand-50 hover:text-brand-700"
                 >
                     <HelpCircle className="h-4 w-4" />
                     Quick Guide

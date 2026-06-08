@@ -86,7 +86,7 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
           "h-16 flex items-center border-b border-dashed border-gray-200 dark:border-gray-800",
           isSidebarCollapsed ? "justify-center px-0" : "px-6"
         )}>
-          <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+          <div className="flex items-center gap-2 text-brand-600 dark:text-brand-400">
             <LayoutDashboard className="h-6 w-6" />
             {!isSidebarCollapsed && (
               <span className="font-bold text-lg tracking-tight">Settings</span>
@@ -112,7 +112,7 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
               className={cn(
                 "flex items-center w-full p-3 rounded-xl transition-all duration-200 group relative",
                 activeTab === item.id
-                  ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 shadow-sm"
+                  ? "bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300 shadow-sm"
                   : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-gray-200",
                 isSidebarCollapsed ? "justify-center" : "gap-3"
               )}
@@ -120,7 +120,7 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
             >
               <item.icon className={cn(
                 "h-5 w-5 flex-shrink-0 transition-colors",
-                activeTab === item.id ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300"
+                activeTab === item.id ? "text-brand-600 dark:text-brand-400" : "text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300"
               )} />
 
               {!isSidebarCollapsed && (
@@ -131,7 +131,7 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
               )}
 
               {activeTab === item.id && !isSidebarCollapsed && (
-                <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-brand-500"></div>
               )}
             </button>
           ))}
@@ -165,7 +165,7 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
                 transition={{ duration: 0.4, ease: "easeOut" }}
                 className="rounded-2xl border border-border/60 bg-white/80 p-5 dark:bg-background/60 shadow-sm relative overflow-hidden"
               >
-                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -mx-10 -my-10 pointer-events-none" />
+                <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/10 rounded-full blur-3xl -mx-10 -my-10 pointer-events-none" />
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between relative z-10">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-primary">
@@ -204,12 +204,12 @@ export const SystemConfiguration: React.FC<SystemConfigurationProps> = ({ focusT
                   <Card className="border-border/70 bg-gradient-to-br from-white to-gray-50/50 dark:from-slate-900 dark:to-slate-800/50 backdrop-blur shadow-sm hover:shadow-md transition-shadow h-full">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <CardTitle className="text-sm font-medium">{t('systemConfiguration.subscription.cards.remainingDays.title')}</CardTitle>
-                      <motion.span whileHover={{ rotate: 15, scale: 1.1 }} className="rounded-full bg-blue-50 dark:bg-blue-900/20 p-2 text-blue-600 dark:text-blue-400 shadow-sm">
+                      <motion.span whileHover={{ rotate: 15, scale: 1.1 }} className="rounded-full bg-brand-50 dark:bg-brand-900/20 p-2 text-brand-600 dark:text-brand-400 shadow-sm">
                         <Calendar className="h-4 w-4" />
                       </motion.span>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
+                      <div className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand-600 to-brand-600 dark:from-brand-400 dark:to-brand-400">
                         {isHospitalLoading ? '...' : daysRemaining}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">

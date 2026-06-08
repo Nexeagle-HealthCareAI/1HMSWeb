@@ -27,26 +27,26 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
   const { t } = useTranslation();
   const defaultLoadingMessage = t('loginLayout.signingIn');
 
-  // Helper function to render company name with "easyHMS" in blue
+  // Helper function to render company name with "1HMS" highlighted
   const renderCompanyName = (companyName: string, textColorClass: string = '', fontSize: string = '') => {
-    const parts = companyName.split(' easyHMS');
+    const parts = companyName.split(' 1HMS');
     if (parts.length === 2) {
       return (
         <span className={`${textColorClass} ${fontSize}`}>
-          {parts[0]} <span className="text-healthcare-primary">easyHMS</span>
+          {parts[0]} <span className="text-healthcare-primary">1HMS</span>
         </span>
       );
     }
     return <span className={`${textColorClass} ${fontSize}`}>{companyName}</span>;
   };
 
-  // Helper function to render title with "easyHMS" in blue
+  // Helper function to render title with "1HMS" highlighted
   const renderTitle = (titleText: string) => {
-    const parts = titleText.split(' easyHMS');
+    const parts = titleText.split(' 1HMS');
     if (parts.length === 2) {
       return (
         <>
-          {parts[0]} <span className="text-healthcare-primary">easyHMS</span>
+          {parts[0]} <span className="text-healthcare-primary">1HMS</span>
         </>
       );
     }
@@ -65,27 +65,27 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
         </div>
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">NexEagle</h1>
-          <p className="text-blue-200 text-xs font-medium tracking-wide">HEALTHCARE EXCELLENCE</p>
+          <p className="text-brand-200 text-xs font-medium tracking-wide">HEALTHCARE EXCELLENCE</p>
         </div>
       </div>
 
-      <h2 className="text-3xl font-bold mb-4 leading-tight bg-gradient-to-r from-white via-blue-100 to-blue-200 bg-clip-text text-transparent">
+      <h2 className="text-3xl font-bold mb-4 leading-tight bg-gradient-to-r from-white via-brand-100 to-brand-200 bg-clip-text text-transparent">
         {t('loginLayout.tagline')}
       </h2>
 
-      <p className="text-sm text-blue-100/90 mb-6 leading-relaxed font-normal max-w-xl">
+      <p className="text-sm text-brand-100/90 mb-6 leading-relaxed font-normal max-w-xl">
         {t('loginLayout.description')}
       </p>
 
       <div className="grid grid-cols-2 gap-3 mb-6">
         <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-lg p-3 hover:bg-white/15 transition-all duration-300">
           <div className="text-2xl font-bold text-white mb-0.5">99.9%</div>
-          <div className="text-xs text-blue-200 font-medium uppercase tracking-wider">{t('loginLayout.uptime')}</div>
+          <div className="text-xs text-brand-200 font-medium uppercase tracking-wider">{t('loginLayout.uptime')}</div>
         </div>
 
         <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-lg p-3 hover:bg-white/15 transition-all duration-300">
           <div className="text-2xl font-bold text-white mb-0.5">24/7</div>
-          <div className="text-xs text-blue-200 font-medium uppercase tracking-wider">{t('loginLayout.support')}</div>
+          <div className="text-xs text-brand-200 font-medium uppercase tracking-wider">{t('loginLayout.support')}</div>
         </div>
       </div>
 

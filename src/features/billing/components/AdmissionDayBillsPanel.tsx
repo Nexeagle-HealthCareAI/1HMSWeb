@@ -138,10 +138,10 @@ export const AdmissionDayBillsPanel: React.FC<AdmissionDayBillsPanelProps> = ({ 
     };
 
     return (
-        <Card className="border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-indigo-500/5 bg-white flex flex-col overflow-hidden">
+        <Card className="border-0 ring-1 ring-black/5 rounded-2xl shadow-lg shadow-brand-500/5 bg-white flex flex-col overflow-hidden">
             <CardHeader className="pb-2 border-b border-slate-200 bg-slate-50 flex flex-row items-center justify-between gap-2">
                 <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
-                    <CalendarDays className="h-4 w-4 text-indigo-500" /> Day-wise Bills
+                    <CalendarDays className="h-4 w-4 text-brand-500" /> Day-wise Bills
                 </CardTitle>
                 <div className="flex items-center gap-2">
                     {openDay && (
@@ -172,15 +172,15 @@ export const AdmissionDayBillsPanel: React.FC<AdmissionDayBillsPanelProps> = ({ 
                         {/* Summary */}
                         <div className="grid grid-cols-3 gap-2 text-center">
                             <div className="rounded-xl border border-slate-200 p-2">
-                                <div className="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Charged</div>
+                                <div className="text-[11px] uppercase tracking-wider text-slate-400 font-bold">Charged</div>
                                 <div className="text-sm font-bold tabular-nums text-slate-800">{inr(data.totalCharged)}</div>
                             </div>
                             <div className="rounded-xl border border-slate-200 p-2">
-                                <div className="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Received</div>
+                                <div className="text-[11px] uppercase tracking-wider text-slate-400 font-bold">Received</div>
                                 <div className="text-sm font-bold tabular-nums text-emerald-700">{inr(data.totalReceived)}</div>
                             </div>
                             <div className="rounded-xl border border-slate-200 p-2">
-                                <div className="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Balance</div>
+                                <div className="text-[11px] uppercase tracking-wider text-slate-400 font-bold">Balance</div>
                                 <div className={cn('text-sm font-bold tabular-nums', data.balance > 0 ? 'text-rose-700' : 'text-emerald-700')}>{inr(Math.abs(data.balance))} {data.balance < 0 ? 'CR' : ''}</div>
                             </div>
                         </div>
@@ -188,19 +188,19 @@ export const AdmissionDayBillsPanel: React.FC<AdmissionDayBillsPanelProps> = ({ 
                         {/* Day cards */}
                         <div className="space-y-2">
                             {data.days.map(day => (
-                                <div key={day.dayNumber} className={cn('rounded-xl border', day.isClosed ? 'border-slate-200 bg-white' : 'border-indigo-200 bg-indigo-50/30')}>
+                                <div key={day.dayNumber} className={cn('rounded-xl border', day.isClosed ? 'border-slate-200 bg-white' : 'border-brand-200 bg-brand-50/30')}>
                                     <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-slate-100">
                                         <div className="flex items-center gap-2 min-w-0">
-                                            <span className="h-6 w-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 text-[11px] font-bold">{day.dayNumber}</span>
+                                            <span className="h-6 w-6 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center shrink-0 text-[11px] font-bold">{day.dayNumber}</span>
                                             <div className="min-w-0">
                                                 <div className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
                                                     Day {day.dayNumber}
                                                     {day.isClosed ? (
-                                                        <Badge variant="outline" className="h-4 px-1 text-[9px] bg-emerald-50 text-emerald-700 border-emerald-300"><CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> {day.interimBillNo}</Badge>
+                                                        <Badge variant="outline" className="h-4 px-1 text-[11px] bg-emerald-50 text-emerald-700 border-emerald-300"><CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> {day.interimBillNo}</Badge>
                                                     ) : day.isCurrent ? (
-                                                        <Badge variant="outline" className="h-4 px-1 text-[9px] bg-amber-50 text-amber-700 border-amber-300">In progress</Badge>
+                                                        <Badge variant="outline" className="h-4 px-1 text-[11px] bg-amber-50 text-amber-700 border-amber-300">In progress</Badge>
                                                     ) : (
-                                                        <Badge variant="outline" className="h-4 px-1 text-[9px] bg-slate-50 text-slate-500 border-slate-300">Open</Badge>
+                                                        <Badge variant="outline" className="h-4 px-1 text-[11px] bg-slate-50 text-slate-500 border-slate-300">Open</Badge>
                                                     )}
                                                 </div>
                                                 <div className="text-[10px] text-slate-500">{fmtWindow(day.fromUtc)} → {fmtWindow(day.toUtc)}</div>
@@ -217,7 +217,7 @@ export const AdmissionDayBillsPanel: React.FC<AdmissionDayBillsPanelProps> = ({ 
                                             {day.lines.map(l => (
                                                 <div key={l.chargeEventId} className="flex items-center justify-between gap-2 text-[11px]">
                                                     <span className="flex items-center gap-1.5 min-w-0 text-slate-700">
-                                                        <IndianRupee className="h-3 w-3 text-indigo-400 shrink-0" />
+                                                        <IndianRupee className="h-3 w-3 text-brand-400 shrink-0" />
                                                         <span className="truncate">{l.displayName || l.categoryCode || '—'}</span>
                                                         <span className="text-slate-400 shrink-0">{l.qty}×{inr(l.unitPrice)}</span>
                                                     </span>
@@ -232,7 +232,7 @@ export const AdmissionDayBillsPanel: React.FC<AdmissionDayBillsPanelProps> = ({ 
                                     {day.isClosed && (
                                         <div className="px-3 py-1.5 border-t border-slate-100 flex justify-end gap-1">
                                             {printSettings && patient && (
-                                                <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px] text-indigo-700 hover:bg-indigo-50" onClick={() => handlePrintDay(day)}>
+                                                <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px] text-brand-700 hover:bg-brand-50" onClick={() => handlePrintDay(day)}>
                                                     <Printer className="h-3 w-3 mr-1" /> Print
                                                 </Button>
                                             )}

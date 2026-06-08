@@ -3,7 +3,8 @@ import {
     Ward, Room, Bed, Patient, Admission, VitalReading, MedicationDose, RoundNote, LedgerEntry, AdmissionView,
     AdmissionType, IcdCode, BillingPolicy, Beneficiary, IncentiveAccrual,
 } from './types';
-import * as mock from './data/mockData';
+// Mock data removed for now — IPD starts empty until the real backend APIs are wired in.
+const COMMISSIONABLE_CATEGORIES = ['CONSULT', 'LAB', 'PROCEDURE'];
 
 let seq = 100;
 const nextId = (prefix: string) => `${prefix}${++seq}`;
@@ -65,19 +66,19 @@ const isToday = (iso?: string) => {
 };
 
 export const useIpdStore = create<IpdState>((set, get) => ({
-    wards: mock.wards,
-    rooms: mock.rooms,
-    beds: mock.beds.map(b => ({ ...b })),
-    patients: mock.patients,
-    admissions: mock.admissions.map(a => ({ ...a })),
-    vitals: mock.vitals.map(v => ({ ...v })),
-    medications: mock.medications.map(m => ({ ...m })),
-    roundNotes: mock.roundNotes.map(r => ({ ...r })),
-    ledger: mock.ledger.map(l => ({ ...l })),
-    icdCatalog: mock.icdCatalog,
-    policy: { ...mock.billingPolicy, doctorConsultFees: { ...mock.billingPolicy.doctorConsultFees } },
-    beneficiaries: mock.beneficiaries.map(b => ({ ...b })),
-    incentiveAccruals: mock.incentiveAccruals.map(a => ({ ...a })),
+    wards: [],
+    rooms: [],
+    beds: [],
+    patients: [],
+    admissions: [],
+    vitals: [],
+    medications: [],
+    roundNotes: [],
+    ledger: [],
+    icdCatalog: [],
+    policy: { autoConsultFeeOnAdmission: true, autoDailyBedCharge: true, doctorConsultFees: {} },
+    beneficiaries: [],
+    incentiveAccruals: [],
 
     admissionViews: () => {
         const s = get();
@@ -251,7 +252,7 @@ export const useIpdStore = create<IpdState>((set, get) => ({
                 const charges = state.ledger.filter(l => l.admissionId === admissionId && l.kind === 'CHARGE');
                 const totalCharges = charges.reduce((t, c) => t + c.amount, 0);
                 const commissionable = charges
-                    .filter(c => mock.COMMISSIONABLE_CATEGORIES.includes(c.category))
+                    .filter(c => COMMISSIONABLE_CATEGORIES.includes(c.category))
                     .reduce((t, c) => t + c.amount, 0);
                 const share = totalCharges > 0 ? commissionable / totalCharges : 0;
                 const eligible = Math.round(amount * share);

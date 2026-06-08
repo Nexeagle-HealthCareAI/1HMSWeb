@@ -147,6 +147,8 @@ export interface EPrescriptionDraftReq {
         doseNumber: number;
         remarks: string;
     }[];
+    // Doctor's custom fields — self-describing (key + label + value).
+    customFields?: { key: string; label?: string; value: string }[];
     loggedInUserName: string;
 }
 

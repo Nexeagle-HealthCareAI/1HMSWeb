@@ -19,6 +19,11 @@ export interface PatientProfileData {
   paymentMode: string | null;
   registeredAt: string;
   registeredBy: string;
+  bloodGroup?: string | null;
+  allergies?: string | null;
+  email?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
 }
 
 export interface UpdatePatientProfileData {
@@ -35,6 +40,11 @@ export interface UpdatePatientProfileData {
   pincode: string;
   insuranceId: string;
   paymentMode: string;
+  bloodGroup?: string;
+  allergies?: string;
+  email?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
 }
 
 export interface UpdatePatientProfileResponse {

@@ -166,7 +166,7 @@ export const EditShiftModal: React.FC<EditShiftModalProps> = ({
           </DialogTitle>
         </DialogHeader>
         
-        <div className="rounded-md bg-blue-50 border border-blue-200 text-sm text-blue-700 px-4 py-3 mb-4">
+        <div className="rounded-md bg-brand-50 border border-brand-200 text-sm text-brand-700 px-4 py-3 mb-4">
           {t('doctorCalendar.editShiftModal.info')}
         </div>
 

@@ -92,7 +92,7 @@ export const HeaderLanguageSelector: React.FC = () => {
 
           {/* RTL Indicator */}
           {isRTL() && (
-            <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full border border-white dark:border-gray-900" />
+            <div className="absolute -top-1 -right-1 w-2 h-2 bg-brand-500 rounded-full border border-white dark:border-gray-900" />
           )}
         </Button>
       </PopoverTrigger>
@@ -100,7 +100,7 @@ export const HeaderLanguageSelector: React.FC = () => {
       <PopoverContent className="w-72 p-0" align="end">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2">
-            <Languages className="h-4 w-4 text-blue-600" />
+            <Languages className="h-4 w-4 text-brand-600" />
             <h3 className="font-semibold text-sm">{t('languageSelector.selectLanguage')}</h3>
           </div>
           <p className="text-xs text-muted-foreground mt-1">{t('languageSelector.chooseLanguage')}</p>
@@ -113,7 +113,7 @@ export const HeaderLanguageSelector: React.FC = () => {
               onClick={() => handleLanguageChange(language.code)}
               className={cn(
                 "w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors",
-                i18n.language === language.code && "bg-blue-50 dark:bg-blue-900/20 border-r-2 border-blue-500"
+                i18n.language === language.code && "bg-brand-50 dark:bg-brand-900/20 border-r-2 border-brand-500"
               )}
             >
               <div className="flex items-center gap-3">
@@ -135,7 +135,7 @@ export const HeaderLanguageSelector: React.FC = () => {
                   </div>
                 </div>
                 {i18n.language === language.code && (
-                  <Check className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                  <Check className="h-4 w-4 text-brand-600 flex-shrink-0" />
                 )}
               </div>
             </button>
@@ -148,7 +148,7 @@ export const HeaderLanguageSelector: React.FC = () => {
             <span>{t('languageSelector.changesApplyImmediately')}</span>
           </div>
           {isRTL() && (
-            <div className="flex items-center gap-2 text-xs text-blue-600 mt-1">
+            <div className="flex items-center gap-2 text-xs text-brand-600 mt-1">
               <span>🔄</span>
               <span>{t('languageSelector.rtlLayoutActive')}</span>
             </div>

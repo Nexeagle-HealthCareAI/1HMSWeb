@@ -27,6 +27,10 @@ export const API_ENDPOINTS = {
       }
       return `/e-prescription/configuration/update-preference-setting/${params.join('&')}`;
     },
+    GET_FIELD_LAYOUT: (doctorId: string) =>
+      `/e-prescription/configuration/field-layout/doctorId=${encodeURIComponent(doctorId)}`,
+    UPDATE_FIELD_LAYOUT: (doctorId: string) =>
+      `/e-prescription/configuration/field-layout/doctorId=${encodeURIComponent(doctorId)}`,
     GET_PATIENT_VITALS: (patientId: string, appointmentId: string) =>
       `/e-prescription/patient-details/vitals?patientId=${encodeURIComponent(patientId)}&appointmentId=${encodeURIComponent(appointmentId)}`,
     PERSONALIZED_DATA: (doctorId: string, hospitalId?: string, lookupType?: string, source?: string) => {
@@ -62,7 +66,6 @@ export const API_ENDPOINTS = {
     LOGIN: 'auth/user/login',
     SEND_OTP: 'auth/otp/send',
     SIGN_UP: 'auth/user/register',
-    ONBOARDING_REGISTER: 'auth/user/onboarding/register',
     OTP_CHECKER: 'auth/otp/verify',
     SET_PASSWORD: 'auth/user/password?scope=set-password',
     RESET_PASSWORD: 'auth/user/password?scope=reset-password',
@@ -79,7 +82,15 @@ export const API_ENDPOINTS = {
     REGISTER: 'hospitals/register',
     GET_BY_ID: (id: string) => `hospitals/${id}`,
     GET_BY_USER_ID: (userId: string) => `hospitals/users/${userId}`,
+    MINE: 'hospitals/mine',
     GET_ANALYSIS: (hospitalId: string) => `hospitals/analysis/hospitalId=${hospitalId}`,
+  },
+  CHAINS: {
+    CREATE: 'chains',
+    MINE: 'chains/mine',
+    ONBOARD_HOSPITAL: (chainId: string) => `chains/${chainId}/hospitals`,
+    MINE_DOCTORS: 'chains/mine/doctors',
+    ADD_DOCTOR: (chainId: string) => `chains/${chainId}/doctors`,
   },
   DEPARTMENTS: {
     GLOBAL: 'departments/global',
@@ -110,14 +121,11 @@ export const API_ENDPOINTS = {
       `appointments/department-doctor?departmentId=${encodeURIComponent(departmentId)}&hospitalId=${encodeURIComponent(hospitalId)}`,
   },
   USER_MANAGEMENT: {
-    INVITE_USER: 'admin/user-onboarding/invitations?scope=new',
-    GET_INVITED_USERS: 'admin/user-onboarding/invitations',
-    GET_ONBOARDED_USERS: 'admin/users/onboarded',
+    QUICK_ADD_USER: 'admin/users/quick-add',
+    SHARE_CREDENTIALS: 'admin/users/share-credentials',
+    RESET_CREDENTIALS: 'admin/users/reset-credentials',
     GET_ALL_USERS: 'admin/user-onboarding/allusers',
-    MANAGE_INVITATION: 'admin/user-onboarding/invitations/manage',
     DEACTIVATE_USER: 'admin/user-onboarding/deactivate-user',
-    UPDATE_INVITED_USER: 'admin/user-onboarding/invited/Update-user',
-    VALIDATE_TOKEN: 'admin/user-onboarding/validate',
   },
   APPOINTMENTS: {
     SAVE_VITALS: 'appointments/patient-vitals',

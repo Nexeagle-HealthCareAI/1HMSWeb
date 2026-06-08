@@ -40,8 +40,8 @@ const shifts = [
     nameKey: 'shiftTabs.shifts.night.name',
     timeKey: 'shiftTabs.shifts.night.time',
     icon: Moon,
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-50 border-blue-200'
+    color: 'text-brand-600',
+    bgColor: 'bg-brand-50 border-brand-200'
   }
 ];
 

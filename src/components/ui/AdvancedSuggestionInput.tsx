@@ -215,7 +215,7 @@ export default function AdvancedSuggestionInput({
         </label>
       )}
       <div
-        className="flex min-h-[44px] flex-wrap items-center gap-1 rounded-xl border border-gray-300 px-2 py-1 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-colors"
+        className="flex min-h-[44px] flex-wrap items-center gap-1 rounded-xl border border-gray-300 px-2 py-1 focus-within:ring-2 focus-within:ring-brand-500 focus-within:border-brand-500 transition-colors"
         role="combobox"
         aria-expanded={open}
         aria-haspopup="listbox"
@@ -224,13 +224,13 @@ export default function AdvancedSuggestionInput({
         {tokens.map((t, i) => (
           <span
             key={t + i}
-            className="flex items-center gap-1 rounded-lg bg-blue-100 px-2 py-1 text-sm text-blue-800"
+            className="flex items-center gap-1 rounded-lg bg-brand-100 px-2 py-1 text-sm text-brand-800"
           >
             {t}
             <button
               type="button"
               onClick={() => removeToken(i)}
-              className="rounded p-0.5 text-blue-600 hover:bg-blue-200 transition-colors"
+              className="rounded p-0.5 text-brand-600 hover:bg-brand-200 transition-colors"
               aria-label={`Remove ${t}`}
             >
               ✕
@@ -279,7 +279,7 @@ export default function AdvancedSuggestionInput({
                 role="option"
                 aria-selected={i === active}
                 className={`cursor-pointer px-3 py-2 text-sm transition-colors ${
-                  i === active ? "bg-blue-100 text-blue-900" : "hover:bg-gray-50"
+                  i === active ? "bg-brand-100 text-brand-900" : "hover:bg-gray-50"
                 }`}
                 onMouseEnter={() => setActive(i)}
                 onMouseDown={(e) => {
@@ -289,7 +289,7 @@ export default function AdvancedSuggestionInput({
               >
                 {isCreate ? (
                   <span className="text-gray-700 flex items-center gap-2">
-                    <span className="text-blue-500">+</span>
+                    <span className="text-brand-500">+</span>
                     {display}
                   </span>
                 ) : (

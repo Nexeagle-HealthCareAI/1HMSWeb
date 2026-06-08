@@ -5,7 +5,6 @@ import { useAuthStore } from '@/store';
 
 // Lazy load public components
 const LoginPage = React.lazy(() => import('@/features/auth/pages/LoginPage').then(module => ({ default: module.default })));
-const UserOnboardingRegistration = React.lazy(() => import('@/features/auth/components/UserOnboardingRegistration').then(module => ({ default: module.default })));
 const TokenDetailsPage = React.lazy(() => import('@/features/appointment/pages/TokenDetailsPage').then(module => ({ default: module.default })));
 const NotFoundPage = React.lazy(() => import('@/components/shared/NotFoundPage').then(module => ({ default: module.default })));
 const PrescriptionVerificationPage = React.lazy(() => import('@/features/patient/pages/PrescriptionVerificationPage').then(module => ({ default: module.default })));
@@ -33,12 +32,6 @@ interface PublicRoutesProps {
 export const PublicRoutes: React.FC<PublicRoutesProps> = ({ isAuthenticated }) => {
   return (
     <>
-      {/* User Onboarding - Always accessible */}
-      <Route
-        path="/user-onboarding"
-        element={<UserOnboardingRegistration />}
-      />
-
       {/* Token View - Publicly accessible */}
       <Route
         path="/token-view"

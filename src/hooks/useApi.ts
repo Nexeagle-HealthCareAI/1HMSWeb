@@ -39,9 +39,6 @@ export const useAuthApi = {
   // Register
   register: () => createMutationHook(authApi.register),
 
-  // Onboarding Register
-  onboardingRegister: () => createMutationHook(authApi.onboardingRegister),
-
   // Send OTP
   sendOTP: () => createMutationHook(authApi.sendOTP),
 
@@ -54,9 +51,6 @@ export const useAuthApi = {
   // Reset password with userId (for forgot password)
   resetPasswordWithUserId: () => createMutationHook(authApi.resetPasswordWithUserId),
   getUserPermissions: () => createMutationHook(authApi.getUserPermissions),
-
-  // Validate onboarding token
-  validateToken: () => createMutationHook(authApi.validateToken),
 };
 
 // Hospital API hooks

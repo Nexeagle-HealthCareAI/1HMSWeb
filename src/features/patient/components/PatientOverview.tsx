@@ -131,7 +131,7 @@ export const PatientOverview: React.FC<PatientOverviewProps> = ({
       <div className="h-full flex flex-col bg-gray-50">
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600 mx-auto mb-4"></div>
             <p className="text-gray-600">Loading patient data...</p>
           </div>
         </div>
@@ -238,7 +238,7 @@ export const PatientOverview: React.FC<PatientOverviewProps> = ({
   };
 
   const getVitalStatus = (value: number, normalRange: [number, number], type: string) => {
-    if (value < normalRange[0]) return { status: 'low', color: 'text-blue-600', bg: 'bg-blue-50' };
+    if (value < normalRange[0]) return { status: 'low', color: 'text-brand-600', bg: 'bg-brand-50' };
     if (value > normalRange[1]) return { status: 'high', color: 'text-red-600', bg: 'bg-red-50' };
     return { status: 'normal', color: 'text-green-600', bg: 'bg-green-50' };
   };
@@ -280,11 +280,11 @@ export const PatientOverview: React.FC<PatientOverviewProps> = ({
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
                 <p className="text-xs sm:text-sm font-medium text-gray-600">Appointments</p>
-                <p className="text-lg sm:text-2xl font-bold text-blue-600">{metrics.completedAppointments}</p>
+                <p className="text-lg sm:text-2xl font-bold text-brand-600">{metrics.completedAppointments}</p>
                 <p className="text-xs text-gray-500">+{metrics.upcomingAppointments} upcoming</p>
               </div>
-              <div className="p-2 sm:p-3 bg-blue-100 rounded-full flex-shrink-0">
-                <Calendar className="h-4 w-4 sm:h-6 sm:w-6 text-blue-600" />
+              <div className="p-2 sm:p-3 bg-brand-100 rounded-full flex-shrink-0">
+                <Calendar className="h-4 w-4 sm:h-6 sm:w-6 text-brand-600" />
               </div>
             </div>
           </CardContent>
@@ -393,15 +393,15 @@ export const PatientOverview: React.FC<PatientOverviewProps> = ({
               </div>
 
               {/* Oxygen Saturation */}
-              <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="text-center p-4 bg-brand-50 rounded-lg border border-brand-200">
                 <div className="flex items-center justify-center gap-2 mb-2">
-                  <Target className="h-5 w-5 text-blue-600" />
+                  <Target className="h-5 w-5 text-brand-600" />
                   <Minus className="h-4 w-4 text-gray-500" />
                 </div>
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-2xl font-bold text-brand-600">
                   {metrics.latestVitals.oxygenSaturation}%
                 </div>
-                <div className="text-sm text-blue-600">O2 Saturation</div>
+                <div className="text-sm text-brand-600">O2 Saturation</div>
                 <div className="text-xs text-gray-500">Percentage</div>
               </div>
             </div>
@@ -520,8 +520,8 @@ export const PatientOverview: React.FC<PatientOverviewProps> = ({
             <div className="space-y-3">
               {appointments.slice(0, 3).map((appointment) => (
                 <div key={appointment.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="p-2 bg-blue-100 rounded-full">
-                    <Calendar className="h-4 w-4 text-blue-600" />
+                  <div className="p-2 bg-brand-100 rounded-full">
+                    <Calendar className="h-4 w-4 text-brand-600" />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900">{appointment.type}</p>

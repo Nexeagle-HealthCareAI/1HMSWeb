@@ -36,13 +36,13 @@ const DoctorCalendar = lazy(() => import('@/features/doctor-calendar/DoctorCalen
 const DocAI = lazy(() => import('@/features/ai/components/DocAI').then(module => ({ default: module.DocAI })));
 const ProfilePage = lazy(() => import('@/features/profile/components/ProfilePage').then(module => ({ default: module.ProfilePage })));
 
-const UserOnboardingRegistration = lazy(() => import('@/features/auth/components/UserOnboardingRegistration').then(module => ({ default: module.default })));
 const TokenDetailsPage = lazy(() => import('@/features/appointment/pages/TokenDetailsPage').then(module => ({ default: module.default })));
 const NotFoundPage = lazy(() => import('@/components/shared/NotFoundPage').then(module => ({ default: module.default })));
 const PrescriptionVerificationPage = lazy(() => import('@/features/patient/pages/PrescriptionVerificationPage').then(module => ({ default: module.default })));
 
 // Patient routes
 const PatientsPage = lazy(() => import('@/features/patient/components/PatientsPage').then(module => ({ default: module.PatientsPage })));
+const ChainManagement = lazy(() => import('@/features/hospital/components/ChainManagement').then(module => ({ default: module.ChainManagement })));
 const PatientProfilePage = lazy(() => import('@/features/patient/pages/PatientProfilePage').then(module => ({ default: module.PatientProfilePage })));
 const BillingPage = lazy(() => import('@/features/billing/pages/BillingPage').then(module => ({ default: module.BillingPage })));
 const BillingDashboard = lazy(() => import('@/features/billing/pages/BillingDashboard').then(module => ({ default: module.BillingDashboard })));
@@ -91,12 +91,6 @@ export const AppRoutes: React.FC = () => {
   return (
     <Suspense fallback={<RouteLoadingSpinner />}>
       <Routes>
-        {/* Public Routes - No Authentication Required */}
-        <Route
-          path="/user-onboarding"
-          element={<UserOnboardingRegistration />}
-        />
-
         {/* Token View - Publicly accessible */}
         <Route
           path="/token-view"
@@ -169,6 +163,16 @@ export const AppRoutes: React.FC = () => {
                 <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
                   <MainLayout>
                     <AdminConfigModule />
+                  </MainLayout>
+                </RouteGuard>
+              }
+            />
+            <Route
+              path="/chain"
+              element={
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                  <MainLayout>
+                    <ChainManagement />
                   </MainLayout>
                 </RouteGuard>
               }
@@ -287,7 +291,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/patient/:patientId"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Doctor']}>
                   <MainLayout>
                     <PatientProfilePage />
                   </MainLayout>

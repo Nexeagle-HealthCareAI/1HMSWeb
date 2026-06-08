@@ -89,7 +89,7 @@ export const QualificationSelector: React.FC<QualificationSelectorProps> = ({
                 variant="secondary"
                 className="flex items-center gap-1 px-3 py-1"
               >
-                <GraduationCap className="h-3 w-3 text-blue-600" />
+                <GraduationCap className="h-3 w-3 text-brand-600" />
                 {qual}
                 {!disabled && (
                   <Button

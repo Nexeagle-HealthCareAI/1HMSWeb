@@ -62,6 +62,8 @@ import { useAppointmentDetails } from '../hooks/useAppointmentDetails';
 import { useAuthStore, useAppStore } from '@/store';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { isReachable } from '@/offline';
+import { RowSkeletonList } from '@/components/ui/skeletons';
 import { AppointmentDetail, appointmentApi, ConsultTimelineResponse } from '../services/appointmentApi';
 import { PrescriptionPreviewModal, type GeneratePrescriptionDetailsRequest } from '@/components/shared/prescription-preview';
 import AttachmentsSection from '@/features/patient/components/AttachmentsSection';
@@ -219,7 +221,7 @@ export const AppointmentDashboard = () => {
           </Badge>
         );
       case 'UNDER_CONSULT':
-        return <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-xs px-1.5 py-0.5 font-medium">{statusLabels.UNDER_CONSULT}</Badge>;
+        return <Badge className="bg-brand-50 text-brand-700 border-brand-200 text-xs px-1.5 py-0.5 font-medium">{statusLabels.UNDER_CONSULT}</Badge>;
       case 'LAB_REQUIRED':
         return <Badge className="bg-orange-50 text-orange-700 border-orange-200 text-xs px-1.5 py-0.5 font-medium">{statusLabels.LAB_REQUIRED}</Badge>;
       case 'AWAITING_RECONSULT':
@@ -363,6 +365,7 @@ export const AppointmentDashboard = () => {
   // patient has arrived. Backend is idempotent, so this won't double-charge.
   const handleCollectConsult = async (markPaid: boolean) => {
     if (!appointmentForBilling?.patientId || billBusy) return;
+    if (!isReachable()) { toast({ title: 'Needs connection', description: 'Billing the consult requires an internet connection.', variant: 'destructive' }); return; }
     setBillBusy(true);
     try {
       const r = await postOpdConsult(appointmentForBilling.patientId, { markPaid, paymentMode: billPaymentMode, appointmentId: appointmentForBilling.appointmentId });
@@ -1051,19 +1054,19 @@ export const AppointmentDashboard = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] bg-slate-50 dark:bg-zinc-950 px-3 sm:px-4 lg:px-6 pt-1 pb-4 gap-4 overflow-auto relative">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-100/40 via-slate-50 to-slate-50 dark:from-indigo-900/20 dark:via-zinc-950 dark:to-zinc-950 pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-100/40 via-slate-50 to-slate-50 dark:from-brand-900/20 dark:via-zinc-950 dark:to-zinc-950 pointer-events-none" />
 
       {/* Header Container */}
-      <div className="flex-none bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl rounded-2xl shadow-xl shadow-indigo-900/5 border border-white/60 dark:border-zinc-800/60 overflow-hidden relative z-10 w-full mb-2">
+      <div className="flex-none bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl rounded-2xl shadow-xl shadow-brand-900/5 border border-white/60 dark:border-zinc-800/60 overflow-hidden relative z-10 w-full mb-2">
 
         {/* Header Section */}
-        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 dark:from-blue-900/80 dark:via-indigo-900/80 dark:to-violet-900/80 px-4 py-4 sm:px-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-blue-500/20">
+        <div className="bg-gradient-to-r from-brand-600 via-brand-600 to-violet-600 dark:from-brand-900/80 dark:via-brand-900/80 dark:to-violet-900/80 px-4 py-4 sm:px-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-brand-500/20">
 
           {/* Left: Title and Actions */}
           <div className="flex flex-col gap-1 min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2 drop-shadow-md">
-                <CalendarDays className="h-6 w-6 text-blue-200" />
+                <CalendarDays className="h-6 w-6 text-brand-200" />
                 {t('appointmentDashboard.title')}
               </h1>
 
@@ -1082,7 +1085,7 @@ export const AppointmentDashboard = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowQuickGuide(true)}
-                className="bg-white/5 hover:bg-white/10 text-blue-100 border border-white/10 rounded-full h-8 sm:h-10 px-3 sm:px-4 ml-2 transition-all duration-300 hover:scale-105 backdrop-blur-sm"
+                className="bg-white/5 hover:bg-white/10 text-brand-100 border border-white/10 rounded-full h-8 sm:h-10 px-3 sm:px-4 ml-2 transition-all duration-300 hover:scale-105 backdrop-blur-sm"
               >
                 <div className="flex items-center gap-2">
                   <HelpCircle className="h-4 w-4" />
@@ -1107,18 +1110,18 @@ export const AppointmentDashboard = () => {
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key as any)}
                   className={`group flex-1 lg:flex-none min-w-[100px] flex flex-col items-center text-center sm:items-start sm:text-left gap-0.5 rounded-xl px-3 py-1.5 border transition-all duration-300 text-[12px] relative overflow-hidden ${isActive
-                    ? 'bg-blue-500/20 text-white border-blue-400/40 shadow-[0_0_15px_rgba(59,130,246,0.5)]'
-                    : 'bg-transparent border-transparent text-blue-100/70 hover:bg-white/10 hover:text-white'
+                    ? 'bg-brand-500/20 text-white border-brand-400/40 shadow-[0_0_15px_rgba(59,130,246,0.5)]'
+                    : 'bg-transparent border-transparent text-brand-100/70 hover:bg-white/10 hover:text-white'
                     } hover:-translate-y-0.5`}
                 >
-                  {isActive && <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-indigo-400/20 animate-pulse" />}
+                  {isActive && <div className="absolute inset-0 bg-gradient-to-r from-brand-400/20 to-brand-400/20 animate-pulse" />}
                   <div className="flex items-center gap-1.5 text-[12px] font-bold relative z-10">
                     <span className={`p-1 rounded-lg ${isActive ? 'bg-white/20 shadow-inner' : 'bg-white/10'}`}>
-                      <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-blue-200'}`} />
+                      <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-brand-200'}`} />
                     </span>
                     <span className="tracking-wide">{tab.label}</span>
                   </div>
-                  <span className={`hidden sm:block text-[10px] leading-snug relative z-10 ${isActive ? 'text-blue-100' : 'text-blue-200/50'}`}>
+                  <span className={`hidden sm:block text-[10px] leading-snug relative z-10 ${isActive ? 'text-brand-100' : 'text-brand-200/50'}`}>
                     {tab.desc}
                   </span>
                 </button>
@@ -1133,18 +1136,18 @@ export const AppointmentDashboard = () => {
         {/* KPI Section */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-4">
           {/* Total Appointments */}
-          <div className="relative overflow-hidden bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-5 rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-lg hover:shadow-indigo-500/20 hover:-translate-y-1 transition-all duration-300 group">
+          <div className="relative overflow-hidden bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-5 rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-lg hover:shadow-brand-500/20 hover:-translate-y-1 transition-all duration-300 group">
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
-              <Calendar className="h-20 w-20 text-indigo-500 -rotate-12" />
+              <Calendar className="h-20 w-20 text-brand-500 -rotate-12" />
             </div>
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-br from-brand-500/5 to-transparent pointer-events-none" />
             <div className="flex items-center gap-4 mb-3 relative z-10">
-              <div className="p-2.5 bg-indigo-100 dark:bg-indigo-500/20 rounded-xl shadow-inner ring-1 ring-indigo-500/30 group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white transition-all duration-300 text-indigo-600 dark:text-indigo-400">
+              <div className="p-2.5 bg-brand-100 dark:bg-brand-500/20 rounded-xl shadow-inner ring-1 ring-brand-500/30 group-hover:scale-110 group-hover:bg-brand-500 group-hover:text-white transition-all duration-300 text-brand-600 dark:text-brand-400">
                 <Calendar className="h-5 w-5" />
               </div>
-              <span className="text-xs font-bold uppercase tracking-widest text-indigo-900/70 dark:text-indigo-300/80">Total</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-brand-900/70 dark:text-brand-300/80">Total</span>
             </div>
-            <div className="text-4xl font-mono font-black text-indigo-900 dark:text-white relative z-10 tracking-tighter drop-shadow-sm ml-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-indigo-600 group-hover:to-violet-500 dark:group-hover:from-indigo-400 dark:group-hover:to-violet-400 transition-all">{kpiStats.total}</div>
+            <div className="text-4xl font-mono font-black text-brand-900 dark:text-white relative z-10 tracking-tighter drop-shadow-sm ml-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-brand-600 group-hover:to-violet-500 dark:group-hover:from-brand-400 dark:group-hover:to-violet-400 transition-all">{kpiStats.total}</div>
           </div>
 
           {activeTab !== 'future' && (
@@ -1197,7 +1200,7 @@ export const AppointmentDashboard = () => {
                 <span className="text-xs font-bold uppercase tracking-widest text-cyan-900/70 dark:text-cyan-300/80 truncate max-w-[100px]" title={doc.name}>{doc.name}</span>
               </div>
               <div className="relative z-10 ml-1">
-                <div className="text-4xl font-mono font-black text-cyan-900 dark:text-white tracking-tighter drop-shadow-sm group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-cyan-600 group-hover:to-blue-500 dark:group-hover:from-cyan-400 dark:group-hover:to-blue-400 transition-all">{doc.count}</div>
+                <div className="text-4xl font-mono font-black text-cyan-900 dark:text-white tracking-tighter drop-shadow-sm group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-cyan-600 group-hover:to-brand-500 dark:group-hover:from-cyan-400 dark:group-hover:to-brand-400 transition-all">{doc.count}</div>
                 {activeTab === 'past' && doc.noShowCount > 0 && (
                   <div className="flex items-center gap-1 mt-2 text-[10px] font-bold text-red-100 bg-red-500 dark:bg-red-600 px-2 pl-1 py-0.5 rounded shadow-[0_0_8px_rgba(239,68,68,0.5)] w-fit uppercase tracking-wider backdrop-blur-sm bg-opacity-90">
                     <UserX className="h-3 w-3" />
@@ -1214,32 +1217,32 @@ export const AppointmentDashboard = () => {
 
 
           {/* Compact Search Bar and Filters */}
-          <div className="mb-4 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl p-3 sm:p-4 rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-xl shadow-indigo-900/5 relative z-10 w-full overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 to-transparent dark:from-blue-900/10 pointer-events-none" />
+          <div className="mb-4 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl p-3 sm:p-4 rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-xl shadow-brand-900/5 relative z-10 w-full overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-brand-50/30 to-transparent dark:from-brand-900/10 pointer-events-none" />
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:flex-wrap relative z-10">
               {/* Search Input */}
               <div className="relative w-full sm:w-80 lg:w-96 flex-none">
-                <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-indigo-500/70 dark:text-indigo-400" />
+                <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-brand-500/70 dark:text-brand-400" />
                 <Input
                   placeholder={t('appointmentDashboard.searchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-10 bg-white/80 dark:bg-zinc-950/50 border-indigo-100/50 dark:border-zinc-800/80 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 rounded-xl transition-all duration-300 shadow-inner font-medium"
+                  className="pl-10 h-10 bg-white/80 dark:bg-zinc-950/50 border-brand-100/50 dark:border-zinc-800/80 focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500/50 rounded-xl transition-all duration-300 shadow-inner font-medium"
                 />
               </div>
 
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6 w-full sm:w-auto flex-1">
                 {/* Doctor Filter Dropdown */}
                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <label className="text-xs font-bold uppercase tracking-widest text-indigo-900/60 dark:text-indigo-200/60 whitespace-nowrap">{t('appointmentDashboard.doctorLabel')}</label>
+                  <label className="text-xs font-bold uppercase tracking-widest text-brand-900/60 dark:text-brand-200/60 whitespace-nowrap">{t('appointmentDashboard.doctorLabel')}</label>
                   <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
-                    <SelectTrigger className="w-full sm:w-48 h-10 bg-white/80 dark:bg-zinc-950/50 border-indigo-100/50 dark:border-zinc-800/80 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 rounded-xl transition-all duration-300 shadow-inner font-medium">
+                    <SelectTrigger className="w-full sm:w-48 h-10 bg-white/80 dark:bg-zinc-950/50 border-brand-100/50 dark:border-zinc-800/80 focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500/50 rounded-xl transition-all duration-300 shadow-inner font-medium">
                       <SelectValue placeholder={t('appointmentDashboard.allDoctors')} />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl border-indigo-100/50 dark:border-zinc-800 backdrop-blur-xl bg-white/95 dark:bg-zinc-900/95 shadow-xl">
-                      <SelectItem value="all" className="font-medium cursor-pointer rounded-lg focus:bg-indigo-50 dark:focus:bg-indigo-900/30">{t('appointmentDashboard.allDoctors')}</SelectItem>
+                    <SelectContent className="rounded-xl border-brand-100/50 dark:border-zinc-800 backdrop-blur-xl bg-white/95 dark:bg-zinc-900/95 shadow-xl">
+                      <SelectItem value="all" className="font-medium cursor-pointer rounded-lg focus:bg-brand-50 dark:focus:bg-brand-900/30">{t('appointmentDashboard.allDoctors')}</SelectItem>
                       {doctorOptions.map((doctor) => (
-                        <SelectItem key={doctor.value} value={doctor.value} className="font-medium cursor-pointer rounded-lg focus:bg-indigo-50 dark:focus:bg-indigo-900/30">
+                        <SelectItem key={doctor.value} value={doctor.value} className="font-medium cursor-pointer rounded-lg focus:bg-brand-50 dark:focus:bg-brand-900/30">
                           {doctor.label}
                         </SelectItem>
                       ))}
@@ -1262,15 +1265,15 @@ export const AppointmentDashboard = () => {
                   const minFutureDate = tomorrow.toISOString().split('T')[0];
 
                   return (
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4 w-full sm:w-auto relative px-4 sm:border-l border-indigo-100/50 dark:border-zinc-800/50">
-                      <label className="text-xs font-bold uppercase tracking-widest text-indigo-900/60 dark:text-indigo-200/60 whitespace-nowrap hidden sm:block">{t('appointmentDashboard.dateRange.label')}</label>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4 w-full sm:w-auto relative px-4 sm:border-l border-brand-100/50 dark:border-zinc-800/50">
+                      <label className="text-xs font-bold uppercase tracking-widest text-brand-900/60 dark:text-brand-200/60 whitespace-nowrap hidden sm:block">{t('appointmentDashboard.dateRange.label')}</label>
                       <div className="flex items-center gap-2">
                         <div className="relative w-full">
                           <Input
                             type="date"
                             value={startDate}
                             onChange={(e) => handleStartDateChange(e.target.value)}
-                            className="w-full sm:w-36 h-10 bg-white/80 dark:bg-zinc-950/50 border-indigo-100/50 dark:border-zinc-800/80 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 rounded-xl transition-all duration-300 shadow-inner text-xs font-mono font-bold"
+                            className="w-full sm:w-36 h-10 bg-white/80 dark:bg-zinc-950/50 border-brand-100/50 dark:border-zinc-800/80 focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500/50 rounded-xl transition-all duration-300 shadow-inner text-xs font-mono font-bold"
                             max={activeTab === 'past' ? maxPastDate : undefined}
                             min={activeTab === 'future' ? minFutureDate : undefined}
                           />
@@ -1281,7 +1284,7 @@ export const AppointmentDashboard = () => {
                             type="date"
                             value={endDate}
                             onChange={(e) => handleEndDateChange(e.target.value)}
-                            className="w-full sm:w-36 h-10 bg-white/80 dark:bg-zinc-950/50 border-indigo-100/50 dark:border-zinc-800/80 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/50 rounded-xl transition-all duration-300 shadow-inner text-xs font-mono font-bold"
+                            className="w-full sm:w-36 h-10 bg-white/80 dark:bg-zinc-950/50 border-brand-100/50 dark:border-zinc-800/80 focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500/50 rounded-xl transition-all duration-300 shadow-inner text-xs font-mono font-bold"
                             min={startDate || (activeTab === 'future' ? minFutureDate : undefined)}
                             max={activeTab === 'past' ? maxPastDate : undefined}
                           />
@@ -1303,7 +1306,7 @@ export const AppointmentDashboard = () => {
                     { key: 'all', label: t('appointmentDashboard.statusFilters.all'), color: 'bg-slate-100 text-slate-700 border-slate-200/50 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700/50 hover:bg-slate-200' },
                     { key: 'VITALS_REQUIRED', label: t('appointmentDashboard.statusFilters.vitalsRequired'), color: 'bg-rose-100 text-rose-700 border-rose-200/50 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-800/50 hover:bg-rose-200' },
                     { key: 'READY', label: t('appointmentDashboard.statusFilters.ready'), color: 'bg-green-100 text-green-700 border-green-200/50 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800/50 hover:bg-green-200' },
-                    { key: 'UNDER_CONSULT', label: t('appointmentDashboard.statusFilters.underConsult'), color: 'bg-blue-100 text-blue-700 border-blue-200/50 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/50 hover:bg-blue-200' },
+                    { key: 'UNDER_CONSULT', label: t('appointmentDashboard.statusFilters.underConsult'), color: 'bg-brand-100 text-brand-700 border-brand-200/50 dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800/50 hover:bg-brand-200' },
                     { key: 'LAB_REQUIRED', label: t('appointmentDashboard.statusFilters.labRequired'), color: 'bg-orange-100 text-orange-700 border-orange-200/50 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800/50 hover:bg-orange-200' },
                     { key: 'AWAITING_RECONSULT', label: t('appointmentDashboard.statusFilters.awaitingReconsult'), color: 'bg-yellow-100 text-yellow-700 border-yellow-200/50 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800/50 hover:bg-yellow-200' },
                     { key: 'COMPLETED', label: t('appointmentDashboard.statusFilters.completed'), color: 'bg-emerald-100 text-emerald-700 border-emerald-200/50 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800/50 hover:bg-emerald-200' },
@@ -1368,11 +1371,10 @@ export const AppointmentDashboard = () => {
             </div>
           )}
 
-          {/* Loading State */}
+          {/* Loading State — skeleton board (no blocking spinner) */}
           {isLoading && (
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600 dark:text-gray-400">{t('appointmentDashboard.loadingAppointments')}</p>
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+              <RowSkeletonList rows={6} />
             </div>
           )}
 
@@ -1397,17 +1399,17 @@ export const AppointmentDashboard = () => {
           {/* Current Appointments Table */}
           {!isLoading && !error && (
             <div className="space-y-4">
-              <div className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl border border-white/50 dark:border-zinc-800/50 rounded-2xl overflow-x-auto shadow-xl shadow-indigo-900/5 relative z-10">
-                <div className="px-2 sm:px-4 py-2.5 border-b border-indigo-100/50 dark:border-zinc-800/50 bg-gradient-to-r from-indigo-50/30 to-transparent dark:from-indigo-900/10">
+              <div className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl border border-white/50 dark:border-zinc-800/50 rounded-2xl overflow-x-auto shadow-xl shadow-brand-900/5 relative z-10">
+                <div className="px-2 sm:px-4 py-2.5 border-b border-brand-100/50 dark:border-zinc-800/50 bg-gradient-to-r from-brand-50/30 to-transparent dark:from-brand-900/10">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
                     <div>
-                      <p className="text-xs font-bold text-indigo-900/60 dark:text-indigo-200/60 uppercase tracking-widest">
+                      <p className="text-xs font-bold text-brand-900/60 dark:text-brand-200/60 uppercase tracking-widest">
                         {totalPages > 1 && `Page ${currentPage} of ${totalPages}`}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
                       {totalPages > 1 && (
-                        <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800/50 text-xs px-2 py-1 shadow-sm">
+                        <Badge variant="outline" className="bg-brand-50 text-brand-700 border-brand-200 dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800/50 text-xs px-2 py-1 shadow-sm">
                           {currentPage}/{totalPages}
                         </Badge>
                       )}
@@ -1419,45 +1421,45 @@ export const AppointmentDashboard = () => {
                 <div className="hidden md:block overflow-x-auto w-full">
                   <Table className="border-collapse min-w-[700px] md:min-w-full text-xs md:text-sm">
                     <TableHeader>
-                      <TableRow className="bg-indigo-50/50 dark:bg-indigo-900/20 backdrop-blur-md hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 border-b border-indigo-100/50 dark:border-zinc-800/50">
-                        <TableHead className="font-bold text-indigo-900 dark:text-indigo-100 text-xs py-2 px-2 tracking-wide uppercase">
+                      <TableRow className="bg-brand-50/50 dark:bg-brand-900/20 backdrop-blur-md hover:bg-brand-50/50 dark:hover:bg-brand-900/20 border-b border-brand-100/50 dark:border-zinc-800/50">
+                        <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase">
                           <div className="flex items-center gap-1.5 drop-shadow-sm">
-                            <User className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                            <User className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" />
                             <span>{t('appointmentDashboard.table.patientId')}</span>
-                            <Eye className="h-3 w-3 text-indigo-400/50" />
+                            <Eye className="h-3 w-3 text-brand-400/50" />
                           </div>
                         </TableHead>
-                        <TableHead className="font-bold text-indigo-900 dark:text-indigo-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">{t('appointmentDashboard.table.patientName')}</TableHead>
-                        <TableHead className="font-bold text-indigo-900 dark:text-indigo-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">{t('appointmentDashboard.table.doctorName')}</TableHead>
-                        <TableHead className="font-bold text-indigo-900 dark:text-indigo-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">{t('appointmentDashboard.table.tokenNo')}</TableHead>
+                        <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">{t('appointmentDashboard.table.patientName')}</TableHead>
+                        <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">{t('appointmentDashboard.table.doctorName')}</TableHead>
+                        <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">{t('appointmentDashboard.table.tokenNo')}</TableHead>
                         {activeTab === 'current' && (
-                          <TableHead className="font-bold text-indigo-900 dark:text-indigo-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">{t('appointmentDashboard.table.printToken', { defaultValue: 'Print Token' })}</TableHead>
+                          <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">{t('appointmentDashboard.table.printToken', { defaultValue: 'Print Token' })}</TableHead>
                         )}
-                        <TableHead className="font-bold text-indigo-900 dark:text-indigo-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">
+                        <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">
                           {activeTab === 'past'
                             ? t('appointmentDashboard.table.lastAppointmentDate')
                             : activeTab === 'future'
                               ? t('appointmentDashboard.table.appointmentDate')
                               : t('appointmentDashboard.table.appointmentTime')}
                         </TableHead>
-                        <TableHead className="font-bold text-indigo-900 dark:text-indigo-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">
+                        <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">
                           {activeTab === 'past'
                             ? t('appointmentDashboard.table.lastCompletedStatus')
                             : t('appointmentDashboard.table.currentStatus')}
                         </TableHead>
-                        <TableHead className="font-bold text-indigo-900 dark:text-indigo-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">
+                        <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">
                           {t('appointmentDashboard.table.labReports', { defaultValue: 'Lab reports' })}
                         </TableHead>
-                        <TableHead className="font-bold text-indigo-900 dark:text-indigo-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">
+                        <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">
                           {t('appointmentDashboard.table.case', { defaultValue: 'Case' })}
                         </TableHead>
 
                         {activeTab !== 'past' && (
-                          <TableHead className="font-bold text-indigo-900 dark:text-indigo-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">{t('appointmentDashboard.table.actions')}</TableHead>
+                          <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">{t('appointmentDashboard.table.actions')}</TableHead>
                         )}
-                        <TableHead className="font-bold text-indigo-900 dark:text-indigo-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">{t('appointmentDashboard.table.printPrescription')}</TableHead>
+                        <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">{t('appointmentDashboard.table.printPrescription')}</TableHead>
                         {activeTab === 'past' && (
-                          <TableHead className="font-bold text-indigo-900 dark:text-indigo-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">{t('appointmentDashboard.table.isCompleted')}</TableHead>
+                          <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">{t('appointmentDashboard.table.isCompleted')}</TableHead>
                         )}
                       </TableRow>
                     </TableHeader>
@@ -1466,28 +1468,28 @@ export const AppointmentDashboard = () => {
                         <TableRow className="hover:bg-transparent">
                           <TableCell colSpan={activeTab === 'past' ? 9 : activeTab === 'current' ? 10 : 9} className="text-center py-12">
                             <div className="flex flex-col items-center gap-3">
-                              <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center shadow-inner">
-                                <CalendarDays className="h-6 w-6 text-indigo-400 dark:text-indigo-500" />
+                              <div className="w-12 h-12 bg-brand-50 dark:bg-brand-900/30 rounded-full flex items-center justify-center shadow-inner">
+                                <CalendarDays className="h-6 w-6 text-brand-400 dark:text-brand-500" />
                               </div>
                               <div>
-                                <p className="text-indigo-900 dark:text-white font-bold text-sm tracking-wide">
+                                <p className="text-brand-900 dark:text-white font-bold text-sm tracking-wide">
                                   {activeTab === 'current' && t('appointmentDashboard.emptyStates.current')}
                                   {activeTab === 'past' && t('appointmentDashboard.emptyStates.past')}
                                   {activeTab === 'future' && t('appointmentDashboard.emptyStates.future')}
                                 </p>
-                                <p className="text-indigo-600/70 dark:text-indigo-400/70 text-xs font-medium mt-1">{t('appointmentDashboard.emptyStates.adjustFilters')}</p>
+                                <p className="text-brand-600/70 dark:text-brand-400/70 text-xs font-medium mt-1">{t('appointmentDashboard.emptyStates.adjustFilters')}</p>
                               </div>
                             </div>
                           </TableCell>
                         </TableRow>
                       ) : (
                         currentAppointments.map((appointment) => (
-                          <TableRow key={appointment.appointmentId} className={`group hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-all border-b border-indigo-50 dark:border-zinc-800/50 ${compactMode ? 'h-10' : 'h-12'} text-xs md:text-sm relative hover:shadow-[inset_0_0_15px_rgba(59,130,246,0.1)]`}>
+                          <TableRow key={appointment.appointmentId} className={`group hover:bg-brand-50/50 dark:hover:bg-brand-900/20 transition-all border-b border-brand-50 dark:border-zinc-800/50 ${compactMode ? 'h-10' : 'h-12'} text-xs md:text-sm relative hover:shadow-[inset_0_0_15px_rgba(59,130,246,0.1)]`}>
                             {/* Patient ID */}
                             <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                               <div
                                 onClick={() => handlePatientClick(appointment)}
-                                className="inline-flex items-center gap-1.5 bg-white dark:bg-zinc-800 border border-indigo-100 dark:border-zinc-700 px-2 py-1 rounded shadow-sm text-[10px] sm:text-xs font-mono font-bold text-indigo-700 dark:text-indigo-300 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:border-indigo-300 dark:hover:border-indigo-600 transition-all hover:scale-105"
+                                className="inline-flex items-center gap-1.5 bg-white dark:bg-zinc-800 border border-brand-100 dark:border-zinc-700 px-2 py-1 rounded shadow-sm text-[10px] sm:text-xs font-mono font-bold text-brand-700 dark:text-brand-300 cursor-pointer hover:bg-brand-50 dark:hover:bg-brand-900/50 hover:border-brand-300 dark:hover:border-brand-600 transition-all hover:scale-105"
                               >
                                 <User className="h-3 w-3" />
                                 <span>{appointment.patientId}</span>
@@ -1497,7 +1499,7 @@ export const AppointmentDashboard = () => {
                             {/* Patient Name */}
                             <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                               <div className="min-w-0 cursor-pointer" onClick={() => handlePatientClick(appointment)}>
-                                <div className="font-bold text-slate-800 dark:text-slate-200 text-xs truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors drop-shadow-sm">
+                                <div className="font-bold text-slate-800 dark:text-slate-200 text-xs truncate group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors drop-shadow-sm">
                                   {appointment.patientFullName?.split('-')[0].trim()}
                                 </div>
                                 {appointment.patientFullName?.includes('-') && (
@@ -1506,12 +1508,12 @@ export const AppointmentDashboard = () => {
                                   </div>
                                 )}
                                 {appointment.referrerName && (
-                                  <div className="text-[10px] text-indigo-500 dark:text-indigo-300 truncate leading-tight font-medium">
+                                  <div className="text-[10px] text-brand-500 dark:text-brand-300 truncate leading-tight font-medium">
                                     {(appointment.referrerRelation || 'C/O')} {appointment.referrerName}
                                   </div>
                                 )}
                                 <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
-                                  <Phone className="h-2.5 w-2.5 text-indigo-400" />
+                                  <Phone className="h-2.5 w-2.5 text-brand-400" />
                                   <span className="truncate">{appointment.patientMobile}</span>
                                 </div>
                               </div>
@@ -1520,7 +1522,7 @@ export const AppointmentDashboard = () => {
                             {/* Doctor Name */}
                             <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                               <div className="flex items-center gap-1.5">
-                                <div className="w-5 h-5 bg-gradient-to-br from-cyan-100 to-blue-100 dark:from-cyan-900/50 dark:to-blue-900/50 rounded-full flex items-center justify-center flex-shrink-0 shadow-inner border border-white/50 dark:border-transparent">
+                                <div className="w-5 h-5 bg-gradient-to-br from-cyan-100 to-brand-100 dark:from-cyan-900/50 dark:to-brand-900/50 rounded-full flex items-center justify-center flex-shrink-0 shadow-inner border border-white/50 dark:border-transparent">
                                   <User className="h-2.5 w-2.5 text-cyan-700 dark:text-cyan-300" />
                                 </div>
                                 <span className="text-slate-700 dark:text-slate-300 text-xs truncate font-semibold">
@@ -1531,7 +1533,7 @@ export const AppointmentDashboard = () => {
 
                             {/* Token No */}
                             <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
-                              <span className="font-mono bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded text-xs font-bold border border-indigo-200 dark:border-indigo-800 shadow-sm">
+                              <span className="font-mono bg-brand-100 dark:bg-brand-900/50 text-brand-700 dark:text-brand-300 px-2 py-0.5 rounded text-xs font-bold border border-brand-200 dark:border-brand-800 shadow-sm">
                                 {appointment.token?.tokenNumber || t('appointmentDashboard.actionButtons.notApplicable')}
                               </span>
                             </TableCell>
@@ -1594,7 +1596,7 @@ export const AppointmentDashboard = () => {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleOpenLabAttachments(appointment)}
-                                className="h-8 w-8 p-0 text-blue-600 hover:bg-gradient-to-br hover:from-blue-500 hover:to-indigo-500 hover:text-white dark:hover:from-blue-600 dark:hover:text-white rounded-full transition-all shadow-sm hover:shadow-blue-500/30"
+                                className="h-8 w-8 p-0 text-brand-600 hover:bg-gradient-to-br hover:from-brand-500 hover:to-brand-500 hover:text-white dark:hover:from-brand-600 dark:hover:text-white rounded-full transition-all shadow-sm hover:shadow-brand-500/30"
                                 title={t('appointmentDashboard.actionButtons.addLabReport', { defaultValue: 'Add lab report' })}
                               >
                                 <Upload className="h-4 w-4" />
@@ -1604,7 +1606,7 @@ export const AppointmentDashboard = () => {
                             {/* Case */}
                             <TableCell className={`${compactMode ? 'py-1 px-1.5' : 'py-1.5 px-2'}`}>
                               <div className="flex flex-col items-start gap-0.5">
-                                <Badge className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50 text-[10px] px-2 py-0.5 font-bold shadow-sm">
+                                <Badge className="bg-gradient-to-r from-brand-50 to-brand-50 dark:from-brand-900/30 dark:to-brand-900/30 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-800/50 text-[10px] px-2 py-0.5 font-bold shadow-sm">
                                   {appointment.appointmentType || 'New / Fee'}
                                 </Badge>
                                 {opdFeeFor(appointment) > 0 && (
@@ -1640,7 +1642,7 @@ export const AppointmentDashboard = () => {
                                     disabled={['COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)}
                                     className={`h-7 px-2.5 text-xs font-bold transition-all duration-300 ${['COMPLETED', 'CANCELLED'].includes(appointment.finalStatusCode)
                                       ? 'text-slate-400 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-50 bg-slate-50 dark:bg-slate-900/20'
-                                      : 'text-indigo-600 border-indigo-200 dark:border-indigo-800/50 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-blue-50 dark:hover:from-indigo-900/20 dark:hover:to-blue-900/20 shadow-sm hover:shadow-md hover:scale-105 hover:border-indigo-300 dark:hover:border-indigo-700'
+                                      : 'text-brand-600 border-brand-200 dark:border-brand-800/50 hover:bg-gradient-to-r hover:from-brand-50 hover:to-brand-50 dark:hover:from-brand-900/20 dark:hover:to-brand-900/20 shadow-sm hover:shadow-md hover:scale-105 hover:border-brand-300 dark:hover:border-brand-700'
                                       }`}
                                     onClick={() => handleRescheduleClick(appointment)}
                                   >
@@ -1736,19 +1738,19 @@ export const AppointmentDashboard = () => {
                 <div className="md:hidden space-y-4">
                   {filteredAppointments.length === 0 ? (
                     <div className="text-center py-12 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-md rounded-2xl border border-white/50 dark:border-zinc-800/50 shadow-inner">
-                      <CalendarDays className="h-10 w-10 text-indigo-300 dark:text-indigo-700 mx-auto mb-3 opacity-50" />
-                      <p className="text-indigo-900/70 dark:text-indigo-200/70 text-sm font-bold tracking-wide">No appointments found</p>
+                      <CalendarDays className="h-10 w-10 text-brand-300 dark:text-brand-700 mx-auto mb-3 opacity-50" />
+                      <p className="text-brand-900/70 dark:text-brand-200/70 text-sm font-bold tracking-wide">No appointments found</p>
                     </div>
                   ) : (
                     currentAppointments.map((appointment) => (
-                      <div key={appointment.appointmentId} className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-white/50 dark:border-zinc-800/50 rounded-2xl shadow-lg shadow-indigo-900/5 p-4 space-y-4 relative overflow-hidden group">
+                      <div key={appointment.appointmentId} className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-white/50 dark:border-zinc-800/50 rounded-2xl shadow-lg shadow-brand-900/5 p-4 space-y-4 relative overflow-hidden group">
                         {/* Shimmer Effect */}
                         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/40 to-transparent dark:from-white/5 pointer-events-none opacity-50" />
 
                         {/* Header: Token & Status */}
                         <div className="flex justify-between items-start relative z-10">
                           <div className="flex items-center gap-2">
-                            <span className="font-mono bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-lg text-xs font-black shadow-sm border border-indigo-200/50 dark:border-indigo-800/50">
+                            <span className="font-mono bg-brand-100 dark:bg-brand-900/50 text-brand-700 dark:text-brand-300 px-2.5 py-1 rounded-lg text-xs font-black shadow-sm border border-brand-200/50 dark:border-brand-800/50">
                               #{appointment.token?.tokenNumber || 'NA'}
                             </span>
                             <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-slate-50/80 text-slate-600 border-slate-200 shadow-inner font-mono font-bold dark:bg-slate-800/80 dark:text-slate-300 dark:border-slate-700">
@@ -1770,9 +1772,9 @@ export const AppointmentDashboard = () => {
                               {appointment.patientFullName}
                             </div>
                             <div className="text-xs text-slate-500 flex items-center gap-2.5 mt-1.5">
-                              <span className="font-mono text-[10px] font-bold bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 shadow-inner text-indigo-600 dark:text-indigo-400">{appointment.patientId}</span>
+                              <span className="font-mono text-[10px] font-bold bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 shadow-inner text-brand-600 dark:text-brand-400">{appointment.patientId}</span>
                               <div className="flex items-center gap-1 font-medium bg-slate-50 dark:bg-slate-800/50 px-1.5 py-0.5 rounded">
-                                <Phone className="h-3 w-3 text-indigo-400" />
+                                <Phone className="h-3 w-3 text-brand-400" />
                                 {appointment.patientMobile}
                               </div>
                             </div>
@@ -1780,12 +1782,12 @@ export const AppointmentDashboard = () => {
                         </div>
 
                         {/* Doctor Info */}
-                        <div className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-200 bg-gradient-to-r from-cyan-50/50 to-blue-50/50 dark:from-cyan-900/20 dark:to-blue-900/20 p-2.5 rounded-xl border border-white/50 dark:border-zinc-800/50 shadow-sm relative z-10">
+                        <div className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-200 bg-gradient-to-r from-cyan-50/50 to-brand-50/50 dark:from-cyan-900/20 dark:to-brand-900/20 p-2.5 rounded-xl border border-white/50 dark:border-zinc-800/50 shadow-sm relative z-10">
                           <UserCheck className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
                           <span className="font-bold tracking-wide">Dr. {appointment.doctorName || 'Not Assigned'}</span>
                         </div>
 
-                        <div className="h-px bg-gradient-to-r from-transparent via-indigo-100 dark:via-zinc-800 to-transparent my-3 opacity-50" />
+                        <div className="h-px bg-gradient-to-r from-transparent via-brand-100 dark:via-zinc-800 to-transparent my-3 opacity-50" />
 
                         {/* Actions Grid */}
                         <div className="grid grid-cols-2 gap-2.5 relative z-10">
@@ -1838,8 +1840,8 @@ export const AppointmentDashboard = () => {
                 </div>
 
                 {/* User Guide */}
-                <div className="mt-4 px-4 py-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg">
-                  <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
+                <div className="mt-4 px-4 py-3 bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800 rounded-lg">
+                  <div className="flex items-center gap-2 text-sm text-brand-700 dark:text-brand-300">
                     <div className="flex items-center gap-1.5">
                       <User className="h-4 w-4" />
                       <span className="font-medium">{t('appointmentDashboard.quickTip.title')}</span>
@@ -1857,9 +1859,9 @@ export const AppointmentDashboard = () => {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="px-4 py-3 border-t border-indigo-100/50 dark:border-zinc-800/50 bg-indigo-50/30 dark:bg-indigo-900/10 backdrop-blur-md rounded-b-2xl">
+            <div className="px-4 py-3 border-t border-brand-100/50 dark:border-zinc-800/50 bg-brand-50/30 dark:bg-brand-900/10 backdrop-blur-md rounded-b-2xl">
               <div className="flex items-center justify-between">
-                <div className="text-xs font-bold text-indigo-900/60 dark:text-indigo-200/60 uppercase tracking-widest">
+                <div className="text-xs font-bold text-brand-900/60 dark:text-brand-200/60 uppercase tracking-widest">
                   {t('appointmentDashboard.pagination.showing', {
                     from: startIndex + 1,
                     to: Math.min(endIndex, filteredAppointments.length),
@@ -1975,7 +1977,7 @@ export const AppointmentDashboard = () => {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="fixed inset-y-0 right-0 w-full sm:w-[500px] md:w-[600px] bg-white dark:bg-gray-900 shadow-2xl z-50 flex flex-col overflow-hidden border-l border-gray-200 dark:border-gray-800"
             >
-              <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-800 bg-indigo-50/50 dark:bg-indigo-900/10">
+              <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-800 bg-brand-50/50 dark:bg-brand-900/10">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
@@ -2032,7 +2034,7 @@ export const AppointmentDashboard = () => {
                       </div>
                       <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700/50">
                         <span className="font-medium text-gray-500">{t('appointmentDashboard.table.patientId')}</span>
-                        <span className="font-mono text-indigo-600 dark:text-indigo-400 text-right">{appointmentForBilling.patientId}</span>
+                        <span className="font-mono text-brand-600 dark:text-brand-400 text-right">{appointmentForBilling.patientId}</span>
                       </div>
                       <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700/50">
                         <span className="font-medium text-gray-500">{t('appointmentDashboard.table.doctorName')}</span>
@@ -2050,8 +2052,8 @@ export const AppointmentDashboard = () => {
 
                     {/* Consultation timeline — last paid, free follow-up window, next-visit fee preview */}
                     {billTimeline && (
-                      <div className="rounded-xl border border-blue-100 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-900/10 p-4 space-y-2">
-                        <div className="flex items-center gap-2 font-semibold text-blue-800 dark:text-blue-300 text-sm">
+                      <div className="rounded-xl border border-brand-100 dark:border-brand-900/40 bg-brand-50/50 dark:bg-brand-900/10 p-4 space-y-2">
+                        <div className="flex items-center gap-2 font-semibold text-brand-800 dark:text-brand-300 text-sm">
                           <Clock className="h-4 w-4" /> {t('patientForm.timeline.title', { defaultValue: 'Consultation history' })}
                         </div>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:text-sm">
@@ -2066,7 +2068,7 @@ export const AppointmentDashboard = () => {
                               <span className="text-muted-foreground">{t('patientForm.timeline.validUpto', { defaultValue: 'Free until' })}</span>
                               <span className="text-right font-medium">
                                 {fmtBillTimelineDate(billTimeline.validUptoDate)}
-                                <span className="block text-[11px] font-normal text-blue-600 dark:text-blue-400">{daysLeftText(billTimeline.validUptoDate)}</span>
+                                <span className="block text-[11px] font-normal text-brand-600 dark:text-brand-400">{daysLeftText(billTimeline.validUptoDate)}</span>
                               </span>
                             </>
                           )}
@@ -2080,13 +2082,13 @@ export const AppointmentDashboard = () => {
 
                         {/* Per-visit payment timeline: date · case type · amount · status · receipt */}
                         {(billTimeline.history?.length ?? 0) > 0 && (
-                          <div className="pt-2 mt-1 border-t border-blue-100 dark:border-blue-900/40 space-y-1.5">
-                            <div className="text-xs font-semibold text-blue-800 dark:text-blue-300">{t('appointmentDashboard.addBill.paymentTimeline', { defaultValue: 'Payment timeline' })}</div>
+                          <div className="pt-2 mt-1 border-t border-brand-100 dark:border-brand-900/40 space-y-1.5">
+                            <div className="text-xs font-semibold text-brand-800 dark:text-brand-300">{t('appointmentDashboard.addBill.paymentTimeline', { defaultValue: 'Payment timeline' })}</div>
                             {[...billTimeline.history].sort((a, b) => b.apptDate.localeCompare(a.apptDate)).map((v) => (
                               <div key={v.appointmentId} className="flex items-center justify-between gap-2 text-[11px] sm:text-xs">
                                 <div className="flex items-center gap-2 min-w-0">
                                   <span className="text-muted-foreground whitespace-nowrap">{fmtBillTimelineDate(v.apptDate)}</span>
-                                  <span className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">{caseTypeLabel(v.appointmentType)}</span>
+                                  <span className="px-1.5 py-0.5 rounded bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 font-medium whitespace-nowrap">{caseTypeLabel(v.appointmentType)}</span>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
                                   {v.amount > 0 && <span className="font-mono text-gray-700 dark:text-gray-300">₹{v.amount.toLocaleString('en-IN')}</span>}
@@ -2172,7 +2174,7 @@ export const AppointmentDashboard = () => {
                     </>
                   )
                 ) : (
-                  <Button onClick={() => goToBilling(appointmentForBilling)} className="bg-indigo-600 text-white hover:bg-indigo-700">
+                  <Button onClick={() => goToBilling(appointmentForBilling)} className="bg-brand-600 text-white hover:bg-brand-700">
                     {t('appointmentDashboard.addBill.goToBilling', { defaultValue: 'Go to Billing' })}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
@@ -2207,7 +2209,7 @@ export const AppointmentDashboard = () => {
             </div>
           )}
           <DialogFooter>
-            <Button onClick={() => setPaidSuccess(null)} className="bg-indigo-600 text-white hover:bg-indigo-700">
+            <Button onClick={() => setPaidSuccess(null)} className="bg-brand-600 text-white hover:bg-brand-700">
               {t('common.done', { defaultValue: 'Done' })}
             </Button>
           </DialogFooter>
@@ -2270,7 +2272,7 @@ export const AppointmentDashboard = () => {
                     </div>
                     <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700/50">
                       <span className="font-medium text-gray-500">{t('appointmentDashboard.dialog.patientId')}</span>
-                      <span className="font-mono text-indigo-600 dark:text-indigo-400 text-right">{appointmentToCancel.patientId}</span>
+                      <span className="font-mono text-brand-600 dark:text-brand-400 text-right">{appointmentToCancel.patientId}</span>
                     </div>
                     <div className="flex justify-between items-center pb-2 border-b border-gray-100 dark:border-gray-700/50">
                       <span className="font-medium text-gray-500">{t('appointmentDashboard.dialog.doctor')}</span>

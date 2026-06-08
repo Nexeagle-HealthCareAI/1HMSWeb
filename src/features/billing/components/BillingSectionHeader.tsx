@@ -18,11 +18,11 @@ export const BillingSectionHeader: React.FC<BillingSectionHeaderProps> = ({
     icon, title, subtitle, actions, leading, className,
 }) => (
     <div className={cn(
-        'flex items-center gap-3 rounded-2xl border border-white/40 bg-white/80 backdrop-blur-xl px-3 py-3 sm:px-4 shadow-lg shadow-indigo-500/5 ring-1 ring-black/5',
+        'flex items-center gap-3 rounded-2xl border border-white/40 bg-white/80 backdrop-blur-xl px-3 py-3 sm:px-4 shadow-lg shadow-brand-500/5 ring-1 ring-black/5',
         className,
     )}>
         {leading}
-        <div className="relative h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-indigo-500/30">
+        <div className="relative h-10 w-10 rounded-xl bg-gradient-to-br from-brand-500 to-violet-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-brand-500/30">
             {icon}
         </div>
         <div className="min-w-0 flex-1">

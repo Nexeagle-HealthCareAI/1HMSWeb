@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, User, Edit3, Save, X, Phone, MapPin, Calendar, CreditCard } from 'lucide-react';
+import { Loader2, User, Edit3, Save, X, Phone, MapPin, Calendar, CreditCard, Heart } from 'lucide-react';
 import { usePatientProfile } from '../hooks/usePatientProfile';
 import { PatientProfileData, UpdatePatientProfileData } from '../services/patientProfileApi';
 
@@ -59,6 +59,11 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
     pincode: '',
     insuranceId: '',
     paymentMode: '',
+    bloodGroup: '',
+    allergies: '',
+    email: '',
+    emergencyContactName: '',
+    emergencyContactPhone: '',
   });
 
   const [referenceName, setReferenceName] = useState('');
@@ -80,6 +85,11 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
         pincode: patientProfile.pincode,
         insuranceId: patientProfile.insuranceId || '',
         paymentMode: patientProfile.paymentMode || '',
+        bloodGroup: patientProfile.bloodGroup || '',
+        allergies: patientProfile.allergies || '',
+        email: patientProfile.email || '',
+        emergencyContactName: patientProfile.emergencyContactName || '',
+        emergencyContactPhone: patientProfile.emergencyContactPhone || '',
       });
       // Set reference name from the part after the first hyphen
       if (patientProfile.fullName && patientProfile.fullName.includes('-')) {
@@ -100,7 +110,7 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
   };
 
   // Standard input styling - more compact
-  const inputClassName = "h-8 text-xs border border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-gray-800 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed";
+  const inputClassName = "h-8 text-xs border border-gray-300 dark:border-gray-600 focus:border-brand-500 dark:focus:border-brand-400 bg-white dark:bg-gray-800 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:cursor-not-allowed";
   const labelClassName = "text-xs font-medium text-gray-600 dark:text-gray-400";
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -152,21 +162,21 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
       <DialogContent className="max-w-6xl max-h-[98vh] overflow-hidden bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-2xl flex flex-col w-[95vw] sm:w-full">
         <DialogHeader className="bg-gray-50 dark:bg-gray-800 px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 text-base sm:text-lg font-bold text-gray-900 dark:text-white">
-            <User className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
+            <User className="h-4 w-4 sm:h-5 sm:w-5 text-brand-600 dark:text-brand-400" />
             <span className="truncate">Patient Profile - {patientName || patientProfile?.fullName || patientId}</span>
           </DialogTitle>
         </DialogHeader>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-6 sm:py-8 flex-1">
-            <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-blue-600" />
+            <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-brand-600" />
             <span className="ml-2 text-sm sm:text-base text-gray-600 dark:text-gray-300">Loading patient profile...</span>
           </div>
         ) : (
           <div className="p-2 sm:p-3 space-y-2 sm:space-y-3 bg-gray-50 dark:bg-gray-800 flex-1 overflow-y-auto">
             {/* Patient ID Badge - Mobile Responsive */}
             <div className="flex justify-center mb-1">
-              <Badge variant="outline" className="text-xs sm:text-sm px-2 sm:px-3 py-1 bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700 font-medium">
+              <Badge variant="outline" className="text-xs sm:text-sm px-2 sm:px-3 py-1 bg-brand-50 dark:bg-brand-900 text-brand-700 dark:text-brand-300 border-brand-200 dark:border-brand-700 font-medium">
                 Patient ID: {patientId}
               </Badge>
             </div>
@@ -175,8 +185,8 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-3">
                 {/* Personal Information Card - Mobile Responsive */}
                 <Card className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-lg">
-                  <CardHeader className="bg-blue-50 dark:bg-blue-900 border-b border-blue-200 dark:border-blue-700 px-2 py-1">
-                    <CardTitle className="flex items-center gap-1 text-xs sm:text-sm font-semibold text-blue-800 dark:text-blue-200">
+                  <CardHeader className="bg-brand-50 dark:bg-brand-900 border-b border-brand-200 dark:border-brand-700 px-2 py-1">
+                    <CardTitle className="flex items-center gap-1 text-xs sm:text-sm font-semibold text-brand-800 dark:text-brand-200">
                       <User className="h-3 w-3" />
                       Personal Information
                     </CardTitle>
@@ -393,6 +403,77 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Clinical & Emergency Card — full width */}
+              <div className="mt-2 sm:mt-3">
+                <Card className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-lg">
+                  <CardHeader className="bg-red-50 dark:bg-red-900 border-b border-red-200 dark:border-red-700 px-2 py-1">
+                    <CardTitle className="flex items-center gap-1 text-sm font-semibold text-red-800 dark:text-red-200">
+                      <Heart className="h-3 w-3" />
+                      Clinical & Emergency
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 p-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+                      <div className="space-y-1">
+                        <Label className={labelClassName}>Blood group</Label>
+                        <Select
+                          value={formData.bloodGroup || ''}
+                          onValueChange={(v) => handleInputChange('bloodGroup', v)}
+                          disabled={!isEditing}
+                        >
+                          <SelectTrigger className={inputClassName}>
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => (
+                              <SelectItem key={bg} value={bg}>{bg}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1 sm:col-span-2 lg:col-span-3">
+                        <Label className={labelClassName}>Allergies</Label>
+                        <Input
+                          value={formData.allergies || ''}
+                          onChange={(e) => handleInputChange('allergies', e.target.value)}
+                          disabled={!isEditing}
+                          placeholder="e.g. Penicillin, Sulpha drugs (comma separated)"
+                          className={inputClassName}
+                        />
+                      </div>
+                      <div className="space-y-1 sm:col-span-2">
+                        <Label className={labelClassName}>Email</Label>
+                        <Input
+                          type="email"
+                          value={formData.email || ''}
+                          onChange={(e) => handleInputChange('email', e.target.value)}
+                          disabled={!isEditing}
+                          className={inputClassName}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className={labelClassName}>Emergency contact name</Label>
+                        <Input
+                          value={formData.emergencyContactName || ''}
+                          onChange={(e) => handleInputChange('emergencyContactName', e.target.value)}
+                          disabled={!isEditing}
+                          className={inputClassName}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className={labelClassName}>Emergency contact phone</Label>
+                        <Input
+                          value={formData.emergencyContactPhone || ''}
+                          onChange={(e) => handleInputChange('emergencyContactPhone', e.target.value)}
+                          disabled={!isEditing}
+                          className={inputClassName}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </form>
           </div>
         )}
@@ -416,7 +497,7 @@ export const PatientProfileModal: React.FC<PatientProfileModalProps> = ({
                   <Button
                     onClick={handleSubmit}
                     disabled={isUpdating}
-                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs"
+                    className="px-3 py-1 bg-brand-600 hover:bg-brand-700 text-white text-xs"
                   >
                     {isUpdating ? (
                       <>

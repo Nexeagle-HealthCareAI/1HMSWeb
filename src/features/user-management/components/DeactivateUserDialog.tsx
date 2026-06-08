@@ -61,8 +61,8 @@ export const DeactivateUserDialog: React.FC<DeactivateUserDialogProps> = ({
           {/* User Information */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
             <div className="flex items-center gap-3 mb-4 border-b border-slate-100 dark:border-slate-800/50 pb-3">
-              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center">
-                <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <div className="w-8 h-8 bg-brand-100 dark:bg-brand-900/50 rounded-full flex items-center justify-center">
+                <Shield className="h-4 w-4 text-brand-600 dark:text-brand-400" />
               </div>
               <div>
                 <h4 className="font-medium text-slate-900 dark:text-slate-100 text-sm">{t('userManagement.deactivateDialog.userDetailsTitle')}</h4>

@@ -1,13 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import { Hotel, Plus, BedDouble, Activity, IndianRupee, TrendingUp, Search, ChevronRight, AlertTriangle, Zap, Moon, Gift } from 'lucide-react';
+import { Hotel, Plus, BedDouble, Activity, IndianRupee, TrendingUp, Search, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { format, parseISO } from 'date-fns';
-import { useToast } from '@/hooks/use-toast';
 import { useIpdStore } from '../store';
-import { AutoBillingConfig } from './AutoBillingConfig';
 import type { BedStatus } from '../types';
 
 const BED_TONE: Record<BedStatus, string> = {
@@ -21,32 +18,15 @@ const BED_TONE: Record<BedStatus, string> = {
 interface Props {
     onOpenAdmission: (admissionId: string) => void;
     onAdmit: () => void;
-    onOpenIncentives: () => void;
 }
 
-export const IpdDashboard: React.FC<Props> = ({ onOpenAdmission, onAdmit, onOpenIncentives }) => {
-    const { toast } = useToast();
+export const IpdDashboard: React.FC<Props> = ({ onOpenAdmission, onAdmit }) => {
     const wards = useIpdStore(s => s.wards);
     const beds = useIpdStore(s => s.beds);
     const admissionViews = useIpdStore(s => s.admissionViews);
     const admissionView = useIpdStore(s => s.admissionView);
-    const policy = useIpdStore(s => s.policy);
-    const runNightlyBilling = useIpdStore(s => s.runNightlyBilling);
     const [search, setSearch] = useState('');
     const [wardFilter, setWardFilter] = useState<string>('ALL');
-    const [autoBillingOpen, setAutoBillingOpen] = useState(false);
-
-    const handleNightly = () => {
-        const r = runNightlyBilling();
-        if (!policy.autoDailyBedCharge) {
-            toast({ title: 'Auto bed charge is OFF', description: 'Enable it in Auto-Billing settings first.', variant: 'destructive' });
-            return;
-        }
-        toast({
-            title: r.bedCharges > 0 ? `Posted ${r.bedCharges} bed charge${r.bedCharges > 1 ? 's' : ''}` : 'Nothing to post',
-            description: r.bedCharges > 0 ? `₹${r.total.toLocaleString('en-IN')} across active admissions.` : 'All active admissions already have today’s bed charge.',
-        });
-    };
 
     const views = admissionViews();
 
@@ -80,7 +60,7 @@ export const IpdDashboard: React.FC<Props> = ({ onOpenAdmission, onAdmit, onOpen
             {/* Header */}
             <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div className="flex items-start gap-3">
-                    <div className="h-12 w-12 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-md">
+                    <div className="h-12 w-12 rounded-2xl bg-brand-600 flex items-center justify-center shadow-md">
                         <Hotel className="h-6 w-6 text-white" />
                     </div>
                     <div>
@@ -89,24 +69,11 @@ export const IpdDashboard: React.FC<Props> = ({ onOpenAdmission, onAdmit, onOpen
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button onClick={handleNightly} variant="outline" className="h-10 border-indigo-200 text-indigo-700 hover:bg-indigo-50">
-                        <Moon className="h-4 w-4 mr-2" /> Run nightly billing
-                    </Button>
-                    <Button onClick={() => setAutoBillingOpen(true)} variant="outline" className="h-10 border-amber-200 text-amber-700 hover:bg-amber-50">
-                        <Zap className="h-4 w-4 mr-2" /> Auto-Billing
-                        <Badge variant="outline" className={cn('ml-2 text-[9px] font-bold', (policy.autoConsultFeeOnAdmission || policy.autoDailyBedCharge) ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500')}>
-                            {(policy.autoConsultFeeOnAdmission || policy.autoDailyBedCharge) ? 'ON' : 'OFF'}
-                        </Badge>
-                    </Button>
-                    <Button onClick={onOpenIncentives} variant="outline" className="h-10 border-fuchsia-200 text-fuchsia-700 hover:bg-fuchsia-50">
-                        <Gift className="h-4 w-4 mr-2" /> Incentives
-                    </Button>
-                    <Button onClick={onAdmit} className="h-10 bg-indigo-600 hover:bg-indigo-700 font-semibold">
+                    <Button onClick={onAdmit} className="h-10 bg-brand-600 hover:bg-brand-700 font-semibold">
                         <Plus className="h-4 w-4 mr-2" /> Admit Patient
                     </Button>
                 </div>
             </div>
-            <AutoBillingConfig open={autoBillingOpen} onOpenChange={setAutoBillingOpen} />
 
             {/* KPI tiles */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -150,7 +117,7 @@ export const IpdDashboard: React.FC<Props> = ({ onOpenAdmission, onAdmit, onOpen
                                             >
                                                 <div className="flex items-center justify-between">
                                                     <span className="font-mono text-[10px] font-bold">{bed.bedCode}</span>
-                                                    <span className="text-[8px] font-bold uppercase tracking-wider">{bed.status}</span>
+                                                    <span className="text-[11px] font-bold uppercase tracking-wider">{bed.status}</span>
                                                 </div>
                                                 {av ? (
                                                     <div className="mt-1">
@@ -203,12 +170,12 @@ export const IpdDashboard: React.FC<Props> = ({ onOpenAdmission, onAdmit, onOpen
                         </thead>
                         <tbody>
                             {filteredAdmissions.map(v => (
-                                <tr key={v.admissionId} className="border-t border-slate-100 hover:bg-indigo-50/40 cursor-pointer" onClick={() => onOpenAdmission(v.admissionId)}>
+                                <tr key={v.admissionId} className="border-t border-slate-100 hover:bg-brand-50/40 cursor-pointer" onClick={() => onOpenAdmission(v.admissionId)}>
                                     <td className="px-3 py-2">
                                         <p className="font-semibold text-slate-900">{v.patient.name}</p>
                                         <p className="text-[11px] text-slate-500">{v.patient.uhid} · {v.patient.age}{v.patient.sex}{v.patient.allergies?.length ? ' · ⚠ allergy' : ''}</p>
                                     </td>
-                                    <td className="px-3 py-2 font-mono text-xs text-indigo-700 font-bold">{v.admissionNo}</td>
+                                    <td className="px-3 py-2 font-mono text-xs text-brand-700 font-bold">{v.admissionNo}</td>
                                     <td className="px-3 py-2 text-xs text-slate-700">{v.ward.wardCode} · {v.bed.bedCode}</td>
                                     <td className="px-3 py-2 text-xs text-slate-700">{v.attendingDoctor}</td>
                                     <td className="px-3 py-2 text-xs text-slate-600 max-w-[220px] truncate" title={v.provisionalDiagnosis}>{v.finalDiagnosis ?? v.provisionalDiagnosis}</td>
@@ -238,7 +205,7 @@ export const IpdDashboard: React.FC<Props> = ({ onOpenAdmission, onAdmit, onOpen
 
 const KpiTile: React.FC<{ label: string; value: React.ReactNode; icon: React.ReactNode; tone: string; sub?: string }> = ({ label, value, icon, tone, sub }) => {
     const tones: Record<string, string> = {
-        indigo: 'bg-indigo-50 border-indigo-100 text-indigo-700',
+        indigo: 'bg-brand-50 border-brand-100 text-brand-700',
         emerald: 'bg-emerald-50 border-emerald-100 text-emerald-700',
         sky: 'bg-sky-50 border-sky-100 text-sky-700',
         rose: 'bg-rose-50 border-rose-100 text-rose-700',

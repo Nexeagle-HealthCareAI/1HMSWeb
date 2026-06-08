@@ -592,11 +592,11 @@ export const DoctorProfile: React.FC<DoctorProfileProps> = ({
               <div className="border border-slate-100 rounded-xl p-4 bg-slate-50/60">
                 <div className="flex items-center justify-between text-sm font-medium text-slate-700">
                   <span>{t('docProfile.success.profileCompletion')}</span>
-                  <span className="text-blue-600">{clampedProfileCompletion}%</span>
+                  <span className="text-brand-600">{clampedProfileCompletion}%</span>
                 </div>
                 <div className="mt-2 h-2 rounded-full bg-slate-200">
                   <div
-                    className="h-full rounded-full bg-blue-600 transition-all"
+                    className="h-full rounded-full bg-brand-600 transition-all"
                     style={{ width: `${clampedProfileCompletion}%` }}
                     aria-label={`Profile completion ${clampedProfileCompletion}%`}
                   />

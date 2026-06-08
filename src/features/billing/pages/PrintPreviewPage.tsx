@@ -76,7 +76,7 @@ export const PrintPreviewPage: React.FC = () => {
                     </Button>
                     <div>
                         <h1 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                            <Printer className="h-5 w-5 text-indigo-500" /> Print Preview
+                            <Printer className="h-5 w-5 text-brand-500" /> Print Preview
                         </h1>
                         <div className="text-xs text-gray-500">
                             ID: {id} • Type: <span className="uppercase">{type}</span>
@@ -101,7 +101,7 @@ export const PrintPreviewPage: React.FC = () => {
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </Button>
 
-                    <Button onClick={handlePrint} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
+                    <Button onClick={handlePrint} className="bg-brand-600 hover:bg-brand-700 text-white gap-2">
                         <Printer className="h-4 w-4" /> Print
                     </Button>
                 </div>

@@ -139,6 +139,7 @@ export interface GeneratePrescriptionDetailsPayload {
   certificates: PrescriptionCertificate;
   followUp: PrescriptionFollowUp;
   immunizations: PrescriptionImmunization[];
+  customFields?: { key: string; label?: string; value?: string }[];
   validUpto?: number; // Number of days the prescription is valid
   validUptoDate?: string; // Pre-calculated date from server
   qrCodeData?: string;

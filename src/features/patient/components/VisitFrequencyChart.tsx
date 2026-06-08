@@ -25,7 +25,7 @@ export const VisitFrequencyChart: React.FC<VisitFrequencyChartProps> = ({ data }
                     const btn = document.getElementById(`period-${p}`);
                     if (btn) {
                         if (p === newPeriod) {
-                            btn.className = 'px-3 py-1 text-xs font-medium rounded transition-colors bg-white text-indigo-600 shadow-sm';
+                            btn.className = 'px-3 py-1 text-xs font-medium rounded transition-colors bg-white text-brand-600 shadow-sm';
                         } else {
                             btn.className = 'px-3 py-1 text-xs font-medium rounded transition-colors text-gray-600 hover:text-gray-900';
                         }
