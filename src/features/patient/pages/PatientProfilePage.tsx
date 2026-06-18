@@ -83,7 +83,7 @@ export const PatientProfilePage: React.FC = () => {
   const patientId = routePatientId || queryPatientId;
 
   const [patient, setPatient] = useState<PatientData | null>(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('prescriptions');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
@@ -198,12 +198,10 @@ export const PatientProfilePage: React.FC = () => {
     [timelineEvents]
   );
 
+  // Overview removed; Timeline, Lab Tests and Prescription Fields live inside the prescription pad
+  // (as sheets). The pad is the only view.
   const navigationItems = [
-    { id: 'overview', label: 'Overview', icon: User },
-    { id: 'timeline', label: 'Timeline', icon: History },
     { id: 'prescriptions', label: 'ePrescription Pad', icon: ClipboardList },
-    { id: 'lab-tests', label: 'Lab Tests', icon: TestTube },
-    { id: 'prescription-fields', label: 'Prescription Fields', icon: Settings },
   ];
 
   const activeTabMeta = navigationItems.find((item) => item.id === activeTab) || navigationItems[0];
@@ -513,59 +511,12 @@ export const PatientProfilePage: React.FC = () => {
               </div>
             )}
 
-            {/* Overview Tab */}
-            {activeTab === 'overview' && (
-              <div className="h-full px-6">
-                {isTimelineLoading ? (
-                  <div className="flex justify-center items-center h-64">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                  </div>
-                ) : (
-                  <PatientAnalytics timelineEvents={timelineEvents} />
-                )}
-              </div>
-            )}
-
-            {/* Timeline Tab */}
-            {activeTab === 'timeline' && (
-              <div className="h-full p-6">
-                {isTimelineLoading ? (
-                  <div className="flex justify-center items-center h-40">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                  </div>
-                ) : (
-                  <PatientTimeline
-                    timelineEvents={timelineEvents}
-                  />
-                )}
-              </div>
-            )}
-
             {/* Prescriptions Tab */}
             {activeTab === 'prescriptions' && (
               <div className="h-full">
                 <EPrescriptionPad
                   ref={ePrescriptionPadRef}
                   appointmentId={appointmentId || activeAppointmentId || undefined}
-                />
-              </div>
-            )}
-
-            {/* Prescription Fields Tab */}
-            {activeTab === 'prescription-fields' && (
-              <div className="h-full">
-                <PrescriptionCustomizePanel showCloseButton={false} defaultTab="fields" />
-              </div>
-            )}
-
-            {/* Lab Tests Tab */}
-            {activeTab === 'lab-tests' && (
-              <div className="h-full">
-                <PatientLabTests
-                  historyAttachments={historyAttachments}
-                  patientId={patientId || undefined}
-                  appointmentId={appointmentId || activeAppointmentId || undefined}
-                  patientName={patient?.name}
                 />
               </div>
             )}

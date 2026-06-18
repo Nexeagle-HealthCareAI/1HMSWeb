@@ -131,6 +131,7 @@ export interface GeneratePrescriptionDetailsPayload {
   history: string;
   comorbidity: string;
   examination: string;
+  systemicExamination?: string;
   diagnosis: string;
   orders: PrescriptionOrders;
   medications: PrescriptionMedication[];

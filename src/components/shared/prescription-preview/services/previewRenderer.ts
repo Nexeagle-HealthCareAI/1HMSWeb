@@ -602,18 +602,23 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
     if (h) cursorY -= (h + 6);
   };
   const drawExamination = async () => {
-    const h = await renderTabularItem(printLabel('examination', 'Examination'), payload.examination, leftPad, contentWidth);
+    const h = await renderTabularItem(printLabel('examination', 'General Examination'), payload.examination, leftPad, contentWidth);
     if (h) cursorY -= (h + 6);
   };
-  const drawOrders = async () => {
-    if (investigations.length > 0) {
-      const hInv = await renderTabularItem('Investigations', investigations.join(', '), leftPad, contentWidth, false);
-      if (hInv) cursorY -= (hInv + 6);
-    }
-    if (procedures.length > 0) {
-      const hProc = await renderTabularItem('Procedures & Treatment Plan', procedures.join(', '), leftPad, contentWidth, false);
-      if (hProc) cursorY -= (hProc + 6);
-    }
+  const drawSystemicExamination = async () => {
+    if (!payload.systemicExamination) return;
+    const h = await renderTabularItem(printLabel('systemicExamination', 'Systemic Examination'), payload.systemicExamination, leftPad, contentWidth);
+    if (h) cursorY -= (h + 6);
+  };
+  const drawInvestigations = async () => {
+    if (investigations.length === 0) return;
+    const hInv = await renderTabularItem(printLabel('investigations', 'Investigations'), investigations.join(', '), leftPad, contentWidth, false);
+    if (hInv) cursorY -= (hInv + 6);
+  };
+  const drawProcedures = async () => {
+    if (procedures.length === 0) return;
+    const hProc = await renderTabularItem(printLabel('procedures', 'Procedures & Treatment Plan'), procedures.join(', '), leftPad, contentWidth, false);
+    if (hProc) cursorY -= (hProc + 6);
   };
   const drawDiagnosis = async () => {
     if (!payload.diagnosis) return;
@@ -917,18 +922,20 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
     history: drawHistory,
     comorbidity: drawComorbidity,
     examination: drawExamination,
+    systemicExamination: drawSystemicExamination,
     diagnosis: drawDiagnosis,
-    orders: drawOrders,
+    investigations: drawInvestigations,
+    procedures: drawProcedures,
     nonPharmacologicalAdvice: drawAdvice,
     medications: drawMedications,
     certificates: drawCertificates,
     followUp: drawFollowUp,
   };
-  const DEFAULT_PRINT_ORDER = ['chiefComplaint', 'history', 'comorbidity', 'examination', 'diagnosis', 'orders', 'medications', 'nonPharmacologicalAdvice', 'certificates', 'followUp'];
   // The doctor's custom field VALUES (key → label/value) for this prescription.
   const customByKey = new Map((payload.customFields ?? []).map(c => [c.key, c]));
-  // Ordered keys: prefer the doctor's layout order (built-ins + customs); else the default built-in order.
-  const orderedKeys = (printFields && printFields.length) ? printFields.map(f => f.key) : DEFAULT_PRINT_ORDER;
+  // Print order is driven SOLELY by the doctor's saved arrangement (printFields, already ordered).
+  // The drawer-key list is only a structural fallback for the unexpected case of no layout at all.
+  const orderedKeys = (printFields && printFields.length) ? printFields.map(f => f.key) : Object.keys(drawerByKey);
 
   let firstSectionDrawn = false;
   const ensureFirstSpacing = async () => {

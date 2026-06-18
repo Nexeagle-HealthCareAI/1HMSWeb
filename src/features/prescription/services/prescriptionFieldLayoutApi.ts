@@ -33,16 +33,18 @@ export const DEFAULT_PRESCRIPTION_FIELDS: PrescriptionFieldConfigItem[] = [
   { key: 'chiefComplaint', label: 'Chief Complaint', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 1 },
   { key: 'history', label: 'History', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 2 },
   { key: 'comorbidity', label: 'Comorbidity', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 3 },
-  { key: 'examination', label: 'Examination', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 4 },
-  { key: 'diagnosis', label: 'Diagnosis', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 5 },
-  { key: 'orders', label: 'Orders: Investigations / Procedures', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 6 },
-  { key: 'medications', label: 'Medications', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 7 },
-  { key: 'nonPharmacologicalAdvice', label: 'Non-pharmacological Advice', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 8 },
-  { key: 'privateNotes', label: 'Private Notes', type: 'builtin', builtIn: true, showInPad: true, showInPrint: false, order: 9 },
-  { key: 'certificates', label: 'Certificates & Notes', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 10 },
-  { key: 'immunizations', label: 'Immunizations', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 11 },
-  { key: 'followUp', label: 'Follow-up & Referral', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 12 },
-  { key: 'attachments', label: 'Attachments', type: 'builtin', builtIn: true, showInPad: true, showInPrint: false, order: 13 },
+  { key: 'examination', label: 'General Examination', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 4 },
+  { key: 'systemicExamination', label: 'Systemic Examination', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 5 },
+  { key: 'diagnosis', label: 'Diagnosis', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 6 },
+  { key: 'investigations', label: 'Investigations', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 7 },
+  { key: 'procedures', label: 'Procedures', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 8 },
+  { key: 'medications', label: 'Medications', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 9 },
+  { key: 'nonPharmacologicalAdvice', label: 'Non-pharmacological Advice', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 10 },
+  { key: 'privateNotes', label: 'Private Notes', type: 'builtin', builtIn: true, showInPad: true, showInPrint: false, order: 11 },
+  { key: 'certificates', label: 'Certificates & Notes', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 12 },
+  { key: 'immunizations', label: 'Immunizations', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 13 },
+  { key: 'followUp', label: 'Follow-up & Referral', type: 'builtin', builtIn: true, showInPad: true, showInPrint: true, order: 14 },
+  { key: 'attachments', label: 'Attachments', type: 'builtin', builtIn: true, showInPad: true, showInPrint: false, order: 15 },
 ];
 
 /**
@@ -59,9 +61,11 @@ export function mergeFieldsWithDefaults(saved: PrescriptionFieldConfigItem[] | u
     return s ? { ...def, ...s, key: def.key, builtIn: true, type: 'builtin' as const } : { ...def };
   });
 
-  // Custom fields the doctor added (not part of the built-in set).
+  // Custom fields the doctor added (always keyed "cf_*"). Restricting to that prefix also drops any
+  // legacy built-in keys that were since split/renamed (e.g. an old saved "orders") instead of
+  // resurfacing them as stray custom fields.
   const knownKeys = new Set(DEFAULT_PRESCRIPTION_FIELDS.map(d => d.key));
-  savedList.filter(f => !knownKeys.has(f.key)).forEach(f => merged.push({ ...f, builtIn: false }));
+  savedList.filter(f => !knownKeys.has(f.key) && f.key.startsWith('cf_')).forEach(f => merged.push({ ...f, builtIn: false }));
 
   return merged.sort((a, b) => a.order - b.order);
 }

@@ -16,6 +16,7 @@ import {
   AlertCircle,
   Calendar,
   CheckCircle,
+  History,
   Cloud,
   ChevronDown,
   ChevronRight,
@@ -36,6 +37,10 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { PrescriptionCustomizePanel } from '@/features/prescription/components/PrescriptionCustomizePanel';
 import { PatientLabTests } from './PatientLabTests';
+import { PatientTimeline } from './PatientTimeline';
+import { timelineApi, TimelineEventData } from '../services/timelineApi';
+import { VoiceRxSheet } from './VoiceRxSheet';
+import type { VoiceRxFields } from '../services/voiceRxApi';
 
 // Fix: Add missing Select import for Immunizations section
 import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select';
@@ -69,6 +74,7 @@ interface EPrescriptionData {
   history: string;
   comorbidity: string;
   examination: string;
+  systemicExamination: string;
   diagnosis: string;
   orders: {
     investigations: string[];
@@ -346,6 +352,7 @@ const AutoSaveHandler: React.FC<{
         history: JSON.stringify(prescriptionData.history),
         comorbidity: JSON.stringify(prescriptionData.comorbidity),
         examination: JSON.stringify(prescriptionData.examination),
+        systemicExamination: JSON.stringify(prescriptionData.systemicExamination),
         diagnosis: JSON.stringify(prescriptionData.diagnosis),
         orders: JSON.stringify({
           investigations: prescriptionData.orders.investigations,
@@ -429,6 +436,7 @@ const AutoSaveHandler: React.FC<{
           history: prescriptionData.history,
           comorbidity: prescriptionData.comorbidity,
           examination: prescriptionData.examination,
+          systemicExamination: prescriptionData.systemicExamination,
           diagnosis: prescriptionData.diagnosis,
           orders: {
             investigations: prescriptionData.orders.investigations,
@@ -575,6 +583,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
     history: '',
     comorbidity: '',
     examination: '',
+    systemicExamination: '',
     diagnosis: '',
     orders: {
       investigations: [],
@@ -695,6 +704,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
           history: prescriptionData.history,
           comorbidity: prescriptionData.comorbidity,
           examination: prescriptionData.examination,
+          systemicExamination: prescriptionData.systemicExamination,
           diagnosis: prescriptionData.diagnosis,
           orders: {
             investigations: prescriptionData.orders.investigations,
@@ -843,6 +853,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
           history: prescriptionData.history,
           comorbidity: prescriptionData.comorbidity,
           examination: prescriptionData.examination,
+          systemicExamination: prescriptionData.systemicExamination,
           diagnosis: prescriptionData.diagnosis,
           orders: {
             investigations: prescriptionData.orders.investigations,
@@ -1153,6 +1164,31 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
   const buildCustomFieldsPayload = () =>
     customFields.map(f => ({ key: f.key, label: f.label, value: customFieldValues[f.key] ?? '' }));
 
+  // Patient timeline (shown in an inline sheet). Lazily fetched the first time the sheet opens.
+  const [timelineOpen, setTimelineOpen] = useState(false);
+  const [timelineEvents, setTimelineEvents] = useState<TimelineEventData[]>([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const [timelineLoaded, setTimelineLoaded] = useState(false);
+  const fetchTimeline = async () => {
+    if (timelineLoaded || timelineLoading) return;
+    const pid = resolvedPatientId;
+    const did = getDoctorId() || 'unknown';
+    const hid = getHospitalId?.() || '';
+    if (!pid || !hid) return;
+    setTimelineLoading(true);
+    try {
+      const response = await timelineApi.getEvents(pid, did, hid);
+      if (response.success && response.data && response.data.length > 0) {
+        setTimelineEvents(response.data[0].timelineData || []);
+      }
+      setTimelineLoaded(true);
+    } catch (error) {
+      console.error('Failed to fetch timeline events', error);
+    } finally {
+      setTimelineLoading(false);
+    }
+  };
+
   // Use API preferences if available, otherwise use hook data
   const finalFieldConfigs = apiPreferences ?
     convertPreferencesToFieldConfigs(apiPreferences) :
@@ -1357,6 +1393,7 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
           history: draft.history || '',
           comorbidity: draft.comorbidity || '',
           examination: draft.examination || '',
+          systemicExamination: draft.systemicExamination || '',
           diagnosis: draft.diagnosis || '',
           privateNotes: draft.privateNotes ? [{ content: draft.privateNotes }] : [],
           vitals: draft.vitalsJson ? {
@@ -1914,6 +1951,54 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
     return () => document.removeEventListener('mousedown', onDocDown);
   }, []);
 
+  // Apply parsed Voice Rx fields into the pad, keeping the multi-select chip state and the saved
+  // strings in sync. Everything is appended (never replaced) so the doctor's existing entries stay.
+  const applyVoiceRx = (vf: VoiceRxFields) => {
+    const join = (arr: string[]) => arr.filter(Boolean).join('; ');
+    const newCC = vf.chiefComplaint ? [...selectedChiefComplaints, vf.chiefComplaint] : selectedChiefComplaints;
+    const newHist = vf.history ? [...selectedHistoryItems, vf.history] : selectedHistoryItems;
+    const newExam = vf.examination ? [...selectedExaminations, vf.examination] : selectedExaminations;
+    const newDiag = vf.diagnosis ? [...selectedDiagnoses, vf.diagnosis] : selectedDiagnoses;
+    const newInv = vf.investigations?.length ? [...selectedInvestigations, ...vf.investigations] : selectedInvestigations;
+    const newProc = vf.procedures?.length ? [...selectedProcedures, ...vf.procedures] : selectedProcedures;
+
+    setSelectedChiefComplaints(newCC);
+    setSelectedHistoryItems(newHist);
+    setSelectedExaminations(newExam);
+    setSelectedDiagnoses(newDiag);
+    setSelectedInvestigations(newInv);
+    setSelectedProcedures(newProc);
+
+    setPrescriptionData(prev => ({
+      ...prev,
+      chiefComplaint: join(newCC),
+      history: join(newHist),
+      examination: join(newExam),
+      diagnosis: join(newDiag),
+      systemicExamination: vf.systemicExamination
+        ? (prev.systemicExamination ? `${prev.systemicExamination}\n${vf.systemicExamination}` : vf.systemicExamination)
+        : prev.systemicExamination,
+      orders: { investigations: newInv, procedures: newProc },
+      medications: [
+        ...prev.medications,
+        ...(vf.medications || []).filter(m => (m.name || '').trim()).map(m => ({
+          id: `rx_${Date.now()}_${Math.floor(Math.random() * 100000)}`,
+          name: m.name || '', dosage: m.dose || '', route: '', frequency: m.frequency || '',
+          timing: '', duration: m.duration || '', durationUnit: '', saltName: '', instructions: m.instructions || '',
+        })),
+      ],
+      nonPharmacologicalAdvice: [
+        ...prev.nonPharmacologicalAdvice,
+        ...(vf.advice || []).filter(a => (a.advice || '').trim()).map(a => ({
+          advice: a.advice || '', category: '', durationValue: a.duration || '', durationUnit: '', notes: a.notes || '',
+        })),
+      ],
+      followUp: (vf.followUp?.followUpOn || vf.followUp?.reason)
+        ? { ...prev.followUp, reason: [vf.followUp?.followUpOn, vf.followUp?.reason].filter(Boolean).join(' — ') || prev.followUp.reason }
+        : prev.followUp,
+    }));
+  };
+
   // Renders the input for a doctor's custom field, by its type.
   const renderCustomFieldInput = (field: { key: string; type?: string; options?: string[]; label: string }) => {
     const val = customFieldValues[field.key] ?? '';
@@ -1955,7 +2040,9 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
     const field = finalFieldConfigs.find(f => f.id === fieldId);
     // Visibility: once the doctor has saved a personalized layout, it's the source of truth;
     // otherwise fall back to the legacy section preference.
-    const enabled = hasSavedLayout ? (layout?.showInPad ?? true) : (field?.enabled ?? false);
+    // When falling back to legacy prefs, sections the old prefs don't know about (e.g. the new
+    // investigations / procedures / systemicExamination split) default to shown.
+    const enabled = hasSavedLayout ? (layout?.showInPad ?? true) : (field?.enabled ?? true);
     if (!enabled) return null;
 
     // The doctor's personalized label overrides the default heading.
@@ -2194,6 +2281,35 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
             <div className="w-full flex flex-col gap-4">
               {/* Top Action Bar — pinned above all sections */}
               <div className="flex justify-end gap-2 mb-2" style={{ order: -1 }}>
+                <VoiceRxSheet
+                  hospitalId={getHospitalId?.() || ''}
+                  doctorId={getDoctorId() || ''}
+                  patientId={resolvedPatientId}
+                  onApply={applyVoiceRx}
+                />
+                <Sheet open={timelineOpen} onOpenChange={(o) => { setTimelineOpen(o); if (o) fetchTimeline(); }}>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 shadow-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300">
+                      <History className="w-4 h-4" />
+                      Timeline
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-[90vw] sm:w-[600px] md:w-[800px] lg:w-[900px] sm:max-w-none p-0 flex flex-col h-full bg-slate-50 dark:bg-slate-950 border-gray-200 dark:border-gray-800 [&>button]:right-6 [&>button]:top-4 [&>button]:text-gray-500 hover:[&>button]:text-gray-700">
+                    <SheetHeader className="px-6 py-4 border-b border-gray-100 dark:border-gray-800/60 bg-white dark:bg-slate-900">
+                      <SheetTitle className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-brand-700 to-brand-500 dark:from-brand-400 dark:to-brand-300">Patient Timeline</SheetTitle>
+                    </SheetHeader>
+                    <div className="flex-1 overflow-y-auto w-full custom-scrollbar p-4 md:p-6">
+                      {timelineLoading ? (
+                        <div className="flex justify-center items-center h-40">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        </div>
+                      ) : (
+                        <PatientTimeline timelineEvents={timelineEvents} />
+                      )}
+                    </div>
+                  </SheetContent>
+                </Sheet>
+
                 <Sheet>
                   <SheetTrigger asChild>
                     <Button variant="outline" size="sm" className="gap-2 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 shadow-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300">
@@ -3322,11 +3438,26 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
                 </div>
               )}
 
+              {/* Systemic Examination Section */}
+              {renderCollapsibleSection(
+                'systemicExamination',
+                'Systemic Examination',
+                <div className="bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-lg p-4">
+                  <textarea
+                    value={prescriptionData.systemicExamination}
+                    onChange={(e) => setPrescriptionData(prev => ({ ...prev, systemicExamination: e.target.value }))}
+                    rows={4}
+                    placeholder="Systemic examination findings (CVS, RS, CNS, P/A, etc.)"
+                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500/25 focus:border-brand-400"
+                  />
+                </div>
+              )}
+
               {/* Orders Section */}
               {renderCollapsibleSection(
-                'orders',
-                'Orders: Investigation/Procedures & Treatment Plan',
-                <div className="space-y-6 bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-lg p-4">
+                'investigations',
+                'Investigations',
+                <div className="bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-lg p-4">
                   {/* Investigations */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
@@ -3538,9 +3669,13 @@ const EPrescriptionPad = forwardRef<EPrescriptionPadRef, EPrescriptionPadProps>(
 
                     {/* Save investigations button removed */}
                   </div>
+                </div>
+              )}
 
-                  <hr className="border-slate-200 dark:border-slate-700/50" />
-
+              {renderCollapsibleSection(
+                'procedures',
+                'Procedures',
+                <div className="bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-lg p-4">
                   {/* Procedures */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">

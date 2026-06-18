@@ -27,6 +27,7 @@ export const API_ENDPOINTS = {
       }
       return `/e-prescription/configuration/update-preference-setting/${params.join('&')}`;
     },
+    VOICE_PARSE: '/e-prescription/voice/parse',
     GET_FIELD_LAYOUT: (doctorId: string) =>
       `/e-prescription/configuration/field-layout/doctorId=${encodeURIComponent(doctorId)}`,
     UPDATE_FIELD_LAYOUT: (doctorId: string) =>

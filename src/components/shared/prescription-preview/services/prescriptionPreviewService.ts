@@ -37,18 +37,21 @@ export const buildPreviewFromRequest = async (request: GeneratePrescriptionDetai
   // We assume response.data IS the GeneratePrescriptionDetailsPayload structure
   const payload = response.data;
 
-  // The doctor's personalized field layout drives which sections print and their labels.
-  let printFields: PrintFieldConfig[] | undefined;
+  // The doctor's personalized field layout is the SOLE driver of print order / labels / visibility.
+  // Always resolved against defaults (mergeFieldsWithDefaults) so it's never empty — even on a
+  // fetch error we use the same default arrangement, never a separate fixed print order.
+  let layoutFields: Awaited<ReturnType<typeof prescriptionFieldLayoutApi.getFieldLayout>>['fields'] = [];
   try {
     const layoutResp = await prescriptionFieldLayoutApi.getFieldLayout(request.doctorId);
-    printFields = mergeFieldsWithDefaults(layoutResp.fields).map(f => ({
-      key: f.key,
-      label: f.label,
-      showInPrint: f.showInPrint,
-    }));
+    layoutFields = layoutResp.fields;
   } catch {
-    printFields = undefined; // fall back to default (show all, default labels)
+    layoutFields = [];
   }
+  const printFields: PrintFieldConfig[] = mergeFieldsWithDefaults(layoutFields).map(f => ({
+    key: f.key,
+    label: f.label,
+    showInPrint: f.showInPrint,
+  }));
 
   const blob = await buildPreviewBlob({
     layout: templateConfig.layout,

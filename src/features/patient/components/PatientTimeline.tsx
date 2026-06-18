@@ -274,11 +274,11 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
                           </div>
                         </div>
 
-                        {/* Examination */}
+                        {/* General Examination */}
                         <div className="p-3 bg-brand-50/30 dark:bg-brand-900/10 rounded-lg border border-brand-100 dark:border-brand-800/30 shadow-sm flex flex-col gap-2">
                           <div className="flex items-center gap-2">
                             <Activity className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
-                            <span className="text-xs font-bold text-brand-700 dark:text-brand-300 uppercase tracking-wide">Examination</span>
+                            <span className="text-xs font-bold text-brand-700 dark:text-brand-300 uppercase tracking-wide">General Examination</span>
                           </div>
                           <div className="flex flex-wrap gap-1.5">
                             {event.examination ? event.examination.split(';').map((item, i) => (
@@ -286,6 +286,17 @@ export const PatientTimeline: React.FC<PatientTimelineProps> = ({
                             )) : <span className="text-sm text-gray-400 italic">No findings</span>}
                           </div>
                         </div>
+
+                        {/* Systemic Examination */}
+                        {event.systemicExamination && event.systemicExamination.trim() && (
+                          <div className="p-3 bg-brand-50/30 dark:bg-brand-900/10 rounded-lg border border-brand-100 dark:border-brand-800/30 shadow-sm flex flex-col gap-2">
+                            <div className="flex items-center gap-2">
+                              <Activity className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
+                              <span className="text-xs font-bold text-brand-700 dark:text-brand-300 uppercase tracking-wide">Systemic Examination</span>
+                            </div>
+                            <div className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{event.systemicExamination}</div>
+                          </div>
+                        )}
 
                         {/* Diagnosis */}
                         <div className="p-3 bg-emerald-50/30 dark:bg-emerald-900/10 rounded-lg border border-emerald-100 dark:border-emerald-800/30 shadow-sm flex flex-col gap-2">

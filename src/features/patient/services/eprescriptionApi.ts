@@ -102,6 +102,7 @@ export interface EPrescriptionDraftReq {
     history?: string;
     comorbidity?: string;
     examination?: string;
+    systemicExamination?: string;
     diagnosis?: string;
     orders?: {
         investigations: string[];

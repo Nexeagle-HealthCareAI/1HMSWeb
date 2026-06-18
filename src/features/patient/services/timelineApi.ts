@@ -100,6 +100,7 @@ export interface TimelineEventData {
     history: string;
     comorbidity: string;
     examination: string;
+    systemicExamination?: string;
     diagnosis: string;
     orders: TimelineOrders;
     medications: TimelineMedication[];
