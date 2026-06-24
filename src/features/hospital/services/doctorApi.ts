@@ -48,7 +48,7 @@ export const doctorApi = {
 }) => {
     try {
       const response = await apiClient.put(
-        'https://easyhmsapisevices-gcb4btbthmaedaex.centralindia-01.azurewebsites.net/doctors/profile',
+        API_ENDPOINTS.DOCTORS.UPDATE_PROFILE,
         payload,
         {
           headers: {
