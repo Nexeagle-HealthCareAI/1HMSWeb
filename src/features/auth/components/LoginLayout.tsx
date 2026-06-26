@@ -88,57 +88,6 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
           <div className="text-xs text-brand-200 font-medium uppercase tracking-wider">{t('loginLayout.support')}</div>
         </div>
       </div>
-
-      <div className="bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-white/10 shadow-2xl">
-        <h3 className="text-lg font-semibold mb-3 flex items-center gap-2 text-white">
-          <div className="p-1.5 bg-emerald-500/20 rounded-md">
-            <Shield className="w-4 h-4 text-emerald-400" />
-          </div>
-          Why you can trust us
-        </h3>
-
-        <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 gap-2"
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: { opacity: 0 },
-            visible: {
-              opacity: 1,
-              transition: {
-                staggerChildren: 0.1
-              }
-            }
-          }}
-        >
-          {[
-            { icon: Activity, text: "Designed for real OPD workflows (queue, follow-ups)" },
-            { icon: Lock, text: "Secure patient records with controlled access" },
-            { icon: Database, text: "Backup & recovery so your data is safe" },
-            { icon: FileText, text: "Clear audit trail for edits and actions" },
-            { icon: GraduationCap, text: "Training + onboarding for your staff" },
-            { icon: Users, text: "Human support when you need it" },
-            { icon: Code, text: "Built by healthcare-tech team working closely with clinics" },
-            { icon: Calendar, text: "No long lock-in (monthly plans / data export anytime)" },
-            { icon: HardDrive, text: "Data ownership (your data is yours; export on request)" }
-          ].map((item, index) => (
-            <motion.div
-              key={index}
-              variants={{
-                hidden: { opacity: 0, y: 20 },
-                visible: { opacity: 1, y: 0 }
-              }}
-              whileHover={{ scale: 1.02, backgroundColor: "rgba(255, 255, 255, 0.25)" }}
-              className="bg-white/20 p-2.5 rounded-lg border border-white/10 backdrop-blur-md flex items-center gap-3 transition-colors cursor-default shadow-sm"
-            >
-              <div className="mt-0 bg-emerald-500/30 p-1.5 rounded-md flex-shrink-0 shadow-inner">
-                <item.icon className="w-3.5 h-3.5 text-emerald-300" />
-              </div>
-              <span className="text-xs text-white leading-snug font-medium tracking-wide shadow-black/10 text-shadow-sm">{item.text}</span>
-            </motion.div>
-          ))}
-        </motion.div>
-      </div>
     </div>
   );
 

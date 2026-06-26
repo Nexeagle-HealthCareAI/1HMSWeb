@@ -6,7 +6,7 @@ const trimStart = (s: string) => s.replace(/^\/+/, '');
 const join = (base: string, path: string) => `${trimEnd(base)}/${trimStart(path)}`;
 
 const rawApiUrl = import.meta.env.VITE_API_BASE_URL
-  || 'easyhmsapiservices-bgasabd9ddbbdden.centralindia-01.azurewebsites.net';
+  || 'http://151.185.45.77:5001';
 
 export const API_BASE_URL = ensureProtocol(rawApiUrl);
 

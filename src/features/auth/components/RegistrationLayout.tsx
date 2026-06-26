@@ -59,32 +59,6 @@ export const RegistrationLayout: React.FC<RegistrationLayoutProps> = ({
             The most advanced Hospital Management System trusted by thousands of healthcare professionals worldwide
           </h2>
           
-          {/* Statistics Cards */}
-          <div className="grid grid-cols-3 gap-4 mb-8">
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold mb-1">10K+</div>
-              <div className="text-sm opacity-90">Active Doctors</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold mb-1">1M+</div>
-              <div className="text-sm opacity-90">Patients Served</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold mb-1">99.9%</div>
-              <div className="text-sm opacity-90">Uptime</div>
-            </div>
-          </div>
-          
-          {/* Limited Time Offer */}
-          <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg p-4 border border-purple-500/30">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-yellow-300">⭐</span>
-              <span className="font-semibold">Limited Time Offer</span>
-            </div>
-            <p className="text-sm opacity-90">
-              First 100 doctors get 3 months FREE premium features!
-            </p>
-          </div>
         </div>
       </div>
 

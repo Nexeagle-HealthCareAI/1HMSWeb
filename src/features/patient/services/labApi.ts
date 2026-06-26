@@ -105,7 +105,7 @@ export const labApi = {
                 });
                 return window.URL.createObjectURL(blob);
             } else {
-                // External Storage (e.g. Azure Blob with SAS): 
+                // External presigned URL (S3/MinIO):
                 // Do NOT fetch via axios/XHR to avoid CORS issues if the storage doesn't allow the origin.
                 // Just use the direct URL which works effectively in <img> tags or window.open
                 return url;

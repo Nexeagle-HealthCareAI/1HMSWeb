@@ -6,7 +6,7 @@ import path from "path";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const defaultApiHost = 'easyhmsapiservices-bgasabd9ddbbdden.centralindia-01.azurewebsites.net';
+  const defaultApiHost = 'http://151.185.45.77:5001';
   const rawApiBaseUrl = env.VITE_API_BASE_URL || defaultApiHost;
   const apiBaseUrl = rawApiBaseUrl.startsWith('http://') || rawApiBaseUrl.startsWith('https://')
     ? rawApiBaseUrl
@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
   const createProxyConfig = (pathRewrite?: (path: string) => string) => ({
     target: apiBaseUrl,
     changeOrigin: true,
-    secure: true,
+    secure: false,
     ...(pathRewrite && { rewrite: pathRewrite }),
     configure: (proxy: any, _options: any) => {
       proxy.on('error', (err: any, _req: any, _res: any) => {
@@ -44,9 +44,9 @@ export default defineConfig(({ mode }) => {
         '/admin': createProxyConfig(),
         '/patient-profile': createProxyConfig(),
         '/blob-proxy': {
-          target: 'https://easyhmsblob.blob.core.windows.net',
+          target: 'http://151.185.45.77:9000',
           changeOrigin: true,
-          secure: true,
+          secure: false,
           rewrite: (path: string) => path.replace(/^\/blob-proxy/, ''),
         },
       }
