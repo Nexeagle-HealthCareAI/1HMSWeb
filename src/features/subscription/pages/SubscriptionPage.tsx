@@ -37,7 +37,7 @@ export const SubscriptionPage = () => {
                 // The user said: month 2500, off price 1099, year 999
                 setPlans([
                     {
-                        id: 'monthly-plan-id',
+                        id: '5f9b4c0e-436d-472d-883f-0361308a0429',
                         name: 'Monthly Plan',
                         basePrice: 2500,
                         discountedPrice: 1099,
@@ -45,7 +45,7 @@ export const SubscriptionPage = () => {
                         features: ['Appointment', 'Auto billing', 'IPD', 'Prescription writing', 'Advance analytics', 'Training', '24*7 Support']
                     },
                     {
-                        id: 'yearly-plan-id',
+                        id: '7d9e4c0e-436d-472d-883f-0361308a0430',
                         name: 'Yearly Plan',
                         basePrice: 2500,
                         discountedPrice: 999,
