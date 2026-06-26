@@ -89,16 +89,19 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
         </div>
       </div>
 
-      <div className="bg-white/5 backdrop-blur-sm rounded-xl p-5 border border-white/10 shadow-2xl">
-        <h3 className="text-lg font-semibold mb-3 flex items-center gap-2 text-white">
-          <div className="p-1.5 bg-emerald-500/20 rounded-md">
-            <Shield className="w-4 h-4 text-emerald-400" />
+      <div className="relative rounded-2xl p-6 border border-white/10 shadow-2xl overflow-hidden bg-white/5 backdrop-blur-md">
+        {/* Subtle background glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-32 bg-emerald-500/20 blur-[100px] rounded-full pointer-events-none" />
+
+        <h3 className="text-xl font-bold mb-6 flex items-center gap-3 text-white relative z-10">
+          <div className="p-2 bg-gradient-to-br from-emerald-400/20 to-emerald-600/20 rounded-lg border border-emerald-500/20 shadow-inner">
+            <Shield className="w-5 h-5 text-emerald-400" />
           </div>
           Why you can trust us
         </h3>
 
         <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 gap-2"
+          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 relative z-10"
           initial="hidden"
           animate="visible"
           variants={{
@@ -106,7 +109,8 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
             visible: {
               opacity: 1,
               transition: {
-                staggerChildren: 0.1
+                staggerChildren: 0.1,
+                delayChildren: 0.1
               }
             }
           }}
@@ -125,16 +129,29 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
             <motion.div
               key={index}
               variants={{
-                hidden: { opacity: 0, y: 20 },
-                visible: { opacity: 1, y: 0 }
+                hidden: { opacity: 0, y: 20, scale: 0.95 },
+                visible: { 
+                  opacity: 1, 
+                  y: 0, 
+                  scale: 1,
+                  transition: { type: "spring", stiffness: 100, damping: 15 }
+                }
               }}
-              whileHover={{ scale: 1.02, backgroundColor: "rgba(255, 255, 255, 0.25)" }}
-              className="bg-white/20 p-2.5 rounded-lg border border-white/10 backdrop-blur-md flex items-center gap-3 transition-colors cursor-default shadow-sm"
+              whileHover={{ 
+                scale: 1.03, 
+                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                borderColor: "rgba(52, 211, 153, 0.4)",
+                boxShadow: "0 10px 30px -10px rgba(52, 211, 153, 0.2)"
+              }}
+              className="group relative bg-white/5 p-4 rounded-xl border border-white/5 backdrop-blur-lg flex flex-col gap-3 transition-all duration-300 cursor-default shadow-lg overflow-hidden"
             >
-              <div className="mt-0 bg-emerald-500/30 p-1.5 rounded-md flex-shrink-0 shadow-inner">
-                <item.icon className="w-3.5 h-3.5 text-emerald-300" />
+              {/* Premium gradient overlay on hover */}
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/0 via-emerald-500/0 to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              
+              <div className="bg-gradient-to-br from-emerald-400/10 to-emerald-600/10 p-2.5 rounded-lg w-fit shadow-inner border border-emerald-500/10 group-hover:border-emerald-400/30 transition-colors">
+                <item.icon className="w-5 h-5 text-emerald-400 group-hover:text-emerald-300 transition-colors drop-shadow-md" />
               </div>
-              <span className="text-xs text-white leading-snug font-medium tracking-wide shadow-black/10 text-shadow-sm">{item.text}</span>
+              <span className="text-[13px] text-white/90 leading-relaxed font-medium tracking-wide relative z-10 group-hover:text-white transition-colors">{item.text}</span>
             </motion.div>
           ))}
         </motion.div>
