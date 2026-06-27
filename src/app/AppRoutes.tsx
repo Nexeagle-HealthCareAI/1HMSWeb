@@ -39,7 +39,6 @@ const ProfilePage = lazy(() => import('@/features/profile/components/ProfilePage
 const TokenDetailsPage = lazy(() => import('@/features/appointment/pages/TokenDetailsPage').then(module => ({ default: module.default })));
 const NotFoundPage = lazy(() => import('@/components/shared/NotFoundPage').then(module => ({ default: module.default })));
 const PrescriptionVerificationPage = lazy(() => import('@/features/patient/pages/PrescriptionVerificationPage').then(module => ({ default: module.default })));
-const SubscriptionPage = lazy(() => import('@/features/subscription/pages/SubscriptionPage').then(module => ({ default: module.default })));
 
 // Patient routes
 const PatientsPage = lazy(() => import('@/features/patient/components/PatientsPage').then(module => ({ default: module.PatientsPage })));
@@ -164,16 +163,6 @@ export const AppRoutes: React.FC = () => {
                 <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
                   <MainLayout>
                     <AdminConfigModule />
-                  </MainLayout>
-                </RouteGuard>
-              }
-            />
-            <Route
-              path="/subscription"
-              element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
-                  <MainLayout>
-                    <SubscriptionPage />
                   </MainLayout>
                 </RouteGuard>
               }

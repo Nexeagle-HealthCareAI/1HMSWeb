@@ -60,10 +60,6 @@ ipdAxios.interceptors.response.use(
             if (status === 401) {
                 useAuthStore.getState().logout();
                 window.location.href = '/login';
-            } else if (status === 402) {
-                if (window.location.pathname !== '/subscription') {
-                    window.location.href = '/subscription';
-                }
             } else {
                 console.error(`IPD API HTTP ${status}:`, data);
             }

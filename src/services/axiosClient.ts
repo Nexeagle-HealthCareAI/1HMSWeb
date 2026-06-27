@@ -95,13 +95,6 @@ axiosInstance.interceptors.response.use(
           }
           break;
           
-        case 402:
-          // Payment Required - redirect to subscription page
-          if (window.location.pathname !== '/subscription') {
-            window.location.href = '/subscription';
-          }
-          break;
-          
         case 403:
           // Forbidden - user doesn't have permission
           console.error('Access forbidden:', data);

@@ -31,7 +31,8 @@ export const useSystemConfiguration = (focusTab?: string) => {
   // Map focusTab to the correct tab value
   const getInitialTab = () => {
     if (focusTab === 'hospital') return 'branding';
-    return 'branding'; // Default to branding tab
+    if (focusTab === 'subscription') return 'subscription';
+    return 'subscription'; // Default to subscription tab
   };
 
   const [activeTab, setActiveTab] = useState(getInitialTab());

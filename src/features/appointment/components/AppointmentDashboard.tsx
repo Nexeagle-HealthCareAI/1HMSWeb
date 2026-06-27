@@ -1771,6 +1771,11 @@ export const AppointmentDashboard = () => {
                             <div className="font-black text-slate-800 dark:text-slate-100 text-[15px] drop-shadow-sm">
                               {appointment.patientFullName}
                             </div>
+                            {appointment.referrerName && (
+                              <div className="text-[11px] text-brand-500 dark:text-brand-300 truncate leading-tight font-medium mt-0.5">
+                                {(appointment.referrerRelation || 'C/O')} {appointment.referrerName}
+                              </div>
+                            )}
                             <div className="text-xs text-slate-500 flex items-center gap-2.5 mt-1.5">
                               <span className="font-mono text-[10px] font-bold bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 shadow-inner text-brand-600 dark:text-brand-400">{appointment.patientId}</span>
                               <div className="flex items-center gap-1 font-medium bg-slate-50 dark:bg-slate-800/50 px-1.5 py-0.5 rounded">

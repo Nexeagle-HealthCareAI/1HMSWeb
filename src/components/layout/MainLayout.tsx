@@ -216,12 +216,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     },
     { id: 'billing', name: t('header.billing') || 'Billing', icon: IndianRupee, path: '/billing' },
     { id: 'ipd-redesign', name: 'IPD (new)', icon: Hotel, path: '/ipd-redesign' },
-    { id: 'subscription', name: 'Subscription', icon: CreditCard, path: '/subscription' },
   ];
 
   // Filter navigation items based on user role
   const navigation: NavigationItem[] = allNavigationItems.filter(item => {
-    if (item.id === 'admin' || item.id === 'configuration' || item.id === 'subscription') {
+    if (item.id === 'admin' || item.id === 'configuration') {
       return userRole === 'Admin' || userRole === 'AdminDoctor';
     }
     if (item.id === 'dashboard' || item.id === 'doc-ai' || item.id === 'calendar') {

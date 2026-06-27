@@ -378,7 +378,12 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   // Name (Large)
   const rawPName = toUpper(patient.name || 'Unknown Patient');
   const [mainName, ...restName] = rawPName.split('-');
-  const subName = restName.join('-').trim();
+  let subName = restName.join('-').trim();
+  // "Referred By" line under the patient name. The live preview passes the raw API payload
+  // (no name suffix), so derive it directly from the referrer fields when not already present.
+  if (!subName && patient.referrerName) {
+    subName = toUpper(`${patient.referrerRelation || 'C/O'} ${patient.referrerName}`);
+  }
 
   page.drawText(mainName.trim(), {
     x: nameX,
