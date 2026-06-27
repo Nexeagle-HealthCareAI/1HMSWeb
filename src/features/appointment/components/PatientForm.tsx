@@ -475,7 +475,24 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           defaultRatePercent: 0, // incentive rate set later by admin, not at booking
         });
         referredByReferrerId = created.referrerId;
+      } else if (!referredByReferrerId && referrerSearch.trim()) {
+        // The user typed a referrer name in the search box but never clicked a dropdown
+        // result. Don't silently drop it: reuse an exact (case-insensitive) match if one
+        // exists, otherwise create the referrer on the fly.
+        const typed = referrerSearch.trim();
+        const match = referrers.find(r => r.referrerName.trim().toLowerCase() === typed.toLowerCase());
+        if (match) {
+          referredByReferrerId = match.referrerId;
+        } else {
+          const created = await createReferrer.mutateAsync({
+            referrerName: typed,
+            referrerType: 'REFERRER',
+            defaultRatePercent: 0,
+          });
+          referredByReferrerId = created.referrerId;
+        }
       }
+      console.log('Resolved referrer →', { referredByReferrerId, referrerRelation: formData.referrerRelation, referrerSearch, creatingReferrer, formReferrerId: formData.referrerId });
 
       // Prepare the appointment request
       const appointmentRequest: RegisterAppointmentRequest = {
