@@ -234,6 +234,7 @@ export interface PatientSearchItem {
   mobile: string;
   sex: string;
   age: number;
+  ageUnit?: string;
   dateOfBirth: string;
   address: string;
   city: string;
