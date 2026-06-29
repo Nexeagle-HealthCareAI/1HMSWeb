@@ -182,6 +182,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const [selectedIndex, setSelectedIndex] = useState(0);
   // searchField state removed
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [suppressSuggestions, setSuppressSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Fuzzy duplicate detection (only while entering a brand-new patient).
@@ -294,6 +295,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   // Debounced search on name typing
   useEffect(() => {
     if (formData.patientId) return; // Stop searching if already selected
+    if (suppressSuggestions) return; // Stop searching if user discarded suggestions
     const query = formData.name.trim();
     if (query.length < 2) {
       setSearchResults([]);
@@ -710,23 +712,57 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                       {t('patientForm.personal.name')} <span className="text-red-500">*</span>
                     </Label>
                     <div className="relative">
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => {
-                          setFormData(prev => ({ ...prev, name: e.target.value, patientId: '' }));
-                        }}
-                        onFocus={() => { if (searchResults.length > 0 && !formData.patientId) setShowSearchResults(true); }}
-                        onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
-                        placeholder={t('patientForm.personal.namePlaceholder')}
-                        autoComplete="off"
-                        className={`h-10 text-sm md:text-base mt-1.5 ${reqClass(formData.name, !!errors.name)}`}
-                      />
+                      <div className="relative flex items-center">
+                        <Input
+                          id="name"
+                          value={formData.name}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setFormData(prev => ({ ...prev, name: val, patientId: '' }));
+                            if (val.trim() === '') setSuppressSuggestions(false);
+                          }}
+                          onFocus={() => { if (!suppressSuggestions && searchResults.length > 0 && !formData.patientId) setShowSearchResults(true); }}
+                          onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
+                          placeholder={t('patientForm.personal.namePlaceholder')}
+                          autoComplete="off"
+                          className={`h-10 text-sm md:text-base mt-1.5 ${reqClass(formData.name, !!errors.name)} ${formData.patientId ? 'pr-10' : ''}`}
+                        />
+                        {formData.patientId && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData(createInitialFormState());
+                              setSearchResults([]);
+                              setShowSearchResults(false);
+                            }}
+                            className="absolute right-2 top-1/2 mt-[3px] -translate-y-1/2 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-full transition-colors"
+                            title="Discard selected patient"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
                       {showSearchResults && searchResults.length > 0 && !formData.patientId && (
                         <div className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-md border bg-popover shadow-lg">
                           <div className="sticky top-0 px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted/50 border-b backdrop-blur-sm z-10 flex justify-between items-center">
                             <span>Suggested patients</span>
-                            {isSearching && <Loader2 className="h-3 w-3 animate-spin" />}
+                            <div className="flex items-center gap-2">
+                              {isSearching && <Loader2 className="h-3 w-3 animate-spin" />}
+                              <button 
+                                type="button" 
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setSuppressSuggestions(true);
+                                  setShowSearchResults(false);
+                                  setSearchResults([]);
+                                }}
+                                className="p-1 hover:bg-muted-foreground/10 rounded-full transition-colors"
+                                title="Close suggestions"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
                           </div>
                           {searchResults.map((patient, index) => (
                              <button 
