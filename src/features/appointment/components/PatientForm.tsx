@@ -503,7 +503,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
         patient: {
           fullName: formData.name,
           mobile: formatPhoneNumber(formData.phone), // Use formatted phone number
-          age: parseInt(formData.age),
+          age: formData.age ? parseInt(formData.age) : null,
           ageUnit: formData.ageUnit,
           sex: formData.gender,
           addressLine1: formData.address,

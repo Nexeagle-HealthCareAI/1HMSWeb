@@ -186,7 +186,7 @@ export interface RegisterAppointmentRequest {
   patient: {
     fullName: string;
     mobile: string;
-    age: number;
+    age?: number | null;
     ageUnit: string;
     sex: string;
     addressLine1: string;
