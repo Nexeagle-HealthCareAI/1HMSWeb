@@ -17,6 +17,8 @@ interface TokenPayload {
     g?: string; // Gender
     rn?: string; // Referrer Name
     rt?: string; // Referrer Type (DOCTOR/AGENT/REFERRER)
+    gn?: string; // Guardian Name
+    gr?: string; // Guardian Relation
     hn?: string; // Hospital Name
     ha?: string; // Hospital Address
 }
@@ -120,6 +122,12 @@ const TokenDetailsPage: React.FC = () => {
                                     <span className="font-bold text-sm text-gray-800">
                                         {[tokenData.ag != null ? `${tokenData.ag} ${tokenData.agU || 'Y'}` : null, tokenData.g?.charAt(0)].filter(Boolean).join(' / ')}
                                     </span>
+                                </div>
+                            )}
+                            {tokenData.gn && (
+                                <div className="col-span-2 flex justify-between items-baseline pt-2 border-t border-gray-100 mt-1">
+                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{tokenData.gr || 'C/O'}</span>
+                                    <span className="font-bold text-sm text-gray-800 truncate pl-2">{tokenData.gn}</span>
                                 </div>
                             )}
                             {tokenData.rn && tokenData.rn !== 'Self' && (

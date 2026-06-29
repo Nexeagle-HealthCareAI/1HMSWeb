@@ -24,6 +24,8 @@ interface TokenPrintModalProps {
         gender?: string;
         referrerName?: string;
         referrerType?: string;
+        guardianName?: string;
+        guardianRelation?: string;
     } | null;
 }
 
@@ -61,6 +63,8 @@ export const TokenPrintModal: React.FC<TokenPrintModalProps> = ({
         g: tokenData.gender,
         rn: tokenData.referrerName,
         rt: tokenData.referrerType,
+        gn: tokenData.guardianName,
+        gr: tokenData.guardianRelation,
         hn: hospitalData?.name,
         ha: hospitalAddress
     };
@@ -134,6 +138,14 @@ export const TokenPrintModal: React.FC<TokenPrintModalProps> = ({
                                         <span className="font-bold text-[12px]">
                                             {[tokenData.age != null ? `${tokenData.age} ${tokenData.ageUnit || 'Y'}` : null, tokenData.gender?.charAt(0)].filter(Boolean).join(' / ')}
                                         </span>
+                                    </div>
+                                )}
+                                {tokenData.guardianName && (
+                                    <div className="flex justify-between items-baseline border-b border-black/20 pb-2">
+                                        <span className="font-bold text-[10px] uppercase tracking-wider">
+                                            {tokenData.guardianRelation || 'C/O'}
+                                        </span>
+                                        <span className="font-bold text-[12px] text-right truncate pl-2">{tokenData.guardianName}</span>
                                     </div>
                                 )}
                                 {tokenData.referrerName && tokenData.referrerName !== 'Self' && (

@@ -8,6 +8,7 @@ export interface PrescriptionPatient {
   id: string;
   name: string;
   age: string;
+  ageUnit?: string;
   gender: string;
   phone: string;
   address?: string;

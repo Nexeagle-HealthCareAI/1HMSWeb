@@ -406,7 +406,7 @@ export const buildTemplateBoundPreview = async ({ templateFile, layout, typograp
   cursorY -= lineHeight * 1.2;
 
   // Grid Info
-  const pAgeSex = toUpper([patient.age ? `${patient.age} Y` : '', patient.sex].filter(Boolean).join(' / '));
+  const pAgeSex = toUpper([patient.age ? `${patient.age} ${patient.ageUnit || 'Y'}` : '', patient.sex].filter(Boolean).join(' / '));
   const pUhid = toUpper(patient.patientId ? `ID: ${patient.patientId}` : '');
 
   // Dynamic width calculation

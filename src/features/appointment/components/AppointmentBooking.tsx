@@ -673,7 +673,9 @@ export const AppointmentBooking: React.FC<AppointmentBookingProps> = ({ refreshT
           ageUnit: patientData?.ageUnit,
           gender: patientData?.gender,
           referrerName: patientData?.referrerName,
-          referrerType: patientData?.referrerType
+          referrerType: patientData?.referrerType,
+          guardianName: patientData?.guardianName,
+          guardianRelation: patientData?.guardianRelation
         }}
       />
     );

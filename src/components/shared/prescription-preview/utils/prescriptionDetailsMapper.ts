@@ -117,8 +117,13 @@ export const buildPrescriptionDataFromResponse = (
     bmi: formatMetric(vitals?.bmi, '', 1),
   };
 
+  // Build guardian suffix
+  const guardianLabel = firstPatient?.guardianRelation || 'C/O';
+  const guardianSuffix = firstPatient?.guardianName
+    ? `${guardianLabel} ${firstPatient.guardianName}`
+    : '';
+
   // Build the referrer prefix based on type for a context-aware label
-  // DOCTOR → "Ref. Dr."  |  AGENT → "Ref. Agt."  |  others → relation or "C/O"
   const referrerLabel = firstPatient?.referrerType === 'DOCTOR'
     ? 'Ref. Dr.'
     : firstPatient?.referrerType === 'AGENT'
@@ -127,10 +132,16 @@ export const buildPrescriptionDataFromResponse = (
   const referrerSuffix = firstPatient?.referrerName
     ? `${referrerLabel} ${firstPatient.referrerName}`
     : '';
+
+  const nameParts = [firstPatient?.name ?? ''];
+  if (guardianSuffix) nameParts.push(guardianSuffix);
+  if (referrerSuffix) nameParts.push(referrerSuffix);
+
   const mappedPatient: PrescriptionPatient = {
-    name: referrerSuffix ? `${firstPatient?.name ?? ''}-${referrerSuffix}` : (firstPatient?.name ?? ''),
+    name: nameParts.join(' - '),
     id: firstPatient?.patientId ?? '',
     age: typeof firstPatient?.age === 'number' ? String(firstPatient.age) : '',
+    ageUnit: firstPatient?.ageUnit,
     gender: firstPatient?.sex ?? '',
     phone: firstPatient?.contact ?? '',
     address: buildAddressLine(firstPatient?.address, firstPatient?.city, firstPatient?.state, firstPatient?.country, firstPatient?.pincode),
