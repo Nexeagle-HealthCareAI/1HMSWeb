@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
+import axios from 'axios';
 import { apiClient } from '@/services/axiosClient';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/hooks/use-toast';
@@ -32,27 +33,16 @@ export const SubscriptionPage = () => {
 
         const fetchPlans = async () => {
             try {
-                // Fetch from CMSAPI - Use relative proxy if configured, or direct URL.
-                // Assuming CMSAPI is on a known URL or we hardcode for this demo per user specs
-                // The user said: month 2500, off price 1099, year 999
-                setPlans([
-                    {
-                        id: '5f9b4c0e-436d-472d-883f-0361308a0429',
-                        name: 'Monthly Plan',
-                        basePrice: 2500,
-                        discountedPrice: 1099,
-                        billingCycle: 'Monthly',
-                        features: ['Appointment', 'Auto billing', 'IPD', 'Prescription writing', 'Advance analytics', 'Training', '24*7 Support']
-                    },
-                    {
-                        id: '7d9e4c0e-436d-472d-883f-0361308a0430',
-                        name: 'Yearly Plan',
-                        basePrice: 2500,
-                        discountedPrice: 999,
-                        billingCycle: 'Yearly',
-                        features: ['Appointment', 'Auto billing', 'IPD', 'Prescription writing', 'Advance analytics', 'Training', '24*7 Support']
-                    }
-                ]);
+                const response = await axios.get('http://151.185.45.77:5002/api/v1/SubscriptionPlans');
+                const mappedPlans = response.data.map((p: any) => ({
+                    id: p.planId,
+                    name: p.name,
+                    basePrice: p.basePrice,
+                    discountedPrice: p.discountPrice,
+                    billingCycle: p.billingCycle,
+                    features: ['Appointment', 'Auto billing', 'IPD', 'Prescription writing', 'Advance analytics', 'Training', '24*7 Support']
+                }));
+                setPlans(mappedPlans);
             } catch (err) {
                 console.error(err);
             }
