@@ -117,10 +117,15 @@ export const buildPrescriptionDataFromResponse = (
     bmi: formatMetric(vitals?.bmi, '', 1),
   };
 
-  // Append "C/O Referrer" so the renderer shows it on a smaller second line below the name
-  // (the renderer splits the name on "-" and draws the suffix in a smaller font).
+  // Build the referrer prefix based on type for a context-aware label
+  // DOCTOR → "Ref. Dr."  |  AGENT → "Ref. Agt."  |  others → relation or "C/O"
+  const referrerLabel = firstPatient?.referrerType === 'DOCTOR'
+    ? 'Ref. Dr.'
+    : firstPatient?.referrerType === 'AGENT'
+    ? 'Ref. Agt.'
+    : (firstPatient?.referrerRelation || 'C/O');
   const referrerSuffix = firstPatient?.referrerName
-    ? `${firstPatient.referrerRelation || 'C/O'} ${firstPatient.referrerName}`
+    ? `${referrerLabel} ${firstPatient.referrerName}`
     : '';
   const mappedPatient: PrescriptionPatient = {
     name: referrerSuffix ? `${firstPatient?.name ?? ''}-${referrerSuffix}` : (firstPatient?.name ?? ''),

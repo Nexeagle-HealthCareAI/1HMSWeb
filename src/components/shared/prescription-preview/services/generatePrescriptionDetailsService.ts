@@ -58,6 +58,7 @@ export interface PrescriptionPatientDetail {
   insuranceId?: string;
   referrerName?: string | null;
   referrerRelation?: string | null;
+  referrerType?: string | null;
 }
 
 export interface PrescriptionPatientData {

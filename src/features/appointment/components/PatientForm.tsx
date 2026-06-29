@@ -43,9 +43,9 @@ type PatientFormState = {
   patientId: string;
   name: string;
   referrerId: string;
-  referrerRelation: string;
   phone: string;
   age: string;
+  ageUnit: string;
   gender: string;
   address: string;
   block: string;
@@ -64,6 +64,9 @@ type PatientFormState = {
   hasInsurance: boolean;
   insuranceId: string;
   insuranceType: string;
+  // Guardian / relative (permanent patient-level, separate from medical referrer)
+  guardianName: string;
+  guardianRelation: string;
 };
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-', 'Unknown'];
@@ -82,10 +85,10 @@ const createInitialFormState = (): PatientFormState => ({
   patientId: '',
   name: '',
   referrerId: '',
-  referrerRelation: 'C/O',
   phone: '',
   age: '',
-  gender: '',
+  ageUnit: 'Y',
+  gender: 'Male',
   address: '',
   block: '',
   city: '',
@@ -102,7 +105,9 @@ const createInitialFormState = (): PatientFormState => ({
   paymentMode: '',
   hasInsurance: false,
   insuranceId: '',
-  insuranceType: ''
+  insuranceType: '',
+  guardianName: '',
+  guardianRelation: 'C/O',
 });
 
 const formatPhoneNumber = (value: string) => value.replace(/\D/g, '').slice(0, 10);
@@ -149,7 +154,9 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetClose } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 
 interface PatientFormProps {
@@ -253,7 +260,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   const [referrerSearch, setReferrerSearch] = useState('');
   const [referrerFocused, setReferrerFocused] = useState(false);
   const [creatingReferrer, setCreatingReferrer] = useState(false);
-  const [newReferrer, setNewReferrer] = useState({ name: '', phone: '', address: '', rate: '10' });
+  const [newReferrer, setNewReferrer] = useState({ name: '', phone: '', address: '', rate: '10', type: 'REFERRER' });
   const { data: referrersData } = useReferrers(hospitalId || '', referrerSearch.trim() || undefined);
   const createReferrer = useCreateReferrer(hospitalId || '');
   const referrers = referrersData?.referrers ?? [];
@@ -284,61 +291,47 @@ export const PatientForm: React.FC<PatientFormProps> = ({
     return timeFormatter.format(date);
   };
 
-  // Search function with auto-detection
-  const handleSearch = async () => {
-    const query = searchQuery.trim();
-    if (!query) {
+  // Debounced search on name typing
+  useEffect(() => {
+    if (formData.patientId) return; // Stop searching if already selected
+    const query = formData.name.trim();
+    if (query.length < 2) {
+      setSearchResults([]);
+      setShowSearchResults(false);
       return;
     }
 
     setIsSearching(true);
-    clearSearchError();
+    const timer = setTimeout(async () => {
+      try {
+        const response = await searchPatients({
+          by: 'name',
+          q: query,
+          scope: 'local'
+        });
+        setSearchResults(response.items);
+        setShowSearchResults(true);
+      } catch (error) {
+        console.error('Search error:', error);
+        setSearchResults([]);
+        setShowSearchResults(false);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 400);
 
-    // Determine search field based on input pattern
-    let searchBy: 'patientId' | 'name' | 'contact' = 'name';
-
-    // Check for Patient ID (starts with PTID or UHID)
-    if (/^(PTID|UHID)/i.test(query)) {
-      searchBy = 'patientId';
-    }
-    // Check for Phone Number (mostly digits, allowing +, -, space)
-    else if (/^\+?[\d\s-]{3,}$/.test(query) && /\d/.test(query)) {
-      // Ensure it has at least some digits to be a phone number
-      searchBy = 'contact';
-    }
-
-    console.log(`Smart Search detected type: ${searchBy} for query: ${query}`);
-
-    try {
-      const response = await searchPatients({
-        by: searchBy,
-        q: query,
-        scope: 'local'
-      });
-
-      setSearchResults(response.items);
-      setShowSearchResults(true);
-
-      console.log('Search results:', response);
-    } catch (error) {
-      console.error('Search error:', error);
-      setSearchResults([]);
-      setShowSearchResults(true);
-    } finally {
-      setIsSearching(false);
-      setSelectedIndex(0); // Reset selection
-    }
-  };
+    return () => clearTimeout(timer);
+  }, [formData.name, formData.patientId, searchPatients]);
 
   // Handle patient selection from search results
   const handlePatientSelect = (patient: PatientSearchItem) => {
     setFormData({
       patientId: patient.patientId,
       name: patient.fullName,
-      referrerId: '', // Reset referral on patient select
-      referrerRelation: 'C/O',
+      referrerId: '',
       phone: formatPhoneNumber(patient.mobile || ''),
       age: patient.age.toString(),
+      ageUnit: (patient as any).ageUnit || 'Y',
       gender: patient.sex,
       address: patient.address || '',
       block: '',
@@ -356,7 +349,9 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       paymentMode: '',
       hasInsurance: false,
       insuranceId: '',
-      insuranceType: ''
+      insuranceType: '',
+      guardianName: (patient as any).guardianName || '',
+      guardianRelation: (patient as any).guardianRelation || 'C/O',
     });
     setShowSearchResults(false);
     setSearchQuery('');
@@ -385,7 +380,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       patientId: m.patientId,
       fullName: m.fullName ?? '',
       mobile: m.mobile ?? '',
-      age: m.ageYears ?? 0,
+      age: m.age ?? (m as any).ageYears ?? 0,
+      ageUnit: m.ageUnit ?? 'Y',
       sex: m.sex ?? '',
       address: '',
       city: m.city ?? '',
@@ -466,16 +462,20 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
       // Resolve the referrer: inline-create a new one if the user typed one, else use the picked id.
       let referredByReferrerId = formData.referrerId || undefined;
+      let finalReferrerName = selectedReferrer?.referrerName || 'Self';
+      let finalReferrerType = selectedReferrer?.referrerType || 'REFERRER';
       if (creatingReferrer && newReferrer.name.trim()) {
         const created = await createReferrer.mutateAsync({
           referrerName: newReferrer.name.trim(),
-          referrerType: 'REFERRER',
+          referrerType: newReferrer.type || 'REFERRER',
           phone: newReferrer.phone.trim() || undefined,
           address: newReferrer.address.trim() || undefined,
-          defaultRatePercent: 0, // incentive rate set later by admin, not at booking
+          defaultRatePercent: parseInt(newReferrer.rate) || 10,
         });
         referredByReferrerId = created.referrerId;
-      } else if (!referredByReferrerId && referrerSearch.trim()) {
+        finalReferrerName = created.referrerName;
+        finalReferrerType = newReferrer.type || 'REFERRER';
+      } else if (!formData.referrerId && referrerSearch.trim()) {
         // The user typed a referrer name in the search box but never clicked a dropdown
         // result. Don't silently drop it: reuse an exact (case-insensitive) match if one
         // exists, otherwise create the referrer on the fly.
@@ -483,6 +483,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({
         const match = referrers.find(r => r.referrerName.trim().toLowerCase() === typed.toLowerCase());
         if (match) {
           referredByReferrerId = match.referrerId;
+          finalReferrerName = match.referrerName;
+          finalReferrerType = match.referrerType || 'REFERRER';
         } else {
           const created = await createReferrer.mutateAsync({
             referrerName: typed,
@@ -490,16 +492,19 @@ export const PatientForm: React.FC<PatientFormProps> = ({
             defaultRatePercent: 0,
           });
           referredByReferrerId = created.referrerId;
+          finalReferrerName = typed;
+          finalReferrerType = 'REFERRER';
         }
       }
-      console.log('Resolved referrer →', { referredByReferrerId, referrerRelation: formData.referrerRelation, referrerSearch, creatingReferrer, formReferrerId: formData.referrerId });
+      console.log('Resolved referrer →', { referredByReferrerId, guardianName: formData.guardianName, referrerSearch, creatingReferrer, formReferrerId: formData.referrerId });
 
       // Prepare the appointment request
       const appointmentRequest: RegisterAppointmentRequest = {
         patient: {
           fullName: formData.name,
           mobile: formatPhoneNumber(formData.phone), // Use formatted phone number
-          ageYears: parseInt(formData.age),
+          age: parseInt(formData.age),
+          ageUnit: formData.ageUnit,
           sex: formData.gender,
           addressLine1: formData.address,
           city: formData.city,
@@ -515,15 +520,16 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           emergencyContactName: formData.emergencyContactName || undefined,
           emergencyContactRelation: formData.emergencyContactRelation || undefined,
           emergencyContactPhone: formData.emergencyContactPhone || undefined,
+          guardianName: formData.guardianName || undefined,
+          guardianRelation: formData.guardianName ? formData.guardianRelation : undefined,
         },
         doctorId: doctor.id,
         apptDate: new Date(selectedSlot.date + 'T' + selectedSlot.time).toISOString(),
-        startAt: selectedSlot.date + 'T' + selectedSlot.time + ':00', // Keep as local time string, don't convert to UTC
+        startAt: selectedSlot.date + 'T' + selectedSlot.time + ':00',
         reason: formData.reason || t('patientForm.reason.general'),
-        slotTimeInMinutes: selectedSlot.slotDurationInMinutes || 10, // Use slot duration from UI or default to 10
+        slotTimeInMinutes: selectedSlot.slotDurationInMinutes || 10,
         userId: getUserId() || '',
         referredByReferrerId,
-        referrerRelation: referredByReferrerId ? formData.referrerRelation : undefined,
       };
 
       // Call the API using the hook
@@ -584,9 +590,12 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       onSubmit({
         ...formData,
         age: parseInt(formData.age),
+        ageUnit: formData.ageUnit,
         appointmentId: response.appointmentId,
         patientId: finalPatientId,
-        tokenNumber: response.tokenNumber
+        tokenNumber: response.tokenNumber,
+        referrerName: finalReferrerName,
+        referrerType: finalReferrerType,
       });
     } catch (error) {
       console.error('Failed to register appointment:', error);
@@ -601,111 +610,58 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   };
 
   return (
-    <Dialog open={true} onOpenChange={onCancel}>
-      <DialogContent className="w-[98vw] h-[98vh] md:w-[92vw] md:max-w-[92vw] md:h-[95vh] md:max-h-[95vh] p-3 md:p-6 overflow-y-auto dark:bg-gray-900 [&>button]:hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        <div className="absolute right-5 top-5 z-50">
-          <DialogClose className="rounded-full opacity-100 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground bg-red-100 hover:bg-red-200 text-red-600 border-2 border-red-200 h-8 w-8 md:h-10 md:w-10 flex items-center justify-center">
-            <X className="h-5 w-5 md:h-6 md:w-6" />
-            <span className="sr-only">Close</span>
-          </DialogClose>
-        </div>
-        <DialogHeader className="border-b pb-1 mb-1">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mr-8 md:mr-16">
-            <div>
-              <DialogTitle className="text-2xl md:text-3xl font-extrabold text-brand-900 dark:text-brand-400 tracking-tight">
+    <Sheet open={true} onOpenChange={onCancel}>
+      <SheetContent side="right" className="w-[100vw] sm:max-w-[540px] md:max-w-[700px] p-0 flex flex-col gap-0 border-l dark:bg-gray-900 shadow-2xl overflow-hidden">
+        {/* Sticky Header */}
+        <SheetHeader className="p-4 md:p-6 border-b bg-background z-10 shrink-0 text-left">
+          <div className="pr-8 space-y-1.5">
+            <div className="flex items-center justify-between pr-4">
+              <SheetTitle className="text-2xl md:text-3xl font-extrabold text-brand-900 dark:text-brand-400 tracking-tight">
                 {t('patientForm.title')}
-              </DialogTitle>
-              <DialogDescription className="text-sm md:text-base text-gray-600 dark:text-gray-300 mt-0">
-                {t('patientForm.description')}
-              </DialogDescription>
+              </SheetTitle>
+              {showConsult && (
+                <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 bg-emerald-100/50 dark:bg-emerald-900/30 px-3 py-1 rounded-full border border-emerald-200/50 dark:border-emerald-800/50 shadow-sm shrink-0">
+                  <span className="text-sm">⚡</span>
+                  <span className="font-bold text-[10px] md:text-xs uppercase tracking-widest">Auto Bill Enabled</span>
+                </div>
+              )}
             </div>
-            {/* Appointment Details Row in Header */}
-            <div className="w-full md:w-auto overflow-x-auto pb-1 -mx-3 px-3 md:mx-0 md:px-0 md:overflow-visible no-scrollbar">
-              <div className="flex flex-nowrap items-center gap-x-3 text-xs md:text-lg bg-brand-100 dark:bg-brand-900/30 px-3 py-1.5 md:px-4 rounded-xl border-2 border-brand-200 dark:border-brand-700 shadow-sm whitespace-nowrap min-w-max">
-                <div className="flex items-center gap-1.5 md:gap-2">
-                  <User className="h-3.5 w-3.5 md:h-5 md:w-5 text-brand-700 dark:text-brand-400" />
-                  <span className="font-bold text-brand-900 dark:text-brand-100">{doctor.name}</span>
-                </div>
-                <div className="h-4 md:h-6 w-px bg-brand-300 dark:bg-brand-600" />
-                <div className="flex items-center gap-1.5 md:gap-2">
-                  <Calendar className="h-3.5 w-3.5 md:h-5 md:w-5 text-brand-700 dark:text-brand-400" />
-                  <span className="font-bold text-brand-900 dark:text-brand-100">{dateFormatter.format(new Date(selectedSlot.date))}</span>
-                </div>
-                <div className="h-4 md:h-6 w-px bg-brand-300 dark:bg-brand-600" />
-                <div className="flex items-center gap-1.5 md:gap-2">
-                  <Clock className="h-3.5 w-3.5 md:h-5 md:w-5 text-brand-700 dark:text-brand-400" />
-                  <span className="font-bold text-brand-900 dark:text-brand-100">{formatTime(selectedSlot.time)}</span>
-                </div>
-                <div className="h-4 md:h-6 w-px bg-brand-300 dark:bg-brand-600" />
-                <div className="flex items-center gap-1.5 md:gap-2">
-                  <span className="text-sm md:text-lg">⏱️</span>
-                  <span className="font-bold text-brand-900 dark:text-brand-100">{t('patientForm.appointmentDetails.duration', { minutes: selectedSlot.slotDurationInMinutes || 10 })}</span>
-                </div>
+            <SheetDescription className="text-sm text-gray-600 dark:text-gray-300">
+              {t('patientForm.description')}
+            </SheetDescription>
+          </div>
+          
+          {/* Appointment Details Row in Header */}
+          <div className="mt-3 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 no-scrollbar">
+            <div className="inline-flex items-center gap-x-3 md:gap-x-4 text-xs md:text-sm bg-brand-50/80 dark:bg-brand-900/30 px-3 py-2 md:px-4 md:py-2.5 rounded-lg border border-brand-200/60 dark:border-brand-700 shadow-sm whitespace-nowrap text-brand-800 dark:text-brand-200">
+              <div className="flex items-center gap-1.5 md:gap-2">
+                <User className="h-4 w-4 md:h-4 md:w-4 text-brand-600 dark:text-brand-400" />
+                <span className="font-semibold">{doctor.name}</span>
+              </div>
+              <div className="h-4 md:h-5 w-px bg-brand-300 dark:bg-brand-600" />
+              <div className="flex items-center gap-1.5 md:gap-2">
+                <Calendar className="h-4 w-4 md:h-4 md:w-4 text-brand-600 dark:text-brand-400" />
+                <span className="font-semibold">{dateFormatter.format(new Date(selectedSlot.date))}</span>
+              </div>
+              <div className="h-4 md:h-5 w-px bg-brand-300 dark:bg-brand-600" />
+              <div className="flex items-center gap-1.5 md:gap-2">
+                <Clock className="h-4 w-4 md:h-4 md:w-4 text-brand-600 dark:text-brand-400" />
+                <span className="font-semibold">{formatTime(selectedSlot.time)}</span>
+              </div>
+              <div className="h-4 md:h-5 w-px bg-brand-300 dark:bg-brand-600" />
+              <div className="flex items-center gap-1.5 md:gap-2">
+                <span className="text-sm">⏱️</span>
+                <span className="font-semibold">{t('patientForm.appointmentDetails.duration', { minutes: selectedSlot.slotDurationInMinutes || 10 })}</span>
               </div>
             </div>
           </div>
-        </DialogHeader>
+        </SheetHeader>
 
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-2 md:gap-3 pb-3">
-          {/* Patient Search - Enhanced */}
-          <div className="xl:col-span-1">
-            <Card className="p-3 md:p-6 bg-gradient-subtle dark:bg-gray-800 border-healthcare-primary/20 dark:border-brand-400/20 h-fit mb-0">
-              <h4 className="font-bold text-base md:text-lg text-foreground dark:text-white mb-2 md:mb-4 flex items-center gap-2">
-                <Search className="h-4 w-4 md:h-5 md:w-5 text-brand-600" />
-                {t('patientForm.search.title')}
-              </h4>
-              <div className="space-y-3 md:space-y-4">
-                {/* Search Input - Smart Search */}
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleSearch();
-                    }
-                  }}
-                  placeholder="Search by Name, Phone, or Patient ID..."
-                  className="text-sm md:text-base h-9 md:h-10 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm"
-                />
-
-                {/* Search Help Text */}
-                <div className="text-xs md:text-sm text-muted-foreground dark:text-gray-400 space-y-1">
-                  <p>💡 Auto-detects <strong>Phone, Patient ID, or Name</strong></p>
-                </div>
-
-                <Button
-                  type="button"
-                  size="sm"
-                  className="w-full h-9 md:h-10 text-sm md:text-base"
-                  onClick={handleSearch}
-                  disabled={isSearching || isSearchLoading || !searchQuery.trim()}
-                >
-                  <Search className="h-4 w-4 md:h-5 md:w-5 mr-1" />
-                  {isSearching || isSearchLoading ? t('patientForm.search.searching') : t('patientForm.search.submit')}
-                </Button>
-
-                {/* Search Error Display */}
-                {searchError && (
-                  <div className="text-red-500 text-xs md:text-sm bg-red-50 dark:bg-red-900/20 p-2 rounded border border-red-200 dark:border-red-800">
-                    <p>{t('patientForm.search.error', { error: searchError })}</p>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="mt-1 h-7 md:h-8 text-xs md:text-sm"
-                      onClick={clearSearchError}
-                    >
-                      {t('patientForm.search.clearError')}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </Card>
-          </div>
-
-          {/* Main Form - 3 columns */}
-          <div className="xl:col-span-3">
+        {/* Scrollable Form Content */}
+        <ScrollArea className="flex-1 px-4 md:px-6 py-4">
+          <div className="grid grid-cols-1 gap-4 md:gap-5 pb-6">
+          {/* Main Form */}
+          <div className="w-full">
             <form id="patient-form" onSubmit={handleSubmit} className="space-y-2 md:space-y-4">
               {/* Duplicate-patient warning (new patient only) */}
               {!formData.patientId && dupMatches.length > 0 && !dupDismissed && (
@@ -727,7 +683,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                             <Badge variant="outline" className={`text-[11px] font-bold border ${DUP_TONE[m.confidence].chip}`}>{DUP_TONE[m.confidence].label}</Badge>
                           </div>
                           <p className="text-[11px] text-muted-foreground font-mono truncate">
-                            {m.patientId}{m.ageYears != null ? ` · ${m.ageYears}${m.sex ?? ''}` : m.sex ? ` · ${m.sex}` : ''}{m.mobile ? ` · ${m.mobile}` : ''} · {Math.round(m.similarity * 100)}% name
+                            {m.patientId}{(m.age ?? (m as any).ageYears) != null ? ` · ${m.age ?? (m as any).ageYears}${m.ageUnit || 'Y'} ${m.sex ?? ''}` : m.sex ? ` · ${m.sex}` : ''}{m.mobile ? ` · ${m.mobile}` : ''} · {Math.round(m.similarity * 100)}% name
                           </p>
                         </div>
                         <Button type="button" size="sm" onClick={() => useExistingDuplicate(m)} className="h-8 text-xs shrink-0">Use this</Button>
@@ -748,55 +704,132 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     Required fields
                   </span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-3 md:gap-5">
-                  <div className="xl:col-span-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-5">
+                  <div className="md:col-span-2">
                     <Label htmlFor="name" className="text-sm md:text-base font-medium dark:text-gray-300">
                       {t('patientForm.personal.name')} <span className="text-red-500">*</span>
                     </Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder={t('patientForm.personal.namePlaceholder')}
-                      className={`h-10 text-sm md:text-base mt-1.5 ${reqClass(formData.name, !!errors.name)}`}
-                    />
+                    <div className="relative">
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => {
+                          setFormData(prev => ({ ...prev, name: e.target.value, patientId: '' }));
+                        }}
+                        onFocus={() => { if (searchResults.length > 0 && !formData.patientId) setShowSearchResults(true); }}
+                        onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
+                        placeholder={t('patientForm.personal.namePlaceholder')}
+                        autoComplete="off"
+                        className={`h-10 text-sm md:text-base mt-1.5 ${reqClass(formData.name, !!errors.name)}`}
+                      />
+                      {showSearchResults && searchResults.length > 0 && !formData.patientId && (
+                        <div className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-md border bg-popover shadow-lg">
+                          <div className="sticky top-0 px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted/50 border-b backdrop-blur-sm z-10 flex justify-between items-center">
+                            <span>Suggested patients</span>
+                            {isSearching && <Loader2 className="h-3 w-3 animate-spin" />}
+                          </div>
+                          {searchResults.map((patient, index) => (
+                             <button 
+                               key={patient.patientId} 
+                               type="button"
+                               className="w-full text-left px-3 py-2.5 text-sm hover:bg-accent border-b last:border-b-0 transition-colors"
+                               onClick={() => handlePatientSelect(patient)}
+                             >
+                               <div className="font-semibold text-foreground flex items-center gap-2">
+                                 {patient.fullName} 
+                                 <Badge variant="secondary" className="text-[10px] font-mono">{patient.patientId}</Badge>
+                               </div>
+                               <div className="text-muted-foreground text-xs mt-0.5 flex gap-2">
+                                 <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {patient.mobile}</span>
+                                 {patient.age ? <span>· {patient.age}{patient.sex ? patient.sex[0] : ''}</span> : null}
+                               </div>
+                             </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     {errors.name && (
                       <p className="text-red-500 text-xs md:text-sm mt-1">{t(errors.name)}</p>
                     )}
                   </div>
 
-                  <div className="xl:col-span-4">
+                  {/* GUARDIAN / RELATIVE */}
+                  <div className="md:col-span-2">
                     <Label className="text-sm md:text-base font-medium dark:text-gray-300">
-                      Referred By
+                      Guardian / Relative
+                    </Label>
+                    <div className="flex mt-1.5 h-10 rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 transition-colors">
+                      {/* Relation selector */}
+                      <select
+                        value={formData.guardianRelation}
+                        onChange={(e) => setFormData(prev => ({ ...prev, guardianRelation: e.target.value }))}
+                        className="h-full w-[80px] border-0 border-r border-input rounded-l-md px-2 text-sm bg-muted/40 focus:outline-none shrink-0"
+                      >
+                        {RELATION_OPTIONS.map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                      {/* Guardian name input */}
+                      <Input
+                        id="guardianName"
+                        value={formData.guardianName}
+                        onChange={(e) => setFormData(prev => ({ ...prev, guardianName: e.target.value }))}
+                        placeholder="Guardian / relative name (optional)"
+                        className="flex-1 min-w-0 h-full border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none rounded-r-md bg-transparent px-3 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* MEDICAL REFERRAL (Doctor / Agent) */}
+                  <div className="md:col-span-2">
+                    <Label className="text-sm md:text-base font-medium dark:text-gray-300">
+                      Referred By <span className="text-xs text-muted-foreground font-normal">(Doctor / Agent)</span>
                     </Label>
                     <div className="flex">
-                      <Select
-                        value={formData.referrerRelation}
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, referrerRelation: value }))}
-                      >
-                        <SelectTrigger className="w-[85px] h-10 text-sm md:text-base mt-1.5 rounded-r-none border-r-0 focus:ring-0 focus:ring-offset-0 focus:z-10 bg-muted/50">
-                          <SelectValue placeholder="Rel" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {RELATION_OPTIONS.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
                       {selectedReferrer ? (
-                        <div className="flex-1 h-10 mt-1.5 rounded-l-none rounded-r-md border border-l-0 border-input bg-brand-50 dark:bg-brand-900/20 px-3 flex items-center justify-between">
-                          <span className="text-sm truncate">
-                            {selectedReferrer.referrerName}
-                            {selectedReferrer.defaultRatePercent > 0 && (
-                              <span className="text-muted-foreground"> · {selectedReferrer.defaultRatePercent}%</span>
-                            )}
-                          </span>
-                          <button type="button" onClick={() => setFormData(prev => ({ ...prev, referrerId: '' }))} className="ml-2 text-gray-400 hover:text-red-500">
-                            <X className="h-4 w-4" />
-                          </button>
+                        <div className="flex-1 mt-1.5 rounded-xl border border-input overflow-hidden"
+                             style={{
+                               background: selectedReferrer.referrerType === 'DOCTOR'
+                                 ? 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)'
+                                 : selectedReferrer.referrerType === 'AGENT'
+                                 ? 'linear-gradient(135deg, #faf5ff 0%, #ede9fe 100%)'
+                                 : 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)'
+                             }}
+                        >
+                          <div className="h-10 px-3 flex items-center justify-between">
+                            <span className="flex items-center gap-2 min-w-0">
+                              {/* Avatar circle */}
+                              <span className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold
+                                ${
+                                  selectedReferrer.referrerType === 'DOCTOR' ? 'bg-blue-600 text-white'
+                                  : selectedReferrer.referrerType === 'AGENT' ? 'bg-purple-600 text-white'
+                                  : 'bg-emerald-600 text-white'
+                                }`}>
+                                {selectedReferrer.referrerName.charAt(0).toUpperCase()}
+                              </span>
+                              <span className="font-semibold text-sm text-slate-800 dark:text-slate-100 truncate">
+                                {selectedReferrer.referrerName}
+                              </span>
+                              <span className={`shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full border
+                                ${
+                                  selectedReferrer.referrerType === 'DOCTOR' ? 'bg-blue-100 text-blue-700 border-blue-200'
+                                  : selectedReferrer.referrerType === 'AGENT' ? 'bg-purple-100 text-purple-700 border-purple-200'
+                                  : 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                                }`}>
+                                {selectedReferrer.referrerType}
+                              </span>
+                              {selectedReferrer.defaultRatePercent > 0 && (
+                                <span className="shrink-0 text-[10px] text-slate-500">{selectedReferrer.defaultRatePercent}%</span>
+                              )}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, referrerId: '' }))}
+                              className="ml-2 shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-slate-400 hover:bg-red-100 hover:text-red-500 transition-colors"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </div>
                       ) : creatingReferrer ? (
                         <Input
@@ -804,7 +837,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                           onChange={(e) => setNewReferrer(prev => ({ ...prev, name: e.target.value }))}
                           placeholder="New referrer name"
                           autoFocus
-                          className="flex-1 h-10 text-sm md:text-base mt-1.5 rounded-l-none focus:z-10"
+                          className="flex-1 h-10 text-sm md:text-base mt-1.5 focus:z-10"
                         />
                       ) : (
                         <div className="relative flex-1">
@@ -813,31 +846,65 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                             onChange={(e) => setReferrerSearch(e.target.value)}
                             onFocus={() => setReferrerFocused(true)}
                             onBlur={() => setTimeout(() => setReferrerFocused(false), 150)}
-                            placeholder="Search or add referrer…"
-                            className="h-10 text-sm md:text-base mt-1.5 rounded-l-none focus:z-10"
+                            placeholder="Search doctor / agent referrer…"
+                            className="h-10 text-sm md:text-base mt-1.5 focus:z-10"
                           />
                           {(referrerFocused || referrerSearch.trim()) && (
-                            <div className="absolute z-20 left-0 right-0 mt-1 max-h-48 overflow-auto rounded-md border bg-popover shadow-lg">
+                            <div className="absolute z-20 left-0 right-0 mt-1.5 max-h-52 overflow-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl shadow-slate-200/60 dark:shadow-black/40 divide-y divide-slate-100 dark:divide-slate-800">
                               {referrers.length === 0 && (
-                                <div className="px-3 py-2 text-xs text-muted-foreground">No referrers yet — add one below.</div>
+                                <div className="px-4 py-3 text-xs text-slate-400 flex items-center gap-2">
+                                  <Search className="h-3.5 w-3.5" />
+                                  No referrers yet — add one below.
+                                </div>
                               )}
-                              {referrers.map(r => (
-                                <button
-                                  key={r.referrerId}
-                                  type="button"
-                                  onClick={() => { setFormData(prev => ({ ...prev, referrerId: r.referrerId })); setReferrerSearch(''); }}
-                                  className="w-full text-left px-3 py-2 text-sm hover:bg-accent border-b last:border-b-0"
-                                >
-                                  <span className="font-medium">{r.referrerName}</span>
-                                  <span className="text-muted-foreground text-xs"> · {r.referrerType}{r.defaultRatePercent > 0 ? ` · ${r.defaultRatePercent}%` : ''}{r.phone ? ` · ${r.phone}` : ''}</span>
-                                </button>
-                              ))}
+                              {referrers.map(r => {
+                                const accentCls = r.referrerType === 'DOCTOR'
+                                  ? 'border-l-blue-500'
+                                  : r.referrerType === 'AGENT'
+                                  ? 'border-l-purple-500'
+                                  : 'border-l-emerald-500';
+                                const avatarCls = r.referrerType === 'DOCTOR'
+                                  ? 'bg-blue-600'
+                                  : r.referrerType === 'AGENT'
+                                  ? 'bg-purple-600'
+                                  : 'bg-emerald-600';
+                                const badgeCls = r.referrerType === 'DOCTOR'
+                                  ? 'bg-blue-50 text-blue-600 border-blue-200'
+                                  : r.referrerType === 'AGENT'
+                                  ? 'bg-purple-50 text-purple-600 border-purple-200'
+                                  : 'bg-emerald-50 text-emerald-600 border-emerald-200';
+                                return (
+                                  <button
+                                    key={r.referrerId}
+                                    type="button"
+                                    onClick={() => { setFormData(prev => ({ ...prev, referrerId: r.referrerId })); setReferrerSearch(''); }}
+                                    className={`w-full text-left px-3 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 flex items-center gap-3 transition-colors border-l-4 ${accentCls}`}
+                                  >
+                                    <span className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white ${avatarCls}`}>
+                                      {r.referrerName.charAt(0).toUpperCase()}
+                                    </span>
+                                    <span className="flex-1 min-w-0">
+                                      <span className="block font-medium text-sm text-slate-800 dark:text-slate-100 truncate">{r.referrerName}</span>
+                                      {r.phone && <span className="block text-[11px] text-slate-400">{r.phone}</span>}
+                                    </span>
+                                    <span className="flex items-center gap-1.5 shrink-0">
+                                      {r.defaultRatePercent > 0 && (
+                                        <span className="text-[10px] font-semibold text-slate-500">{r.defaultRatePercent}%</span>
+                                      )}
+                                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${badgeCls}`}>
+                                        {r.referrerType}
+                                      </span>
+                                    </span>
+                                  </button>
+                                );
+                              })}
                               <button
                                 type="button"
                                 onClick={() => { setCreatingReferrer(true); setNewReferrer(prev => ({ ...prev, name: referrerSearch.trim() })); setReferrerSearch(''); }}
-                                className="w-full text-left px-3 py-2 text-sm text-brand-600 hover:bg-accent font-medium"
+                                className="w-full text-left px-4 py-2.5 text-sm font-semibold text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 flex items-center gap-2 transition-colors"
                               >
-                                + Add new referrer{referrerSearch.trim() ? ` "${referrerSearch.trim()}"` : ''}
+                                <span className="w-5 h-5 rounded-full bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center text-brand-600 font-bold text-sm">+</span>
+                                Add new referrer{referrerSearch.trim() ? ` "${referrerSearch.trim()}"` : ''}
                               </button>
                             </div>
                           )}
@@ -846,80 +913,146 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                     </div>
 
                     {creatingReferrer && (
-                      <div className="mt-2 grid grid-cols-2 gap-2 rounded-md border border-brand-200 bg-brand-50/40 dark:bg-brand-900/10 p-2">
-                        <Input
-                          value={newReferrer.phone}
-                          onChange={(e) => setNewReferrer(prev => ({ ...prev, phone: e.target.value }))}
-                          placeholder="Phone"
-                          className="h-8 text-xs"
-                        />
-                        <Input
-                          value={newReferrer.address}
-                          onChange={(e) => setNewReferrer(prev => ({ ...prev, address: e.target.value }))}
-                          placeholder="Address"
-                          className="h-8 text-xs"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => { setCreatingReferrer(false); setNewReferrer({ name: '', phone: '', address: '', rate: '10' }); }}
-                          className="col-span-2 text-left text-xs text-gray-500 hover:text-red-500"
-                        >
-                          Cancel new referrer
-                        </button>
+                      <div className="mt-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg overflow-hidden">
+                        {/* Header */}
+                        <div className="px-4 py-2.5 bg-gradient-to-r from-slate-50 to-slate-100/60 dark:from-slate-800 dark:to-slate-800/50 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="w-4 h-4 rounded-full bg-brand-500 flex items-center justify-center">
+                              <span className="text-[9px] font-bold text-white">+</span>
+                            </span>
+                            <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">New Referrer</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => { setCreatingReferrer(false); setNewReferrer({ name: '', phone: '', address: '', rate: '10', type: 'REFERRER' }); }}
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-slate-400 hover:bg-red-100 hover:text-red-500 transition-colors"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+
+                        <div className="p-3 space-y-3">
+                          {/* Type selector pills */}
+                          <div className="flex gap-2">
+                            {(['DOCTOR', 'AGENT', 'REFERRER'] as const).map(opt => {
+                              const active = newReferrer.type === opt;
+                              const inactive = opt === 'DOCTOR'
+                                ? 'border-blue-200 text-blue-600 hover:bg-blue-50/60 dark:border-blue-800 dark:text-blue-400'
+                                : opt === 'AGENT'
+                                ? 'border-purple-200 text-purple-600 hover:bg-purple-50/60 dark:border-purple-800 dark:text-purple-400'
+                                : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50/60 dark:border-emerald-800 dark:text-emerald-400';
+                              const activeStyle = opt === 'DOCTOR'
+                                ? 'bg-blue-600 text-white border-blue-600'
+                                : opt === 'AGENT'
+                                ? 'bg-purple-600 text-white border-purple-600'
+                                : 'bg-emerald-600 text-white border-emerald-600';
+                              const icon = opt === 'DOCTOR' ? '🩺' : opt === 'AGENT' ? '🤝' : '👤';
+                              const label = opt === 'DOCTOR' ? 'Doctor' : opt === 'AGENT' ? 'Agent' : 'Other';
+                              return (
+                                <button
+                                  key={opt}
+                                  type="button"
+                                  onClick={() => setNewReferrer(prev => ({ ...prev, type: opt }))}
+                                  className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold h-8 rounded-lg border-2 transition-all duration-150 ${
+                                    active ? activeStyle : `bg-transparent ${inactive}`
+                                  }`}
+                                >
+                                  <span className="text-base leading-none">{icon}</span>
+                                  <span>{label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Contact fields */}
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input
+                              value={newReferrer.phone}
+                              onChange={(e) => setNewReferrer(prev => ({ ...prev, phone: e.target.value }))}
+                              placeholder="Phone (optional)"
+                              className="h-8 text-xs rounded-lg border-slate-200 dark:border-slate-700"
+                            />
+                            <Input
+                              value={newReferrer.address}
+                              onChange={(e) => setNewReferrer(prev => ({ ...prev, address: e.target.value }))}
+                              placeholder="Address (optional)"
+                              className="h-8 text-xs rounded-lg border-slate-200 dark:border-slate-700"
+                            />
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
 
-                  <div className="xl:col-span-2">
-                    <Label htmlFor="phone" className="text-sm md:text-base font-medium">
-                      {t('patientForm.personal.phone')} <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="phone"
-                      value={formData.phone}
-                      onChange={handlePhoneChange}
-                      placeholder={t('patientForm.personal.phonePlaceholder')}
-                      className={`h-10 text-sm md:text-base mt-1.5 ${reqClass(formData.phone, !!errors.phone)}`}
-                    />
-                    {errors.phone && (
-                      <p className="text-red-500 text-xs md:text-sm mt-1">{t(errors.phone)}</p>
-                    )}
-                  </div>
+                  <div className="md:col-span-2 flex flex-col md:flex-row gap-3 md:gap-4">
+                    <div className="flex-[0.8]">
+                      <Label htmlFor="phone" className="text-sm md:text-base font-medium">
+                        {t('patientForm.personal.phone')} <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="phone"
+                        value={formData.phone}
+                        onChange={handlePhoneChange}
+                        placeholder={t('patientForm.personal.phonePlaceholder')}
+                        className={`h-10 text-sm md:text-base mt-1.5 ${reqClass(formData.phone, !!errors.phone)}`}
+                      />
+                      {errors.phone && (
+                        <p className="text-red-500 text-xs md:text-sm mt-1">{t(errors.phone)}</p>
+                      )}
+                    </div>
 
-                  <div className="xl:col-span-3 flex gap-3 md:gap-4">
-                    <div className="flex-1">
+                    <div className="flex-[1.2]">
                       <Label htmlFor="age" className="text-sm md:text-base font-medium">
                         {t('patientForm.personal.age')} <span className="text-red-500">*</span>
                       </Label>
-                      <Input
-                        id="age"
-                        type="number"
-                        value={formData.age}
-                        onChange={(e) => setFormData(prev => ({ ...prev, age: e.target.value }))}
-                        placeholder={t('patientForm.personal.agePlaceholder')}
-                        min="1"
-                        max="120"
-                        className={`h-10 text-sm md:text-base mt-1.5 ${reqClass(formData.age, !!errors.age)}`}
-                      />
+                      <div className={`flex items-center mt-1.5 h-10 rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background transition-colors ${reqClass(formData.age, !!errors.age)}`}>
+                        <Input
+                          id="age"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={formData.age}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9]/g, '');
+                            setFormData(prev => ({ ...prev, age: val }));
+                          }}
+                          placeholder={t('patientForm.personal.agePlaceholder')}
+                          className="flex-1 min-w-0 h-full border-0 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none rounded-l-md bg-transparent px-3 text-sm md:text-base"
+                        />
+                        <div className="flex bg-muted/40 p-0.5 h-full shrink-0 border-l border-input">
+                          {[{ val: 'Y', label: 'Year' }, { val: 'M', label: 'Month' }, { val: 'D', label: 'Day' }].map(({ val, label }) => (
+                            <button
+                              key={val}
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, ageUnit: val }))}
+                              className={`px-2.5 text-[11px] font-bold rounded-sm transition-all duration-200 ${formData.ageUnit === val ? 'bg-brand-600 text-white shadow-md ring-1 ring-brand-700' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                       {errors.age && (
                         <p className="text-red-500 text-xs md:text-sm mt-1">{t(errors.age)}</p>
                       )}
                     </div>
 
                     <div className="flex-1">
-                      <Label htmlFor="gender" className="text-sm md:text-base font-medium">
+                      <Label className="text-sm md:text-base font-medium">
                         {t('patientForm.personal.gender')} <span className="text-red-500">*</span>
                       </Label>
-                      <Select value={formData.gender} onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
-                        <SelectTrigger className={`h-10 text-sm md:text-base mt-1.5 ${reqClass(formData.gender, !!errors.gender)}`}>
-                          <SelectValue placeholder={t('patientForm.personal.genderPlaceholder')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Male">{t('patientForm.personal.genderOptions.male')}</SelectItem>
-                          <SelectItem value="Female">{t('patientForm.personal.genderOptions.female')}</SelectItem>
-                          <SelectItem value="Other">{t('patientForm.personal.genderOptions.other')}</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="flex bg-muted/40 p-0.5 mt-1.5 h-10 rounded-md border border-input w-full">
+                        {['Male', 'Female', 'Other'].map(gender => (
+                          <button
+                            key={gender}
+                            type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, gender }))}
+                            className={`flex-1 text-[11px] md:text-xs font-bold rounded-sm transition-all duration-200 ${formData.gender === gender ? 'bg-brand-600 text-white shadow-md ring-1 ring-brand-700' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+                          >
+                            {gender}
+                          </button>
+                        ))}
+                      </div>
                       {errors.gender && (
                         <p className="text-red-500 text-xs md:text-sm mt-1">{t(errors.gender)}</p>
                       )}
@@ -1159,208 +1292,34 @@ export const PatientForm: React.FC<PatientFormProps> = ({
               </div>
 
             </form>
-
-            <div className="flex justify-end gap-3 md:gap-4 mt-3 pb-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onCancel}
-                className="flex-1 md:flex-none md:min-w-[200px] h-10 md:h-11 md:text-base"
-              >
-                {t('patientForm.actions.cancel')}
-              </Button>
-              <Button
-                type="submit"
-                form="patient-form"
-                disabled={isSubmitting || isBookingLoading || !isFormReady}
-                className="flex-1 md:flex-none md:min-w-[320px] h-10 md:h-11 md:text-base bg-healthcare-primary hover:bg-healthcare-primary/90 gap-2 shadow-lg shadow-brand-500/20"
-              >
-                {(isSubmitting || isBookingLoading) && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isSubmitting || isBookingLoading ? t('patientForm.actions.submitting') : t('patientForm.actions.submit')}
-              </Button>
-            </div>
           </div>
+          </div>
+        </ScrollArea>
+
+        {/* Sticky Footer */}
+        <div className="p-4 md:p-6 border-t bg-background shrink-0 flex justify-end gap-3 md:gap-4 mt-auto">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            className="flex-1 md:flex-none md:min-w-[200px] h-10 md:h-11 md:text-base"
+          >
+            {t('patientForm.actions.cancel')}
+          </Button>
+          <Button
+            type="submit"
+            form="patient-form"
+            disabled={isSubmitting || isBookingLoading || !isFormReady}
+            className="flex-1 md:flex-none md:min-w-[320px] h-10 md:h-11 md:text-base bg-healthcare-primary hover:bg-healthcare-primary/90 gap-2 shadow-lg shadow-brand-500/20"
+          >
+            {(isSubmitting || isBookingLoading) && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isSubmitting || isBookingLoading ? t('patientForm.actions.submitting') : t('patientForm.actions.submit')}
+          </Button>
         </div>
-      </DialogContent >
-
-      {/* Search Results Popup */}
-      < Dialog open={showSearchResults} onOpenChange={setShowSearchResults} >
-        <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden flex flex-col">
-          <DialogHeader className="border-b pb-4">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="flex items-center gap-3 text-2xl">
-                <div className="p-2 bg-brand-100 dark:bg-brand-900/30 rounded-lg">
-                  <Search className="h-6 w-6 text-brand-600 dark:text-brand-400" />
-                </div>
-                <span>{t('patientForm.searchResults.title')}</span>
-                {searchResults.length > 0 && (
-                  <span className="ml-2 px-3 py-1 bg-brand-600 text-white text-sm font-semibold rounded-full">
-                    {searchResults.length}
-                  </span>
-                )}
-              </DialogTitle>
-            </div>
-            <DialogDescription className="text-base mt-2">
-              {searchResults.length > 0
-                ? `${t('patientForm.searchResults.description', { count: searchResults.length })} Click on a card to auto-fill the form.`
-                : 'No patients found matching your search criteria.'}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex-1 overflow-y-auto py-4 space-y-3">
-            {searchResults.length > 0 ? (
-              searchResults.map((patient, index) => (
-                <Card
-                  key={patient.patientId}
-                  className={`p-5 cursor-pointer transition-all duration-200 border-2 relative ${index === selectedIndex
-                    ? 'border-brand-500 shadow-xl scale-[1.02] ring-4 ring-brand-200 dark:ring-brand-800'
-                    : 'hover:border-brand-400 hover:shadow-lg hover:scale-[1.01]'
-                    }`}
-                  onClick={() => handlePatientSelect(patient)}
-                  onMouseEnter={() => setSelectedIndex(index)}
-                >
-                  {/* Patient Number Badge */}
-                  <div className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all ${index === selectedIndex
-                    ? 'bg-brand-600 text-white scale-110'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-                    }`}>
-                    {index + 1}
-                  </div>
-
-                  {/* Patient Header */}
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="w-14 h-14 bg-gradient-to-br from-brand-500 to-brand-600 rounded-full flex items-center justify-center shadow-md flex-shrink-0">
-                      <User className="h-7 w-7 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-bold text-lg text-foreground">{patient.fullName}</h4>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded font-mono">
-                          {patient.patientId}
-                        </span>
-                        <span className="text-xs px-2 py-1 rounded font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                          Existing Patient
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Patient Info Grid */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <Phone className="h-3.5 w-3.5 text-gray-500" />
-                        <span className="text-xs text-muted-foreground font-medium">Phone</span>
-                      </div>
-                      <p className="font-semibold text-sm">{patient.mobile}</p>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <User className="h-3.5 w-3.5 text-gray-500" />
-                        <span className="text-xs text-muted-foreground font-medium">Gender</span>
-                      </div>
-                      <p className="font-semibold text-sm">{patient.sex}</p>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <Calendar className="h-3.5 w-3.5 text-gray-500" />
-                        <span className="text-xs text-muted-foreground font-medium">Age</span>
-                      </div>
-                      <p className="font-semibold text-sm">{patient.age} years</p>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <Clock className="h-3.5 w-3.5 text-gray-500" />
-                        <span className="text-xs text-muted-foreground font-medium">Last Visit</span>
-                      </div>
-                      <p className="font-semibold text-sm truncate">
-                        {patient.lastRegistrationAt ? dateFormatter.format(new Date(patient.lastRegistrationAt)) : 'N/A'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Address Info */}
-                  <div className="mt-3 pt-3 border-t">
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1">
-                        <p className="text-sm text-muted-foreground">
-                          {patient.address || 'N/A'}
-                          {patient.city && `, ${patient.city}`}
-                          {patient.pincode && ` - ${patient.pincode}`}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Upcoming Appointment Badge */}
-                  {patient.appointmentDate && (
-                    <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                        <span className="text-xs font-semibold text-amber-900 dark:text-amber-100">
-                          Upcoming Appointment: {dateFormatter.format(new Date(patient.appointmentDate))}
-                          {patient.tokenNumber && patient.tokenNumber !== '0' && ` • Token #${patient.tokenNumber}`}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </Card>
-              ))
-            ) : (
-              <div className="text-center py-12">
-                <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Search className="h-10 w-10 text-gray-400" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                  {t('patientForm.searchResults.emptyTitle')}
-                </h3>
-                <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-                  {t('patientForm.searchResults.emptyDescription')}
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-between items-center gap-3 pt-4 border-t bg-gray-50 dark:bg-gray-900/50 -mx-6 px-6 -mb-6 pb-6">
-            <div>
-              <p className="text-sm text-muted-foreground">
-                {searchResults.length > 0 ? 'Click any card above to select' : 'Try adjusting your search criteria'}
-              </p>
-              {searchResults.length > 0 && (
-                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                  <span className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs font-mono">↑</span>
-                  <span className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs font-mono">↓</span>
-                  <span>Navigate</span>
-                  <span className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs font-mono">Enter</span>
-                  <span>Select</span>
-                </p>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowSearchResults(false)}
-              >
-                {searchResults.length > 0 ? 'Cancel' : 'Close'}
-              </Button>
-              {searchResults.length === 0 && (
-                <Button
-                  onClick={() => {
-                    setShowSearchResults(false);
-                    setSearchQuery('');
-                  }}
-                  className="bg-brand-600 hover:bg-brand-700"
-                >
-                  Create New Patient
-                </Button>
-              )}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      </SheetContent>
 
       {/* Same-day duplicate appointment warning (warn, but allow) */}
+      {/* We use a separate Dialog here so it overlays above the Sheet safely */}
       <Dialog open={showDupConfirm} onOpenChange={setShowDupConfirm}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -1409,6 +1368,6 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           </div>
         </DialogContent>
       </Dialog>
-    </Dialog>
+    </Sheet>
   );
 };

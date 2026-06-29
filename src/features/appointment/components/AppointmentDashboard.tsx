@@ -138,6 +138,10 @@ export const AppointmentDashboard = () => {
     doctorName: string;
     appointmentDate: string;
     department?: string;
+    age?: string | number;
+    ageUnit?: string;
+    gender?: string;
+    referrerName?: string;
   } | null>(null);
 
   // Auto-collapse sidebar on mount for maximizing screen real estate
@@ -154,7 +158,11 @@ export const AppointmentDashboard = () => {
       patientId: appointment.patientId,
       doctorName: appointment.doctorName || 'N/A',
       appointmentDate: appointment.startAt,
-      department: appointment.departments?.[0] || undefined
+      department: appointment.departments?.[0] || undefined,
+      age: appointment.patientAge ?? (appointment as any).patientAgeYears,
+      ageUnit: appointment.patientAgeUnit,
+      gender: appointment.patientSex,
+      referrerName: appointment.referrerName || undefined
     });
     setTokenPrintOpen(true);
   };
@@ -417,7 +425,7 @@ export const AppointmentDashboard = () => {
       const ctx = {
         patientName: appt.patientFullName,
         patientId: appt.patientId,
-        ageGender: [appt.patientAgeYears, appt.patientSex].filter(Boolean).join(' / '),
+        ageGender: [(appt.patientAge ?? (appt as any).patientAgeYears) != null ? `${appt.patientAge ?? (appt as any).patientAgeYears} ${appt.patientAgeUnit || ''}`.trim() : null, appt.patientSex].filter(Boolean).join(' / '),
         mobile: appt.patientMobile,
         doctorName: appt.doctorName ?? undefined,
         department: appt.departmentName,

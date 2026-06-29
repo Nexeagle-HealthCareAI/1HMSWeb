@@ -186,7 +186,8 @@ export interface RegisterAppointmentRequest {
   patient: {
     fullName: string;
     mobile: string;
-    ageYears: number;
+    age: number;
+    ageUnit: string;
     sex: string;
     addressLine1: string;
     city: string;
@@ -202,6 +203,8 @@ export interface RegisterAppointmentRequest {
     emergencyContactName?: string;
     emergencyContactRelation?: string;
     emergencyContactPhone?: string;
+    guardianName?: string;
+    guardianRelation?: string;
   };
   doctorId: string;
   apptDate: string;
@@ -261,7 +264,8 @@ export interface AppointmentDetail {
   patientFullName: string;
   patientMobile: string;
   patientSex: string;
-  patientAgeYears: number;
+  patientAge: number;
+  patientAgeUnit: string;
   doctorId: string;
   doctorName: string | null;
   appointmentDate: string;
@@ -275,6 +279,8 @@ export interface AppointmentDetail {
   appointmentType: string | null;
   referrerName?: string | null;
   referrerRelation?: string | null;
+  guardianName?: string | null;
+  guardianRelation?: string | null;
   createdAt: string;
   token: {
     tokenId: string;
