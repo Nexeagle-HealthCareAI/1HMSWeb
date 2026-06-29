@@ -146,6 +146,10 @@ export const buildPrescriptionDataFromResponse = (
     phone: firstPatient?.contact ?? '',
     address: buildAddressLine(firstPatient?.address, firstPatient?.city, firstPatient?.state, firstPatient?.country, firstPatient?.pincode),
     contact: firstPatient?.contact ?? '',
+    cityId: firstPatient?.city ?? '',
+    state: firstPatient?.state,
+    country: firstPatient?.country,
+    pincode: firstPatient?.pincode,
     // Optionally add details if needed
   };
 
