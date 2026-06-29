@@ -43,12 +43,6 @@ export default defineConfig(({ mode }) => {
         '/auth': createProxyConfig(),
         '/admin': createProxyConfig(),
         '/patient-profile': createProxyConfig(),
-        '/blob-proxy': {
-          target: 'http://151.185.45.77:9000',
-          changeOrigin: true,
-          secure: false,
-          rewrite: (path: string) => path.replace(/^\/blob-proxy/, ''),
-        },
       }
     },
     preview: {

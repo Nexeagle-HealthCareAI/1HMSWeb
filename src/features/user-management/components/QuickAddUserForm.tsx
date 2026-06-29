@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -186,19 +186,19 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded 
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
-      <DialogContent className="max-w-lg p-0 overflow-hidden gap-0">
+    <Sheet open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
+      <SheetContent side="right" className="w-[400px] sm:w-[540px] max-w-none p-0 flex flex-col overflow-hidden gap-0 border-l border-slate-200">
         {!created ? (
           <>
-            <div className="px-6 py-4 bg-gradient-to-br from-brand-600 to-violet-600 text-white flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center"><UserPlus className="h-5 w-5" /></div>
+            <div className="px-6 py-6 bg-gradient-to-br from-brand-600 to-violet-600 text-white flex items-center gap-4 shrink-0">
+              <div className="h-12 w-12 rounded-2xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center"><UserPlus className="h-6 w-6" /></div>
               <div>
-                <DialogTitle className="text-base font-bold text-white">{t('userManagement.quickAdd.title')}</DialogTitle>
-                <DialogDescription className="text-xs text-white/80">{t('userManagement.quickAdd.subtitle')}</DialogDescription>
+                <SheetTitle className="text-lg font-bold text-white">{t('userManagement.quickAdd.title')}</SheetTitle>
+                <SheetDescription className="text-sm text-white/80 mt-0.5">{t('userManagement.quickAdd.subtitle')}</SheetDescription>
               </div>
             </div>
 
-            <div className="px-6 py-5 space-y-3 max-h-[65vh] overflow-y-auto">
+            <div className="px-6 py-6 space-y-4 flex-1 overflow-y-auto">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="sm:col-span-2">
                   <Label className="text-[11px] font-semibold text-slate-600">{t('userManagement.quickAdd.fullName')} <span className="text-red-500">*</span></Label>
@@ -294,24 +294,24 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded 
               )}
             </div>
 
-            <DialogFooter className="px-6 py-3 border-t border-slate-200">
+            <SheetFooter className="px-6 py-4 border-t border-slate-200 bg-slate-50/50 shrink-0">
               <Button variant="outline" onClick={closeAll}>{t('userManagement.quickAdd.cancel')}</Button>
               <Button onClick={submit} disabled={submitting} className="bg-brand-600 hover:bg-brand-700">
                 {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UserPlus className="h-4 w-4 mr-2" />} {t('userManagement.quickAdd.addMember')}
               </Button>
-            </DialogFooter>
+            </SheetFooter>
           </>
         ) : (
           <>
-            <div className="px-6 py-4 bg-gradient-to-br from-emerald-600 to-teal-600 text-white flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center"><CheckCircle2 className="h-5 w-5" /></div>
+            <div className="px-6 py-6 bg-gradient-to-br from-emerald-600 to-teal-600 text-white flex items-center gap-4 shrink-0">
+              <div className="h-12 w-12 rounded-2xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center"><CheckCircle2 className="h-6 w-6" /></div>
               <div>
-                <DialogTitle className="text-base font-bold text-white">{t('userManagement.quickAdd.readyTitle', { name: created.fullName })}</DialogTitle>
-                <DialogDescription className="text-xs text-white/80">{t('userManagement.quickAdd.readySubtitle')}</DialogDescription>
+                <SheetTitle className="text-lg font-bold text-white">{t('userManagement.quickAdd.readyTitle', { name: created.fullName })}</SheetTitle>
+                <SheetDescription className="text-sm text-white/80 mt-0.5">{t('userManagement.quickAdd.readySubtitle')}</SheetDescription>
               </div>
             </div>
 
-            <div className="px-6 py-5 space-y-4">
+            <div className="px-6 py-6 space-y-4 flex-1 overflow-y-auto">
               <div className="rounded-xl border border-slate-200 bg-slate-50/70 divide-y divide-slate-200">
                 <div className="flex items-center justify-between px-4 py-2.5">
                   <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t('userManagement.quickAdd.loginMobileLabel')}</span>
@@ -355,14 +355,14 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded 
               </p>
             </div>
 
-            <DialogFooter className="px-6 py-3 border-t border-slate-200">
+            <SheetFooter className="px-6 py-4 border-t border-slate-200 bg-slate-50/50 shrink-0">
               <Button variant="outline" onClick={() => { reset(); }}>{t('userManagement.quickAdd.addAnother')}</Button>
               <Button onClick={closeAll} className="bg-brand-600 hover:bg-brand-700">{t('userManagement.quickAdd.done')}</Button>
-            </DialogFooter>
+            </SheetFooter>
           </>
         )}
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 };
 
