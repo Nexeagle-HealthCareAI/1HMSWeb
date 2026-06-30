@@ -196,7 +196,10 @@ export const useAuthStore = create<AuthStore>()(
         },
 
         setUserRole: (role: string | null) => {
-          set({ userRole: role, userRoles: role ? [role] : [] });
+          set({ 
+            userRole: role, 
+            userRoles: role ? role.split(',').map(r => r.trim()).filter(Boolean) : [] 
+          });
         },
 
         getUserRole: () => {
