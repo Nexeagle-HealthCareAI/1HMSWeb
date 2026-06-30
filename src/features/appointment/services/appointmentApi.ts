@@ -279,6 +279,7 @@ export interface AppointmentDetail {
   lastStatusAt: string;
   appointmentType: string | null;
   referrerName?: string | null;
+  referrerType?: string | null;
   referrerRelation?: string | null;
   guardianName?: string | null;
   guardianRelation?: string | null;

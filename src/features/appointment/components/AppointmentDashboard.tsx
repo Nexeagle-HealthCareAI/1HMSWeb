@@ -160,6 +160,9 @@ export const AppointmentDashboard = () => {
     ageUnit?: string;
     gender?: string;
     referrerName?: string;
+    referrerType?: string;
+    guardianName?: string;
+    guardianRelation?: string;
   } | null>(null);
 
   // Auto-collapse sidebar on mount for maximizing screen real estate
