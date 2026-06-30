@@ -35,6 +35,29 @@ export interface QuickAddUserResponse {
   userId?: string;
 }
 
+export interface AdminUpdateUserRequest {
+  userId: string;
+  fullName: string;
+  mobileNumber: string;
+  email?: string;
+  roles: string[];
+  hospitalId: string;
+  employeeId?: string;
+  licenseNumber?: string;
+  qualification?: string[];
+  experienceYears?: number;
+  medicalCouncil?: string;
+  department?: string;
+  specializations?: string[];
+  consultFee?: number;
+}
+
+export interface AdminUpdateUserResponse {
+  success: boolean;
+  message: string;
+  userId?: string;
+}
+
 export interface ShareCredentialsRequest {
   hospitalId: string;
   fullName: string;
@@ -109,6 +132,11 @@ export const userManagementApi = {
   // Quick-add a team member directly (no invitation link / OTP).
   quickAddUser: (data: QuickAddUserRequest): Promise<QuickAddUserResponse> => {
     return apiClient.post(API_ENDPOINTS.USER_MANAGEMENT.QUICK_ADD_USER, data);
+  },
+
+  // Update a team member's details
+  updateUser: (data: AdminUpdateUserRequest): Promise<AdminUpdateUserResponse> => {
+    return apiClient.put('admin/users/update', data);
   },
 
   // Send a newly added member their login details via email and/or WhatsApp.

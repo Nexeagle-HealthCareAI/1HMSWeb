@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { userManagementApi, RolesResponse, AllUsersResponse, DeactivateUserRequest, DeactivateUserResponse, QuickAddUserRequest, QuickAddUserResponse, ShareCredentialsRequest, ShareCredentialsResponse, ResetCredentialsRequest, ResetCredentialsResponse } from '../services/userManagementApi';
+import { userManagementApi, RolesResponse, AllUsersResponse, DeactivateUserRequest, DeactivateUserResponse, QuickAddUserRequest, QuickAddUserResponse, AdminUpdateUserRequest, AdminUpdateUserResponse, ShareCredentialsRequest, ShareCredentialsResponse, ResetCredentialsRequest, ResetCredentialsResponse } from '../services/userManagementApi';
 import { useToast } from '@/hooks/use-toast';
 
 // Hook for user management API calls
@@ -44,6 +44,22 @@ export const useUserManagementApi = () => {
     },
   });
 
+  // Update a team member's details
+  const updateUser = useMutation<AdminUpdateUserResponse, Error, AdminUpdateUserRequest>({
+    mutationFn: userManagementApi.updateUser,
+    onSuccess: (data) => {
+      if (data.success) {
+        toast({ title: 'Team member updated', description: data.message || 'The user profile has been updated.' });
+        queryClient.invalidateQueries({ queryKey: ['user-management'] });
+      } else {
+        toast({ title: 'Could not update the member', description: data.message || 'Please try again.', variant: 'destructive' });
+      }
+    },
+    onError: (error) => {
+      toast({ title: 'Could not update the member', description: error.message || 'Something went wrong. Please try again.', variant: 'destructive' });
+    },
+  });
+
   // Send a new member their login details (the form reports the per-channel result itself)
   const shareCredentials = useMutation<ShareCredentialsResponse, Error, ShareCredentialsRequest>({
     mutationFn: userManagementApi.shareCredentials,
@@ -83,6 +99,7 @@ export const useUserManagementApi = () => {
     getAllRoles,
     getAllUsers,
     quickAddUser,
+    updateUser,
     shareCredentials,
     resetCredentials,
     deactivateUser,

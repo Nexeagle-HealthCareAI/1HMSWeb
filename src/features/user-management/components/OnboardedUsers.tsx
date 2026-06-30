@@ -12,6 +12,7 @@ import {
   Users,
   Search,
   Eye,
+  Pencil,
 
   UserX,
   Mail,
@@ -25,6 +26,7 @@ import { AllUsersResponse } from '../services/userManagementApi';
 import { useAuthStore } from '@/store/authStore';
 import { DeactivateUserDialog } from './DeactivateUserDialog';
 import { ShareLoginDialog, ShareLoginTarget } from './ShareLoginDialog';
+import { QuickAddUserForm } from './QuickAddUserForm';
 import { cn } from '@/lib/utils';
 
 export const OnboardedUsers: React.FC = () => {
@@ -53,6 +55,10 @@ export const OnboardedUsers: React.FC = () => {
   // View user details state
   const [viewUser, setViewUser] = useState<AllUsersResponse['users'][number] | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+
+  // Edit user state
+  const [editUser, setEditUser] = useState<any>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   // Share-login (reset + re-share credentials) state
   const [shareTarget, setShareTarget] = useState<ShareLoginTarget | null>(null);
@@ -349,7 +355,23 @@ export const OnboardedUsers: React.FC = () => {
                           )}
                           title={t('userManagement.onboardedUsers.actions.viewTooltip')}
                         >
-                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditUser(user);
+                            setIsEditDialogOpen(true);
+                          }}
+                          className={cn(
+                            "h-8 w-8 p-0 rounded-lg transition-all duration-300 shadow-sm",
+                            isUserActive(user)
+                              ? "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 dark:hover:bg-blue-900/20"
+                              : "bg-transparent border-slate-300 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800"
+                          )}
+                          title="Edit user details"
+                        >
+                          <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="outline"
@@ -432,6 +454,17 @@ export const OnboardedUsers: React.FC = () => {
         userName={selectedUser?.fullName || ''}
         userEmail={selectedUser?.email || ''}
         isPending={deactivateUser.isPending}
+      />
+
+      {/* Edit User Form Modal */}
+      <QuickAddUserForm
+        open={isEditDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          if (!open) setEditUser(null);
+        }}
+        editMode={true}
+        initialData={editUser}
       />
 
       {/* View User Details Dialog */}

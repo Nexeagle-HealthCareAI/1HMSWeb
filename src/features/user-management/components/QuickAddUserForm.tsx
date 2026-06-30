@@ -16,6 +16,8 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onAdded?: () => void;
+  editMode?: boolean;
+  initialData?: any;
 }
 
 const DOCTOR_ROLES = ['doctor', 'admindoctor'];
@@ -35,11 +37,11 @@ interface Created {
   hospitalId: string;
 }
 
-/** One-step "quick add" of a team member — no invitation link or OTP. */
-export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded }) => {
+/** One-step "quick add" or "edit" of a team member. */
+export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded, editMode, initialData }) => {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const { getAllRoles, quickAddUser, shareCredentials } = useUserManagementApi();
+  const { getAllRoles, quickAddUser, updateUser, shareCredentials } = useUserManagementApi();
   const rolesQuery = getAllRoles();
   // The roles table holds a system role plus a per-hospital copy of each role (same name),
   // so the raw list repeats names. Show each role type once.
@@ -56,13 +58,37 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded 
   const [form, setForm] = useState({ ...EMPTY });
   const [specializations, setSpecializations] = useState<string[]>([]);
   const [showPwd, setShowPwd] = useState(false);
+  
+  React.useEffect(() => {
+    if (open && editMode && initialData) {
+      setForm({
+        fullName: initialData.fullName || '',
+        mobileNumber: initialData.mobileNumber || '',
+        email: initialData.email || '',
+        password: '',
+        confirm: '',
+        roles: initialData.roles?.map((r: any) => r.roleName) || [],
+        licenseNumber: initialData.licenseNumber || '',
+        qualification: initialData.qualification?.join(', ') || '',
+        experienceYears: initialData.experienceYears ? String(initialData.experienceYears) : '',
+        department: initialData.department || '',
+        consultFee: initialData.consultFee ? String(initialData.consultFee) : '',
+      });
+      if (initialData.specializations) {
+        setSpecializations(initialData.specializations);
+      }
+    } else if (open && !editMode) {
+      setForm({ ...EMPTY });
+      setSpecializations([]);
+    }
+  }, [open, editMode, initialData]);
   const [created, setCreated] = useState<Created | null>(null);
   const [copied, setCopied] = useState(false);
   const [sendingChannel, setSendingChannel] = useState<'email' | 'whatsapp' | null>(null);
   const set = (k: keyof typeof EMPTY, v: string) => setForm(f => ({ ...f, [k]: v }));
 
   const isDoctor = useMemo(() => DOCTOR_ROLES.some(dr => form.roles.some(r => r.trim().toLowerCase() === dr)), [form.roles]);
-  const submitting = quickAddUser.isPending;
+  const submitting = editMode ? updateUser.isPending : quickAddUser.isPending;
 
   // Departments to pick from (cascades into specializations). Same source the doctor profile uses.
   const departmentsQuery = useDepartmentApi.getGlobalDepartments();
@@ -76,17 +102,23 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded 
   const closeAll = () => { reset(); onOpenChange(false); };
 
   const submit = async () => {
-    if (!form.fullName.trim() || !form.mobileNumber.trim() || !form.password || form.roles.length === 0) {
+    if (!form.fullName.trim() || !form.mobileNumber.trim() || form.roles.length === 0) {
       toast({ title: t('userManagement.quickAdd.missingTitle'), description: t('userManagement.quickAdd.missingDesc'), variant: 'destructive' });
       return;
     }
-    if (form.password.length < 6) {
-      toast({ title: t('userManagement.quickAdd.weakTitle'), description: t('userManagement.quickAdd.weakDesc'), variant: 'destructive' });
-      return;
-    }
-    if (form.password !== form.confirm) {
-      toast({ title: t('userManagement.quickAdd.mismatchTitle'), variant: 'destructive' });
-      return;
+    if (!editMode) {
+      if (!form.password) {
+        toast({ title: t('userManagement.quickAdd.missingTitle'), description: t('userManagement.quickAdd.missingDesc'), variant: 'destructive' });
+        return;
+      }
+      if (form.password.length < 6) {
+        toast({ title: t('userManagement.quickAdd.weakTitle'), description: t('userManagement.quickAdd.weakDesc'), variant: 'destructive' });
+        return;
+      }
+      if (form.password !== form.confirm) {
+        toast({ title: t('userManagement.quickAdd.mismatchTitle'), variant: 'destructive' });
+        return;
+      }
     }
     if (isDoctor) {
       if (!form.licenseNumber.trim()) {
@@ -107,31 +139,52 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded 
 
     const toList = (s: string) => s.split(',').map(x => x.trim()).filter(Boolean);
     try {
-      const res = await quickAddUser.mutateAsync({
-        fullName: form.fullName.trim(),
-        mobileNumber: form.mobileNumber.trim(),
-        email: form.email.trim() || undefined,
-        password: form.password,
-        roles: form.roles,
-        hospitalId,
-        licenseNumber: isDoctor ? form.licenseNumber.trim() : undefined,
-        qualification: isDoctor && form.qualification.trim() ? toList(form.qualification) : undefined,
-        experienceYears: isDoctor && form.experienceYears ? Number(form.experienceYears) : undefined,
-        department: isDoctor && selectedDepartment ? selectedDepartment.name : undefined,
-        specializations: isDoctor && specializations.length ? specializations : undefined,
-        consultFee: isDoctor && form.consultFee.trim() ? Number(form.consultFee) : undefined,
-      });
-      if (res.success !== false) {
-        // Member created — refresh the list behind us and switch to the share-login screen.
-        onAdded?.();
-        setCreated({
+      if (editMode) {
+        const res = await updateUser.mutateAsync({
+          userId: initialData.userId,
           fullName: form.fullName.trim(),
           mobileNumber: form.mobileNumber.trim(),
-          email: form.email.trim(),
+          email: form.email.trim() || undefined,
+          roles: form.roles,
+          hospitalId,
+          licenseNumber: isDoctor ? form.licenseNumber.trim() : undefined,
+          qualification: isDoctor && form.qualification.trim() ? toList(form.qualification) : undefined,
+          experienceYears: isDoctor && form.experienceYears ? Number(form.experienceYears) : undefined,
+          department: isDoctor && selectedDepartment ? selectedDepartment.name : undefined,
+          specializations: isDoctor && specializations.length ? specializations : undefined,
+          consultFee: isDoctor && form.consultFee.trim() ? Number(form.consultFee) : undefined,
+        });
+        if (res.success !== false) {
+          onAdded?.();
+          closeAll();
+        }
+      } else {
+        const res = await quickAddUser.mutateAsync({
+          fullName: form.fullName.trim(),
+          mobileNumber: form.mobileNumber.trim(),
+          email: form.email.trim() || undefined,
           password: form.password,
           roles: form.roles,
           hospitalId,
+          licenseNumber: isDoctor ? form.licenseNumber.trim() : undefined,
+          qualification: isDoctor && form.qualification.trim() ? toList(form.qualification) : undefined,
+          experienceYears: isDoctor && form.experienceYears ? Number(form.experienceYears) : undefined,
+          department: isDoctor && selectedDepartment ? selectedDepartment.name : undefined,
+          specializations: isDoctor && specializations.length ? specializations : undefined,
+          consultFee: isDoctor && form.consultFee.trim() ? Number(form.consultFee) : undefined,
         });
+        if (res.success !== false) {
+          // Member created — refresh the list behind us and switch to the share-login screen.
+          onAdded?.();
+          setCreated({
+            fullName: form.fullName.trim(),
+            mobileNumber: form.mobileNumber.trim(),
+            email: form.email.trim(),
+            password: form.password,
+            roles: form.roles,
+            hospitalId,
+          });
+        }
       }
     } catch { /* mutation toasts the error */ }
   };
@@ -194,8 +247,8 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded 
             <div className="px-6 py-6 bg-gradient-to-br from-brand-600 to-violet-600 text-white flex items-center gap-4 shrink-0">
               <div className="h-12 w-12 rounded-2xl bg-white/15 ring-1 ring-white/25 flex items-center justify-center"><UserPlus className="h-6 w-6" /></div>
               <div>
-                <SheetTitle className="text-lg font-bold text-white">{t('userManagement.quickAdd.title')}</SheetTitle>
-                <SheetDescription className="text-sm text-white/80 mt-0.5">{t('userManagement.quickAdd.subtitle')}</SheetDescription>
+                <SheetTitle className="text-lg font-bold text-white">{editMode ? 'Edit team member' : t('userManagement.quickAdd.title')}</SheetTitle>
+                <SheetDescription className="text-sm text-white/80 mt-0.5">{editMode ? 'Update details and roles.' : t('userManagement.quickAdd.subtitle')}</SheetDescription>
               </div>
             </div>
 
@@ -213,19 +266,23 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded 
                   <Label className="text-[11px] font-semibold text-slate-600">{t('userManagement.quickAdd.email')}</Label>
                   <Input type="email" value={form.email} onChange={e => set('email', e.target.value)} className="mt-1 rounded-lg" placeholder={t('userManagement.quickAdd.emailPlaceholder')} />
                 </div>
-                <div>
-                  <Label className="text-[11px] font-semibold text-slate-600">{t('userManagement.quickAdd.password')} <span className="text-red-500">*</span></Label>
-                  <div className="relative mt-1">
-                    <Input type={showPwd ? 'text' : 'password'} value={form.password} onChange={e => set('password', e.target.value)} className="rounded-lg pr-9" placeholder={t('userManagement.quickAdd.passwordPlaceholder')} />
-                    <button type="button" onClick={() => setShowPwd(s => !s)} className="absolute right-2.5 top-3 text-slate-400 hover:text-slate-600">
-                      {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-[11px] font-semibold text-slate-600">{t('userManagement.quickAdd.confirmPassword')} <span className="text-red-500">*</span></Label>
-                  <Input type={showPwd ? 'text' : 'password'} value={form.confirm} onChange={e => set('confirm', e.target.value)} className="mt-1 rounded-lg" placeholder={t('userManagement.quickAdd.confirmPlaceholder')} />
-                </div>
+                {!editMode && (
+                  <>
+                    <div>
+                      <Label className="text-[11px] font-semibold text-slate-600">{t('userManagement.quickAdd.password')} <span className="text-red-500">*</span></Label>
+                      <div className="relative mt-1">
+                        <Input type={showPwd ? 'text' : 'password'} value={form.password} onChange={e => set('password', e.target.value)} className="rounded-lg pr-9" placeholder={t('userManagement.quickAdd.passwordPlaceholder')} />
+                        <button type="button" onClick={() => setShowPwd(s => !s)} className="absolute right-2.5 top-3 text-slate-400 hover:text-slate-600">
+                          {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-[11px] font-semibold text-slate-600">{t('userManagement.quickAdd.confirmPassword')} <span className="text-red-500">*</span></Label>
+                      <Input type={showPwd ? 'text' : 'password'} value={form.confirm} onChange={e => set('confirm', e.target.value)} className="mt-1 rounded-lg" placeholder={t('userManagement.quickAdd.confirmPlaceholder')} />
+                    </div>
+                  </>
+                )}
                 <div className="sm:col-span-2">
                   <Label className="text-[11px] font-semibold text-slate-600 mb-2 block">{t('userManagement.quickAdd.role')} <span className="text-red-500">*</span></Label>
                   <div className="flex flex-wrap gap-2">
@@ -325,7 +382,7 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded 
             <SheetFooter className="px-6 py-4 border-t border-slate-200 bg-slate-50/50 shrink-0">
               <Button variant="outline" onClick={closeAll}>{t('userManagement.quickAdd.cancel')}</Button>
               <Button onClick={submit} disabled={submitting} className="bg-brand-600 hover:bg-brand-700">
-                {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UserPlus className="h-4 w-4 mr-2" />} {t('userManagement.quickAdd.addMember')}
+                {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UserPlus className="h-4 w-4 mr-2" />} {editMode ? 'Save Changes' : t('userManagement.quickAdd.addMember')}
               </Button>
             </SheetFooter>
           </>
