@@ -352,12 +352,6 @@ export const OnboardedUsers: React.FC = () => {
                             {t('userManagement.onboardedUsers.unknownRole')}
                           </Badge>
                         )}
-
-                        {user.isPrimary && (
-                          <Badge variant="outline" className="text-[11px] font-mono font-bold tracking-widest uppercase bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800 px-2 py-0.5 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
-                            {t('userManagement.onboardedUsers.badges.primary', 'PRIMARY')}
-                          </Badge>
-                        )}
                       </div>
 
                       <div className="flex items-center gap-1.5">
