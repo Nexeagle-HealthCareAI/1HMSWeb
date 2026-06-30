@@ -71,13 +71,17 @@ export const OnboardedUsers: React.FC = () => {
   const isUserActive = (user: AllUsersResponse['users'][number]) => getUserStatus(user.usersStatusId) === 'active';
 
   // Get unique roles for filter
-  const uniqueRoles = Array.from(new Set(users.map((user) => getPrimaryRoleName(user))));
+  const uniqueRoles = Array.from(new Set(users.flatMap((user) => 
+    user.roles?.length ? user.roles.map(r => r.roleName) : [t('userManagement.onboardedUsers.unknownRole')]
+  )));
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch = (user.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (user.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (user.mobileNumber || '').includes(searchTerm);
-    const matchesRole = roleFilter === 'all' || getPrimaryRoleName(user) === roleFilter;
+    const hasRoles = user.roles && user.roles.length > 0;
+    const matchesRole = roleFilter === 'all' || 
+      (hasRoles ? user.roles!.some(r => r.roleName === roleFilter) : roleFilter === t('userManagement.onboardedUsers.unknownRole'));
     const matchesStatus = statusFilter === 'all' || getUserStatus(user.usersStatusId) === statusFilter;
     return matchesSearch && matchesRole && matchesStatus;
   }).sort((a, b) => {
@@ -320,17 +324,34 @@ export const OnboardedUsers: React.FC = () => {
                     {/* Badges & Actions Footer */}
                     <div className="flex items-center justify-between pt-2">
                       <div className="flex flex-wrap gap-1.5">
-                        <Badge
-                          variant="secondary"
-                          className={cn(
-                            "text-[11px] font-mono font-bold tracking-widest uppercase px-2 py-0.5 border shadow-sm transition-colors",
-                            isUserActive(user)
-                              ? getRoleColor(getPrimaryRoleName(user))
-                              : "bg-slate-200 text-slate-500 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
-                          )}
-                        >
-                          {getPrimaryRoleName(user)}
-                        </Badge>
+                        {user.roles && user.roles.length > 0 ? (
+                          user.roles.map((role, idx) => (
+                            <Badge
+                              key={idx}
+                              variant="secondary"
+                              className={cn(
+                                "text-[11px] font-mono font-bold tracking-widest uppercase px-2 py-0.5 border shadow-sm transition-colors",
+                                isUserActive(user)
+                                  ? getRoleColor(role.roleName)
+                                  : "bg-slate-200 text-slate-500 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
+                              )}
+                            >
+                              {role.roleName}
+                            </Badge>
+                          ))
+                        ) : (
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              "text-[11px] font-mono font-bold tracking-widest uppercase px-2 py-0.5 border shadow-sm transition-colors",
+                              isUserActive(user)
+                                ? getRoleColor(undefined)
+                                : "bg-slate-200 text-slate-500 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
+                            )}
+                          >
+                            {t('userManagement.onboardedUsers.unknownRole')}
+                          </Badge>
+                        )}
 
                         {user.isPrimary && (
                           <Badge variant="outline" className="text-[11px] font-mono font-bold tracking-widest uppercase bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800 px-2 py-0.5 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
