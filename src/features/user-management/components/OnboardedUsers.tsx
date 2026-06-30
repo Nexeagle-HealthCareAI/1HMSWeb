@@ -355,6 +355,7 @@ export const OnboardedUsers: React.FC = () => {
                           )}
                           title={t('userManagement.onboardedUsers.actions.viewTooltip')}
                         >
+                          <Eye className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="outline"
