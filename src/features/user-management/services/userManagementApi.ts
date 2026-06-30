@@ -106,6 +106,7 @@ export interface AllUsersResponse {
       roleName: string;
     }[];
     permissionKeys: string[];
+    lastLoginTime?: string;
   }[];
 }
 

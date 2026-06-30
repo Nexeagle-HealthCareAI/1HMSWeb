@@ -19,7 +19,8 @@ import {
   Phone,
   Shield,
   Key,
-  KeyRound
+  KeyRound,
+  Clock
 } from 'lucide-react';
 import { useUserManagementApi } from '../hooks/useUserManagementApi';
 import { AllUsersResponse } from '../services/userManagementApi';
@@ -317,6 +318,18 @@ export const OnboardedUsers: React.FC = () => {
                           isUserActive(user) ? "text-slate-700 dark:text-slate-300" : "text-slate-500 dark:text-slate-500"
                         )}>
                           {user.employeeID || 'N/A'}
+                        </div>
+                      </div>
+                      <div className="col-span-2 space-y-1.5 border-t border-slate-200 dark:border-slate-700 pt-2 mt-1">
+                        <span className="text-[11px] font-mono tracking-widest text-slate-400 uppercase flex items-center gap-1">
+                          <Clock className="h-2.5 w-2.5" />
+                          {t('userManagement.onboardedUsers.labels.lastLogin', 'LAST LOGIN')}
+                        </span>
+                        <div className={cn(
+                          "text-xs font-mono font-medium tracking-tight truncate",
+                          isUserActive(user) ? "text-slate-700 dark:text-slate-300" : "text-slate-500 dark:text-slate-500"
+                        )}>
+                          {user.lastLoginTime ? new Date(user.lastLoginTime).toLocaleString() : t('userManagement.onboardedUsers.labels.neverLoggedIn', 'Never logged in')}
                         </div>
                       </div>
                     </div>
