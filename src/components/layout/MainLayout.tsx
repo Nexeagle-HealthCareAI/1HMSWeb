@@ -425,7 +425,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                         {getUserDisplayName()}
                       </p>
                       <p className="text-xs leading-none text-gray-600 dark:text-gray-300">
-                        {userRole}
+                        {userRoles.join(', ')}
                       </p>
                     </div>
                   </DropdownMenuItem>
