@@ -314,7 +314,7 @@ export const AppRoutes: React.FC = () => {
             <Route
               path="/billing"
               element={
-                <RouteGuard requiredRoles={['Admin', 'AdminDoctor']}>
+                <RouteGuard requiredRoles={['Admin', 'AdminDoctor', 'Accountant']}>
                   <MainLayout>
                     <BillingDashboard />
                   </MainLayout>

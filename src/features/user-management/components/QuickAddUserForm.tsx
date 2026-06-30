@@ -4,6 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFo
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { UserPlus, Loader2, Eye, EyeOff, Stethoscope, CheckCircle2, Copy, Check, Mail, MessageCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/store';
@@ -20,7 +21,7 @@ interface Props {
 const DOCTOR_ROLES = ['doctor', 'admindoctor'];
 
 const EMPTY = {
-  fullName: '', mobileNumber: '', email: '', password: '', confirm: '', role: '',
+  fullName: '', mobileNumber: '', email: '', password: '', confirm: '', roles: [] as string[],
   licenseNumber: '', qualification: '', experienceYears: '', department: '', consultFee: '',
 };
 
@@ -30,7 +31,7 @@ interface Created {
   mobileNumber: string;
   email: string;
   password: string;
-  role: string;
+  roles: string[];
   hospitalId: string;
 }
 
@@ -60,7 +61,7 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded 
   const [sendingChannel, setSendingChannel] = useState<'email' | 'whatsapp' | null>(null);
   const set = (k: keyof typeof EMPTY, v: string) => setForm(f => ({ ...f, [k]: v }));
 
-  const isDoctor = useMemo(() => DOCTOR_ROLES.includes(form.role.trim().toLowerCase()), [form.role]);
+  const isDoctor = useMemo(() => DOCTOR_ROLES.some(dr => form.roles.some(r => r.trim().toLowerCase() === dr)), [form.roles]);
   const submitting = quickAddUser.isPending;
 
   // Departments to pick from (cascades into specializations). Same source the doctor profile uses.
@@ -75,7 +76,7 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded 
   const closeAll = () => { reset(); onOpenChange(false); };
 
   const submit = async () => {
-    if (!form.fullName.trim() || !form.mobileNumber.trim() || !form.password || !form.role) {
+    if (!form.fullName.trim() || !form.mobileNumber.trim() || !form.password || form.roles.length === 0) {
       toast({ title: t('userManagement.quickAdd.missingTitle'), description: t('userManagement.quickAdd.missingDesc'), variant: 'destructive' });
       return;
     }
@@ -111,7 +112,7 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded 
         mobileNumber: form.mobileNumber.trim(),
         email: form.email.trim() || undefined,
         password: form.password,
-        role: form.role,
+        roles: form.roles,
         hospitalId,
         licenseNumber: isDoctor ? form.licenseNumber.trim() : undefined,
         qualification: isDoctor && form.qualification.trim() ? toList(form.qualification) : undefined,
@@ -128,7 +129,7 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded 
           mobileNumber: form.mobileNumber.trim(),
           email: form.email.trim(),
           password: form.password,
-          role: form.role,
+          roles: form.roles,
           hospitalId,
         });
       }
@@ -169,7 +170,7 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded 
         mobileNumber: created.mobileNumber,
         email: created.email || undefined,
         password: created.password,
-        roleName: created.role,
+        roleName: created.roles.join(', '),
         viaEmail: channel === 'email',
         viaWhatsApp: channel === 'whatsapp',
       });
@@ -227,10 +228,24 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded 
                 </div>
                 <div className="sm:col-span-2">
                   <Label className="text-[11px] font-semibold text-slate-600">{t('userManagement.quickAdd.role')} <span className="text-red-500">*</span></Label>
-                  <select value={form.role} onChange={e => set('role', e.target.value)} className="mt-1 h-11 w-full rounded-lg border border-slate-200 px-3 text-sm bg-white outline-none focus:ring-2 focus:ring-brand-500/25 focus:border-brand-400">
-                    <option value="">{rolesQuery.isLoading ? t('userManagement.quickAdd.loadingRoles') : t('userManagement.quickAdd.selectRole')}</option>
-                    {roles.map(r => <option key={r.roleId} value={r.roleName}>{r.roleName}</option>)}
-                  </select>
+                  <div className="mt-2 flex flex-wrap gap-4">
+                    {rolesQuery.isLoading ? <span className="text-sm text-slate-500">{t('userManagement.quickAdd.loadingRoles')}</span> : 
+                      roles.map(r => (
+                        <label key={r.roleId} className="flex items-center space-x-2 cursor-pointer">
+                          <Checkbox 
+                            checked={form.roles.includes(r.roleName)}
+                            onCheckedChange={(checked) => {
+                              const newRoles = checked 
+                                ? [...form.roles, r.roleName] 
+                                : form.roles.filter(x => x !== r.roleName);
+                              setForm(f => ({ ...f, roles: newRoles }));
+                            }}
+                          />
+                          <span className="text-sm text-slate-700">{r.roleName}</span>
+                        </label>
+                      ))
+                    }
+                  </div>
                 </div>
               </div>
 
