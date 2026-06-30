@@ -17,6 +17,11 @@ export interface PrescriptionPatient {
   state?: string;
   country?: string;
   pincode?: string;
+  guardianName?: string;
+  guardianRelation?: string;
+  referrerName?: string;
+  referrerRelation?: string;
+  referrerType?: string;
 }
 
 export interface PrescriptionVitals {

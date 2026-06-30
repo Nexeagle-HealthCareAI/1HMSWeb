@@ -28,6 +28,8 @@ import {
   UserX,
   Tag,
   ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
   Minimize2,
   Maximize2,
   HelpCircle,
@@ -57,7 +59,18 @@ import { TokenPrintModal } from './TokenPrintModal';
 import { DashboardQuickGuide } from './DashboardQuickGuide';
 import { VitalsForm } from './VitalsForm';
 import { RescheduleDialog } from './RescheduleDialog';
-import { format } from 'date-fns';
+import { format as dateFnsFormat } from 'date-fns';
+
+// Helper to force IST timezone for date-fns formatting
+const format = (date: Date, formatStr: string) => {
+  try {
+    const istString = date.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+    const istDate = new Date(istString);
+    return dateFnsFormat(istDate, formatStr);
+  } catch (e) {
+    return dateFnsFormat(date, formatStr);
+  }
+};
 import { useAppointmentDetails } from '../hooks/useAppointmentDetails';
 import { useAuthStore, useAppStore } from '@/store';
 import { useQueryClient } from '@tanstack/react-query';
@@ -91,6 +104,11 @@ export const AppointmentDashboard = () => {
   const [endDate, setEndDate] = useState<string>('');
   const [showBooking, setShowBooking] = useState(false);
   const [bookingRefreshToken, setBookingRefreshToken] = useState(0);
+
+  // Sorting state
+  type SortColumn = 'patientId' | 'patientName' | 'doctorName' | 'tokenNo' | 'appointmentDate' | 'status' | 'printToken' | 'labReports' | 'case' | 'actions' | 'printPrescription' | 'isCompleted';
+  const [sortColumn, setSortColumn] = useState<SortColumn>('tokenNo');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [showVitalsForm, setShowVitalsForm] = useState(false);
 
   const [selectedPatient, setSelectedPatient] = useState<AppointmentDetail | null>(null);
@@ -286,12 +304,14 @@ export const AppointmentDashboard = () => {
       .catch(() => { setBillStatus(null); setBillTimeline(null); });
   };
 
-  const fmtBillTimelineDate = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const fmtBillTimelineDate = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' });
 
   // Days until the free follow-up window closes (after which the next consult is chargeable again).
   const daysLeftText = (iso: string): string => {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const upto = new Date(iso); upto.setHours(0, 0, 0, 0);
+    const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })); 
+    today.setHours(0, 0, 0, 0);
+    const upto = new Date(new Date(iso).toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })); 
+    upto.setHours(0, 0, 0, 0);
     const days = Math.round((upto.getTime() - today.getTime()) / 86400000);
     if (days < 0) return t('patientForm.timeline.expired', { defaultValue: 'Window closed' });
     if (days === 0) return t('patientForm.timeline.lastDay', { defaultValue: 'Last free day' });
@@ -809,12 +829,51 @@ export const AppointmentDashboard = () => {
     }
 
     // If filtering is too restrictive and no results, show all appointments for debugging
-    // Sort by appointment time in increasing order
-    const sortedFiltered = filtered.sort((a, b) => {
-      // Sort only by appointment time
-      const timeA = new Date(a.startAt).getTime();
-      const timeB = new Date(b.startAt).getTime();
-      return timeA - timeB;
+    // Sort by selected column and direction
+    const sortedFiltered = [...filtered].sort((a, b) => {
+      let valA: any = '';
+      let valB: any = '';
+
+      switch (sortColumn) {
+        case 'patientId':
+          valA = a.patientId?.toLowerCase() || '';
+          valB = b.patientId?.toLowerCase() || '';
+          break;
+        case 'patientName':
+          valA = a.patientFullName?.toLowerCase() || '';
+          valB = b.patientFullName?.toLowerCase() || '';
+          break;
+        case 'doctorName':
+          valA = a.doctorName?.toLowerCase() || '';
+          valB = b.doctorName?.toLowerCase() || '';
+          break;
+        case 'tokenNo':
+          valA = a.token?.tokenNumber || 0;
+          valB = b.token?.tokenNumber || 0;
+          break;
+        case 'status':
+          valA = a.finalStatusCode?.toLowerCase() || '';
+          valB = b.finalStatusCode?.toLowerCase() || '';
+          break;
+        case 'printToken':
+        case 'labReports':
+        case 'case':
+        case 'actions':
+        case 'printPrescription':
+        case 'isCompleted':
+          valA = '';
+          valB = '';
+          break;
+        case 'appointmentDate':
+        default:
+          valA = new Date(a.startAt).getTime();
+          valB = new Date(b.startAt).getTime();
+          break;
+      }
+
+      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
     });
 
     if (
@@ -823,11 +882,18 @@ export const AppointmentDashboard = () => {
       activeTab === 'current' &&
       isDefaultFilterState
     ) {
-      return [...appointments].sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+      // Default fallback if filtered yields nothing but we are in default state
+      return [...appointments].sort((a, b) => {
+        let valA: any = a.token?.tokenNumber || 0;
+        let valB: any = b.token?.tokenNumber || 0;
+        if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+        if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
     }
 
     return sortedFiltered;
-  }, [searchTerm, selectedDoctor, selectedStatus, startDate, endDate, activeTab, appointments, isDefaultFilterState]);
+  }, [searchTerm, selectedDoctor, selectedStatus, startDate, endDate, activeTab, appointments, isDefaultFilterState, sortColumn, sortDirection]);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage);
@@ -1035,6 +1101,31 @@ export const AppointmentDashboard = () => {
       doctorId: appointment.doctorId,
     });
     setPreviewModalOpen(true);
+  };
+
+  const renderSortableHeader = (label: React.ReactNode, column: SortColumn, className = "") => {
+    return (
+      <TableHead 
+        className={`font-bold text-slate-600 dark:text-slate-300 text-[11px] py-3.5 px-3 tracking-widest uppercase whitespace-nowrap cursor-pointer hover:bg-slate-200/50 dark:hover:bg-zinc-700/50 transition-colors ${className}`}
+        onClick={() => {
+          if (sortColumn === column) {
+            setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+          } else {
+            setSortColumn(column);
+            setSortDirection(column === 'tokenNo' ? 'desc' : 'asc'); // Default tokenNo to desc, others to asc
+          }
+        }}
+      >
+        <div className="flex items-center gap-1.5 justify-between">
+          <span>{label}</span>
+          {sortColumn === column ? (
+            sortDirection === 'asc' ? <ArrowUp className="h-3 w-3 text-brand-600 flex-shrink-0" /> : <ArrowDown className="h-3 w-3 text-brand-600 flex-shrink-0" />
+          ) : (
+            <ArrowUpDown className="h-3 w-3 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+          )}
+        </div>
+      </TableHead>
+    );
   };
 
   if (showBooking) {
@@ -1429,46 +1520,31 @@ export const AppointmentDashboard = () => {
                 <div className="hidden md:block overflow-x-auto w-full">
                   <Table className="border-collapse min-w-[700px] md:min-w-full text-xs md:text-sm">
                     <TableHeader>
-                      <TableRow className="bg-brand-50/50 dark:bg-brand-900/20 backdrop-blur-md hover:bg-brand-50/50 dark:hover:bg-brand-900/20 border-b border-brand-100/50 dark:border-zinc-800/50">
-                        <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase">
-                          <div className="flex items-center gap-1.5 drop-shadow-sm">
-                            <User className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" />
-                            <span>{t('appointmentDashboard.table.patientId')}</span>
-                            <Eye className="h-3 w-3 text-brand-400/50" />
-                          </div>
-                        </TableHead>
-                        <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">{t('appointmentDashboard.table.patientName')}</TableHead>
-                        <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">{t('appointmentDashboard.table.doctorName')}</TableHead>
-                        <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">{t('appointmentDashboard.table.tokenNo')}</TableHead>
-                        {activeTab === 'current' && (
-                          <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">{t('appointmentDashboard.table.printToken', { defaultValue: 'Print Token' })}</TableHead>
-                        )}
-                        <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">
-                          {activeTab === 'past'
+                      <TableRow className="bg-slate-50 dark:bg-zinc-800/50 hover:bg-slate-50 dark:hover:bg-zinc-800/50 border-y border-slate-200 dark:border-zinc-700/50">
+                        {renderSortableHeader(t('appointmentDashboard.table.patientId'), 'patientId')}
+                        {renderSortableHeader(t('appointmentDashboard.table.patientName'), 'patientName')}
+                        {renderSortableHeader(t('appointmentDashboard.table.doctorName'), 'doctorName')}
+                        {renderSortableHeader(t('appointmentDashboard.table.tokenNo'), 'tokenNo')}
+                        {activeTab === 'current' && renderSortableHeader(t('appointmentDashboard.table.printToken', { defaultValue: 'Print Token' }), 'printToken')}
+                        {renderSortableHeader(
+                          activeTab === 'past'
                             ? t('appointmentDashboard.table.lastAppointmentDate')
                             : activeTab === 'future'
                               ? t('appointmentDashboard.table.appointmentDate')
-                              : t('appointmentDashboard.table.appointmentTime')}
-                        </TableHead>
-                        <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">
-                          {activeTab === 'past'
+                              : t('appointmentDashboard.table.appointmentTime'),
+                          'appointmentDate'
+                        )}
+                        {renderSortableHeader(
+                          activeTab === 'past'
                             ? t('appointmentDashboard.table.lastCompletedStatus')
-                            : t('appointmentDashboard.table.currentStatus')}
-                        </TableHead>
-                        <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">
-                          {t('appointmentDashboard.table.labReports', { defaultValue: 'Lab reports' })}
-                        </TableHead>
-                        <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">
-                          {t('appointmentDashboard.table.case', { defaultValue: 'Case' })}
-                        </TableHead>
-
-                        {activeTab !== 'past' && (
-                          <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">{t('appointmentDashboard.table.actions')}</TableHead>
+                            : t('appointmentDashboard.table.currentStatus'),
+                          'status'
                         )}
-                        <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">{t('appointmentDashboard.table.printPrescription')}</TableHead>
-                        {activeTab === 'past' && (
-                          <TableHead className="font-bold text-brand-900 dark:text-brand-100 text-xs py-2 px-2 tracking-wide uppercase drop-shadow-sm">{t('appointmentDashboard.table.isCompleted')}</TableHead>
-                        )}
+                        {renderSortableHeader(t('appointmentDashboard.table.labReports', { defaultValue: 'Lab reports' }), 'labReports')}
+                        {renderSortableHeader(t('appointmentDashboard.table.case', { defaultValue: 'Case' }), 'case')}
+                        {activeTab !== 'past' && renderSortableHeader(t('appointmentDashboard.table.actions'), 'actions')}
+                        {renderSortableHeader(t('appointmentDashboard.table.printPrescription'), 'printPrescription')}
+                        {activeTab === 'past' && renderSortableHeader(t('appointmentDashboard.table.isCompleted'), 'isCompleted')}
                       </TableRow>
                     </TableHeader>
                     <TableBody>

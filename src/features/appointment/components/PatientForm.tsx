@@ -206,7 +206,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   // patient (no id, no timeline) is always a fee visit.
   const nextFeeApplies = timeline ? timeline.nextVisit.feeApplies : true;
   const consultFee = (timeline && timeline.nextVisit.fee > 0) ? timeline.nextVisit.fee : consultCtx.fee;
-  const showConsult = consultCtx.autoConsult && consultFee > 0 && isSameDay && nextFeeApplies;
+  const showConsult = consultCtx.autoConsult && consultFee > 0 && nextFeeApplies;
 
   // Same-day duplicate guard: the timeline history is this patient's visits to THIS doctor
   // (cancelled already excluded by the server). If one falls on the selected appointment date,
@@ -226,11 +226,11 @@ export const PatientForm: React.FC<PatientFormProps> = ({
   }, [timeline, selectedSlot?.date]);
 
   useEffect(() => {
-    if (!doctor?.id || !isSameDay) { setConsultCtx({ autoConsult: false, fee: 0 }); return; }
+    if (!doctor?.id) { setConsultCtx({ autoConsult: false, fee: 0 }); return; }
     let active = true;
     getOpdConsultContext(doctor.id, hospitalId).then(ctx => { if (active) setConsultCtx(ctx); });
     return () => { active = false; };
-  }, [doctor?.id, hospitalId, isSameDay]);
+  }, [doctor?.id, hospitalId]);
 
   // Consult timeline (last paid, free follow-ups, next-visit preview) for an existing patient.
   useEffect(() => {

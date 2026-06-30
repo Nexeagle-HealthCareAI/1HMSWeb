@@ -438,9 +438,16 @@ export const ipdBillingService = {
 
     // Charge Events
     // Creates a billing encounter for a registered patient without requiring an appointment
-    // (manual billing, e.g. IPD). The OPD consult flow still uses charge/create-event.
+    // (manual billing, e.g. IPD).
     createEncounter: (req: CreateEncounterRequest): Promise<CreateEncounterResponse> =>
         ipdApiClient.post(IPD_API_ENDPOINTS.CHARGE.CREATE_ENCOUNTER, {
+            ...req,
+            hospitalId: hospitalIdOrThrow(req.hospitalId),
+        }),
+
+    // The OPD consult flow uses charge/create-event to auto-post consult charges.
+    createChargeEvent: (req: CreateEncounterRequest): Promise<CreateEncounterResponse> =>
+        ipdApiClient.post(IPD_API_ENDPOINTS.CHARGE.CREATE_EVENT, {
             ...req,
             hospitalId: hospitalIdOrThrow(req.hospitalId),
         }),

@@ -81,7 +81,7 @@ const TokenDetailsPage: React.FC = () => {
                 }}
             >
                 {/* Token Number */}
-                <div className="bg-brand-50 rounded-b-xl border border-brand-100 p-6 text-center shadow-inner relative overflow-hidden">
+                <div className="bg-brand-50 rounded-b-xl border border-brand-100 p-4 text-center shadow-inner relative overflow-hidden">
                     {(tokenData.hn || tokenData.ha) && (
                         <div className="absolute top-0 left-0 right-0 p-3 bg-white/50 border-b border-brand-100 text-center">
                             {tokenData.hn && <div className="font-bold text-sm text-gray-800 break-words leading-tight">{tokenData.hn}</div>}
@@ -89,7 +89,7 @@ const TokenDetailsPage: React.FC = () => {
                         </div>
                     )}
                     <div className={`text-sm font-bold uppercase text-brand-600 ${tokenData.hn ? 'mt-12' : ''}`}>Token Number</div>
-                    <div className="text-6xl font-black my-2 text-brand-900 tracking-tight">{formatTokenNumber(tokenData.tn)}</div>
+                    <div className="text-5xl font-black my-1 text-brand-900 tracking-tight">{formatTokenNumber(tokenData.tn)}</div>
                     <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white rounded-full text-xs font-semibold text-gray-600 shadow-sm border border-gray-100">
                         <Ticket className="w-3.5 h-3.5" /> Active
                     </div>

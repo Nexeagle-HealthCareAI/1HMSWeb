@@ -128,17 +128,10 @@ export const buildPrescriptionDataFromResponse = (
     ? 'Ref. Dr.'
     : firstPatient?.referrerType === 'AGENT'
     ? 'Ref. Agt.'
-    : (firstPatient?.referrerRelation || 'C/O');
-  const referrerSuffix = firstPatient?.referrerName
-    ? `${referrerLabel} ${firstPatient.referrerName}`
-    : '';
-
-  const nameParts = [firstPatient?.name ?? ''];
-  if (guardianSuffix) nameParts.push(guardianSuffix);
-  if (referrerSuffix) nameParts.push(referrerSuffix);
+    : (firstPatient?.referrerRelation || 'Ref. By');
 
   const mappedPatient: PrescriptionPatient = {
-    name: nameParts.join(' - '),
+    name: firstPatient?.name ?? '',
     id: firstPatient?.patientId ?? '',
     age: typeof firstPatient?.age === 'number' ? String(firstPatient.age) : '',
     ageUnit: firstPatient?.ageUnit,
@@ -150,6 +143,11 @@ export const buildPrescriptionDataFromResponse = (
     state: firstPatient?.state,
     country: firstPatient?.country,
     pincode: firstPatient?.pincode,
+    guardianName: firstPatient?.guardianName,
+    guardianRelation: firstPatient?.guardianRelation,
+    referrerName: firstPatient?.referrerName,
+    referrerRelation: firstPatient?.referrerRelation,
+    referrerType: firstPatient?.referrerType,
     // Optionally add details if needed
   };
 
