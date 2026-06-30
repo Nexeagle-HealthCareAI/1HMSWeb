@@ -1591,9 +1591,14 @@ export const AppointmentDashboard = () => {
                                     {appointment.patientFullName.split('-').slice(1).join('-').trim()}
                                   </div>
                                 )}
+                                {appointment.guardianName && (
+                                  <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate leading-tight font-medium">
+                                    {(appointment.guardianRelation || 'C/O')} {appointment.guardianName}
+                                  </div>
+                                )}
                                 {appointment.referrerName && (
                                   <div className="text-[10px] text-brand-500 dark:text-brand-300 truncate leading-tight font-medium">
-                                    {(appointment.referrerRelation || 'C/O')} {appointment.referrerName}
+                                    <span className="font-semibold text-brand-600 dark:text-brand-400">Ref:</span> {appointment.referrerName}
                                   </div>
                                 )}
                                 <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
