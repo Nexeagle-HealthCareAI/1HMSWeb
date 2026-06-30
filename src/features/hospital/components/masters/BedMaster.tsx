@@ -698,7 +698,7 @@ export const BedMaster = () => {
                                     <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
                                         <div className="w-1.5 h-1.5 rounded-full bg-brand-500" /> Bed Specifics
                                     </h3>
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-2 gap-4 items-start">
                                         {!editingRecord?.id && (
                                             <div className="grid gap-2 col-span-2 sm:col-span-1">
                                                 <Label>Number of beds</Label>
