@@ -180,7 +180,10 @@ export const AppointmentDashboard = () => {
       age: appointment.patientAge ?? (appointment as any).patientAgeYears,
       ageUnit: appointment.patientAgeUnit,
       gender: appointment.patientSex,
-      referrerName: appointment.referrerName || undefined
+      referrerName: appointment.referrerName || undefined,
+      referrerType: appointment.referrerType || undefined,
+      guardianName: appointment.guardianName || undefined,
+      guardianRelation: appointment.guardianRelation || undefined
     });
     setTokenPrintOpen(true);
   };
