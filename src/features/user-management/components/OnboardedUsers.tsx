@@ -329,7 +329,17 @@ export const OnboardedUsers: React.FC = () => {
                           "text-xs font-mono font-medium tracking-tight truncate",
                           isUserActive(user) ? "text-slate-700 dark:text-slate-300" : "text-slate-500 dark:text-slate-500"
                         )}>
-                          {user.lastLoginTime ? new Date(user.lastLoginTime).toLocaleString() : t('userManagement.onboardedUsers.labels.neverLoggedIn', 'Never logged in')}
+                          {user.lastLoginTime 
+                            ? new Intl.DateTimeFormat('en-IN', {
+                                timeZone: 'Asia/Kolkata',
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true
+                              }).format(new Date(user.lastLoginTime + (user.lastLoginTime.endsWith('Z') ? '' : 'Z'))) 
+                            : t('userManagement.onboardedUsers.labels.neverLoggedIn', 'Never logged in')}
                         </div>
                       </div>
                     </div>
