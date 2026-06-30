@@ -60,7 +60,8 @@ import {
   Siren,
   Wrench,
   Ambulance,
-  UserSquare
+  UserSquare,
+  Crown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -208,6 +209,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const allNavigationItems: NavigationItem[] = [
     { id: 'admin', name: t('header.adminPanel'), icon: Shield, path: '/admin' },
     { id: 'configuration', name: t('header.configuration') || 'Configuration', icon: Settings, path: '/configuration' },
+    { id: 'subscription', name: 'Subscription', icon: Crown, path: '/subscription' },
     { id: 'dashboard', name: t('header.clinicalDashboard'), icon: LayoutDashboard, path: '/dashboard' },
     {
       id: 'appointments',
@@ -221,7 +223,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   // Filter navigation items based on user role
   const navigation: NavigationItem[] = allNavigationItems.filter(item => {
-    if (item.id === 'admin' || item.id === 'configuration') {
+    if (item.id === 'admin' || item.id === 'configuration' || item.id === 'subscription') {
       return userRoles.includes('Admin') || userRoles.includes('AdminDoctor');
     }
     if (item.id === 'dashboard' || item.id === 'doc-ai' || item.id === 'calendar') {
