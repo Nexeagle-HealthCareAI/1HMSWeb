@@ -227,23 +227,36 @@ export const QuickAddUserForm: React.FC<Props> = ({ open, onOpenChange, onAdded 
                   <Input type={showPwd ? 'text' : 'password'} value={form.confirm} onChange={e => set('confirm', e.target.value)} className="mt-1 rounded-lg" placeholder={t('userManagement.quickAdd.confirmPlaceholder')} />
                 </div>
                 <div className="sm:col-span-2">
-                  <Label className="text-[11px] font-semibold text-slate-600">{t('userManagement.quickAdd.role')} <span className="text-red-500">*</span></Label>
-                  <div className="mt-2 flex flex-wrap gap-4">
+                  <Label className="text-[11px] font-semibold text-slate-600 mb-2 block">{t('userManagement.quickAdd.role')} <span className="text-red-500">*</span></Label>
+                  <div className="flex flex-wrap gap-2">
                     {rolesQuery.isLoading ? <span className="text-sm text-slate-500">{t('userManagement.quickAdd.loadingRoles')}</span> : 
-                      roles.map(r => (
-                        <label key={r.roleId} className="flex items-center space-x-2 cursor-pointer">
-                          <Checkbox 
-                            checked={form.roles.includes(r.roleName)}
-                            onCheckedChange={(checked) => {
-                              const newRoles = checked 
-                                ? [...form.roles, r.roleName] 
-                                : form.roles.filter(x => x !== r.roleName);
+                      roles.map(r => {
+                        const isSelected = form.roles.includes(r.roleName);
+                        return (
+                          <button
+                            key={r.roleId}
+                            type="button"
+                            onClick={() => {
+                              const newRoles = isSelected 
+                                ? form.roles.filter(x => x !== r.roleName)
+                                : [...form.roles, r.roleName];
                               setForm(f => ({ ...f, roles: newRoles }));
                             }}
-                          />
-                          <span className="text-sm text-slate-700">{r.roleName}</span>
-                        </label>
-                      ))
+                            className={`px-3.5 py-2 text-[13px] font-medium rounded-xl transition-all duration-200 border flex items-center gap-2 ${
+                              isSelected 
+                                ? 'bg-brand-50 border-brand-500 text-brand-800 ring-1 ring-brand-500/20 shadow-sm' 
+                                : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm'
+                            }`}
+                          >
+                            {isSelected ? (
+                              <CheckCircle2 className="h-4 w-4 text-brand-600" />
+                            ) : (
+                              <div className="h-4 w-4 rounded-full border border-slate-300 flex items-center justify-center bg-white" />
+                            )}
+                            {r.roleName}
+                          </button>
+                        );
+                      })
                     }
                   </div>
                 </div>
