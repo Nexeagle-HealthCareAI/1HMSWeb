@@ -23,8 +23,8 @@ const RoleBasedRedirect = () => {
 };
 
 // Lazy load pages for better performance
-const IPDAdmissionForm = lazy(() => import('@/features/ipd/components/IPDAdmissionForm').then(m => ({ default: m.IPDAdmissionForm })));
-const InventoryDashboard = lazy(() => import('@/features/inventory/components/InventoryDashboard').then(m => ({ default: m.InventoryDashboard })));
+
+
 const SubscriptionPage = lazy(() => import('@/features/subscription/pages/SubscriptionPage').then(m => ({ default: m.SubscriptionPage })));
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage').then(module => ({ default: module.default })));
 const AdminDashboard = lazy(() => import('@/features/dashboard/components/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
