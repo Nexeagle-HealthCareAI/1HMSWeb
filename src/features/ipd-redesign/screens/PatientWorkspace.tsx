@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import {
-    ArrowLeft, BedDouble, Pill, LogOut, ArrowLeftRight, Check, Loader2, X, FlaskConical, Scissors, Utensils, HeartPulse,
+    ArrowLeft, BedDouble, Pill, LogOut, ArrowLeftRight, Check, Loader2, X, FlaskConical, Scissors, Utensils, HeartPulse, Scan,
 } from 'lucide-react';
 import { admissionApi, type ActiveAdmissionItem } from '../services/admissionApi';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
@@ -31,7 +31,7 @@ const formatIstDateTime = (iso?: string | null): string => {
     return `${day}${month}.${year}, ${time}`;
 };
 
-type Tab = 'overview' | 'medications' | 'lab' | 'procedures' | 'dietNursing';
+type Tab = 'overview' | 'medications' | 'lab' | 'procedures' | 'dietNursing' | 'radiology';
 
 interface Props {
     admission: ActiveAdmissionItem;
@@ -179,6 +179,10 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                     className={cn('h-9 px-4 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5', tab === 'dietNursing' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
                     <Utensils className="h-4 w-4" /> Diet &amp; Nursing
                 </button>
+                <button type="button" onClick={() => setTab('radiology')}
+                    className={cn('h-9 px-4 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5', tab === 'radiology' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                    <Scan className="h-4 w-4" /> Radiology
+                </button>
             </div>
 
             {tab === 'overview' && (
@@ -323,6 +327,21 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                         />
                     )}
                 </div>
+            )}
+
+            {/* Radiology fulfillment (modality worklist, DICOM, reporting) is explicitly out of
+                EasyHMS scope -- lives in an external radiology system (see scope_decisions). This
+                tab is order-placement + charge-on-event only, same as every other type here. */}
+            {tab === 'radiology' && (
+                <ClinicalOrderPanel
+                    admissionId={current.admissionId}
+                    isActive={isActive}
+                    orderType="RADIOLOGY"
+                    itemPickerCategoryCodes={['RAD', 'RADIOLOGY']}
+                    itemLabel="Study"
+                    noItemsText="No radiology orders yet."
+                    showUrgency
+                />
             )}
 
             {/* Discharge dialog */}
