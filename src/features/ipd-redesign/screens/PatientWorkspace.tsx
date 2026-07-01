@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import {
-    ArrowLeft, BedDouble, Pill, LogOut, ArrowLeftRight, Check, Loader2, X, FlaskConical,
+    ArrowLeft, BedDouble, Pill, LogOut, ArrowLeftRight, Check, Loader2, X, FlaskConical, Scissors,
 } from 'lucide-react';
 import { admissionApi, type ActiveAdmissionItem } from '../services/admissionApi';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
@@ -31,7 +31,7 @@ const formatIstDateTime = (iso?: string | null): string => {
     return `${day}${month}.${year}, ${time}`;
 };
 
-type Tab = 'overview' | 'medications' | 'lab';
+type Tab = 'overview' | 'medications' | 'lab' | 'procedures';
 
 interface Props {
     admission: ActiveAdmissionItem;
@@ -170,6 +170,10 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                     className={cn('h-9 px-4 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5', tab === 'lab' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
                     <FlaskConical className="h-4 w-4" /> Lab
                 </button>
+                <button type="button" onClick={() => setTab('procedures')}
+                    className={cn('h-9 px-4 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5', tab === 'procedures' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                    <Scissors className="h-4 w-4" /> Procedures
+                </button>
             </div>
 
             {tab === 'overview' && (
@@ -261,6 +265,22 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                     itemLabel="Test"
                     noItemsText="No lab orders yet."
                     showUrgency
+                />
+            )}
+
+            {/* Consent capture (ConsentRecord, TemplateTypeCode=PROCEDURE) is a separate, already-
+                existing system — deliberately not linked here yet to avoid scope creep; a natural
+                future step would prompt for consent when a procedure order is placed. */}
+            {tab === 'procedures' && (
+                <ClinicalOrderPanel
+                    admissionId={current.admissionId}
+                    isActive={isActive}
+                    orderType="PROCEDURE"
+                    itemPickerCategoryCodes={['PROCEDURE']}
+                    itemLabel="Procedure"
+                    noItemsText="No procedure orders yet."
+                    showUrgency
+                    showScheduledAt
                 />
             )}
 
