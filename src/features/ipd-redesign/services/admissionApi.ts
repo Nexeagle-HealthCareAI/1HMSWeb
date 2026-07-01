@@ -112,6 +112,20 @@ export interface AdmitPatientPayload {
 
     referralSource?: 'SELF' | 'DOCTOR' | 'HOSPITAL' | '';
     referralName?: string;
+
+    // ── Payer branch (CASH is fully wired; TPA/SCHEME are capture-only in Phase 1) ──
+    payerType?: 'CASH' | 'TPA' | 'SCHEME';
+    depositExpected?: number | null;
+    enableIpdBilling?: boolean;        // opens an IPD billing encounter; default true server-side
+    clientRequestId?: string;         // offline-resync idempotency key
+    bedId?: string | null;            // optional bed to assign at admit time
+
+    // Coverage detail — only meaningful when payerType is TPA / SCHEME.
+    payerName?: string;
+    policyOrBeneficiaryNo?: string;
+    preAuthNo?: string;
+    packageCode?: string;
+    sanctionedAmount?: number | null;
 }
 
 export interface AdmitPatientResponse {
@@ -123,6 +137,10 @@ export interface AdmitPatientResponse {
     isNewPatient?: boolean;
     admittedAt?: string;
     wasExisting?: boolean;
+    encounterId?: string | null;
+    payerType?: string | null;
+    bedId?: string | null;
+    bedAssignmentId?: string | null;
 }
 
 // ─── Duplicate detection ────────────────────────────────────────────────────────

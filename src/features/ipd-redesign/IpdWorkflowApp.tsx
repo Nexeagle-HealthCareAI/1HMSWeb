@@ -3,10 +3,12 @@ import { IpdDashboard } from './screens/IpdDashboard';
 import { PatientWorkspace } from './screens/PatientWorkspace';
 import { AdmitPatientSheet } from './screens/AdmitPatientSheet';
 import { DischargeFlow } from './screens/DischargeFlow';
+import { BedBoardScreen } from './screens/BedBoardScreen';
 
 type View =
     | { name: 'dashboard' }
-    | { name: 'workspace'; admissionId: string };
+    | { name: 'workspace'; admissionId: string }
+    | { name: 'bedboard' };
 
 /**
  * IPD workspace. Role-based persona screens (Reception / Doctor / Nurse) were removed —
@@ -25,7 +27,12 @@ export const IpdWorkflowApp: React.FC = () => {
                 <IpdDashboard
                     onOpenAdmission={openAdmission}
                     onAdmit={() => setAdmitOpen(true)}
+                    onOpenBedBoard={() => setView({ name: 'bedboard' })}
                 />
+            )}
+
+            {view.name === 'bedboard' && (
+                <BedBoardScreen onBack={() => setView({ name: 'dashboard' })} />
             )}
 
             {view.name === 'workspace' && (

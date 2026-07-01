@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Hotel, Plus, BedDouble, Activity, IndianRupee, TrendingUp, Search, ChevronRight } from 'lucide-react';
+import { Hotel, Plus, BedDouble, Activity, IndianRupee, TrendingUp, Search, ChevronRight, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -18,9 +18,10 @@ const BED_TONE: Record<BedStatus, string> = {
 interface Props {
     onOpenAdmission: (admissionId: string) => void;
     onAdmit: () => void;
+    onOpenBedBoard: () => void;
 }
 
-export const IpdDashboard: React.FC<Props> = ({ onOpenAdmission, onAdmit }) => {
+export const IpdDashboard: React.FC<Props> = ({ onOpenAdmission, onAdmit, onOpenBedBoard }) => {
     const wards = useIpdStore(s => s.wards);
     const beds = useIpdStore(s => s.beds);
     const admissionViews = useIpdStore(s => s.admissionViews);
@@ -69,6 +70,9 @@ export const IpdDashboard: React.FC<Props> = ({ onOpenAdmission, onAdmit }) => {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    <Button onClick={onOpenBedBoard} variant="outline" className="h-10 font-semibold">
+                        <LayoutGrid className="h-4 w-4 mr-2" /> Live Bed Board
+                    </Button>
                     <Button onClick={onAdmit} className="h-10 bg-brand-600 hover:bg-brand-700 font-semibold">
                         <Plus className="h-4 w-4 mr-2" /> Admit Patient
                     </Button>
@@ -84,9 +88,9 @@ export const IpdDashboard: React.FC<Props> = ({ onOpenAdmission, onAdmit }) => {
                 <KpiTile label="Discharges today" value={views.filter(v => v.status === 'DISCHARGE_INITIATED').length} icon={<TrendingUp className="h-4 w-4" />} tone="amber" />
             </div>
 
-            {/* Bed board */}
+            {/* Bed board (demo data below — use "Live Bed Board" above for the real, backend-wired board) */}
             <section className="space-y-3">
-                <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Bed Board</h2>
+                <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Bed Board (demo)</h2>
                 <div className="space-y-4">
                     {wards.map(ward => {
                         const wardBeds = beds.filter(b => b.wardId === ward.wardId);
