@@ -2,19 +2,20 @@ import React, { useState } from 'react';
 import { IpdDashboard } from './screens/IpdDashboard';
 import { AdmitPatientSheet } from './screens/AdmitPatientSheet';
 import { BedBoardScreen } from './screens/BedBoardScreen';
-import { MedicationOrdersScreen } from './screens/MedicationOrdersScreen';
+import { PatientWorkspace } from './screens/PatientWorkspace';
 import type { ActiveAdmissionItem } from './services/admissionApi';
 
 type View =
     | { name: 'dashboard' }
     | { name: 'bedboard' }
-    | { name: 'medorders'; admission: ActiveAdmissionItem };
+    | { name: 'workspace'; admission: ActiveAdmissionItem };
 
 /**
- * IPD workspace — real screens backed entirely by the API: the dashboard (admitted-patient
- * list), the live Bed Board, and per-admission Medication Orders (CPOE). The old mock
- * PatientWorkspace/DischargeFlow (and the earlier Reception/Doctor/Nurse persona screens) are no
- * longer routed from here — they were a backend-agnostic prototype that predates the real
+ * IPD workspace — real screens backed entirely by the API: the dashboard (admissions list with
+ * a status filter), the live Bed Board, and the per-admission Patient Workspace (bed, medication
+ * orders, discharge — everything about one patient's stay in one place, opened by clicking a
+ * row). The old mock DischargeFlow (and the earlier Reception/Doctor/Nurse persona screens) are
+ * no longer routed from here — they were a backend-agnostic prototype that predates the real
  * admission/bed-board wiring. Left as unrouted files rather than deleted, same treatment as the
  * persona screens before them.
  */
@@ -29,7 +30,7 @@ export const IpdWorkflowApp: React.FC = () => {
                 <IpdDashboard
                     onAdmit={() => setAdmitOpen(true)}
                     onOpenBedBoard={() => setView({ name: 'bedboard' })}
-                    onOpenMedicationOrders={(admission) => setView({ name: 'medorders', admission })}
+                    onOpenWorkspace={(admission) => setView({ name: 'workspace', admission })}
                     refreshSignal={refreshTick}
                 />
             )}
@@ -38,8 +39,12 @@ export const IpdWorkflowApp: React.FC = () => {
                 <BedBoardScreen onBack={() => setView({ name: 'dashboard' })} />
             )}
 
-            {view.name === 'medorders' && (
-                <MedicationOrdersScreen admission={view.admission} onBack={() => setView({ name: 'dashboard' })} />
+            {view.name === 'workspace' && (
+                <PatientWorkspace
+                    admission={view.admission}
+                    onBack={() => setView({ name: 'dashboard' })}
+                    onChanged={() => setRefreshTick(t => t + 1)}
+                />
             )}
 
             <AdmitPatientSheet

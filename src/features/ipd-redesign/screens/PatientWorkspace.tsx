@@ -1,489 +1,500 @@
-import React, { useMemo, useState } from 'react';
-import {
-    ArrowLeft, Activity, Pill, NotebookPen, IndianRupee, LayoutDashboard, LogOut,
-    Plus, Check, AlertTriangle, Clock, Heart, Wind, Thermometer, Droplet, Loader2,
-} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import {
-    Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { format, parseISO } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { useIpdStore } from '../store';
-import type { MedStatus } from '../types';
+import {
+    ArrowLeft, BedDouble, Pill, LogOut, ArrowLeftRight, Check, Loader2, X, Plus, Trash2, RefreshCw,
+} from 'lucide-react';
+import { admissionApi, type ActiveAdmissionItem } from '../services/admissionApi';
+import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
+import { medicationOrderApi, type MedicationOrderItem, type MedicationOrderLineInput } from '../services/medicationOrderApi';
+import { ipdBillingService, type ChargeMaster } from '@/features/billing/services/ipdBillingService';
 
-type Tab = 'overview' | 'vitals' | 'mar' | 'notes' | 'billing';
+const ACTIVE_STATUSES = ['PRE_ADMIT', 'ADMITTED', 'DISCHARGE_INITIATED', 'DISCHARGE_BILLED'];
 
-const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="h-4 w-4" /> },
-    { id: 'vitals', label: 'Vitals', icon: <Activity className="h-4 w-4" /> },
-    { id: 'mar', label: 'MAR', icon: <Pill className="h-4 w-4" /> },
-    { id: 'notes', label: 'Round Notes', icon: <NotebookPen className="h-4 w-4" /> },
-    { id: 'billing', label: 'Billing', icon: <IndianRupee className="h-4 w-4" /> },
-];
+// Backend timestamps come back naive (no timezone suffix) — treat as UTC before converting to IST.
+const toIstDate = (iso: string): Date => {
+    const hasTz = /[zZ]|[+-]\d{2}:?\d{2}$/.test(iso);
+    return new Date(hasTz ? iso : `${iso}Z`);
+};
+const formatIstDateTime = (iso?: string | null): string => {
+    if (!iso) return '';
+    const d = toIstDate(iso);
+    if (isNaN(d.getTime())) return '';
+    const day = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit' });
+    const month = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', month: 'short' });
+    const year = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', year: 'numeric' });
+    const time = d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false });
+    return `${day}${month}.${year}, ${time}`;
+};
+
+const EMPTY_LINE: MedicationOrderLineInput = { drugName: '', dose: '', route: '', frequency: '', durationDays: undefined, instructions: '', qty: 1 };
+
+type Tab = 'overview' | 'medications';
 
 interface Props {
-    admissionId: string;
+    admission: ActiveAdmissionItem;
     onBack: () => void;
-    onDischarge: () => void;
+    onChanged: () => void;
 }
 
-export const PatientWorkspace: React.FC<Props> = ({ admissionId, onBack, onDischarge }) => {
+/**
+ * Real per-admission workspace — bed, medication orders (CPOE), and discharge all in one place,
+ * replacing the old separate bed/discharge dialog and the standalone medication-orders screen.
+ * Read-only for bed/order actions once the admission is no longer in an Active status.
+ */
+export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged }) => {
+    const { toast } = useToast();
+    const [current, setCurrent] = useState<ActiveAdmissionItem>(admission);
     const [tab, setTab] = useState<Tab>('overview');
-    const admissionView = useIpdStore(s => s.admissionView);
-    const v = admissionView(admissionId);
+    const isActive = ACTIVE_STATUSES.includes(current.statusCode);
 
-    if (!v) {
-        return (
-            <div className="max-w-7xl mx-auto px-6 py-10 text-center text-slate-500">
-                Admission not found. <Button variant="link" onClick={onBack}>Back to dashboard</Button>
-            </div>
-        );
-    }
+    const [freeBeds, setFreeBeds] = useState<BedBoardItem[]>([]);
+    const [bedActionMode, setBedActionMode] = useState<'assign' | 'transfer' | null>(null);
+    const [pickedBedId, setPickedBedId] = useState('');
+    const [bedBusy, setBedBusy] = useState(false);
 
-    const discharging = v.status === 'DISCHARGE_INITIATED';
+    const [dischargeOpen, setDischargeOpen] = useState(false);
+    const [dischargeNotes, setDischargeNotes] = useState('');
+    const [dischargeBusy, setDischargeBusy] = useState(false);
+
+    const [orders, setOrders] = useState<MedicationOrderItem[]>([]);
+    const [ordersLoading, setOrdersLoading] = useState(true);
+    const [pharmacyItems, setPharmacyItems] = useState<ChargeMaster[]>([]);
+    const [newOrderOpen, setNewOrderOpen] = useState(false);
+    const [lines, setLines] = useState<MedicationOrderLineInput[]>([{ ...EMPTY_LINE }]);
+    const [orderNotes, setOrderNotes] = useState('');
+    const [placingOrder, setPlacingOrder] = useState(false);
+    const [discontinuing, setDiscontinuing] = useState<{ orderLineId: string; drugName: string } | null>(null);
+    const [discontinueReason, setDiscontinueReason] = useState('');
+    const [discontinueBusy, setDiscontinueBusy] = useState(false);
+
+    const refreshAdmission = async () => {
+        try {
+            const list = await admissionApi.getActiveAdmissions('ALL');
+            const found = list.find(a => a.admissionId === admission.admissionId);
+            if (found) setCurrent(found);
+        } catch { /* keep last known state on failure */ }
+    };
+
+    const loadFreeBeds = () => {
+        bedBoardApi.getBoard().then(beds => setFreeBeds(beds.filter(b => b.isActive && !b.admissionId))).catch(() => setFreeBeds([]));
+    };
+
+    const loadOrders = () => {
+        setOrdersLoading(true);
+        medicationOrderApi.getOrders(admission.admissionId)
+            .then(setOrders)
+            .catch(() => toast({ title: 'Could not load medication orders', variant: 'destructive' }))
+            .finally(() => setOrdersLoading(false));
+    };
+
+    useEffect(() => {
+        refreshAdmission();
+        loadFreeBeds();
+        loadOrders();
+        ipdBillingService.listChargeMasters({ pageSize: 500 })
+            .then(r => setPharmacyItems(r.items.filter(c => c.isActive && (c.appliesTo === 'PHARMACY' || c.categoryCode === 'PHARMACY'))))
+            .catch(() => setPharmacyItems([]));
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const refreshAfterAction = () => {
+        refreshAdmission();
+        loadFreeBeds();
+        onChanged();
+    };
+
+    // ── Bed actions ──────────────────────────────────────────────────────────
+    const runBedAction = async (fn: () => Promise<unknown>, successMessage: string) => {
+        setBedBusy(true);
+        try {
+            await fn();
+            toast({ title: successMessage });
+            setBedActionMode(null);
+            setPickedBedId('');
+            refreshAfterAction();
+        } catch (err) {
+            toast({ title: 'Action failed', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setBedBusy(false);
+        }
+    };
+
+    const releaseBed = async () => {
+        setBedBusy(true);
+        try {
+            await bedBoardApi.releaseBed(current.admissionId);
+            toast({ title: 'Bed released.' });
+            refreshAfterAction();
+        } catch (err) {
+            toast({ title: 'Action failed', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setBedBusy(false);
+        }
+    };
+
+    // ── Discharge ────────────────────────────────────────────────────────────
+    const confirmDischarge = async () => {
+        setDischargeBusy(true);
+        try {
+            await bedBoardApi.dischargeAdmission(current.admissionId, dischargeNotes || undefined);
+            toast({ title: 'Patient discharged.' });
+            setDischargeOpen(false);
+            refreshAfterAction();
+        } catch (err) {
+            toast({ title: 'Could not discharge', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setDischargeBusy(false);
+        }
+    };
+
+    // ── Medication orders ────────────────────────────────────────────────────
+    const openNewOrder = () => { setLines([{ ...EMPTY_LINE }]); setOrderNotes(''); setNewOrderOpen(true); };
+    const addLine = () => setLines(ls => [...ls, { ...EMPTY_LINE }]);
+    const removeLine = (i: number) => setLines(ls => ls.filter((_, idx) => idx !== i));
+    const setLine = (i: number, patch: Partial<MedicationOrderLineInput>) =>
+        setLines(ls => ls.map((l, idx) => idx === i ? { ...l, ...patch } : l));
+    const pickPharmacyItem = (i: number, chargeId: string) => {
+        const item = pharmacyItems.find(p => p.chargeId === chargeId);
+        setLine(i, { chargeId: chargeId || undefined, drugName: item?.displayName ?? lines[i].drugName });
+    };
+    const canSubmitOrder = lines.length > 0 && lines.every(l => l.drugName.trim().length > 0);
+
+    const submitOrder = async () => {
+        if (!canSubmitOrder || placingOrder) {
+            toast({ title: 'Incomplete', description: 'Every line needs a drug name.', variant: 'destructive' });
+            return;
+        }
+        setPlacingOrder(true);
+        try {
+            await medicationOrderApi.placeOrder(current.admissionId, lines, orderNotes || undefined);
+            toast({ title: 'Medication order placed.' });
+            setNewOrderOpen(false);
+            loadOrders();
+        } catch (err) {
+            toast({ title: 'Could not place order', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setPlacingOrder(false);
+        }
+    };
+
+    const confirmDiscontinue = async () => {
+        if (!discontinuing) return;
+        setDiscontinueBusy(true);
+        try {
+            await medicationOrderApi.discontinueLine(discontinuing.orderLineId, discontinueReason || undefined);
+            toast({ title: `${discontinuing.drugName} discontinued.` });
+            setDiscontinuing(null);
+            setDiscontinueReason('');
+            loadOrders();
+        } catch (err) {
+            toast({ title: 'Could not discontinue', description: err instanceof Error ? err.message : 'Please try again.', variant: 'destructive' });
+        } finally {
+            setDiscontinueBusy(false);
+        }
+    };
 
     return (
-        <div className="max-w-7xl mx-auto px-6 py-6 space-y-5">
-            {/* Header bar */}
+        <div className="max-w-5xl mx-auto px-6 py-6 space-y-5">
+            {/* Header */}
             <div className="flex items-start justify-between gap-4 flex-wrap">
-                <div className="flex items-start gap-3">
-                    <Button variant="ghost" size="icon" onClick={onBack} className="mt-0.5"><ArrowLeft className="h-5 w-5" /></Button>
-                    <div className="h-12 w-12 rounded-2xl bg-brand-600 flex items-center justify-center text-white font-black text-lg shrink-0">
-                        {v.patient.name.charAt(0)}
+                <div className="flex items-center gap-3">
+                    <Button variant="outline" size="sm" className="h-9" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1.5" /> Dashboard</Button>
+                    <div className="h-11 w-11 rounded-2xl bg-brand-600 text-white flex items-center justify-center text-sm font-bold shrink-0 shadow">
+                        {(current.patientName || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()}
                     </div>
                     <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                            <h1 className="text-xl font-black text-slate-900">{v.patient.name}</h1>
-                            <Badge variant="outline" className="text-[10px] font-bold bg-slate-50">{v.patient.age}{v.patient.sex} · {v.patient.bloodGroup}</Badge>
-                            {v.isMlc && <Badge variant="outline" className="text-[10px] font-bold bg-rose-50 text-rose-700 border-rose-200">MLC</Badge>}
-                            {discharging && <Badge variant="outline" className="text-[10px] font-bold bg-amber-50 text-amber-700 border-amber-200">DISCHARGING</Badge>}
+                            <h1 className="text-lg font-black text-slate-900">{current.patientName || current.patientId}</h1>
+                            <Badge variant="outline" className={cn('text-[10px] font-bold', isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600')}>
+                                {current.statusCode}
+                            </Badge>
                         </div>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                            {v.admissionNo} · {v.ward.wardName} · {v.bed.bedCode} · {v.attendingDoctor} · LOS {v.lengthOfStayDays}d
+                        <p className="text-xs text-slate-500">
+                            {current.patientId}{current.patientAge != null ? ` · ${current.patientAge}${current.patientSex ?? ''}` : ''} · {current.admissionNo} · {current.admissionType ?? '—'} · {current.payerType}
                         </p>
-                        {v.patient.allergies?.length ? (
-                            <p className="text-[11px] text-rose-600 font-semibold mt-0.5 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Allergies: {v.patient.allergies.join(', ')}</p>
-                        ) : null}
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <div className={cn('rounded-lg border px-3 py-1.5 text-right', v.balance > 0 ? 'bg-rose-50 border-rose-200' : 'bg-emerald-50 border-emerald-200')}>
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Balance</p>
-                        <p className={cn('text-sm font-black font-mono', v.balance > 0 ? 'text-rose-700' : 'text-emerald-700')}>₹{Math.abs(v.balance).toLocaleString('en-IN')}{v.balance < 0 ? ' CR' : ''}</p>
-                    </div>
-                    {!discharging && (
-                        <Button onClick={onDischarge} variant="outline" className="h-10 border-amber-300 text-amber-700 hover:bg-amber-50">
-                            <LogOut className="h-4 w-4 mr-2" /> Discharge
-                        </Button>
-                    )}
-                </div>
+                {isActive && (
+                    <Button onClick={() => { setDischargeNotes(''); setDischargeOpen(true); }} className="h-10 bg-amber-600 hover:bg-amber-700 font-semibold">
+                        <LogOut className="h-4 w-4 mr-2" /> Discharge
+                    </Button>
+                )}
             </div>
 
             {/* Tabs */}
-            <div className="inline-flex p-1 bg-slate-100 rounded-lg gap-1 flex-wrap">
-                {TABS.map(t => (
-                    <button key={t.id} type="button" onClick={() => setTab(t.id)} className={cn(
-                        'h-8 px-3 rounded-md text-xs font-semibold inline-flex items-center gap-1.5',
-                        tab === t.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                    )}>{t.icon}{t.label}</button>
-                ))}
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 w-fit">
+                <button type="button" onClick={() => setTab('overview')}
+                    className={cn('h-9 px-4 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5', tab === 'overview' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                    <BedDouble className="h-4 w-4" /> Overview
+                </button>
+                <button type="button" onClick={() => setTab('medications')}
+                    className={cn('h-9 px-4 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5', tab === 'medications' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                    <Pill className="h-4 w-4" /> Medications
+                    {orders.length > 0 && <Badge variant="outline" className="text-[9px] bg-slate-50 ml-0.5">{orders.length}</Badge>}
+                </button>
             </div>
 
-            {/* Tab content */}
-            {tab === 'overview' && <OverviewTab admissionId={admissionId} />}
-            {tab === 'vitals' && <VitalsTab admissionId={admissionId} />}
-            {tab === 'mar' && <MarTab admissionId={admissionId} />}
-            {tab === 'notes' && <NotesTab admissionId={admissionId} />}
-            {tab === 'billing' && <BillingTab admissionId={admissionId} locked={discharging} />}
-        </div>
-    );
-};
-
-// ─── Overview ─────────────────────────────────────────────────────────────────
-const OverviewTab: React.FC<{ admissionId: string }> = ({ admissionId }) => {
-    const v = useIpdStore(s => s.admissionView(admissionId))!;
-    const referredBy = useIpdStore(s => s.beneficiaryName(v.beneficiaryId));
-    const vitals = useIpdStore(s => s.vitals).filter(x => x.admissionId === admissionId);
-    const meds = useIpdStore(s => s.medications).filter(x => x.admissionId === admissionId);
-    const latest = vitals[vitals.length - 1];
-    const dueMeds = meds.filter(m => m.status === 'DUE').length;
-
-    return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2 space-y-4">
-                <Card title="Admission details">
-                    <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                        <Field label="Admission #" value={v.admissionNo} mono />
-                        <Field label="Admitted" value={format(parseISO(v.admittedAt), 'd MMM yyyy, HH:mm')} />
-                        <Field label="Ward / Bed" value={`${v.ward.wardName} · ${v.bed.bedCode}`} />
-                        <Field label="Attending" value={v.attendingDoctor} />
-                        <Field label="Provisional Dx" value={v.provisionalDiagnosis} />
-                        {v.finalDiagnosis && <Field label="Final Dx" value={v.finalDiagnosis} />}
-                        <Field label="Est. daily cost" value={`₹${v.estimatedDailyCost.toLocaleString('en-IN')}`} />
-                        <Field label="LOS" value={`${v.lengthOfStayDays} day(s)`} />
-                        {referredBy && <Field label="Referred by" value={referredBy} />}
-                    </dl>
-                </Card>
-            </div>
-            <div className="space-y-4">
-                <Card title="Latest vitals">
-                    {latest ? (
-                        <div className="grid grid-cols-2 gap-3">
-                            <Stat icon={<Thermometer className="h-4 w-4 text-rose-500" />} label="Temp" value={`${latest.temperatureF}°F`} />
-                            <Stat icon={<Heart className="h-4 w-4 text-rose-500" />} label="Pulse" value={`${latest.pulse}`} />
-                            <Stat icon={<Activity className="h-4 w-4 text-brand-500" />} label="BP" value={`${latest.systolic}/${latest.diastolic}`} />
-                            <Stat icon={<Wind className="h-4 w-4 text-sky-500" />} label="SpO₂" value={`${latest.spo2}%`} />
-                        </div>
-                    ) : <p className="text-xs text-slate-400">No vitals recorded.</p>}
-                </Card>
-                <Card title="Care snapshot">
-                    <div className="space-y-2 text-sm">
-                        <div className="flex items-center justify-between"><span className="text-slate-500">Meds due</span><Badge variant="outline" className={cn('text-[10px] font-bold', dueMeds ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200')}>{dueMeds}</Badge></div>
-                        <div className="flex items-center justify-between"><span className="text-slate-500">Total billed</span><span className="font-mono font-semibold">₹{v.totalCharges.toLocaleString('en-IN')}</span></div>
-                        <div className="flex items-center justify-between"><span className="text-slate-500">Received</span><span className="font-mono font-semibold text-emerald-700">₹{v.totalPaid.toLocaleString('en-IN')}</span></div>
-                        <div className="flex items-center justify-between pt-2 border-t border-slate-100"><span className="font-bold">Balance</span><span className={cn('font-mono font-bold', v.balance > 0 ? 'text-rose-700' : 'text-emerald-700')}>₹{Math.abs(v.balance).toLocaleString('en-IN')}{v.balance < 0 ? ' CR' : ''}</span></div>
-                    </div>
-                </Card>
-            </div>
-        </div>
-    );
-};
-
-// ─── Vitals ───────────────────────────────────────────────────────────────────
-const VitalsTab: React.FC<{ admissionId: string }> = ({ admissionId }) => {
-    const { toast } = useToast();
-    const vitals = useIpdStore(s => s.vitals).filter(x => x.admissionId === admissionId);
-    const addVital = useIpdStore(s => s.addVital);
-    const [open, setOpen] = useState(false);
-    const [form, setForm] = useState({ temperatureF: '', pulse: '', systolic: '', diastolic: '', spo2: '', respRate: '', painScore: '' });
-
-    const submit = () => {
-        addVital({
-            admissionId, recordedAt: new Date().toISOString(), recordedBy: 'You',
-            temperatureF: num(form.temperatureF), pulse: num(form.pulse), systolic: num(form.systolic),
-            diastolic: num(form.diastolic), spo2: num(form.spo2), respRate: num(form.respRate), painScore: num(form.painScore),
-        });
-        toast({ title: 'Vitals recorded' });
-        setForm({ temperatureF: '', pulse: '', systolic: '', diastolic: '', spo2: '', respRate: '', painScore: '' });
-        setOpen(false);
-    };
-
-    return (
-        <div className="space-y-3">
-            <div className="flex justify-end">
-                <Button size="sm" onClick={() => setOpen(true)} className="h-8 bg-brand-600 hover:bg-brand-700"><Plus className="h-3.5 w-3.5 mr-1" /> Record vitals</Button>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-                <table className="w-full text-sm">
-                    <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
-                        <tr>
-                            <th className="text-left px-3 py-2.5 font-bold">Time</th>
-                            <th className="text-right px-3 py-2.5 font-bold">Temp °F</th>
-                            <th className="text-right px-3 py-2.5 font-bold">Pulse</th>
-                            <th className="text-right px-3 py-2.5 font-bold">BP</th>
-                            <th className="text-right px-3 py-2.5 font-bold">SpO₂</th>
-                            <th className="text-right px-3 py-2.5 font-bold">RR</th>
-                            <th className="text-right px-3 py-2.5 font-bold">Pain</th>
-                            <th className="text-left px-3 py-2.5 font-bold">By</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {[...vitals].reverse().map(r => (
-                            <tr key={r.id} className="border-t border-slate-100">
-                                <td className="px-3 py-2 text-xs whitespace-nowrap">{format(parseISO(r.recordedAt), 'd MMM HH:mm')}</td>
-                                <td className={cn('px-3 py-2 text-right font-mono', (r.temperatureF ?? 0) >= 100.4 && 'text-rose-600 font-bold')}>{r.temperatureF ?? '—'}</td>
-                                <td className="px-3 py-2 text-right font-mono">{r.pulse ?? '—'}</td>
-                                <td className="px-3 py-2 text-right font-mono">{r.systolic ?? '—'}/{r.diastolic ?? '—'}</td>
-                                <td className={cn('px-3 py-2 text-right font-mono', (r.spo2 ?? 100) < 94 && 'text-rose-600 font-bold')}>{r.spo2 ?? '—'}%</td>
-                                <td className="px-3 py-2 text-right font-mono">{r.respRate ?? '—'}</td>
-                                <td className="px-3 py-2 text-right font-mono">{r.painScore ?? '—'}</td>
-                                <td className="px-3 py-2 text-xs text-slate-500">{r.recordedBy}</td>
-                            </tr>
-                        ))}
-                        {vitals.length === 0 && <tr><td colSpan={8} className="px-3 py-8 text-center text-xs text-slate-400">No vitals yet.</td></tr>}
-                    </tbody>
-                </table>
-            </div>
-
-            <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader><DialogTitle>Record vitals</DialogTitle></DialogHeader>
-                    <div className="grid grid-cols-2 gap-3">
-                        {([['temperatureF', 'Temp °F'], ['pulse', 'Pulse'], ['systolic', 'Systolic'], ['diastolic', 'Diastolic'], ['spo2', 'SpO₂ %'], ['respRate', 'Resp rate'], ['painScore', 'Pain 0-10']] as const).map(([k, lbl]) => (
-                            <div key={k}>
-                                <Label className="text-xs font-semibold text-slate-700">{lbl}</Label>
-                                <Input type="number" value={(form as any)[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} className="h-9 mt-1" />
+            {tab === 'overview' && (
+                <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+                    <div>
+                        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2">Bed</h2>
+                        {current.bedCode ? (
+                            <div className="flex items-center justify-between gap-3 flex-wrap">
+                                <p className="font-semibold text-slate-900">{current.wardName ? `${current.wardName} · ` : ''}{current.bedCode}</p>
+                                {isActive && (
+                                    <div className="flex items-center gap-2">
+                                        <Button variant="outline" size="sm" className="h-9" onClick={() => { setBedActionMode('transfer'); setPickedBedId(''); }}>
+                                            <ArrowLeftRight className="h-3.5 w-3.5 mr-1.5" /> Transfer
+                                        </Button>
+                                        <Button variant="outline" size="sm" className="h-9 text-slate-500 hover:text-rose-600" onClick={releaseBed} disabled={bedBusy}>
+                                            <X className="h-3.5 w-3.5 mr-1.5" /> Release
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
-                        ))}
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                        <Button onClick={submit} className="bg-brand-600 hover:bg-brand-700">Save</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </div>
-    );
-};
-
-// ─── MAR ──────────────────────────────────────────────────────────────────────
-const MED_TONE: Record<MedStatus, string> = {
-    DUE: 'bg-amber-50 text-amber-700 border-amber-200',
-    GIVEN: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    MISSED: 'bg-rose-50 text-rose-700 border-rose-200',
-    HELD: 'bg-slate-100 text-slate-600 border-slate-200',
-};
-const MarTab: React.FC<{ admissionId: string }> = ({ admissionId }) => {
-    const { toast } = useToast();
-    const meds = useIpdStore(s => s.medications).filter(x => x.admissionId === admissionId);
-    const give = useIpdStore(s => s.giveMedication);
-
-    return (
-        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-            <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
-                    <tr>
-                        <th className="text-left px-3 py-2.5 font-bold">Drug</th>
-                        <th className="text-left px-3 py-2.5 font-bold">Dose / Route</th>
-                        <th className="text-left px-3 py-2.5 font-bold">Scheduled</th>
-                        <th className="text-left px-3 py-2.5 font-bold">Status</th>
-                        <th className="text-left px-3 py-2.5 font-bold">Given by</th>
-                        <th className="w-px"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {[...meds].sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt)).map(m => (
-                        <tr key={m.id} className="border-t border-slate-100">
-                            <td className="px-3 py-2">
-                                <span className="font-semibold text-slate-900">{m.drugName}</span>
-                                {m.highAlert && <Badge variant="outline" className="ml-2 text-[11px] font-bold bg-rose-50 text-rose-700 border-rose-200">HIGH-ALERT</Badge>}
-                            </td>
-                            <td className="px-3 py-2 text-xs text-slate-700">{m.dose} · {m.route}</td>
-                            <td className="px-3 py-2 text-xs whitespace-nowrap">{format(parseISO(m.scheduledAt), 'd MMM HH:mm')}</td>
-                            <td className="px-3 py-2"><Badge variant="outline" className={cn('text-[10px] font-bold', MED_TONE[m.status])}>{m.status}</Badge></td>
-                            <td className="px-3 py-2 text-xs text-slate-500">{m.givenBy ?? '—'}</td>
-                            <td className="px-2 py-2 text-right">
-                                {m.status === 'DUE' && (
-                                    <Button size="sm" className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700" onClick={() => { give(m.id, 'You'); toast({ title: `${m.drugName} given`, description: m.highAlert ? 'High-alert — second-nurse verification recommended.' : undefined }); }}>
-                                        <Check className="h-3 w-3 mr-1" /> Give
+                        ) : (
+                            <div className="flex items-center justify-between gap-3 flex-wrap">
+                                <p className="text-amber-600 font-semibold text-sm">{isActive ? 'Unassigned' : 'No bed'}</p>
+                                {isActive && (
+                                    <Button variant="outline" size="sm" className="h-9" onClick={() => { setBedActionMode('assign'); setPickedBedId(''); }}>
+                                        <BedDouble className="h-3.5 w-3.5 mr-1.5" /> Assign a bed
                                     </Button>
                                 )}
-                            </td>
-                        </tr>
-                    ))}
-                    {meds.length === 0 && <tr><td colSpan={6} className="px-3 py-8 text-center text-xs text-slate-400">No medication orders.</td></tr>}
-                </tbody>
-            </table>
-        </div>
-    );
-};
-
-// ─── Notes ────────────────────────────────────────────────────────────────────
-const NotesTab: React.FC<{ admissionId: string }> = ({ admissionId }) => {
-    const { toast } = useToast();
-    const notes = useIpdStore(s => s.roundNotes).filter(x => x.admissionId === admissionId);
-    const addNote = useIpdStore(s => s.addRoundNote);
-    const [open, setOpen] = useState(false);
-    const [form, setForm] = useState({ subjective: '', objective: '', assessment: '', plan: '' });
-
-    const submit = () => {
-        addNote({ admissionId, author: 'You', authoredAt: new Date().toISOString(), ...form });
-        toast({ title: 'Round note saved' });
-        setForm({ subjective: '', objective: '', assessment: '', plan: '' });
-        setOpen(false);
-    };
-
-    return (
-        <div className="space-y-3">
-            <div className="flex justify-end">
-                <Button size="sm" onClick={() => setOpen(true)} className="h-8 bg-brand-600 hover:bg-brand-700"><Plus className="h-3.5 w-3.5 mr-1" /> Add SOAP note</Button>
-            </div>
-            <div className="space-y-3">
-                {[...notes].reverse().map(n => (
-                    <div key={n.id} className="rounded-xl border border-slate-200 bg-white p-4">
-                        <div className="flex items-center justify-between mb-2">
-                            <p className="font-bold text-sm text-slate-900">{n.author}</p>
-                            <p className="text-[11px] text-slate-500">{format(parseISO(n.authoredAt), 'd MMM yyyy, HH:mm')}</p>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                            <SoapLine letter="S" text={n.subjective} />
-                            <SoapLine letter="O" text={n.objective} />
-                            <SoapLine letter="A" text={n.assessment} />
-                            <SoapLine letter="P" text={n.plan} />
-                        </div>
-                    </div>
-                ))}
-                {notes.length === 0 && <div className="rounded-xl border-2 border-dashed border-slate-200 p-8 text-center text-xs text-slate-400">No round notes yet.</div>}
-            </div>
-
-            <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent className="max-w-lg">
-                    <DialogHeader><DialogTitle>SOAP round note</DialogTitle></DialogHeader>
-                    <div className="space-y-3">
-                        {([['subjective', 'Subjective'], ['objective', 'Objective'], ['assessment', 'Assessment'], ['plan', 'Plan']] as const).map(([k, lbl]) => (
-                            <div key={k}>
-                                <Label className="text-xs font-semibold text-slate-700">{lbl}</Label>
-                                <Textarea rows={2} value={(form as any)[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} className="text-sm mt-1" />
                             </div>
-                        ))}
+                        )}
+
+                        {bedActionMode && (
+                            <div className="mt-3 pt-3 border-t border-slate-100 flex items-end gap-2 flex-wrap">
+                                <div className="flex-1 min-w-[220px]">
+                                    <Label className="text-[11px] font-semibold text-slate-600">{bedActionMode === 'assign' ? 'Bed to assign' : 'New bed'}</Label>
+                                    <select value={pickedBedId} onChange={e => setPickedBedId(e.target.value)} className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                                        <option value="">Select a bed…</option>
+                                        {freeBeds.map(b => (
+                                            <option key={b.bedId} value={b.bedId}>{(b.wardName || b.wardCode)} · {b.bedCode} · ₹{b.effectiveDailyRate.toLocaleString('en-IN')}/day</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <Button variant="ghost" size="sm" className="h-9" onClick={() => setBedActionMode(null)}>Cancel</Button>
+                                <Button size="sm" disabled={!pickedBedId || bedBusy} className="h-9 bg-brand-600 hover:bg-brand-700"
+                                    onClick={() => runBedAction(
+                                        () => bedActionMode === 'assign'
+                                            ? bedBoardApi.assignBed(current.admissionId, pickedBedId)
+                                            : bedBoardApi.transferBed(current.admissionId, pickedBedId),
+                                        bedActionMode === 'assign' ? 'Bed assigned.' : 'Bed transferred.')}>
+                                    {bedBusy ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Check className="h-3.5 w-3.5 mr-1.5" />}
+                                    {bedActionMode === 'assign' ? 'Assign' : 'Transfer'}
+                                </Button>
+                            </div>
+                        )}
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                        <Button onClick={submit} className="bg-brand-600 hover:bg-brand-700">Save note</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </div>
-    );
-};
 
-// ─── Billing tab ────────────────────────────────────────────────────────────────
-const BillingTab: React.FC<{ admissionId: string; locked: boolean }> = ({ admissionId, locked }) => {
-    const { toast } = useToast();
-    const v = useIpdStore(s => s.admissionView(admissionId))!;
-    const ledger = useIpdStore(s => s.ledger).filter(l => l.admissionId === admissionId);
-    const addCharge = useIpdStore(s => s.addCharge);
-    const addPayment = useIpdStore(s => s.addPayment);
-    const [chargeOpen, setChargeOpen] = useState(false);
-    const [payOpen, setPayOpen] = useState(false);
-    const [charge, setCharge] = useState({ description: '', category: 'PROCEDURE', qty: '1', rate: '' });
-    const [pay, setPay] = useState({ amount: '', mode: 'CASH' });
-
-    return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2 rounded-xl border border-slate-200 bg-white overflow-hidden">
-                <table className="w-full text-sm">
-                    <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
-                        <tr>
-                            <th className="text-left px-3 py-2.5 font-bold">Date</th>
-                            <th className="text-left px-3 py-2.5 font-bold">Description</th>
-                            <th className="text-left px-3 py-2.5 font-bold">Category</th>
-                            <th className="text-right px-3 py-2.5 font-bold">Debit</th>
-                            <th className="text-right px-3 py-2.5 font-bold">Credit</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {[...ledger].reverse().map(l => (
-                            <tr key={l.id} className={cn('border-t border-slate-100', l.kind === 'PAYMENT' && 'bg-emerald-50/30')}>
-                                <td className="px-3 py-2 text-xs whitespace-nowrap">{format(parseISO(l.at), 'd MMM HH:mm')}</td>
-                                <td className="px-3 py-2">
-                                    <span className="text-slate-800">{l.description}</span>
-                                    {l.qty && l.rate ? <span className="text-[11px] text-slate-400 ml-1">({l.qty} × ₹{l.rate})</span> : null}
-                                    {l.mode ? <span className="text-[11px] text-slate-400 ml-1">· {l.mode}</span> : null}
-                                    {l.auto ? <Badge variant="outline" className="ml-1.5 text-[11px] font-bold bg-amber-50 text-amber-700 border-amber-200">AUTO</Badge> : null}
-                                </td>
-                                <td className="px-3 py-2 text-[10px] font-mono uppercase text-slate-500">{l.category}</td>
-                                <td className="px-3 py-2 text-right font-mono">{l.kind === 'CHARGE' ? `₹${l.amount.toLocaleString('en-IN')}` : '—'}</td>
-                                <td className="px-3 py-2 text-right font-mono text-emerald-700">{l.kind === 'PAYMENT' ? `₹${l.amount.toLocaleString('en-IN')}` : '—'}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-
-            <div className="space-y-3">
-                <Card title="Summary">
-                    <div className="space-y-2 text-sm">
-                        <Row label="Total billed" value={`₹${v.totalCharges.toLocaleString('en-IN')}`} />
-                        <Row label="Received" value={`₹${v.totalPaid.toLocaleString('en-IN')}`} valueClass="text-emerald-700" />
-                        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                            <span className="font-bold">Balance</span>
-                            <span className={cn('font-mono font-bold', v.balance > 0 ? 'text-rose-700' : 'text-emerald-700')}>₹{Math.abs(v.balance).toLocaleString('en-IN')}{v.balance < 0 ? ' CR' : ''}</span>
-                        </div>
+                    <div className="pt-2 border-t border-slate-100">
+                        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2">Admission details</h2>
+                        <dl className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+                            <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Admitted</dt><dd className="text-slate-800">{formatIstDateTime(current.admittedAt)}</dd></div>
+                            <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Type</dt><dd className="text-slate-800">{current.admissionType ?? '—'}</dd></div>
+                            <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Payer</dt><dd className="text-slate-800">{current.payerType}</dd></div>
+                        </dl>
+                        {(current.admissionReason || current.diagnosis) && (
+                            <p className="text-sm text-slate-700 mt-3">{current.diagnosis || current.admissionReason}</p>
+                        )}
                     </div>
-                </Card>
-                <div className="grid grid-cols-1 gap-2">
-                    <Button onClick={() => setChargeOpen(true)} disabled={locked} className="bg-brand-600 hover:bg-brand-700"><Plus className="h-4 w-4 mr-1" /> Add charge</Button>
-                    <Button onClick={() => setPayOpen(true)} className="bg-emerald-600 hover:bg-emerald-700"><IndianRupee className="h-4 w-4 mr-1" /> Record payment</Button>
                 </div>
-                {locked && <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">Discharge initiated — charges are locked. Payments still allowed.</p>}
-            </div>
+            )}
 
-            {/* Add charge */}
-            <Dialog open={chargeOpen} onOpenChange={setChargeOpen}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader><DialogTitle>Add charge</DialogTitle></DialogHeader>
-                    <div className="space-y-3">
-                        <div><Label className="text-xs font-semibold">Description</Label><Input value={charge.description} onChange={e => setCharge(c => ({ ...c, description: e.target.value }))} className="h-9 mt-1" /></div>
-                        <div className="grid grid-cols-3 gap-2">
-                            <div><Label className="text-xs font-semibold">Category</Label>
-                                <select value={charge.category} onChange={e => setCharge(c => ({ ...c, category: e.target.value }))} className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-md px-2 bg-white">
-                                    {['PROCEDURE', 'LAB', 'PHARMACY', 'CONSULT', 'BED', 'OTHER'].map(c => <option key={c} value={c}>{c}</option>)}
-                                </select>
-                            </div>
-                            <div><Label className="text-xs font-semibold">Qty</Label><Input type="number" value={charge.qty} onChange={e => setCharge(c => ({ ...c, qty: e.target.value }))} className="h-9 mt-1" /></div>
-                            <div><Label className="text-xs font-semibold">Rate</Label><Input type="number" value={charge.rate} onChange={e => setCharge(c => ({ ...c, rate: e.target.value }))} className="h-9 mt-1" /></div>
+            {tab === 'medications' && (
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Medication Orders</h2>
+                        <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" className="h-9" onClick={loadOrders} disabled={ordersLoading}>
+                                <RefreshCw className={cn('h-3.5 w-3.5 mr-1.5', ordersLoading && 'animate-spin')} /> Refresh
+                            </Button>
+                            {isActive && (
+                                <Button size="sm" className="h-9 bg-brand-600 hover:bg-brand-700 font-semibold" onClick={openNewOrder}>
+                                    <Plus className="h-3.5 w-3.5 mr-1.5" /> New order
+                                </Button>
+                            )}
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setChargeOpen(false)}>Cancel</Button>
-                        <Button className="bg-brand-600 hover:bg-brand-700" onClick={() => {
-                            if (!charge.description.trim() || !charge.rate) { toast({ title: 'Description and rate required', variant: 'destructive' }); return; }
-                            addCharge(admissionId, { description: charge.description.trim(), category: charge.category, qty: parseInt(charge.qty || '1', 10), rate: parseFloat(charge.rate) });
-                            toast({ title: 'Charge added' });
-                            setCharge({ description: '', category: 'PROCEDURE', qty: '1', rate: '' });
-                            setChargeOpen(false);
-                        }}>Add</Button>
-                    </DialogFooter>
+
+                    {ordersLoading && orders.length === 0 ? (
+                        <div className="py-12 text-center text-sm text-slate-400 flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading orders…</div>
+                    ) : orders.length === 0 ? (
+                        <div className="py-12 text-center text-sm text-slate-400">No medication orders yet.</div>
+                    ) : (
+                        <div className="space-y-3">
+                            {orders.map(o => (
+                                <div key={o.orderId} className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+                                    <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-100">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-bold text-slate-700">{formatIstDateTime(o.orderedAt)}</span>
+                                            {o.orderedBy && <span className="text-[11px] text-slate-500">· {o.orderedBy}</span>}
+                                        </div>
+                                        <Badge variant="outline" className={cn('text-[10px] font-bold',
+                                            o.statusCode === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500')}>
+                                            {o.statusCode}
+                                        </Badge>
+                                    </div>
+                                    <div className="divide-y divide-slate-100">
+                                        {o.lines.map(l => (
+                                            <div key={l.orderLineId} className="px-4 py-3 flex items-start justify-between gap-3">
+                                                <div className="min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className={cn('font-semibold text-slate-900', l.statusCode === 'DISCONTINUED' && 'line-through text-slate-400')}>{l.drugName}</span>
+                                                        {l.statusCode === 'DISCONTINUED' && <Badge variant="outline" className="text-[9px] bg-slate-100 text-slate-500">DISCONTINUED</Badge>}
+                                                    </div>
+                                                    <p className="text-[11px] text-slate-500 mt-0.5">
+                                                        {[l.dose, l.route, l.frequency, l.durationDays ? `${l.durationDays}d` : null].filter(Boolean).join(' · ') || '—'}
+                                                    </p>
+                                                    {l.instructions && <p className="text-[11px] text-slate-400 italic mt-0.5">{l.instructions}</p>}
+                                                    <p className="text-[11px] mt-1">
+                                                        {l.chargeEventId ? (
+                                                            l.chargeVoided
+                                                                ? <span className="text-slate-400">Charge voided</span>
+                                                                : <span className="text-emerald-700 font-semibold">Charged ₹{l.chargedAmount?.toLocaleString('en-IN')}</span>
+                                                        ) : <span className="text-slate-400">Not billed</span>}
+                                                    </p>
+                                                </div>
+                                                {l.statusCode === 'ACTIVE' && isActive && (
+                                                    <Button size="sm" variant="ghost" className="h-8 text-xs text-slate-400 hover:text-rose-600 shrink-0"
+                                                        onClick={() => { setDiscontinuing({ orderLineId: l.orderLineId, drugName: l.drugName || 'this drug' }); setDiscontinueReason(''); }}>
+                                                        <X className="h-3.5 w-3.5 mr-1" /> Discontinue
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Discharge dialog */}
+            <Dialog open={dischargeOpen} onOpenChange={setDischargeOpen}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>Discharge {current.patientName || 'patient'}?</DialogTitle>
+                        <DialogDescription>
+                            This closes the admission to DISCHARGED{current.bedCode ? ` and releases bed ${current.bedCode}` : ''}.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div>
+                        <Label className="text-xs font-semibold text-slate-700">Discharge notes</Label>
+                        <Textarea rows={3} value={dischargeNotes} onChange={e => setDischargeNotes(e.target.value)} className="text-sm mt-1" placeholder="Optional" />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                        <Button variant="ghost" onClick={() => setDischargeOpen(false)}>Cancel</Button>
+                        <Button disabled={dischargeBusy} className="bg-amber-600 hover:bg-amber-700" onClick={confirmDischarge}>
+                            {dischargeBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Confirm discharge
+                        </Button>
+                    </div>
                 </DialogContent>
             </Dialog>
 
-            {/* Record payment */}
-            <Dialog open={payOpen} onOpenChange={setPayOpen}>
-                <DialogContent className="max-w-sm">
-                    <DialogHeader><DialogTitle>Record payment</DialogTitle></DialogHeader>
-                    <div className="space-y-3">
-                        <div><Label className="text-xs font-semibold">Amount</Label><Input type="number" value={pay.amount} onChange={e => setPay(p => ({ ...p, amount: e.target.value }))} className="h-9 mt-1 font-mono text-lg" /></div>
-                        <div><Label className="text-xs font-semibold">Mode</Label>
-                            <select value={pay.mode} onChange={e => setPay(p => ({ ...p, mode: e.target.value }))} className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-md px-2 bg-white">
-                                {['CASH', 'UPI', 'CARD', 'BANK'].map(m => <option key={m} value={m}>{m}</option>)}
-                            </select>
+            {/* New order dialog */}
+            <Dialog open={newOrderOpen} onOpenChange={setNewOrderOpen}>
+                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>New medication order</DialogTitle>
+                        <DialogDescription>Chargeable lines are billed to this admission immediately.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        {lines.map((line, i) => (
+                            <div key={i} className="rounded-lg border border-slate-200 p-3 space-y-2 relative">
+                                {lines.length > 1 && (
+                                    <button type="button" onClick={() => removeLine(i)} className="absolute top-2 right-2 text-slate-300 hover:text-rose-500">
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                )}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <div>
+                                        <Label className="text-[11px] font-semibold text-slate-600">Pharmacy item (optional — links billing)</Label>
+                                        <select value={line.chargeId ?? ''} onChange={e => pickPharmacyItem(i, e.target.value)}
+                                            className="h-9 mt-1 w-full text-sm border border-slate-200 rounded-lg px-2 bg-white">
+                                            <option value="">— Free text drug (no billing link) —</option>
+                                            {pharmacyItems.map(p => (
+                                                <option key={p.chargeId} value={p.chargeId}>{p.displayName} · ₹{p.defaultRate.toLocaleString('en-IN')}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <Label className="text-[11px] font-semibold text-slate-600">Drug name *</Label>
+                                        <Input value={line.drugName} onChange={e => setLine(i, { drugName: e.target.value })} className="h-9 mt-1" placeholder="e.g. Paracetamol" />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    <div>
+                                        <Label className="text-[11px] font-semibold text-slate-600">Dose</Label>
+                                        <Input value={line.dose ?? ''} onChange={e => setLine(i, { dose: e.target.value })} className="h-9 mt-1" placeholder="500 mg" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-[11px] font-semibold text-slate-600">Route</Label>
+                                        <Input value={line.route ?? ''} onChange={e => setLine(i, { route: e.target.value })} className="h-9 mt-1" placeholder="PO / IV" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-[11px] font-semibold text-slate-600">Frequency</Label>
+                                        <Input value={line.frequency ?? ''} onChange={e => setLine(i, { frequency: e.target.value })} className="h-9 mt-1" placeholder="BD / TDS" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-[11px] font-semibold text-slate-600">Duration (days)</Label>
+                                        <Input type="number" min={0} value={line.durationDays ?? ''} onChange={e => setLine(i, { durationDays: e.target.value ? parseInt(e.target.value, 10) : undefined })} className="h-9 mt-1" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <Label className="text-[11px] font-semibold text-slate-600">Instructions</Label>
+                                    <Input value={line.instructions ?? ''} onChange={e => setLine(i, { instructions: e.target.value })} className="h-9 mt-1" placeholder="Optional — e.g. after food" />
+                                </div>
+                            </div>
+                        ))}
+                        <Button variant="outline" size="sm" onClick={addLine} className="h-9"><Plus className="h-3.5 w-3.5 mr-1.5" /> Add another drug</Button>
+
+                        <div>
+                            <Label className="text-[11px] font-semibold text-slate-600">Order notes</Label>
+                            <Textarea rows={2} value={orderNotes} onChange={e => setOrderNotes(e.target.value)} className="text-sm mt-1" placeholder="Optional" />
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-2">
+                            <Button variant="outline" onClick={() => setNewOrderOpen(false)}>Cancel</Button>
+                            <Button disabled={!canSubmitOrder || placingOrder} onClick={submitOrder} className="bg-brand-600 hover:bg-brand-700">
+                                {placingOrder ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Place order
+                            </Button>
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setPayOpen(false)}>Cancel</Button>
-                        <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => {
-                            const amt = parseFloat(pay.amount);
-                            if (!amt || amt <= 0) { toast({ title: 'Enter a valid amount', variant: 'destructive' }); return; }
-                            addPayment(admissionId, amt, pay.mode);
-                            toast({ title: 'Payment recorded', description: `₹${amt.toLocaleString('en-IN')} · ${pay.mode}` });
-                            setPay({ amount: '', mode: 'CASH' });
-                            setPayOpen(false);
-                        }}>Record</Button>
-                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Discontinue confirm */}
+            <Dialog open={!!discontinuing} onOpenChange={(o) => { if (!o) setDiscontinuing(null); }}>
+                <DialogContent className="max-w-sm">
+                    {discontinuing && (
+                        <>
+                            <DialogHeader>
+                                <DialogTitle>Discontinue {discontinuing.drugName}?</DialogTitle>
+                                <DialogDescription>Any charge already posted for this line will be voided.</DialogDescription>
+                            </DialogHeader>
+                            <div>
+                                <Label className="text-xs font-semibold text-slate-700">Reason</Label>
+                                <Textarea rows={2} value={discontinueReason} onChange={e => setDiscontinueReason(e.target.value)} className="text-sm mt-1" placeholder="Optional" />
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <Button variant="ghost" onClick={() => setDiscontinuing(null)}>Cancel</Button>
+                                <Button disabled={discontinueBusy} className="bg-rose-600 hover:bg-rose-700" onClick={confirmDiscontinue}>
+                                    {discontinueBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <X className="h-4 w-4 mr-2" />} Discontinue
+                                </Button>
+                            </div>
+                        </>
+                    )}
                 </DialogContent>
             </Dialog>
         </div>
     );
 };
-
-// ─── Small shared bits ──────────────────────────────────────────────────────────
-const Card: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
-        <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">{title}</h4>
-        {children}
-    </div>
-);
-const Field: React.FC<{ label: string; value: React.ReactNode; mono?: boolean }> = ({ label, value, mono }) => (
-    <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</dt><dd className={cn('text-sm text-slate-800 mt-0.5', mono && 'font-mono')}>{value}</dd></div>
-);
-const Stat: React.FC<{ icon: React.ReactNode; label: string; value: string }> = ({ icon, label, value }) => (
-    <div className="rounded-lg border border-slate-100 bg-slate-50 p-2">
-        <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">{icon}{label}</div>
-        <p className="text-base font-black text-slate-900 mt-0.5">{value}</p>
-    </div>
-);
-const SoapLine: React.FC<{ letter: string; text: string }> = ({ letter, text }) => (
-    <div className="flex gap-2"><span className="h-5 w-5 shrink-0 rounded bg-brand-100 text-brand-700 text-[10px] font-black flex items-center justify-center">{letter}</span><p className="text-slate-700">{text || <span className="text-slate-300">—</span>}</p></div>
-);
-const Row: React.FC<{ label: string; value: string; valueClass?: string }> = ({ label, value, valueClass }) => (
-    <div className="flex items-center justify-between"><span className="text-slate-500">{label}</span><span className={cn('font-mono font-semibold', valueClass)}>{value}</span></div>
-);
-
-const num = (s: string) => s === '' ? undefined : Number(s);

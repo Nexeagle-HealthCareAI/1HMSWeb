@@ -144,6 +144,8 @@ export interface AdmitPatientResponse {
 }
 
 // ─── Active admissions (real data — every currently-open admission for the hospital) ─
+export type AdmissionStatusFilter = 'ACTIVE' | 'DISCHARGED' | 'ALL';
+
 export interface ActiveAdmissionItem {
     admissionId: string;
     admissionNo: string;
@@ -209,9 +211,9 @@ export const admissionApi = {
             params: { hospitalId: hospitalIdOrThrow(hospitalId), patientId },
         }),
 
-    getActiveAdmissions: (hospitalId?: string): Promise<ActiveAdmissionItem[]> =>
+    getActiveAdmissions: (statusFilter?: AdmissionStatusFilter, hospitalId?: string): Promise<ActiveAdmissionItem[]> =>
         ipdApiClient
-            .get<GetActiveAdmissionsResponse>('/admission/active', { params: { hospitalId: hospitalIdOrThrow(hospitalId) } })
+            .get<GetActiveAdmissionsResponse>('/admission/active', { params: { hospitalId: hospitalIdOrThrow(hospitalId), statusFilter } })
             .then(r => r.items ?? []),
 
     admit: (payload: AdmitPatientPayload, hospitalId?: string): Promise<AdmitPatientResponse> =>
