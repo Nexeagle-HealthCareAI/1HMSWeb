@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Hotel, Plus, BedDouble, ClipboardList, Wallet, ArrowLeftRight, LogOut, Check, Loader2, Search, RefreshCw, LayoutGrid } from 'lucide-react';
+import { Hotel, Plus, BedDouble, ClipboardList, Wallet, ArrowLeftRight, LogOut, Check, Loader2, Search, RefreshCw, LayoutGrid, Pill } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -48,6 +48,7 @@ const todayIstKey = (): string => new Date().toLocaleDateString('en-CA', { timeZ
 interface Props {
     onAdmit: () => void;
     onOpenBedBoard: () => void;
+    onOpenMedicationOrders: (admission: ActiveAdmissionItem) => void;
     refreshSignal: number;
 }
 
@@ -56,7 +57,7 @@ interface Props {
  * BedBoardScreen). Backed by GET /admission/active; also fetches GET /bed/board (not rendered)
  * just to populate the free-bed picker inside the assign/transfer dialog.
  */
-export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, refreshSignal }) => {
+export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, onOpenMedicationOrders, refreshSignal }) => {
     const { toast } = useToast();
     const [admissions, setAdmissions] = useState<ActiveAdmissionItem[]>([]);
     const [freeBeds, setFreeBeds] = useState<BedBoardItem[]>([]);
@@ -250,6 +251,9 @@ export const IpdDashboard: React.FC<Props> = ({ onAdmit, onOpenBedBoard, refresh
                                             <BedDouble className="h-4 w-4 mr-2" /> Assign a bed
                                         </Button>
                                     )}
+                                    <Button variant="outline" className="w-full justify-start h-11" onClick={() => { onOpenMedicationOrders(selected); closeDialog(); }}>
+                                        <Pill className="h-4 w-4 mr-2" /> Medication orders
+                                    </Button>
                                     <Button className="w-full justify-start h-11 bg-amber-600 hover:bg-amber-700" onClick={() => setActionMode('discharge')}>
                                         <LogOut className="h-4 w-4 mr-2" /> Discharge patient
                                     </Button>
