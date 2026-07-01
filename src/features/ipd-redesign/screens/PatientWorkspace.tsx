@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import {
-    ArrowLeft, BedDouble, Pill, LogOut, ArrowLeftRight, Check, Loader2, X, FlaskConical, Scissors,
+    ArrowLeft, BedDouble, Pill, LogOut, ArrowLeftRight, Check, Loader2, X, FlaskConical, Scissors, Utensils, HeartPulse,
 } from 'lucide-react';
 import { admissionApi, type ActiveAdmissionItem } from '../services/admissionApi';
 import { bedBoardApi, type BedBoardItem } from '../services/bedBoardApi';
@@ -31,7 +31,7 @@ const formatIstDateTime = (iso?: string | null): string => {
     return `${day}${month}.${year}, ${time}`;
 };
 
-type Tab = 'overview' | 'medications' | 'lab' | 'procedures';
+type Tab = 'overview' | 'medications' | 'lab' | 'procedures' | 'dietNursing';
 
 interface Props {
     admission: ActiveAdmissionItem;
@@ -50,6 +50,7 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
     const { toast } = useToast();
     const [current, setCurrent] = useState<ActiveAdmissionItem>(admission);
     const [tab, setTab] = useState<Tab>('overview');
+    const [dietNursingSubTab, setDietNursingSubTab] = useState<'diet' | 'nursing'>('diet');
     const isActive = ACTIVE_STATUSES.includes(current.statusCode);
 
     const [freeBeds, setFreeBeds] = useState<BedBoardItem[]>([]);
@@ -174,6 +175,10 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                     className={cn('h-9 px-4 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5', tab === 'procedures' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
                     <Scissors className="h-4 w-4" /> Procedures
                 </button>
+                <button type="button" onClick={() => setTab('dietNursing')}
+                    className={cn('h-9 px-4 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5', tab === 'dietNursing' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                    <Utensils className="h-4 w-4" /> Diet &amp; Nursing
+                </button>
             </div>
 
             {tab === 'overview' && (
@@ -282,6 +287,42 @@ export const PatientWorkspace: React.FC<Props> = ({ admission, onBack, onChanged
                     showUrgency
                     showScheduledAt
                 />
+            )}
+
+            {tab === 'dietNursing' && (
+                <div className="space-y-3">
+                    <div className="flex items-center gap-1 p-1 rounded-lg bg-slate-100 w-fit">
+                        <button type="button" onClick={() => setDietNursingSubTab('diet')}
+                            className={cn('h-8 px-3 rounded-md text-xs font-bold transition-all flex items-center gap-1.5', dietNursingSubTab === 'diet' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                            <Utensils className="h-3.5 w-3.5" /> Diet
+                        </button>
+                        <button type="button" onClick={() => setDietNursingSubTab('nursing')}
+                            className={cn('h-8 px-3 rounded-md text-xs font-bold transition-all flex items-center gap-1.5', dietNursingSubTab === 'nursing' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+                            <HeartPulse className="h-3.5 w-3.5" /> Nursing
+                        </button>
+                    </div>
+                    {/* Most diet/nursing orders are free-text with no ChargeMaster link — nursing
+                        care and standard diets are usually bundled into the room charge already. */}
+                    {dietNursingSubTab === 'diet' ? (
+                        <ClinicalOrderPanel
+                            admissionId={current.admissionId}
+                            isActive={isActive}
+                            orderType="DIET"
+                            itemPickerCategoryCodes={['DIET']}
+                            itemLabel="Diet"
+                            noItemsText="No diet orders yet."
+                        />
+                    ) : (
+                        <ClinicalOrderPanel
+                            admissionId={current.admissionId}
+                            isActive={isActive}
+                            orderType="NURSING"
+                            itemPickerCategoryCodes={['NURSING']}
+                            itemLabel="Nursing instruction"
+                            noItemsText="No nursing orders yet."
+                        />
+                    )}
+                </div>
             )}
 
             {/* Discharge dialog */}
