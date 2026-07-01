@@ -754,26 +754,31 @@ export const BillingPage: React.FC = () => {
                                     </thead>
                                     <tbody>
                                         {ledgerRows.map((row) => row.kind === 'charge' ? (
-                                            <tr key={`c-${row.c.chargeEventId}`} className="border-b border-slate-100 border-l-2 border-l-transparent hover:border-l-brand-300 hover:bg-slate-50 transition-colors">
-                                                <td className="px-3 py-2 whitespace-nowrap text-slate-600">{formatIst(row.c.createdDateTime)}</td>
+                                            <tr key={`c-${row.c.chargeEventId}`} className={cn("border-b border-slate-100 border-l-2 transition-colors", row.c.statusCode === 'VOID' ? "border-l-transparent bg-slate-50/50 opacity-75" : "border-l-transparent hover:border-l-brand-300 hover:bg-slate-50")}>
+                                                <td className={cn("px-3 py-2 whitespace-nowrap text-slate-600", row.c.statusCode === 'VOID' && "line-through opacity-70")}>{formatIst(row.c.createdDateTime)}</td>
                                                 <td className="px-3 py-2">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="h-6 w-6 rounded-lg bg-brand-50 text-brand-500 flex items-center justify-center shrink-0"><IndianRupee className="h-3.5 w-3.5" /></span>
+                                                        <span className={cn("h-6 w-6 rounded-lg flex items-center justify-center shrink-0", row.c.statusCode === 'VOID' ? "bg-slate-100 text-slate-400" : "bg-brand-50 text-brand-500")}><IndianRupee className="h-3.5 w-3.5" /></span>
                                                         <div className="min-w-0">
-                                                            <div className="font-semibold text-slate-800 truncate max-w-[260px]">{splitChargePeriod(row.c.displayName, row.c.categoryCode).name || '—'}</div>
+                                                            <div className="flex items-center gap-2">
+                                                                <div className={cn("font-semibold text-slate-800 truncate max-w-[260px]", row.c.statusCode === 'VOID' && "line-through text-slate-500")}>{splitChargePeriod(row.c.displayName, row.c.categoryCode).name || '—'}</div>
+                                                                {row.c.statusCode === 'VOID' && <Badge variant="outline" className="text-[9px] bg-white text-slate-500 border-slate-200">VOID</Badge>}
+                                                            </div>
                                                             {splitChargePeriod(row.c.displayName, row.c.categoryCode).period && (
-                                                                <div className="text-[10px] text-slate-500 whitespace-nowrap">📅 {splitChargePeriod(row.c.displayName, row.c.categoryCode).period}</div>
+                                                                <div className={cn("text-[10px] text-slate-500 whitespace-nowrap", row.c.statusCode === 'VOID' && "line-through opacity-70")}>📅 {splitChargePeriod(row.c.displayName, row.c.categoryCode).period}</div>
                                                             )}
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-3 py-2 text-[10px] font-mono uppercase text-slate-500">{row.c.categoryCode ?? '—'}</td>
-                                                <td className="px-3 py-2 text-right tabular-nums">{row.c.qty} × ₹{Number(row.c.rate).toFixed(2)}</td>
-                                                <td className="px-3 py-2 text-right tabular-nums text-rose-600">{Number(row.c.discountAmount) > 0 ? `− ₹${Number(row.c.discountAmount).toFixed(2)}` : <span className="text-slate-300">—</span>}</td>
-                                                <td className="px-3 py-2 text-right tabular-nums font-semibold text-slate-800">₹{Number(row.c.netAmount).toFixed(2)}</td>
+                                                <td className={cn("px-3 py-2 text-[10px] font-mono uppercase text-slate-500", row.c.statusCode === 'VOID' && "line-through opacity-70")}>{row.c.categoryCode ?? '—'}</td>
+                                                <td className={cn("px-3 py-2 text-right tabular-nums", row.c.statusCode === 'VOID' && "line-through text-slate-400")}>{row.c.qty} × ₹{Number(row.c.rate).toFixed(2)}</td>
+                                                <td className={cn("px-3 py-2 text-right tabular-nums", row.c.statusCode === 'VOID' ? "line-through text-slate-400" : "text-rose-600")}>{Number(row.c.discountAmount) > 0 ? `− ₹${Number(row.c.discountAmount).toFixed(2)}` : <span className="text-slate-300">—</span>}</td>
+                                                <td className="px-3 py-2 text-right tabular-nums font-semibold text-slate-800">
+                                                    {row.c.statusCode === 'VOID' ? <span className="text-slate-400 line-through font-medium">₹{Number(row.c.netAmount).toFixed(2)}</span> : `₹${Number(row.c.netAmount).toFixed(2)}`}
+                                                </td>
                                                 <td className="px-3 py-2 text-right text-slate-300">—</td>
                                                 <td className="px-2 py-2 text-right">
-                                                    {!isFinalized && (
+                                                    {!isFinalized && row.c.statusCode !== 'VOID' && (
                                                         <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" onClick={() => setVoidConfirm({ kind: 'charge', id: row.c.chargeEventId, label: row.c.displayName ?? 'Charge' })}>
                                                             <Trash2 className="h-3.5 w-3.5" />
                                                         </Button>
@@ -781,22 +786,24 @@ export const BillingPage: React.FC = () => {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            <tr key={`p-${row.p.paymentId}`} className="border-b border-slate-100 border-l-2 border-l-emerald-300 hover:bg-emerald-50/40 bg-emerald-50/20 transition-colors">
+                                            <tr key={`p-${row.p.paymentId}`} className={cn("border-b border-slate-100 border-l-2 transition-colors", row.p.paymentType === 'REFUND' ? "border-l-amber-300 hover:bg-amber-50/40 bg-amber-50/20" : "border-l-emerald-300 hover:bg-emerald-50/40 bg-emerald-50/20")}>
                                                 <td className="px-3 py-2 whitespace-nowrap text-slate-600">{formatIst(row.p.createdDateTime)}</td>
                                                 <td className="px-3 py-2">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="h-6 w-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0"><Wallet className="h-3.5 w-3.5" /></span>
+                                                        <span className={cn("h-6 w-6 rounded-lg flex items-center justify-center shrink-0", row.p.paymentType === 'REFUND' ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600")}><Wallet className="h-3.5 w-3.5" /></span>
                                                         <div className="min-w-0">
-                                                            <div className="font-semibold text-emerald-700">{row.p.paymentType ?? 'PAYMENT'} · {row.p.paymentMode ?? '—'}</div>
+                                                            <div className={cn("font-semibold", row.p.paymentType === 'REFUND' ? "text-amber-700" : "text-emerald-700")}>{row.p.paymentType ?? 'PAYMENT'} · {row.p.paymentMode ?? '—'}</div>
                                                             <div className="text-[10px] text-slate-500 truncate max-w-[220px]">{row.p.receiptNo ? `Receipt ${row.p.receiptNo}` : ''}{row.p.paymentDescription ? ` · ${row.p.paymentDescription}` : ''}</div>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-3 py-2 text-[10px] font-mono uppercase text-slate-500">PAYMENT</td>
+                                                <td className="px-3 py-2 text-[10px] font-mono uppercase text-slate-500">{row.p.paymentType === 'REFUND' ? 'REFUND' : 'PAYMENT'}</td>
                                                 <td className="px-3 py-2 text-right text-slate-300 tabular-nums">—</td>
                                                 <td className="px-3 py-2 text-right text-slate-300">—</td>
                                                 <td className="px-3 py-2 text-right text-slate-300">—</td>
-                                                <td className="px-3 py-2 text-right tabular-nums font-semibold text-emerald-700">₹{Number(row.p.amount).toFixed(2)}</td>
+                                                <td className={cn("px-3 py-2 text-right tabular-nums font-semibold", row.p.paymentType === 'REFUND' ? "text-amber-700" : "text-emerald-700")}>
+                                                    {row.p.paymentType === 'REFUND' ? `− ₹${Number(row.p.amount).toFixed(2)}` : `₹${Number(row.p.amount).toFixed(2)}`}
+                                                </td>
                                                 <td className="px-2 py-2 text-right whitespace-nowrap">
                                                     <div className="inline-flex items-center gap-0.5">
                                                         <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors" disabled={docBusy} title="Print this payment's receipt" onClick={() => handleDoc('receipt', 'print', row.p.paymentId)}>
@@ -805,7 +812,7 @@ export const BillingPage: React.FC = () => {
                                                         <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors" disabled={docBusy} title="Download this payment's receipt (PDF)" onClick={() => handleDoc('receipt', 'download', row.p.paymentId)}>
                                                             <Download className="h-3.5 w-3.5" />
                                                         </Button>
-                                                        {!isFinalized && (
+                                                        {!isFinalized && row.p.paymentType !== 'REFUND' && (
                                                             <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" onClick={() => setVoidConfirm({ kind: 'payment', id: row.p.paymentId, label: row.p.paymentType ?? 'Payment' })}>
                                                                 <Trash2 className="h-3.5 w-3.5" />
                                                             </Button>
