@@ -13,15 +13,21 @@ const hospitalIdOrThrow = (override?: string) => {
 const messageFrom = (err: unknown, fallback: string): string =>
     (axios.isAxiosError(err) && (err.response?.data as { message?: string } | undefined)?.message) || fallback;
 
-export interface MedicationOrderLineItem {
+// One generic order type for every CPOE tab — Medication/Lab/Radiology/Procedure/Diet/Nursing.
+export type ClinicalOrderType = 'MEDICATION' | 'LAB' | 'RADIOLOGY' | 'PROCEDURE' | 'DIET' | 'NURSING';
+export type OrderUrgency = 'ROUTINE' | 'URGENT' | 'STAT';
+
+export interface ClinicalOrderLineItem {
     orderLineId: string;
-    drugName?: string | null;
+    itemName?: string | null;
     saltName?: string | null;
     dose?: string | null;
     route?: string | null;
     frequency?: string | null;
     durationDays?: number | null;
     instructions?: string | null;
+    urgency?: string | null;
+    scheduledAt?: string | null;
     qty: number;
     statusCode: string;          // ACTIVE / DISCONTINUED
     chargeEventId?: string | null;
@@ -29,56 +35,66 @@ export interface MedicationOrderLineItem {
     chargeVoided: boolean;
 }
 
-export interface MedicationOrderItem {
+export interface ClinicalOrderItem {
     orderId: string;
     statusCode: string;          // ACTIVE / DISCONTINUED / COMPLETED
     orderedAt: string;
     orderedBy?: string | null;
     notes?: string | null;
-    lines: MedicationOrderLineItem[];
+    lines: ClinicalOrderLineItem[];
 }
 
-interface GetMedicationOrdersResponse {
+interface GetClinicalOrdersResponse {
     success?: boolean;
     message?: string;
-    orders?: MedicationOrderItem[];
+    orders?: ClinicalOrderItem[];
 }
 
-export interface MedicationOrderLineInput {
-    chargeId?: string;            // ChargeMaster pharmacy item — omit for a drug with no billing link
-    drugName: string;
+export interface ClinicalOrderLineInput {
+    chargeId?: string;            // ChargeMaster item — omit for an item with no billing link
+    itemName: string;
     saltName?: string;
     dose?: string;
     route?: string;
     frequency?: string;
     durationDays?: number;
     instructions?: string;
+    urgency?: OrderUrgency;
+    scheduledAt?: string;
     qty?: number;
 }
 
-export const medicationOrderApi = {
-    getOrders: (admissionId: string, hospitalId?: string): Promise<MedicationOrderItem[]> =>
+export const clinicalOrderApi = {
+    getOrders: (admissionId: string, orderType: ClinicalOrderType, hospitalId?: string): Promise<ClinicalOrderItem[]> =>
         ipdApiClient
-            .get<GetMedicationOrdersResponse>('/medication-order', { params: { hospitalId: hospitalIdOrThrow(hospitalId), admissionId } })
+            .get<GetClinicalOrdersResponse>('/clinical-order', { params: { hospitalId: hospitalIdOrThrow(hospitalId), admissionId, orderType } })
             .then(r => r.orders ?? []),
 
-    placeOrder: async (admissionId: string, lines: MedicationOrderLineInput[], notes?: string, orderedByDoctorId?: string, hospitalId?: string) => {
+    placeOrder: async (
+        admissionId: string,
+        orderType: ClinicalOrderType,
+        lines: ClinicalOrderLineInput[],
+        notes?: string,
+        orderedByDoctorId?: string,
+        hospitalId?: string,
+    ) => {
         try {
-            return await ipdApiClient.post('/medication-order', {
+            return await ipdApiClient.post('/clinical-order', {
                 hospitalId: hospitalIdOrThrow(hospitalId),
                 admissionId,
+                orderType,
                 orderedByDoctorId,
                 notes,
                 lines,
             });
         } catch (err) {
-            throw new Error(messageFrom(err, 'Could not place the medication order.'));
+            throw new Error(messageFrom(err, 'Could not place the order.'));
         }
     },
 
     discontinueLine: async (orderLineId: string, reason?: string, hospitalId?: string) => {
         try {
-            return await ipdApiClient.post('/medication-order/discontinue-line', {
+            return await ipdApiClient.post('/clinical-order/discontinue-line', {
                 hospitalId: hospitalIdOrThrow(hospitalId),
                 orderLineId,
                 reason,
